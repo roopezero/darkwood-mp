@@ -1,0 +1,200 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>DarkwoodMP</AssemblyName>
+    <RootNamespace>DarkwoodMP</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Path to the Darkwood install. Override with: dotnet build -p:GameDir=... -->
+    <GameDir Condition="'$(GameDir)' == '' And '$(OS)' == 'Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\Darkwood</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Darkwood</GameDir>
+    <Managed>$(GameDir)/Darkwood_Data/Managed</Managed>
+    <BepCore>$(GameDir)/BepInEx/core</BepCore>
+    <!-- Copy the built DLL into the game's plugin folder after build -->
+    <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
+    <!-- The client game folders for the map tests (tools/setup-client-game.sh makes them: client-game, client-game-2..):
+         every client-game* folder in here that has a BepInEx/plugins folder is deployed to. -->
+    <ClientGamesRoot Condition="'$(ClientGamesRoot)' == ''">$(HOME)/.cache/darkwood-mp</ClientGamesRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(BepCore)/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepCore)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(Managed)/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="com.rlabrecque.steamworks.net"><HintPath>$(Managed)/com.rlabrecque.steamworks.net.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Rewired_Core"><HintPath>$(Managed)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)/UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(Managed)/UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Managed)/UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Managed)/UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(Managed)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Managed)/UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!--
+    GOG builds may not have Steamworks.NET. If any class other than SteamBackend, Lobby and SteamTransport names a
+    Steamworks type (in a field, a signature, a local, an instruction, a catch, a generic constraint or an attribute,
+    including in compiler-generated nested classes such as closures and iterators), loading that class throws and the mod can stop loading. This fails the build if it happens.
+  -->
+  <UsingTask TaskName="CheckSteamworksRefs" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Assembly ParameterType="System.String" Required="true" />
+      <CecilPath ParameterType="System.String" Required="true" />
+      <SearchDirs ParameterType="System.String[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(BepCore)/Mono.Cecil.dll" />
+      <Code Type="Class" Language="cs"><![CDATA[
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+
+public class CheckSteamworksRefs : Task
+{
+    [Required] public string Assembly { get; set; }
+    [Required] public string CecilPath { get; set; }
+    // Where the referenced assemblies are: reading attribute arguments (enums) needs their definitions.
+    [Required] public string[] SearchDirs { get; set; }
+
+    const string Steam = "com.rlabrecque.steamworks.net";
+    static readonly HashSet<string> Allowed = new HashSet<string> {
+        "DarkwoodMP.Net.SteamBackend", "DarkwoodMP.Net.Lobby", "DarkwoodMP.Net.SteamTransport" };
+
+    public override bool Execute()
+    {
+        // MSBuild doesn't know where Mono.Cecil is; load it from BepInEx's folder before Scan is compiled.
+        var cecil = System.Reflection.Assembly.LoadFrom(CecilPath);
+        ResolveEventHandler h = (s, e) => new System.Reflection.AssemblyName(e.Name).Name == "Mono.Cecil" ? cecil : null;
+        AppDomain.CurrentDomain.AssemblyResolve += h;
+        try { return Scan(); }
+        finally { AppDomain.CurrentDomain.AssemblyResolve -= h; }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    bool Scan()
+    {
+        var bad = new SortedSet<string>();
+        var resolver = new DefaultAssemblyResolver();
+        foreach (var d in SearchDirs) resolver.AddSearchDirectory(d);
+        using (var module = ModuleDefinition.ReadModule(Assembly, new ReaderParameters { AssemblyResolver = resolver }))
+        {
+            CheckAttrs(bad, "assembly", module.Assembly);
+            CheckAttrs(bad, "module", module);
+            foreach (var t in module.GetTypes())
+            {
+                var outer = t;
+                while (outer.DeclaringType != null) outer = outer.DeclaringType;
+                if (Allowed.Contains(outer.FullName)) continue;
+                string where = t.FullName;
+                CheckAttrs(bad, where, t);
+                CheckGenerics(bad, where, t);
+                Check(bad, where, t.BaseType);
+                foreach (var i in t.Interfaces) Check(bad, where, i.InterfaceType);
+                foreach (var f in t.Fields) { Check(bad, where + "." + f.Name, f.FieldType); CheckAttrs(bad, where + "." + f.Name, f); }
+                foreach (var p in t.Properties) { Check(bad, where + "." + p.Name, p.PropertyType); CheckAttrs(bad, where + "." + p.Name, p); }
+                foreach (var e in t.Events) { Check(bad, where + "." + e.Name, e.EventType); CheckAttrs(bad, where + "." + e.Name, e); }
+                foreach (var m in t.Methods)
+                {
+                    string mw = where + "::" + m.Name;
+                    CheckMethod(bad, mw, m);
+                    CheckAttrs(bad, mw, m);
+                    CheckAttrs(bad, mw, m.MethodReturnType);
+                    foreach (var p in m.Parameters) CheckAttrs(bad, mw, p);
+                    CheckGenerics(bad, mw, m);
+                    foreach (var o in m.Overrides) CheckMethod(bad, mw, o);
+                    if (!m.HasBody) continue;
+                    foreach (var v in m.Body.Variables) Check(bad, mw, v.VariableType);
+                    foreach (var eh in m.Body.ExceptionHandlers) Check(bad, mw, eh.CatchType);
+                    foreach (var ins in m.Body.Instructions)
+                    {
+                        if (ins.Operand is TypeReference tr) Check(bad, mw, tr);
+                        else if (ins.Operand is FieldReference fr) { Check(bad, mw, fr.DeclaringType); Check(bad, mw, fr.FieldType); }
+                        else if (ins.Operand is MethodReference mr) CheckMethod(bad, mw, mr);
+                    }
+                }
+            }
+        }
+        foreach (var b in bad) Log.LogError("Steamworks type named outside SteamBackend/Lobby/SteamTransport (breaks GOG builds): " + b);
+        return bad.Count == 0;
+    }
+
+    // An attribute's constructor and its arguments (typeof(...) is stored as a TypeReference, arrays of them too).
+    static void CheckAttrs(SortedSet<string> bad, string where, ICustomAttributeProvider p)
+    {
+        if (p == null || !p.HasCustomAttributes) return;
+        foreach (var a in p.CustomAttributes)
+        {
+            CheckMethod(bad, where, a.Constructor);
+            foreach (var arg in a.ConstructorArguments) CheckArg(bad, where, arg);
+            foreach (var n in a.Fields) CheckArg(bad, where, n.Argument);
+            foreach (var n in a.Properties) CheckArg(bad, where, n.Argument);
+        }
+    }
+
+    static void CheckArg(SortedSet<string> bad, string where, CustomAttributeArgument arg)
+    {
+        Check(bad, where, arg.Type);
+        if (arg.Value is TypeReference tr) Check(bad, where, tr);
+        else if (arg.Value is CustomAttributeArgument inner) CheckArg(bad, where, inner);
+        else if (arg.Value is CustomAttributeArgument[] list) foreach (var x in list) CheckArg(bad, where, x);
+    }
+
+    static void CheckGenerics(SortedSet<string> bad, string where, IGenericParameterProvider p)
+    {
+        if (!p.HasGenericParameters) return;
+        foreach (var g in p.GenericParameters)
+            foreach (var c in g.Constraints) Check(bad, where, c);
+    }
+
+    static void CheckMethod(SortedSet<string> bad, string where, MethodReference m)
+    {
+        Check(bad, where, m.DeclaringType);
+        Check(bad, where, m.ReturnType);
+        foreach (var p in m.Parameters) Check(bad, where, p.ParameterType);
+        if (m is GenericInstanceMethod g) foreach (var a in g.GenericArguments) Check(bad, where, a);
+    }
+
+    static void Check(SortedSet<string> bad, string where, TypeReference t)
+    {
+        if (t == null || t is GenericParameter) return;
+        if (t is GenericInstanceType g) foreach (var a in g.GenericArguments) Check(bad, where, a);
+        if (t is TypeSpecification spec) { Check(bad, where, spec.ElementType); return; }
+        if (t.DeclaringType != null) { Check(bad, where, t.DeclaringType); return; }
+        if (t.Scope != null && t.Scope.Name == Steam) bad.Add(where + " -> " + t.FullName);
+    }
+}
+]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="CheckSteamworks" AfterTargets="Build" BeforeTargets="DeployPlugin">
+    <CheckSteamworksRefs Assembly="$(TargetPath)" CecilPath="$(BepCore)/Mono.Cecil.dll" SearchDirs="$(Managed);$(BepCore);$(TargetDir)" />
+  </Target>
+
+  <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)/BepInEx')">
+    <MakeDir Directories="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Message Importance="high" Text="Deployed $(TargetFileName) to $(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <ItemGroup>
+      <_ClientGame Condition="Exists('$(ClientGamesRoot)')" Include="$([System.IO.Directory]::GetDirectories('$(ClientGamesRoot)', 'client-game*'))" />
+      <_ClientPlugins Include="@(_ClientGame->'%(FullPath)/BepInEx/plugins/DarkwoodMP')" Condition="Exists('%(FullPath)/BepInEx/plugins')" />
+    </ItemGroup>
+    <Copy Condition="'@(_ClientPlugins)' != ''" SourceFiles="$(TargetPath)" DestinationFolder="%(_ClientPlugins.Identity)" />
+    <Message Condition="'@(_ClientPlugins)' != ''" Importance="high" Text="Deployed $(TargetFileName) to %(_ClientPlugins.Identity)" />
+  </Target>
+</Project>
