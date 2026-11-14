@@ -27,7 +27,11 @@ namespace DarkwoodMP.World
     ///
     /// A character carries over into the host's next chapter as the host's own does (its level, skills and items;
     /// the chapter's ChapterPreset.initInventory and initPlayer are only for a chapter started without one): each
-    /// record says which chapter it was sent in, and one from an earlier chapter starts beside the host (World.Chapters).
+    /// record says which chapter the joiner's game was in when it sent it (the joiner says so in CharacterSave), and
+    /// one from an earlier chapter starts beside the host (World.Chapters). The host used to stamp a record with its
+    /// own chapter, and a joiner's last save from the old chapter's map (sent as it reloaded the world) came in after
+    /// the host was already in the next one: that player then stood at the old map's place on the new map, in the dark
+    /// outside it. A kept place that isn't on the world's map at all starts beside the host too.
     /// </summary>
     public sealed class Characters
     {
@@ -55,8 +59,8 @@ namespace DarkwoodMP.World
             session.Register(MsgType.CharacterSave, OnSave);
             session.Register(MsgType.CharacterLoad, OnLoad);
             session.Register(MsgType.CharacterDead, OnDead);
-            session.OnSessionEnded += () => { _asked = false; _have = false; _quitSent = false; _carried.Clear(); _inChapter.Clear(); };
-            session.OnPeerDisconnected += peer => { _carried.Remove(peer); _inChapter.Remove(peer); };
+            session.OnSessionEnded += () => { _asked = false; _have = false; _quitSent = false; _carried.Clear(); };
+            session.OnPeerDisconnected += peer => _carried.Remove(peer);
         }
 
         // =====================================================================
@@ -141,7 +145,6 @@ namespace DarkwoodMP.World
             bool dead = rec != null && rec.Dead;
             // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new, 3: yours, beside the host, 4: yours, dead for good
             w.W.Write((byte)(dead ? 4 : earlier ? 3 : rec != null ? 1 : copy ? 2 : 0));
-            _inChapter.Remove(from); // its game is in this chapter from now on
             w.WriteBigStr(rec?.Player ?? ""); w.WriteBigStr(rec?.Inv ?? ""); w.WriteBigStr(rec?.Hotbar ?? "");
             // Where the host stands: the joiner's game finds a free spot beside it (Sync.SpawnSpot), off the host.
             w.Write(host != null ? host.transform.position : Vector3.zero);
@@ -155,7 +158,11 @@ namespace DarkwoodMP.World
         private void OnSave(ulong from, PacketReader r)
         {
             if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
-            var rec = new Record { Name = _session.NameOf(from), Player = r.ReadBigStr(), Inv = r.ReadBigStr(), Hotbar = r.ReadBigStr(), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = _inChapter.TryGetValue(from, out int was) ? was : Chapters.HostChapter };
+            var rec = new Record { Name = _session.NameOf(from), Player = r.ReadBigStr(), Inv = r.ReadBigStr(), Hotbar = r.ReadBigStr(), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds() };
+            // The chapter of the world the joiner's game is in: what it sends from the last chapter's map, while it
+            // waits for the next one or reloads, is stamped with that chapter, whenever it arrives.
+            int chapter = r.R.ReadInt32();
+            rec.Chapter = chapter > 0 ? chapter : Chapters.HostChapter;
             if (rec.Player.Length == 0 || rec.Inv.Length == 0) return;
             _carried[from] = new Carried { Inv = rec.Inv, Hotbar = rec.Hotbar };
             // A character that died for good stays dead, whatever its game sends after (it goes on sending while it watches).
@@ -163,20 +170,6 @@ namespace DarkwoodMP.World
             string id = KeyHash(key);
             if (recs.TryGetValue(id, out var old) && old.Dead) rec.Dead = true;
             recs[id] = rec; // written with the world, next time the host's game saves
-        }
-
-        /// <summary>
-        /// Host: the chapter each joiner's game was in when the host started the next one. Until a joiner asks for its
-        /// character in the new chapter's world, what it sends is from the last chapter's map (its save at ChapterStart,
-        /// at Rejoin, or a periodic one), so it's stamped with that chapter and comes back beside the host (kind 3).
-        /// </summary>
-        private readonly Dictionary<ulong, int> _inChapter = new Dictionary<ulong, int>();
-
-        /// <summary>Host: it is starting the next chapter; every joiner's game is still in this one.</summary>
-        public void ChapterStarted(int chapter)
-        {
-            if (!_session.IsHost || chapter == 0) return;
-            foreach (var peer in _session.Peers) _inChapter[peer] = chapter;
         }
 
         /// <summary>What a client's player carried, by the character it sent last this session, and what it placed since.</summary>
@@ -266,14 +259,36 @@ namespace DarkwoodMP.World
         public bool Placing => NetEnemies.ClientMode && !_have && WorldShare.InWorld
                                && (_readyAt < 0f || Time.unscaledTime - _readyAt < PlaceWait);
 
+        /// <summary>Client: our character in the host's world has come (CharacterLoad).</summary>
+        public bool HasCharacter => _have;
+
+        /// <summary>
+        /// The loaded world (scene handle) we asked for our character in. Joining again (Rejoin: a new chapter, the
+        /// host's world reloaded, the panel's reload) is welcomed while the old world is still loaded, and the host's
+        /// world is loaded only after that, in the same session. The request used to go from the old world in that
+        /// last frame (the game's returnToMainMenu clears forbidInputs, and its world is there until the next frame);
+        /// the answer was lost with that world and nothing asked again, so the player kept the host's character from
+        /// the host's save: the host's place, hotbar and bags. Now each loaded world asks for itself.
+        /// </summary>
+        private int _askedScene;
+
+        private static int ActiveScene => UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+
         public void Update()
         {
             if (!NetEnemies.ClientMode || !WorldShare.InWorld) { _readyAt = -1f; return; }
+            if (_asked && ActiveScene != _askedScene)
+            {
+                // Another world loaded in this session: what we had or asked for was the last one's.
+                _asked = false; _have = false; _readyAt = -1f;
+            }
             if (!WorldShare.WorldReady) return;
             if (_readyAt < 0f) _readyAt = Time.unscaledTime; // the wait starts once the world has loaded
             if (!_asked)
             {
+                if (Core.mainMenu) return; // the menu over a world: we may be leaving it (returnToMainMenu sets it at once)
                 _asked = true;
+                _askedScene = ActiveScene;
                 _session.SendToHost(_session.Begin(MsgType.CharacterRequest), Channel.Control, reliable: true);
                 return;
             }
@@ -293,6 +308,7 @@ namespace DarkwoodMP.World
                 w.WriteBigStr(JsonConvert.SerializeObject(new Player.SaveState(p)));
                 w.WriteBigStr(JsonConvert.SerializeObject(new Inventory.SaveState(p.Inventory)));
                 w.WriteBigStr(JsonConvert.SerializeObject(new Inventory.SaveState(p.Hotbar)));
+                w.W.Write(Chapters.HostChapter); // the chapter of the world we're in (the host's, until it moves on)
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send your character: {e.Message}"); }
@@ -312,6 +328,12 @@ namespace DarkwoodMP.World
         private void OnLoad(ulong from, PacketReader r)
         {
             if (from != _session.HostId || !NetEnemies.ClientMode) return;
+            if (!_asked || ActiveScene != _askedScene || !WorldShare.InWorld)
+            {
+                Plugin.Log.LogInfo("Our character came for a world we've left: asking again in this one");
+                _asked = false;
+                return;
+            }
             byte kind = r.R.ReadByte();
             string ps = r.ReadBigStr(), inv = r.ReadBigStr(), hot = r.ReadBigStr();
             Vector3 spawn = r.ReadVector3();
@@ -331,8 +353,12 @@ namespace DarkwoodMP.World
                 // In the prologue, a new character is what the stage made it (its own items): only put beside the host.
                 bool prologue = Prologue.Active && (kind == 0 || kind == 2);
                 if (kind == 1 || kind == 3) ApplyRecord(p, ps, inv, hot);
+                // Our own kept place, but not on this world's map (a character kept with the wrong chapter, or one that
+                // was away in a separate location): beside the host, as from the last chapter.
+                bool offMap = !prologue && kind == 1 && spawn != Vector3.zero && !OnMap(p.transform.position);
+                if (offMap) Plugin.Log.LogInfo($"[spawn] your kept place {p.transform.position} isn't on this map: your character is back, beside the host");
                 if (prologue) { if (spawn != Vector3.zero) p.transform.position = spawn; }
-                else if (kind == 3 && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
+                else if ((kind == 3 || offMap) && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
                 else if (kind == 0) Fresh(p, spawn);
                 // A copy of the host's: keep it, beside them. Our own (kind 1) stays where it was saved, not on the
                 // host (or at 0,0 when no position was given).
@@ -346,6 +372,28 @@ namespace DarkwoodMP.World
             catch (Exception e) { Plugin.Log.LogError($"Couldn't load your character: {e}"); }
             _have = true;
             _nextSave = Time.unscaledTime + CharacterInterval;
+        }
+
+        /// <summary>
+        /// Whether a place is on the loaded world's map: within 0.6 of a chunk's size (in x and z) of one of
+        /// WorldGenerator's chunks, by their places, so a part of the map that's switched off counts too. True when
+        /// that can't be told.
+        /// </summary>
+        internal static bool OnMap(Vector3 at) => NearestChunk(at) <= 0.6f * (Singleton<WorldGenerator>.Instance?.chunkSize ?? 0f);
+
+        /// <summary>How far (the larger of x and z) the nearest of the world's chunks is from a place; 0 when not known.</summary>
+        internal static float NearestChunk(Vector3 at)
+        {
+            var wg = Singleton<WorldGenerator>.Instance;
+            if (wg == null || wg.worldChunks == null || wg.worldChunks.Count == 0 || wg.chunkSize <= 0f) return 0f;
+            float best = float.MaxValue;
+            foreach (var c in wg.worldChunks)
+            {
+                if (c == null) continue;
+                var d = c.transform.position - at;
+                best = Mathf.Min(best, Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.z)));
+            }
+            return best == float.MaxValue ? 0f : best;
         }
 
         /// <summary>
@@ -375,11 +423,28 @@ namespace DarkwoodMP.World
             state.hotbarUpgrades = 0;    // these only add slots; the inventory and hotbar below come with their own
             state.inventoryUpgrades = 0; // slot counts (loadValues adds or removes slots to match), fewer included
             state.loadValues(onlyState: false); // position too
-            JsonConvert.DeserializeObject<Inventory.SaveState>(inv).loadValues(p.Inventory);
-            JsonConvert.DeserializeObject<Inventory.SaveState>(hot).loadValues(p.Hotbar);
+            var invState = JsonConvert.DeserializeObject<Inventory.SaveState>(inv);
+            var hotState = JsonConvert.DeserializeObject<Inventory.SaveState>(hot);
+            SetSlots(p.Inventory, invState.slotCount);
+            SetSlots(p.Hotbar, hotState.slotCount);
+            invState.loadValues(p.Inventory);
+            hotState.loadValues(p.Hotbar);
             p.hotbarUpgrades = hotbarUpgrades;
             p.inventoryUpgrades = inventoryUpgrades;
             p.setHealth(Mathf.Min(state.health, p.maxHealth));
+        }
+
+        /// <summary>
+        /// Give a bag as many slots as our character's, the game's way: Inventory.addSlot and removeSlot also make and
+        /// destroy the slot's picture when the bag is shown (the hotbar always is). Inventory.SaveState.loadValues
+        /// changes the slot list alone, so the hotbar on screen kept the host's slots (the save we loaded is the host's):
+        /// one of ours more had no picture, and one fewer left the host's last slot showing.
+        /// </summary>
+        private static void SetSlots(Inventory bag, int count)
+        {
+            if (bag == null || bag.slots == null || count <= 0) return;
+            while (bag.slots.Count < count) bag.addSlot();
+            while (bag.slots.Count > count) bag.removeSlot();
         }
 
         private static int Delta(int wanted, int have, Action takeOne)

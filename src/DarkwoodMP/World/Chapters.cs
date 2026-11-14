@@ -174,7 +174,6 @@ namespace DarkwoodMP.World
             var s = S;
             if (s == null || !s.IsHost || s.Peers.Count == 0 || _chapterSent) return;
             _chapterSent = true;
-            Characters.Instance?.ChapterStarted(HostChapter); // still the chapter being left
             Plugin.Log.LogInfo($"Starting chapter {chapter}: the players in your world follow once it's ready");
             var w = s.Begin(MsgType.ChapterStart);
             w.W.Write(chapter);

@@ -9,6 +9,7 @@ by the environment variable MAP_SCENARIO (default map_scenario: tools/tests/map_
 may have AT_JOIN (run before STEPS), PRE_JOIN, POST, REQUIRE and SETTLE. Who does a step: "host", "c1".."c4", "client" (c1) or "all-clients"
 (each client in turn), or "c1+c2.." (those games at once, see run_steps). ("all", "compare", WHO, SECTIONS) (or "both") dumps every game there and then around WHO's
 player and compares each client's dump with the host's, with SECTIONS (comma-separated) required not to be empty.
+A step's options: "settle" (seconds to wait after it), "may_fail", "timeout" (seconds to wait for its reply, default 180).
 Dumps go to WORKDIR: host.json and client.json with one client, host.json and c1.json.. with more; mid-way ones are
 midN-host.json, midN-client.json / midN-c1.json... Exits 1 if a step fails, a wait times out or the dumps differ.
 """
@@ -130,13 +131,13 @@ def run_steps(ctls, steps, work=None, prefix="mid"):
                     ok = False
                 reply += f"; spread {spread if spread is None else round(spread, 2)} s (at most {opts['max_spread']})"
         elif who == "all-clients":
-            replies = [(c, ctls[c].cmd("do", name, *args, timeout=180)) for c in clients(ctls)]
+            replies = [(c, ctls[c].cmd("do", name, *args, timeout=float(opts.get("timeout", 180)))) for c in clients(ctls)]
             ok = all(good(r) for _, r in replies)
             reply = "; ".join(f"{c}: {r}" for c, r in replies)
         elif who not in ctls:
             reply, ok = f"fail no game {who} (there are {', '.join(ctls)})", False
         else:
-            reply = ctls[who].cmd("do", name, *args, timeout=180)
+            reply = ctls[who].cmd("do", name, *args, timeout=float(opts.get("timeout", 180)))
             ok = good(reply)
         log(f"{who:6} {name} {' '.join(args)} -> {reply} ({time.time() - t0:.1f} s)")
         if not ok and not opts.get("may_fail"):

@@ -351,9 +351,10 @@ def serve(port, inp):
             c.sendall(frame(bytes([26, 0]) + s32("") + s32("") + s32("") + struct.pack("<fff", 0, 0, 0)))
         elif t == 25 and CHARS:
             ps, at = rbig(m, 1); inv, at = rbig(m, at); hot, at = rbig(m, at)
+            chapter = struct.unpack_from("<i", m, at)[0]  # the chapter of the client's world
             P = json.loads(ps); I = json.loads(inv)
             items = [(i["type"], i["amount"]) for i in I["invItems"]]
-            print(f"client saved its character: pos {P['pos'][0]:.0f},{P['pos'][2]:.0f} health {P['health']:.0f} level {P['currentLevel']} items {items} slots {I['slotCount']}", flush=True)
+            print(f"client saved its character: pos {P['pos'][0]:.0f},{P['pos'][2]:.0f} health {P['health']:.0f} level {P['currentLevel']} items {items} slots {I['slotCount']} chapter {chapter}", flush=True)
             if not sent_back:
                 sent_back = True
                 P["pos"][0] += 300; P["health"] = 50.0; I["slotCount"] -= 2

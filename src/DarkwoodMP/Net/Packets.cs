@@ -81,9 +81,9 @@ namespace DarkwoodMP.Net
         ObjSpawn = 23,
         /// <summary>Client -> host, once in the world: send me my character.</summary>
         CharacterRequest = 24,
-        /// <summary>Client -> host: bigstr Player.SaveState, bigstr inventory, bigstr hotbar (as JSON): my character now.</summary>
+        /// <summary>Client -> host: bigstr Player.SaveState, bigstr inventory, bigstr hotbar (as JSON), i32 the chapter of the world my game is in (0: none): my character now.</summary>
         CharacterSave = 25,
-        /// <summary>Host -> client: u8 kind (1 yours, 0 new, 2 copy of the host's, 3 yours from an earlier chapter: stand beside the host, 4 yours, which died for good: watch the others), bigstr player, bigstr inventory, bigstr hotbar, vec3 where to stand (beside the host; kinds 0, 2 and 3).</summary>
+        /// <summary>Host -> client: u8 kind (1 yours, 0 new, 2 copy of the host's, 3 yours from an earlier chapter: stand beside the host, 4 yours, which died for good: watch the others), bigstr player, bigstr inventory, bigstr hotbar, vec3 where to stand (beside the host; kinds 0, 2 and 3, and kind 1 when its place isn't on the map).</summary>
         CharacterLoad = 26,
         /// <summary>Either way: u16 n, n x (str key, str value): story state that changed (see World.FlagsSync).</summary>
         FlagsDelta = 27,

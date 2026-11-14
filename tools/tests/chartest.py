@@ -26,7 +26,7 @@ print(f"  CharacterLoad kind={kind} (0 new, 1 yours) spawn at {pos[0]:.0f},{pos[
 mine_p = json.dumps({"pos": [100.0, 16.0, 200.0], "health": 42.0, "experience": 77})
 mine_inv = json.dumps({"slotCount": 12, "invItems": [{"slotId": 0, "type": "rope", "durability": 1.0, "amount": 3}]})
 mine_hot = json.dumps({"slotCount": 4, "invItems": []})
-s.sendall(frame(bytes([25]) + s32(mine_p) + s32(mine_inv) + s32(mine_hot)))
+s.sendall(frame(bytes([25]) + s32(mine_p) + s32(mine_inv) + s32(mine_hot) + struct.pack("<i", 1)))  # i32: our world is in chapter 1
 print("  sent my character (health 42, 3 ropes); waiting for the host to save")
 time.sleep(12)
 s.close()
@@ -40,7 +40,7 @@ print("dying for good:")
 s, r = join()
 kind, p, inv, hot, pos = ask(s, r)
 s.sendall(frame(bytes([140])))  # CharacterDead: died for good, watching the others
-s.sendall(frame(bytes([25]) + s32(mine_p) + s32(mine_inv) + s32(mine_hot)))  # the watcher's game goes on sending it
+s.sendall(frame(bytes([25]) + s32(mine_p) + s32(mine_inv) + s32(mine_hot) + struct.pack("<i", 1)))  # (i32: chapter 1) the watcher's game goes on sending it
 print("  sent CharacterDead, then my character again; waiting for the host to save")
 time.sleep(12)
 s.close()

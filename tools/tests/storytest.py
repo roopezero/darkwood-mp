@@ -65,7 +65,7 @@ if ok:
     m = early.get(86) or pump(30, lambda m: m[0] == 86)
     if m is None: print("FAIL no ChapterStart", flush=True); sys.exit(1)
     print(f"ChapterStart: chapter {struct.unpack_from('<i', m, 1)[0]} ({time.time() - t0:.1f} s)", flush=True)
-    s.sendall(frame(bytes([25]) + s32('{"health":100}') + s32('{"invItems":[]}') + s32('{"invItems":[]}')))
+    s.sendall(frame(bytes([25]) + s32('{"health":100}') + s32('{"invItems":[]}') + s32('{"invItems":[]}') + struct.pack("<i", CHAPTER - 1)))  # from the chapter being left
     m = early.get(31) or pump(400, lambda m: m[0] in (31, 32))
     if m is None: print("FAIL no WorldReload", flush=True); sys.exit(1)
     if m[0] != 31: print("FAIL HostAway from the host instead of WorldReload", flush=True); sys.exit(1)
