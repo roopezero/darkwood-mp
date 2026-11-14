@@ -49,7 +49,15 @@ namespace DarkwoodMP.Combat
         /// <summary>Client: the melee hit is over (ClientHitEffectsPatch).</summary>
         internal static void EndHit() => _forwarded = null;
 
-        public static void Clear() => _running.Clear();
+        public static void Clear() { _running.Clear(); _dead.Clear(); }
+
+        // NPCs that died in this game while playing together. A corpse loses its NPC part (Character.destroyComponents),
+        // so from then on it looks like any creature's: one the host runs and sends, and that a client freezes and
+        // hides until the host's comes (NetEnemies.ClientSweep).
+        private static readonly HashSet<Character> _dead = new HashSet<Character>();
+
+        /// <summary>An NPC died in this game (WorldActions' NpcDiedPatch): its corpse is still our copy of that NPC.</summary>
+        internal static void Died(Character c) { if (c != null) _dead.Add(c); }
 
         /// <summary>
         /// Whether the host runs this NPC as an enemy: on the host, one it runs or one that just turned on a player;
@@ -109,14 +117,18 @@ namespace DarkwoodMP.Combat
 
         /// <summary>
         /// Client: our copy of the host's NPC of this kind when its save id didn't name it (one a scripted event made
-        /// in each game): the nearest one of ours within 3000 that isn't driven yet.
+        /// in each game, or a location each game loaded for itself while playing together): the nearest one of ours
+        /// within 3000 that isn't driven yet. Our corpse of an NPC that died here counts too: the host sends its
+        /// corpse of a killed NPC as one of its creatures (the NPC part is gone), and without ours to show it as, our
+        /// corpse stayed frozen and hidden while nothing stood in for the host's (the chicken lady's corpse vanished
+        /// for joiners and couldn't be looted).
         /// </summary>
         internal static Character OurCopy(string kind, Vector3 pos, Func<Character, bool> driven, Func<Character, string> kindOf)
         {
             Character best = null; float bestD = 3000f * 3000f;
             foreach (var c in Object.FindObjectsOfType<Character>())
             {
-                if (c == null || c.npc == null || driven(c) || kindOf(c) != kind) continue;
+                if (c == null || (c.npc == null && !_dead.Contains(c)) || driven(c) || kindOf(c) != kind) continue;
                 float d = (c.transform.position - pos).sqrMagnitude;
                 if (d < bestD) { best = c; bestD = d; }
             }

@@ -1062,6 +1062,7 @@ namespace DarkwoodMP.World
         static void Prefix(Character __instance, out bool __state) { WorldActions.Depth++; __state = __instance.alive; }
         static void Postfix(Character __instance, bool __state)
         {
+            if (__state && __instance != null && __instance.npc != null && !__instance.alive && Net.Session.Instance != null) Combat.HostileNpcs.Died(__instance); // a replayed death too
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __instance.npc == null || !__state) return;
             // With its name and where it stood: one each game puts in place itself (the morning trader, the wolf)
             // has its own save id in each, and one that walked can be off its named spot.

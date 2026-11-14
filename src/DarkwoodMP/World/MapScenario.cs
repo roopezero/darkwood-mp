@@ -264,6 +264,7 @@ namespace DarkwoodMP.World
             MapScenarioWbRows.Register();
             MapScenarioLights.Register();
             MapScenarioShortcut.Register();
+            MapScenarioCorpse.Register();
         }
 
         internal static IEnumerator None() { yield break; }
