@@ -206,6 +206,7 @@ namespace DarkwoodMP.World
             try { state = JsonConvert.DeserializeObject<Inventory.SaveState>(contents); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"[slots] {obj} bad contents from host: {e.Message}"); return; }
             if (state == null) return;
+            if (state.slotCount > inv.slots.Count && Is(inv)) WorkbenchStorage.Fit(inv, state.slotCount); // the host's rows (an upgrade)
             if (state.slotCount != inv.slots.Count) Plugin.Log.LogWarning($"[slots] {obj} has {state.slotCount} slots on the host, {inv.slots.Count} here");
 
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
@@ -238,6 +239,15 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void FlushBeforeLoad(Inventory inv) { if (Watching(inv)) Check(inv); }
         internal void Loaded(Inventory inv) { if (Watching(inv)) _watched[inv] = Keys(inv); }
+
+        /// <summary>The storage got more slots (WorkbenchStorage.Fit): they start empty, as they are; our changes to the others still go.</summary>
+        internal void Grew(Inventory inv)
+        {
+            if (!_watched.TryGetValue(inv, out var keys) || keys.Length >= inv.slots.Count) return;
+            var grown = new string[inv.slots.Count];
+            for (int i = 0; i < grown.Length; i++) grown[i] = i < keys.Length ? keys[i] : Key(inv.slots[i]);
+            _watched[inv] = grown;
+        }
 
         private void Merge(Inventory inv, Inventory.SaveState state, string[] seen, string what)
         {
@@ -704,6 +714,7 @@ namespace DarkwoodMP.World
             }
             ctl.workbenchLevel = level;
             Plugin.Log.LogInfo($"The workbench is now level {level} ({s.NameOf(from)} upgraded it)");
+            WorkbenchStorage.ApplyAll("upgraded"); // its new row, before any change to it arrives
             // An open workbench shows the new level's recipes.
             var open = Player.Instance != null ? Player.Instance.openedItemInventory : null;
             if (open != null && open.isWorkbench && open.workbench != null)
@@ -737,7 +748,9 @@ namespace DarkwoodMP.World
         static void Postfix(int __state)
         {
             var ctl = Singleton<Controller>.Instance;
-            if (ctl != null && ctl.workbenchLevel > __state && !WorldActions.Replaying) SlotShare.Instance?.LevelRaised(ctl.workbenchLevel);
+            if (ctl == null || ctl.workbenchLevel <= __state) return;
+            WorkbenchStorage.ApplyAll("upgraded"); // the storage's new row (also without co-op)
+            if (!WorldActions.Replaying) SlotShare.Instance?.LevelRaised(ctl.workbenchLevel);
         }
     }
 

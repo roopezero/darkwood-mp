@@ -108,7 +108,7 @@ namespace DarkwoodMP.Net
         ContainerSlots = 37,
         /// <summary>Host -> client: ObjRef, u16 slot, str what it holds (JSON), str what you saw there (key), str what you put there (JSON): your change came too late.</summary>
         ContainerSlotRefused = 38,
-        /// <summary>Either way: i32 level: the workbench was upgraded.</summary>
+        /// <summary>Either way: i32 level: the workbench was upgraded. Each game gives every workbench's storage that level's rows as it takes it, before any change to the new slots arrives (see World.WorkbenchStorage).</summary>
         WorkbenchLevel = 39,
         /// <summary>Client -> host: ObjRef: what does this container hold? Sent as a client opens a container (before it sends any ContainerSlots for it), and for every workbench's storage once its world has loaded (see World.SlotShare).</summary>
         ContainerSlotsAsk = 0xC8,

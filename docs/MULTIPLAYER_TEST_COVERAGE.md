@@ -174,7 +174,7 @@ Animals treating a joiner by its perks (gap 18) and fleeing a joiner's ward: CO 
 | Containers: put, take | 2G | 2G | 2G | 2G | 2G | none | `put-item`, `take-from` (world); `mt-grab` three at once, one wins (map4_multi) |
 | Containers: one user at a time, lock released on leave | 2G | 2G | 2G | 2G | n/a | none | `hold-open`, `open-busy`, `release` (world); `mt-leave`, `mt-open-free` (map4 POST) |
 | Crates: picked open (progress bar), locked crate lockpicked | 2G | 2G | 2G (`--refused` until picked) | none | n/a | none | `pick-crate` (world) |
-| Workbench storage | 2G | 2G | 2G | none | 2G | 2G (`wb-fill` changes it during the join) | `wb-use`, `wb-host` (issues); Sort & Stack SC (`host-world`) |
+| Workbench storage | 2G | 2G | 2G | none | 2G | 2G (`wb-fill` changes it during the join) | `wb-use`, `wb-host` (issues); Sort & Stack SC (`host-world`); its rows per level, an item in a new row, save and reload (`map:wbrows`) |
 | Rotting food in an open container | 2G | 2G | 2G | none | 2G | none | `rot-open`, `rot-host` (gaps) |
 | Dropped items: drop, pick up, held flare/match dropped | 2G | 2G | none | 2G | n/a | none | `drop-item`, `pickup` (world), `drop-held`, `expect-dropped` (fixchecks) |
 | Death bag (left in a separate location) | 2G~ | 2G | n/a | none | n/a | none | `bag-drop`, `bag-check`, `bag-take` (gaps): dropped "as from a separate location", not by a real death |

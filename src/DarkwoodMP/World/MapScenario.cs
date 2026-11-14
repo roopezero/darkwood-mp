@@ -259,6 +259,7 @@ namespace DarkwoodMP.World
             MapScenarioSavage.Register();
             MapScenarioKnock.Register();
             MapScenarioRepair.Register();
+            MapScenarioWbRows.Register();
         }
 
         internal static IEnumerator None() { yield break; }

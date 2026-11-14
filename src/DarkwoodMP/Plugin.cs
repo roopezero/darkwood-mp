@@ -1008,6 +1008,7 @@ namespace DarkwoodMP
             Proxies.Update(_playerSync, _session.IsHost); ModProfiler.Mark("proxies");
             _enemies.Update(); ModProfiler.Mark("enemies");
             _time.Update(); ModProfiler.Mark("time");
+            World.WorkbenchStorage.Update(); // also without co-op: each upgrade adds a row to the storage
             _containers.Update(); ModProfiler.Mark("containers");
             _characters.Update(); ModProfiler.Mark("characters");
             _flags.Update(); ModProfiler.Mark("flags");

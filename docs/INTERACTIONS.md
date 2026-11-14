@@ -151,7 +151,7 @@ Ranked by what two players would notice first in normal play.
 | Enemy corpse loot | Host's enemy dies. Changes corpse inventory | `Character.die` (host) | Shared (World/Containers.cs: corpse contents sent on death; Combat/NetEnemies.cs) |
 | Trader stock | Stock up, trade. Changes trader inventory | `NPC.randomizeTraderInv`, shop inventories | Shared (World/TraderSync.cs, World/Containers.cs) |
 | Workbench storage | Put in / take out. Changes storage slots | `Workbench.open`, slots | Shared (World/SlotShare.cs, slot by slot) |
-| Workbench | Upgrade level. Changes workbench level | `CraftingRecipes.doCraft` (upgrade recipe), `Workbench.refreshWorkbenchUpgrade` | Shared (World/SlotShare.cs: WorkbenchLevel) |
+| Workbench | Upgrade level. Changes workbench level, and adds a row of 6 storage slots per level (World/WorkbenchStorage.cs) | `CraftingRecipes.doCraft` (upgrade recipe), `Workbench.refreshWorkbenchUpgrade` | Shared (World/SlotShare.cs: WorkbenchLevel; each game grows the storage as it takes the level, the save keeps the slot count) |
 | Workbench | Craft / repair / upgrade an item. Changes the player's own inventory | `Player.progressBarCompleted` -> `doCraft`, `InvItemClass.repair`, `addUpgrade` | Each player's own (not world state) |
 | Container with switches | An item in a slot activates something. Changes item `activated` | `Inventory.checkForActiveSwitches`, `deactivateSwitches` | Not shared as an event; contents are shared, so it follows when the container is next refreshed (unverified) |
 
