@@ -30,7 +30,7 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 | `maps` | every map battery, one after another, except modules with `IN_MAPS = False` |
 
 The batteries are data: every `tools/tests/map_scenario_NAME.py` is `map:NAME`, so a new module is a battery as soon
-as it exists. Now: core, dreams, enemies, far, farevents, fixchecks, gaps, hostile, issues, items1, items2, locations,
+as it exists. Now: core, dreams, enemies, far, farevents, fixchecks, gaps, hostile, issues, items1, items2, lights (the lights on the other players' puppets, and each game's view drawn from its own player), locations,
 night, npcs, repair (a door and furniture repaired by the client stay repaired), skills, status, sweep, world, and dogfull (the whole scenario with the dog watch; not in `maps`).
 `map:prologue` is the one battery that doesn't play the test world: its module says `HOST_WORLD = "new"`, so the host
 starts a new game on a fresh copy of your saves (the prologue not skipped, hosting once the intro film is over) and

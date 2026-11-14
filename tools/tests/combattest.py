@@ -29,8 +29,8 @@ away_bits = 0  # 1 away (a separate location or a dream)
 away_place = ""  # where, when away: the location's name ("dream:<name>" in a dream)
 state_bits = 1  # 1 alive, 8 invisible, 16 shadow ward, 32 forest spirit ward, 64 friend / 128 enemy of the forest
 def player_state():
-    # u64 owner, vec3 pos, quat rot (Euler(90,0,0)), u8 state, str library, str held light, u8 sprites, u8 more state (1 away), u8 health %, str place, vec3 held flames (on the torch: the host logs where it put them), f32 lantern light radius (none)
-    return frame(bytes([10]) + struct.pack("<Q", my_id) + struct.pack("<fff", X, 16.0, Z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([state_bits]) + s16("") + s16(held) + bytes([0]) + bytes([away_bits, 100]) + s16(away_place) + struct.pack("<fff", *((14.0, 22.0, 0.0) if held else (0.0, 0.0, 0.0))) + struct.pack("<f", 0))
+    # u64 owner, vec3 pos, quat rot (Euler(90,0,0)), u8 state, str library, str held light, u8 sprites, u8 more state (1 away), u8 health %, str place, vec3 held flames (on the torch: the host logs where it put them), f32 lantern light radius (none), f32 flashlight beam radius, f32 its brightness (off)
+    return frame(bytes([10]) + struct.pack("<Q", my_id) + struct.pack("<fff", X, 16.0, Z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([state_bits]) + s16("") + s16(held) + bytes([0]) + bytes([away_bits, 100]) + s16(away_place) + struct.pack("<fff", *((14.0, 22.0, 0.0) if held else (0.0, 0.0, 0.0))) + struct.pack("<fff", 0, 0, 0))
 
 counts, enemies, damage, sounds = {}, {}, [], 0
 t0 = time.time(); next_state = 0; hit_sent = False; next_noise = 0; noises = 0

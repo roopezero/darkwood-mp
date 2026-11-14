@@ -43,7 +43,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 4 | SaveOffer | H→C | 32 B hash, u32 size (to download), bigstr profile JSON, u8 n, n × (str file, u32 size), u8 packing (0 none, 1 Deflate), u32 unpacked size |
 | 5 | NeedSave | C→H | 32 B hash, u32 offset, u32 length |
 | 6 | SaveData | H→C | 32 B hash, u32 offset, u32 length, bytes |
-| 10 | PlayerState | both | u64 owner, vec3, quat, u8 state (alive, watching, flashlight on, invisible, shadow ward, forest spirit ward, Friend / Enemy of the Forest), str animation library, str lit thing in hand, sprites, u8 more state (away in a separate location or a dream, in an after-night), u8 health %, str where (a location's name, `dream:` and a dream's), vec3 where the lit thing's flames are, f32 a hotbar lantern's light radius (0: none) |
+| 10 | PlayerState | both | u64 owner, vec3, quat, u8 state (alive, watching, flashlight on, invisible, shadow ward, forest spirit ward, Friend / Enemy of the Forest), str animation library, str lit thing in hand, sprites, u8 more state (away in a separate location or a dream, in an after-night), u8 health %, str where (a location's name, `dream:` and a dream's), vec3 where the lit thing's flames are, f32 a hotbar lantern's light radius (0: none), f32 the flashlight beam's radius and f32 its brightness (0: off) |
 | 11 | PlayerLeft | H→C | u64 id |
 | 12 | PlayerInfo | H→C | u64 id, str name |
 | 13 | PlayerDamage | H→C | f32 damage, u8 flags, str attacker, effects |

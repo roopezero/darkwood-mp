@@ -55,6 +55,11 @@ namespace DarkwoodMP.Sync
         /// <summary>The flashlight's beam is on.</summary>
         public bool Flashlight;
         /// <summary>
+        /// The beam's radius and brightness (the grey of its colour), which Player.processFlashlight works out each frame
+        /// from how far the mouse is; the others draw their copy of the beam with them. Zero when it's off.
+        /// </summary>
+        public float BeamRadius, BeamBright;
+        /// <summary>
         /// What the host's enemies check about the player they look at, which only the player's own game knows:
         /// invisible (the Chameleon skill, Player.setInvisible), the shadow ward and forest spirit ward effects, and the
         /// Friend / Enemy of the Forest skills. The host puts them on the player's proxy.
@@ -103,6 +108,8 @@ namespace DarkwoodMP.Sync
             pw.WriteStr(Place ?? "");
             pw.Write(HeldFlames);
             w.Write(Lantern);
+            w.Write(BeamRadius);
+            w.Write(BeamBright);
         }
 
         public void Read(PacketReader pr)
@@ -148,6 +155,8 @@ namespace DarkwoodMP.Sync
             Place = pr.ReadStr();
             HeldFlames = pr.ReadVector3();
             Lantern = r.ReadSingle();
+            BeamRadius = r.ReadSingle();
+            BeamBright = r.ReadSingle();
         }
 
         private static void WriteRot(System.IO.BinaryWriter w, Quaternion q) { w.Write(q.x); w.Write(q.y); w.Write(q.z); w.Write(q.w); }
@@ -155,7 +164,7 @@ namespace DarkwoodMP.Sync
 
         public void CopyFrom(PlayerSnapshot o)
         {
-            Owner = o.Owner; Time = o.Time; Position = o.Position; Rotation = o.Rotation; Alive = o.Alive; Spectating = o.Spectating; Library = o.Library; HeldLight = o.HeldLight; HeldFlames = o.HeldFlames; Flashlight = o.Flashlight; Lantern = o.Lantern;
+            Owner = o.Owner; Time = o.Time; Position = o.Position; Rotation = o.Rotation; Alive = o.Alive; Spectating = o.Spectating; Library = o.Library; HeldLight = o.HeldLight; HeldFlames = o.HeldFlames; Flashlight = o.Flashlight; Lantern = o.Lantern; BeamRadius = o.BeamRadius; BeamBright = o.BeamBright;
             Invisible = o.Invisible; ShadowWard = o.ShadowWard; ForestSpiritWard = o.ForestSpiritWard; FriendOfTheForest = o.FriendOfTheForest; EnemyOfTheForest = o.EnemyOfTheForest;
             Away = o.Away; AfterNight = o.AfterNight; Place = o.Place; Health = o.Health;
             Sprites.Clear(); Sprites.AddRange(o.Sprites);
@@ -227,6 +236,9 @@ namespace DarkwoodMP.Sync
             snap.Lantern = dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot) ? dot.LightRadius : 0f;
             if (_flashlight == null || _flashlightOf != player) { _flashlightOf = player; _flashlight = root.Find("Flashlight")?.gameObject; }
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
+            var beam = snap.Flashlight ? _flashlight.GetComponent<Light2D>() : null;
+            snap.BeamRadius = beam != null ? beam.LightRadius : 0f;
+            snap.BeamBright = beam != null ? beam.LightColor.r : 0f;
             snap.Invisible = player.invisible;
             var fx = player.effects;
             snap.ShadowWard = fx != null && fx.hasEffectType(CharacterEffectType.shadowWard);

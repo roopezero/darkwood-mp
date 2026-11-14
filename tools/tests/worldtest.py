@@ -64,9 +64,9 @@ def join(port, name, key="c" * 64, timeout=20):
 
 def player_state(owner, x=0.0, y=16.0, z=0.0, more=0, health=100):
     """PlayerState (10): u64 owner, vec3 pos, quat rot, u8 state (1 alive), str library, str held light, u8 sprites,
-    u8 more (2: in an after-night), u8 health %, str place, vec3 held flames, f32 lantern. Framed."""
+    u8 more (2: in an after-night), u8 health %, str place, vec3 held flames, f32 lantern, f32 beam radius, f32 beam brightness. Framed."""
     return frame(bytes([10]) + struct.pack("<Q", owner) + struct.pack("<fff", x, y, z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071)
-                 + bytes([1]) + s16("") + s16("") + bytes([0, more, health]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<f", 0))
+                 + bytes([1]) + s16("") + s16("") + bytes([0, more, health]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<fff", 0, 0, 0))
 
 _seq = 0
 

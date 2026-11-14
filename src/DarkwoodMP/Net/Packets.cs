@@ -49,7 +49,8 @@ namespace DarkwoodMP.Net
         /// u8 more state (1 away: in a separate location or a dream, 2 in an after-night: in their hideout after dawn), u8 health (percent of the maximum, 0 to 100), str where
         /// ("" in the shared world, the location's name in a separate location, "dream:" and its name in a dream; see World.Locations.Current),
         /// vec3 where the held light's flames are, relative to the player and in its rotation (zero if none; see PlayerSnapshot.HeldFlames),
-        /// f32 the radius of a hotbar lantern's light around the player (0 if none; see PlayerSnapshot.Lantern).
+        /// f32 the radius of a hotbar lantern's light around the player (0 if none; see PlayerSnapshot.Lantern),
+        /// f32 the flashlight beam's radius, f32 its brightness (the grey of its colour; both 0 when it's off; see PlayerSnapshot.BeamRadius).
         /// </summary>
         PlayerState = 10,
         /// <summary>u64 id: a player left.</summary>

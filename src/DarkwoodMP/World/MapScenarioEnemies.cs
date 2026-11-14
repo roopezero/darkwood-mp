@@ -470,7 +470,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Take a weapon of this type out (made in an empty hotbar slot), as the game's hotbar select does.</summary>
-        private static IEnumerator TakeOut(Player p, string type, Result r)
+        internal static IEnumerator TakeOut(Player p, string type, Result r)
         {
             for (int attempt = 0; attempt < 4; attempt++)
             {

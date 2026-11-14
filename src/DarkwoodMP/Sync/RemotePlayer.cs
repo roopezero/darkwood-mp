@@ -58,6 +58,13 @@ namespace DarkwoodMP.Sync
         private string _heldShown = "";
         private Transform _heldLight, _heldFlames;
         private GameObject _beam;
+
+        /// <summary>For the tests: the puppet's flashlight beam (null if it never had one).</summary>
+        internal GameObject Beam => _beam;
+        /// <summary>For the tests: the puppet's lantern light (null when there's none).</summary>
+        internal Light2D LanternLight => _lantern;
+        /// <summary>For the tests: the light of the torch or lamp in the puppet's hand (null when there's none).</summary>
+        internal Light2D HeldLightShown => _heldLight != null ? _heldLight.GetComponent<Light2D>() : null;
         private bool _flamesLogged;
 
         private void ApplyLights()
@@ -101,12 +108,20 @@ namespace DarkwoodMP.Sync
                 var own = Player.Instance != null ? Player.Instance.transform.Find("Flashlight") : null;
                 if (own != null)
                 {
-                    _beam = Object.Instantiate(own.gameObject, Root.transform, false);
-                    _beam.name = "Flashlight";
+                    _beam = CopyLight(own.gameObject, Root.transform, "Flashlight");
                     NotSolid(_beam.transform);
                 }
             }
             if (_beam != null && _beam.activeSelf != beam) _beam.SetActive(beam);
+            // The copy keeps the radius and colour our own beam had when it was copied (the prefab's, if we never used
+            // one); their game sets them each frame from where their mouse is (Player.processFlashlight).
+            var beamLight = beam && _beam != null ? _beam.GetComponent<Light2D>() : null;
+            if (beamLight != null && _last.BeamRadius > 0f)
+            {
+                if (beamLight.LightRadius != _last.BeamRadius) beamLight.LightRadius = _last.BeamRadius;
+                var c = new Color(_last.BeamBright, _last.BeamBright, _last.BeamBright, 0f);
+                if (beamLight.LightColor != c) beamLight.LightColor = c;
+            }
             ApplyLantern();
         }
 
@@ -128,9 +143,7 @@ namespace DarkwoodMP.Sync
             {
                 var own = Player.Instance != null ? Player.Instance.lightDot : null;
                 if (own == null || ctl == null) return;
-                var go = Object.Instantiate(own.gameObject, Root.transform, false);
-                go.name = "PuppetLanternDot";
-                go.transform.localPosition = own.transform.localPosition;
+                var go = CopyLight(own.gameObject, Root.transform, "PuppetLanternDot");
                 go.SetActive(true);
                 NotSolid(go.transform);
                 _lantern = go.GetComponent<Light2D>();
@@ -162,6 +175,29 @@ namespace DarkwoodMP.Sync
             if (_heldFlames != null) Object.Destroy(_heldFlames.gameObject);
             _heldLight = _heldFlames = null;
             _heldShown = "";
+        }
+
+        /// <summary>
+        /// A copy of one of our own player's lights (its flashlight beam, its light dot) for the puppet, with a mesh of
+        /// its own. Light2D keeps the mesh it draws in a serialized field (_mesh) and its MeshFilter holds it too, so
+        /// Object.Instantiate gave the copy our light's mesh: both lights then drew their shape, walls' shadows and
+        /// all, into the one mesh, and our player's light showed the shape worked out where the puppet stands (a
+        /// joiner beside the host's lantern saw the host's shadows around their own player, and the puppet's lantern
+        /// showed our small dot). Destroying the copy also destroyed our light's mesh (Light2D.OnDestroy). So the copy
+        /// is made under a switched-off holder (no Awake or OnEnable yet), its mesh references are cleared, and only
+        /// then is it put on the puppet, where it makes its own mesh when it first draws (Light2D.CreateMeshObject).
+        /// </summary>
+        internal static GameObject CopyLight(GameObject own, Transform parent, string name)
+        {
+            var holder = new GameObject("DarkwoodMP_LightCopy");
+            holder.SetActive(false);
+            var go = Object.Instantiate(own, holder.transform, false);
+            go.name = name;
+            foreach (var l in go.GetComponentsInChildren<Light2D>(true)) l._mesh = null;
+            foreach (var f in go.GetComponentsInChildren<MeshFilter>(true)) f.sharedMesh = null;
+            go.transform.SetParent(parent, false);
+            Object.Destroy(holder);
+            return go;
         }
 
         /// <summary>Take a puppet's light off the lighting graph and out of the game's list of lights.</summary>
