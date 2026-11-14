@@ -21,11 +21,18 @@ namespace DarkwoodMP.World
     ///   the view is all around (see AllAround): the game's view cone stays where the character faced when it died.
     ///
     /// When nobody is left playing (the last player died, or left), the game's own permadeath screen follows.
+    ///
+    /// The epilogue's burning forest uses the watching alone (BeginWatch): a player who crawled to their death
+    /// there watches the ones still crawling until the camera pans over the forest (World.EpilogueSync). Nothing is
+    /// marked dead and no permadeath follows; with nobody left to watch the camera stays on the body.
     /// For a client that deletes only its copy of the host's world in the mod's cache (SaveRedirect).
     /// </summary>
     public static class Spectator
     {
         public static bool Active { get; private set; }
+
+        /// <summary>Watching in the epilogue (BeginWatch): no permadeath, the profile isn't touched.</summary>
+        public static bool Epilogue { get; private set; }
 
         /// <summary>Lets the game's permadeath screen through (when there's nobody left to watch).</summary>
         internal static bool AllowPermadeath;
@@ -151,8 +158,35 @@ namespace DarkwoodMP.World
             Permadeath();
         }
 
+        /// <summary>The epilogue: watch the players still playing, if any (true), without dying for good.</summary>
+        internal static bool BeginWatch()
+        {
+            var s = Session.Instance;
+            if (Active || s == null || !s.Active) return false;
+            var playing = Playing();
+            if (playing.Count == 0) return false;
+            Epilogue = true;
+            Active = true;
+            _watching = playing[0].Owner;
+            Plugin.Log.LogInfo($"[epilogue] watching {s.NameOf(_watching)} until the others have crawled too");
+            var player = Player.Instance;
+            if (player != null)
+                foreach (var c in player.GetComponentsInChildren<Collider>()) if (c != null) c.enabled = false;
+            _body = player != null ? player.GetComponent<Rigidbody>() : null;
+            Plugin.Instance.StartCoroutine(Run());
+            return true;
+        }
+
+        /// <summary>The epilogue's watching ends (the pan): the camera is the caller's again.</summary>
+        internal static void EndWatch()
+        {
+            if (!Epilogue) return;
+            End();
+        }
+
         private static void Begin(ulong first)
         {
+            Epilogue = false;
             Active = true;
             _watching = first;
             if (Session.Instance.IsClient) Characters.Instance?.SendDead(); // the host keeps it with our character
@@ -189,6 +223,11 @@ namespace DarkwoodMP.World
                 var s = Session.Instance;
                 bool inSession = s != null && s.Active && s.Connected && WorldShare.InWorld;
                 var playing = inSession ? Playing() : new List<RemotePlayer>();
+                if (playing.Count == 0 && Epilogue)
+                {
+                    yield return null; // nobody else crawling: stay put until the pan (EndWatch)
+                    continue;
+                }
                 if (playing.Count == 0)
                 {
                     if (!WorldShare.InWorld) { End(); yield break; } // the world is being replaced (a reload): it decides again
@@ -225,6 +264,7 @@ namespace DarkwoodMP.World
         private static void End()
         {
             Active = false;
+            Epilogue = false;
             var cam = Singleton<CamMain>.Instance;
             if (cam != null) cam.followTarget = null;
             RestoreCone();
@@ -243,6 +283,7 @@ namespace DarkwoodMP.World
             _coneLight = float.NaN; // a living player's getFOVAngle sets the cone again every frame
             Active = false;
             AllowPermadeath = false;
+            Epilogue = false;
             _lastAlive.Clear();
             _body = null;
         }
@@ -253,6 +294,7 @@ namespace DarkwoodMP.World
             if (!Active) return;
             string name = Session.Instance?.NameOf(_watching) ?? "?";
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
+            if (Epilogue) { GUI.Label(rect, $"Watching {name}. Click for the next player.", Plugin.NameTagStyle); return; }
             GUI.Label(rect, $"You're dead. Watching {name}. Click for the next player, right-click for the one before.", Plugin.NameTagStyle);
         }
     }

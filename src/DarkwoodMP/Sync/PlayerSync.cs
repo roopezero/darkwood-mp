@@ -145,6 +145,7 @@ namespace DarkwoodMP.Sync
             if (MapMarkers.MapOpen) { MapMarkers.DrawNames(); return; }
             var cam = Camera.main;
             if (cam == null) return;
+            if (Player.Instance != null && Player.Instance.inEpilogue) return; // the ending shows no UI
             foreach (var r in Remotes.Values)
             {
                 if (r.Root == null || !r.Root.activeSelf) continue;

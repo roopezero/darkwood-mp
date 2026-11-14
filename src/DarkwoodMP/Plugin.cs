@@ -88,6 +88,7 @@ namespace DarkwoodMP
             !WorldShare.InWorld ? "To host, load your world first (Start Game), then press Esc and choose Multiplayer in the pause menu."
             // After leaving someone's game you're still in your copy of their world (your own saves are untouched).
             : WorldShare.Instance?.PlayingHostCopy == true ? "This is your copy of another host's world. To host, go back to the main menu and load your own world."
+            : EpilogueSync.InEpilogueAlone() ? "This world is in the epilogue, which can't be shared once it has begun. Host from a save before the end of the game."
             : null;
 
         /// <summary>Open the co-op panel (Multiplayer in the pause menu).</summary>

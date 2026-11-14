@@ -579,6 +579,7 @@ namespace DarkwoodMP.World
         static bool Prefix(Events __instance, string type)
         {
             if (ScriptedEvents.Current != ScriptedEvents.Part.All || WorldActions.Replaying || !WorldActions.Sharing || ScriptedEvents.AnimationSent) return true;
+            if (type == EpilogueSync.PanEvent) return true; // each game runs its own, when the host says (EpilogueSync)
             if (type == null || !__instance.worldEvents.TryGetValue(type, out var ge) || ge == null || (ge.fired && !ge.multipleFire)) return true;
             if (!WorldActions.ByLocalPlayer() && !ScriptedEvents.OnStack(typeof(DialogueWindow))) return true;
             var events = __instance;

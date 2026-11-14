@@ -236,9 +236,16 @@ namespace DarkwoodMP.Net
         /// </summary>
         StoryRequest = 88,
         /// <summary>
-        /// Host -> client: u8 what (1 the camera pans over the burning forest), str the world event
-        /// (epilogue_cameraPanOverBurningForest). A step of the shared epilogue that the host's game took; a joiner
-        /// whose own game hasn't taken it runs it a few seconds later (see World.EpilogueSync).
+        /// u8 what, str value. A step of the shared epilogue (see World.EpilogueSync):
+        /// host -> client, 1 the camera pans over the burning forest (value: the world event,
+        /// epilogue_cameraPanOverBurningForest): every player has crawled to their death, or a minute has passed
+        /// since the first did; each game runs its own pan once.
+        /// host -> client, 2 the outcomes screen (value "1" the forest burned, "0" it didn't): the host's
+        /// EpilogueOutcomes.burnedForest, which a joiner's outcomes screen uses.
+        /// client -> host, 3 our player crawled to their death in the burning forest (value empty).
+        /// 4 a player set the Being on fire in the crater (value: the GameEvents, Istota_lv1_events), which chooses
+        /// the burned-forest ending: client -> host as is; host -> client followed by u64 the player who did it.
+        /// The other games run the same events.
         /// </summary>
         EpilogueStep = 89,
         /// <summary>
