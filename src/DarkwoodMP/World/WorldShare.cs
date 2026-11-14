@@ -535,9 +535,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Why a joiner can't come in yet, or null. The prologue, and every dream, is a place of its own the
-        /// game loads for the player who's in it; someone joining then would be put where the host stands, in a
-        /// place their game hasn't got, and be sent to load again when the host comes out.
+        /// Why a joiner can't come in yet, or null. A dream is a place of its own the game loads for the player
+        /// who's in it; someone joining then would be put where the host stands, in a place their game hasn't got,
+        /// and be sent to load again when the host comes out. The prologue's stages are the exception (World.Prologue).
         /// </summary>
         private static string HostNotReady()
         {
@@ -549,17 +549,19 @@ namespace DarkwoodMP.World
                 TestHoldSecs = 0f;
             }
             // The prologue on a new game: the intro film (WorldGenerator.playingIntro), then the forest
-            // (dream_tutorial_00, a separate location), then a dream (dream_tutorial_01).
-            var gen = Singleton<WorldGenerator>.Instance;
+            // (dream_tutorial_00, a separate location), then a dream (dream_tutorial_01). The two stages are played
+            // together: a joiner goes into the stage the host is in as it loads the snapshot (World.Prologue). Only
+            // the film, and the moments between the stages or in their cutscenes, keep it waiting.
+            if (World.Prologue.Film) return Prologue;
+            if (World.Prologue.Active)
+            {
+                string why = World.Prologue.WhyWait(WorldReady);
+                World.Prologue.NoteWait(why);
+                return why == null ? null : "The host is between parts of the prologue. You'll join in a moment.";
+            }
             var outside = Singleton<OutsideLocations>.Instance;
-            if ((gen != null && gen.playingIntro)
-                || (outside != null && outside.playerInOutsideLocation && outside.currentLocationName == "dream_tutorial_00"))
-                return Prologue;
             var dreams = Singleton<Dreams>.Instance;
-            if (dreams != null && dreams.dreaming)
-                return Core.currentProfile != null && Core.currentProfile.day <= 1 && !Core.currentProfile.skippedPrologue
-                    ? Prologue
-                    : "The host is in a dream. You'll join when they wake up.";
+            if (dreams != null && dreams.dreaming) return "The host is in a dream. You'll join when they wake up.";
             // A separate location is loaded only in the host's game, and the joiner would be put beside the host
             // there (Characters), on the world's grid of a game that hasn't loaded it. The snapshot would also be
             // saved while away, which the game itself never does.
@@ -568,11 +570,11 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        private const string Prologue = "The host is playing the prologue. You'll join when it's over.";
+        private const string Prologue = "The host is watching the prologue's intro. You'll join when it's over.";
         private const string NotInWorld = "The host isn't in a saved game yet. Join once they've loaded their world.";
 
         /// <summary>Test (map test's "hold-joiners"): for this many seconds from the first joiner, answer as if the
-        /// host were in the prologue.</summary>
+        /// host were watching the prologue's intro film.</summary>
         internal static float TestHoldSecs;
         private static float _testHoldFrom = -1f;
 

@@ -104,7 +104,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 182 | LevelTaken | C→H | u8 our player's own level |
 | 183 | SkillReset | C→H | nothing: a request to reset our skills (in our morning, once a day) |
 | 184 | DreamStart | H→C | str dream preset: the host's level dream; go into it |
-| 185 | DreamEnd | both | str outcome: the shared dream ends (a client's goes to the host, which passes it on) |
+| 185 | DreamEnd | both | str outcome, str dream: the shared dream (a level dream, a prologue stage or the epilogue) ends (a client's goes to the host, which passes it on if it's the host's dream) |
 | 190 | JoinNotice | H→C | str name, u8 what (0 is joining, 1 stopped joining before getting in) |
 | 250 | ViewRect | C→H | u16 half width, u16 half height of the area the client's game keeps running round its player |
 | 251 | StackSize | H→C | u16 the host's stack size (0: the game's own), after Welcome and when it changes; used until the session ends |

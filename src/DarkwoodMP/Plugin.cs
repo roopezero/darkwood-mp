@@ -1030,6 +1030,7 @@ namespace DarkwoodMP
             Progression.Update();
             SkillsPanel.Update(_showMenu);
             DreamSync.Update();
+            Prologue.Update();
             Locations.Update();
             ViewRects.Update();
             InfectionSync.Update();

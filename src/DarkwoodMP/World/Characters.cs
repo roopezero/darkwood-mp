@@ -284,6 +284,7 @@ namespace DarkwoodMP.World
         public void SaveNow()
         {
             if (_quitSent || !_have || !NetEnemies.ClientMode || !WorldShare.InWorld) return;
+            if (Prologue.Active) return; // the prologue's character isn't kept: the host keeps ours from its end on
             _nextSave = Time.unscaledTime + CharacterInterval;
             var p = Player.Instance;
             try
@@ -327,8 +328,11 @@ namespace DarkwoodMP.World
             }
             try
             {
+                // In the prologue, a new character is what the stage made it (its own items): only put beside the host.
+                bool prologue = Prologue.Active && (kind == 0 || kind == 2);
                 if (kind == 1 || kind == 3) ApplyRecord(p, ps, inv, hot);
-                if (kind == 3 && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
+                if (prologue) { if (spawn != Vector3.zero) p.transform.position = spawn; }
+                else if (kind == 3 && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
                 else if (kind == 0) Fresh(p, spawn);
                 // A copy of the host's: keep it, beside them. Our own (kind 1) stays where it was saved, not on the
                 // host (or at 0,0 when no position was given).
@@ -337,7 +341,7 @@ namespace DarkwoodMP.World
                 p.refreshRecipes();
                 Reequip(p);
                 Progression.AfterCharacter(p);
-                Plugin.Log.LogInfo(kind == 1 ? "Your character in this world is back" : kind == 3 ? "Your character from the last chapter is back, beside the host" : kind == 0 ? "A new character for you in this world" : "You start as a copy of the host's character");
+                Plugin.Log.LogInfo(prologue ? "A new character for you in the host's prologue" : kind == 1 ? "Your character in this world is back" : kind == 3 ? "Your character from the last chapter is back, beside the host" : kind == 0 ? "A new character for you in this world" : "You start as a copy of the host's character");
             }
             catch (Exception e) { Plugin.Log.LogError($"Couldn't load your character: {e}"); }
             _have = true;
@@ -349,7 +353,7 @@ namespace DarkwoodMP.World
         /// of another player or in a wall. host: where the host stands, kept clear too (we may not have heard where
         /// it is yet).
         /// </summary>
-        private static void PlaceFree(Player p, Vector3? host)
+        internal static void PlaceFree(Player p, Vector3? host)
         {
             var want = p.transform.position;
             var at = Sync.SpawnSpot.Find(p, want, host.HasValue ? new[] { host.Value } : null);

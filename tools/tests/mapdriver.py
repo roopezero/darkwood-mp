@@ -210,6 +210,11 @@ def main():
 
     # The last dumps: around the test area, every client against the host.
     t0 = time.time()
+    if getattr(sc, "FINAL_AROUND_HOST", False):
+        # A module whose steps move everyone (the prologue's end): the final dumps around the host's centre now.
+        where = host.cmd("do", "where")
+        log(f"host's centre for the final dumps: {where}")
+        x, z = where.split()[1:3]
     req = getattr(sc, "REQUIRE", None)
     bad = compare_all(ctls, dump_all(ctls, "", x, z, work), None if req is None else ",".join(req))
     print(f"  phase: final dumps and compare in {time.time() - t0:.0f} s", flush=True)

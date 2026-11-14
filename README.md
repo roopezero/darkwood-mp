@@ -15,6 +15,7 @@ DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com
 - **Shared world.** Doors, barricades, traps, containers, traders, furniture, fire, generators, the time of day, nights, weather and quest progress are the same for everyone. What one player takes from a cupboard is gone for the others.
 - **Your character is yours.** The host keeps each friend's character (items, health, skills) and gives it back when they rejoin.
 - **Shared levels, your own skills.** Everyone cooks into one shared essence bar and gets the same levels, but each player picks their own skills, on a new **Skills panel** (press **K**). The level dreams are dreamt together.
+- **The prologue together.** Start a new game and your friends join you in the prologue once its opening film is over.
 - **The world keeps going.** With others in the game, the pause menu, map and journal don't pause the world.
 - **Dying for good** (Nightmare, or Hard with no lives left) lets you watch your friends until the game is over.
 - **Your saves are safe.** When you join someone's game, your own saves aren't touched.
@@ -84,7 +85,7 @@ If things ever look out of sync, open the Multiplayer window (Escape, *Multiplay
 - **The menu looks like the normal game.** The mod didn't load. On Linux, check the launch options are exactly `./darkwood_mp.sh %command%`. On Windows, check that `winhttp.dll` is next to `Darkwood.exe` (see the Windows Defender note above). If there's no `BepInEx\LogOutput.log` in the game folder after starting the game, and your `Darkwood.exe` is 32-bit, use `DarkwoodMP-win_x86.zip` instead.
 - **"Different DarkwoodMP version".** Everyone needs the same mod version.
 - **"No answer" when joining by address.** The host's router must forward port 27720 (TCP and UDP), and the host's firewall must allow it.
-- **"The host is playing the prologue"** (or "in a dream"). Wait: you join by yourself when they're out of it.
+- **"The host is watching the prologue's intro"** (or "in a dream"). Wait: you join by yourself when they're out of it.
 - **"The host is playing the ending".** Nobody can join during the epilogue; join after it. A save that is already in the epilogue can't be hosted.
 - **The LAN tab finds nothing.** The host's firewall must allow UDP port 27720.
 

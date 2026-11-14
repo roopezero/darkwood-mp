@@ -20,7 +20,7 @@ namespace DarkwoodMP.World
 
         public static void Register()
         {
-            // "hold-joiners SECS" (host, before the join): answer joiners as if in the prologue for SECS from the first.
+            // "hold-joiners SECS" (host, before the join): answer joiners as if watching the prologue's intro for SECS from the first.
             Add("hold-joiners", (a, r) =>
             {
                 WorldShare.TestHoldSecs = a.Length > 0 ? F(a[0]) : 15f;
@@ -52,9 +52,9 @@ namespace DarkwoodMP.World
         private static IEnumerator JoinWaited(string[] a, Result r)
         {
             var lines = MapScenarioIssues.LogLines();
-            int wait = lines.FindIndex(l => l.Contains("Waiting to join: The host is playing the prologue"));
+            int wait = lines.FindIndex(l => l.Contains("Waiting to join: The host is watching the prologue"));
             int ready = lines.FindLastIndex(l => l.Contains("World ready"));
-            if (wait < 0) r.Fail("no \"Waiting to join: The host is playing the prologue\" in the log");
+            if (wait < 0) r.Fail("no \"Waiting to join: The host is watching the prologue\" in the log");
             else if (ready < wait) r.Fail("the world wasn't ready after the wait");
             else r.Info = $"waited ({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
             yield break;

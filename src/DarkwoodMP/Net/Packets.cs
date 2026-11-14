@@ -98,7 +98,7 @@ namespace DarkwoodMP.Net
         HostAway = 32,
         /// <summary>Either way: ObjRef, vec3 pos, quat rot, u8 flags (1 last: the drag ended here, or a pushed object came to rest here): an object a player is dragging or pushed (see World.DragSync). The host takes a drag's moves only from its owner (DragClaim, DragOwner), and a lone end (last) only while nobody drags it.</summary>
         ObjMove = 33,
-        /// <summary>Host -> client: str why. Not yet (the host is loading, or in the prologue or a dream): send Hello again in a few seconds. Also while the host makes its world for the joiner (WorldShare.Preparing): its SaveOffer follows by itself. And for a NeedSave of a world no longer offered: start again with Hello.</summary>
+        /// <summary>Host -> client: str why. Not yet (the host is loading, watching the prologue's intro film or between its parts, or in a dream): send Hello again in a few seconds. Also while the host makes its world for the joiner (WorldShare.Preparing): its SaveOffer follows by itself. And for a NeedSave of a world no longer offered: start again with Hello.</summary>
         JoinWait = 34,
         /// <summary>Either way: u64 thrower, str item type, vec3 pos, quat rot, vec3 velocity, vec3 land target, f32 distance (-1: dropped at the thrower's feet, Player.dropItem): something thrown or dropped (see World.ThrowSync).</summary>
         ItemThrown = 35,
@@ -397,9 +397,10 @@ namespace DarkwoodMP.Net
         /// </summary>
         DreamStart = 184,
         /// <summary>
-        /// Either way: str the outcome (Dreams.outcome, e.g. "playerDeath"). The shared dream ends with this outcome.
+        /// Either way: str the outcome (Dreams.outcome, e.g. "playerDeath"), str the shared dream that ended (its
+        /// DreamSync.Shared: a level dream, a stage of the prologue, World.Prologue, or the epilogue, Chapters.EpilogueDream). The shared dream ends with this outcome.
         /// From a client: its dream ended (it died, or reached the end); the host ends its own with that outcome and
-        /// passes it on. From the host: end yours with it (World.DreamSync).
+        /// passes it on, if it's the dream the host is in. From the host: end yours with it (World.DreamSync).
         /// </summary>
         DreamEnd = 185,
         /// <summary>Host -> clients: str name, u8 what (0 is joining: the host let their Hello in and is getting its world to them; 1 stopped joining before they got in). "Joined" is the PlayerInfo after Welcome.</summary>

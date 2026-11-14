@@ -178,7 +178,8 @@ namespace DarkwoodMP
             {
                 if (kv.Key == Sync.PlayerSync.DummyId || !s.Peers.Contains(kv.Key)) continue;
                 var last = kv.Value.Last;
-                if (last != null && Mathf.Abs(last.Position.x) < 50000f && !last.Away) n++;
+                // In the world, or with us in the prologue's stage (a place on the far-off grid, World.Prologue).
+                if (last != null && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away) || World.Prologue.InStage)) n++;
             }
             return n;
         }

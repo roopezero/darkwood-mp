@@ -43,7 +43,7 @@ while time.time() - t0 < SECS and not stop and not (UNTIL and UNTIL <= seen):
     now = time.time()
     if dream_end_at and now >= dream_end_at:
         dream_end_at = None
-        s.sendall(frame(bytes([185]) + s16("no_such_outcome")))
+        s.sendall(frame(bytes([185]) + s16("no_such_outcome") + s16("epilog_part1a_dream")))  # outcome, shared dream
         print("sent a made-up DreamEnd (no_such_outcome)", flush=True)
     if now >= next_state:
         s.sendall(player_state()); next_state = now + 0.05

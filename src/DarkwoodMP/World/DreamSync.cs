@@ -41,7 +41,7 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.DreamStart, OnStart);
             s.Register(MsgType.DreamEnd, OnEnd);
-            s.OnSessionEnded += () => { Shared = null; _hostLevelDream = false; _pendingStart = _pendingEnd = null; };
+            s.OnSessionEnded += () => { Shared = null; _hostLevelDream = false; _pendingStart = _pendingEnd = null; _inputsCheckFrom = 0f; };
         }
 
         private static bool InDream(Dreams d) => d != null && (d.dreaming || d.dreamPrepared || d.switchingDream || Core.EnteringDream);
@@ -84,10 +84,18 @@ namespace DarkwoodMP.World
         {
             var w = S.Begin(MsgType.DreamEnd);
             w.WriteStr(outcome);
+            w.WriteStr(Shared ?? "");
             return w;
         }
 
         internal static void Started() => _ended = false;
+
+        /// <summary>The prologue's stages are dreamt together too (World.Prologue): this is the one every game is in.</summary>
+        internal static void SharePrologue(string stage)
+        {
+            Share(stage);
+            Plugin.Log.LogInfo($"[dream] the prologue's {stage}: dreamt together");
+        }
 
         /// <summary>A dream from the story everyone dreams together (the epilogue, EpilogueSync).</summary>
         internal static void Share(string name) { Shared = name; _ended = false; }
@@ -100,6 +108,7 @@ namespace DarkwoodMP.World
         private static void EndHere(Dreams d, string outcome)
         {
             _ended = true;
+            if (NetEnemies.ClientMode) _inputsCheckFrom = Time.unscaledTime + InputsGrace;
             d.outcome = outcome;
             WorldActions.Replaying = true;
             try { d.initiateEndDreaming(); }
@@ -109,10 +118,13 @@ namespace DarkwoodMP.World
         private static void OnEnd(ulong from, PacketReader r)
         {
             string outcome = r.ReadStr();
+            string dream = r.ReadStr();
             var d = Singleton<Dreams>.Instance;
             if (S.IsHost)
             {
                 if (Shared == null || d == null || !d.dreaming || _ended || !EpilogueSync.OutcomeAllowed(d, outcome)) return;
+                // The end of a dream we're no longer in (a prologue stage that ended here a moment before).
+                if (dream != Shared) { Plugin.Log.LogInfo($"[dream] {S.NameOf(from)}'s {dream} ended, but we're in {Shared}: not passed on"); return; }
                 Plugin.Log.LogInfo($"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours and everyone's end");
                 S.Broadcast(EndMessage(outcome), Channel.Control, reliable: true, except: from);
                 EndHere(d, outcome);
@@ -141,10 +153,37 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[dream] the host's level dream {name}: we go in");
         }
 
+        // A client: a dream ended by another game's say can end in the middle of one of our own cutscenes or
+        // fades, and their end (which gives the player back) may never come then. A few seconds after the end, once
+        // nothing of the game's own holds the player (no cutscene, transition, load or dialogue), let them go.
+        private const float InputsGrace = 6f, InputsGiveUp = 40f;
+        private static float _inputsCheckFrom;
+
+        private static void CheckInputs(Dreams d)
+        {
+            if (Time.unscaledTime > _inputsCheckFrom + InputsGiveUp || !WorldShare.InWorld) { _inputsCheckFrom = 0f; return; }
+            if (!Core.forbidInputs) { _inputsCheckFrom = 0f; return; }
+            if (!InputsHeldByNothing(d)) return;
+            _inputsCheckFrom = 0f;
+            Core.forbidInputs = false;
+            Plugin.Log.LogInfo("[dream] the shared dream's end left our player held: let go");
+        }
+
+        /// <summary>Nothing of the game's own holds the player now (Core.forbidInputs is left over, if set).</summary>
+        internal static bool InputsHeldByNothing(Dreams d)
+        {
+            var ctl = Singleton<Controller>.Instance;
+            var o = Singleton<OutsideLocations>.Instance;
+            var p = Player.Instance;
+            return p != null && !Core.cantChangeForbidInputs && !Core.loadingGame && (ctl == null || !ctl.playingCutscene)
+                && (o == null || !o.loading) && (d == null || !d.switchingDream) && !Core.EnteringDream && !p.inDialogue;
+        }
+
         /// <summary>Call every frame: a client starts the host's dream once its own menus let it, and ends it if the host's already did.</summary>
         public static void Update()
         {
             var d = Singleton<Dreams>.Instance;
+            if (_inputsCheckFrom > 0f && Time.unscaledTime > _inputsCheckFrom) CheckInputs(d);
             if (_pendingEnd != null && d != null && d.dreaming && !d.switchingDream)
             {
                 string o = _pendingEnd; _pendingEnd = null;

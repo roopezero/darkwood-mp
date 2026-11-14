@@ -58,7 +58,9 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 **When the host leaves:** if the host goes back to the main menu, the server stops and everyone else goes back to theirs, with the co-op panel open saying why. The same happens if the host quits or their connection breaks: over Direct, a connection that has sent nothing (not even its keepalive, every 3 seconds) for 15 seconds is closed, on both sides; over Steam, when Steam gives up on the connection. Your character is as the host last saved it. If your own connection dropped, join again: the host takes your new connection in place of the old one, so you don't wait for it to time out. After you leave a host's game you're still in your copy of their world (your own saves are untouched); you can't host that copy, so go back to the main menu and load your own world to host.
 
-**Joining while the host is busy:** while the host's world is loading, or the host is in the prologue or a dream (a place of its own their game loads just for them), you wait, and come in by yourself once they're out. That includes the prologue's intro film and its first part in the forest.
+**The prologue together:** a new game's prologue is played together. Join once the host's intro film is over: you come into the part of the prologue the host is in (the forest, or the dream after it), with that part's own items, beside the host. When anyone reaches the end of a part, everyone goes on into the next one, and at the end everyone wakes at the hideout. Your character is kept from then on (what you carried in the prologue isn't).
+
+**Joining while the host is busy:** while the host's world is loading, the host is watching the prologue's intro film or is between its parts, or the host is in a dream (a place of its own their game loads just for them), you wait, and come in by yourself once they're out.
 
 **The game doesn't pause:** with others in the world, the pause menu, the map, the journal and dialogue stop your own character but not the world. Enemies and the clock go on, and the pause menu shows the world, dimmed, behind it. Playing alone, the pause menu shows the world behind it too (paused, as in the game).
 
@@ -139,7 +141,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 - **Refused: "different DarkwoodMP version".** Everyone needs a mod version with the same protocol (see the release notes).
 - **A Steam join stops partway through the world download.** Fixed in 0.11.1: only the host needs it.
 - **Refused: "isn't in a saved game yet".** The host has to be in their world, not the menu.
-- **"The host is playing the prologue" (or "in a dream", or "away in another place").** Wait: you join by yourself when they're out of it.
+- **"The host is watching the prologue's intro" (or "between parts of the prologue", "in a dream", or "away in another place").** Wait: you join by yourself when they're out of it.
 - **"The host is playing the ending."** Nobody can join while the host plays the epilogue (it ends at the credits); join after it.
 - **The LAN tab finds nothing.** The search asks the broadcast address first (a host answering it shows at once), then every address on your /24 on port 27720 (that can take ten seconds, with hosts showing as they answer), so the host's firewall must let UDP 27720 in. A host on another port is found by broadcast only, which Windows' firewall may block: add it under *Add server* instead.
 - **The whole screen goes black in one spot and comes back when you step away.** The game switches your view off while something solid is under your character. Please report it with your `LogOutput.log`: the mod logs a `[view]` line there naming what it was.

@@ -4,7 +4,7 @@ The steps are in src/DarkwoodMP/World/MapScenarioStatus.cs."""
 import os
 
 PRE_JOIN = [
-    # The joiner is answered as if the host were in the prologue for 15 s from its first Hello (JoinWait).
+    # The joiner is answered as if the host were watching the prologue's intro film for 15 s from its first Hello (JoinWait).
     ("host", "hold-joiners", "15"),
 ]
 

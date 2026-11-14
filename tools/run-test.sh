@@ -266,7 +266,8 @@ client_game_start() { # client_game_start N <args...>: client game N, from its f
   local cg ch; cg="$(cgame $n)"; ch="$(chome $n)"
   CLIENT_GAME="$cg" CLIENT_HOME="$ch" GAME_DIR="$GAME_DIR" "$ROOT/tools/setup-client-game.sh" $n >/dev/null || die "couldn't set up client game $n"
   safe_rm_in "$cg/BepInEx/cache/DarkwoodMP/worlds"; rm -f "$(clog $n)"
-  mkdir -p "$(dirname "$(culog $n)")"; CULOG0[$n]=$(size "$(culog $n)"); CLOG0[$n]=0
+  # A game starting moves the old Player.log to Player-prev.log and writes a new one: read it from its start.
+  mkdir -p "$(dirname "$(culog $n)")"; CULOG0[$n]=0; CLOG0[$n]=0
   # The timeout is only a safety net (client_game_stop ends it): the full map scenario takes over an hour.
   (cd "$cg" && HOME="$ch" setsid timeout ${CLIENT_TIMEOUT:-7200} ./darkwood_mp.sh --inner --dwmp-test-control $(cctl $n) "$@" >"$WORK/client-game-$n.out" 2>&1 &) </dev/null >/dev/null 2>&1
 }
@@ -342,12 +343,20 @@ test_world_up() { # test_world_up <extra args...>: the host plays a fresh test w
   $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
   echo "  phase: pre-join steps in $(( $(date +%s) - t0 )) s"
 }
+new_game_up() { # new_game_up: the host starts a new game (prologue not skipped) on a fresh copy of your saves, hosting it
+  local t0; t0=$(date +%s)
+  copy_saves "$WORK/sandbox"
+  ctl args --dwmp-test-start-window --dwmp-sandbox "$WORK/sandbox" --dwmp-start new --dwmp-start-host direct --dwmp-debug-world
+  wait_log "hosting with Direct" 600 || die "the new game wasn't hosted"
+  echo "  phase: host's new game made, its intro film over and hosting in $(( $(date +%s) - t0 )) s"
+}
 map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.py, results in DIR
   local dir="$2" rc
   export MAP_SCENARIO="$1"
   safe_rm "$WORK" "$dir"; mkdir -p "$dir"
   echo "  scenario: $MAP_SCENARIO"
-  test_world_up
+  # HOST_WORLD = "new" in the module: the host plays a new game instead of the test world.
+  if grep -q '^HOST_WORLD *= *"new"' "$T/$MAP_SCENARIO.py"; then new_game_up; else test_world_up; fi
   client_join 1 --dwmp-join 127.0.0.1:27720 --dwmp-debug-world
   $PY "$T/mapdriver.py" run $CTL $(cctl 1) "$dir"; rc=$?
   EXC=0; client_report 1 "$dir"

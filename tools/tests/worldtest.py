@@ -33,7 +33,7 @@ def hello(h=bytes(32), key="c" * 64, name="WorldBot", version=PROTO, game=GAME, 
     return frame(struct.pack("<BH", 1, version) + s16(game) + s16(key) + s16(password) + s16(mod) + s16(name) + h)
 
 def ask(s, r, hb, timeout=10):
-    """Send Hello and return the host's answer. JoinWait (34: it's loading, or in the prologue or a dream) means ask again soon."""
+    """Send Hello and return the host's answer. JoinWait (34: it's loading, watching the prologue's intro, or in a dream) means ask again soon."""
     for _ in range(100):
         s.sendall(hb)
         m = r.msg(timeout)
