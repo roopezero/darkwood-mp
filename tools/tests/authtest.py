@@ -18,6 +18,7 @@ CRATE, CRATE_AT = 20238, (-15011.0, -7390.0)                           # a locke
 FEEDER, FEEDER_AT = 18913, (-11464.0, -5849.0)                         # a feeder to build (a Constructible)
 OVEN, OVEN_AT = 102, (-12013.0, -5988.0)                               # an NPC with dialogue
 NOTE, NOTE_AT = 19005, (-12762.0, -6266.0)                             # a note by the generator: onActivate, its event removes it
+GENERATOR, GENERATOR_AT = 18912, (-12692.0, -6296.0)                   # Generator_02, off, 100 of 400 fuel
 WORLD_EVENT = "cottageTrailer_txt_5"                                   # a world event that hasn't run
 
 def join(s, r, name, key="c" * 64, h=bytes(32)):
@@ -41,6 +42,7 @@ my_id, h = join(s, r, "Asker")
 print("joined as", my_id, flush=True)
 
 host_pos, enemies, enemy_pos, seq = None, {}, {}, 0
+gen_fuel = None  # the generator's level, as the host last sent it (Fuel)
 pos = None
 
 def state(x, z):
@@ -50,7 +52,7 @@ def state(x, z):
 
 def pump(secs, until=None):
     """Read messages for up to secs; returns the first one until(m) accepts (or None)."""
-    global host_pos
+    global host_pos, gen_fuel
     end = time.time() + secs
     while time.time() < end:
         if pos: state(*pos)
@@ -73,6 +75,10 @@ def pump(secs, until=None):
             extra = f" flags {m[11]}" if kind in (1, 2, 3, 4, 5, 6) else ""
             if kind == 4: extra += f" health {struct.unpack_from('<i', m, 12)[0]}"
             print(f"  ObjState {k}:{oid} {desc}{extra}", flush=True)
+        elif t == 44:  # Fuel from the host: the level
+            oid = struct.unpack_from("<q", m, 2)[0]; level = struct.unpack_from("<f", m, 11)[0]
+            if oid == GENERATOR: gen_fuel = level
+            print(f"  Fuel {m[1]}:{oid}: {level:.1f}{', running' if m[15] else ''}", flush=True)
         elif t == 43:
             cx, _, cz = struct.unpack_from("<fff", m, 1)
             print(f"  PlayerCorrection to {cx:.0f},{cz:.0f}", flush=True)
@@ -208,7 +214,7 @@ go(*OVEN_AT)
 request("talk to the oven", talk(OVEN, 1))
 # A second player wants the same NPC while we talk to them.
 s2 = socket.create_connection(("127.0.0.1", PORT), timeout=10); r2 = Reader(s2)
-join(s2, r2, "Asker2", key="d" * 64, h=h)
+id2, _ = join(s2, r2, "Asker2", key="d" * 64, h=h)
 print("Asker2 joined", flush=True)
 def request2(label, inner):
     global seq
@@ -234,6 +240,55 @@ while time.time() < end2:  # Asker2 reads too, or what queued up for it hides th
         while True: r2.msg(0.01)
     except socket.timeout: pass
 request2("Asker2: talk to the oven now", talk(OVEN, 1))
+# Fuel (World.FuelSync): two players pour into the same generator at the same moment; the host adds both.
+# A pour is the amount added (not the level the client has now), so both count.
+def fuel(amount, oid=GENERATOR):
+    return bytes([44, SAVED]) + struct.pack("<q", oid) + bytes([1]) + struct.pack("<f", amount) + bytes([0])
+def drain2(secs):
+    """Asker2 reads what queued up for it (it isn't checked), while Asker keeps reading too."""
+    end = time.time() + secs
+    while time.time() < end:
+        pump(0.05)
+        try:
+            while True: r2.msg(0.01)
+        except socket.timeout: pass
+go(*GENERATOR_AT)
+s2.sendall(player_state(id2, GENERATOR_AT[0] + 30, 16.0, GENERATOR_AT[1])); drain2(1.0)
+request("pour 1 into the generator", fuel(1.0))
+pump(0.5)
+base = gen_fuel
+print(f"generator at {base:.1f}" if base is not None else "generator: no level from the host", flush=True)
+print("Asker pours 10 and Asker2 pours 15 at the same moment:", flush=True)
+seq += 1; sa = seq; s.sendall(frame(bytes([40]) + struct.pack("<I", sa) + fuel(10.0)))
+seq += 1; sb = seq; s2.sendall(frame(bytes([40]) + struct.pack("<I", sb) + fuel(15.0)))
+got = {}
+end = time.time() + 5
+while time.time() < end and len(got) < 2:
+    m = pump(0.05, lambda m: m[0] == 41 and struct.unpack_from("<I", m, 1)[0] == sa)
+    if m: got["Asker"] = m[5]
+    try:
+        while True:
+            m = r2.msg(0.01)
+            if m[0] == 41 and struct.unpack_from("<I", m, 1)[0] == sb: got["Asker2"] = m[5]
+    except socket.timeout: pass
+print(f"  -> verdicts {', '.join(f'{k} ' + ('ok' if v else 'refused') for k, v in sorted(got.items()))}", flush=True)
+drain2(1.0)
+if base is not None and gen_fuel is not None:
+    print(f"fuel sum: {base:.1f} + 10 + 15 = {gen_fuel:.1f}: {'PASS' if abs(gen_fuel - (base + 25)) < 0.1 else 'FAIL'}", flush=True)
+else: print("fuel sum: FAIL (no level from the host)", flush=True)
+request("pour 9999 into the generator (more than a can holds)", fuel(9999.0))
+pump(0.5)
+print(f"generator at {gen_fuel:.1f} after it: {'PASS' if base is not None and abs(gen_fuel - (base + 25)) < 0.1 else 'FAIL'}", flush=True)
+print("fill the generator, 30 at a time:", flush=True)
+step, full = 30.0, None
+for _ in range(20):
+    res = request(f"  pour {step:.0f}", fuel(step))
+    if res is None: break
+    ok, reason, result = res
+    if not ok and "more than a can" in reason and step > 5: step = 5.0; continue
+    if not ok: full = reason; break
+pump(0.5)
+print(f"generator full at {gen_fuel:.1f}, then refused ({full}): {'PASS' if full and 'full' in full else 'FAIL'}", flush=True)
 s2.close()
 go(hx + 40, hz)
 

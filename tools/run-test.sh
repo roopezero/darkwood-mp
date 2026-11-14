@@ -44,7 +44,7 @@
 #   host-chapter  a scripted player asks for the next chapter: refused from far, for a wrong chapter, an unknown event, the
 #                 epilogue; allowed beside it; then ChapterStart, WorldReload and the new world offered
 #   host-end      the host starts the epilogue: the player gets GameEnd, the server stops
-#   host-authority  a scripted client's requests the host allows or refuses: reach, state, damage, a disarm roll, speed
+#   host-authority  a scripted client's requests the host allows or refuses: reach, state, damage, a disarm roll, fuel, speed
 #   menu-entry    the menu list takes a click (Join Game in the main menu, Multiplayer in the pause menu) and opens the panel; screenshots into $WORK/shots
 #   solo          playing alone (no session) on a copy of your save: skills, the Skills panel, the stove's reset;
 #                 screenshots into $WORK/solo

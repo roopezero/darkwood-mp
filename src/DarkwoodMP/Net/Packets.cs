@@ -126,8 +126,11 @@ namespace DarkwoodMP.Net
         PlayerCorrection = 43,
         /// <summary>
         /// Either way: ObjRef (u8 kind, i64 id), u8 what (1 generator, 2 saw), f32 fuel, u8 on (generators: running).
-        /// From a client: its player poured fuel (the host checks reach and the amount, passes it on, or sends back how
-        /// it is). From the host: how much a generator has and whether it runs, when that changed.
+        /// From a client, only inside a Request: fuel is the amount its player added (a pour, at most a can's worth),
+        /// or minus a log's worth for each log cut at the saw; on is 0. The host adds it to its own level, up to the
+        /// tank (Verdict result: the amount it took), or refuses it (too far, more than a can, a full tank) after
+        /// sending the level back. From the host: fuel is the level and on whether it runs, after a pour and when that
+        /// changed (World.FuelSync).
         /// </summary>
         Fuel = 44,
         /// <summary>Client -> host: str npc, f32 x, f32 z (where he stands here): the trader appeared here; what do they have? A host with no copy of a joiner's morning trader puts its own in that hideout (World.TraderSync).</summary>

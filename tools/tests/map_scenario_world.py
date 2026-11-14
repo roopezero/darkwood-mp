@@ -77,6 +77,8 @@ STEPS = [
     ("client", "fuel", "Generator_02@-480,-320", "20"),
     ("client", "switch", "Generator_02@-480,-320", "on", {"settle": 2}),
     ("host", "fuel", "Generator_02@-691,-175", "10"),
+    # The client pours into the same generator: it adds to the host's 10 (the dumps' fuel must match).
+    ("client", "fuel", "Generator_02@-691,-175", "10"),
     ("host", "fuel", "saw_stationary_01@-480,-160", "15"),
     ("client", "fuel", "saw_stationary_01@-480,-160", "15"),
     # The generator doesn't light its lamps by itself (Generator.turnOn only gives them power): each player

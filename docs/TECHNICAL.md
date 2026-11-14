@@ -63,7 +63,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 41 | Verdict | H→C | u32 seq, u8 ok, str reason, str result |
 | 42 | ObjState | H→C | ObjRef, u8 kind, the kind's state (to roll back to) |
 | 43 | PlayerCorrection | H→C | vec3 (where you're put back) |
-| 44 | Fuel | both | ObjRef, u8 what (generator, saw), f32 fuel, u8 running |
+| 44 | Fuel | both | ObjRef, u8 what (generator, saw), f32 fuel, u8 running. From a client (in a Request): fuel is the amount poured, or minus a log's worth per log cut; the host adds it (result: the amount taken) and sends everyone the level |
 | 45–46 | TraderAsk (C→H), TraderStock (H→C) | | str npc, f32 x, f32 z (where he stands); str npc, bigstr contents (JSON) |
 | 47 | EnemyExplosion | H→C | vec3, str sound, str effect prefab |
 | 50 | PlayerSounds | both | u64 player, u8 n, n x (str audio id, f32 volume): the sounds on that player, at most 10 batches a second |
