@@ -197,7 +197,9 @@ namespace DarkwoodMP.World
                 foreach (var proxy in Combat.NetPlayerProxy.All.Values)
                     if (proxy != null && proxy.alive && !proxy.Away) Look(proxy.transform.position);
             // A client away (spectating) has no player of its own to push anything: it takes the host's word on all.
-            bool clientAway = _session.IsClient && Sync.PlayerCapture.LocalAway();
+            // Our pushes count wherever the host runs our area too (a separate location it placed, the shared dream):
+            // only in an area that's ours alone does what our player knocks over stay ours.
+            bool clientAway = _session.IsClient && !Locations.HostRunsHere();
             float nowT = Time.unscaledTime;
             List<Rigidbody> gone = null;
             foreach (var kv in _loose)
