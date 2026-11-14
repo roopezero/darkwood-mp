@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using HarmonyLib;
@@ -21,6 +24,8 @@ namespace DarkwoodMP.World
             DoorOpen = 1, DoorClose = 2, DoorBarricade = 3, DoorDestroyBarricade = 4, DoorDestroy = 5, DoorHit = 6,
             /// <summary>DoorLock: s the key type. DoorUnlock: a is 0 by the story, 1 with a key, 2 with a lockpick (Locked.unlock).</summary>
             DoorLock = 7, DoorUnlock = 8, DoorUndestroy = 9,
+            /// <summary>Host to clients: the story cleared the door's "blocked" (GameEvent modifyDoor unblock, Door.unblock), so a player can open it now.</summary>
+            DoorUnblock = 10,
             WindowBarricade = 11, WindowDestroyBarricade = 12, WindowHit = 13,
             TrapFired = 21, TrapSwitched = 22,
             /// <summary>Client to host: our player finished disarming this trap, or picking this locked crate; the host rolls whether it worked (Verdict result "1" or "0").</summary>
@@ -284,6 +289,7 @@ namespace DarkwoodMP.World
                         case Action.DoorLock: door.lockMe(str); break;
                         case Action.DoorUnlock: door.unlock(); break;
                         case Action.DoorUndestroy: door.unDestroy(); break;
+                        case Action.DoorUnblock: door.unblock(); break;
                     }
                 }
                 else
@@ -455,6 +461,7 @@ namespace DarkwoodMP.World
                 {
                     case Action.DoorOpen when door.destroyed: Authority.Refuse("the door is broken"); return false;
                     case Action.DoorOpen when isLocked: Authority.Refuse("the door is locked"); return false;
+                    case Action.DoorOpen when door.blocked: Authority.Refuse("the door is blocked"); return false;
                     // On a broken door the hammer's strokes rebuild it (Door.setBarricadeState calls unDestroy): that's a repair, allowed.
                     case Action.DoorBarricade when door.barricaded && !door.destroyed: Authority.Refuse("the door is already barricaded"); return false;
                     case Action.DoorDestroyBarricade when !door.barricaded: Authority.Refuse("the door isn't barricaded"); return false;
@@ -463,6 +470,7 @@ namespace DarkwoodMP.World
                     case Action.DoorUnlock when !locked.locked: Authority.Refuse("the door isn't locked"); return false;
                     case Action.DoorUnlock when x == 0f: Authority.Refuse(StoryOnly); return false;
                     case Action.DoorLock: Authority.Refuse(StoryOnly); return false;
+                    case Action.DoorUnblock: Authority.Refuse(StoryOnly); return false;
                     case Action.DoorUnlock when x == 1f && !HasKey(locked): Authority.Refuse($"nobody has the key ({locked.keyType})"); return false;
                     case Action.DoorHit when x > 1000f: Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false;
                 }
@@ -502,7 +510,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: tell a client how this thing really is (ObjState: ObjRef, u8 kind, then the kind's state), so it
         /// can put its copy back after a refused request.
-        /// door: u8 flags (1 open, 2 barricaded, 4 broken, 8 locked), i32 health, i32 barricade health, str key type.
+        /// door: u8 flags (1 open, 2 barricaded, 4 broken, 8 locked, 16 blocked), i32 health, i32 barricade health, str key type.
         /// window: u8 flags (1 barricaded), i32 barricade health. trap: u8 flags (1 armed).
         /// item: u8 flags (1 switched on, 2 locked, 4 searched, 8 broken, 16 its InteractiveItem is on, 32 its feeder is full), i32 health. padlock (when the request was
         /// about the padlock): u8 flags (1 locked). explosive (an Explodes that isn't an item): u8 flags (1 gone off).
@@ -523,7 +531,7 @@ namespace DarkwoodMP.World
             {
                 var l = door.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Door);
-                w.W.Write((byte)((door.opened ? 1 : 0) | (door.barricaded ? 2 : 0) | (door.destroyed ? 4 : 0) | (l != null && l.locked ? 8 : 0)));
+                w.W.Write((byte)((door.opened ? 1 : 0) | (door.barricaded ? 2 : 0) | (door.destroyed ? 4 : 0) | (l != null && l.locked ? 8 : 0) | (door.blocked ? 16 : 0)));
                 w.W.Write(door.health); w.W.Write(door.barricadeHealth);
                 w.WriteStr(l != null ? l.keyType ?? "" : "");
             }
@@ -574,6 +582,7 @@ namespace DarkwoodMP.World
                         var door = go != null ? go.GetComponent<Door>() : null;
                         if (door == null) break;
                         bool open = (f & 1) != 0, barricaded = (f & 2) != 0, broken = (f & 4) != 0, locked = (f & 8) != 0;
+                        door.blocked = (f & 16) != 0; // only the story sets or clears it (Door.unblock), and only the host runs that
                         if (broken && !door.destroyed) door.destroyDoor(true); // silently: a rollback, not the door breaking again
                         else if (!broken && door.destroyed) door.unDestroy();
                         var l = door.GetComponent<Locked>();
@@ -784,6 +793,49 @@ namespace DarkwoodMP.World
     {
         static void Prefix() => WorldActions.Depth++;
         static void Postfix(Door __instance) { if (WorldActions.Outermost() && WorldActions.Sharing) WorldActions.Send(WorldActions.Action.DoorUnlock, __instance.gameObject); }
+    }
+
+    /// <summary>
+    /// The story clearing a door's "blocked" (GameEvent modifyDoor unblock), which a player can't open through until
+    /// then (Player.itemDefaultAction says "blocked"). That step is the host's (ScriptedEvents.HostSteps), so the
+    /// host sends it to everyone; without this the joiners' copies stayed blocked for good (Piotrek's door).
+    /// Door.unblock only sets a field, so Mono inlines it into its caller and a patch on it never runs (tried: the
+    /// host unblocked, nothing was sent). The step's coroutine (GameEvent.fire, the only caller) calls
+    /// DoorUnblockPatch.Unblock instead, by a transpiler.
+    /// </summary>
+    [HarmonyPatch]
+    static class DoorUnblockPatch
+    {
+        static IEnumerable<MethodBase> TargetMethods()
+        {
+            foreach (var t in typeof(GameEvent).GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
+                if (t.Name.StartsWith("<fire>") && typeof(System.Collections.IEnumerator).IsAssignableFrom(t))
+                {
+                    var m = AccessTools.Method(t, "MoveNext");
+                    if (m != null) yield return m;
+                }
+        }
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var unblock = AccessTools.Method(typeof(Door), nameof(Door.unblock));
+            var ours = AccessTools.Method(typeof(DoorUnblockPatch), nameof(Unblock));
+            int swapped = 0;
+            foreach (var ci in instructions)
+            {
+                if (ci.Calls(unblock)) { yield return new CodeInstruction(OpCodes.Call, ours) { labels = ci.labels, blocks = ci.blocks }; swapped++; }
+                else yield return ci;
+            }
+            if (swapped == 0) Plugin.Log.LogWarning("DoorUnblockPatch: no Door.unblock in GameEvent.fire (game changed?)");
+        }
+
+        /// <summary>Door.unblock, and sent to the others when it cleared the block here.</summary>
+        public static void Unblock(Door door)
+        {
+            bool was = door.blocked;
+            door.unblock();
+            if (was && !door.blocked && WorldActions.Depth == 0 && WorldActions.Sharing) WorldActions.Send(WorldActions.Action.DoorUnblock, door.gameObject);
+        }
     }
 
     [HarmonyPatch(typeof(Window), nameof(Window.barricade))]

@@ -128,7 +128,7 @@ namespace DarkwoodMP.World
                     if (!ctx.Near(d.transform.position)) continue;
                     var l = d.GetComponent<Locked>();
                     var e = ctx.Add(d.gameObject);
-                    e["open"] = d.opened; e["locked"] = l != null && l.locked; e["health"] = d.health; e["broken"] = d.destroyed;
+                    e["open"] = d.opened; e["locked"] = l != null && l.locked; e["health"] = d.health; e["broken"] = d.destroyed; e["blocked"] = d.blocked;
                     e["leafTurned"] = !d.destroyed && DoorLeaf.Turned(d); // drawn open (Door.open pushes the leaf; lost on a switched-off door)
                     e["barricaded"] = d.barricaded; e["barricadeHealth"] = d.barricadeHealth; e["burning"] = d.GetComponent<Burn>() != null;
                 }

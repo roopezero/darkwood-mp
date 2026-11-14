@@ -19,7 +19,7 @@ s, r, my_id, _ = worldtest.join(PORT, "Observer")
 print("joined as", my_id, flush=True)
 host_pos = None
 ACTIONS = {41: "NpcDied", 21: "TrapFired", 22: "TrapSwitched", 23: "TrapDisarm", 31: "ItemOn", 32: "ItemOff", 33: "ItemUnlock", 34: "ItemSearched", 35: "PadlockUnlock", 1: "DoorOpen", 2: "DoorClose", 3: "DoorBarricade", 4: "DoorDestroyBarricade", 5: "DoorDestroy", 6: "DoorHit",
-           7: "DoorLock", 8: "DoorUnlock", 9: "DoorUndestroy", 11: "WindowBarricade", 12: "WindowDestroyBarricade", 13: "WindowHit",
+           7: "DoorLock", 8: "DoorUnlock", 9: "DoorUndestroy", 10: "DoorUnblock", 11: "WindowBarricade", 12: "WindowDestroyBarricade", 13: "WindowHit",
            51: "ItemHit", 52: "ItemBroken", 53: "ItemRepaired", 61: "Explode",
            90: "InteractiveSwitch", 91: "Removed", 92: "FeederUsed", 93: "LiquidLit",
            130: "VineHit", 131: "ShadowArmorDied"}

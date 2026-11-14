@@ -8,6 +8,9 @@
   A trap given to the player a moment before it places it is allowed (its character goes to the host first).
 - A door opened with a key: the host checks the key is in the (shared) journal; one sent without the key is
   refused, one with the key just picked up is allowed.
+- A door the story blocks (Door.blocked, as Piotrek's house is until the story clears it): blocked in both
+  games, cleared on the host by a scripted event (GameEvent modifyDoor unblock, the host's step),
+  which reaches the client, whose player then opens it.
 - The porter whistle: the host calls the porter, in both games; a call from a place where the player isn't is
   refused.
 """
@@ -47,6 +50,16 @@ STEPS = [
     ("host", "door-locked", "1", "yes"),
     ("client", "door-key", "1"),
     ("host", "door-locked", "1", "no"),
+
+    # The story clears the blocked door on the host; the client's copy follows, and its player opens it.
+    # Door 0 (the hideout's front door; only doors 0-4 are near, and 1-4 are locked, barricaded or broken by now)
+    # is blocked in both games, as a story door is in the save (Door.blocked is saved, so a joiner loads it so).
+    ("host", "door-block", "0"),
+    ("client", "door-block", "0"),
+    ("host", "door-story-unblock", "0"),
+    ("client", "door-blocked", "0", "no"),
+    ("client", "door-use", "0"),
+    ("host", "door-opened", "0", "yes"),
 
     # The porter whistle.
     ("client", "porter-forged"),

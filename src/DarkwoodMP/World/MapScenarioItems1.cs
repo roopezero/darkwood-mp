@@ -28,6 +28,11 @@ namespace DarkwoodMP.World
             Add("door-lock-key", DoorLockKey);
             Add("door-key", DoorKey, timeout: 40f); // the walk back from trap-place-far is 1400 long, then up to 8 s for the refusal
             Add("door-locked", DoorLocked);
+            Add("door-block", DoorBlock);
+            Add("door-story-unblock", DoorStoryUnblock);
+            Add("door-blocked", DoorBlocked);
+            Add("door-use", DoorUse, timeout: 30f);
+            Add("door-opened", DoorOpened);
             Add("porter-ready", PorterReady);
             Add("whistle", Whistle, timeout: 40f);
             Add("porter-came", PorterCame, timeout: 40f);
@@ -230,6 +235,87 @@ namespace DarkwoodMP.World
             while ((l != null && l.locked) != want && Time.realtimeSinceStartup < giveUp) yield return null;
             r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
             if ((l != null && l.locked) != want) r.Fail($"{r.Info}, not {(want ? "locked" : "open")}");
+        }
+
+        // ---- doors the story blocks ----------------------------------------------------------------------------
+
+        /// <summary>
+        /// "door-block N": door N closed and blocked here, as a story door is in the save until the story clears it
+        /// (Piotrek's house). Only the field is set, so nothing is sent: run it in each game.
+        /// </summary>
+        private static IEnumerator DoorBlock(string[] a, Result r)
+        {
+            var d = MapScenarioWorld.Nth<Door>(a[0]);
+            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            var l = d.GetComponent<Locked>();
+            if (d.destroyed || d.barricaded || (l != null && l.locked)) { r.Fail($"door {a[0]} ({d.name}) is broken, barricaded or locked"); yield break; }
+            if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
+            d.blocked = true;
+            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
+            if (d.opened) r.Fail($"{r.Info}: didn't close");
+        }
+
+        /// <summary>
+        /// "door-story-unblock N" (host): the story clears door N's block the way a scripted event does (GameEvent
+        /// modifyDoor unblock, the host's step, as in an event set off by a death).
+        /// </summary>
+        private static IEnumerator DoorStoryUnblock(string[] a, Result r)
+        {
+            var d = MapScenarioWorld.Nth<Door>(a[0]);
+            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            if (!d.blocked) { r.Fail($"door {a[0]} isn't blocked here"); yield break; }
+            var ge = new GameEvent
+            {
+                type = GameEvent.Type.modifyDoor,
+                doorModifyType = GameEvent.DoorModify.unblock,
+                targetGameObjects = new List<GameObject> { d.gameObject },
+            };
+            Plugin.Instance.StartCoroutine(ge.fire(d.gameObject));
+            yield return new WaitForSeconds(1f);
+            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
+            if (d.blocked) r.Fail($"{r.Info}: the event didn't unblock it");
+        }
+
+        /// <summary>"door-blocked N yes|no": door N blocked here as expected (waiting up to 5 s).</summary>
+        private static IEnumerator DoorBlocked(string[] a, Result r)
+        {
+            var d = MapScenarioWorld.Nth<Door>(a[0]);
+            bool want = a.Length > 1 && a[1] == "yes";
+            float giveUp = Time.realtimeSinceStartup + 5f;
+            while (d != null && d.blocked != want && Time.realtimeSinceStartup < giveUp) yield return null;
+            r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
+            if (d == null || d.blocked != want) r.Fail($"{r.Info}, not {(want ? "blocked" : "clear")}");
+        }
+
+        /// <summary>
+        /// "door-use N": our player walks to door N and opens it as the player does (Player.openCloseDoor, which the
+        /// game reaches only for a door that isn't blocked: Player.itemDefaultAction). A client's open is a request,
+        /// and the step fails if the host refused it.
+        /// </summary>
+        private static IEnumerator DoorUse(string[] a, Result r)
+        {
+            var d = MapScenarioWorld.Nth<Door>(a[0]);
+            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            yield return Walk(d.transform.position);
+            if (d.blocked) { r.Fail($"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it"); yield break; }
+            if (d.opened) { r.Fail($"{d.name} is open already"); yield break; }
+            int refused = Authority.RolledBack;
+            AsPlayer(() => P.openCloseDoor(d, false));
+            yield return new WaitForSeconds(2f); // a refusal would close it again
+            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
+            if (Authority.RolledBack != refused) r.Fail($"{r.Info}: the host refused it");
+            else if (!d.opened) r.Fail($"{r.Info}: didn't open");
+        }
+
+        /// <summary>"door-opened N yes|no": door N open here as expected (waiting up to 5 s).</summary>
+        private static IEnumerator DoorOpened(string[] a, Result r)
+        {
+            var d = MapScenarioWorld.Nth<Door>(a[0]);
+            bool want = a.Length > 1 && a[1] == "yes";
+            float giveUp = Time.realtimeSinceStartup + 5f;
+            while (d != null && d.opened != want && Time.realtimeSinceStartup < giveUp) yield return null;
+            r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
+            if (d == null || d.opened != want) r.Fail($"{r.Info}, not {(want ? "open" : "closed")}");
         }
 
         // ---- the porter whistle -------------------------------------------------------------------------------
