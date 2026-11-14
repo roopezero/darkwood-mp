@@ -238,9 +238,48 @@ namespace DarkwoodMP.World
             w.W.Write((byte)(world ? Kind.WorldTrigger : Kind.Trigger));
             r.Write(w);
             w.W.Write((byte)index);
-            w.WriteStr("");
+            w.WriteStr(WorldEventsOf(TriggerAt(et, index)));
             Send(w, $"{(world ? "world trigger" : "event")} {et.name} #{index} {r}", accepted);
             return true;
+        }
+
+        /// <summary>
+        /// The world events a trigger's steps fire by name (fireEvent with activeModifier: Events.fireWorldEvent), one
+        /// per line, sent with the trigger. A game that can't find the trigger still runs these. The trigger may be in a
+        /// separate location, which is in a game only once its player has been there: the hole in the chapter 1
+        /// village's fence (in the village's scene) fires openVillageShortcut, which opens the farm side's hole in the
+        /// world, and a player who had never been to the village never got it open.
+        /// </summary>
+        internal static string WorldEventsOf(global::EventTrigger t)
+        {
+            var ge = t?.gameEvents;
+            if (ge == null || ge.events == null) return "";
+            return string.Join("\n", ge.events.Where(e => e != null && !e.disabled && e.type == GameEvent.Type.fireEvent
+                && e.activeModifier && !string.IsNullOrEmpty(e.Value)).Select(e => e.Value).Distinct());
+        }
+
+        private static string[] Names(string list) => string.IsNullOrEmpty(list) ? new string[0] : list.Split('\n');
+
+        /// <summary>Whether every world event named is one this game has (and there is at least one).</summary>
+        private static bool WorldEventsKnown(string list)
+        {
+            var events = Singleton<Events>.Instance;
+            var names = Names(list);
+            return events != null && names.Length > 0 && names.All(n => events.worldEvents.TryGetValue(n, out var ge) && ge != null);
+        }
+
+        /// <summary>For a trigger this game doesn't have: run the world events it fires, in the given part.</summary>
+        private static void RunWorldEvents(string list, Part part, bool replaying, string what)
+        {
+            var events = Singleton<Events>.Instance;
+            if (events == null) return;
+            foreach (var n in Names(list))
+            {
+                if (!events.worldEvents.ContainsKey(n)) continue;
+                if (Debug) Plugin.Log.LogInfo($"[world] {what} isn't here: running its world event {n}");
+                try { RunAs(part, replaying, () => events.fireWorldEvent(n)); }
+                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world event {n}: {e.Message}"); }
+            }
         }
 
         /// <summary>True while the host runs a world event it has just sent as a character's animation's (FromAnimation).</summary>
@@ -328,7 +367,8 @@ namespace DarkwoodMP.World
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
                 if (Debug) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
-                if (t == null || (t.fired && !t.multipleFire)) return;
+                if (t == null) { RunWorldEvents(name, Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
+                if (t.fired && !t.multipleFire) return;
                 t.fired = true;
                 t.firedExit = false;
                 var ge = t.gameEvents;
@@ -348,21 +388,31 @@ namespace DarkwoodMP.World
                 var t = TriggerAt(et, index);
                 if (s.IsHost)
                 {
-                    if (t == null) { Authority.Refuse("no such event here"); return; }
-                    if (!TriggerAllowed(et, t)) return;
+                    // A trigger the host doesn't have (in a separate location only the joiner has loaded) is still
+                    // the joiner's to use, if the world events it fires are ones the host has: the joiner's trip is its
+                    // own, and the world events are what a joiner may ask for by name anyway (kind 2).
+                    if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
+                    if (t != null && !TriggerAllowed(et, t)) return;
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
-                if (t == null) return;
-                t.fired = true;
-                t.firedExit = false;
-                var ge = t.gameEvents;
-                if (CanRun(ge))
+                var wasBy = By; if (s.IsHost) By = from;
+                try
                 {
-                    var wasBy = By; if (s.IsHost) By = from;
-                    try { RunAs(s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient, ge.fire); }
-                    catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run event {et.name} #{index}: {e.Message}"); }
-                    finally { By = wasBy; }
+                    var part = s.IsHost ? Part.HostAndShared : Part.SharedOnly;
+                    if (t == null) RunWorldEvents(name, part, replaying: s.IsClient, $"event {obj} #{index}");
+                    else
+                    {
+                        t.fired = true;
+                        t.firedExit = false;
+                        var ge = t.gameEvents;
+                        if (CanRun(ge))
+                        {
+                            try { RunAs(part, replaying: s.IsClient, ge.fire); }
+                            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run event {et.name} #{index}: {e.Message}"); }
+                        }
+                    }
                 }
+                finally { By = wasBy; }
             }
             else
             {

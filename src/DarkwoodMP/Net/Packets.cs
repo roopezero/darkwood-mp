@@ -185,7 +185,9 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// Either way: u8 kind (1 a trigger a player set off, 2 a world event, 3 a trigger the host's world set off by
         /// itself), ObjRef (u8 kind, i64 id) of the EventTriggers (kind 2: none, 0 and 0), u8 the trigger's index in it,
-        /// str the world event's name (kinds 1 and 3: ""). From a client (kinds 1 and 2): its player set off this
+        /// str the world event's name (kinds 1 and 3: the world events the trigger's steps fire by name, one per line,
+        /// or ""; a game that doesn't have the trigger, such as one in a separate location its player hasn't been to,
+        /// runs those instead, and the host accepts such a trigger from a client if it has them all). From a client (kinds 1 and 2): its player set off this
         /// scripted event (a request; the host checks it hasn't fired, reach and what it needs, then runs the host's and
         /// the shared steps; the client runs its own and the shared steps only once the host agrees). From the host: it
         /// fired; mark it fired and run the shared steps (kind 3: and the messages, if your player is near it). Kind 2
