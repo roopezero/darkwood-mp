@@ -231,18 +231,20 @@ namespace DarkwoodMP.World
             });
             AddSection("traders", ctx =>
             {
-                // NPCs live in each game separately, so traders go by name (TraderSync); the reputation is the story's.
-                // Several copies can share a name (the same trader placed in more than one location); they're
-                // numbered in the order of their stock, so the numbering is the same in both games.
-                var traders = All<NPC>().Where(n => n != null && n.trader && n.inventory != null)
-                    .Select(n => (n, key: StockKey(n.inventory), rep: n.reputation))
+                // NPCs live in each game separately, so traders go by name (TraderSync), and those from the shared
+                // save by name and ref; the reputation is the story's. Other copies can share a name (the morning
+                // trader in each hideout); they're numbered in the order of their stock, the same in both games.
+                var traders = All<NPC>().Where(n => n != null && n.trader && TraderSync.Inv(n) != null)
+                    .Select(n => (n, key: StockKey(TraderSync.Inv(n)), rep: n.reputation))
                     .OrderBy(t => t.n.name, StringComparer.Ordinal).ThenBy(t => t.key, StringComparer.Ordinal).ThenBy(t => t.rep);
                 foreach (var (n, _, _) in traders)
                 {
                     var ch = n.GetComponent<Character>();
-                    ctx.Set("trader:" + n.name, new Dictionary<string, object>
+                    // One from the shared save is that one (TraderSync names him by his ref): keyed by it.
+                    var who = ObjRef.Of(n.gameObject);
+                    ctx.Set("trader:" + n.name + (who.K == ObjRef.Kind.Saved ? "@" + who : ""), new Dictionary<string, object>
                     {
-                        ["stock"] = Slots(n.inventory),
+                        ["stock"] = Slots(TraderSync.Inv(n)),
                         ["reputation"] = n.reputation,
                         ["alive"] = ch == null || ch.alive,
                     });

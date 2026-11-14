@@ -44,9 +44,11 @@ namespace DarkwoodMP.World
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => { if (_oursRef.Valid && _ours == null) Closed(); };
         }
 
-        /// <summary>The name an NPC is locked by if they're the same NPC in every game wherever they stand, else "".</summary>
+        /// <summary>The name an NPC is locked by if they're the same NPC in every game wherever they stand, else "".
+        /// One from the shared save goes by his ref instead: a new chapter-1 world has three "wolfman" traders.</summary>
         private static string UniqueName(NPC npc) =>
-            npc != null && npc.name != null && (npc.trader || npc.name.IndexOf("wolf", StringComparison.OrdinalIgnoreCase) >= 0) ? npc.name : "";
+            npc != null && npc.name != null && (npc.trader || npc.name.IndexOf("wolf", StringComparison.OrdinalIgnoreCase) >= 0)
+            && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved ? npc.name : "";
 
         private static string Key(ObjRef r, string name) => name.Length > 0 ? "npc:" + name : r.ToString();
 

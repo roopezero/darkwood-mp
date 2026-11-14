@@ -32,6 +32,7 @@ WALK = [
 MORNING = [
     ("host", "wolf-away", {"settle": 3}),  # the morning brings the trader, not the wolf
     *TRADER_AWAY,
+    ("host", "an-dawn", {"settle": 0}),  # a new day's morning (a walk-out ends the day's morning for everyone)
     ("client", "an-start", {"settle": 4}),
     ("host", "host-copy", "here"),
     ("client", "trade", {"settle": 2}),
@@ -48,6 +49,7 @@ MORNING = [
 KILL = [
     ("host", "wolf-away", {"settle": 3}),
     *TRADER_AWAY,
+    ("host", "an-dawn", {"settle": 0}),
     ("client", "an-start", "noreward", {"settle": 4}),
     ("host", "host-copy", "here"),
     ("client", "kill-trader", {"settle": 4}),

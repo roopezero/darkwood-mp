@@ -19,7 +19,7 @@ namespace DarkwoodMP.Net
     /// Otherwise the host answers Welcome with the client's id, then a PlayerInfo for everyone already in, and the
     /// client loads the world. While they play, both sides send PlayerState.
     ///
-    /// The values below aren't in order. In use (decimal): 1-6, 10-52, 62-68, 70, 78-80, 86-90, 100,
+    /// The values below aren't in order. In use (decimal): 1-6, 10-52, 60, 62-68, 70, 78-80, 86-90, 100,
     /// 115-116, 120-122, 130, 135, 140, 155, 160, 165, 170, 180-185, 190, 200-202, 208-210, 216, 220, 230, 235-237,
     /// 240-241, 250-251. A new message takes a free value; keep this list up to date.
     /// </summary>
@@ -134,9 +134,9 @@ namespace DarkwoodMP.Net
         /// changed (World.FuelSync).
         /// </summary>
         Fuel = 44,
-        /// <summary>Client -> host: str npc, f32 x, f32 z (where he stands here): the trader appeared here; what do they have? A host with no copy of a joiner's morning trader puts its own in that hideout (World.TraderSync).</summary>
+        /// <summary>Client -> host: str npc, ObjRef trader, f32 x, f32 z (where he stands here): the trader appeared here; what do they have? A host with no copy of a joiner's morning trader puts its own in that hideout (World.TraderSync).</summary>
         TraderAsk = 45,
-        /// <summary>Host -> client: str npc, bigstr contents (Inventory.SaveState JSON): what the trader has.</summary>
+        /// <summary>Host -> client: str npc, ObjRef trader, f32 x, f32 z (where he stands in the host's game), bigstr contents (Inventory.SaveState JSON): what the trader has. A trader from the shared save (a Saved ref) is that one only; any other is the nearest of that name, not from the shared save (World.TraderSync).</summary>
         TraderStock = 46,
         /// <summary>Host -> client: vec3 position, str sound (the game's audio id, "" none), str effect (the explosion prefab's name, "" none): one of the host's enemies' explosions, for the sound and the flash (see Combat.EnemyAreaHits).</summary>
         EnemyExplosion = 47,
@@ -214,8 +214,10 @@ namespace DarkwoodMP.Net
         /// host's enemies do (the banshee's scream, the forest spirit's teleport), see Combat.EnemyFx.
         /// </summary>
         EnemyEffect = 79,
-        /// <summary>Host -> client: no payload. The host's after-night is over (its trader left, its clock runs again); end yours too (see Combat.EnemyFx).</summary>
+        /// <summary>Host -> client: no payload. The morning after the night is over (the host or a joiner walked out of their hideout: the host's trader left, its clock runs again); end yours too, its trader goes. Sent again every few seconds to a joiner whose PlayerState still says it is in that day's morning (see World.AfterNight).</summary>
         AfterNightEnded = 80,
+        /// <summary>Client -> host: no payload. Our player walked out of their hideout in the morning after the night and ended it; the host ends its own and sends AfterNightEnded to everyone (see World.AfterNight).</summary>
+        AfterNightLeft = 60,
         /// <summary>Client -> host: u8 kind (0 your player swings: enemies within 150 may dodge; 1 your player aims a weapon: enemies within 350 get scared). The host runs it at your proxy (see Combat.PlayerCues).</summary>
         PlayerCue = 70,
         /// <summary>
@@ -306,7 +308,7 @@ namespace DarkwoodMP.Net
         /// </summary>
         InfectionSpawned = 0xD2,
         /// <summary>
-        /// Either way (a client's is a request): str npc (the trader's name), f32 x, f32 z (where the trader stands in
+        /// Either way (a client's is a request): str npc (the trader's name), ObjRef trader, f32 x, f32 z (where the trader stands in
         /// the sender's game), u16 n, then n times: str item type, i32 count (what the player took from the trader),
         /// u16 m, then m times: str item type, i32 count (what the player gave), bigstr contents (JSON Inventory.SaveState
         /// of the trader's stock after the trade), i32 reputation change (what the trade did to the trader's reputation:

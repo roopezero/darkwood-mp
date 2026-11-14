@@ -71,9 +71,12 @@ STEPS = [
     ("host", "an-start", "noreward"),
     ("client", "an-start", "noreward", {"settle": 6}),
     ("host", "an-clock", "stopped"),
-    ("client", "an-end"),                       # 62: the client walks out: the host's clock runs on
-    ("host", "an-clock", "running"),
-    ("host", "an-end"),
+    ("host", "talk"),                           # the host trades while the client walks out
+    ("host", "trade-open"),
+    ("client", "an-end"),                       # the client walks out: the morning (and the trader) ends in every game
+    ("host", "talk-free"),                      # 15 on the host: its trade closed first, then its morning ended
+    ("host", "an-check", "off"),
+    ("client", "an-start", "noreward", "late"), # a morning that starts after it's over (a late joiner's): the host ends it
     ("client", "an-check", "off"),
     ("host", "trader-back", {"settle": 0}),
     ("client", "trader-back"),

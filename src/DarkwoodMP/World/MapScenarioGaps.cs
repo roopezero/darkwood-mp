@@ -47,6 +47,7 @@ namespace DarkwoodMP.World
             MapScenario.Add("journal-has", JournalHas, timeout: 20f);
             // 62, 63, 38 the morning
             MapScenario.Add("an-start", AnStart, timeout: 40f);
+            MapScenario.Add("an-dawn", AnDawn);
             // "trader-away" (both games): the test area's night trader goes. In the game he is only ever in the
             // hideout in the morning; two copies of one trader at once (the station's and the morning's) get
             // their stock by name (TraderSync), on a different copy in each game.
@@ -329,7 +330,7 @@ namespace DarkwoodMP.World
             return go != null ? go.GetComponent<NPC>() : null;
         }
 
-        /// <summary>"an-start [noreward]": our player in their hideout at dawn: the game's morning (Controller.startAfterNight,
+        /// <summary>"an-start [noreward] [late]": our player in their hideout at dawn: the game's morning (Controller.startAfterNight,
         /// which dawn calls in each game): the trader or the wolf comes, the clock is frozen until we walk out.</summary>
         private static IEnumerator AnStart(string[] a, Result r)
         {
@@ -346,19 +347,32 @@ namespace DarkwoodMP.World
             if (Location.getAtPos(p.transform.position) != l) { r.Fail($"couldn't get into {l.name} (at {Fmt(p.transform.position)})"); yield break; }
             bool reward = !a.Contains("noreward");
             c.startAfterNight(reward);
+            // late: the day's morning is already over, so the host ends this one at once; here only that it began counts.
+            bool late = a.Contains("late"), began = c.isAfterNight;
             yield return new WaitForSecondsRealtime(1f);
             var npc = MorningNpc(l);
+            if (late) { r.Info = $"{l.name}: began {began}, afterNight now {c.isAfterNight}"; if (!began) r.Fail(r.Info); yield break; }
             r.Info = $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, " +
                      $"{(npc != null ? npc.name + " " + ObjRef.Of(npc.gameObject) : "no trader or wolf")}";
             if (!c.isAfterNight) r.Fail(r.Info);
         }
 
-        /// <summary>"an-end": our player's morning ends, as walking out of the hideout does (Location.OnTriggerExit -> endAfterNight).</summary>
+        /// <summary>"an-dawn" (host): a new dawn in our game while our player isn't in a hideout (no morning of our own):
+        /// the day's morning isn't over yet, so a joiner's morning stays until someone walks out (AfterNight.HostDawn).</summary>
+        private static IEnumerator AnDawn(string[] a, Result r)
+        {
+            AfterNight.HostDawn();
+            r.Info = "a new morning";
+            yield break;
+        }
+
+        /// <summary>"an-end": our player's morning ends, as walking out of the hideout does (Location.OnTriggerExit -> endAfterNight,
+        /// and on a joiner AfterNightWalkOutPatch telling the host).</summary>
         private static IEnumerator AnEnd(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
             if (!c.isAfterNight) { r.Fail("not in a morning"); yield break; }
-            AsPlayer(() => c.endAfterNight());
+            AsPlayer(() => { c.endAfterNight(); if (!c.isAfterNight) AfterNight.LocalWalkedOut(); });
             yield return new WaitForSecondsRealtime(0.5f);
             var hl = Hideout(Player.Instance);
             r.Info = $"afterNight {c.isAfterNight}, trader {(hl != null && hl.trader != null ? "still here" : "gone")}";

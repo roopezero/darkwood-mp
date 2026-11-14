@@ -29,6 +29,7 @@ STEPS = [
 POST = [
     # In the client's morning (after dawn, in its hideout) the reset is allowed.
     *TRADER_AWAY,
+    ("host", "an-dawn", {"settle": 0}),  # a new day's morning (a walk-out ends the day's morning for everyone)
     ("client", "an-start", "noreward", {"settle": 4}),
     ("client", "skills-reset", "on"),
     ("client", "an-end"),

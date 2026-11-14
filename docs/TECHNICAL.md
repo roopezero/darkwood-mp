@@ -64,13 +64,14 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 42 | ObjState | H→C | ObjRef, u8 kind, the kind's state (to roll back to) |
 | 43 | PlayerCorrection | H→C | vec3 (where you're put back) |
 | 44 | Fuel | both | ObjRef, u8 what (generator, saw), f32 fuel, u8 running. From a client (in a Request): fuel is the amount poured, or minus a log's worth per log cut; the host adds it (result: the amount taken) and sends everyone the level |
-| 45–46 | TraderAsk (C→H), TraderStock (H→C) | | str npc, f32 x, f32 z (where he stands); str npc, bigstr contents (JSON) |
+| 45–46 | TraderAsk (C→H), TraderStock (H→C) | | str npc, ObjRef, f32 x, f32 z (where he stands); str npc, ObjRef, f32 x, f32 z, bigstr contents (JSON). A trader from the shared save is the one his ref names; any other the nearest of that name not from the shared save |
 | 47 | EnemyExplosion | H→C | vec3, str sound, str effect prefab |
 | 48 | DragClaim | C→H, in a Request | ObjRef: our player took hold of this object; refused while someone else drags it (the claimer is first sent where it is, ObjMove last) |
 | 49 | DragOwner | H→C | ObjRef, u64 owner (0: nobody), u8 flags (1: let go of it if you drag it and aren't the owner): who drags it now; the host takes its ObjMoves only from the owner |
 | 50 | PlayerSounds | both | u64 player, u8 n, n x (str audio id, f32 volume): the sounds on that player, at most 10 batches a second |
 | 51 | PlayerShot | both | u64 player, str muzzle prefab, str muzzle particles, u8 flash, vec3 offset |
 | 52 | PlayerHurt | both | u64 player, u8 what (1 blood, 2 burning, 3 not burning), then what's: blood prefab, height, yaw; flames prefab, fire sound |
+| 60 | AfterNightLeft | C→H | nothing (the joiner walked out of their hideout in the morning: the host ends the morning everywhere) |
 | 62 | NightScenario | H→C | str scenario |
 | 63 | NightEvent | H→C | u8 kind: 1 str scenario, str event, str where; 2 ObjRef generator, ObjRef lamp kept on |
 | 64 | RandomObjects | H→C | u8 kind: 1 u16 n, n × (i64 id, u16 chunk, u16 object, vec3, str contents); 2 i64 id, str prefab, vec3 |
@@ -81,7 +82,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 70 | PlayerCue | C→H | u8 kind (0 a swing: enemies may dodge; 1 aiming: enemies get scared) |
 | 78 | CombatMusic | H→C | u8 in combat (one of the host's enemies is chasing you) |
 | 79 | EnemyEffect | H→C | u8 kind: 1 str prefab path, vec3, f32 y rotation; 2 str pooled FX name, vec3; 3 u32 enemy id, i32 emitter toggle |
-| 80 | AfterNightEnded | H→C | nothing (the host's after-night is over) |
+| 80 | AfterNightEnded | H→C | nothing (the morning is over for everyone: end yours, the trader goes; repeated to a joiner still in that day's morning) |
 | 86 | ChapterStart | H→C | i32 chapter (the host is starting it: send your character, wait for WorldReload) |
 | 87 | GameEnd | H→C | u8 kind (1 the epilogue, 2 the end screen), u8 phase (0 the ending starts, 1 the session ends). Epilogue phase 0: go into the host's epilogue and stay connected (a shared dream); phase 1: the host went to the credits, so leave and go too. End screen (phase 1): leave, show it, then the credits and the menu |
 | 88 | StoryRequest | C→H | ObjRef GameEvents, u8 step index, u8 kind (1 a new chapter, 2 the epilogue, 3 the end screen), i32 chapter: a request; the host checks it and runs the step |
@@ -113,7 +114,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 208 | EggDestroyed | both | ObjRef egg, f32 x, f32 z, str name: an egg was broken open (a client's is a request; the host checks reach) |
 | 209 | InfectionCleared | both | u16 n, n × (ObjRef, f32 x, f32 z): infection burned away this frame (a client's is a request: its player's burning weapon, within reach) |
 | 210 | InfectionSpawned | H→C | i64 spawned id, f32 x, y, z, ObjRef parent: a new patch of infection in the host's world |
-| 216 | TraderTrade | both | str npc, f32 x, f32 z, u16 n × (str type, i32 count) taken, u16 m × (str type, i32 count) given, bigstr contents (JSON), i32 reputation change: a trade was accepted and this is the trader's stock now (a client's is a request; the host checks reach, that the stock adds up and that the trader's reputation pays for it) |
+| 216 | TraderTrade | both | str npc, ObjRef, f32 x, f32 z, u16 n × (str type, i32 count) taken, u16 m × (str type, i32 count) given, bigstr contents (JSON), i32 reputation change: a trade was accepted and this is the trader's stock now (a client's is a request; the host checks reach, that the stock adds up and that the trader's reputation pays for it) |
 | 220 | PorterCalled | both | vec3 the porter's place: the porter whistle was blown there (a client's is a request; the host checks the time and that the player is there) |
 | 230 | NpcPos | H→C | u16 n, n × (i32 save id, f32 x, f32 z): where the host's NPCs stand (those that moved, and all every 4 s); clients keep their copies there |
 | 240 | NpcHit | C→H | in a Request: ObjRef NPC, then EnemyHit's bytes after its id: our player hit a friendly NPC; the host's copy takes the hit (capped by the weapon) and turns on us |
