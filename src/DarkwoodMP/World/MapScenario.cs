@@ -237,6 +237,7 @@ namespace DarkwoodMP.World
             MapScenarioIssues.Register();
             MapScenarioStatus.Register();
             MapScenarioFixChecks.Register();
+            MapScenarioWhispers.Register();
             MapScenarioGaps.Register();
             MapScenarioLocations.Register();
             MapScenarioDreams.Register();

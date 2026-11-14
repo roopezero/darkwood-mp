@@ -47,6 +47,12 @@ namespace DarkwoodMP.World
     /// fire each time (each game's own copy and its own culling), and triggers set off by another event's step
     /// (StepDepth: they chain on in the part their event runs in, in every game).
     ///
+    /// Leaving an area trigger runs its exit events (EventTrigger.gameEventsExit: the stop of a sound its enter started,
+    /// objects shown again) in the leaver's game at once, in its own and the shared part, and sends them (EventFired
+    /// kind 4, SendExit); every other game runs the shared part (the host also its own part) unless its own player is
+    /// still in that area, in which case their own exit runs it later. The enter's shared part ran everywhere, so an exit
+    /// left in one game kept the place's looping whispers playing for good in the others.
+    ///
     /// The part is carried into everything the event starts later (its steps' coroutines, events it chains to),
     /// so a chained dialogue still opens only for the player who set it off.
     /// </summary>
@@ -166,7 +172,7 @@ namespace DarkwoodMP.World
 
         /// <summary>True while EventTriggers.fireEventTrigger runs for something our own player did.</summary>
         internal static bool SettingOff;
-        /// <summary>True while EventTriggers.OnTriggerEnter runs for our own player's collider.</summary>
+        /// <summary>True while EventTriggers.OnTriggerEnter (or OnTriggerExit) runs for our own player's collider.</summary>
         internal static bool PlayerEntered;
 
         /// <summary>Trigger types the host's world sets off for everyone (see the class comment).</summary>
@@ -223,7 +229,7 @@ namespace DarkwoodMP.World
 
         // ---- sending ------------------------------------------------------------------------------------
 
-        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3 }
+        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4 }
 
         /// <summary>
         /// Our player set off this trigger and its GameEvents are about to run: a joiner asks the host and runs its own
@@ -241,6 +247,60 @@ namespace DarkwoodMP.World
             w.WriteStr(WorldEventsOf(TriggerAt(et, index)));
             Send(w, $"{(world ? "world trigger" : "event")} {et.name} #{index} {r}", accepted);
             return true;
+        }
+
+        /// <summary>
+        /// Our player left an area trigger and its exit events (EventTrigger.gameEventsExit) ran here: tell the others.
+        /// The trigger's enter events are shared (their sounds, objects shown or hidden ran in every game), so their exit
+        /// has to be too: a place's whispers (a looping sound step, stopped by the exit's sound step) went on for good
+        /// in the games of everyone but the player who walked out. A joiner sends it as a request, but its own exit has
+        /// already run (its own and the shared part; the host's part runs on the host): the leaver has left whatever the
+        /// host says, and a refusal only means the others don't run it. The host runs the host's and the shared part and
+        /// passes it on; each game runs it unless its own player is still in that area (ExitArrived).
+        /// </summary>
+        internal static void SendExit(EventTriggers et, int index)
+        {
+            var r = ObjRef.Of(et.gameObject);
+            if (!r.Valid) return;
+            var w = S.Begin(MsgType.EventFired);
+            w.W.Write((byte)Kind.TriggerExit);
+            r.Write(w);
+            w.W.Write((byte)index);
+            w.WriteStr("");
+            if (Debug) Plugin.Log.LogInfo($"[world] sent the exit of {et.name} #{index} {r}");
+            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
+            string what = $"exit of {et.name} #{index} {r}";
+            Authority.Request(w, what, (ok, reason, _) =>
+            {
+                if (!ok) Plugin.Log.LogInfo($"[world] the host didn't take the {what} ({reason}); it ran here");
+            }, inventory: false);
+        }
+
+        /// <summary>
+        /// Another player left an area trigger (kind 4): run its exit events in the given part, as EventTrigger.fireExit
+        /// does, once per entry (firedExit). Not while our own player is still in the area: the place goes on around
+        /// them (its whispers keep playing), and their own exit runs it as they leave.
+        /// </summary>
+        private static void ExitArrived(EventTriggers et, global::EventTrigger t, int index, Part part, bool replaying)
+        {
+            if (t == null || t.disabled || t.type != global::EventTrigger.Type.area) return;
+            if (t.firedExit) { if (Debug) Plugin.Log.LogInfo($"[world] exit of {et.name} #{index}: it already ran here"); return; }
+            if (OurPlayerInside(et)) { Plugin.Log.LogInfo($"[world] exit of {et.name} #{index}: our player is still in it, it runs when they leave"); return; }
+            t.firedExit = true;
+            if (t.multipleFire) t.fired = false;
+            var ge = t.gameEventsExit;
+            if (Debug) Plugin.Log.LogInfo($"[world] got the exit of {et.name} #{index}: running {(ge != null ? ge.name : "nothing")}");
+            if (ge == null || !CanRun(ge)) return;
+            try { RunAs(part, replaying, ge.fire); }
+            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run the exit of {et.name} #{index}: {e.Message}"); }
+        }
+
+        /// <summary>Whether our player is in this area trigger, as EventTriggers.OnTriggerExit tells (entered and not left, and standing on its collider).</summary>
+        internal static bool OurPlayerInside(EventTriggers et)
+        {
+            var p = Player.Instance;
+            if (p == null || et == null || et.entered <= et.exited) return false;
+            return Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et);
         }
 
         /// <summary>
@@ -382,7 +442,16 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (kind == Kind.Trigger)
+            if (kind == Kind.TriggerExit)
+            {
+                var et = ObjRef.Resolve<EventTriggers>(obj);
+                var t = TriggerAt(et, index);
+                if (s.IsHost && t != null && !ExitAllowed(from, et, t)) return;
+                var wasBy = By; if (s.IsHost) By = from;
+                try { ExitArrived(et, t, index, s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient); }
+                finally { By = wasBy; }
+            }
+            else if (kind == Kind.Trigger)
             {
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
@@ -458,6 +527,13 @@ namespace DarkwoodMP.World
         {
             EventTriggerRequirement.Type.itemState, EventTriggerRequirement.Type.itemTurnedOn, EventTriggerRequirement.Type.npcStateIsDead,
         };
+
+        /// <summary>Host: a joiner's player can have left this area trigger: it's an area here and they are near it.</summary>
+        private static bool ExitAllowed(ulong from, EventTriggers et, global::EventTrigger t)
+        {
+            if (t.type != global::EventTrigger.Type.area) { Authority.Refuse($"{et.name} isn't an area here"); return false; }
+            return Authority.InReach(et.transform.position, 3000f, et.name);
+        }
 
         /// <summary>The trigger can fire in the host's world and the requester is near it.</summary>
         private static bool TriggerAllowed(EventTriggers et, global::EventTrigger t)
@@ -540,6 +616,47 @@ namespace DarkwoodMP.World
         static void Prefix(Collider other) =>
             ScriptedEvents.PlayerEntered = other != null && Player.Instance != null && other.gameObject == Player.Instance.gameObject;
         static Exception Finalizer(Exception __exception) { ScriptedEvents.PlayerEntered = false; return __exception; }
+    }
+
+    [HarmonyPatch(typeof(EventTriggers), "OnTriggerExit")]
+    static class TriggerExitPatch
+    {
+        static void Prefix(Collider other) =>
+            ScriptedEvents.PlayerEntered = other != null && Player.Instance != null && other.gameObject == Player.Instance.gameObject;
+        static Exception Finalizer(Exception __exception) { ScriptedEvents.PlayerEntered = false; return __exception; }
+    }
+
+    /// <summary>
+    /// Our player left an area trigger: its exit events run here (a joiner's only its own and the shared part; the
+    /// host's part is the host's) and are sent to the others (ScriptedEvents.SendExit).
+    /// </summary>
+    [HarmonyPatch(typeof(global::EventTrigger), nameof(global::EventTrigger.fireExit))]
+    static class TriggerExitSharePatch
+    {
+        static void Prefix(global::EventTrigger __instance, global::EventTrigger.Type TriggerType, out (bool, ScriptedEvents.Part) __state)
+        {
+            __state = (false, ScriptedEvents.Current);
+            if (TriggerType != global::EventTrigger.Type.area || __instance.firedExit || __instance.disabled || __instance.type != TriggerType) return;
+            if (__instance.thisEventTriggers == null || !ScriptedEvents.ByOurPlayer(TriggerType)) return;
+            __state.Item1 = true;
+            if (Session.Instance.IsClient) ScriptedEvents.Current = ScriptedEvents.Part.PlayerAndShared;
+        }
+
+        static void Postfix(global::EventTrigger __instance, (bool, ScriptedEvents.Part) __state)
+        {
+            if (!__state.Item1) return;
+            ScriptedEvents.Current = __state.Item2;
+            if (!__instance.firedExit) return; // it didn't run (its requirements)
+            var et = __instance.thisEventTriggers;
+            try { ScriptedEvents.SendExit(et, et.eventTriggers.IndexOf(__instance)); }
+            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send the exit of {et.name}: {e.Message}"); }
+        }
+
+        static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part) __state)
+        {
+            if (__state.Item1) ScriptedEvents.Current = __state.Item2;
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(EventTriggers), nameof(EventTriggers.fireEventTrigger))]
