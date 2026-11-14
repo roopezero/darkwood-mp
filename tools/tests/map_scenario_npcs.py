@@ -13,6 +13,16 @@ PRE_JOIN = []
 WALK = [
     ("host", "npc-move", "trader", "2600", "0"),
     ("client", "npc-talk", "trader", "2600", "0"),
+    # A world event that a character's animation fires is the host's, and switches an NPC on for talking in every
+    # game (the musician hiding under the tractor: musician_setUnderTractor switches on the tractor's NPC).
+    ("host", "anim-setup", "trader", "2600", "0"),
+    ("client", "anim-setup", "trader", "2600", "0"),
+    ("client", "anim-fire", "left"),
+    ("host", "anim-fire", "run"),
+    ("client", "anim-check"),
+    ("client", "npc-talk", "trader", "2600", "0"),
+    ("host", "anim-end"),
+    ("client", "anim-end"),
     ("host", "npc-move", "trader", "back", {"settle": 3}),
     ("client", "fx-goto", "centre"),
 ]

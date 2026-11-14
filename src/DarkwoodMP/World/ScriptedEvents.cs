@@ -243,6 +243,48 @@ namespace DarkwoodMP.World
             return true;
         }
 
+        /// <summary>True while the host runs a world event it has just sent as a character's animation's (FromAnimation).</summary>
+        internal static bool AnimationSent;
+
+        /// <summary>
+        /// A character's animation frame fires a world event (AnimationTriggerListener.checkFrameTrigger, a tk2d frame
+        /// trigger of type fireWorldEvent). The runaway musician's hiding animation by the tractor does this: its frames
+        /// fire musician_removeCollider and musician_setUnderTractor, and the latter switches on the tractor's own NPC
+        /// (tractor_muzyk, NPC.disabled off), the one players then talk to. The runaway musician is a plain Character,
+        /// so in a joiner's game it is a frozen copy of the host's, with its animation events cut (NetEnemies.Freeze):
+        /// the event never ran there and the tractor's NPC stayed switched off, so a joiner couldn't talk to him.
+        ///
+        /// It's the world acting by itself, so it's the host's: the host runs it and sends it (EventFired kind 2, as a
+        /// dialogue's world event goes), and the joiners run its shared part. A joiner's own characters leave theirs to
+        /// the host (the host's copy plays the same animation, as the host's world runs around every player), except in
+        /// an area only the joiner is in. The players' own animations (Player) are left as they were.
+        /// </summary>
+        /// <returns>Whether the game's own call runs here.</returns>
+        internal static bool FromAnimation(Component from, string name)
+        {
+            var s = S;
+            if (s == null || !s.Active || !WorldShare.InWorld || Current != Part.All || WorldActions.Replaying) return true;
+            if (from == null || from.GetComponent<Character>() == null || from.GetComponent<Player>() != null) return true;
+            var events = Singleton<Events>.Instance;
+            if (events == null || string.IsNullOrEmpty(name) || !events.worldEvents.TryGetValue(name, out var ge) || ge == null) return true;
+            if (s.IsClient)
+            {
+                if (Combat.NetEnemies.LocalOnly(from.gameObject)) return true;
+                if (Debug) Plugin.Log.LogInfo($"[world] left world event {name} from {from.name}'s animation to the host");
+                return false;
+            }
+            if (s.Peers.Count == 0 || (ge.fired && !ge.multipleFire)) return true;
+            var w = s.Begin(MsgType.EventFired);
+            w.W.Write((byte)Kind.WorldEvent);
+            default(ObjRef).Write(w);
+            w.W.Write((byte)0);
+            w.WriteStr(name);
+            if (Debug) Plugin.Log.LogInfo($"[world] sent world event {name} from {from.name}'s animation");
+            s.Broadcast(w, Channel.Control, reliable: true);
+            AnimationSent = true;
+            return true;
+        }
+
         internal static void SendWorldEvent(string name, Action accepted)
         {
             var w = S.Begin(MsgType.EventFired);
@@ -536,7 +578,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Events __instance, string type)
         {
-            if (ScriptedEvents.Current != ScriptedEvents.Part.All || WorldActions.Replaying || !WorldActions.Sharing) return true;
+            if (ScriptedEvents.Current != ScriptedEvents.Part.All || WorldActions.Replaying || !WorldActions.Sharing || ScriptedEvents.AnimationSent) return true;
             if (type == null || !__instance.worldEvents.TryGetValue(type, out var ge) || ge == null || (ge.fired && !ge.multipleFire)) return true;
             if (!WorldActions.ByLocalPlayer() && !ScriptedEvents.OnStack(typeof(DialogueWindow))) return true;
             var events = __instance;
@@ -544,5 +586,15 @@ namespace DarkwoodMP.World
             // A joiner runs it (its own and the shared part) once the host says yes.
             return !Session.Instance.IsClient;
         }
+    }
+
+    /// <summary>A world event a character's animation fires is the host's (ScriptedEvents.FromAnimation).</summary>
+    [HarmonyPatch(typeof(AnimationTriggerListener), nameof(AnimationTriggerListener.checkFrameTrigger))]
+    static class AnimationWorldEventPatch
+    {
+        static bool Prefix(AnimationTriggerListener __instance, string eventInfo, tk2dSpriteAnimationFrame.Trigger.Type type) =>
+            type != tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent || ScriptedEvents.FromAnimation(__instance, eventInfo);
+
+        static Exception Finalizer(Exception __exception) { ScriptedEvents.AnimationSent = false; return __exception; }
     }
 }

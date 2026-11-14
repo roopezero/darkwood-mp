@@ -184,7 +184,8 @@ namespace DarkwoodMP.Net
         /// str the world event's name (kinds 1 and 3: ""). From a client (kinds 1 and 2): its player set off this
         /// scripted event (a request; the host checks it hasn't fired, reach and what it needs, then runs the host's and
         /// the shared steps; the client runs its own and the shared steps only once the host agrees). From the host: it
-        /// fired; mark it fired and run the shared steps (kind 3: and the messages, if your player is near it). See
+        /// fired; mark it fired and run the shared steps (kind 3: and the messages, if your player is near it). Kind 2
+        /// from the host is also a world event a character's animation fired there (ScriptedEvents.FromAnimation). See
         /// World.ScriptedEvents.
         /// </summary>
         EventFired = 67,

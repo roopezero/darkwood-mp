@@ -30,6 +30,10 @@ namespace DarkwoodMP.World
             Add("follow-near", FollowNear, timeout: 30f);
             Add("follow-check", FollowCheck, timeout: 30f);
             Add("follow-end", FollowEnd);
+            Add("anim-setup", AnimSetup);
+            Add("anim-fire", AnimFire);
+            Add("anim-check", AnimCheck);
+            Add("anim-end", (a, r) => { AnimEnd(); return MapScenarioIssues.Nothing(); });
         }
 
         /// <summary>"follow-go DX DZ" (client): our player walks to centre + (DX, DZ).</summary>
@@ -186,6 +190,82 @@ namespace DarkwoodMP.World
             npc.transform.position = to;
             yield return new WaitForSeconds(1f);
             r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> {Fmt(npc.transform.position)}";
+        }
+
+        // ---- a world event from a character's animation (the musician under the tractor) ------------------------
+
+        /// <summary>The world event the anim-* steps make: it switches the NPC's talking back on, as the musician's
+        /// musician_setUnderTractor does for the tractor's NPC (tractor_muzyk).</summary>
+        private const string AnimEvent = "dwmp_test_animWakesNpc";
+        private static (NPC npc, GameEvents ge, AnimationTriggerListener added) _anim;
+
+        /// <summary>"anim-setup NAME DX DZ" (host and client): our NPC of that name nearest centre + (DX, DZ) is switched
+        /// off for talking (NPC.disabled), and a world event is made that switches it on again with the game's own step
+        /// (GameEvent modifyComponent NPC.disabled), as the tractor's NPC waits for the musician's hiding animation. The
+        /// NPC gets an AnimationTriggerListener if it has none, for anim-fire to fire the event from its animation.</summary>
+        private static IEnumerator AnimSetup(string[] a, Result r)
+        {
+            AnimEnd();
+            var npc = Shared(a[0], Centre + new Vector3(F(a[1]), 0f, F(a[2])));
+            if (npc == null) { r.Fail($"no {a[0]} here that every game has"); yield break; }
+            var go = new GameObject(AnimEvent);
+            go.transform.position = npc.transform.position;
+            var ge = go.AddComponent<GameEvents>();
+            ge.isWorldEvent = true;
+            ge.worldEventType = AnimEvent;
+            ge.events = new List<GameEvent>
+            {
+                new GameEvent
+                {
+                    type = GameEvent.Type.modifyComponent, Value = "NPC", Value2 = "disabled",
+                    relentlessPursuit = true, activeModifier2 = false, // sets the bool field to activeModifier2
+                    targetGameObjects = new List<GameObject> { npc.gameObject },
+                },
+            };
+            Singleton<Events>.Instance.addWorldEvent(AnimEvent, ge);
+            var listener = npc.GetComponent<AnimationTriggerListener>();
+            _anim = (npc, ge, listener == null ? npc.gameObject.AddComponent<AnimationTriggerListener>() : null);
+            npc.disabled = true;
+            yield return null;
+            r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)} at {Fmt(npc.transform.position)}: switched off for talking";
+        }
+
+        /// <summary>"anim-fire left|run": our NPC's animation fires the world event (the frame trigger's own call,
+        /// AnimationTriggerListener.checkFrameTrigger of type fireWorldEvent). "left" (client): it doesn't run here, it's
+        /// the host's (the NPC stays switched off for a second). "run" (host): it runs here (the NPC is switched on).</summary>
+        private static IEnumerator AnimFire(string[] a, Result r)
+        {
+            var (npc, ge, _) = _anim;
+            if (npc == null || ge == null) { r.Fail("no anim-setup"); yield break; }
+            var listener = npc.GetComponent<AnimationTriggerListener>();
+            listener.checkFrameTrigger(AnimEvent, 0, 0f, tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent, Vector3.zero, Vector3.zero, null, "", false);
+            bool run = a.Length > 0 && a[0] == "run";
+            float until = Time.realtimeSinceStartup + (run ? 5f : 1.5f);
+            while (Time.realtimeSinceStartup < until && npc.disabled) yield return new WaitForSecondsRealtime(0.25f);
+            r.Info = $"{npc.name}: {(npc.disabled ? "switched off" : "can be talked to")}, the event {(ge.fired ? "ran" : "didn't run")} here";
+            if (run ? npc.disabled || !ge.fired : !npc.disabled || ge.fired) r.Fail(r.Info);
+        }
+
+        /// <summary>"anim-check" (client): the host's run of the event reached us: our NPC can be talked to as the game
+        /// asks it before talking (wantsToTalk and not disabled; waiting up to 10 s).</summary>
+        private static IEnumerator AnimCheck(string[] a, Result r)
+        {
+            var (npc, ge, _) = _anim;
+            if (npc == null || ge == null) { r.Fail("no anim-setup"); yield break; }
+            float until = Time.realtimeSinceStartup + 10f;
+            while (Time.realtimeSinceStartup < until && npc.disabled) yield return new WaitForSecondsRealtime(0.25f);
+            r.Info = $"{npc.name}: wantsToTalk {npc.wantsToTalk}, disabled {npc.disabled}, the event {(ge.fired ? "ran" : "didn't run")} here";
+            if (npc.disabled || !npc.wantsToTalk || !ge.fired) r.Fail(r.Info);
+        }
+
+        /// <summary>"anim-end": the test's world event and listener are removed, and the NPC can be talked to.</summary>
+        private static void AnimEnd()
+        {
+            var (npc, ge, added) = _anim;
+            _anim = default;
+            if (ge != null) UnityEngine.Object.Destroy(ge.gameObject); // GameEvents.OnDestroy takes it out of the world events
+            if (added != null) UnityEngine.Object.Destroy(added);
+            if (npc != null) npc.disabled = false;
         }
 
         /// <summary>"npc-talk NAME DX DZ" (client): our copy of that NPC comes to centre + (DX, DZ), where the host's
