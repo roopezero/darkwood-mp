@@ -6,11 +6,16 @@ from mapsteps import TRADER_AWAY, TRADER_BACK
 STEPS = [
     # The host's levels raise the shared level, so the client's points can be spent.
     ("host", "skills-give", "3"),
+    # Several points spent one after another on the panel (the host's own: no request).
+    ("host", "skills-learn-all"),
     # The key opens the panel without the backpack; the skills take the mouse over their whole cells; K closes it.
     ("client", "skills-panel"),
     ("client", "skills-give", "2"),
     # A point spent: the host checks it (SkillSpend) and allows it.
     ("client", "skills-learn"),
+    # Two more points (three levels), spent one after another: each choice goes to the host and is allowed.
+    ("client", "skills-give", "1"),
+    ("client", "skills-learn-all"),
     # Far more levels than the shared essence gives: the host refuses the next point and it's taken back.
     ("client", "skills-give", "20"),
     ("client", "skills-learn", "--refused"),

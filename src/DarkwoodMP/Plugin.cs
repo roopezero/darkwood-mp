@@ -583,6 +583,18 @@ namespace DarkwoodMP
                     Log.LogInfo($"[solo] real mouse: over {SkillsPanel.TestHover ?? "nothing"}, chosen {SkillsPanel.TestChosen ?? "nothing"}, the game's mouse reads eaten {SkillsPanel.TestEaten - eaten}");
                     yield return Shot("solo-skills-real-mouse");
                 }
+                // Several points spent one after another with the real mouse: a skill, its negative one if needed, Learn.
+                if (RealMouse.Available)
+                {
+                    Progression.TestGiveLevels(1, chooseSkills: false);
+                    yield return new WaitForSecondsRealtime(1f);
+                    int had = SkillTree.Points(p);
+                    List<string> clickFails = null;
+                    yield return SkillsPanel.TestClickAll(f => clickFails = f);
+                    yield return Shot("solo-skills-clicked");
+                    Log.LogInfo($"[solo] real clicks on {had} points: {(clickFails.Count == 0 && had >= 2 ? "PASS all learned" : "FAIL " + string.Join("; ", clickFails))}: {Progression.TestState()}");
+                }
+                else Log.LogInfo("[solo] no ydotool: the real clicks were not tried");
             }
             SkillsPanel.TestPressKey();
             yield return new WaitForSecondsRealtime(1.5f);

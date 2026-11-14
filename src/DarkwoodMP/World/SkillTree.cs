@@ -18,9 +18,12 @@ namespace DarkwoodMP.World
     ///
     /// The game's rules for a choice still hold, as SkillsMenu and SkillTiers apply them: a tier (I to IV) can be
     /// chosen from once the player's level reaches the tier's level (SkillTiers.getTiers); a tier takes two good
-    /// skills at most (Tier.locked); and while any open tier with negative skills has no good skill yet, a good
-    /// skill comes with a negative one (SkillsMenu.mustChooseNegativeSkill), taken from such a tier (only their
-    /// negative skills are offered).
+    /// skills at most (Tier.locked); and each tier with negative skills gives one of them with its first good skill.
+    /// The game says the last one as "while an open tier has no good skill yet, a choice comes with a negative skill
+    /// from such a tier" (SkillsMenu.mustChooseNegativeSkill), which with one choice per level comes to the same:
+    /// a tier opens at a level, and the tiers below are full by then. With several points banked that wording asked
+    /// for a negative skill with every choice while any open tier had no good skill (three or four negative skills
+    /// at level 3 instead of two), so here the negative skill goes with the first good skill of its own tier.
     ///
     /// In co-op a client learns at once and asks the host (SkillSpend, a request) with its level and the skills it
     /// has. The host checks the choice against the same rules and against the shared level (the list of skills
@@ -122,18 +125,18 @@ namespace DarkwoodMP.World
         public static int Points(Player p) => p == null ? 0 : Points(p.currentLevel, Chosen(p));
 
         /// <summary>
-        /// Whether a choice now must take a negative skill too: an open tier that has negative skills and no good
-        /// skill yet (SkillsMenu.showHideTiers: mustChooseNegativeSkill), with one left to take.
+        /// Whether this good skill must come with a negative skill: it would be the first good skill of a tier that has
+        /// negative skills, and none of them is taken yet (one negative skill for each such tier, as the game gives it
+        /// when the levels come one at a time: SkillsMenu.showHideTiers, mustChooseNegativeSkill).
         /// </summary>
-        public static bool NeedsNegative(int level, HashSet<string> chosen)
+        public static bool NeedsNegative(HashSet<string> chosen, string good)
         {
-            var tiers = Tiers;
-            if (tiers == null) return false;
-            foreach (var t in tiers)
-                if (t.level <= level && t.negativeSkills.Count > 0 && !HasGood(t, chosen) && t.negativeSkills.Any(sk => sk != null && !chosen.Contains(sk.name)))
-                    return true;
-            return false;
+            var t = TierOf(good, out bool neg);
+            return t != null && !neg && TierNeedsNegative(t, chosen);
         }
+
+        private static bool TierNeedsNegative(SkillTiers.Tier t, HashSet<string> chosen) =>
+            t.negativeSkills.Any(sk => sk != null) && !HasGood(t, chosen) && !t.negativeSkills.Any(sk => sk != null && chosen.Contains(sk.name));
 
         /// <summary>Why a good skill can't be taken now (null: it can), whatever negative skill goes with it.</summary>
         public static string CantTake(int level, HashSet<string> chosen, string good)
@@ -147,14 +150,19 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>Whether a negative skill can go with a choice now: in an open tier with no good skill yet.</summary>
-        public static string CantTakeNegative(int level, HashSet<string> chosen, string negative)
+        /// <summary>
+        /// Whether a negative skill can be taken now: its tier is open and still owes its negative skill (no good skill
+        /// and no negative one taken there). good: the good skill it goes with, which must be of the same tier; null: any.
+        /// </summary>
+        public static string CantTakeNegative(int level, HashSet<string> chosen, string negative, string good = null)
         {
             var t = TierOf(negative, out bool neg);
             if (t == null || !neg) return "there's no such negative skill";
             if (chosen.Contains(negative)) return "you have this negative skill already";
             if (t.level > level) return $"this tier opens at level {t.level}";
             if (HasGood(t, chosen)) return "this tier's negative skill was taken with its first skill";
+            if (!TierNeedsNegative(t, chosen)) return "this tier's negative skill is taken";
+            if (good != null && TierOf(good, out _) != t) return "it goes with the first skill of its own tier";
             return null;
         }
 
@@ -163,10 +171,10 @@ namespace DarkwoodMP.World
         {
             string why = CantTake(level, chosen, good);
             if (why != null) return why;
-            bool need = NeedsNegative(level, chosen);
-            if (string.IsNullOrEmpty(negative)) return need ? "a negative skill has to be taken with it" : null;
-            if (!need) return "no negative skill is needed now";
-            return CantTakeNegative(level, chosen, negative);
+            bool need = NeedsNegative(chosen, good);
+            if (string.IsNullOrEmpty(negative)) return need ? "a negative skill of its tier has to be taken with it" : null;
+            if (!need) return "no negative skill goes with this skill";
+            return CantTakeNegative(level, chosen, negative, good);
         }
 
         // ---- learning -------------------------------------------------------------------------------
@@ -266,6 +274,24 @@ namespace DarkwoodMP.World
             return string.Join(" | ", parts);
         }
 
+        /// <summary>For tests: what breaks "one negative skill for each tier that has a good skill" in our player's skills; null: nothing.</summary>
+        internal static string NegativesWrong(Player p)
+        {
+            var tiers = Tiers;
+            if (tiers == null || p == null) return null;
+            var chosen = Chosen(p);
+            var wrong = new List<string>();
+            for (int i = 0; i < tiers.Count; i++)
+            {
+                var t = tiers[i];
+                int negs = t.negativeSkills.Count(sk => sk != null && chosen.Contains(sk.name));
+                bool good = HasGood(t, chosen), owes = t.negativeSkills.Any(sk => sk != null);
+                if (negs > 1 || (good && owes && negs != 1) || (!good && negs > 0))
+                    wrong.Add($"tier {TierName(i)}: {negs} negative skills with {GoodIn(t, chosen)} skills");
+            }
+            return wrong.Count > 0 ? string.Join(", ", wrong) : null;
+        }
+
         /// <summary>For tests: a choice that the rules allow now (good, negative or null), or null if there's none.</summary>
         internal static string[] AnyChoice(Player p)
         {
@@ -273,15 +299,13 @@ namespace DarkwoodMP.World
             if (tiers == null || p == null) return null;
             var chosen = Chosen(p);
             int level = p.currentLevel;
-            bool need = NeedsNegative(level, chosen);
             foreach (var t in tiers)
                 foreach (var g in t.skills)
                 {
                     if (g == null || CantTake(level, chosen, g.name) != null) continue;
-                    if (!need) return new[] { g.name, null };
-                    foreach (var u in tiers)
-                        foreach (var ng in u.negativeSkills)
-                            if (ng != null && Check(level, chosen, g.name, ng.name) == null) return new[] { g.name, ng.name };
+                    if (!NeedsNegative(chosen, g.name)) return new[] { g.name, null };
+                    foreach (var ng in t.negativeSkills)
+                        if (ng != null && Check(level, chosen, g.name, ng.name) == null) return new[] { g.name, ng.name };
                 }
             return null;
         }

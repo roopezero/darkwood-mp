@@ -19,7 +19,7 @@ namespace DarkwoodMP.World
             Add("skills-give", Give);
             Add("skills-panel", Panel);
             Add("skills-learn", Learn);
-            Add("skills-reset", Reset, timeout: 40f);
+            Add("skills-learn-all", LearnAll, timeout: 60f);            Add("skills-reset", Reset, timeout: 40f);
         }
 
         /// <summary>"skills-give N": N more levels for our player (their points to spend, no skills chosen); a negative N takes levels away.</summary>
@@ -121,6 +121,54 @@ namespace DarkwoodMP.World
             bool have = SkillTree.Chosen(P).Contains(choice[0]);
             r.Info = $"{choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}: have it {have}, points {before} -> {SkillTree.Points(P)}, waiting {SkillTree.Waiting}";
             if (SkillTree.Waiting || have == refused) r.Fail(r.Info);
+        }
+
+        /// <summary>
+        /// "skills-learn-all": with the panel open, spend every point one after another, as a player clicks a skill
+        /// and Learn each time (the next as soon as the Learn button takes it). Every choice must be taken, the panel
+        /// must stay open, and every skill learned must still be there at the end, with no points left.
+        /// </summary>
+        private static IEnumerator LearnAll(string[] a, Result r)
+        {
+            var fails = new List<string>();
+            if (!SkillsPanel.Open) SkillsPanel.TestPressKey();
+            yield return new WaitForSecondsRealtime(1f);
+            if (!SkillsPanel.Open) { r.Fail("the panel didn't open"); yield break; }
+            int start = SkillTree.Points(P), n = 0;
+            var learned = new List<string>();
+            var log = new List<string>();
+            while (SkillTree.Points(P) > 0 && n < 12)
+            {
+                var choice = SkillTree.AnyChoice(P);
+                if (choice == null) { fails.Add($"{SkillTree.Points(P)} points but nothing to learn"); break; }
+                // The Learn button takes a click once it's ready (not while a choice waits for the host).
+                float until = Time.realtimeSinceStartup + 8f;
+                while (!SkillsPanel.TestReady(choice[0], choice[1]) && Time.realtimeSinceStartup < until) yield return null;
+                int before = SkillTree.Points(P);
+                string why = SkillsPanel.TestLearn(choice[0], choice[1]);
+                n++;
+                log.Add($"{choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}: {why ?? "ok"} ({before} -> {SkillTree.Points(P)})");
+                if (why != null) { fails.Add($"choice {n} ({choice[0]}): {why}"); break; }
+                learned.Add(choice[0]);
+                if (choice[1] != null) learned.Add(choice[1]);
+                yield return null;
+                if (!SkillsPanel.Open) { fails.Add($"the panel closed after choice {n}"); break; }
+            }
+            float end = Time.realtimeSinceStartup + 8f;
+            while (SkillTree.Waiting && Time.realtimeSinceStartup < end) yield return null;
+            yield return new WaitForSecondsRealtime(1f);
+            var have = SkillTree.Chosen(P);
+            var lost = learned.Where(s => !have.Contains(s)).ToList();
+            if (lost.Count > 0) fails.Add($"taken back: {string.Join(", ", lost)}");
+            if (SkillTree.Points(P) != 0) fails.Add($"{SkillTree.Points(P)} points left");
+            if (SkillTree.Waiting) fails.Add("still waiting for the host");
+            if (!SkillsPanel.Open) fails.Add("the panel isn't open");
+            // As the levels one at a time give them: one negative skill for each tier, with its first skill.
+            if (SkillTree.NegativesWrong(P) is string wrong) fails.Add("negative skills: " + wrong);
+            if (SkillsPanel.Open) SkillsPanel.TestPressKey();
+            r.Info = $"{start} points, {n} choices: {string.Join("; ", log)}; {Progression.TestState()}";
+            if (start < 2) fails.Add("fewer than two points to spend");
+            if (fails.Count > 0) r.Fail(string.Join("; ", fails) + " | " + r.Info);
         }
 
         /// <summary>"skills-reset on|off": reset at the stove; on: allowed (every skill back, the points again), off: refused.</summary>

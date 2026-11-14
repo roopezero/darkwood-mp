@@ -27,6 +27,7 @@ namespace DarkwoodMP.World
         private static readonly Dictionary<string, Rect[]> _rects = new Dictionary<string, Rect[]>(); // last drawn: icon, cell (screen, top left)
         private static float _detailW = -1f;     // the width the details' height was measured for
         private static float _detailH;
+        private static Rect _learnRect;          // the Learn button as last drawn (screen, top left), for tests
 
         public static bool Open => _win != null && _win.Open;
 
@@ -122,7 +123,7 @@ namespace DarkwoodMP.World
             if (p == null || tiers == null) { Ui.Text(f, "No skills here."); return; }
             var chosen = SkillTree.Chosen(p);
             int level = p.currentLevel, points = SkillTree.Points(level, chosen);
-            bool needNeg = SkillTree.NeedsNegative(level, chosen);
+            bool needNeg = _good != null && SkillTree.NeedsNegative(chosen, _good);
             if (Event.current.type == EventType.Layout) _hover = null;
 
             var top = f.Row(PixelFont.Line + 4 * UiWindow.S, 0, 0);
@@ -168,7 +169,8 @@ namespace DarkwoodMP.World
                         var sk = tiers[i].negativeSkills[k];
                         if (sk == null) continue;
                         var cell = new Rect(ngrid.x + i * colW, ngrid.y + k * (icon + gap), colW, icon + gap);
-                        bool can = needNeg && SkillTree.CantTakeNegative(level, chosen, sk.name) == null;
+                        // With a skill chosen, the negative skills of its tier when it needs one; else any a tier still owes.
+                        bool can = (_good == null || needNeg) && SkillTree.CantTakeNegative(level, chosen, sk.name, _good) == null;
                         DrawSkill(cell, icon, sk, chosen.Contains(sk.name), can, sk.name == _negative, true);
                     }
             }
@@ -186,8 +188,8 @@ namespace DarkwoodMP.World
                 SkillTree.TierOf(show, out bool neg);
                 PixelFont.Draw(f.Next(PixelFont.Line + 2 * UiWindow.S), SkillName(show), neg ? MenuSkin.Warn : MenuSkin.Bright, TextAnchor.MiddleLeft, PixelFont.Kind.Title);
                 string state = chosen.Contains(show) ? "Learned"
-                    : neg ? (needNeg ? SkillTree.CantTakeNegative(level, chosen, show) ?? "Taken with a good skill" : "Not needed now")
-                    : SkillTree.CantTake(level, chosen, show) ?? (needNeg ? "Comes with a negative skill" : "Can be learned");
+                    : neg ? SkillTree.CantTakeNegative(level, chosen, show) ?? "Taken with the first skill of its tier"
+                    : SkillTree.CantTake(level, chosen, show) ?? (SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned");
                 Ui.Label(f, Capital(state), MenuSkin.Dim);
                 Ui.Text(f, SkillDesc(show));
             }
@@ -218,25 +220,26 @@ namespace DarkwoodMP.World
             if (p == null) return;
             var chosen = SkillTree.Chosen(p);
             int level = p.currentLevel;
-            bool needNeg = SkillTree.NeedsNegative(level, chosen);
+            bool needNeg = _good != null && SkillTree.NeedsNegative(chosen, _good);
             var c = Ui.Split(r, 0, 90);
             string status = _message;
             if (status == null)
             {
                 if (SkillTree.Waiting) status = "Asking the host...";
                 else if (_good == null) status = SkillTree.Points(level, chosen) > 0 ? "" : "No skill points to spend";
-                else if (needNeg && _negative == null) status = "Choose a negative skill to go with it";
+                else if (needNeg && _negative == null) status = "Choose a negative skill of its tier to go with it";
                 else status = "";
             }
             Ui.Label(c[0], PixelFont.Fit(status, c[0].width), _message != null ? MenuSkin.Warn : MenuSkin.Dim);
             bool ready = _good != null && !SkillTree.Waiting && SkillTree.Check(level, chosen, _good, needNeg ? _negative : null) == null;
+            if (Event.current.type == EventType.Repaint) _learnRect = ToScreen(c[1]);
             if (Ui.Button(c[1], "Learn", ready)) LearnChosen();
         }
 
         private static void LearnChosen()
         {
             var p = Player.Instance;
-            bool needNeg = p != null && SkillTree.NeedsNegative(p.currentLevel, SkillTree.Chosen(p));
+            bool needNeg = p != null && _good != null && SkillTree.NeedsNegative(SkillTree.Chosen(p), _good);
             if (SkillTree.Learn(_good, needNeg ? _negative : null, out string why)) { _good = _negative = _message = null; }
             else _message = Capital(why);
         }
@@ -277,6 +280,13 @@ namespace DarkwoodMP.World
                 _message = null;
                 if (negative) _negative = _negative == sk.name ? null : sk.name;
                 else _good = _good == sk.name ? null : sk.name;
+                // A negative skill goes with the first skill of its own tier: a pick that doesn't fit the other drops it.
+                if (_good != null && _negative != null && SkillTree.TierOf(_good, out _) != SkillTree.TierOf(_negative, out _))
+                {
+                    if (negative) _good = null; else _negative = null;
+                }
+                var p = Player.Instance;
+                if (_good != null && _negative != null && p != null && !SkillTree.NeedsNegative(SkillTree.Chosen(p), _good)) _negative = null;
                 try { AudioController.Play("UI_click"); } catch { }
             }
         }
@@ -363,6 +373,16 @@ namespace DarkwoodMP.World
             return _message;
         }
 
+        /// <summary>For tests: whether the Learn button would take this choice now (as DrawFooter enables it).</summary>
+        internal static bool TestReady(string good, string negative)
+        {
+            var p = Player.Instance;
+            if (p == null || SkillTree.Waiting) return false;
+            var chosen = SkillTree.Chosen(p);
+            bool needNeg = SkillTree.NeedsNegative(chosen, good);
+            return SkillTree.Check(p.currentLevel, chosen, good, needNeg ? negative : null) == null;
+        }
+
         /// <summary>For tests: show this skill's details as if the mouse were over it.</summary>
         internal static void TestPick(string good, string negative) { _good = good; _negative = negative; }
 
@@ -418,6 +438,53 @@ namespace DarkwoodMP.World
             TestMouse = null;
             Plugin.Log.LogInfo($"[skills] hover sweep: {frames} frames, {(bad == 0 ? "PASS nothing moved" : $"FAIL {bad} frames moved")}");
             done?.Invoke(bad);
+        }
+
+        /// <summary>
+        /// For tests: spend every point with the real mouse (RealMouse): for each, a click on a skill the rules allow,
+        /// one on its negative skill if one must go with it, and one on Learn, as a player does. Every click is logged
+        /// with what the panel made of it. done(failures).
+        /// </summary>
+        internal static System.Collections.IEnumerator TestClickAll(Action<List<string>> done)
+        {
+            var fails = new List<string>();
+            var p = Player.Instance;
+            int n = 0;
+            if (!Open) Toggle();
+            yield return new WaitForSecondsRealtime(1f);
+            while (p != null && Open && SkillTree.Points(p) > 0 && n < 10)
+            {
+                n++;
+                var choice = SkillTree.AnyChoice(p);
+                if (choice == null) { fails.Add($"{SkillTree.Points(p)} points but nothing to learn"); break; }
+                int before = SkillTree.Points(p);
+                foreach (var sk in new[] { choice[0], choice[1] })
+                {
+                    if (sk == null) continue;
+                    if (!_rects.TryGetValue(sk, out var rs)) { fails.Add($"{sk} not drawn"); continue; }
+                    bool reached = false;
+                    yield return RealMouse.MoveTo(rs[1].center, ok => reached = ok);
+                    yield return RealMouse.Click();
+                    Plugin.Log.LogInfo($"[skills] real click {n} on {sk} (reached {reached}, mouse {RealMouse.Now}, cell {rs[1]}): over {_hover ?? "nothing"}, chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
+                }
+                float until = Time.realtimeSinceStartup + 8f;
+                while (SkillTree.Waiting && Time.realtimeSinceStartup < until) yield return null;
+                yield return null;
+                yield return RealMouse.MoveTo(_learnRect.center);
+                yield return RealMouse.Click();
+                yield return new WaitForSecondsRealtime(0.3f);
+                until = Time.realtimeSinceStartup + 8f;
+                while (SkillTree.Waiting && Time.realtimeSinceStartup < until) yield return null;
+                yield return new WaitForSecondsRealtime(0.3f);
+                var have = SkillTree.Chosen(p);
+                bool ok2 = have.Contains(choice[0]) && (choice[1] == null || have.Contains(choice[1]));
+                Plugin.Log.LogInfo($"[skills] real click {n} on Learn (mouse {RealMouse.Now}, button {_learnRect}): {(ok2 ? "learned" : "NOT learned")} {choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}, points {before} -> {SkillTree.Points(p)}, panel open {Open}, chosen {_good ?? "nothing"}, message {_message ?? "none"}");
+                if (!ok2) { fails.Add($"choice {n} ({choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}"); break; }
+            }
+            if (!Open) fails.Add("the panel closed");
+            if (p != null && SkillTree.Points(p) > 0 && fails.Count == 0) fails.Add($"{SkillTree.Points(p)} points left");
+            if (SkillTree.NegativesWrong(p) is string wrong) fails.Add("negative skills: " + wrong);
+            done?.Invoke(fails);
         }
 
         /// <summary>For tests: the panel's window, in screen pixels from the top left.</summary>
