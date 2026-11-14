@@ -656,6 +656,7 @@ namespace DarkwoodMP.World
         private static IEnumerator SwingInfection(string[] a, Result r)
         {
             var p = Player.Instance;
+            var cameFrom = p.transform.position;
             string type = a.Length > 0 ? a[0] : "torch";
             var inf = Patch("infection:client");
             if (inf == null) { r.Fail("no patch"); yield break; }
@@ -716,7 +717,9 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.6f);
             }
             yield return new WaitForSeconds(1f);
-            yield return Walk(Centre, 60f); // off the patch, which hurts while we stand in it
+            // Off the patch, which hurts while we stand in it, the way we came: the straight way to Centre crosses one of
+            // the test world's chain traps (Saved:21369), which holds the player there until the step times out.
+            yield return Walk(cameFrom, 60f);
             var refused = LogLines().Skip(mark).FirstOrDefault(l => l.Contains("refused") && l.Contains("infection"));
             r.Info = $"{type} (sensor flaming {flaming}) at {rf} {infAt}: cleared {inf == null || inf.disappearing}{seen}; stood at {string.Join(" ", tried)}";
             if (inf != null && !inf.disappearing) r.Fail(r.Info);

@@ -2,6 +2,30 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## Unreleased
+
+*Protocol 27, so everyone must update (it doesn't play with 0.22.x).*
+
+Fixes from co-op play and a few requested features:
+
+- Dead dogs no longer bark for joiners: a joiner's game no longer spawns its own enemies where the host runs the world, and the host's characters it keeps hidden stay silent.
+- A savage that dies outside its own area no longer vanishes on the host's screen when that area is left. Joiners' corpses end the same way as the host's.
+- Only one player drags a thing at a time. The host decides who; a second player lets go and sees who is moving it, and the thing comes to rest in the same place everywhere. A container change made of several slots is taken whole or refused whole, so dragging the same item at once can't copy it.
+- Every stackable item stacks to 50 (a host setting, `StackSize`; 0 keeps the game's own sizes). Joiners use the host's size. No separate gasoline stacking bug was found.
+- Gasoline poured into a generator or saw by several players adds up: a joiner sends how much it poured and the host adds it. What didn't fit goes back to the can.
+- Repairing a broken door as a joiner no longer breaks it again right after: the host refused the repair and the rollback broke the door. A refused repair gives the wood and nails back. Furniture wasn't affected.
+- Doors the story keeps shut (Piotrek's) open for joiners once the story unblocks them.
+- Each workbench upgrade adds a row of six storage slots (54 at level 1, 96 at level 8), also in single player. Old saves get their rows when loaded.
+- The hole shortcut to the village opens for everyone, including players who have never been to the village.
+- The church dream's creature is the same one for everyone: the shared dream's enemies and events are run by the host.
+- Joiners can talk to the Musician once he is under the tractor: world events fired by a character's animation are run by the host and sent to everyone.
+- The ending is played together: everyone goes into the epilogue with the host, whoever moves on takes everyone, the burn starts in every game, players who die in the crawl watch the others, the final pan and the credits run for everyone. A world already in the epilogue can't be hosted.
+- A joiner's pushes inside caves, interiors and the shared dream now move things for everyone; they used to be put back.
+- The stove's skill reset button looks like the mod's other buttons.
+- The black screen near a Dry Meadow landmark is not fixed yet. The cause is known: the game switches the player's view off while a ray straight down through the player hits certain objects. The mod now logs which object did it (a `[view]` line), so a log from a session where it happens will show the culprit.
+
+How it was tested: with scripted players and the two-game map test; nobody has played this build together yet. `all` (every scripted test) passed, and the full map run passed 27 of 28 parts. New map tests cover door repair, workbench rows, the village shortcut and the ending (the epilogue through the burn, both crawl deaths, the pan and the credits); the map dreams, items, locations, npcs and world tests were extended for the church dream, a story-blocked door, the corpse, the Musician and dragging. Several things were tested on stand-ins rather than the real places: the Musician's event on another NPC, Piotrek's door on another blocked door, and the black screen only around the hideout. Not tested: a real flamethrower burn at the end, the host leaving mid-epilogue, and a generator running for long on a joiner.
+
 ## 0.22.1
 
 *Protocol 26, plays with 0.21.x and 0.22.0.*
