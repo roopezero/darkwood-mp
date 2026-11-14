@@ -109,7 +109,8 @@ def run_steps(ctls, steps, work=None, prefix="mid"):
         elif "+" in who:
             # ("c1+c2+c3", STEP, ARGS...): the step in those games at once; an "AT" argument becomes an epoch second a
             # few seconds ahead, for the games to act at the same moment (they share this machine's clock). Options
-            # "winners": N (exactly N replies start "done got"), "min_winners": N (at least N).
+            # "winners": N (exactly N replies start "done got"), "min_winners": N (at least N), "max_spread": SECS (the
+            # replies' "entered T" times are at most SECS apart).
             games = who.split("+")
             at = f"{time.time() + float(opts.get('lead', 6)):.3f}"
             targs = [at if w == "AT" else w for w in args]
@@ -121,6 +122,13 @@ def run_steps(ctls, steps, work=None, prefix="mid"):
                 ok, reply = False, f"{got} got it, wanted {opts['winners']}: {reply}"
             if "min_winners" in opts and got < int(opts["min_winners"]):
                 ok, reply = False, f"{got} got it, wanted at least {opts['min_winners']}: {reply}"
+            if "max_spread" in opts:
+                # Each reply has "entered T" (Unix seconds): the games did it within max_spread seconds of each other.
+                ts = [float(w.split()[1]) for r in replies.values() for w in [r[r.find("entered "):]] if "entered " in r]
+                spread = max(ts) - min(ts) if len(ts) == len(games) else None
+                if spread is None or spread > float(opts["max_spread"]):
+                    ok = False
+                reply += f"; spread {spread if spread is None else round(spread, 2)} s (at most {opts['max_spread']})"
         elif who == "all-clients":
             replies = [(c, ctls[c].cmd("do", name, *args, timeout=180)) for c in clients(ctls)]
             ok = all(good(r) for _, r in replies)

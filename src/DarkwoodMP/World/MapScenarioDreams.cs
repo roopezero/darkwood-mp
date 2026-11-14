@@ -28,6 +28,10 @@ namespace DarkwoodMP.World
             Add("dream-wardrobe", DreamWardrobe, timeout: 30f);
             Add("dream-mob", DreamMobHost, timeout: 20f);
             Add("dream-mob-copies", DreamMobCopies, timeout: 10f);
+            Add("dream-entered", DreamEntered, timeout: 90f);
+            Add("home-door", HomeDoor, timeout: 10f);
+            Add("home-knock", HomeKnock, timeout: 20f);
+            Add("home-open", HomeOpen, timeout: 30f);
         }
 
         /// <summary>"progress-shared" (client): the host sent the shared essence and level, and our bar shows it up to our next level.</summary>
@@ -56,6 +60,7 @@ namespace DarkwoodMP.World
         private static IEnumerator LevelDream(string[] a, Result r)
         {
             string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
+            if (!D.allPresets.Any(x => x != null && x.name == name)) { r.Fail($"no dream {name}"); yield break; }
             DreamSync.TestLevelDream(name);
             while (!D.dreaming) yield return new WaitForSeconds(0.5f);
             yield return new WaitForSeconds(2f);
@@ -191,6 +196,84 @@ namespace DarkwoodMP.World
             r.Info = $"host runs it here {Locations.HostRunsHere()}; the host's shown {puppets}; ours running {running.Count}" +
                      (running.Count > 0 ? $" ({string.Join(", ", running.Select(c => c.name))})" : "");
             if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0) r.Fail($"the dream's characters aren't the host's: {r.Info}");
+        }
+
+        /// <summary>
+        /// "dream-entered" (any game, run in all at once with "host+client..."): once we're dreaming, when our game went
+        /// into the dream ("entered T", Unix seconds); the driver's "max_spread" checks the games went in together.
+        /// </summary>
+        private static IEnumerator DreamEntered(string[] a, Result r)
+        {
+            while (!D.dreaming) yield return new WaitForSeconds(0.25f);
+            r.Info = System.FormattableString.Invariant($"entered {DreamSync.EnteredAt:0.000}");
+        }
+
+        // The level dream at home (dream_home): the player wakes in the bedroom, and walking into the knocking area
+        // (start_knocking_dreamHome) unlocks the bedroom's door (a modifyDoor unlock step) for the way out.
+        private static EventTriggers Knocking() =>
+            D.dreamLocation == null ? null : D.dreamLocation.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("start_knocking_dreamHome"));
+
+        private static Door HomeDoorOf(EventTriggers et)
+        {
+            var ge = et == null ? null : et.GetComponent<GameEvents>();
+            var step = ge == null ? null : ge.events.FirstOrDefault(e => e != null && e.type == GameEvent.Type.modifyDoor);
+            var go = step?.targetGameObjects.FirstOrDefault(g => g != null);
+            return go == null ? null : go.GetComponent<Door>() ?? go.GetComponentInChildren<Door>();
+        }
+
+        private static string DoorInfo(Door d)
+        {
+            var l = d.GetComponent<Locked>();
+            return $"{d.name} at {Fmt(d.transform.position)} {ObjRef.Of(d.gameObject)} locked {(l != null && l.locked)} blocked {d.blocked} open {d.opened}";
+        }
+
+        /// <summary>"home-door locked|unlocked|open" (either): the bedroom door of the home dream is in that state here.</summary>
+        private static IEnumerator HomeDoor(string[] a, Result r)
+        {
+            yield return new WaitForSeconds(0.5f);
+            var door = HomeDoorOf(Knocking());
+            if (door == null) { r.Fail($"no knocking area or door in {D.dreamLocation?.name}"); yield break; }
+            var l = door.GetComponent<Locked>();
+            bool locked = l != null && l.locked;
+            r.Info = DoorInfo(door);
+            string want = a.Length > 0 ? a[0] : "";
+            if ((want == "locked" && !locked) || (want == "unlocked" && (locked || door.blocked)) || (want == "open" && !door.opened))
+                r.Fail($"the door isn't {want}: {r.Info}");
+        }
+
+        /// <summary>"home-knock" (either): our player walks into the knocking area, which unlocks the bedroom door.</summary>
+        private static IEnumerator HomeKnock(string[] a, Result r)
+        {
+            var et = Knocking();
+            if (et == null) { r.Fail($"no knocking area in {D.dreamLocation?.name}"); yield break; }
+            var p = P;
+            p.transform.position = new Vector3(et.transform.position.x, p.transform.position.y, et.transform.position.z);
+            var rb = p.GetComponent<Rigidbody>();
+            if (rb != null) rb.position = p.transform.position;
+            yield return new WaitForSeconds(0.3f);
+            AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.area));
+            yield return new WaitForSeconds(3f);
+            var door = HomeDoorOf(et);
+            r.Info = $"walked into {et.name} at {Fmt(et.transform.position)}; " + (door != null ? DoorInfo(door) : "no door");
+        }
+
+        /// <summary>"home-open" (either): our player opens the bedroom door, as a player can only when it isn't locked here, and it stays open.</summary>
+        private static IEnumerator HomeOpen(string[] a, Result r)
+        {
+            var door = HomeDoorOf(Knocking());
+            if (door == null) { r.Fail($"no door in {D.dreamLocation?.name}"); yield break; }
+            var p = P;
+            var to = door.transform.position + (p.transform.position - door.transform.position).normalized * 150f;
+            p.transform.position = new Vector3(to.x, p.transform.position.y, to.z);
+            var rb = p.GetComponent<Rigidbody>();
+            if (rb != null) rb.position = p.transform.position;
+            yield return new WaitForSeconds(0.5f);
+            var l = door.GetComponent<Locked>();
+            if ((l != null && l.locked) || door.blocked) { r.Fail($"we're locked in: {DoorInfo(door)}"); yield break; }
+            if (!door.opened) AsPlayer(() => door.open(p.transform.position, p.transform, 0f));
+            yield return new WaitForSeconds(2f); // a refusal by the host closes it again
+            r.Info = DoorInfo(door);
+            if (!door.opened) r.Fail($"the door didn't stay open: {r.Info}");
         }
 
         /// <summary>"back-from-dream" (client): the host's end ended ours.</summary>

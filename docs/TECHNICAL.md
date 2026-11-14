@@ -95,7 +95,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 130 | DeathBagMarker | both | i64 spawned id of a death bag, vec3: the map marker of a bag left in a separate location |
 | 135 | Ping | both | nothing: Direct only, a keepalive from the writer thread; it never reaches the session |
 | 140 | CharacterDead | C→H | nothing: our character died for good (we watch the others); the host keeps it with our character, so rejoining gives CharacterLoad kind 4 (watch again) |
-| 155 | HostIds | H→C | u8 flags (1: made before you joined), u16 n, n × (i64 id, str name, vec3 position): ids for what the world made by itself; a client ties each to its own copy (named as an ObjRef Spawned) |
+| 155 | HostIds | H→C | u8 flags (1: made before you joined), u16 n, n × (i64 id, str name, vec3 position, i32 place in the hierarchy): ids for what the world made by itself; a client ties each to its own copy (named as an ObjRef Spawned) |
 | 160 | SkillSpend | C→H | u8 level, str good skill, str negative skill ("" none), u8 n, n × str skills had: a request to spend a skill point; the host checks the game's rules |
 | 165 | NightObject | H→C | u8 kind (1 made, 2 gone, 3 made before you joined), i64 id, then (not for 2) str night scenario, str night event, u8 GameEvents, u8 step, vec3, quat, ObjRef parent, u8 trap armed (255: no trap): an object a night event's spawn step made on the host; clients make that step's prefab there, or tie their copy from the save |
 | 170 | SteamPiece | both | Steam only: a piece of a reliable message over Steam's 512 KiB limit (the first piece starts with u32 the whole length); joined again before the session sees it |

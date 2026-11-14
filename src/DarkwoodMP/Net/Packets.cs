@@ -327,9 +327,11 @@ namespace DarkwoodMP.Net
         /// Host to clients: ids for objects the world made by itself while players are joined (a location's
         /// characters, a delayed event's spawn...), which each game would give its own save id. u8 flags (1 = made
         /// before you joined: in the world you loaded), u16 count, then count times: i64 id, str the object's name,
-        /// vec3 where it stands in the host's game. A client ties each id to its own object of that name that started
-        /// within 30 s of the message, the nearest within 50 of that spot, and names it by that id as an ObjRef
-        /// Spawned; one it hasn't tied it finds by that name and spot (see World.HostIds).
+        /// vec3 where it stands in the host's game, i32 its place in its hierarchy (HostIds.PlaceOf: a hash of each
+        /// level's name and sibling index). A client ties each id to its own object of that name that started
+        /// within 30 s of the message, the nearest within 50 of that spot (of those equally near, the one in the same
+        /// place), and names it by that id as an ObjRef Spawned; one it hasn't tied it finds by that name and spot
+        /// (see World.HostIds).
         /// </summary>
         HostIds = 155,
         /// <summary>

@@ -51,7 +51,23 @@ namespace DarkwoodMP.World
         internal static void AfterConfirm(Dreams d)
         {
             if (S == null || !S.IsHost || !Hideouts.Together || d == null) return;
-            if (d.wantToDream && Core.EnteringDream) _hostLevelDream = true;
+            if (d.wantToDream && Core.EnteringDream) { _hostLevelDream = true; DrawNow(d); }
+        }
+
+        /// <summary>
+        /// The game draws the dream only after its transition has played (DreamTransition.onFinishedVideo ->
+        /// Dreams.prepareDream -> getPreset), several seconds after the level. Drawing it here, as the transition
+        /// starts, sends it (PresetChosen) then, so every client's transition plays at the same time as ours; the
+        /// transition then goes into the dream drawn (getPreset by name doesn't draw again).
+        /// </summary>
+        private static void DrawNow(Dreams d)
+        {
+            try
+            {
+                var preset = d.getPreset(d.startTransition.dreamToTransitionTo ?? "");
+                if (preset != null) d.startTransition.dreamToTransitionTo = preset.name;
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning($"[dream] couldn't draw the level dream early, it's sent when the game draws it: {e.Message}"); }
         }
 
         internal static void PresetChosen(DreamPreset preset)
@@ -88,7 +104,10 @@ namespace DarkwoodMP.World
             return w;
         }
 
-        internal static void Started() => _ended = false;
+        internal static void Started() { _ended = false; EnteredAt = System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0; }
+
+        /// <summary>For tests: when our game last started dreaming (Unix seconds; the test games share one clock).</summary>
+        internal static double EnteredAt { get; private set; }
 
         /// <summary>The prologue's stages are dreamt together too (World.Prologue): this is the one every game is in.</summary>
         internal static void SharePrologue(string stage)
@@ -233,8 +252,9 @@ namespace DarkwoodMP.World
         internal static void TestLevelDream(string name)
         {
             var d = Singleton<Dreams>.Instance;
-            _hostLevelDream = true;
             GoInto(d, name);
+            _hostLevelDream = true;
+            DrawNow(d);
         }
     }
 

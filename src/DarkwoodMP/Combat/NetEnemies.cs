@@ -84,9 +84,11 @@ namespace DarkwoodMP.Combat
             if (go == null) return false;
             if (go.scene != UnityEngine.SceneManagement.SceneManager.GetActiveScene()) return true;
             // In the dream's own place: also while our player is still on the way in (a stage's start event fires
-            // before the player stands there), when the distance below doesn't tell yet.
+            // before the player stands there), when the distance below doesn't tell yet. Not a shared level dream's
+            // (or the epilogue's): the host runs those (World.Locations.SharedDream); a prologue stage each game runs.
             var d = Singleton<Dreams>.Instance;
-            if (d != null && d.dreamLocation != null && (d.dreaming || d.dreamPrepared || d.switchingDream) && go.transform.IsChildOf(d.dreamLocation.transform)) return true;
+            if (d != null && d.dreamLocation != null && (d.dreaming || d.dreamPrepared || d.switchingDream) && go.transform.IsChildOf(d.dreamLocation.transform)
+                && (World.DreamSync.Shared == null || World.Prologue.IsStage(World.DreamSync.Shared))) return true;
             if (World.Locations.HostRunsHere()) return false;
             var p = Player.Instance;
             return p != null && (go.transform.position - p.transform.position).sqrMagnitude < 4000f * 4000f;

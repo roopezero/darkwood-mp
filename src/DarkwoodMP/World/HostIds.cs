@@ -16,7 +16,8 @@ namespace DarkwoodMP.World
     ///           A joiner let in later gets all the live ones (flagged as made before it came, so it doesn't look
     ///           for them by time).
     ///   Client: ties the id to its own copy: an object of that name, made within Window seconds before or after the
-    ///           message, the nearest within ObjRef.PlacedSlack of the host's position, not tied already. Until one
+    ///           message, the nearest within ObjRef.PlacedSlack of the host's position (of those equally near, the one in the
+    ///           same place in its hierarchy, PlaceOf), not tied already. Until one
     ///           is tied (or when none ever is), a ref to the id is looked up by that name and position, as Placed.
     ///           An id not tied within Window (the host loaded a location this joiner only goes to minutes later),
     ///           or one made before it came, is kept by name: an object of that name that starts here later, still
@@ -32,12 +33,12 @@ namespace DarkwoodMP.World
         private const int MaxPerMessage = 1000;
 
         private static readonly List<(GameObject go, float at)> _started = new List<(GameObject, float)>();
-        private static readonly List<(long id, string name, Vector3 pos, float until)> _pending = new List<(long, string, Vector3, float)>();
+        private static readonly List<(long id, string name, Vector3 pos, int place, float until)> _pending = new List<(long, string, Vector3, int, float)>();
         // Client: ids the host gave out that weren't tied in time (or were made before we came), by name.
-        private static readonly Dictionary<string, List<(long id, Vector3 pos)>> _late = new Dictionary<string, List<(long, Vector3)>>();
+        private static readonly Dictionary<string, List<(long id, Vector3 pos, int place)>> _late = new Dictionary<string, List<(long, Vector3, int)>>();
         private static readonly HashSet<GameObject> _lateChecked = new HashSet<GameObject>();
         private static readonly HashSet<GameObject> _lateTied = new HashSet<GameObject>(); // still in _started: a fresh id may take over
-        private static readonly List<(long id, string name, Vector3 pos)> _outgoing = new List<(long, string, Vector3)>();
+        private static readonly List<(long id, string name, Vector3 pos, int place)> _outgoing = new List<(long, string, Vector3, int)>();
         private static readonly System.Random _rng = new System.Random();
         private static float _nextPrune;
 
@@ -82,7 +83,7 @@ namespace DarkwoodMP.World
                     if (go == null || !ObjRef.Unnamed(go)) continue;
                     long id = NewId();
                     ObjRef.BindShared(id, go);
-                    _outgoing.Add((id, go.name, go.transform.position));
+                    _outgoing.Add((id, go.name, go.transform.position, PlaceOf(go)));
                     Given++;
                 }
                 if (_outgoing.Count > 0) { Send(_outgoing, 0, 0); _outgoing.Clear(); }
@@ -94,8 +95,8 @@ namespace DarkwoodMP.World
             for (int i = 0; i < _pending.Count; i++)
             {
                 var p = _pending[i];
-                if (TryBind(p.id, p.name, p.pos)) _pending.RemoveAt(i--);
-                else if (now > p.until) { AddLate(p.id, p.name, p.pos); _pending.RemoveAt(i--); }
+                if (TryBind(p.id, p.name, p.pos, p.place)) _pending.RemoveAt(i--);
+                else if (now > p.until) { AddLate(p.id, p.name, p.pos, p.place); _pending.RemoveAt(i--); }
             }
             // What started a while ago and is still unnamed: maybe the copy of an id the host gave out long before.
             if (_late.Count > 0)
@@ -106,24 +107,44 @@ namespace DarkwoodMP.World
             if (_started.Count == 0) { _lateChecked.Clear(); _lateTied.Clear(); }
         }
 
-        private static void AddLate(long id, string name, Vector3 pos)
+        private static void AddLate(long id, string name, Vector3 pos, int place)
         {
-            if (!_late.TryGetValue(name, out var list)) _late[name] = list = new List<(long, Vector3)>();
-            list.Add((id, pos));
+            if (!_late.TryGetValue(name, out var list)) _late[name] = list = new List<(long, Vector3, int)>();
+            list.Add((id, pos, place));
         }
+
+        /// <summary>
+        /// Where an object stands in its hierarchy (each level's name and sibling index, up to its root): a hash
+        /// that tells apart objects of the same name on the same spot (the home dream's bedroom door, Door1, has a
+        /// second Door1 with its events at the same spot). A prefab spawned in every game gives the same one in
+        /// each; elsewhere it may differ, so it only picks between objects that are equally near.
+        /// </summary>
+        internal static int PlaceOf(GameObject go)
+        {
+            var sb = new System.Text.StringBuilder();
+            // The root's own index is left out: it is its place among the scene's roots, which differs between games.
+            for (var t = go.transform; t != null; t = t.parent) { sb.Append(t.name); if (t.parent != null) sb.Append(':').Append(t.GetSiblingIndex()); sb.Append('/'); }
+            return StableHash.Of(sb.ToString());
+        }
+
+        // Nearer wins; at the same distance (within a unit), the one in the same place in its hierarchy.
+        private static bool Better(float d, bool samePlace, float bestD, bool bestSame) =>
+            d < bestD - 1f || (d <= bestD + 1f && samePlace && !bestSame);
 
         private static void TryBindLate(GameObject go)
         {
             if (!_late.TryGetValue(go.name, out var list) || !ObjRef.Unnamed(go)) return;
             var q = go.transform.position;
-            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
-            int best = -1;
+            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack + 2f;
+            bool bestSame = false;
+            int best = -1, place = PlaceOf(go);
             for (int i = 0; i < list.Count; i++)
             {
-                var (id, pos) = list[i];
+                var (id, pos, p) = list[i];
                 if (ObjRef.IsBound(id)) continue;
                 float d = (q.x - pos.x) * (q.x - pos.x) + (q.z - pos.z) * (q.z - pos.z);
-                if (d <= bestD) { bestD = d; best = i; }
+                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack) continue;
+                if (best < 0 || Better(d, p == place, bestD, bestSame)) { bestD = d; best = i; bestSame = p == place; }
             }
             if (best < 0 || !ObjRef.BindShared(list[best].id, go)) return;
             _lateTied.Add(go);
@@ -131,9 +152,10 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] tied {go.name} at {go.transform.position} to the host's #{list[best].id} (given out a while ago)");
         }
 
-        private static bool TryBind(long id, string name, Vector3 pos)
+        private static bool TryBind(long id, string name, Vector3 pos, int place)
         {
             GameObject best = null;
+            bool bestSame = false;
             float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack, now = Time.unscaledTime;
             foreach (var (go, at) in _started)
             {
@@ -141,7 +163,9 @@ namespace DarkwoodMP.World
                 if (!ObjRef.Unnamed(go) && !_lateTied.Contains(go)) continue;
                 var q = go.transform.position;
                 float d = (q.x - pos.x) * (q.x - pos.x) + (q.z - pos.z) * (q.z - pos.z);
-                if (d <= bestD) { bestD = d; best = go; }
+                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack) continue;
+                bool same = PlaceOf(go) == place;
+                if (best == null || Better(d, same, bestD, bestSame)) { bestD = d; best = go; bestSame = same; }
             }
             if (best == null) return false;
             // Tied a moment ago to an id from long before: the id the host gives out now is the one for it.
@@ -152,7 +176,7 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        private static void Send(List<(long id, string name, Vector3 pos)> list, byte flags, ulong to)
+        private static void Send(List<(long id, string name, Vector3 pos, int place)> list, byte flags, ulong to)
         {
             for (int start = 0; start < list.Count; start += MaxPerMessage)
             {
@@ -165,6 +189,7 @@ namespace DarkwoodMP.World
                     w.W.Write(list[i].id);
                     w.WriteStr(list[i].name);
                     w.Write(list[i].pos);
+                    w.W.Write(list[i].place);
                 }
                 if (to == 0) _session.Broadcast(w, Channel.Control, reliable: true);
                 else _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -176,8 +201,8 @@ namespace DarkwoodMP.World
         private static void SendAllTo(ulong peer)
         {
             if (_session == null || !_session.IsHost) return;
-            var all = new List<(long, string, Vector3)>();
-            foreach (var kv in ObjRef.SharedObjects) all.Add((kv.Key, kv.Value.name, kv.Value.transform.position));
+            var all = new List<(long, string, Vector3, int)>();
+            foreach (var kv in ObjRef.SharedObjects) all.Add((kv.Key, kv.Value.name, kv.Value.transform.position, PlaceOf(kv.Value)));
             if (all.Count > 0) Send(all, MadeBefore, peer);
         }
 
@@ -192,10 +217,11 @@ namespace DarkwoodMP.World
                 long id = r.R.ReadInt64();
                 string name = r.ReadStr();
                 var pos = r.ReadVector3();
+                int place = r.R.ReadInt32();
                 ObjRef.Announced(id, name, pos);
                 // Made before this joiner came: its copy is in the save it loaded, found by name and position when named.
-                if ((flags & MadeBefore) != 0) { AddLate(id, name, pos); continue; }
-                if (!Joined || !TryBind(id, name, pos)) _pending.Add((id, name, pos, until));
+                if ((flags & MadeBefore) != 0) { AddLate(id, name, pos, place); continue; }
+                if (!Joined || !TryBind(id, name, pos, place)) _pending.Add((id, name, pos, place, until));
             }
         }
     }
