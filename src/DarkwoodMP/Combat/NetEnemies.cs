@@ -53,7 +53,7 @@ namespace DarkwoodMP.Combat
             session.OnPeerDisconnected += id => { _known.Remove(id); _corpseKnown.Remove(id); };
             session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
             session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
-            session.OnSessionEnded += () => { HostileNpcs.Clear(); _known.Clear(); _corpseKnown.Clear(); _byCharHost.Clear(); _byIdHost.Clear(); _puppets.Clear(); _byChar.Clear(); EnemyMotion.Reset(); _corpses.Clear(); _corpseIds.Clear(); Frozen.Clear(); };
+            session.OnSessionEnded += () => { HostileNpcs.Clear(); _known.Clear(); _corpseKnown.Clear(); _byCharHost.Clear(); _byIdHost.Clear(); _puppets.Clear(); _byChar.Clear(); EnemyMotion.Reset(); _corpses.Clear(); _corpseIds.Clear(); Frozen.Clear(); Hidden.Clear(); _switchedOff.Clear(); };
         }
 
         /// <summary>
@@ -91,6 +91,7 @@ namespace DarkwoodMP.Combat
         public static void Thaw(Character c)
         {
             if (c == null || !Frozen.Remove(c)) return;
+            Hidden.Remove(c);
             SetVisible(c, true);
             var rb = c.GetComponent<Rigidbody>();
             if (rb != null) rb.isKinematic = false;
@@ -745,16 +746,81 @@ namespace DarkwoodMP.Combat
             if (rb != null) { rb.isKinematic = true; rb.velocity = Vector3.zero; }
             foreach (var a in c.GetComponentsInChildren<tk2dSpriteAnimator>(true)) { a.AnimationEventTriggered = null; a.AnimationCompleted = null; }
             if (hide && Instance != null && Instance._corpseIds.ContainsKey(c)) hide = false; // a corpse the host sent stays shown
-            if (hide) { SetVisible(c, false); StopSounds(c, keepDeathSound: false); } // no barking from a dog that isn't shown
+            if (hide) { Hide(c); StopSounds(c, keepDeathSound: false); } // no barking from a dog that isn't shown
             Frozen.Add(c);
         }
 
         public static readonly HashSet<Character> Frozen = new HashSet<Character>();
 
+        /// <summary>
+        /// Client: our own characters hidden while the host runs the world there (frozen ones, and our save's copies
+        /// of host enemies the host stopped sending). They stay in their location's lists, so the game switches them
+        /// off and on with their area, and each time CharacterSounds.OnEnable starts their idle loop again
+        /// (ClientHiddenSilentPatch keeps them silent): a dead dog camp's dogs barked on in a joiner's game.
+        /// </summary>
+        public static readonly HashSet<Character> Hidden = new HashSet<Character>();
+
+        private static void Hide(Character c) { SetVisible(c, false); Hidden.Add(c); }
+
+        private static readonly System.Reflection.FieldInfo FovLightField = HarmonyLib.AccessTools.Field(typeof(Player), "FOVLight");
+
+        /// <summary>The layers our player's view (Player.FOVLight, a Light2D) is cut by: its rays stop at colliders on these.</summary>
+        internal static int FovShadowMask()
+        {
+            var l = Player.Instance != null ? FovLightField?.GetValue(Player.Instance) as Light2D : null;
+            return l != null ? (int)l.ShadowLayer : 0;
+        }
+
+        /// <summary>A character's switched-on colliders that cut our player's view (on FovShadowMask's layers), by path under it.</summary>
+        internal static List<string> FovBlockers(Character c, int mask)
+        {
+            var list = new List<string>();
+            if (c == null || mask == 0) return list;
+            foreach (var col in c.GetComponentsInChildren<Collider>(true))
+            {
+                if (col == null || !col.enabled || !col.gameObject.activeInHierarchy || (mask & (1 << col.gameObject.layer)) == 0) continue;
+                string path = col.transform == c.transform ? "." : col.transform.name;
+                for (var t = col.transform.parent; t != null && t != c.transform; t = t.parent) path = t.name + "/" + path;
+                list.Add($"{path}:{col.GetType().Name}:{col.gameObject.layer}{(col.isTrigger ? ":trigger" : "")}");
+            }
+            list.Sort(System.StringComparer.Ordinal);
+            return list;
+        }
+
+        private static void LogFovBlockers(Character c, string when)
+        {
+            int mask = FovShadowMask();
+            var b = FovBlockers(c, mask);
+            if (b.Count == 0) return;
+            var sizes = c.GetComponentsInChildren<Collider>(true).Where(x => x != null && x.enabled && (mask & (1 << x.gameObject.layer)) != 0)
+                .Select(x => $"{x.name} {x.bounds.size.x:0}x{x.bounds.size.z:0}");
+            Plugin.Log.LogInfo($"[enemy] {c.name} {when}: colliders on the view's shadow layers (mask {mask}): {string.Join(", ", b)}; sizes {string.Join(", ", sizes)}");
+        }
+
+        /// <summary>
+        /// Client: the renderers and colliders SetVisible(false) switched off, per character, so showing it again switches
+        /// on just those. Switching on everything under a character woke parts the game keeps off (and a corpse's parts
+        /// its die2 destroys on the host): a collider on the view's shadow layers then cut the player's view to nothing
+        /// beside the corpse.
+        /// </summary>
+        private static readonly Dictionary<Character, List<Component>> _switchedOff = new Dictionary<Character, List<Component>>();
+
         private static void SetVisible(Character c, bool on)
         {
-            foreach (var r in c.GetComponentsInChildren<Renderer>(true)) r.enabled = on;
-            foreach (var col in c.GetComponentsInChildren<Collider>(true)) col.enabled = on;
+            if (!on)
+            {
+                if (!_switchedOff.TryGetValue(c, out var off)) _switchedOff[c] = off = new List<Component>();
+                foreach (var r in c.GetComponentsInChildren<Renderer>(true)) if (r != null && r.enabled) { r.enabled = false; off.Add(r); }
+                foreach (var col in c.GetComponentsInChildren<Collider>(true)) if (col != null && col.enabled) { col.enabled = false; off.Add(col); }
+                return;
+            }
+            if (!_switchedOff.TryGetValue(c, out var list)) return;
+            _switchedOff.Remove(c);
+            foreach (var x in list)
+            {
+                if (x is Renderer r && r != null) r.enabled = true;
+                else if (x is Collider col && col != null) col.enabled = true;
+            }
         }
 
         /// <summary>Catch characters that started before we were in client mode (e.g. rejoining in the same world).</summary>
@@ -820,6 +886,7 @@ namespace DarkwoodMP.Combat
             Uncull(p);
             Freeze(c, hide: false);
             SetVisible(c, true);
+            Hidden.Remove(c); // shown as the host's now: its idle loop plays again
             PlayIdleLoop(c);
             c.transform.SetPositionAndRotation(pos, rot);
             Animators(c.transform, out var list, out var paths);
@@ -828,6 +895,7 @@ namespace DarkwoodMP.Combat
             _byChar[c] = p;
             if (c.npc != null) HostileNpcs.ClientStarted(c, id);
             Plugin.Log.LogInfo($"Showing the host's {name} #{id} ({(ours ? "made from its prefab" : "our copy from the save")}{(wasOff ? ", switched on" : "")}); {Frozen.Count} of our own characters are frozen");
+            LogFovBlockers(c, $"#{id} shown");
         }
 
         private void OnState(ulong from, PacketReader r)
@@ -1000,6 +1068,8 @@ namespace DarkwoodMP.Combat
                 a.Pause();
             }
             StopSounds(c, keepDeathSound: true); // destroyComponents destroys CharacterSounds without stopping its loop
+            SetVisible(c, true); // whatever a hide switched off (it's shown already; this only makes sure)
+            DieBody(c);
             if (p.Cut) { SettleCut(p); return; }
             if (c.animator == null)
             {
@@ -1019,8 +1089,35 @@ namespace DarkwoodMP.Combat
                     else Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse ({step.Name}): {e.InnerException?.Message ?? e.Message}");
                 }
             }
-            foreach (var col in c.GetComponentsInChildren<Collider>(true)) if (col != null) col.enabled = true;
             Plugin.Log.LogInfo(c.GetComponent<Item>() != null ? $"The host's {c.name} #{p.Id} died: its corpse can be searched here" : $"The host's {c.name} #{p.Id} died, but its corpse couldn't be made searchable here");
+            LogFovBlockers(c, $"#{p.Id} settled");
+        }
+
+        /// <summary>
+        /// Client: what Character.die2 does to a dying character's body, for a copy (which never runs die2): its body
+        /// collider is on and walked through (unless the kind keeps it solid), its hit collider goes (unless it has a pre-death, which keeps it alive a while longer), its Selectable when it
+        /// isn't selectable dead, and its InSightOfPlayer. Logs the parts on the view's shadow layers that are off here,
+        /// which Settle used to switch on.
+        /// </summary>
+        private static void DieBody(Character c)
+        {
+            try
+            {
+                int mask = FovShadowMask();
+                var off = c.GetComponentsInChildren<Collider>(true)
+                    .Where(x => x != null && !x.enabled && (mask & (1 << x.gameObject.layer)) != 0).Select(x => $"{x.name}:{x.gameObject.layer}").ToList();
+                var hit = c.hitCollider;
+                Plugin.Log.LogInfo($"[enemy] {c.name} dies here: hit collider {(hit == null ? "none" : $"{hit.name} layer {hit.layer}{((mask & (1 << hit.layer)) != 0 ? " (cuts the view)" : "")}")}, " +
+                                   $"pre-death {c.hasPreDeath}; switched-off parts on the view's shadow layers (mask {mask}): [{string.Join(", ", off)}]");
+                if (c.collider != null) { if (!c.dontSwitchColliderTriggerOnDeath) c.collider.isTrigger = true; c.collider.enabled = true; }
+                if (!c.hasPreDeath)
+                {
+                    if (hit != null) Object.Destroy(hit);
+                    if (c.notSelectableWhenDead) { var sel = c.GetComponent<Selectable>(); if (sel != null) Object.Destroy(sel); }
+                }
+                if (c.inSightOfPlayer != null) { Object.Destroy(c.inSightOfPlayer); c.inSightOfPlayer = null; }
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't settle {c.name}'s body as die2 does: {e.Message}"); }
         }
 
         /// <summary>
@@ -1158,7 +1255,7 @@ namespace DarkwoodMP.Combat
             StopSounds(p.C, keepDeathSound: false);
             // An NPC the host calmed down (or one out of our range): our copy of it is ours to run again.
             if (p.C.npc != null && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours)) { Recull(p); return; }
-            if (p.Ours) Object.Destroy(p.C.gameObject); else { SetVisible(p.C, false); Recull(p); }
+            if (p.Ours) Object.Destroy(p.C.gameObject); else { Hide(p.C); Recull(p); }
         }
 
         private void OnSound(ulong from, PacketReader r)

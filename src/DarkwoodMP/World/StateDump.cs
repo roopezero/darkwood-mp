@@ -295,6 +295,9 @@ namespace DarkwoodMP.World
                         e["searchable"] = c.GetComponent<Item>() != null;
                         // A settled corpse is walked through (setDeathCollider makes its body a trigger).
                         e["walkThrough"] = c.collider == null || c.collider.isTrigger || !c.collider.enabled;
+                        // What of it cuts the player's view (Player.FOVLight's shadow layers): a client's copy had
+                        // colliders switched on that the host's corpse has off or destroyed (a black screen beside it).
+                        e["viewBlockers"] = string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()));
                         var inv = c.GetComponent<Inventory>();
                         if (inv != null) e["loot"] = Slots(inv);
                     }

@@ -50,6 +50,10 @@ namespace DarkwoodMP.World
             Add("loc-wake", Wake, timeout: 20f);
             // "loc-stopped NAME" (host): nobody else is in NAME: it isn't kept running, and its characters are off.
             Add("loc-stopped", Stopped, timeout: 15f);
+            // "corpse-out [KIND]" (host): a location's savage dies outside it and the location is left: the corpse stays;
+            // "corpse-out-check [KIND]" (client): it's here too, shown and searchable.
+            Add("corpse-out", CorpseOut, timeout: 30f);
+            Add("corpse-out-check", CorpseOutCheck, timeout: 10f);
         }
 
         private static NetPlayerProxy Joiner() =>
@@ -342,6 +346,61 @@ namespace DarkwoodMP.World
             var c = woken ? _woken : _dog;
             if (c == null) { r.Fail(woken ? "nothing woken (loc-wake first)" : "no dog (loc-dog first)"); yield break; }
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1f);
+        }
+
+        /// <summary>
+        /// "corpse-out" (host): a world location's savage dies outside that location, beside our player, and then the
+        /// location is left (Location.activateCharacters(false), as when nobody is near it any more). Its corpse must
+        /// stay where it fell, switched on and searchable: it used to vanish here while the clients still had it.
+        /// </summary>
+        private static IEnumerator CorpseOut(string[] a, Result r)
+        {
+            var p = Player.Instance;
+            var loc = Object.FindObjectsOfType<Location>()
+                .Where(l => l != null && !l.isOutsideLocation && l.characters != null && !Core.withinLocation(p.transform.position, 0f, l))
+                .OrderBy(l => (l.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
+            if (loc == null) { r.Fail("no world location with a characters holder"); yield break; }
+            var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), a.Length > 0 ? a[0] : "Villager");
+            if (c == null) { r.Fail("couldn't spawn the savage"); yield break; }
+            // One of the location's characters that chased someone out of it without being disconnected.
+            c.baseLocation = loc; c.baseCharacters = loc.characters; c.disconnectedFromLocation = false;
+            c.transform.SetParent(loc.characters, true);
+            if (!loc.charactersList.Contains(c)) loc.charactersList.Add(c);
+            yield return new WaitForSeconds(1f);
+            string where = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, of {Core.getTrueLocationName(loc.name)} (entered {loc.entered}), on {c.gameObject.activeInHierarchy}";
+            if (!c.gameObject.activeInHierarchy) { r.Fail($"it's switched off before it died: {where}"); yield break; }
+            yield return MapScenarioItems2.KillAsPlayer(c, r, 1f);
+            if (c == null || c.alive) { r.Fail($"it didn't die: {where}"); yield break; }
+            yield return new WaitForSeconds(3f); // its death animation: the corpse becomes searchable
+            int mark = MapScenarioIssues.LogMark();
+            loc.activateCharacters(false);
+            if (loc.entered) loc.activateCharacters(true); // its own characters as they were
+            yield return null;
+            bool on = c != null && c.gameObject.activeInHierarchy, item = c != null && c.GetComponent<Item>() != null;
+            r.Info = $"{where}; after the location was left: on {on}, searchable {item}, in its list {loc.charactersList.Contains(c)}";
+            if (!on) r.Fail($"its corpse was switched off with the location: {r.Info}");
+            else if (!item) r.Fail($"its corpse can't be searched: {r.Info}");
+            else
+            {
+                var missing = new List<string>();
+                yield return MapScenarioIssues.WaitLog(mark, new[] { @"corpse at .* lies outside .*: kept as that location is left" }, 3f, missing);
+                if (missing.Count > 0) r.Fail($"not in the log: {string.Join(", ", missing)}");
+            }
+        }
+
+        /// <summary>"corpse-out-check" (client): the host's savage corpse from corpse-out is here, shown and searchable.</summary>
+        private static IEnumerator CorpseOutCheck(string[] a, Result r)
+        {
+            yield return new WaitForSeconds(1f);
+            var p = Player.Instance;
+            var ne = NetEnemies.Instance;
+            var c = Object.FindObjectsOfType<Character>()
+                .Where(x => x != null && !x.alive && x.name.StartsWith(a.Length > 0 ? a[0] : "Villager") && ne != null && ne.NetIdOf(x, out _))
+                .OrderBy(x => (x.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
+            if (c == null) { r.Fail("no corpse of the host's savage here"); yield break; }
+            bool item = c.GetComponent<Item>() != null;
+            r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, on {c.gameObject.activeInHierarchy}, searchable {item}, cuts the view [{string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()))}]";
+            if (!c.gameObject.activeInHierarchy || !item) r.Fail(r.Info);
         }
     }
 }

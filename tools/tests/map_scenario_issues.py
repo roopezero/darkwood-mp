@@ -29,6 +29,7 @@ STEPS = [
     ("host", "kill-dog", {"settle": 0.5}),
     ("client", "dead-dog"),
     ("client", "search-corpse"),
+    ("client", "hidden-silent"),        # our own hidden characters: none spawned here, none heard when switched on again
     # 5: the client breaks the station's egg, the host the near one and the far one (culled in the client's game)
     ("client", "egg-break", "station"),
     ("client", "egg-cull", "far", "on"),  # as the game culls things far off (it didn't cull this one by itself)

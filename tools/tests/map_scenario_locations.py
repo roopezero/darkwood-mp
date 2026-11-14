@@ -15,6 +15,10 @@ LOCATION = "outside_church_underground_01"
 PRE_JOIN = []
 
 STEPS = [
+    # A world location's savage dies outside it, by the host, and the location is left: the corpse stays in both games.
+    ("host", "corpse-out", {"settle": 1}),
+    ("client", "corpse-out-check"),
+    ("both", "compare", "host", "enemies"),
     ("client", "loc-go", LOCATION, {"settle": 3}),
     ("host", "loc-dog", {"settle": 1}),
     ("client", "loc-dog-check", "alive"),

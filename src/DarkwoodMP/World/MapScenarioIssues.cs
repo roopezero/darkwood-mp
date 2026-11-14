@@ -47,6 +47,7 @@ namespace DarkwoodMP.World
             MapScenario.Add("kill-dog", KillDog);
             MapScenario.Add("dead-dog", DeadDog, timeout: 20f);
             MapScenario.Add("search-corpse", SearchCorpse, timeout: 20f);
+            MapScenario.Add("hidden-silent", HiddenSilent, timeout: 15f);
             // #4 workbench storage
             MapScenario.Add("wb-fill", WbFill);
             MapScenario.Add("wb-use", WbUse, timeout: 30f);
@@ -104,7 +105,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Wait (up to secs) for a line matching each pattern in this game's log after line `from`; the ones not found.</summary>
-        private static IEnumerator WaitLog(int from, string[] patterns, float secs, List<string> missing)
+        internal static IEnumerator WaitLog(int from, string[] patterns, float secs, List<string> missing)
         {
             float until = Time.realtimeSinceStartup + secs;
             while (true)
@@ -356,6 +357,69 @@ namespace DarkwoodMP.World
             else if (missing.Count > 0) r.Fail($"not in the log: {string.Join(", ", missing)}");
             else if (loop != null && loop.IsPlaying()) r.Fail($"its idle loop {loop.audioID} still plays");
             else if (stray.Count > 0) r.Fail($"sounds still playing on the corpse: {string.Join(", ", stray)}");
+        }
+
+        /// <summary>
+        /// "hidden-silent" (client): our own characters stay out of the host's world. A spawn point makes nothing here
+        /// (the host's spawns come from the host), and our hidden frozen characters, switched off and on again as the
+        /// game does when their culling node or location is entered, start no sound (a dead dog camp's dogs barked on).
+        /// </summary>
+        private static IEnumerator HiddenSilent(string[] a, Result r)
+        {
+            var p = Player.Instance;
+            var holder = new GameObject("dwmp_test_spawn_holder");
+            holder.transform.position = p.transform.position + new Vector3(300f, 0f, 0f);
+            var sp = new GameObject("dwmp_test_spawnpoint").AddComponent<CharacterSpawnPoint>();
+            sp.transform.SetParent(holder.transform, false);
+            sp.type = CharacterType.Dog;
+            sp.spawnChance = 1f;
+            sp.actuallySpawn();
+            bool spawned = sp.spawnedCharacter != null;
+            if (spawned) Object.Destroy(sp.spawnedCharacter.gameObject);
+            Object.Destroy(holder);
+
+            // One of our own, as a location's spawn would have made it before: frozen and hidden by its Start.
+            // A Dog has no idle loop of its own: one with a loop is picked, so the check means something.
+            string kind = a.Length > 0 ? a[0] : null;
+            var dogSnd = (Resources.Load("Prefabs/Characters/Dog") as GameObject)?.GetComponent<CharacterSounds>();
+            string dogLoops = dogSnd == null ? "none" : $"idle '{dogSnd.idleLoop}', sleeping '{dogSnd.sleeping}', aggressive '{dogSnd.aggressive}', idle sound '{dogSnd.idle}'";
+            if (kind == null)
+                foreach (var k in new[] { "Dog", "DogMutated", "Villager", "ChomperRed", "Mimic", "Banshee" }.Concat(Enum.GetNames(typeof(CharacterType))))
+                {
+                    var s = (Resources.Load("Prefabs/Characters/" + k) as GameObject)?.GetComponent<CharacterSounds>();
+                    if (s != null && !string.IsNullOrEmpty(s.idleLoop)) { kind = k; break; }
+                }
+            var res = Resources.Load("Prefabs/Characters/" + (kind ?? "Dog"));
+            var go = res != null ? Core.AddPrefab(res, p.transform.position + new Vector3(250f, 0f, 250f), Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true) : null;
+            var mine = go != null ? go.GetComponent<Character>() : null;
+            if (mine == null) { if (go != null) Object.Destroy(go); r.Fail($"couldn't make a {kind ?? "Dog"} of our own here"); yield break; }
+            var save = mine.GetComponent<SaveableObject>();
+            if (save != null) save.dontSave = true;
+            yield return null; yield return null;
+            bool hidden = NetEnemies.Hidden.Contains(mine);
+
+            var toggled = new List<Character>();
+            foreach (var c in NetEnemies.Hidden.ToList())
+            {
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                c.gameObject.SetActive(false);
+                c.gameObject.SetActive(true); // CharacterSounds.OnEnable: its idle loop
+                toggled.Add(c);
+            }
+            yield return new WaitForSeconds(0.5f);
+            var loud = new List<string>();
+            foreach (var c in toggled)
+                foreach (var ao in c.GetComponentsInChildren<AudioObject>(true))
+                    if (ao != null && ao.IsPlaying()) loud.Add($"{c.name}: {ao.audioID}");
+            string idle = mine.sounds != null ? mine.sounds.idleLoop : null;
+            r.Info = $"spawn point made {(spawned ? "a dog" : "nothing")}; our {mine.name} hidden {hidden}, idle loop {idle ?? "none"} (a Dog's: {dogLoops}); " +
+                     $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
+            NetEnemies.Hidden.Remove(mine); NetEnemies.Frozen.Remove(mine);
+            Object.Destroy(mine.gameObject);
+            if (spawned) r.Fail($"a spawn point made a character of our own in the host's world: {r.Info}");
+            else if (!hidden) r.Fail($"our own character wasn't hidden: {r.Info}");
+            else if (!toggled.Contains(mine)) r.Fail($"our own character wasn't switched on to be checked: {r.Info}");
+            else if (loud.Count > 0) r.Fail($"hidden characters play sounds: {r.Info}");
         }
 
         /// <summary>"search-corpse" (client): open the dead dog's body and take what's in it (as take-item does).</summary>
