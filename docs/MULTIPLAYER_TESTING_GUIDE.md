@@ -31,7 +31,7 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 
 The batteries are data: every `tools/tests/map_scenario_NAME.py` is `map:NAME`, so a new module is a battery as soon
 as it exists. Now: core, dreams, enemies, far, farevents, fixchecks, gaps, hostile, issues, items1, items2, locations,
-night, npcs, skills, status, sweep, world, and dogfull (the whole scenario with the dog watch; not in `maps`).
+night, npcs, repair (a door and furniture repaired by the client stay repaired), skills, status, sweep, world, and dogfull (the whole scenario with the dog watch; not in `maps`).
 `map_scenario_core.py` holds the scenario's first steps (door, take and drop, clock), which used to live only in
 `map_scenario.py`; the full scenario is unchanged (same PRE_JOIN, STEPS, POST and REQUIRE, checked by hash).
 

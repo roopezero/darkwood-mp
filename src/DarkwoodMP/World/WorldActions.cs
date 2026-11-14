@@ -134,6 +134,7 @@ namespace DarkwoodMP.World
         public static void Send(Action a, ObjRef r, string name, float x = 0, float y = 0, bool f1 = false, bool f2 = false, string str = "")
         {
             if (!r.Valid) return;
+            if (S.IsClient && HammerStroke.Depth > 0) { HammerStroke.Held.Add(() => Send(a, r, name, x, y, f1, f2, str)); return; }
             var w = S.Begin(MsgType.WorldAction);
             WriteAction(w, a, r, x, y, f1, f2, str);
             if (Debug) Plugin.Log.LogInfo($"[world] sent {a} {r} ({name})");
@@ -274,7 +275,8 @@ namespace DarkwoodMP.World
                     {
                         case Action.DoorOpen: door.open(new Vector3(x, door.transform.position.y, y), null, 0f); break;
                         case Action.DoorClose: door.close(null); break;
-                        // As the hammer's third stroke: Door.barricade only nails it up when barricadeState reaches 3.
+                        // As the hammer's third stroke: Door.barricade only nails it up when barricadeState reaches 3
+                        // (and rebuilds a broken door instead).
                         case Action.DoorBarricade: door.barricadeState = 2; door.barricade(f1); break;
                         case Action.DoorDestroyBarricade: door.destroyBarricade(f1); break;
                         case Action.DoorDestroy: door.destroyDoor(f1); break;
@@ -453,8 +455,8 @@ namespace DarkwoodMP.World
                 {
                     case Action.DoorOpen when door.destroyed: Authority.Refuse("the door is broken"); return false;
                     case Action.DoorOpen when isLocked: Authority.Refuse("the door is locked"); return false;
-                    case Action.DoorBarricade when door.barricaded: Authority.Refuse("the door is already barricaded"); return false;
-                    case Action.DoorBarricade when door.destroyed: Authority.Refuse("the door is broken"); return false;
+                    // On a broken door the hammer's strokes rebuild it (Door.setBarricadeState calls unDestroy): that's a repair, allowed.
+                    case Action.DoorBarricade when door.barricaded && !door.destroyed: Authority.Refuse("the door is already barricaded"); return false;
                     case Action.DoorDestroyBarricade when !door.barricaded: Authority.Refuse("the door isn't barricaded"); return false;
                     case Action.DoorHit when door.destroyed: Authority.Refuse("the door is already broken"); return false;
                     case Action.DoorUnlock when locked == null: Authority.Refuse("the door has no lock to open"); return false;
@@ -572,7 +574,7 @@ namespace DarkwoodMP.World
                         var door = go != null ? go.GetComponent<Door>() : null;
                         if (door == null) break;
                         bool open = (f & 1) != 0, barricaded = (f & 2) != 0, broken = (f & 4) != 0, locked = (f & 8) != 0;
-                        if (broken && !door.destroyed) door.destroyDoor(false);
+                        if (broken && !door.destroyed) door.destroyDoor(true); // silently: a rollback, not the door breaking again
                         else if (!broken && door.destroyed) door.unDestroy();
                         var l = door.GetComponent<Locked>();
                         if (locked && (l == null || !l.locked)) door.lockMe(key);
@@ -658,6 +660,34 @@ namespace DarkwoodMP.World
     }
 
     // ---- the calls -----------------------------------------------------------------
+
+    /// <summary>
+    /// A hammer stroke (Player.checkFrameTrigger "HammerWork"): the stroke that nails up a barricade or rebuilds a
+    /// broken door calls Door.barricade (or Window.barricade) first and takes the wood and nails after it. A client
+    /// sends that action as a request once the call is over, so the request carries the materials it used up and a
+    /// refused one gives them back (InventoryWatch).
+    /// </summary>
+    [HarmonyPatch(typeof(Player), nameof(Player.checkFrameTrigger))]
+    static class HammerStroke
+    {
+        internal static int Depth;
+        internal static readonly System.Collections.Generic.List<System.Action> Held = new System.Collections.Generic.List<System.Action>();
+
+        static void Prefix() => Depth++;
+        static void Finalizer()
+        {
+            if (--Depth > 0) return;
+            Depth = 0;
+            if (Held.Count == 0) return;
+            var held = Held.ToArray();
+            Held.Clear();
+            foreach (var send in held)
+            {
+                try { send(); }
+                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send a hammer stroke's action: {e.Message}"); }
+            }
+        }
+    }
 
     [HarmonyPatch(typeof(Door), nameof(Door.open))]
     static class DoorOpenPatch
