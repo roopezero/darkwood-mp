@@ -19,6 +19,9 @@ STEPS = [
     ("host", "corpse-out", {"settle": 1}),
     ("client", "corpse-out-check"),
     ("both", "compare", "host", "enemies"),
+    # Where each game would switch its player's view off (a black screen), around the corpse and the puppets.
+    ("client", "view-scan"),
+    ("host", "view-scan"),
     ("client", "loc-go", LOCATION, {"settle": 3}),
     ("host", "loc-dog", {"settle": 1}),
     ("client", "loc-dog-check", "alive"),

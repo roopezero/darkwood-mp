@@ -54,6 +54,10 @@ namespace DarkwoodMP.World
             // "corpse-out-check [KIND]" (client): it's here too, shown and searchable.
             Add("corpse-out", CorpseOut, timeout: 30f);
             Add("corpse-out-check", CorpseOutCheck, timeout: 10f);
+            // "view-scan [KIND]" (either): the ground around the nearest dead KIND, around the other players' puppets and
+            // around our player, where the game would switch our player's view off (Sync.ViewWatch): nothing that is
+            // only there in co-op (a corpse, a character, a puppet, a stand-in) may, and the info names whatever does.
+            Add("view-scan", ViewScan, timeout: 20f);
         }
 
         private static NetPlayerProxy Joiner() =>
@@ -401,6 +405,51 @@ namespace DarkwoodMP.World
             bool item = c.GetComponent<Item>() != null;
             r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, on {c.gameObject.activeInHierarchy}, searchable {item}, cuts the view [{string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()))}]";
             if (!c.gameObject.activeInHierarchy || !item) r.Fail(r.Info);
+        }
+
+        /// <summary>"view-scan [KIND]": see Register.</summary>
+        private static IEnumerator ViewScan(string[] a, Result r)
+        {
+            yield return new WaitForSeconds(0.5f);
+            var p = Player.Instance;
+            var from = Sync.ViewWatch.LightPos();
+            if (p == null || from == null) { r.Fail("no player view light"); yield break; }
+            float y = from.Value.y;
+            string kind = a.Length > 0 ? a[0] : "Villager";
+            var corpse = Object.FindObjectsOfType<Character>().Where(x => x != null && !x.alive && x.name.StartsWith(kind))
+                .OrderBy(x => (x.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
+            var centres = new List<(string, Vector3)> { ("our player", p.transform.position) };
+            if (corpse != null) centres.Add(($"{corpse.name}'s corpse", corpse.transform.position));
+            foreach (var t in Object.FindObjectsOfType<Transform>().Where(t => t.parent == null && t.name.StartsWith("DarkwoodMP_")))
+                centres.Add((t.name, t.position));
+            var hiders = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            var bad = new List<string>();
+            int spots = 0, dark = 0;
+            foreach (var (what, c) in centres)
+            {
+                for (float dx = -60f; dx <= 60f; dx += 3f)
+                    for (float dz = -60f; dz <= 60f; dz += 3f)
+                    {
+                        var at = new Vector3(c.x + dx, y, c.z + dz);
+                        spots++;
+                        if (!Sync.ViewWatch.Hidden(at)) continue;
+                        dark++;
+                        foreach (var h in Physics.RaycastAll(at + new Vector3(0f, 100f, 0f), Vector3.down, 200f, Sync.ViewWatch.HideMask))
+                        {
+                            if (h.collider == null) continue;
+                            var t = h.collider.transform;
+                            string path = Sync.ViewWatch.Path(t);
+                            string key = $"{path} [layer {h.collider.gameObject.layer}{(h.collider.isTrigger ? ", trigger" : "")}]";
+                            hiders[key] = hiders.TryGetValue(key, out int n) ? n + 1 : 1;
+                            bool ours = path.StartsWith("DarkwoodMP_") || t.GetComponentInParent<Character>() != null;
+                            if (ours && !bad.Contains(key)) bad.Add(key);
+                        }
+                    }
+                yield return null;
+            }
+            r.Info = $"{spots} spots around {string.Join(", ", centres.Select(x => x.Item1))}: {dark} with the view off, " +
+                     $"by [{string.Join("; ", hiders.Select(kv => $"{kv.Key} x{kv.Value}"))}]";
+            if (bad.Count > 0) r.Fail($"a character, corpse, puppet or stand-in switches our player's view off: {string.Join("; ", bad)}. {r.Info}");
         }
     }
 }

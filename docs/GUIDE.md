@@ -142,6 +142,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 - **"The host is playing the prologue" (or "in a dream", or "away in another place").** Wait: you join by yourself when they're out of it.
 - **"The host is playing the ending."** Nobody can join while the host plays the epilogue (it ends at the credits); join after it.
 - **The LAN tab finds nothing.** The search asks the broadcast address first (a host answering it shows at once), then every address on your /24 on port 27720 (that can take ten seconds, with hosts showing as they answer), so the host's firewall must let UDP 27720 in. A host on another port is found by broadcast only, which Windows' firewall may block: add it under *Add server* instead.
+- **The whole screen goes black in one spot and comes back when you step away.** The game switches your view off while something solid is under your character. Please report it with your `LogOutput.log`: the mod logs a `[view]` line there naming what it was.
 - Logs: `BepInEx/LogOutput.log` (the mod), and Unity's `Player.log` (`~/.config/unity3d/Acid Wizard Studio/Darkwood/` on Linux, `%USERPROFILE%\AppData\LocalLow\Acid Wizard Studio\Darkwood\` on Windows).
 
 ## Known limitations

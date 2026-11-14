@@ -965,6 +965,7 @@ namespace DarkwoodMP
         {
             InventoryWatch.LateUpdate();
             JoinScreen.LateUpdate();
+            Sync.ViewWatch.LateUpdate(_session != null && _session.Active);
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             GameCursor.LateUpdate(MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
         }
