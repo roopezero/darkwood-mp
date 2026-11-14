@@ -73,6 +73,10 @@ STEPS = [
 
     # Dragging (the host drags the wardrobe below, once the gas bottle beside where it goes has gone off).
     ("client", "drag", "crate_movable_01", "150", "0"),
+    # Both players take hold of the crate at the same moment: the host gives the drag to one of them, the other's is
+    # let go of at once ("NAME is moving it"), and it comes to rest at the same place in both games.
+    ("host+client", "drag-race", "crate_movable_01", "0", "120", "AT", {"winners": 1, "lead": 15, "settle": 2}),
+    ("both", "compare", "client", "items"),
     # Power: fuel, the generator on; the saw's fuel.
     ("client", "fuel", "Generator_02@-480,-320", "20"),
     ("client", "switch", "Generator_02@-480,-320", "on", {"settle": 2}),

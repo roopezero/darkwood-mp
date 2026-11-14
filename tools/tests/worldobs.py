@@ -72,6 +72,9 @@ while time.time() - t0 < SECS and not stop:
         if last or not any(e[0] == 33 and e[1:10] == m[1:10] for e in recorded[-3:]):
             print(f"ObjMove {KINDS.get(k, k)}:{oid} to {x:.0f},{z:.0f}{' (let go)' if last else ''}", flush=True)
         recorded.append(m)
+    elif t == 49:  # DragOwner: who drags it now (not recorded: the host's own drags, nothing a client test replays)
+        k = m[1]; oid = struct.unpack_from("<q", m, 2)[0]; owner = struct.unpack_from("<Q", m, 10)[0]; flags = m[18]
+        print(f"DragOwner {KINDS.get(k, k)}:{oid} {'#' + str(owner) if owner else 'nobody'}{' (let go if not yours)' if flags & 1 else ''}", flush=True)
     elif t == 35:
         by = struct.unpack_from("<Q", m, 1)[0]; typ, at = rstr(m, 9); x, y, z = struct.unpack_from("<fff", m, at)
         print(f"ItemThrown {typ} by #{by} from {x:.0f},{z:.0f}", flush=True); recorded.append(m)

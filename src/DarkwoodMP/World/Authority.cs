@@ -85,7 +85,7 @@ namespace DarkwoodMP.World
             MsgType.WorldAction, MsgType.EnemyHit, MsgType.NpcHit, MsgType.NpcAttack, MsgType.Burning,
             MsgType.Construct, MsgType.EventFired, MsgType.StoryRequest, MsgType.EggDestroyed, MsgType.InfectionCleared,
             MsgType.TraderTrade, MsgType.StorageSort, MsgType.SkillSpend, MsgType.EssenceAdd, MsgType.SkillReset,
-            MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit, MsgType.Fuel,
+            MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit, MsgType.Fuel, MsgType.DragClaim,
         };
         private static readonly HashSet<(ulong, MsgType)> _bareWarned = new HashSet<(ulong, MsgType)>();
 

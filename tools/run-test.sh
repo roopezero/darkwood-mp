@@ -9,7 +9,7 @@
 #
 # Items:
 #   a test name        (below)
-#   all                every scripted-peer test (the 25 of $ALL; not shots, options, drag, map, map4)
+#   all                every scripted-peer test (the 26 of $ALL; not shots, options, drag, map, map4)
 #   full               all, then the full two-game map
 #   net combat world chars story menus authority      groups of scripted-peer tests (--list shows them)
 #   map                the full two-game scenario (tools/tests/map_scenario.py: every module in one world)
@@ -46,6 +46,8 @@
 #   host-end      the host starts the epilogue: the player gets GameEnd phase 0 and stays, a made-up DreamEnd and a
 #                 late Hello are refused, then the credits: GameEnd phase 1, the server stops
 #   host-authority  a scripted client's requests the host allows or refuses: reach, state, damage, a disarm roll, fuel, speed
+#   host-drag     two scripted players drag the same thing: one at a time (claims, moves taken from the owner only,
+#                 freed on letting go, silence, leaving, out of reach); a container batch refused whole
 #   menu-entry    the menu list takes a click (Join Game in the main menu, Multiplayer in the pause menu) and opens the panel; screenshots into $WORK/shots
 #   solo          playing alone (no session) on a copy of your save: skills, the Skills panel, the stove's reset;
 #                 screenshots into $WORK/solo
@@ -93,7 +95,7 @@ ULOG="$DATA/Player.log"
 PY="python3 -I"
 CTL=27799
 
-ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-authority menu-entry client-reload client-chapter client-away client-end client-epilogue client-drop client-authority host-end host-chapter steam"
+ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-authority host-drag menu-entry client-reload client-chapter client-away client-end client-epilogue client-drop client-authority host-end host-chapter steam"
 declare -A DESC=(
   [handshake]="refusals (password, version, game) and a valid join"
   [capture]="download the host's world for the client tests"
@@ -106,6 +108,7 @@ declare -A DESC=(
   [host-reload]="the host reloads its world; the player is told to reload"
   [host-menu]="the host goes to the main menu: the server stops"
   [host-authority]="what a player asks for, allowed or refused by the host"
+  [host-drag]="two players at the same thing: one drag at a time, container batches whole or not at all"
   [host-chapter]="a player sets off the next chapter: everyone follows the host into it"
   [host-end]="the host reaches the game's end: the player sees it too, the server stops"
   [client-chapter]="the host starts a chapter: the game waits, then loads it"
@@ -135,11 +138,11 @@ declare -A GROUP=(
   [chars]="host-chars client-chars host-progress"
   [story]="host-chapter client-chapter host-end client-end client-epilogue"
   [menus]="menu-entry shots options drag"
-  [authority]="host-authority client-authority"
+  [authority]="host-authority host-drag client-authority"
 )
 GROUP_NAMES="net combat world chars story menus authority"
 # Tests with a verdict of their own (PASS rather than RAN when nothing failed).
-VERDICT=" map map4 options drag menu-entry capture host-world "
+VERDICT=" map map4 options drag menu-entry capture host-world host-drag "
 
 # Map batteries: every tools/tests/map_scenario_NAME.py is the battery map:NAME. "maps" runs those without
 # "IN_MAPS = False" (a module that only repeats the whole scenario, as map_scenario_dogfull.py does).
@@ -461,6 +464,10 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       host --dwmp-dummy --dwmp-spawn DogMutated --dwmp-debug-world; wait_log "dwmp-spawn:" 60
       $PY "$T/authtest.py" 27720
       mod_log "authority\\]" ;;
+    host-drag)
+      host --dwmp-debug-world; world_ready
+      $PY "$T/dragtest.py" 27720
+      mod_log "dragging\\]|refused ContainerSlots|slot [0-9]* of .*refused" ;;
     menu-entry)
       safe_rm "$WORK" "$WORK/shots"; mkdir -p "$WORK/shots"
       ctl args --dwmp-test-menu-entry --dwmp-shots "$WORK/shots"

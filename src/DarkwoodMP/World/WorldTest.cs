@@ -162,6 +162,25 @@ namespace DarkwoodMP.World
             if (drag != null)
             {
                 var start = drag.transform.position;
+                // First as if a client had taken hold of it already (the host agreed to its DragClaim): our player's
+                // drag is let go of at once, and the game's own Item.startDragging doesn't start one.
+                var ds = DragSync.Instance;
+                if (ds != null)
+                {
+                    int cancelled = DragSync.Cancelled;
+                    ds.TestOwner(drag.gameObject, 999);
+                    int blocked = DragStartPatch.Blocked;
+                    drag.startDragging();
+                    bool stopped = DragStartPatch.Blocked > blocked && !drag.beingDragged && player.itemBeingDragged != drag;
+                    player.itemBeingDragged = drag; // as a script takes hold of it
+                    yield return null; yield return null;
+                    bool letGo = player.itemBeingDragged != drag && DragSync.Cancelled > cancelled;
+                    Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {(stopped ? "not started" : "started")}, ours {(letGo ? "let go" : "kept")}: {(stopped && letGo ? "PASS" : "FAIL")}");
+                    if (player.itemBeingDragged == drag) player.itemBeingDragged = null;
+                    ds.TestOwner(drag.gameObject, 0);
+                    yield return new WaitForSeconds(0.5f);
+                    start = drag.transform.position;
+                }
                 Plugin.Log.LogInfo($"[world test] dragging {drag.name} from {start}");
                 player.itemBeingDragged = drag;
                 for (float t = 0f; t < 2f; t += Time.deltaTime)

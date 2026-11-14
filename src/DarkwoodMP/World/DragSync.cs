@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -29,6 +30,15 @@ namespace DarkwoodMP.World
     ///
     /// The object keeps the ObjRef it had before it moved (ObjRef.Pin), so the ones named by where they stand
     /// are still found after they've been moved.
+    ///
+    /// One player drags a thing at a time, and the host decides who (DragClaim, DragOwner). A client that takes hold
+    /// of something asks the host for it (a Request) and sends its positions only once the host agrees; the host
+    /// refuses it while someone else is dragging it, and the client then lets go at once and is shown where the
+    /// thing is ("NAME is moving it"). The host's own player takes hold of it the same way, against the same list.
+    /// The host takes a drag's moves only from its owner (anyone else is sent where the thing is), and frees the
+    /// drag when its owner lets go, stops sending for StaleAfter seconds, leaves, or drags it out of reach. Every
+    /// game is told who owns each drag, so a player who tries to take hold of something someone else is moving is
+    /// stopped before the game starts the drag (Item.startDragging).
     /// </summary>
     public sealed class DragSync
     {
@@ -44,6 +54,17 @@ namespace DarkwoodMP.World
         private Item _settling;       // the object just let go of, sent again once it's come to rest
         private ObjRef _settlingRef;
         private float _settleAt;
+        private bool _claimed;        // client: the host agreed that our player drags _dragging (we send its moves)
+        // client: where the host (or the player who owns the drag) last said the thing we're holding is, for letting go
+        private readonly Dictionary<GameObject, (Vector3 pos, Quaternion rot)> _hostAt = new Dictionary<GameObject, (Vector3, Quaternion)>();
+
+        // who is dragging what (by ObjRef): decided on the host, as the host said on a client
+        private sealed class Owner { public ulong Id; public float Heard; public ObjRef Ref; }
+        private readonly Dictionary<string, Owner> _owners = new Dictionary<string, Owner>();
+        private readonly Dictionary<string, float> _corrected = new Dictionary<string, float>(); // host: a non-owner last sent where it is
+        private float _nextFree;
+        /// <summary>Drags of ours cancelled because someone else had it (for the tests' log).</summary>
+        public static int Cancelled;
 
         // others' drags, shown here
         private sealed class Moving
@@ -90,7 +111,15 @@ namespace DarkwoodMP.World
             Instance = this;
             _session = session;
             session.Register(MsgType.ObjMove, OnMove);
-            session.OnSessionEnded += () => { foreach (var m in _moving.Values) Release(m); _moving.Clear(); ForgetLoose(); _dragging = null; _settling = null; };
+            session.Register(MsgType.DragClaim, OnClaim);
+            session.Register(MsgType.DragOwner, OnDragOwner);
+            session.OnPeerDisconnected += FreeOwnedBy;
+            session.OnSessionEnded += () =>
+            {
+                foreach (var m in _moving.Values) Release(m);
+                _moving.Clear(); ForgetLoose(); _dragging = null; _settling = null;
+                _owners.Clear(); _corrected.Clear(); _hostAt.Clear(); _claimed = false;
+            };
         }
 
         private void ForgetLoose() { _loose.Clear(); _looseFound = false; }
@@ -98,7 +127,13 @@ namespace DarkwoodMP.World
         public void Update()
         {
             ShowOthers();
-            if (!WorldActions.Sharing) { _dragging = null; if (_loose.Count > 0 || _looseFound) ForgetLoose(); return; }
+            if (!WorldActions.Sharing)
+            {
+                _dragging = null; _claimed = false;
+                if (_loose.Count > 0 || _looseFound) ForgetLoose();
+                if (_owners.Count > 0) _owners.Clear();
+                return;
+            }
             var player = Player.Instance;
             var now = player != null ? player.itemBeingDragged : null;
 
@@ -108,17 +143,16 @@ namespace DarkwoodMP.World
                 {
                     Send(_dragging, _dragRef, last: true);
                     _settling = _dragging; _settlingRef = _dragRef; _settleAt = Time.unscaledTime + 1.5f;
+                    LetGo(_dragRef);
                 }
-                _dragging = now;
-                if (now != null)
-                {
-                    _dragRef = ObjRef.Pin(now.gameObject);
-                    if (_moving.TryGetValue(now.gameObject, out var m)) { Release(m); _moving.Remove(now.gameObject); } // ours now
-                    _nextSend = 0f;
-                }
+                _dragging = now; _claimed = false;
+                if (now != null) StartDrag(now);
             }
+            if (_dragging != null && _session.IsHost && _owners.TryGetValue(_dragRef.ToString(), out var mine) && mine.Id == _session.LocalId)
+                mine.Heard = Time.unscaledTime; // the host's own drag never goes stale
+            if (Time.unscaledTime >= _nextFree) { _nextFree = Time.unscaledTime + 1f; FreeStale(); }
 
-            if (_dragging != null && _dragRef.Valid && Time.unscaledTime >= _nextSend)
+            if (_dragging != null && _dragRef.Valid && (_session.IsHost || _claimed) && Time.unscaledTime >= _nextSend)
             {
                 _nextSend = Time.unscaledTime + SendInterval;
                 Send(_dragging, _dragRef, last: false);
@@ -370,15 +404,16 @@ namespace DarkwoodMP.World
             var rot = new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
             bool last = (r.R.ReadByte() & 1) != 0;
 
-            if (s.IsHost && !DragAllowed(from, obj, pos)) return;
+            if (s.IsHost && !TakeMove(from, obj, pos, last)) return;
             // Pass a client's drag on. Where it ended up goes back to its mover too: if the host's game had sent a push
             // of its own for the same object at the same time, the mover got that one and would keep it.
             if (s.IsHost) s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
 
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here"); return; }
-            if (item == _dragging) return; // we're dragging it ourselves
             var go = item.gameObject;
+            if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o)) o.Heard = Time.unscaledTime; // its drag goes on
+            if (item == _dragging) { _hostAt[go] = (pos, rot); return; } // we're holding it: kept for if we have to let go
             if (!_moving.TryGetValue(go, out var m))
             {
                 ObjRef.Pin(go); // before it moves, so it's still found by the same name
@@ -390,6 +425,219 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {s.NameOf(from)} is moving {go.name} ({obj})");
             }
             m.Pos = pos; m.Rot = rot; m.Last = last; m.Heard = Time.unscaledTime;
+        }
+
+        // ---- who drags what --------------------------------------------------------------------------------------
+
+        private bool Stale(Owner o) =>
+            Time.unscaledTime - o.Heard > (_session.IsHost ? StaleAfter : StaleAfter + 2f); // a client waits for the host's word
+
+        /// <summary>The name of someone else who is dragging this object now (as the host decided), or null.</summary>
+        public string OtherOwner(ObjRef r)
+        {
+            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id == _session.LocalId || Stale(o)) return null;
+            return _session.NameOf(o.Id);
+        }
+
+        /// <summary>Our player has just taken hold of item: ours if nobody else drags it (the host is asked, on a client).</summary>
+        private void StartDrag(Item item)
+        {
+            _dragRef = ObjRef.Pin(item.gameObject);
+            _hostAt.Remove(item.gameObject);
+            string other = OtherOwner(_dragRef);
+            if (other != null) { CancelLocal(item, $"{other} is moving it"); return; }
+            if (_moving.TryGetValue(item.gameObject, out var m)) { Release(m); _moving.Remove(item.gameObject); } // ours now
+            _nextSend = 0f;
+            if (!_dragRef.Valid) return;
+            if (_session.IsHost)
+            {
+                _owners[_dragRef.ToString()] = new Owner { Id = _session.LocalId, Heard = Time.unscaledTime, Ref = _dragRef };
+                SendOwner(_dragRef, _session.LocalId, letGo: true);
+                return;
+            }
+            var w = _session.Begin(MsgType.DragClaim);
+            _dragRef.Write(w);
+            Authority.Request(w, $"drag {item.name} ({_dragRef})", (ok, reason, _) =>
+            {
+                if (_dragging != item) return; // let go meanwhile, or already cancelled
+                if (ok) { _claimed = true; _nextSend = 0f; }
+                else CancelLocal(item, reason.EndsWith("is moving it") ? reason : Language.Get("Playermsg_tooFar", "UI"));
+            }, inventory: false);
+        }
+
+        /// <summary>Our player let go of what they dragged: the host frees the drag (a client's is freed by its last move).</summary>
+        private void LetGo(ObjRef r)
+        {
+            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id != _session.LocalId) return;
+            _owners.Remove(r.ToString());
+            if (_session.IsHost) SendOwner(r, 0, letGo: false);
+        }
+
+        /// <summary>
+        /// Our player lets go of item at once (someone else is dragging it): no end position is sent, and our copy
+        /// goes where the host last said it is, held still a moment as another game's drag is, then let go there.
+        /// </summary>
+        private void CancelLocal(Item item, string message)
+        {
+            if (item == null) return;
+            if (_dragging == item) { _dragging = null; _claimed = false; }
+            var go = item.gameObject;
+            var player = Player.Instance;
+            if (item.beingDragged) item.stopDragging(force: true); // as the game lets go when the night ends
+            if (player != null && player.itemBeingDragged == item) // taken hold of by a script (the tests)
+            {
+                player.itemBeingDragged = null;
+                var joint = item.GetComponent<HingeJoint>();
+                if (joint != null) Object.Destroy(joint);
+            }
+            if (!_moving.ContainsKey(go)) // not already shown following the other player's drag
+            {
+                var body = go.GetComponent<Rigidbody>();
+                var at = (pos: go.transform.position, rot: go.transform.rotation);
+                if (_hostAt.TryGetValue(go, out var h)) at = h;
+                else if (body != null && _loose.TryGetValue(body, out var p)) at = (p.Pos, p.Rot);
+                var m = new Moving { T = go.transform, Body = body, WasKinematic = body != null && body.isKinematic, Pos = at.pos, Rot = at.rot, Last = true, Heard = Time.unscaledTime };
+                if (body != null) body.isKinematic = true;
+                _moving[go] = m;
+                Combat.NetPlayerProxy.IgnoreWith(go);
+            }
+            _hostAt.Remove(go);
+            Cancelled++;
+            if (!string.IsNullOrEmpty(message)) player?.displayMessage(message);
+            Plugin.Log.LogInfo($"[dragging] let go of {item.name} ({ObjRef.Of(go)}): {message}");
+        }
+
+        private void SendOwner(ObjRef r, ulong owner, bool letGo, ulong to = 0)
+        {
+            var w = _session.Begin(MsgType.DragOwner);
+            r.Write(w);
+            w.W.Write(owner);
+            w.W.Write((byte)(letGo ? 1 : 0));
+            if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
+            else _session.Broadcast(w, Channel.Control, reliable: true);
+        }
+
+        /// <summary>Host: where this object is here, as a drag's end, to one player (0: everyone), for their copy to go there.</summary>
+        private void SendHere(ObjRef r, ulong to)
+        {
+            var item = ObjRef.Resolve<Item>(r);
+            if (item == null) return;
+            var w = Message(r, item.transform.position, item.transform.rotation, true);
+            if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
+            else _session.Broadcast(w, Channel.Control, reliable: true);
+        }
+
+        /// <summary>Host, a DragClaim inside a Request: the player took hold of this object. Theirs unless someone else drags it.</summary>
+        private void OnClaim(ulong from, PacketReader r)
+        {
+            if (!_session.IsHost || !Authority.Handling) return;
+            var obj = ObjRef.Read(r);
+            var item = ObjRef.Resolve<Item>(obj);
+            if (item == null) { Authority.Refuse("it isn't here"); return; }
+            if (!Authority.InReach(item.transform.position, WorldActions.Reach, item.name)) { SendHere(obj, from); return; }
+            string key = obj.ToString();
+            if (_owners.TryGetValue(key, out var o) && o.Id != from && !Stale(o))
+            {
+                SendHere(obj, from); // before the Verdict: where their copy goes as they let go
+                Authority.Refuse($"{_session.NameOf(o.Id)} is moving it");
+                return;
+            }
+            _owners[key] = new Owner { Id = from, Heard = Time.unscaledTime, Ref = obj };
+            SendOwner(obj, from, letGo: true);
+            if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} drags {item.name} ({obj})");
+        }
+
+        /// <summary>
+        /// Host: whether a player's ObjMove is taken. While someone drags the thing, only their moves are (anyone else
+        /// is sent where it is, at most twice a second); with nobody dragging it, a move that isn't a drag's end (a
+        /// drag not agreed to) is dropped, and an end (a push come to rest) is taken as before. The mover must be
+        /// within reach (DragAllowed): an owner who isn't loses the drag, and lets go.
+        /// </summary>
+        private bool TakeMove(ulong from, ObjRef obj, Vector3 pos, bool last)
+        {
+            string key = obj.ToString();
+            bool owned = _owners.TryGetValue(key, out var o);
+            if (owned && o.Id != from && Stale(o)) { Free(key, o, "stopped sending"); owned = false; }
+            if (owned && o.Id != from)
+            {
+                string ck = key + "/" + from;
+                if (!_corrected.TryGetValue(ck, out float at) || Time.unscaledTime - at > 0.5f)
+                {
+                    _corrected[ck] = Time.unscaledTime;
+                    SendHere(obj, from);
+                    Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj}, which {_session.NameOf(o.Id)} drags: not taken, sent where it is");
+                }
+                return false;
+            }
+            if (!owned && !last)
+            {
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj} without a claim: dropped");
+                return false;
+            }
+            if (!DragAllowed(from, obj, pos))
+            {
+                if (owned) { _owners.Remove(key); SendOwner(obj, 0, letGo: true); }
+                return false;
+            }
+            if (owned)
+            {
+                o.Heard = Time.unscaledTime;
+                if (last) { _owners.Remove(key); SendOwner(obj, 0, letGo: false); }
+            }
+            return true;
+        }
+
+        /// <summary>Host: a drag whose owner has gone quiet or left is nobody's: everyone is sent where the thing is here.</summary>
+        private void Free(string key, Owner o, string why)
+        {
+            _owners.Remove(key);
+            SendHere(o.Ref, 0);
+            SendOwner(o.Ref, 0, letGo: true);
+            Plugin.Log.LogInfo($"[dragging] {_session.NameOf(o.Id)}'s drag of {o.Ref} freed: {why}");
+        }
+
+        private void FreeStale()
+        {
+            if (_owners.Count == 0) { if (_corrected.Count > 0) _corrected.Clear(); return; }
+            List<string> stale = null;
+            foreach (var kv in _owners) if (Stale(kv.Value)) (stale ??= new List<string>()).Add(kv.Key);
+            if (stale == null) return;
+            foreach (var k in stale)
+            {
+                if (_session.IsHost) Free(k, _owners[k], "stopped sending");
+                else _owners.Remove(k);
+            }
+        }
+
+        private void FreeOwnedBy(ulong who)
+        {
+            if (!_session.IsHost) return;
+            List<string> theirs = null;
+            foreach (var kv in _owners) if (kv.Value.Id == who) (theirs ??= new List<string>()).Add(kv.Key);
+            if (theirs != null) foreach (var k in theirs) Free(k, _owners[k], "they left");
+        }
+
+        /// <summary>Client: who drags this object now, as the host decided; let go of it if the host says so.</summary>
+        private void OnDragOwner(ulong from, PacketReader r)
+        {
+            if (!_session.IsClient || from != _session.HostId || !WorldShare.InWorld) return;
+            var obj = ObjRef.Read(r);
+            ulong owner = r.R.ReadUInt64();
+            bool letGo = (r.R.ReadByte() & 1) != 0;
+            string key = obj.ToString();
+            if (owner == 0) _owners.Remove(key);
+            else _owners[key] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = obj };
+            if (_dragging == null || _dragRef.ToString() != key) return;
+            if (owner == _session.LocalId) { _claimed = true; return; }
+            if (letGo) CancelLocal(_dragging, owner != 0 ? $"{_session.NameOf(owner)} is moving it" : Language.Get("Playermsg_tooFar", "UI"));
+        }
+
+        /// <summary>For the tests (WorldTest): another player (owner; 0: nobody) drags this object, as if the host had agreed.</summary>
+        internal void TestOwner(GameObject go, ulong owner)
+        {
+            var r = ObjRef.Pin(go);
+            if (owner == 0) _owners.Remove(r.ToString());
+            else _owners[r.ToString()] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = r };
         }
 
         /// <summary>Slide each object others are moving towards where they said it is; let go of it when they're done.</summary>
@@ -455,6 +703,28 @@ namespace DarkwoodMP.World
                 m.Body.velocity = Vector3.zero; m.Body.angularVelocity = Vector3.zero;
                 m.Body.Sleep(); // where it was put: not to drift off by itself in this game
             }
+        }
+    }
+
+    /// <summary>
+    /// The player can't take hold of something another player is dragging (as the host decided, DragOwner): the game's
+    /// drag doesn't start, and the player is told who is moving it.
+    /// </summary>
+    [HarmonyPatch(typeof(Item), nameof(Item.startDragging))]
+    internal static class DragStartPatch
+    {
+        /// <summary>Drags not started (for the tests).</summary>
+        internal static int Blocked;
+
+        private static bool Prefix(Item __instance)
+        {
+            var d = DragSync.Instance;
+            if (d == null || !WorldActions.Sharing || __instance == null) return true;
+            string who = d.OtherOwner(ObjRef.Of(__instance.gameObject));
+            if (who == null) return true;
+            Player.Instance?.displayMessage($"{who} is moving it");
+            Blocked++;
+            return false;
         }
     }
 }

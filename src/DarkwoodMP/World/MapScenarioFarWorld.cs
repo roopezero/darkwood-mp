@@ -130,6 +130,7 @@ namespace DarkwoodMP.World
             const float secs = 4f;
             for (float t = 0f; t < secs; t += Time.deltaTime)
             {
+                if (P.itemBeingDragged != it) { r.Fail($"{it.name}: our drag was let go of (another player has it)"); yield break; }
                 var at = start + by * (t / secs);
                 it.transform.position = at;
                 if (rb != null) rb.position = at;

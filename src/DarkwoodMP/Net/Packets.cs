@@ -19,7 +19,7 @@ namespace DarkwoodMP.Net
     /// Otherwise the host answers Welcome with the client's id, then a PlayerInfo for everyone already in, and the
     /// client loads the world. While they play, both sides send PlayerState.
     ///
-    /// The values below aren't in order. In use (decimal): 1-6, 10-47, 50-52, 62-68, 70, 78-80, 86-90, 100,
+    /// The values below aren't in order. In use (decimal): 1-6, 10-52, 62-68, 70, 78-80, 86-90, 100,
     /// 115-116, 120-122, 130, 135, 140, 155, 160, 165, 170, 180-185, 190, 200-202, 208-210, 216, 220, 230, 235-237,
     /// 240-241, 250-251. A new message takes a free value; keep this list up to date.
     /// </summary>
@@ -96,7 +96,7 @@ namespace DarkwoodMP.Net
         WorldReload = 31,
         /// <summary>Host -> clients: I'm going back to the main menu and stopping the server; go back to yours.</summary>
         HostAway = 32,
-        /// <summary>Either way: ObjRef, vec3 pos, quat rot, u8 flags (1 last: the drag ended here, or a pushed object came to rest here): an object a player is dragging or pushed (see World.DragSync).</summary>
+        /// <summary>Either way: ObjRef, vec3 pos, quat rot, u8 flags (1 last: the drag ended here, or a pushed object came to rest here): an object a player is dragging or pushed (see World.DragSync). The host takes a drag's moves only from its owner (DragClaim, DragOwner), and a lone end (last) only while nobody drags it.</summary>
         ObjMove = 33,
         /// <summary>Host -> client: str why. Not yet (the host is loading, or in the prologue or a dream): send Hello again in a few seconds. Also while the host makes its world for the joiner (WorldShare.Preparing): its SaveOffer follows by itself. And for a NeedSave of a world no longer offered: start again with Hello.</summary>
         JoinWait = 34,
@@ -139,6 +139,10 @@ namespace DarkwoodMP.Net
         TraderStock = 46,
         /// <summary>Host -> client: vec3 position, str sound (the game's audio id, "" none), str effect (the explosion prefab's name, "" none): one of the host's enemies' explosions, for the sound and the flash (see Combat.EnemyAreaHits).</summary>
         EnemyExplosion = 47,
+        /// <summary>Client -> host, inside a Request: ObjRef: our player took hold of this object to drag it. The host refuses it while another player is dragging it (and first sends the claimer where the thing is, ObjMove last); otherwise that player owns the drag until they let go, and everyone gets DragOwner (see World.DragSync).</summary>
+        DragClaim = 48,
+        /// <summary>Host -> clients: ObjRef, u64 owner (0: nobody), u8 flags (1: if you're dragging it and aren't the owner, let go). Who is dragging this object now; only the owner's ObjMoves for it are taken until they let go (see World.DragSync).</summary>
+        DragOwner = 49,
         /// <summary>
         /// Either way: u64 player (from a client: anything; the host puts in who sent it), u8 n, n x (str audio id,
         /// f32 volume): sounds that player's game played on its own player since the last one (steps, shots, reloads,

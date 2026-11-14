@@ -61,7 +61,7 @@ namespace DarkwoodMP.World
             session.Register(MsgType.ContainerSlotsAsk, OnAsk);
             session.Register(MsgType.ContainerSlotsAll, OnContents);
             session.Register(MsgType.StorageSort, OnSort);
-            session.OnSessionEnded += () => { _watched.Clear(); _refs.Clear(); _isStorage.Clear(); _awaiting.Clear(); _askedScene = -1; };
+            session.OnSessionEnded += () => { _watched.Clear(); _refs.Clear(); _isStorage.Clear(); _awaiting.Clear(); _askedScene = -1; _sent.Clear(); };
         }
 
         /// <summary>Whether this container is a workbench's storage (shared slot by slot).</summary>
@@ -107,6 +107,7 @@ namespace DarkwoodMP.World
             var r = _refs[inv];
             if (!r.Valid) return;
             SendChanges(r, changed);
+            if (_session.IsClient) RememberSent(r, changed);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {changed.Count} slot(s) of {inv.name} {r}: {string.Join(", ", changed.ConvertAll(c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"))}");
             _watched[inv] = keys;
         }
@@ -277,6 +278,7 @@ namespace DarkwoodMP.World
             for (int i = 0; i < before.Length; i++) if (before[i].Length > 0) changed.Add(new Change { Slot = i, Old = before[i], New = "" });
             if (changed.Count == 0) return;
             SendChanges(r, changed);
+            if (_session.IsClient) RememberSent(r, changed);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {r} emptied ({changed.Count} slot(s))");
         }
 
@@ -398,6 +400,20 @@ namespace DarkwoodMP.World
             if (i < 0 || i >= inv.slots.Count) return;
             var slot = inv.slots[i];
             slot.inventory = inv;
+            // Our player holds an item on the cursor that came from this slot, which someone else has filled now: the
+            // game would put the held item back there when it's let go (Controller.placeItem), over theirs. It goes
+            // into our bags instead (it's ours: the slot gave it up when we picked it up).
+            var ctl = Singleton<Controller>.Instance;
+            var held = ctl != null ? ctl.pickedUpItem : null;
+            var player = Player.Instance;
+            if (!string.IsNullOrEmpty(json) && !InvItemClass.isNull(held) && held.slot == slot && player != null)
+            {
+                var keep = new InvItemClass(held);
+                held.UIInvItem?.despawn();
+                ctl.pickedUpItem = null;
+                int dropped = GiveBack(player, keep, keep.amount);
+                Plugin.Log.LogInfo($"[slots] the {keep.type} we held came from slot {i} of {inv.name}, filled by someone else: into our bags ({dropped} at our feet)");
+            }
             WorldActions.Replaying = true;
             try
             {
@@ -413,6 +429,32 @@ namespace DarkwoodMP.World
         // ---- messages ----------------------------------------------------------------------
 
         private struct Change { public int Slot; public string Old, New; }
+
+        // Client: the batches of slot changes we sent lately, to undo one whole when the host refuses it.
+        private sealed class Sent { public string Obj; public List<Change> Changes; public float At; public bool Undone; }
+        private readonly List<Sent> _sent = new List<Sent>();
+        private const float SentKept = 15f;
+
+        private void RememberSent(ObjRef obj, List<Change> changes)
+        {
+            float now = Time.unscaledTime;
+            _sent.RemoveAll(b => now - b.At > SentKept);
+            _sent.Add(new Sent { Obj = obj.ToString(), Changes = changes, At = now });
+        }
+
+        /// <summary>The batch we sent that had this change in it (the oldest not yet undone first), or null.</summary>
+        private Sent SentWith(ObjRef obj, int slot, string oldKey, string newJson)
+        {
+            string key = obj.ToString();
+            Sent found = null;
+            foreach (var b in _sent)
+            {
+                if (b.Obj != key || !b.Changes.Exists(c => c.Slot == slot && c.Old == oldKey && c.New == newJson)) continue;
+                if (!b.Undone) return b;
+                found ??= b;
+            }
+            return found;
+        }
 
         private void OnSlots(ulong from, PacketReader r)
         {
@@ -434,16 +476,27 @@ namespace DarkwoodMP.World
             string refusedAll = Containers.Refusal(from, inv);
             if (refusedAll == null && !Is(inv) && Containers.Instance != null && Containers.Instance.LockedByOther(obj, from, out string holder)) refusedAll = holder + " has it open";
 
-            // Each change stands if the slot still holds what the player saw there.
+            // The changes stand if every slot still holds what the player saw there; if one doesn't, none does. A
+            // batch is what one look at the container found changed: an item moved from one slot to another (a cursor
+            // drag inside it) is two changes, and taking only one of them would double or lose that item.
+            changes.RemoveAll(c => c.Slot >= inv.slots.Count);
+            if (refusedAll == null)
+                foreach (var c in changes)
+                {
+                    string now = Key(inv.slots[c.Slot]);
+                    if (now == c.Old || RotOnly(inv.slots[c.Slot].invItem, now, c.Old)) continue;
+                    refusedAll = changes.Count > 1 ? $"slot {c.Slot} had just changed, so the {changes.Count} changes made with it are refused too" : "it had just changed";
+                    break;
+                }
+            // A stack bigger than the host's stack size (StackSizes) isn't one the client could have made.
+            if (refusedAll == null)
+                foreach (var c in changes)
+                    if (!StackSizes.Fits(Item(c.New))) { refusedAll = $"slot {c.Slot}: more than one stack holds"; break; }
             var accepted = new List<Change>();
             foreach (var c in changes)
             {
-                if (c.Slot >= inv.slots.Count) continue;
-                string now = Key(inv.slots[c.Slot]);
-                // A stack bigger than the host's stack size (StackSizes) isn't one the client could have made.
-                string why = refusedAll ?? (StackSizes.Fits(Item(c.New)) ? null : "more than one stack holds");
-                if (why == null && (now == c.Old || RotOnly(inv.slots[c.Slot].invItem, now, c.Old))) { Set(inv, c.Slot, c.New); accepted.Add(c); continue; }
-                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({why ?? "it had just changed"})");
+                if (refusedAll == null) { Set(inv, c.Slot, c.New); accepted.Add(c); continue; }
+                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({refusedAll})");
                 var w = s.Begin(MsgType.ContainerSlotRefused);
                 obj.Write(w);
                 w.W.Write((ushort)c.Slot);
@@ -497,7 +550,18 @@ namespace DarkwoodMP.World
                 unsent = Item(Json(inv, slot));
             }
             if (inv != null) Set(inv, slot, hostJson);
-            Undo(oldKey, Item(triedJson)); // what this change moved: from what we saw (its key) to what we made it
+            // What this change moved: from what we saw (its key) to what we made it. The host refuses a batch whole,
+            // so the first refused slot of a batch we sent undoes the whole batch, netted per item type (an item we
+            // moved within the container comes to nothing); its other slots' refusals only set the host's contents.
+            var batch = SentWith(obj, slot, oldKey, triedJson);
+            if (batch == null) Undo(oldKey, Item(triedJson));
+            else if (!batch.Undone)
+            {
+                batch.Undone = true;
+                var net = new Dictionary<string, (int n, InvItemClass item)>();
+                foreach (var c in batch.Changes) Moved(c.Old, Item(c.New), net);
+                Undo(net, quiet: false);
+            }
             if (sentKey != null) Undo(sentKey, unsent, quiet: true);
             UiRefresh.Changed(inv);
         }
@@ -510,35 +574,62 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void Undo(string oldKey, InvItemClass tried, bool quiet = false)
         {
-            var player = Player.Instance;
-            if (player == null) return;
+            var net = new Dictionary<string, (int n, InvItemClass item)>();
+            Moved(oldKey, tried, net);
+            Undo(net, quiet);
+        }
+
+        /// <summary>
+        /// Adds what a slot going from oldKey to tried moved, per item type, to net: more of a type in the container
+        /// (we put it in) counts up, less (we took it) counts down. Summed over a whole batch, an item moved from one
+        /// slot of the container to another comes to nothing.
+        /// </summary>
+        private static void Moved(string oldKey, InvItemClass tried, Dictionary<string, (int n, InvItemClass item)> net)
+        {
             var old = oldKey.Split('|');
             string oldType = oldKey.Length > 0 ? old[0] : null;
             int oldAmount = oldKey.Length > 0 && old.Length > 1 && int.TryParse(old[1], out int a) ? a : 0;
-            string newType = InvItemClass.isNull(tried) ? null : tried.type;
-            int newAmount = InvItemClass.isNull(tried) ? 0 : tried.amount;
-            int put = 0, took = 0;
-            if (oldType != null && oldType == newType) { if (newAmount > oldAmount) put = newAmount - oldAmount; else took = oldAmount - newAmount; }
-            else { put = newAmount; took = oldType != null ? oldAmount : 0; }
-
-            int dropped = put > 0 ? GiveBack(player, tried, put) : 0;
-            int left = took;
-            if (left > 0)
+            bool any = !InvItemClass.isNull(tried);
+            void Add(string type, int n, InvItemClass item)
             {
-                var ctl = Singleton<Controller>.Instance;
-                var held = ctl != null ? ctl.pickedUpItem : null;
-                if (!InvItemClass.isNull(held) && held.type == oldType)
-                {
-                    int n = Mathf.Min(held.amount, left);
-                    left -= n;
-                    if (n >= held.amount) { held.UIInvItem?.despawn(); ctl.pickedUpItem = null; }
-                    else { held.amount -= n; held.refresh(); }
-                }
-                if (left > 0) left -= player.Inventory.removeItemAmountFromPlayer(oldType, left, includeAdditionalInventory: false);
+                net.TryGetValue(type, out var was);
+                net[type] = (was.n + n, was.item ?? item);
             }
-            if (put == 0 && took == 0) return;
-            if (!quiet) player.displayMessage("Someone took that first");
-            Plugin.Log.LogInfo($"[slots] undone: gave back {put} {newType} ({dropped} of them at our feet, no room), took back {took - left} of {took} {oldType}");
+            if (any) Add(tried.type, tried.amount, tried);
+            if (oldType != null) Add(oldType, -oldAmount, null);
+        }
+
+        /// <summary>Undo what net says our changes moved: what we put in comes back to us, what we took goes again.</summary>
+        private static void Undo(Dictionary<string, (int n, InvItemClass item)> net, bool quiet)
+        {
+            var player = Player.Instance;
+            if (player == null) return;
+            bool any = false;
+            foreach (var kv in net)
+            {
+                int put = kv.Value.n > 0 ? kv.Value.n : 0, took = kv.Value.n < 0 ? -kv.Value.n : 0;
+                if (put == 0 && took == 0) continue;
+                any = true;
+                int dropped = put > 0 && kv.Value.item != null ? GiveBack(player, kv.Value.item, put) : 0;
+                int left = took;
+                if (left > 0)
+                {
+                    var ctl = Singleton<Controller>.Instance;
+                    var held = ctl != null ? ctl.pickedUpItem : null;
+                    if (!InvItemClass.isNull(held) && held.type == kv.Key)
+                    {
+                        int n = Mathf.Min(held.amount, left);
+                        left -= n;
+                        if (n >= held.amount) { held.UIInvItem?.despawn(); ctl.pickedUpItem = null; }
+                        else { held.amount -= n; held.refresh(); }
+                    }
+                    if (left > 0) left -= player.Inventory.removeItemAmountFromPlayer(kv.Key, left, includeAdditionalInventory: false);
+                }
+                Plugin.Log.LogInfo(put > 0
+                    ? $"[slots] undone: gave back {put} {kv.Key} ({dropped} of them at our feet, no room)"
+                    : $"[slots] undone: took back {took - left} of {took} {kv.Key}");
+            }
+            if (any && !quiet) player.displayMessage("Someone took that first");
         }
 
         /// <summary>

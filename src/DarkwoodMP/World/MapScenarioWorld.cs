@@ -44,6 +44,7 @@ namespace DarkwoodMP.World
             Add("pickup", Pickup);
             // Things in the world.
             Add("drag", Drag);
+            Add("drag-race", DragRace, timeout: 40f);
             Add("fuel", Fuel);
             Add("switch", Switch);
             Add("use", Use);
@@ -454,21 +455,60 @@ namespace DarkwoodMP.World
             var by = new Vector3(F(a[1]), 0f, F(a[2]));
             yield return Walk(it.transform.position, 80f);
             var start = it.transform.position;
+            bool held = false;
+            yield return DragFor(it, by, 1f, h => held = h);
+            yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
+            r.Info = $"{it.name} {Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)}";
+            if (!held) r.Fail($"{r.Info}: our drag was let go of ({DragSync.Instance?.OtherOwner(ObjRef.Of(it.gameObject)) ?? "nobody"} has it)");
+            else if (StateDump.Flat(it.transform.position - start) < StateDump.Flat(by) * 0.5f) r.Fail($"{r.Info}: it didn't move");
+        }
+
+        /// <summary>
+        /// Holds it (Player.itemBeingDragged, as Item.startDragging sets) and moves it by `by` over secs, with the
+        /// player behind it, then lets go. Stops moving it as soon as our hold is let go of (another player has it).
+        /// held(true) if we held it to the end.
+        /// </summary>
+        private static IEnumerator DragFor(Item it, Vector3 by, float secs, Action<bool> held)
+        {
+            var start = it.transform.position;
             P.itemBeingDragged = it;
-            for (float t = 0f; t < 1f; t += Time.deltaTime)
+            for (float t = 0f; t < secs; t += Time.deltaTime)
             {
-                var to = start + by * Mathf.Min(1f, t);
+                yield return null;
+                if (P.itemBeingDragged != it) { held(false); yield break; }
+                var to = start + by * Mathf.Min(1f, t / secs);
                 it.transform.position = to;
                 var rb = it.GetComponent<Rigidbody>(); if (rb != null) rb.position = to;
                 P.transform.position = new Vector3(to.x, P.transform.position.y, to.z) - by.normalized * 70f;
-                yield return null;
             }
             it.transform.position = start + by;
             yield return new WaitForSeconds(0.3f);
-            P.itemBeingDragged = null;
-            yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
-            r.Info = $"{it.name} {Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)}";
-            if (StateDump.Flat(it.transform.position - start) < StateDump.Flat(by) * 0.5f) r.Fail($"{r.Info}: it didn't move");
+            bool kept = P.itemBeingDragged == it;
+            if (kept) P.itemBeingDragged = null;
+            held(kept);
+        }
+
+        /// <summary>
+        /// "drag-race NAME DX DZ AT": at epoch second AT take hold of it and drag it, as another player does at the same
+        /// moment. Replies "got NAME ..." if our drag held to the end, "lost NAME ..." if it was let go of because the
+        /// other player had it (the host decides who); either way where it came to rest.
+        /// </summary>
+        private static IEnumerator DragRace(string[] a, Result r)
+        {
+            var it = Find<Item>(a[0], i => i.draggable);
+            if (it == null) { r.Fail($"nothing draggable called {a[0]}"); yield break; }
+            var by = new Vector3(F(a[1]), 0f, F(a[2]));
+            double at = double.Parse(a[3], CultureInfo.InvariantCulture);
+            yield return Walk(it.transform.position, 80f);
+            double Now() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+            if (Now() > at) { r.Fail($"walked past the moment ({Now() - at:0.0} s late)"); yield break; }
+            while (Now() < at) yield return null;
+            int cancelled = DragSync.Cancelled;
+            bool held = false;
+            yield return DragFor(it, by, 1.5f, h => held = h);
+            yield return new WaitForSeconds(3f);
+            r.Info = $"{(held ? "got" : "lost")} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} drag(s) of ours let go of), at rest at {Fmt(it.transform.position)}";
+            if (held == (DragSync.Cancelled > cancelled)) r.Fail($"{r.Info}: held to the end and let go of don't agree");
         }
 
         /// <summary>"fuel NAME AMOUNT": pour gasoline into a generator or the saw, a unit at a time, as the player does.</summary>
