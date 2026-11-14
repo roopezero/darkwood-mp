@@ -170,6 +170,10 @@ namespace DarkwoodMP.World
                 {
                     if (!ctx.Near(it.transform.position) || it.GetComponent<Door>() != null || it.GetComponent<Window>() != null) continue;
                     if (it.GetComponentInParent<Player>() != null || it.GetComponent<Inventory>() is Inventory inv && IsDropped(inv)) continue;
+                    // A client's own copy of a character the host runs (a searchable corpse prop in the shared dream) is
+                    // frozen with its renderers and colliders off: nobody sees or searches it; the host's copy is listed.
+                    if (it.GetComponent<Character>() is Character ch && NetEnemies.Frozen.Contains(ch) && NetEnemies.Instance != null
+                        && !NetEnemies.Instance.NetIdOf(ch, out _)) continue;
                     var e = ctx.Add(it.gameObject);
                     e["health"] = it.health; e["broken"] = it.destroyed;
                     if (it.switchable) e["on"] = it.isOn;

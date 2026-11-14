@@ -205,9 +205,9 @@ namespace DarkwoodMP.Combat
                 t.SetPositionAndRotation(r.Root.transform.position, r.Root.transform.rotation);
                 proxy.IgnoreLooseNear();
                 proxy.IgnoreOurPlayer();
-                // The AI only looks for living characters. A joiner in a dream, or in a separate location we haven't got,
+                // The AI only looks for living characters. A joiner in a dream of their own, or in a separate location we haven't got,
                 // isn't in the host's world at all (their own game runs that area), so they count as not there, as dead
-                // ones do. One in a location we have at the same spot is in our world: our enemies there go for them.
+                // ones do. One in a location we have at the same spot, or in the shared dream with our player, is in our world: our enemies there go for them.
                 var snap = r.Last;
                 var loc = hosting && r.Away && snap != null ? World.Locations.HostRunsAt(snap.Place, t.position) : null;
                 bool away = r.Away && loc == null;

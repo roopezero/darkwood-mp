@@ -93,7 +93,7 @@ def compare(ctls, around, tag, require, work):
     return "done dumps SAME" if not bad else f"fail dumps DIFFER ({', '.join(bad)} against the host)"
 
 
-def run_steps(ctls, steps, work=None):
+def run_steps(ctls, steps, work=None, prefix="mid"):
     failed = 0
     mids = 0  # mid-way compares so far, for their dump names
     for n_step, step in enumerate(steps, 1):
@@ -104,7 +104,7 @@ def run_steps(ctls, steps, work=None):
         if who in ("both", "all") and name == "compare":
             # ("all", "compare", WHO, SECTIONS): every game's dump there and then, around WHO's player, compared.
             mids += 1
-            reply = compare(ctls, args[0], f"mid{mids}", args[1] if len(args) > 1 else "", work or ".")
+            reply = compare(ctls, args[0], f"{prefix}{mids}", args[1] if len(args) > 1 else "", work or ".")
             ok = good(reply)
         elif "+" in who:
             # ("c1+c2+c3", STEP, ARGS...): the step in those games at once; an "AT" argument becomes an epoch second a
@@ -216,7 +216,7 @@ def main():
     # Steps that change the world for good (a death) run after the dumps.
     t0 = time.time()
     post = getattr(sc, "POST", [])
-    failed += run_steps(ctls, post)
+    failed += run_steps(ctls, post, work, prefix="post")
     print(f"  phase: {len(post)} post steps in {time.time() - t0:.0f} s", flush=True)
     if failed:
         print(f"steps: {failed} FAILED")

@@ -21,9 +21,10 @@ namespace DarkwoodMP.World
     /// Outcomes that lead into the next dream (transferToDream) are the same in every game, so everyone goes on into
     /// the same next dream.
     ///
-    /// What isn't shared: each game runs the dream's enemies and things by itself (the host's enemies don't reach
-    /// into dreams, and a client's dream characters are its own, World.Locations / Combat.NetEnemies). Dreams that
-    /// come from the story or from a kill (the night trader's) stay the player's own.
+    /// The shared dream is run by the host, as a separate location the host placed is (World.Locations.SharedDream):
+    /// its enemies (the church dream's chomper) and its events are the host's, a client's own copies of them are
+    /// frozen and hidden and the host's are shown, and the host's enemies there go for whoever has the most threat.
+    /// Dreams that come from the story or from a kill (the night trader's) stay the player's own.
     /// </summary>
     public static class DreamSync
     {

@@ -84,17 +84,27 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Host: the separate location a joiner who says they're at `place` (their PlayerState) and stands at pos is in,
-        /// when we have it at that spot; null for the world, a dream (each player's own), or a location we haven't got
-        /// (they loaded it before the host answered: it stands somewhere else here).
+        /// when we have it at that spot; the shared level dream when our player dreams it too (SharedDream); null for
+        /// the world, any other dream (each player's own), or a location we haven't got (they loaded it before the host
+        /// answered: it stands somewhere else here).
         /// </summary>
         public static Location HostRunsAt(string place, Vector3 pos)
         {
-            if (string.IsNullOrEmpty(place) || place == "?" || place.StartsWith("dream:")) return null;
-            var o = Singleton<OutsideLocations>.Instance;
-            if (o == null) return null;
+            if (string.IsNullOrEmpty(place) || place == "?") return null;
             Location loc = null;
-            foreach (var kv in o.spawnedLocations)
-                if (kv.Value != null && (kv.Key == place || Core.getTrueLocationName(kv.Key) == place)) { loc = kv.Value; break; }
+            if (place.StartsWith("dream:"))
+            {
+                // The shared level dream, when our player dreams it too: it is ours to run, as a location is.
+                loc = SharedDream();
+                if (loc == null || place != Current()) return null;
+            }
+            else
+            {
+                var o = Singleton<OutsideLocations>.Instance;
+                if (o == null) return null;
+                foreach (var kv in o.spawnedLocations)
+                    if (kv.Value != null && (kv.Key == place || Core.getTrueLocationName(kv.Key) == place)) { loc = kv.Value; break; }
+            }
             if (loc == null) return null;
             var d = pos - loc.transform.position;
             return d.x * d.x + d.z * d.z < LocationReach * LocationReach ? loc : null;
@@ -113,8 +123,9 @@ namespace DarkwoodMP.World
             if (Time.unscaledTime < _nextKeep) return;
             _nextKeep = Time.unscaledTime + 0.5f;
             var want = new HashSet<Location>();
+            var dream = Singleton<Dreams>.Instance?.dreamLocation;
             foreach (var p in Combat.NetPlayerProxy.All.Values)
-                if (p != null && p.InLocation != null) want.Add(p.InLocation);
+                if (p != null && p.InLocation != null && p.InLocation != dream) want.Add(p.InLocation); // the shared dream runs with our player in it
             foreach (var loc in want)
             {
                 if (_kept.Add(loc)) Plugin.Log.LogInfo($"[locations] keeping {Core.getTrueLocationName(loc.name)} running for the joiner(s) in it{(loc.entered ? " (already entered)" : "")}");
@@ -183,16 +194,33 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Client: whether the host runs the area our player is in: the world, or a separate location the host placed
-        /// (so it has it at the same spot; one we loaded after the host didn't answer is ours alone). A dream never is.
+        /// (so it has it at the same spot; one we loaded after the host didn't answer is ours alone), or the shared level
+        /// dream (SharedDream; the host dreams it too). Any other dream is our own.
         /// </summary>
         public static bool HostRunsHere()
         {
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
-            if (d != null && d.dreaming) return false;
+            if (d != null && d.dreaming)
+            {
+                var loc = SharedDream();
+                return loc != null && !_gaveUp.Contains(loc.name) && !_gaveUp.Contains(Core.getTrueLocationName(loc.name));
+            }
             if (o == null || !o.playerInOutsideLocation) return true;
             string name = o.currentLocationName ?? "";
             return !_gaveUp.Contains(name) && !_gaveUp.Contains(Core.getTrueLocationName(name));
+        }
+
+        /// <summary>
+        /// The dream location our player is in when it is the shared level dream (World.DreamSync.Shared), else null.
+        /// The host dreams it first and every player's copy stands at the host's spot (OnAsk), so, like a location the
+        /// host placed, the host runs its characters and events and the others get the host's.
+        /// </summary>
+        public static Location SharedDream()
+        {
+            var d = Singleton<Dreams>.Instance;
+            if (d == null || !d.dreaming || d.dreamLocation == null || DreamSync.Shared == null) return null;
+            return d.preset != null && d.preset.name == DreamSync.Shared ? d.dreamLocation : null;
         }
 
         // ---- where a player is ------------------------------------------------------------------

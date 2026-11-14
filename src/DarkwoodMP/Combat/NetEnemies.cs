@@ -69,7 +69,8 @@ namespace DarkwoodMP.Combat
         public static bool InPlay(Character c) => c != null && (c.alive || (c.hasPreDeath && c.health > 0f));
 
         /// <summary>
-        /// Client: a character of an area only this player is in: a dream (each player's own), or a separate location
+        /// Client: a character of an area only this player is in: a dream of its own (the shared level dream is the
+        /// host's, World.Locations.SharedDream), or a separate location
         /// the host didn't place for us (World.Locations.HostRunsHere), or anything still in a scene of its own. The
         /// host doesn't run it, so it runs here, as in single player. A separate location the host placed is the
         /// host's to run, as the world is (it loads it at the same spot even when its player isn't there): our
