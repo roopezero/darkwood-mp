@@ -88,9 +88,12 @@ namespace DarkwoodMP.World
 
         internal static void Started() => _ended = false;
 
+        /// <summary>A dream from the story everyone dreams together (the epilogue, EpilogueSync).</summary>
+        internal static void Share(string name) { Shared = name; _ended = false; }
+
         internal static void AfterEnd(Dreams d)
         {
-            if (Shared != null && d != null && !d.dreaming && !d.switchingDream) { Plugin.Log.LogInfo($"[dream] back from {Shared}"); Shared = null; }
+            if (Shared != null && d != null && !d.dreaming && !d.switchingDream && !EpilogueSync.Playing) { Plugin.Log.LogInfo($"[dream] back from {Shared}"); Shared = null; }
         }
 
         private static void EndHere(Dreams d, string outcome)
@@ -108,7 +111,7 @@ namespace DarkwoodMP.World
             var d = Singleton<Dreams>.Instance;
             if (S.IsHost)
             {
-                if (Shared == null || d == null || !d.dreaming || _ended) return;
+                if (Shared == null || d == null || !d.dreaming || _ended || !EpilogueSync.OutcomeAllowed(d, outcome)) return;
                 Plugin.Log.LogInfo($"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours and everyone's end");
                 S.Broadcast(EndMessage(outcome), Channel.Control, reliable: true, except: from);
                 EndHere(d, outcome);

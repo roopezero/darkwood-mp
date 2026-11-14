@@ -578,6 +578,8 @@ namespace DarkwoodMP.World
 
         private bool HostBeforeWelcome(ulong peer, byte[] clientHash)
         {
+            string ending = EpilogueSync.JoinRefusal();
+            if (ending != null) { _session.Refuse(peer, ending); return false; }
             string wait = HostNotReady();
             if (wait != null)
             {

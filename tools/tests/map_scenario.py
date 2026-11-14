@@ -62,6 +62,7 @@ STEPS += [("host", "alive"), ("client", "alive")]
 # After both games have dumped their state: a level dream dreamt together (it moves the players and sets the clock),
 # then things that change it for good (a death).
 POST = _dreams.POST + _status.POST
+# map_scenario_epilogue.py isn't in it: the epilogue ends the game (credits, main menu), so it runs alone (map:epilogue).
 
 REQUIRE = ([r for _m in [_core, _issues, _fixchecks, _gaps, *_extra] for r in getattr(_m, "REQUIRE", [])]
            + [r for r in _npcs.REQUIRE if r != "npcpos"])

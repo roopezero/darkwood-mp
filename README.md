@@ -85,6 +85,7 @@ If things ever look out of sync, open the Multiplayer window (Escape, *Multiplay
 - **"Different DarkwoodMP version".** Everyone needs the same mod version.
 - **"No answer" when joining by address.** The host's router must forward port 27720 (TCP and UDP), and the host's firewall must allow it.
 - **"The host is playing the prologue"** (or "in a dream"). Wait: you join by yourself when they're out of it.
+- **"The host is playing the ending".** Nobody can join during the epilogue; join after it.
 - **The LAN tab finds nothing.** The host's firewall must allow UDP port 27720.
 
 More in [docs/GUIDE.md](docs/GUIDE.md#troubleshooting). When reporting a bug, attach `BepInEx/LogOutput.log` from the game folder.

@@ -307,8 +307,24 @@ def serve(port, inp):
                 print(f"client came back: message type {m2[0]} (1 = Hello)", flush=True)
                 break
             if END and t_end and time.time() - t_end > 5:
-                c.sendall(frame(bytes([87, END])))
-                print(f"sent GameEnd ({'the epilogue' if END == 1 else 'the end screen'})", flush=True)
+                if END == 1:
+                    # The shared epilogue: phase 0, the client goes in and stays connected; then phase 1 (the host
+                    # went to the credits), and it leaves for the credits and the main menu.
+                    c.sendall(frame(bytes([87, 1, 0])))
+                    print("sent GameEnd (the epilogue, phase 0: played together)", flush=True)
+                    t_ep = time.time(); n = 0
+                    c.settimeout(1)
+                    while time.time() - t_ep < 40:
+                        try: m2 = r.msg(1); n += 1
+                        except socket.timeout: continue
+                        except Exception as e:
+                            print(f"the client closed its connection during the epilogue ({type(e).__name__})", flush=True); break
+                    print(f"the client stayed connected for {time.time() - t_ep:.0f} s of the epilogue ({n} messages)", flush=True)
+                    c.sendall(frame(bytes([87, 1, 1])))
+                    print("sent GameEnd (the epilogue, phase 1: to the credits)", flush=True)
+                else:
+                    c.sendall(frame(bytes([87, END, 1])))
+                    print("sent GameEnd (the end screen)", flush=True)
                 try:
                     while True: r.msg(10)
                 except Exception as e:

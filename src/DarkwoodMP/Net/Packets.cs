@@ -19,7 +19,7 @@ namespace DarkwoodMP.Net
     /// Otherwise the host answers Welcome with the client's id, then a PlayerInfo for everyone already in, and the
     /// client loads the world. While they play, both sides send PlayerState.
     ///
-    /// The values below aren't in order. In use (decimal): 1-6, 10-47, 50-52, 62-68, 70, 78-80, 86-88, 90, 100,
+    /// The values below aren't in order. In use (decimal): 1-6, 10-47, 50-52, 62-68, 70, 78-80, 86-90, 100,
     /// 115-116, 120-122, 130, 135, 140, 155, 160, 165, 170, 180-185, 190, 200-202, 208-210, 216, 220, 230, 235-237,
     /// 240-241, 250-251. A new message takes a free value; keep this list up to date.
     /// </summary>
@@ -215,8 +215,10 @@ namespace DarkwoodMP.Net
         /// </summary>
         ChapterStart = 86,
         /// <summary>
-        /// Host -> client: u8 kind (1 the epilogue, 2 the game's end screen). The host's game reached the end and its
-        /// server stops: leave, show the ending in your copy of the world (the epilogue, or the end screen), then the
+        /// Host -> client: u8 kind (1 the epilogue, 2 the game's end screen), u8 phase (0 the ending starts: go into
+        /// the host's epilogue and stay connected; 1 the session ends: the host's server stops). Kind 1 phase 0: play
+        /// the epilogue together (World.EpilogueSync); kind 1 phase 1: the host went to the credits, so leave and go
+        /// to the credits too. Kind 2 (always phase 1): leave, show the end screen in your copy of the world, then the
         /// credits and the main menu (see World.Chapters).
         /// </summary>
         GameEnd = 87,
@@ -228,6 +230,12 @@ namespace DarkwoodMP.Net
         /// if the host hasn't got it, then runs the step itself; see World.Chapters).
         /// </summary>
         StoryRequest = 88,
+        /// <summary>
+        /// Host -> client: u8 what (1 the camera pans over the burning forest), str the world event
+        /// (epilogue_cameraPanOverBurningForest). A step of the shared epilogue that the host's game took; a joiner
+        /// whose own game hasn't taken it runs it a few seconds later (see World.EpilogueSync).
+        /// </summary>
+        EpilogueStep = 89,
         /// <summary>
         /// Client -> host, a request: u8 the hideout (Location.hideoutId, 1-3) to take everything from. Our player
         /// had the porter move their stuff (Location.transportAllItemsToCurrentHideout, from a dialogue's world

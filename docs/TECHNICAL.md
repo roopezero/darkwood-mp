@@ -81,8 +81,9 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 79 | EnemyEffect | H→C | u8 kind: 1 str prefab path, vec3, f32 y rotation; 2 str pooled FX name, vec3; 3 u32 enemy id, i32 emitter toggle |
 | 80 | AfterNightEnded | H→C | nothing (the host's after-night is over) |
 | 86 | ChapterStart | H→C | i32 chapter (the host is starting it: send your character, wait for WorldReload) |
-| 87 | GameEnd | H→C | u8 kind (1 the epilogue, 2 the end screen): leave, show the ending, then the credits and the menu |
+| 87 | GameEnd | H→C | u8 kind (1 the epilogue, 2 the end screen), u8 phase (0 the ending starts, 1 the session ends). Epilogue phase 0: go into the host's epilogue and stay connected (a shared dream); phase 1: the host went to the credits, so leave and go too. End screen (phase 1): leave, show it, then the credits and the menu |
 | 88 | StoryRequest | C→H | ObjRef GameEvents, u8 step index, u8 kind (1 a new chapter, 2 the epilogue, 3 the end screen), i32 chapter: a request; the host checks it and runs the step |
+| 89 | EpilogueStep | H→C | u8 what (1 the camera pans over the burning forest), str the world event: a step of the shared epilogue the host's game took; a joiner whose game hasn't taken it runs it a few seconds later |
 | 90 | EnemySensorThrown | H→C | u32 enemy, str ranged sensor name, f32 x, y, z, f32 yaw, f32 vx, vy, vz, f32 land x, z: a host enemy's ranged attack (`Character.rangedAttack`, the human spider's projectile) threw its sensor's prefab; clients make it from their copy's sensor and show it flying (it hurts nobody there and leaves nothing) |
 | 115 | LocationAsk | C→H | u8 flags (1 a dream), str location: where does this location stand? |
 | 116 | LocationSlot | H→C | str location, vec3 spot, i16 turn: load it there, turned so |

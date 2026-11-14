@@ -240,6 +240,7 @@ namespace DarkwoodMP.World
             MapScenarioGaps.Register();
             MapScenarioLocations.Register();
             MapScenarioDreams.Register();
+            MapScenarioEpilogue.Register();
             MapScenarioDice.Register();
             MapScenarioSkills.Register();
             MapScenarioEnemies.Register();

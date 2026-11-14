@@ -245,6 +245,7 @@ namespace DarkwoodMP
             FarEvents.Register(_session);
             ViewRects.Register(_session);
             Chapters.Register(_session);
+            EpilogueSync.Register(_session);
             EggSync.Register(_session);
             InfectionSync.Register(_session);
             EnemyLandings.Register(_session);

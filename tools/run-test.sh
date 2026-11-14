@@ -43,7 +43,8 @@
 #   host-menu     the host goes back to the main menu: the player gets HostAway, the server stops
 #   host-chapter  a scripted player asks for the next chapter: refused from far, for a wrong chapter, an unknown event, the
 #                 epilogue; allowed beside it; then ChapterStart, WorldReload and the new world offered
-#   host-end      the host starts the epilogue: the player gets GameEnd, the server stops
+#   host-end      the host starts the epilogue: the player gets GameEnd phase 0 and stays, a made-up DreamEnd and a
+#                 late Hello are refused, then the credits: GameEnd phase 1, the server stops
 #   host-authority  a scripted client's requests the host allows or refuses: reach, state, damage, a disarm roll, fuel, speed
 #   menu-entry    the menu list takes a click (Join Game in the main menu, Multiplayer in the pause menu) and opens the panel; screenshots into $WORK/shots
 #   solo          playing alone (no session) on a copy of your save: skills, the Skills panel, the stove's reset;
@@ -61,7 +62,7 @@
 #   client-away     the host sends HostAway: the game leaves and goes back to the main menu
 #   client-chapter  ChapterStart: the game sends its character and waits; then WorldReload and it rejoins
 #   client-end      GameEnd (the end screen): the game leaves, shows it, the credits, the main menu
-#   client-epilogue GameEnd (the epilogue): the game leaves and plays the epilogue (or the end screen), then the main menu
+#   client-epilogue GameEnd (the epilogue): phase 0, the game goes into it and stays connected; phase 1, the credits, the main menu
 #   client-drop     the host's connection just closes: the game goes back to the main menu
 #   client-authority  the host refuses our player's door action: the door and the rope it used come back
 # Two-game tests (a second, real game joins as the client, from its own folder: tools/setup-client-game.sh):
@@ -450,11 +451,12 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       $PY "$T/storytest.py" 27720 $TRIG
       mod_log "[Cc]hapter|authority\\]|world changed|character" | grep -v "chapter test" ;;
     host-end)
-      host --dwmp-test-end 5; world_ready
-      $PY "$T/combattest.py" 27720 6057 350 60 end | grep -E "GameEnd|HostAway|closed|played"
+      host --dwmp-test-end 5 --dwmp-test-quick-end; world_ready
+      $PY "$T/combattest.py" 27720 6057 350 120 "end start,late refused,end" | grep -E "GameEnd|HostAway|closed|played|DreamEnd|late Hello|FAIL"
       sleep 3
       server_up
-      mod_log "test-end|game's end|server" ;;
+      mod_log "test-end|game's end|server|epilogue\\]|Refused"
+      since "$LOG" "$LOG0" | grep -q 'has no outcome "no_such_outcome"' || die "the host took a made-up dream end in the epilogue" ;;
     host-authority)
       host --dwmp-dummy --dwmp-spawn DogMutated --dwmp-debug-world; wait_log "dwmp-spawn:" 60
       $PY "$T/authtest.py" 27720
@@ -530,7 +532,8 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
     client-epilogue)
       client --end 1
       wait_log "Back at the main menu after the ending" 150
-      mod_log "game's end|ending|epilogue|end screen|credits|main menu" ;;
+      mod_log "game's end|ending|epilogue|end screen|credits|main menu"
+      since "$LOG" "$LOG0" | grep -q "playing the epilogue together" || die "the epilogue didn't start together" ;;
     map4)
       safe_rm "$WORK" "$WORK/map4"; mkdir -p "$WORK/map4"
       export MAP_SCENARIO="${MAP_SCENARIO:-map4_scenario}" MAP_CLIENTS="${MAP_CLIENTS:-3}"

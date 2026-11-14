@@ -38,8 +38,13 @@ seen = set()
 fx_at = t0 + 2.0; fx_step = 0; fx_got = {}  # our own fx, once the host has our puppet
 def own_fx(t, body): return frame(bytes([t]) + struct.pack("<Q", my_id) + body)
 cue_at = None; invisible_bites = 0; away_at = None
+dream_end_at = None  # the shared epilogue: when to send a made-up DreamEnd
 while time.time() - t0 < SECS and not stop and not (UNTIL and UNTIL <= seen):
     now = time.time()
+    if dream_end_at and now >= dream_end_at:
+        dream_end_at = None
+        s.sendall(frame(bytes([185]) + s16("no_such_outcome")))
+        print("sent a made-up DreamEnd (no_such_outcome)", flush=True)
     if now >= next_state:
         s.sendall(player_state()); next_state = now + 0.05
     if now >= next_noise:  # footsteps: noise where we stand, as the game's own (range 150, volume 1)
@@ -155,8 +160,27 @@ while time.time() - t0 < SECS and not stop and not (UNTIL and UNTIL <= seen):
     elif t == 86:
         print(f"ChapterStart from the host: chapter {struct.unpack_from('<i', m, 1)[0]}", flush=True); seen.add("chapter")
     elif t == 87:
-        print(f"GameEnd from the host: {({1: 'the epilogue', 2: 'the end screen'}).get(m[1], m[1])}; leaving, as a game does", flush=True)
+        kind = ({1: 'the epilogue', 2: 'the end screen'}).get(m[1], m[1]); phase = m[2] if len(m) > 2 else -1
+        if phase == 0:
+            # The shared epilogue: a game stays connected. A made-up dream end must not move the host's epilogue on,
+            # and a new player can't join while it plays.
+            print(f"GameEnd from the host: {kind}, phase 0 (played together); staying connected", flush=True)
+            seen.add("end start")
+            dream_end_at = time.time() + 10  # once the host is in the epilogue's first part
+            try:
+                from worldtest import Reader, hello
+                s2 = socket.create_connection(("127.0.0.1", PORT), timeout=10); r2 = Reader(s2)
+                s2.sendall(hello(key="d" * 64, name="LateBot")); a = r2.msg(10)
+                print(f"a late Hello: message {a[0]}" + (f" (Refused: {rstr(a, 1)[0]})" if a[0] == 3 else ""), flush=True)
+                if a[0] == 3: seen.add("late refused")
+                s2.close()
+            except Exception as e:
+                print(f"a late Hello: {type(e).__name__} {e}", flush=True)
+            continue
+        print(f"GameEnd from the host: {kind}, phase {phase}; leaving, as a game does", flush=True)
         seen.add("end"); s.close(); break
+    elif t == 89:
+        print(f"EpilogueStep from the host: {m[1]} {rstr(m, 2)[0]}", flush=True); seen.add("epilogue step")
 print(f"played {time.time() - t0:.0f} s" + (f"; everything in {sorted(UNTIL)} happened" if UNTIL and UNTIL <= seen else ""))
 print("noises sent:", noises)
 print("message counts:", counts)

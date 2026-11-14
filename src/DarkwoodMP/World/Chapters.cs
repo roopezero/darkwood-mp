@@ -28,9 +28,10 @@ namespace DarkwoodMP.World
     /// initPlayer only apply to a chapter started without a save to carry over), standing beside the host
     /// (Characters, CharacterLoad kind 3).
     ///
-    /// The end on the host: GameEnd goes to the joiners and the server stops (the host plays its ending alone). Each
-    /// joiner leaves, plays the epilogue in its own copy of the world (the flags are the host's, so the outcomes are
-    /// too), or, if that can't start, sees the end screen, and then the credits take it to the main menu.
+    /// The end on the host: the epilogue is played together (EpilogueSync: GameEnd phase 0 and the session stays up;
+    /// phase 1 at the credits stops the server). The older end screen sends GameEnd phase 1 and stops the server at
+    /// once; each joiner leaves, sees the end screen, and the credits take it to the main menu. A joiner whose
+    /// epilogue can't start falls back to that too.
     /// </summary>
     public static class Chapters
     {
@@ -200,9 +201,11 @@ namespace DarkwoodMP.World
             var s = S;
             if (s == null || !s.IsHost || _endSent) return;
             _endSent = true;
+            if (kind == EndKind.Epilogue) { EpilogueSync.HostStarts(); return; }
             Plugin.Log.LogInfo($"The game's end ({kind}): the players in your world see it too, and the server stops");
             var w = s.Begin(MsgType.GameEnd);
             w.W.Write((byte)kind);
+            w.W.Write((byte)1); // phase 1: the session ends
             WorldShare.Instance?.StopServer(w);
         }
 
@@ -251,8 +254,17 @@ namespace DarkwoodMP.World
             var s = S;
             if (s == null || s.IsHost || from != s.HostId) return;
             var kind = (EndKind)r.R.ReadByte();
-            Plugin.Log.LogInfo($"The host reached the game's end ({kind})");
-            s.Backend?.Leave();
+            byte phase = r.R.ReadByte();
+            Plugin.Log.LogInfo($"The host reached the game's end ({kind}, phase {phase})");
+            if (EpilogueSync.OnGameEnd((byte)kind, phase)) return;
+            SoloEnding(kind);
+        }
+
+        /// <summary>Joiner: leave the session and see the ending alone in our copy of the host's world.</summary>
+        internal static void SoloEnding(EndKind kind)
+        {
+            var s = S;
+            s?.Backend?.Leave();
             WorldShare.Instance?.SetLoadStatus("The host reached the end of the game.");
             if (!WorldShare.InWorld || !SaveRedirect.Active) return;
             Plugin.Notice("The host has reached the end of the game");
@@ -324,7 +336,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>As EpilogueOutcomes.goToCredits does: fade out, then the credits scene, which ends at the main menu.</summary>
-        private static void ToCredits()
+        internal static void ToCredits()
         {
             Plugin.Log.LogInfo("To the credits");
             try
@@ -348,7 +360,7 @@ namespace DarkwoodMP.World
             SceneManager.LoadScene("credits");
         }
 
-        private static IEnumerator ToMenuAfterEnding()
+        internal static IEnumerator ToMenuAfterEnding()
         {
             bool credits = false;
             while (!WorldShare.MainMenuReady())
