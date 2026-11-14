@@ -115,6 +115,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 | Host | `LiveWorld` | `true` | Joiners get the world as it is now. `false` sends your last save |
 | Host | `SnapshotOffThread` | `true` | The snapshot for a joiner is written on a worker thread, so your game stops only while the world is read |
 | Host | `NewCharacters` | `fresh` | Someone new starts `fresh` (no items, beside you) or as a `copy` of your character |
+| Host | `StackSize` | 50 | How many of an item one slot holds, for every item that stacks (the game's own sizes run from 2 to 50; bigger ones keep theirs). `0` keeps the game's sizes. Players in your game use yours, and it applies at once. Weapons, notes, keys and gasoline and the lantern (whose fuel isn't counted in stacks) are left alone. Saves keep only the amounts, so a world with big stacks still loads with the setting at 0 |
 | Network | `SendRate` | 20 | Player updates per second |
 | Debug | `LogPlayerSprites` | `false` | Logs the player's sprites once |
 

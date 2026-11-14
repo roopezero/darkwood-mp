@@ -44,6 +44,7 @@ namespace DarkwoodMP
         private static readonly string[] AimAssist = { "Off", "Low", "High" };
         private static readonly string[] NewChars = { "fresh", "copy" };
         private static readonly string[] NewCharNames = { "Nothing, beside you", "A copy of your character" };
+        private static readonly int[] StackChoices = { 0, 10, 20, 50, 99 };
 
         private const float KeepSeconds = 15f;
 
@@ -414,11 +415,16 @@ namespace DarkwoodMP
             if (Ui.Button(m[2], "+", cfg.MaxPlayers.Value < Net.Protocol.MaxPlayers)) cfg.MaxPlayers.Value++;
             c = Setting(f, "New players get");
             Choice(Ui.Split(c[1], 220, 0)[0], "newchars", NewCharNames, Array.IndexOf(NewChars, cfg.NewCharacters.Value), i => cfg.NewCharacters.Value = NewChars[i]);
+            c = Setting(f, "Stack size");
+            var sizes = new List<int>(StackChoices);
+            if (!sizes.Contains(cfg.StackSize.Value)) { sizes.Add(cfg.StackSize.Value); sizes.Sort(); }
+            var sizeNames = sizes.ConvertAll(n => n == 0 ? "The game's own (2 to 50)" : $"{n} (bigger ones keep theirs)").ToArray();
+            Choice(Ui.Split(c[1], 220, 0)[0], "stacksize", sizeNames, sizes.IndexOf(cfg.StackSize.Value), i => cfg.StackSize.Value = sizes[i]);
             c = Setting(f, "World to join");
             cfg.LiveWorld.Value = Ui.Check(c[1], cfg.LiveWorld.Value, "As it is now (off: as you last saved it)");
             c = Setting(f, "");
             cfg.SnapshotOffThread.Value = Ui.Check(c[1], cfg.SnapshotOffThread.Value, "Write it for them in the background");
-            Ui.Text(f, "These are used the next time you host.", MenuSkin.Dim);
+            Ui.Text(f, "These are used the next time you host (the stack size at once).", MenuSkin.Dim);
         }
 
         private static void DrawFooter(Rect r)

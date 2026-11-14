@@ -113,6 +113,8 @@ while time.time() - t0 < SECS and not stop:
     elif t == 44:
         k = m[1]; oid = struct.unpack_from("<q", m, 2)[0]; what = m[10]; fuel = struct.unpack_from("<f", m, 11)[0]; on = m[15]
         print(f"Fuel {KINDS.get(k, k)}:{oid} ({ {1: 'generator', 2: 'saw'}.get(what, what)}): {fuel:.1f}{', running' if on else ''}", flush=True); recorded.append(m)
+    elif t == 251:
+        print(f"StackSize {struct.unpack_from('<H', m, 1)[0]}", flush=True)
     elif t == 66:
         k = m[1]; oid = struct.unpack_from("<q", m, 2)[0]; opt = struct.unpack_from("<i", m, 10)[0]
         print(f"Construct {KINDS.get(k, k)}:{oid} option {opt}", flush=True); recorded.append(m)

@@ -457,20 +457,38 @@ namespace DarkwoodMP.World
             p.displayMessage($"Skills reset: {SkillTree.Points(p)} skill points to spend ({SkillsPanel.KeyName})");
         }
 
-        private static GUIStyle _style;
-
-        /// <summary>At our stove: the levels waiting, the points to spend, and the reset button in the morning.</summary>
+        /// <summary>At our stove: the levels waiting, the points to spend, and the reset button in the morning, in the
+        /// mod's menu style, with a window box behind them so they read over the world.</summary>
         public static void OnGUI()
         {
             var p = Player.Instance;
             if (!WorldShare.InWorld || !CanResetHere(p)) return;
-            if (_style == null) _style = new GUIStyle(GUI.skin.button) { fontSize = 16 };
             int waiting = (Hideouts.Together || Solo) ? Math.Max(0, SharedLevel - p.currentLevel) : 0;
             int points = SkillTree.Points(p);
-            float w = 360f, h = 34f, x = (Screen.width - w) / 2f, y = Screen.height - 3f * h;
-            if (waiting > 0) GUI.Label(new Rect(x, y - 2 * h, w, h), $"Levels to take: {waiting}", _style);
-            if (points > 0) GUI.Label(new Rect(x, y - h, w, h), $"Skill points to spend: {points} ({SkillsPanel.KeyName}: Skills)", _style);
-            if (InMorning(0) && GUI.Button(new Rect(x, y, w, h), _waitingReset ? "Asking the host..." : "Reset skills (mornings, once a day)", _style)) ResetHere();
+            bool morning = InMorning(0);
+            var lines = new List<string>(2);
+            if (waiting > 0) lines.Add($"Levels to take: {waiting}");
+            if (points > 0) lines.Add($"Skill points to spend: {points} ({SkillsPanel.KeyName}: Skills)");
+            if (lines.Count == 0 && !morning) return;
+
+            MenuSkin.Ensure();
+            var skin = GUI.skin;
+            GUI.skin = MenuSkin.Skin;
+            float s = Ui.S, pad = 6 * s, line = PixelFont.Line + 2 * s;
+            string button = _waitingReset ? "Asking the host..." : "Reset skills (mornings, once a day)";
+            float w = PixelFont.Width("Reset skills (mornings, once a day)") + 24 * s;
+            foreach (var l in lines) w = Math.Max(w, PixelFont.Width(l) + 2 * pad);
+            float h = 2 * pad + lines.Count * line + (morning ? Ui.RowH + (lines.Count > 0 ? pad : 0) : 0);
+            float x = Mathf.Round((Screen.width - w) / 2f), y = Mathf.Round(Screen.height - h - 40 * s);
+            GUI.Box(new Rect(x, y, w, h), GUIContent.none, MenuSkin.Window);
+            float ly = y + pad;
+            foreach (var l in lines) { Ui.Label(new Rect(x + pad, ly, w - 2 * pad, line), l, MenuSkin.Bright, TextAnchor.MiddleCenter); ly += line; }
+            if (morning)
+            {
+                if (lines.Count > 0) ly += pad;
+                if (Ui.Button(new Rect(x + pad, ly, w - 2 * pad, Ui.RowH), button, !_waitingReset)) ResetHere();
+            }
+            GUI.skin = skin;
         }
 
         /// <summary>For tests: reset our skills at the stove as the button does.</summary>

@@ -21,7 +21,7 @@ namespace DarkwoodMP.Net
     ///
     /// The values below aren't in order. In use (decimal): 1-6, 10-47, 50-52, 62-68, 70, 78-80, 86-88, 90, 100,
     /// 115-116, 120-122, 130, 135, 140, 155, 160, 165, 170, 180-185, 190, 200-202, 208-210, 216, 220, 230, 235-237,
-    /// 240-241, 250. A new message takes a free value; keep this list up to date.
+    /// 240-241, 250-251. A new message takes a free value; keep this list up to date.
     /// </summary>
     public enum MsgType : byte
     {
@@ -405,6 +405,12 @@ namespace DarkwoodMP.Net
         /// (Combat.ViewRects); sent once in the world and again when it changes.
         /// </summary>
         ViewRect = 250,
+
+        /// <summary>
+        /// Host -> client: u16 size. The host's stack size (World.StackSizes; 0: the game's own sizes), sent after
+        /// Welcome and to everyone when the host changes it. The client uses it until the session ends.
+        /// </summary>
+        StackSize = 251,
 
         /// <summary>
         /// Host -> client: i64 spawned id, u32 net id of the enemy that threw it, str name of what landed

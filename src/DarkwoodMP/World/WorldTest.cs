@@ -429,7 +429,94 @@ namespace DarkwoodMP.World
             yield return ObjectsStep(player, item);
             yield return WorldEventsStep(player);
             yield return HideoutsStep(player);
+            yield return StacksStep(player, at);
             Plugin.Log.LogInfo("[world test] done");
+        }
+
+        /// <summary>
+        /// World.StackSizes at 50: 30 bandages picked up one by one go in one slot; Sort &amp; Stack makes one stack
+        /// of 3 + 3 + 40 nails in the workbench's storage; two gasoline cans stay two (their amount is fuel); with the
+        /// setting at 0 a bandage stacks to the game's own size again.
+        /// </summary>
+        private static IEnumerator StacksStep(Player player, Vector3 at)
+        {
+            var cfg = Plugin.Cfg.StackSize;
+            int setting = cfg.Value;
+            if (setting != 50) cfg.Value = 50;
+            yield return null;
+            void Check(bool ok, string what) => Plugin.Log.LogInfo($"[world test] stacks: {(ok ? "PASS" : "FAIL")} {what}");
+            var db = DbItems().ToList();
+            foreach (var (k, it) in db.Where(x => x.it.stacksDurability || (x.it.stackable && x.it.maxAmount <= 1)))
+                Plugin.Log.LogInfo($"[world test] stacks: left alone {k} (stackable {it.stackable}, stacksDurability {it.stacksDurability}, maxAmount {it.maxAmount})");
+            string bandage = db.Select(x => x.key).FirstOrDefault(k => k == "bandage") ?? db.Select(x => x.key).FirstOrDefault(k => k.Contains("bandage"));
+            string gas = db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault(k => k.Contains("gas")) ?? db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault();
+
+            List<InvSlot> Bags() => player.Inventory.slots.Concat(player.Hotbar != null ? player.Hotbar.slots : new List<InvSlot>()).ToList();
+            void Clear(string type) { foreach (var sl in Bags()) if (!InvItemClass.isNull(sl.invItem) && sl.invItem.type == type) sl.removeItem(); }
+            List<int> Stacks(string type) => Bags().Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == type).Select(sl => sl.invItem.amount).ToList();
+
+            if (bandage != null)
+            {
+                Clear(bandage);
+                for (int i = 0; i < 30; i++) player.Inventory.addItemTypeToPlayer(bandage, 1);
+                yield return null;
+                var st = Stacks(bandage);
+                Check(st.Count == 1 && st[0] == 30, $"30 {bandage} picked up one by one: {string.Join(", ", st.Select(a => "x" + a))} (game's own size {StackSizes.OriginalOf(bandage)})");
+                Clear(bandage);
+            }
+            else Check(false, "no bandage in the items database");
+
+            if (gas != null)
+            {
+                Clear(gas);
+                player.Inventory.addItemTypeToPlayer(gas, 1);
+                player.Inventory.addItemTypeToPlayer(gas, 1);
+                yield return null;
+                var st = Stacks(gas);
+                var b = Singleton<ItemsDatabase>.Instance.getItem(gas, instantiate: false);
+                Check(st.Count == 2, $"two {gas} stay two: {st.Count} slot(s) (stackable {b.stackable}, maxAmount {b.maxAmount}, stacksDurability {b.stacksDurability})");
+                Clear(gas);
+            }
+
+            // Sort & Stack in the workbench's storage: 3 + 3 + 40 nails -> 46.
+            var wb = Nearest(Object.FindObjectsOfType<Workbench>(), at);
+            var storage = wb != null ? wb.normalInventory : null;
+            var frees = new List<int>();
+            void ClearNails() { foreach (var sl in storage.slots) if (!InvItemClass.isNull(sl.invItem) && sl.invItem.type == "nail") { sl.inventory = storage; sl.removeItem(); } }
+            if (storage != null) for (int i = 0; i < storage.slots.Count; i++) if (InvItemClass.isNull(storage.slots[i].invItem)) frees.Add(i);
+            if (storage != null && frees.Count >= 3 && db.Any(x => x.key == "nail"))
+            {
+                var by = wb.transform.position + (player.transform.position - wb.transform.position).normalized * 120f;
+                player.transform.position = new Vector3(by.x, player.transform.position.y, by.z);
+                yield return new WaitForSeconds(1f);
+                player.openedItemInventory2 = storage;
+                yield return new WaitForSeconds(0.6f);
+                ClearNails();
+                frees.Clear();
+                for (int i = 0; i < storage.slots.Count; i++) if (InvItemClass.isNull(storage.slots[i].invItem)) frees.Add(i);
+                int[] amounts = { 3, 3, 40 };
+                for (int j = 0; j < 3; j++) { var sl = storage.slots[frees[j * (frees.Count - 1) / 2]]; sl.inventory = storage; sl.createItem("nail", amounts[j]); }
+                yield return new WaitForSeconds(0.8f);
+                SlotShare.Instance?.SortPressed(storage);
+                yield return new WaitForSeconds(0.8f);
+                var nails = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == "nail").Select(sl => sl.invItem.amount).ToList();
+                Check(nails.Count == 1 && nails[0] == 46, $"sort & stack of 3 + 3 + 40 nails: {string.Join(", ", nails.Select(a => "x" + a))}");
+                ClearNails();
+                yield return new WaitForSeconds(0.8f);
+                player.openedItemInventory2 = null;
+            }
+            else Check(false, $"sort & stack of nails: no workbench storage with 3 free slots ({frees.Count} free)");
+
+            // 0: the game's own sizes again.
+            cfg.Value = 0;
+            yield return null;
+            if (bandage != null)
+            {
+                int max = Singleton<ItemsDatabase>.Instance.getItem(bandage, instantiate: false).maxAmount;
+                Check(max == StackSizes.OriginalOf(bandage) && max < 30, $"StackSize 0: {bandage} stacks to {max} again");
+            }
+            cfg.Value = setting;
+            yield return null;
         }
 
         /// <summary>

@@ -440,8 +440,10 @@ namespace DarkwoodMP.World
             {
                 if (c.Slot >= inv.slots.Count) continue;
                 string now = Key(inv.slots[c.Slot]);
-                if (refusedAll == null && (now == c.Old || RotOnly(inv.slots[c.Slot].invItem, now, c.Old))) { Set(inv, c.Slot, c.New); accepted.Add(c); continue; }
-                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({refusedAll ?? "it had just changed"})");
+                // A stack bigger than the host's stack size (StackSizes) isn't one the client could have made.
+                string why = refusedAll ?? (StackSizes.Fits(Item(c.New)) ? null : "more than one stack holds");
+                if (why == null && (now == c.Old || RotOnly(inv.slots[c.Slot].invItem, now, c.Old))) { Set(inv, c.Slot, c.New); accepted.Add(c); continue; }
+                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({why ?? "it had just changed"})");
                 var w = s.Begin(MsgType.ContainerSlotRefused);
                 obj.Write(w);
                 w.W.Write((ushort)c.Slot);

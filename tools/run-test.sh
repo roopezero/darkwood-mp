@@ -46,6 +46,8 @@
 #   host-end      the host starts the epilogue: the player gets GameEnd, the server stops
 #   host-authority  a scripted client's requests the host allows or refuses: reach, state, damage, a disarm roll, speed
 #   menu-entry    the menu list takes a click (Join Game in the main menu, Multiplayer in the pause menu) and opens the panel; screenshots into $WORK/shots
+#   solo          playing alone (no session) on a copy of your save: skills, the Skills panel, the stove's reset;
+#                 screenshots into $WORK/solo
 #   shots         screenshots into $WORK/shots: the world, the pause menu, its confirm dialog, the co-op panel
 #   options       the Options window from both menus: a volume and a key stored in the game's settings, then put back
 #                 (the prefs file compared); screenshots of every tab at 1920x1080 and 1280x720 into $WORK/options
@@ -109,6 +111,7 @@ declare -A DESC=(
   [client-end]="the host's end screen: shown here, then the credits and the main menu"
   [client-epilogue]="the host's epilogue: played here, then the main menu"
   [menu-entry]="Join Game and Multiplayer open the panel from both menus"
+  [solo]="playing alone: skill points, the Skills panel and the stove's reset, with screenshots"
   [shots]="screenshots of the world, the pause menu and the co-op panel"
   [options]="the Options window: settings stored the game's way and put back, every tab at two sizes"
   [drag]="a window dragged and resized slowly and fast moves exactly as far as the mouse"
@@ -150,7 +153,7 @@ list() {
   local g; for g in $GROUP_NAMES; do printf "  %-10s %s\n" "$g" "${GROUP[$g]}"; done
   echo "  maps       every map battery below except those marked (not in maps)"
   echo "Tests:"
-  local t; for t in $ALL shots options drag map map4; do printf "  %-16s %s\n" "$t" "${DESC[$t]}"; done
+  local t; for t in $ALL solo shots options drag map map4; do printf "  %-16s %s\n" "$t" "${DESC[$t]}"; done
   echo "Map batteries (tools/tests/map_scenario_NAME.py, each from a fresh test world and join):"
   local b; for b in $(map_batteries); do printf "  %-20s %s%s\n" "map:$b" "$(in_maps $b || echo '(not in maps) ')" "$(battery_doc $b)"; done
 }
@@ -480,6 +483,11 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       wait_log "\[drag\] done" 90
       mod_log "\[drag\]"
       mod_log "\[drag\] done: all passed" | grep -q . || die "the drag test failed (see the lines above)" ;;
+    solo)
+      safe_rm "$WORK" "$WORK/solo"; copy_saves "$WORK/sandbox"
+      ctl args --dwmp-sandbox "$WORK/sandbox" --dwmp-continue 1 --dwmp-solo-test "$WORK/solo" ${DWMP_ARGS:-}
+      wait_log "\[solo\] done" 240
+      mod_log "\[solo\]|\[progress\]"; ls "$WORK/solo" ;;
     shots)
       safe_rm "$WORK" "$WORK/shots"; host --dwmp-shots "$WORK/shots"; world_ready
       bg_until "shots\] done" 60 $PY "$T/combattest.py" 27720 6057 350 60 >/dev/null
@@ -493,7 +501,13 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
     client-world)
       [ -f "$WORK/world_rec.pkl" ] || die "no $WORK/world_rec.pkl: run 'host-world' first"
       client --replay "$WORK/world_rec.pkl"
-      mod_log "\[world\]|refused|workbench|Journal" | grep -Ev "clock|fuel" ; mod_log "fuel" | tail -4 ;;
+      mod_log "\[world\]|refused|workbench|Journal" | grep -Ev "clock|fuel" ; mod_log "fuel" | tail -4
+      # The scripted host's StackSize (30): used while joined, our own setting again once the session is over.
+      wait_log "\[stacks\] session over" 30
+      mod_log "\[stacks\]"
+      if mod_log "the host's stack size: 30" >/dev/null && mod_log "\[stacks\] .* stack to 30" >/dev/null && mod_log "\[stacks\] session over" >/dev/null
+      then echo "  PASS stack size: the host's 30 used, our own setting again after the session"
+      else echo "  FAIL stack size: the host's StackSize wasn't used, or our own setting didn't come back"; fi ;;
     client-enemies)
       client --enemies; sleep 5
       mod_log "Showing|corpse|\[fx\]|enemyfx|after-night" ;;

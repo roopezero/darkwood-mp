@@ -104,6 +104,7 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 185 | DreamEnd | both | str outcome: the shared dream ends (a client's goes to the host, which passes it on) |
 | 190 | JoinNotice | H→C | str name, u8 what (0 is joining, 1 stopped joining before getting in) |
 | 250 | ViewRect | C→H | u16 half width, u16 half height of the area the client's game keeps running round its player |
+| 251 | StackSize | H→C | u16 the host's stack size (0: the game's own), after Welcome and when it changes; used until the session ends |
 | 200–201 | ContainerSlotsAsk (C→H), ContainerSlotsAll (H→C) | | ObjRef; ObjRef, bigstr contents (JSON): what a container holds on the host, as a client opens it and once its world has loaded |
 | 202 | StorageSort (C→H, in a Request) | | ObjRef: Sort & Stack pressed at a workbench's storage; the host answers with ContainerSlots (every slot to the sender, the changed ones to the others) |
 | 208 | EggDestroyed | both | ObjRef egg, f32 x, f32 z, str name: an egg was broken open (a client's is a request; the host checks reach) |

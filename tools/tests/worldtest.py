@@ -192,6 +192,7 @@ def serve(port, inp):
                 print("Hello with our world's hash -> Welcome", flush=True)
                 c.sendall(frame(bytes([2]) + struct.pack("<Q", 1000)))
                 c.sendall(frame(bytes([12]) + struct.pack("<Q", 1) + s16("FakeHost")))
+                c.sendall(frame(bytes([251]) + struct.pack("<H", 30)))  # StackSize: the client stacks to 30 until it leaves
             else:
                 print(f"Hello with hash {ch.hex()[:12]} -> SaveOffer", flush=True)
                 p = bytes([4]) + w["hash"] + struct.pack("<I", len(blob)) + s32(w["profile"]) + bytes([len(w["files"])])

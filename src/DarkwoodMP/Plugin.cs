@@ -37,6 +37,7 @@ namespace DarkwoodMP
         public ConfigEntry<string> NewCharacters;
         public ConfigEntry<KeyCode> SkillsKey;
         public ConfigEntry<string> HostWith;
+        public ConfigEntry<int> StackSize;
     }
 
     [BepInPlugin(PluginInfo.Guid, PluginInfo.Name, PluginInfo.Version)]
@@ -175,6 +176,7 @@ namespace DarkwoodMP
                 SnapshotOffThread = Config.Bind("Host", "SnapshotOffThread", true, "Write the snapshot for a joiner on a worker thread, so your game stops only while the world is read. Off: the game saves it its own way, all at once."),
                 NewCharacters = Config.Bind("Host", "NewCharacters", "fresh", new ConfigDescription("Someone joining your world for the first time starts with: fresh (no items, full health, beside you) or copy (a copy of your character).", new AcceptableValueList<string>("fresh", "copy"))),
                 HostWith = Config.Bind("Host", "HostWith", "steam", new ConfigDescription("How the Start Game window hosts: steam (friends join by invite) or direct (IP and port). Without Steam (GOG) it's always direct.", new AcceptableValueList<string>("steam", "direct"))),
+                StackSize = Config.Bind("Host", "StackSize", 50, new ConfigDescription("How many of an item one inventory slot holds, for every item that stacks (players in your game use yours). Items that already stack higher keep theirs. 0: the game's own sizes.", new AcceptableValueRange<int>(0, 999))),
                 LastAddress = Config.Bind("Network", "LastAddress", "", "Last server joined directly."),
                 SkipIntro = Config.Bind("General", "SkipIntro", true, "Start without the studio logo (about 6 seconds sooner at the main menu)."),
                 SkillsKey = Config.Bind("General", "SkillsKey", KeyCode.K, "Key that opens and closes the Skills panel (spend skill points)."),
@@ -237,6 +239,7 @@ namespace DarkwoodMP
             NightObjects.Register(_session);
             TalkLock.Register(_session);
             Progression.Register(_session);
+            StackSizes.Register(_session);
             DreamSync.Register(_session);
             Locations.Register(_session);
             FarEvents.Register(_session);
