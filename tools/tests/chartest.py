@@ -1,25 +1,15 @@
 """Characters against a DarkwoodMP host: join (new character), send one, wait for the host to save, rejoin, get it back."""
-import json, socket, struct, sys, time
+import json, struct, sys, time
 sys.path.insert(0, sys.argv[0].rsplit("/", 1)[0])
-from worldtest import Reader, frame, hello, rstr, rbig, s16, s32
-from worldtest import ask as hello_until_answered
+from worldtest import frame, rbig, s32
+from worldtest import join as join_host
 
 PORT = int(sys.argv[1]); KEY = "d" * 64
 
 def join():
-    s = socket.create_connection(("127.0.0.1", PORT), timeout=10); r = Reader(s)
-    m = hello_until_answered(s, r, hello(key=KEY, name="Keeper"), 30); assert m[0] == 4, f"expected SaveOffer, got {m[0]}"
-    h = m[1:33]; size = struct.unpack_from("<I", m, 33)[0]; got = off = 0
-    while got < size:
-        while off < size and off - got < 4 * (256 << 10):
-            s.sendall(frame(bytes([5]) + h + struct.pack("<II", off, 256 << 10))); off += 256 << 10
-        m = r.msg(30)
-        if m[0] == 6: got += struct.unpack_from("<I", m, 37)[0]
-    print(f"  downloaded the offered world {h.hex()[:12]} ({size} bytes)")
-    s.sendall(hello(h, key=KEY, name="Keeper"))
-    while True:
-        m = r.msg(30)
-        if m[0] == 2: return s, r
+    s, r, _, offer = join_host(PORT, "Keeper", key=KEY, timeout=30)
+    print(f"  downloaded the offered world {offer[1:33].hex()[:12]} ({struct.unpack_from('<I', offer, 33)[0]} bytes)")
+    return s, r
 
 def ask(s, r):
     s.sendall(frame(bytes([24])))

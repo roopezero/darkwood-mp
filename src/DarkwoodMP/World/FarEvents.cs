@@ -53,7 +53,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Host: whether our own player is by this location (in its cull rect; `was`: by it last time, a margin to leave it).</summary>
-        internal static bool HostNear(Location l, bool was)
+        private static bool HostNear(Location l, bool was)
         {
             var p = Player.Instance;
             if (p == null || SharedCullingPatch.HostAway) return false;
@@ -88,6 +88,23 @@ namespace DarkwoodMP.World
             if (enter) HostIn[l] = hostIn = !Proxies.Any || HostNear(l, true); // with the margin: the location's node is up to 300 nearer than it
             else { if (!HostIn.TryGetValue(l, out hostIn)) hostIn = true; HostIn.Remove(l); }
             return hostIn ? (ScriptedEvents.Part?)null : ScriptedEvents.Part.HostAndShared;
+        }
+
+        /// <summary>
+        /// A location's enter or exit events start: noted and logged (for a world location while together), and
+        /// ScriptedEvents.Current set to `part`. Returns whether it set it (the caller's Finalizer puts it back).
+        /// </summary>
+        internal static bool Begin(Location l, bool enter, ScriptedEvents.Part? part, string more = "")
+        {
+            if (Together && WorldLocation(l))
+            {
+                var ran = part ?? ScriptedEvents.Part.All;
+                Note(Log, l, enter ? "enter" : "exit", ran);
+                if (Debug) Plugin.Log.LogInfo($"[farevents] {l.name} {(enter ? "entered: its enter" : "left: its exit")} events run as {ran}{more}");
+            }
+            if (part == null) return false;
+            ScriptedEvents.Current = part.Value;
+            return true;
         }
 
         /// <summary>Whether the location's exit despawns its trader, porter and wolf here.</summary>
@@ -141,15 +158,7 @@ namespace DarkwoodMP.World
         {
             __state = (false, ScriptedEvents.Current);
             if (Core.loadingGame) return;
-            var part = FarEvents.PartFor(__instance, enter: true);
-            if (FarEvents.Together && FarEvents.WorldLocation(__instance))
-            {
-                FarEvents.Note(FarEvents.Log, __instance, "enter", part ?? ScriptedEvents.Part.All);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[farevents] {__instance.name} entered: its enter events run as {part ?? ScriptedEvents.Part.All}");
-            }
-            if (part == null) return;
-            __state.Item1 = true;
-            ScriptedEvents.Current = part.Value;
+            __state.Item1 = FarEvents.Begin(__instance, enter: true, FarEvents.PartFor(__instance, enter: true));
         }
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part) __state)
@@ -169,15 +178,8 @@ namespace DarkwoodMP.World
             __state = (false, ScriptedEvents.Current, KeepCharacters);
             var part = FarEvents.PartFor(__instance, enter: false);
             KeepCharacters = !FarEvents.Despawns(__instance);
-            if (FarEvents.Together && FarEvents.WorldLocation(__instance))
-            {
-                FarEvents.Note(FarEvents.Log, __instance, "exit", part ?? ScriptedEvents.Part.All);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[farevents] {__instance.name} left: its exit events run as {part ?? ScriptedEvents.Part.All}" +
-                                                           (KeepCharacters ? "; its trader, porter and wolf stay (another player is by it)" : ""));
-            }
-            if (part == null) return;
-            __state.Item1 = true;
-            ScriptedEvents.Current = part.Value;
+            __state.Item1 = FarEvents.Begin(__instance, enter: false, part,
+                KeepCharacters ? "; its trader, porter and wolf stay (another player is by it)" : "");
         }
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part, bool) __state)

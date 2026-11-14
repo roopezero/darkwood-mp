@@ -25,6 +25,9 @@ namespace DarkwoodMP.Sync
             return t != null && t.name == "World" ? t : null;
         }
 
+        /// <summary>Whether this player is shown on the world's map: in the main world, and not spectating.</summary>
+        private static bool OnMap(RemotePlayer r) => r.Root != null && !r.Away && !r.Spectating;
+
         /// <summary>After the map opens: an icon for each other player in the main world.</summary>
         internal static void OnOpened(Map map)
         {
@@ -34,7 +37,7 @@ namespace DarkwoodMP.Sync
             if (type == null || sync == null || map.iconHolder == null) return;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Owner == PlayerSync.DummyId || r.Root == null || r.Away || r.Spectating) continue;
+                if (r.Owner == PlayerSync.DummyId || !OnMap(r)) continue;
                 try
                 {
                     var go = Core.AddPrefab("UI/UIMapElement", Vector3.zero, Quaternion.Euler(90f, 0f, 0f), map.iconHolder);
@@ -69,7 +72,7 @@ namespace DarkwoodMP.Sync
             foreach (var kv in Markers)
             {
                 if (kv.Value == null) continue;
-                bool there = sync.Remotes.TryGetValue(kv.Key, out var r) && r.Root != null && !r.Away && !r.Spectating;
+                bool there = sync.Remotes.TryGetValue(kv.Key, out var r) && OnMap(r);
                 if (kv.Value.gameObject.activeSelf != there) kv.Value.gameObject.SetActive(there);
                 if (there) Place(type, kv.Value, r.Root.transform.position);
             }

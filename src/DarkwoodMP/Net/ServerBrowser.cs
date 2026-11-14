@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -195,10 +196,10 @@ namespace DarkwoodMP.Net
             Ports(IPAddress.Broadcast);
             try
             {
-                foreach (var nic in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
+                foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up) continue;
-                    if (nic.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) continue;
+                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
                     foreach (var u in nic.GetIPProperties().UnicastAddresses)
                     {
                         if (u.Address.AddressFamily != AddressFamily.InterNetwork) continue;
@@ -265,9 +266,8 @@ namespace DarkwoodMP.Net
                             try { a = udp.Receive(ref from); }
                             // A machine that isn't hosting answers with ICMP "port unreachable", which the next Receive
                             // reports: ConnectionReset on Windows, ConnectionRefused on Linux. That's one address
-                            // saying no: keep listening. Only the timeout ends the wait.
-                            catch (SocketException se) when (se.SocketErrorCode != SocketError.TimedOut && se.SocketErrorCode != SocketError.WouldBlock) { continue; }
-                            catch (SocketException) { continue; } // timed out: the deadline above decides
+                            // saying no: keep listening. A timed-out Receive also lands here; the deadline above decides.
+                            catch (SocketException) { continue; }
 
                             var info = ServerInfo.Parse(a, a.Length);
                             if (info == null) continue;

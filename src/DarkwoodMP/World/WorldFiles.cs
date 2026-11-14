@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -100,6 +101,140 @@ namespace DarkwoodMP.World
             if (a == null || b == null || a.Length != b.Length) return false;
             for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
             return true;
+        }
+
+        // ---- paths and deleting folders ------------------------------------------------------------------
+
+        internal static readonly StringComparison PathCase =
+            Environment.OSVersion.Platform == PlatformID.Win32NT ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+        internal static string Full(string p) =>
+            Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        /// <summary>The same folder, however the two were written (separators, a trailing slash; case on Windows).</summary>
+        internal static bool SamePath(string a, string b)
+        {
+            if (a == null || b == null) return false;
+            try { return string.Equals(Full(a), Full(b), PathCase); }
+            catch { return a == b; }
+        }
+
+        /// <summary>Whether path is dir or inside it.</summary>
+        internal static bool IsUnder(string path, string dir)
+        {
+            if (path == null || dir == null) return false;
+            try
+            {
+                string p = Full(path), d = Full(dir);
+                return string.Equals(p, d, PathCase) || p.StartsWith(d + Path.DirectorySeparatorChar, PathCase);
+            }
+            catch { return false; }
+        }
+
+        private static bool StrictlyUnder(string full, string dir) => !SamePath(full, dir) && IsUnder(full, dir);
+
+        /// <summary>
+        /// Why a folder may never be deleted, or null if it may be considered at all: an empty or relative path,
+        /// a filesystem root (Full trims "/" to "" and "C:\" to "C:", so a name-less or parent-less path is a root),
+        /// or the user's home folder or one of its parents.
+        /// </summary>
+        private static string NeverDelete(string path, out string full)
+        {
+            full = null;
+            if (string.IsNullOrWhiteSpace(path)) return "the path is empty";
+            if (!Path.IsPathRooted(path)) return "the path isn't absolute";
+            try { full = Full(path); } catch (Exception e) { return $"the path isn't valid ({e.Message})"; }
+            if (full.Length == 0 || Path.GetDirectoryName(full) == null || string.IsNullOrEmpty(Path.GetFileName(full))) return "it's a filesystem root";
+            foreach (var home in new[] { Environment.GetEnvironmentVariable("HOME"), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) })
+                if (!string.IsNullOrEmpty(home) && Path.IsPathRooted(home) && IsUnder(home, full)) return "it's your home folder or holds it";
+            return null;
+        }
+
+        /// <summary>
+        /// The folders the mod deletes things in: its cache (BepInEx/cache/DarkwoodMP) and the folder standing in for
+        /// the player's saves (SaveRedirect.Dir), unless that is itself a root or the home folder.
+        /// </summary>
+        private static IEnumerable<string> DeleteRoots()
+        {
+            yield return Path.Combine(BepInEx.Paths.CachePath, "DarkwoodMP");
+            string redirect = SaveRedirect.Dir;
+            if (redirect != null && NeverDelete(redirect, out _) == null) yield return redirect;
+        }
+
+        /// <summary>
+        /// Deletes a folder and everything in it, only if it's strictly inside the mod's cache folder or the active
+        /// save-redirect folder; anything else is refused with a warning and left alone (false). A symbolic link or
+        /// other reparse point, the folder itself or anything in it, is deleted as a link: what it points at is never
+        /// touched. Nothing there is true. Errors while deleting are thrown, as Directory.Delete throws them.
+        /// </summary>
+        public static bool DeleteTree(string path)
+        {
+            if (!MayDelete(path, out string full)) return false;
+            DeleteEntry(full);
+            return true;
+        }
+
+        /// <summary>Whether DeleteTree would delete path; logs a warning when not.</summary>
+        public static bool MayDelete(string path) => MayDelete(path, out _);
+
+        private static bool MayDelete(string path, out string full)
+        {
+            string why = NeverDelete(path, out full);
+            string f = full;
+            if (why == null && !DeleteRoots().Any(root => StrictlyUnder(f, root))) why = "it isn't inside the mod's cache or save-redirect folder";
+            if (why == null) return true;
+            Plugin.Log.LogWarning($"Not deleting {path ?? "(null)"}: {why}");
+            return false;
+        }
+
+        /// <summary>
+        /// Deletes the characters the host keeps for slot <paramref name="slot"/>'s joiners, base/prof&lt;slot&gt;/darkwoodmp_players,
+        /// which lives in the player's own save folder (so DeleteTree's roots don't cover it). Only that exact folder:
+        /// false, with a warning, for a bad base folder or slot. True if it was there and is deleted.
+        /// </summary>
+        public static bool DeletePlayersFolder(string baseDir, int slot)
+        {
+            string why = slot < 1 || slot > 99 ? $"slot {slot} isn't a save slot" : NeverDelete(baseDir, out _);
+            string dir = null, full = null;
+            if (why == null)
+            {
+                dir = Path.Combine(Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
+                full = Full(dir);
+                string expected = Full(baseDir) + Path.DirectorySeparatorChar + "prof" + slot + Path.DirectorySeparatorChar + "darkwoodmp_players";
+                if (!string.Equals(full, expected, PathCase)) why = "it isn't prof<N>/darkwoodmp_players in the save folder";
+            }
+            if (why != null) { Plugin.Log.LogWarning($"Not deleting {dir ?? baseDir ?? "(null)"}: {why}"); return false; }
+            if (!Exists(full)) return false;
+            DeleteEntry(full);
+            return true;
+        }
+
+        private static bool IsLink(string p)
+        {
+            try { return (System.IO.File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0; }
+            catch { return false; }
+        }
+
+        private static bool Exists(string p) => Directory.Exists(p) || System.IO.File.Exists(p) || IsLink(p);
+
+        /// <summary>Deletes a file, a link (as a link) or a folder with what's in it, never following a link.</summary>
+        private static void DeleteEntry(string p)
+        {
+            if (IsLink(p))
+            {
+                // A link to a folder: Windows removes a junction or folder link with RemoveDirectory, Unix a symlink with
+                // unlink (rmdir refuses one). Neither goes into the folder it points at.
+                try { Directory.Delete(p, false); }
+                catch (Exception) { System.IO.File.Delete(p); }
+                return;
+            }
+            if (!Directory.Exists(p))
+            {
+                if (System.IO.File.Exists(p)) { System.IO.File.SetAttributes(p, FileAttributes.Normal); System.IO.File.Delete(p); }
+                return;
+            }
+            foreach (var e in Directory.GetFileSystemEntries(p)) DeleteEntry(e);
+            Directory.Delete(p, false);
         }
     }
 }

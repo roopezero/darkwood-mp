@@ -68,7 +68,12 @@ namespace DarkwoodMP.World
         /// </summary>
         public static int Depth;
         public static void ResetDepth() => Depth = 0;
-        public static bool Outermost() => --Depth <= 0 && (Depth = 0) == 0;
+        public static bool Outermost()
+        {
+            if (--Depth > 0) return false;
+            Depth = 0;
+            return true;
+        }
 
         private static Session S => Session.Instance;
 
@@ -136,7 +141,7 @@ namespace DarkwoodMP.World
             else Authority.Request(w, $"{a} {r} ({name})");
         }
 
-        private static void WriteAction(PacketWriter w, Action a, ObjRef r, float x, float y, bool f1, bool f2, string str)
+        internal static void WriteAction(PacketWriter w, Action a, ObjRef r, float x, float y, bool f1, bool f2, string str)
         {
             w.W.Write((byte)a);
             r.Write(w);
@@ -198,15 +203,13 @@ namespace DarkwoodMP.World
                 }
                 else if (a == Action.Explode)
                 {
-                    var ex = ObjRef.Resolve<Explodes>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (ex != null ? ex.name : "not found here"));
+                    var ex = Got<Explodes>(a, obj);
                     if (ex == null || ex.GetComponent<Character>() != null) return; // never an enemy's (see BreakSync)
                     if (!BreakSync.Activated(ex)) ex.onActivate(f1);
                 }
                 else if (a >= Action.ItemHit)
                 {
-                    var item = ObjRef.Resolve<Item>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (item != null ? item.name : "not found here"));
+                    var item = Got<Item>(a, obj);
                     if (item == null) return;
                     switch (a)
                     {
@@ -216,7 +219,7 @@ namespace DarkwoodMP.World
                             // so a copy that missed a hit (or took one more) comes back in step.
                             if (!s.IsHost && item.shadowArmor == null) item.health = (int)y + (int)x; // a shadow takes the hit, not the item
                             item.getHit((int)x, null, f1);
-                            if (s.IsHost) y = item != null ? item.health : 0;
+                            if (s.IsHost) y = item.health;
                             break;
                         case Action.ItemBroken: if (!item.destroyed) item.die(); break;
                         case Action.ItemRepaired: if (item.destroyed) item.setNormalState(); break;
@@ -224,22 +227,19 @@ namespace DarkwoodMP.World
                 }
                 else if (a == Action.NpcDied)
                 {
-                    var npc = DyingNpc(obj, str, x, y);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (npc != null ? npc.name : "not found here"));
+                    var npc = Logged(a, obj, DyingNpc(obj, str, x, y));
                     // A copy of an NPC the host runs as an enemy dies with the host's state (Combat.NetEnemies).
                     bool puppet = npc != null && Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IsPuppet(npc, out _);
                     if (npc != null && npc.alive && !puppet) npc.die();
                 }
                 else if (a == Action.ItemUnlock)
                 {
-                    var l = ObjRef.Resolve<Locked>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (l != null ? l.name : "not found here"));
+                    var l = Got<Locked>(a, obj);
                     if (l != null) l.unlock();
                 }
                 else if (a == Action.ItemSearched)
                 {
-                    var item = ObjRef.Resolve<Item>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (item != null ? item.name : "not found here"));
+                    var item = Got<Item>(a, obj);
                     if (item == null) return;
                     item.searched = true;
                     var corpse = item.GetComponent<Character>();
@@ -247,22 +247,19 @@ namespace DarkwoodMP.World
                 }
                 else if (a == Action.PadlockUnlock)
                 {
-                    var padlock = ObjRef.Resolve<Padlock>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (padlock != null ? padlock.name : "not found here"));
+                    var padlock = Got<Padlock>(a, obj);
                     if (padlock == null) return;
                     padlock.unlock(false); // without its window, message and events: those are the opener's
                 }
                 else if (a >= Action.ItemOn)
                 {
-                    var item = ObjRef.Resolve<Item>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (item != null ? item.name : "not found here"));
+                    var item = Got<Item>(a, obj);
                     if (item == null) return;
                     if (a == Action.ItemOn) item.turnOn(); else item.turnOff();
                 }
                 else if (a >= Action.TrapFired)
                 {
-                    var trap = ObjRef.Resolve<Trigger>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (trap != null ? trap.name : "not found here"));
+                    var trap = Got<Trigger>(a, obj);
                     // Our own firing of it, not answered yet, left its spawn for this (TrapFiredPatch).
                     if (a == Action.TrapFired && s.IsClient && TrapFiredPatch.SpawnHeld(obj)) return;
                     if (trap == null) return;
@@ -271,8 +268,7 @@ namespace DarkwoodMP.World
                 }
                 else if (a < Action.WindowBarricade)
                 {
-                    var door = ObjRef.Resolve<Door>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (door != null ? door.name : "not found here"));
+                    var door = Got<Door>(a, obj);
                     if (door == null) return;
                     switch (a)
                     {
@@ -290,8 +286,7 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    var window = ObjRef.Resolve<Window>(obj);
-                    if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (window != null ? window.name : "not found here"));
+                    var window = Got<Window>(a, obj);
                     if (window == null) return;
                     switch (a)
                     {
@@ -304,26 +299,27 @@ namespace DarkwoodMP.World
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {a} to {obj}: {e.Message}"); }
             finally { Replaying = false; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; }
 
-            // A padlock a client's player opened: its events (onTryToOpenLocked, onUnlockPadlock) ran in the opener's
-            // game, which sends them as scripted events of its own (ScriptedEvents): the host runs its part of them then.
-
-            if (s.IsHost) ObjectActions.AfterOnHost(a, obj, f1);
-
-            // The host passes a client's action on to the others.
             if (s.IsHost)
             {
+                ObjectActions.AfterOnHost(a, obj, f1);
+                // The host passes a client's action on to the others.
                 var w = s.Begin(MsgType.WorldAction);
                 WriteAction(w, a, obj, x, y, f1, f2, str);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
         }
 
+        /// <summary>Resolve the thing an action names, logging it with --dwmp-debug-world.</summary>
+        private static T Got<T>(Action a, ObjRef obj) where T : Component => Logged(a, obj, ObjRef.Resolve<T>(obj));
+
+        private static T Logged<T>(Action a, ObjRef obj, T found) where T : Component
+        {
+            if (Debug) Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (found != null ? found.name : "not found here"));
+            return found;
+        }
+
         // ---- the host's checks -------------------------------------------------
 
-        /// <summary>
-        /// Host: whether a client's player could have done this, as this world is now: the thing is here, they're
-        /// near it, and it's in a state the action applies to. Refuses the request if not.
-        /// </summary>
         /// <summary>
         /// The NPC an NpcDied names: by its ref, else (an NPC each game placed itself, or one that walked off its
         /// named spot) the living NPC of that name nearest to where it died in the killer's game, within 400.
@@ -339,13 +335,23 @@ namespace DarkwoodMP.World
                 if (n == null || n.name != name) continue;
                 var ch = n.GetComponent<Character>();
                 if (ch == null || !ch.alive) continue;
-                var p = ch.transform.position;
-                float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
+                float d = FlatSq(ch.transform.position, new Vector3(x, 0f, z));
                 if (d < bestD) { bestD = d; best = ch; }
             }
             return best ?? c;
         }
 
+        /// <summary>
+        /// Locking a door, and opening a lock or a padlock other than with a key, a lockpick or the code, is only done
+        /// by a scripted event's door steps (GameEvent modifyDoor and unlockDoor), which are the host's part
+        /// (ScriptedEvents.HostSteps) and never run in a client's game for a place the host has. A player has no way to.
+        /// </summary>
+        private const string StoryOnly = "only the story does that, in the host's game";
+
+        /// <summary>
+        /// Host: whether a client's player could have done this, as this world is now: the thing is here, they're
+        /// near it, and it's in a state the action applies to. Refuses the request if not.
+        /// </summary>
         private static bool Allowed(Action a, ObjRef obj, float x, float y, bool f1, string str)
         {
             if (ObjectActions.Handles(a)) return ObjectActions.Allowed(a, obj, f1, x);
@@ -384,6 +390,8 @@ namespace DarkwoodMP.World
                 var l = ObjRef.Resolve<Locked>(obj);
                 if (l == null) { Authority.Refuse("there's no lock on it here"); return false; }
                 if (!Authority.InReach(l.transform.position, Reach, l.name)) return false;
+                if (!l.locked) { Authority.Refuse("it isn't locked"); return false; }
+                if (x == 0f) { Authority.Refuse(StoryOnly); return false; }
                 if (x == 1f && !HasKey(l)) { Authority.Refuse($"nobody has the key ({l.keyType})"); return false; }
                 return true;
             }
@@ -401,7 +409,8 @@ namespace DarkwoodMP.World
                 var p = ObjRef.Resolve<Padlock>(obj);
                 if (p == null) { Authority.Refuse("no such padlock here"); return false; }
                 if (!Authority.InReach(p.transform.position, Reach, p.name)) return false;
-                if (f1 && p.locked && str != p.combination) { Authority.Refuse("that isn't the padlock's code"); return false; }
+                if (!f1) { Authority.Refuse(StoryOnly); return false; }
+                if (p.locked && str != p.combination) { Authority.Refuse("that isn't the padlock's code"); return false; }
                 return true;
             }
             if (a == Action.TrapDisarm && ObjRef.Resolve<Item>(obj) is Item picked && picked.GetComponent<Trigger>() == null)
@@ -448,7 +457,10 @@ namespace DarkwoodMP.World
                     case Action.DoorBarricade when door.destroyed: Authority.Refuse("the door is broken"); return false;
                     case Action.DoorDestroyBarricade when !door.barricaded: Authority.Refuse("the door isn't barricaded"); return false;
                     case Action.DoorHit when door.destroyed: Authority.Refuse("the door is already broken"); return false;
-                    case Action.DoorUnlock when x > 0f && locked == null: Authority.Refuse("the door has no lock to open"); return false;
+                    case Action.DoorUnlock when locked == null: Authority.Refuse("the door has no lock to open"); return false;
+                    case Action.DoorUnlock when !locked.locked: Authority.Refuse("the door isn't locked"); return false;
+                    case Action.DoorUnlock when x == 0f: Authority.Refuse(StoryOnly); return false;
+                    case Action.DoorLock: Authority.Refuse(StoryOnly); return false;
                     case Action.DoorUnlock when x == 1f && !HasKey(locked): Authority.Refuse($"nobody has the key ({locked.keyType})"); return false;
                     case Action.DoorHit when x > 1000f: Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false;
                 }
@@ -473,6 +485,9 @@ namespace DarkwoodMP.World
             var keys = Singleton<UI>.Instance?.journal?.keysDict;
             return l != null && keys != null && !string.IsNullOrEmpty(l.keyType) && keys.ContainsKey(l.keyType);
         }
+
+        /// <summary>The squared distance between two points on the ground (x and z; y is ignored).</summary>
+        internal static float FlatSq(Vector3 a, Vector3 b) => (a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z);
 
         /// <summary>A crate whose lock is picked with the progress bar (Item.disarm without a Trigger), or null.</summary>
         public static Item Crate(Item item) =>
@@ -562,7 +577,7 @@ namespace DarkwoodMP.World
                         var l = door.GetComponent<Locked>();
                         if (locked && (l == null || !l.locked)) door.lockMe(key);
                         else if (!locked && l != null && l.locked) door.unlock();
-                        if (barricaded && !door.barricaded) door.barricade(false);
+                        if (barricaded && !door.barricaded) { door.barricadeState = 2; door.barricade(false); } // as in OnAction
                         else if (!barricaded && door.barricaded) door.destroyBarricade(false);
                         if (open && !door.opened) door.open(door.transform.position + door.transform.right, null, 0f);
                         else if (!open && door.opened) door.close(null);
@@ -575,7 +590,7 @@ namespace DarkwoodMP.World
                         bool barricaded = (r.R.ReadByte() & 1) != 0; int barricade = r.R.ReadInt32();
                         var window = go != null ? go.GetComponent<Window>() : null;
                         if (window == null) break;
-                        if (barricaded && !window.barricaded) window.barricade(barricade, false);
+                        if (barricaded && !window.barricaded) { window.barricadeState = 2; window.barricade(barricade, false); }
                         else if (!barricaded && window.barricaded) window.destroyBarricade(false);
                         window.barricadeHealth = barricade;
                         break;
@@ -603,7 +618,7 @@ namespace DarkwoodMP.World
                         if (feeder != null && feeder.Active != ((f & 32) != 0)) { if ((f & 32) != 0) feeder.makeActive(); else feeder.makeInactive(); }
                         if (broken && !item.destroyed && item.destructible) item.die();
                         else if (!broken && item.destroyed) item.setNormalState();
-                        if (item != null) item.health = health;
+                        item.health = health;
                         break;
                     }
                     case Kind.Explosive:
@@ -799,8 +814,6 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Trigger), "OnAfterTrigger")]
     static class TrapFiredPatch
     {
-        public struct State { public UnityEngine.Object Held; }
-
         /// <summary>A client's trap spawn waiting for the host's yes.</summary>
         private sealed class Held
         {
@@ -820,19 +833,19 @@ namespace DarkwoodMP.World
         /// </summary>
         public static string TestRefuse;
 
-        static void Prefix(Trigger __instance, Collider other, out State __state)
+        static void Prefix(Trigger __instance, Collider other, out UnityEngine.Object __state)
         {
             WorldActions.Depth++;
-            __state = default;
+            __state = null;
             if (WorldActions.Depth != 1 || !WorldActions.Sharing || !Net.Session.Instance.IsClient || __instance.loadedFromSave) return;
             if (__instance.prefabToSpawn == null || !Ours(__instance, other)) return;
-            __state.Held = __instance.prefabToSpawn;
+            __state = __instance.prefabToSpawn;
             __instance.prefabToSpawn = null; // nonPooledPrefabToSpawn alone spawns nothing (Trigger.OnAfterTrigger)
         }
 
-        static void Postfix(Trigger __instance, Collider other, bool doConnectChain, State __state)
+        static void Postfix(Trigger __instance, Collider other, bool doConnectChain, UnityEngine.Object __state)
         {
-            if (__state.Held != null && __instance != null) __instance.prefabToSpawn = __state.Held; // pooled: the next one spawns again
+            if (__state != null && __instance != null) __instance.prefabToSpawn = __state; // pooled: the next one spawns again
             float healthBefore = HealthBefore; HealthBefore = -1f;
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null) return;
             if (!Ours(__instance, other)) return;
@@ -842,9 +855,9 @@ namespace DarkwoodMP.World
             var r = ObjRef.Of(__instance.gameObject);
             if (!r.Valid) return;
             string key = r.ToString();
-            var held = __state.Held == null ? null : new Held
+            var held = __state == null ? null : new Held
             {
-                Prefab = __state.Held,
+                Prefab = __state,
                 At = __instance.transform.position + new Vector3(0f, 1f, 0f),
                 Target = __instance.isChainTrap && doConnectChain && other != null ? other.gameObject : null,
             };
@@ -854,9 +867,7 @@ namespace DarkwoodMP.World
             bool bearHold = player != null && __instance.isBearTrap;
 
             var w = s.Begin(MsgType.WorldAction);
-            w.W.Write((byte)WorldActions.Action.TrapFired);
-            r.Write(w);
-            w.W.Write(0f); w.W.Write(0f); w.W.Write((byte)0); w.WriteStr("");
+            WorldActions.WriteAction(w, WorldActions.Action.TrapFired, r, 0f, 0f, false, false, "");
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent TrapFired {r} ({__instance.name}){(held != null ? ", its " + held.Prefab.name + " waits for the host" : "")}");
             Authority.Request(w, $"TrapFired {r} ({__instance.name})", (ok, reason, result) =>
             {
@@ -1024,9 +1035,7 @@ namespace DarkwoodMP.World
 
             var s = Session.Instance;
             var w = s.Begin(MsgType.WorldAction);
-            w.W.Write((byte)WorldActions.Action.TrapDisarm);
-            r.Write(w);
-            w.W.Write(0f); w.W.Write(0f); w.W.Write((byte)0); w.WriteStr("");
+            WorldActions.WriteAction(w, WorldActions.Action.TrapDisarm, r, 0f, 0f, false, false, "");
             Authority.Request(w, $"TrapDisarm {r} ({trap.name})", (ok, reason, result) =>
             {
                 if (trap == null || Player.Instance == null) return;
@@ -1142,8 +1151,8 @@ namespace DarkwoodMP.World
     /// <summary>
     /// A combination padlock opened (Padlock.unlock, after checkCombination, or by the story with manually false).
     /// The others' copies are unlocked without the window or events (Padlock.unlock(false)). A client's player
-    /// sends the code it entered; the host checks it and the reach, and runs the padlock's onUnlockPadlock events
-    /// in its own game (see WorldActions.OnAction), so what they change is shared from there.
+    /// sends the code it entered, and the host checks it and the reach. The padlock's events (onTryToOpenLocked,
+    /// onUnlockPadlock) run in the opener's game, which sends them as scripted events of its own (ScriptedEvents).
     /// </summary>
     [HarmonyPatch(typeof(Padlock), nameof(Padlock.unlock), new[] { typeof(bool) })]
     static class PadlockUnlockPatch

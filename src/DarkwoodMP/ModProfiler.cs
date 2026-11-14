@@ -40,10 +40,10 @@ namespace DarkwoodMP
             _frames++;
             _frameTime += Time.unscaledDeltaTime;
             if (_frameMod > _worstMod) _worstMod = _frameMod;
-            double total = _ms.Values.Sum();
             _frameMod = 0;
             if (Time.unscaledTime - _since < 10f) return;
             _since = Time.unscaledTime;
+            double total = _ms.Values.Sum();
             string parts = string.Join(", ", _ms.OrderByDescending(kv => kv.Value).Take(10).Select(kv => $"{kv.Key} {kv.Value / _frames:0.000} (worst {_worst[kv.Key]:0.0})"));
             Plugin.Log.LogInfo($"[profile-mod] {_frames} frames, {_frameTime / _frames * 1000f:0.0} ms each; the mod {total / _frames:0.000} ms a frame (worst {_worstMod:0.00}): {parts}");
             _ms.Clear(); _worst.Clear(); _frames = 0; _frameTime = 0; _worstMod = 0;

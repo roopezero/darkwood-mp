@@ -18,6 +18,10 @@ namespace DarkwoodMP.Net
     /// piece at a time with NeedSave, each answered with SaveData, checks it, and sends Hello again with its hash.
     /// Otherwise the host answers Welcome with the client's id, then a PlayerInfo for everyone already in, and the
     /// client loads the world. While they play, both sides send PlayerState.
+    ///
+    /// The values below aren't in order. In use (decimal): 1-6, 10-47, 50-52, 62-68, 70, 78-80, 86-88, 90, 100,
+    /// 115-116, 120-122, 130, 135, 140, 155, 160, 165, 170, 180-185, 190, 200-202, 208-210, 216, 220, 230, 235-237,
+    /// 240-241, 250. A new message takes a free value; keep this list up to date.
     /// </summary>
     public enum MsgType : byte
     {

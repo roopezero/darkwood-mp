@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using UnityEngine;
+using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
 {
@@ -32,8 +32,6 @@ namespace DarkwoodMP.World
             MapScenario.Add("far-spot", FarSpot, timeout: 90f);
         }
 
-        private static IEnumerator None() { yield break; }
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
         private const float Cluster = 2500f; // far spots this far apart at least, so two players' don't share a house
 
         /// <summary>"far-spot MIN INDEX": walk to the INDEXth spot at least MIN from the centre (the test area's)
@@ -45,7 +43,7 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             if (p == null) { r.Fail("no player"); yield break; }
-            float min = a.Length > 0 ? float.Parse(a[0], CultureInfo.InvariantCulture) : 6000f;
+            float min = a.Length > 0 ? F(a[0]) : 6000f;
             int index = a.Length > 1 ? int.Parse(a[1]) : 0;
             var from = MapScenario.Centre;
             var grid = Singleton<WorldGrid>.Instance;

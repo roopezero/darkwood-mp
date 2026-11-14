@@ -20,7 +20,12 @@ namespace DarkwoodMP.Sync
         private readonly PlayerCapture _capture = new PlayerCapture();
         private readonly PlayerSnapshot _snap = new PlayerSnapshot();
         private readonly PlayerSnapshot _incoming = new PlayerSnapshot();
+        private readonly MoveCheck _moves;
         private float _nextSend;
+        // Players who left, and when. Over Steam a PlayerState sent before PlayerLeft can arrive after it (they go on
+        // different channels, which Steam doesn't order), and would bring back a frozen puppet.
+        private readonly Dictionary<ulong, float> _left = new Dictionary<ulong, float>();
+        private const float LeftIgnore = 5f;
         /// <summary>
         /// The tests' dummy (--dwmp-dummy): a copy of you left standing where you were, which the AI treats as
         /// another player. Never a real peer id.
@@ -53,9 +58,11 @@ namespace DarkwoodMP.Sync
             _session = session;
             session.Register(MsgType.PlayerState, OnPlayerState);
             _moves = new MoveCheck(session);
-            session.OnPeerDisconnected += RemoveRemote;
+            session.OnPeerDisconnected += id => { RemoveRemote(id); _left[id] = Time.unscaledTime; };
+            session.OnPeerConnected += id => _left.Remove(id);
             session.OnSessionEnded += () =>
             {
+                _left.Clear();
                 foreach (var r in Remotes.Values) r.Destroy();
                 Remotes.Clear();
             };
@@ -85,11 +92,10 @@ namespace DarkwoodMP.Sync
             MapMarkers.Tick();
         }
 
-        private readonly MoveCheck _moves;
-
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
+            if (LeftJustNow(_session.IsHost ? from : _incoming.Owner)) return;
             if (_session.IsHost)
             {
                 // Never trust the owner field from a client, nor a place it couldn't have got to.
@@ -107,6 +113,14 @@ namespace DarkwoodMP.Sync
             if (_incoming.Owner == _session.LocalId) return;
             var remote = GetOrCreate(_incoming.Owner, _session.NameOf(_incoming.Owner));
             remote.Push(_incoming);
+        }
+
+        private bool LeftJustNow(ulong id)
+        {
+            if (!_left.TryGetValue(id, out float at)) return false;
+            if (Time.unscaledTime - at < LeftIgnore) return true;
+            _left.Remove(id);
+            return false;
         }
 
         private RemotePlayer GetOrCreate(ulong id, string name)

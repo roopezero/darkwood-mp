@@ -56,7 +56,7 @@ namespace DarkwoodMP
             _addressWin = new UiWindow(0x0D3C, "Connect to address")
             {
                 MinSize = new Vector2(280, 150), FitContent = true,
-                DefaultRect = () => Placed(330 * S(), 170 * S()),
+                DefaultRect = () => UiWindow.RightSide(330 * S(), 170 * S()),
                 Body = DrawAddress,
                 Footer = AddressButtons,
                 FooterHeight = 13 + 8,
@@ -64,14 +64,12 @@ namespace DarkwoodMP
             _passwordWin = new UiWindow(0x0D3D, "Password")
             {
                 MinSize = new Vector2(260, 120), FitContent = true,
-                DefaultRect = () => Placed(300 * S(), 130 * S()),
+                DefaultRect = () => UiWindow.RightSide(300 * S(), 130 * S()),
                 Body = DrawPassword,
                 Footer = PasswordButtons,
                 FooterHeight = 13 + 8,
             };
         }
-
-        private static Rect Placed(float w, float h) => UiWindow.RightSide(w, h); // on the right, as every window starts
 
         /// <summary>The windows this section opened (drawn after the Multiplayer window, so they're on top).</summary>
         public void OnGUI()
@@ -86,6 +84,11 @@ namespace DarkwoodMP
         public void CloseAll()
         {
             if (_shotRow != null) { _browser.Favorites.Remove(_shotRow); _shotRow = null; }
+            CloseWindows();
+        }
+
+        private void CloseWindows()
+        {
             _browserWin.Close();
             _addressWin.Close();
             _passwordWin.Close();
@@ -96,7 +99,7 @@ namespace DarkwoodMP
         {
             // A row to show, kept out of the saved list (nothing answers on it).
             if (_browser.Favorites.Count == 0) { _shotRow = "127.0.0.1:27799"; _browser.Favorites.Add(_shotRow); _browser.Query(_shotRow); }
-            OpenBrowser();
+            OpenServerBrowser();
             if (address) OpenAddress();
         }
 
@@ -111,7 +114,7 @@ namespace DarkwoodMP
             else if (_tcp.Status != "Not connected") Ui.Text(f, _tcp.Status);
 
             var row = f.Row(Ui.RowH, 0, 0);
-            if (Ui.Button(row[0], "Find servers...")) OpenBrowser();
+            if (Ui.Button(row[0], "Find servers...")) OpenServerBrowser();
             if (Ui.Button(row[1], "Connect to address...")) OpenAddress();
 
             f.Space(4);
@@ -176,20 +179,18 @@ namespace DarkwoodMP
 
         // ---- the server browser ---------------------------------------------------------------------
 
-        /// <summary>The server browser (the main menu's Join Game).</summary>
-        public void OpenServerBrowser() => OpenBrowser();
+        /// <summary>Opens the server browser (also the main menu's Join Game); the first time, it asks the Favorites and History servers.</summary>
+        public void OpenServerBrowser()
+        {
+            if (!_refreshedOnce) { _refreshedOnce = true; _browser.Refresh(ServerBrowser.Tab.Favorites); _browser.Refresh(ServerBrowser.Tab.History); }
+            _browserWin.Show();
+        }
 
         /// <summary>One of this section's windows (the browser, the address or the password dialog) is open.</summary>
         public bool AnyOpen => _browserWin.Open || _addressWin.Open || _passwordWin.Open;
 
         /// <summary>Called as a join starts (the windows close then), so the Multiplayer window can show how it goes.</summary>
-        public System.Action OnJoining;
-
-        private void OpenBrowser()
-        {
-            if (!_refreshedOnce) { _refreshedOnce = true; _browser.Refresh(ServerBrowser.Tab.Favorites); _browser.Refresh(ServerBrowser.Tab.History); }
-            _browserWin.Show();
-        }
+        public Action OnJoining;
 
         private void SwitchTab(ServerBrowser.Tab t)
         {
@@ -254,7 +255,7 @@ namespace DarkwoodMP
                     if (twice) Connect(addr);
                 }
                 var info = e.Info;
-                bool ok = info == null || info.Incompatibility == null;
+                bool ok = CanJoin(addr);
                 Color col = !ok || (info == null && !e.Querying) ? MenuSkin.Dim : sel ? MenuSkin.Bright : MenuSkin.Text;
                 float y = row.y;
                 Rect C(int c) => new Rect(rc[c].x + 4 * s, y, rc[c].width - 4 * s, rowH);
@@ -361,7 +362,7 @@ namespace DarkwoodMP
             Plugin.Cfg.LastAddress.Value = addr;
             _tcp.Join(addr, password ?? "");
             OnJoining?.Invoke();
-            _browserWin.Close(); _addressWin.Close(); _passwordWin.Close();
+            CloseWindows();
         }
 
         private void OpenAddress()
@@ -390,7 +391,7 @@ namespace DarkwoodMP
                 _selected = TcpBackend.Normalize(_address);
                 SwitchTab(ServerBrowser.Tab.Favorites);
                 _addressWin.Close();
-                OpenBrowser();
+                OpenServerBrowser();
             }
             if (Ui.Button(b[2], "Connect", valid)) ConnectToAddress();
             if (Ui.Button(b[3], "Cancel")) _addressWin.Close();

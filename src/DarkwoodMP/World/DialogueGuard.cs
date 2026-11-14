@@ -10,10 +10,9 @@ namespace DarkwoodMP.World
     /// The game never expects that: DialogueWindow.close() does nothing once its NPC is destroyed (`npc != null` is
     /// false), and closeTrade() throws on `npc.GetComponent`, which is what Escape and the trade window's close
     /// button call. The player then has the window on screen, the game paused and the controls taken
-    /// (Player.inDialogue, inShop) until they quit the game (issue #15: the host walked out of the hideout, its
-    /// AfterNightEnded made the joiner's game end its morning, and endAfterNight destroyed the trader the joiner
-    /// was trading with). AfterNight now closes the dialogue before it ends the morning; this is the safety for
-    /// anything else that takes an NPC away mid-dialogue:
+    /// (Player.inDialogue, inShop) until they quit the game. AfterNight closes the dialogue before it ends a
+    /// joiner's morning (endAfterNight destroys the trader); this is the safety for anything else that takes an
+    /// NPC away mid-dialogue:
     ///
     /// - With the NPC destroyed, closeTrade, close and escPress do the game's own closing steps without the NPC
     ///   (ForceClose): what the player put on the table comes back, the trader's window goes, the screen fades back
@@ -82,6 +81,17 @@ namespace DarkwoodMP.World
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}"); ForceClose(w, "close failed"); }
             return true;
+        }
+
+        /// <summary>
+        /// A prefix's answer for a window method that needs the NPC: false (skip the game's method) after closing the
+        /// dialogue if the NPC was destroyed. ifTweening: also while the window is opening or closing.
+        /// </summary>
+        internal static bool RunGame(DialogueWindow w, bool ifTweening)
+        {
+            if (!NpcDestroyed(w) || (!ifTweening && w.tweening)) return true;
+            ForceClose(w, "destroyed");
+            return false;
         }
 
         /// <summary>DialogueWindow.closeTrade and close without the NPC (which is gone).</summary>
@@ -159,36 +169,21 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.closeTrade))]
     static class DialogueGuardCloseTradePatch
     {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            if (!DialogueGuard.NpcDestroyed(__instance)) return true;
-            DialogueGuard.ForceClose(__instance, "destroyed");
-            return false;
-        }
+        static bool Prefix(DialogueWindow __instance) => DialogueGuard.RunGame(__instance, ifTweening: true);
     }
 
     /// <summary>close() does nothing once the NPC is destroyed.</summary>
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.close))]
     static class DialogueGuardClosePatch
     {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            if (!DialogueGuard.NpcDestroyed(__instance) || __instance.tweening) return true;
-            DialogueGuard.ForceClose(__instance, "destroyed");
-            return false;
-        }
+        static bool Prefix(DialogueWindow __instance) => DialogueGuard.RunGame(__instance, ifTweening: false);
     }
 
     /// <summary>Escape: a line being written (onInstantClick) and the other menus use the NPC too.</summary>
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.escPress))]
     static class DialogueGuardEscPatch
     {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            if (!DialogueGuard.NpcDestroyed(__instance) || __instance.tweening) return true;
-            DialogueGuard.ForceClose(__instance, "destroyed");
-            return false;
-        }
+        static bool Prefix(DialogueWindow __instance) => DialogueGuard.RunGame(__instance, ifTweening: false);
     }
 
     /// <summary>A line still being written (WritingText.Update) when the dialogue closes calls finishedElement on the

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -52,7 +51,7 @@ namespace DarkwoodMP.World
         {
             var npc = Shared(a[0], Centre);
             var c = npc != null ? npc.GetComponent<Character>() : null;
-            var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+            var proxy = MapScenarioNight.ClientProxy();
             if (c == null) { r.Fail($"no {a[0]} here that every game has"); yield break; }
             if (proxy == null) { r.Fail("no joiner"); yield break; }
             _follower = (c, c.aggressiveness, c.behaviour, c.transform.position);
@@ -87,7 +86,7 @@ namespace DarkwoodMP.World
         private static IEnumerator FollowCheck(string[] a, Result r)
         {
             var c = _follower.c;
-            var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+            var proxy = MapScenarioNight.ClientProxy();
             if (c == null || proxy == null) { r.Fail("no follower or no joiner"); yield break; }
             float until = Time.realtimeSinceStartup + 20f;
             while (Time.realtimeSinceStartup < until && StateDump.Flat(c.transform.position - proxy.transform.position) >= 500f)
@@ -149,9 +148,6 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             r.Info = string.Join(", ", WolfFlagNames.Select(n => $"{n} {f.isFlagTrue(n)}"));
         }
-
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
 
         private static int SharedId(NPC n)
         {
@@ -253,8 +249,8 @@ namespace DarkwoodMP.World
 
         /// <summary>"npc-died" (host): the night trader in the hideout died here too, through the joiner's NpcDied
         /// (taken, not refused: our copy is where theirs was), and neither that nor their dead state was refused, since the
-        /// last "host-copy here". (A
-        /// dead night trader is taken away at once, Character.die's removeMe, so there's no body to look at.)</summary>
+        /// last "host-copy here". (A dead night trader is taken away at once, Character.die's removeMe, so there's no
+        /// body to look at.)</summary>
         private static IEnumerator NpcDied(string[] a, Result r)
         {
             yield return new WaitForSeconds(2f);

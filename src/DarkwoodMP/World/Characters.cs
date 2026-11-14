@@ -40,7 +40,7 @@ namespace DarkwoodMP.World
             public string Inv;     // Inventory.SaveState of the player's inventory
             public string Hotbar;  // Inventory.SaveState of the hotbar
             public long Saved;     // unix time
-            public int Chapter;    // the host's chapter when it was sent (0: not known, from before it was kept)
+            public int Chapter;    // the chapter the joiner's game was in when it was sent (0: not known, from before it was kept)
             public bool Dead;      // died for good (CharacterDead): it comes back only to watch the others
         }
 
@@ -55,8 +55,8 @@ namespace DarkwoodMP.World
             session.Register(MsgType.CharacterSave, OnSave);
             session.Register(MsgType.CharacterLoad, OnLoad);
             session.Register(MsgType.CharacterDead, OnDead);
-            session.OnSessionEnded += () => { _asked = false; _have = false; _carried.Clear(); };
-            session.OnPeerDisconnected += peer => _carried.Remove(peer);
+            session.OnSessionEnded += () => { _asked = false; _have = false; _quitSent = false; _carried.Clear(); _inChapter.Clear(); };
+            session.OnPeerDisconnected += peer => { _carried.Remove(peer); _inChapter.Remove(peer); };
         }
 
         // =====================================================================
@@ -82,7 +82,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// A new world in a save folder that had one (a new game in the slot, a deleted slot, a reset test world):
         /// what was read from that folder is dropped, so it's read again. Records() only notices a different folder,
-        /// and a new world in the same one used to get the old world's characters, a character that died for good too.
+        /// so without this a new world in the same one would get the old world's characters, one that died for good too.
         /// </summary>
         public void Forget(string why)
         {
@@ -141,6 +141,7 @@ namespace DarkwoodMP.World
             bool dead = rec != null && rec.Dead;
             // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new, 3: yours, beside the host, 4: yours, dead for good
             w.W.Write((byte)(dead ? 4 : earlier ? 3 : rec != null ? 1 : copy ? 2 : 0));
+            _inChapter.Remove(from); // its game is in this chapter from now on
             w.WriteBigStr(rec?.Player ?? ""); w.WriteBigStr(rec?.Inv ?? ""); w.WriteBigStr(rec?.Hotbar ?? "");
             // Where the host stands: the joiner's game finds a free spot beside it (Sync.SpawnSpot), off the host.
             w.Write(host != null ? host.transform.position : Vector3.zero);
@@ -154,15 +155,28 @@ namespace DarkwoodMP.World
         private void OnSave(ulong from, PacketReader r)
         {
             if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
-            var rec = new Record { Name = _session.NameOf(from), Player = r.ReadBigStr(), Inv = r.ReadBigStr(), Hotbar = r.ReadBigStr(), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = Chapters.HostChapter };
+            var rec = new Record { Name = _session.NameOf(from), Player = r.ReadBigStr(), Inv = r.ReadBigStr(), Hotbar = r.ReadBigStr(), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = _inChapter.TryGetValue(from, out int was) ? was : Chapters.HostChapter };
             if (rec.Player.Length == 0 || rec.Inv.Length == 0) return;
             _carried[from] = new Carried { Inv = rec.Inv, Hotbar = rec.Hotbar };
-            // Once the host's next chapter is being built, a joiner's character still stands in the last one; the one
-            // it sent at ChapterStart is the one kept.
-            if (Chapters.Generating) return;
             // A character that died for good stays dead, whatever its game sends after (it goes on sending while it watches).
-            if (Records().TryGetValue(KeyHash(key), out var was) && was.Dead) rec.Dead = true;
-            Records()[KeyHash(key)] = rec; // written with the world, next time the host's game saves
+            var recs = Records();
+            string id = KeyHash(key);
+            if (recs.TryGetValue(id, out var old) && old.Dead) rec.Dead = true;
+            recs[id] = rec; // written with the world, next time the host's game saves
+        }
+
+        /// <summary>
+        /// Host: the chapter each joiner's game was in when the host started the next one. Until a joiner asks for its
+        /// character in the new chapter's world, what it sends is from the last chapter's map (its save at ChapterStart,
+        /// at Rejoin, or a periodic one), so it's stamped with that chapter and comes back beside the host (kind 3).
+        /// </summary>
+        private readonly Dictionary<ulong, int> _inChapter = new Dictionary<ulong, int>();
+
+        /// <summary>Host: it is starting the next chapter; every joiner's game is still in this one.</summary>
+        public void ChapterStarted(int chapter)
+        {
+            if (!_session.IsHost || chapter == 0) return;
+            foreach (var peer in _session.Peers) _inChapter[peer] = chapter;
         }
 
         /// <summary>What a client's player carried, by the character it sent last this session, and what it placed since.</summary>
@@ -200,7 +214,8 @@ namespace DarkwoodMP.World
         {
             if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
             var recs = Records();
-            if (!recs.TryGetValue(KeyHash(key), out var rec)) recs[KeyHash(key)] = rec = new Record { Name = _session.NameOf(from), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = Chapters.HostChapter };
+            string id = KeyHash(key);
+            if (!recs.TryGetValue(id, out var rec)) recs[id] = rec = new Record { Name = _session.NameOf(from), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = Chapters.HostChapter };
             rec.Dead = true;
             Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good: kept dead in this world");
         }
@@ -268,7 +283,7 @@ namespace DarkwoodMP.World
         /// <summary>Client: send our character to the host now (also as we leave, and as the game quits).</summary>
         public void SaveNow()
         {
-            if (!_have || !NetEnemies.ClientMode || !WorldShare.InWorld) return;
+            if (_quitSent || !_have || !NetEnemies.ClientMode || !WorldShare.InWorld) return;
             _nextSave = Time.unscaledTime + CharacterInterval;
             var p = Player.Instance;
             try
@@ -280,6 +295,17 @@ namespace DarkwoodMP.World
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send your character: {e.Message}"); }
+        }
+
+        // Set once the game quits: sent then, while the world is still whole. Leaving at OnDestroy sends nothing more,
+        // as the player may already be torn down by then.
+        private bool _quitSent;
+
+        /// <summary>Client, OnApplicationQuit: send our character now, and only now.</summary>
+        public void SaveForQuit()
+        {
+            SaveNow();
+            _quitSent = true;
         }
 
         private void OnLoad(ulong from, PacketReader r)
@@ -304,8 +330,8 @@ namespace DarkwoodMP.World
                 if (kind == 1 || kind == 3) ApplyRecord(p, ps, inv, hot);
                 if (kind == 3 && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
                 else if (kind == 0) Fresh(p, spawn);
-                // A copy of the host's: keep it, beside them. Our own (kind 1) stays where it was saved: this used
-                // to apply to it too, which put a returning player on the host (or at 0,0 with no position given).
+                // A copy of the host's: keep it, beside them. Our own (kind 1) stays where it was saved, not on the
+                // host (or at 0,0 when no position was given).
                 else if (kind == 2 && spawn != Vector3.zero) p.transform.position = spawn;
                 PlaceFree(p, spawn == Vector3.zero ? (Vector3?)null : spawn);
                 p.refreshRecipes();

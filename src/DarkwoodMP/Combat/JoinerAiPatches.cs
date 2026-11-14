@@ -16,25 +16,28 @@ namespace DarkwoodMP.Combat
     {
         /// <summary>
         /// Swaps each run of instructions that <paramref name="match"/> recognises (it returns the run's length, or 0)
-        /// for "ldarg.0; call helper", padded with nops, keeping the labels. Logs a warning when nothing matched
-        /// (the game's code changed), and the method then keeps the game's own behaviour.
+        /// for "ldarg.0 (or ldarg.1 with <paramref name="arg"/> 1); call helper", padded with nops, keeping the labels.
+        /// Logs a warning when it swapped other than <paramref name="expected"/> runs, or, given <paramref name="none"/>,
+        /// that text when it swapped none (the game's code changed); the method then keeps the game's own behaviour.
         /// </summary>
         public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, Func<List<CodeInstruction>, int, int> match,
-                                                        MethodInfo helper, string where, int expected = 1)
+                                                        MethodInfo helper, string where, int expected = 1, int arg = 0, string none = null)
         {
+            var load = arg == 0 ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1;
             var list = new List<CodeInstruction>(instructions);
             int swapped = 0;
             for (int i = 0; i < list.Count; i++)
             {
                 int n = match(list, i);
                 if (n <= 0) continue;
-                list[i] = new CodeInstruction(OpCodes.Ldarg_0) { labels = list[i].labels, blocks = list[i].blocks };
+                list[i] = new CodeInstruction(load) { labels = list[i].labels, blocks = list[i].blocks };
                 list[i + 1] = new CodeInstruction(OpCodes.Call, helper) { labels = list[i + 1].labels, blocks = list[i + 1].blocks };
                 for (int k = 2; k < n; k++) list[i + k] = new CodeInstruction(OpCodes.Nop) { labels = list[i + k].labels, blocks = list[i + k].blocks };
                 swapped++;
                 i += n - 1;
             }
-            if (swapped != expected)
+            if (none != null) { if (swapped == 0) Plugin.Log.LogWarning(none); }
+            else if (swapped != expected)
                 Plugin.Log.LogWarning($"JoinerAi: {where}: swapped {swapped} reads of the host's player, expected {expected} (game changed?)");
             return list;
         }
@@ -133,18 +136,29 @@ namespace DarkwoodMP.Combat
             var proxy = ProxyOf(attacker);
             if (proxy == null) { c.attackPlayer(); return; }
             // An NPC turns on the joiner here, and the host runs it as an enemy from then on (Combat.HostileNpcs).
-            if (c.aggressiveness != Aggressiveness.defensive) c.aggressiveness = Aggressiveness.attackOnSight;
-            c.attackCharacter(proxy.transform);
+            GoFor(c, proxy.transform);
             if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
+        }
+
+        /// <summary>Sends a character after a player, as Character.attackPlayer does for the host's (a defensive one stays defensive).</summary>
+        public static void GoFor(Character c, Transform player)
+        {
+            if (c.aggressiveness != Aggressiveness.defensive) c.aggressiveness = Aggressiveness.attackOnSight;
+            c.attackCharacter(player);
+        }
+
+        private static Location HostLocation()
+        {
+            var w = Player.Instance.whereAmI;
+            return w != null ? w.bigLocation : null;
         }
 
         /// <summary>A hatching spider's location: the host's, unless a joiner is the nearest player; then where it is.</summary>
         public static Location HatchLocation(Character c)
         {
-            var host = Player.Instance;
-            var hostLoc = host.whereAmI != null ? host.whereAmI.bigLocation : null;
+            var hostLoc = HostLocation();
             if (!Threat.Enabled || c == null) return hostLoc;
-            return Threat.NearestPlayerPos(c) == host.transform.position ? hostLoc : null; // null: the game uses transform.GetLocation()
+            return Threat.NearestPlayerPos(c) == Player.Instance.transform.position ? hostLoc : null; // null: the game uses transform.GetLocation()
         }
 
         /// <summary>
@@ -153,8 +167,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static Location SpawnedLocation(Character.Activity a)
         {
-            var host = Player.Instance;
-            var hostLoc = host.whereAmI != null ? host.whereAmI.bigLocation : null;
+            var hostLoc = HostLocation();
             var c = a?.thisCharacter;
             if (!Threat.Enabled || c == null) return hostLoc;
             if (NightSpawns.SentAt(c, out var proxy, out var loc) && loc != null) return loc;
@@ -303,7 +316,7 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), nameof(Character.checkOutLocation))]
     static class CheckOutLocationJoinerPatch
     {
-        [ThreadStatic] public static NetPlayerProxy Chased;
+        public static NetPlayerProxy Chased;
 
         static void Prefix(Character __instance)
         {

@@ -35,10 +35,10 @@ namespace DarkwoodMP.Sync
             session.Register(MsgType.PlayerCorrection, OnCorrection);
         }
 
-        /// <summary>Host: a client's player says it's at pos. Returns where it may be (pos, or where it was).</summary>
         /// <summary>Stop tracking this player: the next position they send is taken as it is.</summary>
         public void Forget(ulong from) => _tracks.Remove(from);
 
+        /// <summary>Host: a client's player says it's at pos. Returns where it may be (pos, or where it was).</summary>
         public Vector3 Check(ulong from, Vector3 pos)
         {
             float now = Time.realtimeSinceStartup;

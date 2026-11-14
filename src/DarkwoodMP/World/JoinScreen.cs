@@ -112,7 +112,7 @@ namespace DarkwoodMP.World
                     return;
                 }
                 if (!_inGame) LoadingScreen.Show(); // the menu's scene, until the chapter's loads
-                if (_inGame && wg != null) Raise(DownloadShare + (1f - DownloadShare) * Mathf.Clamp01(wg.percentLoaded / 100f));
+                if (_inGame) RaiseByGame(wg);
                 _line = _inGame ? (LoadingScreen.GameStage() ?? _line) : (world.LoadStatus ?? _line);
                 Draw();
                 return;
@@ -175,12 +175,17 @@ namespace DarkwoodMP.World
         public static void OnGameBar()
         {
             if (!_shown || !_inGame) return;
-            var wg = Singleton<WorldGenerator>.Instance;
-            if (wg != null) Raise(DownloadShare + (1f - DownloadShare) * Mathf.Clamp01(wg.percentLoaded / 100f));
+            RaiseByGame(Singleton<WorldGenerator>.Instance);
             LoadingScreen.SetBar(_fraction, force: true);
         }
 
         private static void Raise(float f) { if (f > _fraction) _fraction = Mathf.Clamp01(f); }
+
+        /// <summary>The game's loading fills the part of the bar after the download.</summary>
+        private static void RaiseByGame(WorldGenerator wg)
+        {
+            if (wg != null) Raise(DownloadShare + (1f - DownloadShare) * Mathf.Clamp01(wg.percentLoaded / 100f));
+        }
 
         private static void Draw()
         {

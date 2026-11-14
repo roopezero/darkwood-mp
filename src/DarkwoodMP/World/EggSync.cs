@@ -39,10 +39,7 @@ namespace DarkwoodMP.World
             // so is ours, so its state is the same in every game.
             if (egg.health < 0) egg.health = 0;
             var p = egg.transform.position;
-            var w = S.Begin(MsgType.EggDestroyed);
-            r.Write(w);
-            w.W.Write(p.x); w.W.Write(p.z);
-            w.WriteStr(egg.gameObject.name);
+            var w = Write(r, p.x, p.z, egg.gameObject.name);
             Plugin.Log.LogInfo($"[world] sent egg {r} destroyed ({egg.gameObject.name})");
             if (S.IsHost) S.Broadcast(w, Channel.Control, reliable: true);
             else Authority.Request(w, $"egg {r} destroyed ({egg.gameObject.name})");
@@ -58,9 +55,10 @@ namespace DarkwoodMP.World
             string name = r.ReadStr();
 
             var egg = Find(obj, x, z, name);
-            if (s.IsHost && Authority.Handling)
+            if (s.IsHost) // a client's break comes only as a request (Authority drops a bare one)
             {
                 if (egg == null) { Authority.Refuse("there's no such egg here"); WorldActions.SendState(from, obj); return; }
+                if (!IsEgg(egg)) { WorldActions.SendState(from, obj); Authority.Refuse($"{egg.gameObject.name} isn't an egg"); return; }
                 if (egg.destroyed) return; // broken here already (by the host, or another player): nothing to do or pass on
                 if (!Authority.InReach(egg.transform.position, WorldActions.ShotReach, egg.gameObject.name)) { WorldActions.SendState(from, obj); return; }
             }
@@ -71,14 +69,16 @@ namespace DarkwoodMP.World
             try { Break(egg); }
             finally { WorldActions.Replaying = false; }
 
-            if (s.IsHost)
-            {
-                var w = s.Begin(MsgType.EggDestroyed);
-                obj.Write(w);
-                w.W.Write(x); w.W.Write(z);
-                w.WriteStr(name);
-                s.Broadcast(w, Channel.Control, reliable: true, except: from);
-            }
+            if (s.IsHost) s.Broadcast(Write(obj, x, z, name), Channel.Control, reliable: true, except: from);
+        }
+
+        private static PacketWriter Write(ObjRef obj, float x, float z, string name)
+        {
+            var w = S.Begin(MsgType.EggDestroyed);
+            obj.Write(w);
+            w.W.Write(x); w.W.Write(z);
+            w.WriteStr(name);
+            return w;
         }
 
         /// <summary>Break the egg as the game does. A culled (inactive) one can't play its animation, so it's left in its broken state.</summary>

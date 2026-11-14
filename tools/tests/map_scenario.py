@@ -35,7 +35,7 @@ STEPS = list(_core.STEPS)
 import map_scenario_world as _world, map_scenario_issues as _issues, map_scenario_fixchecks as _fixchecks
 import map_scenario_locations as _locations, map_scenario_status as _status, map_scenario_gaps as _gaps
 import map_scenario_dreams as _dreams
-# Parts added for the 4-player sweep (each self-contained, also runnable alone with MAP_SCENARIO=map_scenario_X).
+# Parts added for the 4-player sweep (each self-contained, also runnable alone: tools/run-test.sh map:X).
 import map_scenario_items1 as _items1
 import map_scenario_enemies as _enemies  # each kind of enemy fought by the client
 import map_scenario_npcs as _npcs
@@ -63,5 +63,5 @@ STEPS += [("host", "alive"), ("client", "alive")]
 # then things that change it for good (a death).
 POST = _dreams.POST + _status.POST
 
-REQUIRE = (list(_core.REQUIRE) + getattr(_issues, "REQUIRE", [])
-           + getattr(_fixchecks, "REQUIRE", []) + getattr(_gaps, "REQUIRE", []) + [r for _m in _extra for r in getattr(_m, "REQUIRE", [])] + [r for r in _npcs.REQUIRE if r != "npcpos"])
+REQUIRE = ([r for _m in [_core, _issues, _fixchecks, _gaps, *_extra] for r in getattr(_m, "REQUIRE", [])]
+           + [r for r in _npcs.REQUIRE if r != "npcpos"])

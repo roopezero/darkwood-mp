@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -90,9 +89,6 @@ namespace DarkwoodMP.World
 
         // ---- helpers ----------------------------------------------------------------------------------------------
 
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-
         /// <summary>This game's BepInEx log, as written so far (the disk log is flushed every second or two).</summary>
         internal static List<string> LogLines()
         {
@@ -130,30 +126,16 @@ namespace DarkwoodMP.World
         private static bool InBags(Player p, InvItemClass item) =>
             p.Inventory.slots.Concat(p.Hotbar.slots).Any(s => s != null && s.invItem == item);
 
-        /// <summary>The nearest spot to `at` with nothing solid on it (as TestWorld's stations are placed).</summary>
-        private static Vector3 FreeSpot(Vector3 at)
-        {
-            for (int ring = 0; ring < 12; ring++)
-                for (int i = 0; i < Math.Max(1, ring * 6); i++)
-                {
-                    float a = i * Mathf.PI * 2f / Math.Max(1, ring * 6);
-                    var p = at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * ring * 50f;
-                    if (!Physics.OverlapSphere(p, 60f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player")))
-                        return p;
-                }
-            return at;
-        }
-
         private static GameObject Place(string prefab, Vector3 at)
         {
-            var go = Core.AddPrefab(prefab, FreeSpot(at), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
+            var go = Core.AddPrefab(prefab, MapScenarioEnemies.FreeSpot(at), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
             if (go != null) Core.addToSaveable(go, isDynamic: true, assignID: true);
             return go;
         }
 
         /// <summary>Things of a kind in the scene (culled ones too), nearest a spot.</summary>
-        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
-            Resources.FindObjectsOfTypeAll<T>().Where(t => t != null && t.gameObject.scene.IsValid() && ok(t))
+        internal static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
+            StateDump.All<T>().Where(ok)
                 .OrderBy(t => StateDump.Flat(t.transform.position - to)).FirstOrDefault();
 
         private static Item Egg(string which) => NearestAll<Item>(Spot(which == "station" ? which : "egg:" + which), i => i.gameObject.name.StartsWith("larva_egg", StringComparison.Ordinal));
@@ -274,27 +256,16 @@ namespace DarkwoodMP.World
         private static uint _dogId;          // client: the copy attack-dog went for
         private static string _dogDeath;     // client: its death cry's audio ID
 
-        private static Character NetChar(uint id)
-        {
-            var ne = NetEnemies.Instance;
-            if (ne == null) return null;
-            return Object.FindObjectsOfType<Character>().FirstOrDefault(c => ne.NetIdOf(c, out uint i) && i == id);
-        }
-
         /// <summary>"spawn-dog" (host): a Dog beside the centre, not set on anyone.</summary>
         private static IEnumerator SpawnDog(string[] a, Result r)
         {
             // Clear of the stations: a dog among them walked into a trap and died before anyone hit it.
-            var spot = FreeSpot(Centre + new Vector3(0f, 0f, 1200f));
-            // spawnCharacterAround takes a non-zero offset times the distance as the position itself.
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(Player.Instance.gameObject, spot, 1f, a.Length > 0 ? a[0] : "Dog", nocturnal: false, attackPlayer: false);
+            var c = MapScenarioFixChecks.SpawnAt(Centre + new Vector3(0f, 0f, 1200f), a.Length > 0 ? a[0] : "Dog");
             if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
-            c.transform.position = spot;
             _dog = c;
             yield return new WaitForSeconds(1.5f);
             _dogHealth = c.health; // once it's set up (it starts at 0)
-            NetEnemies.Instance.NetIdOf(c, out uint id);
-            r.Info = $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}";
+            r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}";
         }
 
         /// <summary>"attack-dog" (client): walk to the host's dog and swing what we hold at it a few times.</summary>
@@ -371,11 +342,10 @@ namespace DarkwoodMP.World
         /// <summary>"dead-dog" (client): our copy of the dog is dead, and silent but for its death cry.</summary>
         private static IEnumerator DeadDog(string[] a, Result r)
         {
-            int from = 0;
             var missing = new List<string>();
-            yield return WaitLog(from, new[] { $@"\[enemy\] {_dogId} died: sounds stopped", $@"#{_dogId} died: its corpse can be searched here" }, 8f, missing);
+            yield return WaitLog(0, new[] { $@"\[enemy\] {_dogId} died: sounds stopped", $@"#{_dogId} died: its corpse can be searched here" }, 8f, missing);
             yield return new WaitForSeconds(2f); // past the death cry and any late sound from the host
-            var dog = NetChar(_dogId);
+            var dog = MapScenarioFixChecks.ById(_dogId);
             if (dog == null) { r.Fail($"the dog #{_dogId} is gone here"); yield break; }
             var snd = dog.GetComponent<CharacterSounds>();
             var loop = snd != null ? snd.idleAudioObject : null;
@@ -392,7 +362,7 @@ namespace DarkwoodMP.World
         private static IEnumerator SearchCorpse(string[] a, Result r)
         {
             var p = Player.Instance;
-            var dog = NetChar(_dogId);
+            var dog = MapScenarioFixChecks.ById(_dogId);
             if (dog == null) { r.Fail($"the dog #{_dogId} is gone here"); yield break; }
             var item = dog.GetComponent<Item>();
             var inv = dog.GetComponentInChildren<Inventory>(true);
@@ -602,7 +572,7 @@ namespace DarkwoodMP.World
         // ---- #6 infection --------------------------------------------------------------------------------------
 
         private static readonly Dictionary<string, Vector3> _noted = new Dictionary<string, Vector3>();
-        private static IEnumerator Nothing() { yield break; }
+        internal static IEnumerator Nothing() { yield break; }
 
         /// <summary>"burn-infection" (host): set the station's patch alight as fire does (a Burn on it, which clears every patch within 40).</summary>
         private static IEnumerator BurnInfection(string[] a, Result r)
@@ -700,7 +670,7 @@ namespace DarkwoodMP.World
             foreach (var w in which)
             {
                 if (!_noted.TryGetValue(w, out var at)) { r.Fail($"{w}'s patch wasn't noted (infection-note first)"); continue; }
-                var near = Resources.FindObjectsOfTypeAll<Infection>().Where(i => i != null && i.gameObject.scene.IsValid() && !i.disappearing && StateDump.Flat(i.transform.position - at) <= 20f).ToList();
+                var near = StateDump.All<Infection>().Where(i => !i.disappearing && StateDump.Flat(i.transform.position - at) <= 20f).ToList();
                 parts.Add($"{w}: {near.Count} left at {Fmt(at)}");
                 if (near.Count > 0) r.Fail($"{w}'s infection is still here ({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
             }

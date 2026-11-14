@@ -74,17 +74,19 @@ namespace DarkwoodMP.Net
             public volatile bool KeepsAlive;      // it has sent a Ping, so silence from it means it's gone
             public volatile bool SaidHello;
             public int Pending;                   // 1 while counted in _pending (Interlocked)
+            public volatile bool WriterDone;      // its writer thread has finished (Dispose waits on it)
         }
 
         private enum EvKind { Connected, Message, Lost, ConnectFailed }
-        private struct Ev { public EvKind Kind; public Conn Conn; public byte[] Data; public string Error; }
+        // Gen: the session a Connected event belongs to (_generation when its thread started).
+        private struct Ev { public EvKind Kind; public Conn Conn; public byte[] Data; public string Error; public int Gen; }
 
         private readonly ConcurrentQueue<Ev> _events = new ConcurrentQueue<Ev>();
         private readonly Dictionary<ulong, Conn> _conns = new Dictionary<ulong, Conn>();
         private TcpListener _listener;
         private UdpClient _info;
         private ulong _nextId = ClientIdBase;
-        private int _generation; // ignores events from a session we already left
+        private volatile int _generation; // ignores events from a session we already left
         private int _pending;    // inbound connections that haven't sent Hello yet
         private int _lastCheck;
 
@@ -157,7 +159,7 @@ namespace DarkwoodMP.Net
                 c.NoDelay = true;
                 var conn = new Conn { Client = c, Stream = c.GetStream(), Remote = c.Client.RemoteEndPoint?.ToString(), Inbound = true, Pending = 1 };
                 lock (_conns) conn.Id = _nextId++;
-                _events.Enqueue(new Ev { Kind = EvKind.Connected, Conn = conn });
+                _events.Enqueue(new Ev { Kind = EvKind.Connected, Conn = conn, Gen = gen });
                 StartThread($"DarkwoodMP write #{conn.Id}", () => WriteLoop(conn, gen));
                 StartThread($"DarkwoodMP read #{conn.Id}", () => ReadLoop(conn, gen));
             }
@@ -234,7 +236,7 @@ namespace DarkwoodMP.Net
                     c.EndConnect(ar);
                     var conn = new Conn { Id = HostPeerId, Client = c, Stream = c.GetStream(), Remote = $"{host}:{port}" };
                     if (gen != _generation) { c.Close(); return; }
-                    _events.Enqueue(new Ev { Kind = EvKind.Connected, Conn = conn });
+                    _events.Enqueue(new Ev { Kind = EvKind.Connected, Conn = conn, Gen = gen });
                     StartThread("DarkwoodMP write", () => WriteLoop(conn, gen));
                     ReadLoop(conn, gen);
                 }
@@ -299,8 +301,8 @@ namespace DarkwoodMP.Net
         }
 
         /// <summary>
-        /// Sends what Write queued, so the game's main thread never waits on the network (a joiner downloading the
-        /// world over a slow link used to stall the host's frames). A Ping goes first and whenever it's been quiet.
+        /// Sends what Write queued, so the game's main thread never waits on the network and a slow joiner can't
+        /// stall the host's frames. A Ping goes first and whenever it's been quiet.
         /// </summary>
         private void WriteLoop(Conn c, int gen)
         {
@@ -327,7 +329,7 @@ namespace DarkwoodMP.Net
             {
                 if (gen == _generation && !c.Closed) _events.Enqueue(new Ev { Kind = EvKind.Lost, Conn = c, Error = e.Message });
             }
-            finally { try { c.Client.Close(); } catch { } }
+            finally { try { c.Client.Close(); } catch { } c.WriterDone = true; }
         }
 
         private static void ReadFull(Stream s, byte[] buf, int n)
@@ -386,6 +388,8 @@ namespace DarkwoodMP.Net
                 switch (ev.Kind)
                 {
                     case EvKind.Connected:
+                        // From a session we already left (Shutdown ran between its thread's check and its enqueue).
+                        if (ev.Gen != _generation) { Close(ev.Conn, flush: false); break; }
                         lock (_conns) _conns[ev.Conn.Id] = ev.Conn;
                         if (IsHost) Plugin.Log.LogInfo($"Connection from {ev.Conn.Remote} as #{ev.Conn.Id}");
                         else
@@ -473,7 +477,10 @@ namespace DarkwoodMP.Net
             try { _listener?.Stop(); } catch { }
             try { _info?.Close(); } catch { }
             _listener = null; _info = null;
-            while (_events.TryDequeue(out _)) { }
+            // A connection whose Connected event is still queued isn't in _conns yet: close it too, or its
+            // threads and socket stay open (and keep pinging) for as long as the game runs.
+            while (_events.TryDequeue(out var ev))
+                if (ev.Kind == EvKind.Connected) Close(ev.Conn, flush: false);
             Status = status;
             if (was) OnLeft?.Invoke();
         }
@@ -499,6 +506,18 @@ namespace DarkwoodMP.Net
             return list;
         }
 
-        public void Dispose() => Leave();
+        /// <summary>
+        /// Leave, then give the writer threads up to a second to send what's queued (a client's character):
+        /// they're background threads, and at quit they die with the process.
+        /// </summary>
+        public void Dispose()
+        {
+            List<Conn> all;
+            lock (_conns) all = new List<Conn>(_conns.Values);
+            Leave();
+            int until = Environment.TickCount + 1000;
+            foreach (var c in all)
+                while (!c.WriterDone && until - Environment.TickCount > 0) Thread.Sleep(10);
+        }
     }
 }

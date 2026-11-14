@@ -101,23 +101,13 @@ namespace DarkwoodMP.World
                 _awaiting.Remove(inv);
                 Plugin.Log.LogWarning($"[slots] {_refs[inv]} no contents from host in {AskTimeout:0} s; sending changes against what we saw");
             }
-            List<int> changed = null;
-            for (int i = 0; i < keys.Length; i++) if (keys[i] != before[i]) (changed ??= new List<int>()).Add(i);
-            if (changed == null) return;
+            var changed = new List<Change>();
+            for (int i = 0; i < keys.Length; i++) if (keys[i] != before[i]) changed.Add(new Change { Slot = i, Old = before[i], New = Json(inv, i) });
+            if (changed.Count == 0) return;
             var r = _refs[inv];
             if (!r.Valid) return;
-            var w = _session.Begin(MsgType.ContainerSlots);
-            r.Write(w);
-            w.W.Write((byte)changed.Count);
-            foreach (int i in changed)
-            {
-                w.W.Write((ushort)i);
-                w.WriteStr(before[i]);
-                w.WriteStr(Json(inv, i));
-            }
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {changed.Count} slot(s) of {inv.name} {r}: {string.Join(", ", changed.ConvertAll(i => $"{i}: '{before[i]}' -> '{keys[i]}'"))}");
+            SendChanges(r, changed);
+            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {changed.Count} slot(s) of {inv.name} {r}: {string.Join(", ", changed.ConvertAll(c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"))}");
             _watched[inv] = keys;
         }
 
@@ -126,6 +116,7 @@ namespace DarkwoodMP.World
         {
             _awaiting.Remove(inv); // closed before the host answered: what we changed goes against what we saw
             if (inv != null) Check(inv);
+            // destroyed (a Unity object that is == null but still a key here): its slots went empty
             else if (_watched.TryGetValue(inv, out var before) && _refs.TryGetValue(inv, out var r) && r.Valid) SendEmptied(r, before);
             _watched.Remove(inv);
             _refs.Remove(inv);
@@ -215,14 +206,13 @@ namespace DarkwoodMP.World
             catch (System.Exception e) { Plugin.Log.LogWarning($"[slots] {obj} bad contents from host: {e.Message}"); return; }
             if (state == null) return;
             if (state.slotCount != inv.slots.Count) Plugin.Log.LogWarning($"[slots] {obj} has {state.slotCount} slots on the host, {inv.slots.Count} here");
-            int filled = state.invItems != null ? state.invItems.Count : 0, slotCount = inv.slots.Count;
 
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
             {
                 WorldActions.Replaying = true;
                 try { state.loadValues(inv); }
                 finally { WorldActions.Replaying = false; }
-                Plugin.Log.LogInfo($"[slots] {obj} contents from host ({slotCount} slots): {filled} filled, loaded whole");
+                Plugin.Log.LogInfo($"[slots] {obj} contents from host ({inv.slots.Count} slots): {state.invItems?.Count ?? 0} filled, loaded whole");
                 RemoveIfEmptied(inv);
                 return;
             }
@@ -283,15 +273,10 @@ namespace DarkwoodMP.World
         /// <summary>A container that removes itself once emptied went before we last looked: its slots are empty now.</summary>
         private void SendEmptied(ObjRef r, string[] before)
         {
-            var changed = new List<int>();
-            for (int i = 0; i < before.Length; i++) if (before[i].Length > 0) changed.Add(i);
+            var changed = new List<Change>();
+            for (int i = 0; i < before.Length; i++) if (before[i].Length > 0) changed.Add(new Change { Slot = i, Old = before[i], New = "" });
             if (changed.Count == 0) return;
-            var w = _session.Begin(MsgType.ContainerSlots);
-            r.Write(w);
-            w.W.Write((byte)changed.Count);
-            foreach (int i in changed) { w.W.Write((ushort)i); w.WriteStr(before[i]); w.WriteStr(""); }
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
+            SendChanges(r, changed);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {r} emptied ({changed.Count} slot(s))");
         }
 
@@ -401,6 +386,7 @@ namespace DarkwoodMP.World
         {
             if (string.IsNullOrEmpty(json)) return null;
             var st = JsonConvert.DeserializeObject<InvItemClass.SaveState>(json);
+            if (st == null) return null;
             var it = new InvItemClass();
             st.loadValues(it);
             return it;
@@ -441,7 +427,7 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got {n} slot(s) of {obj}: " + (inv != null ? inv.name : "not found here"));
             if (inv == null) return;
 
-            if (s.IsClient) { foreach (var c in changes) Set(inv, c.Slot, c.New); UiRefresh.Changed(inv); RemoveIfEmptied(inv); return; } // the host's word
+            if (s.IsClient) { foreach (var c in changes) TakeHost(inv, c); UiRefresh.Changed(inv); RemoveIfEmptied(inv); return; } // the host's word
 
             // Host: the player must be at the container, it must be open in the host's world (a locked crate not
             // picked open here isn't), and nobody else may have it open (but its storage).
@@ -466,12 +452,28 @@ namespace DarkwoodMP.World
             }
             if (accepted.Count == 0) return;
             UiRefresh.Changed(inv);
-            var pass = s.Begin(MsgType.ContainerSlots);
-            obj.Write(pass);
-            pass.W.Write((byte)accepted.Count);
-            foreach (var c in accepted) { pass.W.Write((ushort)c.Slot); pass.WriteStr(c.Old); pass.WriteStr(c.New); }
-            s.Broadcast(pass, Channel.Control, reliable: true, except: from);
+            SendChanges(obj, accepted, from);
             RemoveIfEmptied(inv);
+        }
+
+        /// <summary>
+        /// Client: another player's change to a slot, as the host took it. A change of ours to that slot not yet sent
+        /// stands if the slot now holds what we changed it from (it goes at the next Check); otherwise the host would
+        /// refuse it, so it's undone now, as Merge does, and Set doesn't double or lose what it moved.
+        /// </summary>
+        private void TakeHost(Inventory inv, Change c)
+        {
+            if (c.Slot >= inv.slots.Count || !_watched.TryGetValue(inv, out var keys) || c.Slot >= keys.Length || keys[c.Slot] == Key(inv.slots[c.Slot]))
+            {
+                Set(inv, c.Slot, c.New);
+                return;
+            }
+            string oldKey = keys[c.Slot], hostKey = Key(Item(c.New));
+            if (hostKey == oldKey || RotOnly(inv.slots[c.Slot].invItem, hostKey, oldKey)) return;
+            var tried = Item(Json(inv, c.Slot));
+            Set(inv, c.Slot, c.New);
+            Plugin.Log.LogInfo($"[authority] our change to slot {c.Slot} of {inv.name}: refused here (another player changed it first)");
+            Undo(oldKey, tried);
         }
 
         /// <summary>Client: the host refused a slot change; take the host's slot, and undo what the change moved.</summary>
@@ -596,13 +598,17 @@ namespace DarkwoodMP.World
             int level = r.R.ReadInt32();
             var ctl = Singleton<Controller>.Instance;
             if (ctl == null) return;
+            if (level <= ctl.workbenchLevel) return;
             if (s.IsHost)
             {
+                // An upgrade (CraftingRecipes.doCraft) raises the level by one, at an open workbench.
+                string refused = level != ctl.workbenchLevel + 1 ? $"level {level} isn't one above {ctl.workbenchLevel}"
+                    : !AtWorkbench(from) ? "they aren't at a workbench" : null;
+                if (refused != null) { Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} raised the workbench level: refused ({refused})"); return; }
                 var w = s.Begin(MsgType.WorkbenchLevel);
                 w.W.Write(level);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
-            if (level <= ctl.workbenchLevel) return;
             ctl.workbenchLevel = level;
             Plugin.Log.LogInfo($"The workbench is now level {level} ({s.NameOf(from)} upgraded it)");
             // An open workbench shows the new level's recipes.
@@ -613,6 +619,13 @@ namespace DarkwoodMP.World
                 open.workbench.setRecipes();
                 open.workbench.refreshWorkbenchUpgrade(); // its "Level N" label and the next upgrade
             }
+        }
+
+        private static bool AtWorkbench(ulong player)
+        {
+            foreach (var wb in Object.FindObjectsOfType<Workbench>(true))
+                if (Authority.Near(player, wb.transform.position, WorldActions.Reach)) return true;
+            return false;
         }
     }
 

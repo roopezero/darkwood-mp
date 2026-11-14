@@ -105,7 +105,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The record for slot <paramref name="slot"/>, or null if there's none.</summary>
-        public static Record Get(int slot)
+        private static Record Get(int slot)
         {
             var d = Data();
             return d != null && d.Slots.TryGetValue(slot.ToString(), out var r) ? r : null;
@@ -149,7 +149,7 @@ namespace DarkwoodMP.World
             try
             {
                 var sm = Singleton<SaveManager>.Instance;
-                string dir = sm == null ? null : Path.Combine(Path.Combine(sm.baseSaveDirectory, "prof" + slot), "darkwoodmp_players");
+                string dir = sm == null ? null : PlayersDir(sm.baseSaveDirectory, slot);
                 if (FilePath != null && dir != null && Directory.Exists(dir))
                     foreach (var f in Directory.GetFiles(dir, "*.json").OrderByDescending(File.GetLastWriteTimeUtc))
                     {
@@ -171,6 +171,19 @@ namespace DarkwoodMP.World
             p.Last = Now();
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}: played with {name}");
+        }
+
+        /// <summary>The folder where the host keeps the characters of the players who joined slot <paramref name="slot"/>.</summary>
+        private static string PlayersDir(string baseDir, int slot) => Path.Combine(Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
+
+        /// <summary>Delete slot <paramref name="slot"/>'s players' characters; <paramref name="why"/> ends the log line.</summary>
+        internal static void DeletePlayersDir(string baseDir, int slot, string why)
+        {
+            try
+            {
+                if (WorldFiles.DeletePlayersFolder(baseDir, slot)) Plugin.Log.LogInfo($"[saves] slot {slot}'s players' characters deleted {why}");
+            }
+            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}"); }
         }
 
         /// <summary>A new game in slot <paramref name="slot"/>, or the slot deleted: its record goes.</summary>
@@ -196,14 +209,8 @@ namespace DarkwoodMP.World
             // world over the old save and leaves them, so a joiner would get their old character (dead, if it died
             // for good). They go with the old world, as when the slot is deleted.
             Characters.Instance?.Forget("a new game");
-            try
-            {
-                var sm = Singleton<SaveManager>.Instance;
-                string dir = sm == null || WorldShare.Instance?.PlayingHostCopy == true ? null
-                    : Path.Combine(Path.Combine(sm.baseSaveDirectory, "prof" + p.id), "darkwoodmp_players");
-                if (dir != null && Directory.Exists(dir)) { Directory.Delete(dir, true); Plugin.Log.LogInfo($"[saves] slot {p.id}'s players' characters deleted (a new game)"); }
-            }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't delete slot {p.id}'s players' characters: {e.Message}"); }
+            var sm = Singleton<SaveManager>.Instance;
+            if (sm != null && WorldShare.Instance?.PlayingHostCopy != true) SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
         }
     }
 
@@ -221,12 +228,7 @@ namespace DarkwoodMP.World
             if (p == null || WorldShare.Instance?.PlayingHostCopy == true) return;
             SaveBook.Forget(p.id, "deleted");
             Characters.Instance?.Forget("the slot deleted");
-            try
-            {
-                string dir = Path.Combine(Path.Combine(__instance.baseSaveDirectory, "prof" + p.id), "darkwoodmp_players");
-                if (Directory.Exists(dir)) { Directory.Delete(dir, true); Plugin.Log.LogInfo($"[saves] slot {p.id}'s players' characters deleted with it"); }
-            }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't delete slot {p.id}'s players' characters: {e.Message}"); }
+            SaveBook.DeletePlayersDir(__instance.baseSaveDirectory, p.id, "with it");
         }
     }
 }

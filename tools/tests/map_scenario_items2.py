@@ -3,6 +3,8 @@
 as map_scenario.py. The steps are in src/DarkwoodMP/World/MapScenarioItems2.cs. Run alone with
 MAP_SCENARIO=map_scenario_items2 tools/run-test.sh map."""
 
+from mapsteps import SAFE_ON
+
 SETTLE = 1.5
 
 PRE_JOIN = []
@@ -106,12 +108,11 @@ for gun, n, *flags in GUNS:
     ]
 FIRE += [("host", "i2-kill", "gun"), ("host", "heal"), ("client", "heal")]
 
-# Both players unhurtable while these run (i2-safe): a death changes the story flags the dumps compare.
-SAFE = [("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0})]
+# Both players unhurtable while these run (SAFE_ON, i2-safe).
 # The clock held at noon for the throws and the guns (ee-day): a night's worms bite the client the whole time it
 # reloads, and each bite stops a reload starting.
 DAY = [("host", "ee-day")]
-STEPS = (SAFE + LANTERN + MAPS + DAY + THROWS + FIRE
+STEPS = (SAFE_ON + LANTERN + MAPS + DAY + THROWS + FIRE
          + [("host", "alive"), ("client", "alive"), ("host", "ee-day", "off"), ("host", "i2-safe", "off"), ("client", "i2-safe", "off")])
 
 POST = []

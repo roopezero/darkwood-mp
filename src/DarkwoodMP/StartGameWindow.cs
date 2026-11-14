@@ -58,12 +58,11 @@ namespace DarkwoodMP
         public StartGameWindow()
         {
             Instance = this;
-            float S() => PixelFont.Scale;
             _win = new UiWindow(0x0D41, "Start Game")
             {
                 MinSize = new Vector2(380, 220),
                 FitContent = true,
-                DefaultRect = () => UiWindow.RightSide(470 * S(), 520 * S(), top: 0.04f),
+                DefaultRect = () => UiWindow.RightSide(470 * S, 520 * S, top: 0.04f),
                 Body = DrawBody,
                 Footer = DrawFooter,
                 FooterHeight = 13 + 8,
@@ -371,16 +370,7 @@ namespace DarkwoodMP
             return false;
         }
 
-        private static bool Check(Rect r, bool on, string text, bool enabled)
-        {
-            if (enabled && GUI.enabled) return Ui.Check(r, on, text);
-            float box = PixelFont.Line - 2 * S;
-            var b = new Rect(r.x, r.y + (r.height - box) / 2, box, box);
-            GUI.Box(b, GUIContent.none, MenuSkin.Sunken);
-            if (on) GUI.Box(new Rect(b.x + 3 * S, b.y + 3 * S, b.width - 6 * S, b.height - 6 * S), GUIContent.none, MenuSkin.Line);
-            Ui.Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, MenuSkin.Dim);
-            return on;
-        }
+        private static bool Check(Rect r, bool on, string text, bool enabled) => Ui.Check(r, on, text, enabled && GUI.enabled);
 
         private void DrawFooter(Rect r)
         {
@@ -395,7 +385,7 @@ namespace DarkwoodMP
         private string CantStart()
         {
             if (!WorldShare.MainMenuReady()) return "Wait for the main menu.";
-            if (_choice > 0) return Chosen?.Profile?.isCompatible == false ? "This save needs the game's profiles screen." : null;
+            if (_choice > 0) return Chosen?.Profile == null ? "No save in that slot." : Chosen.Profile.isCompatible == false ? "This save needs the game's profiles screen." : null;
             return NewSlot > 0 ? null : "Choose a save to overwrite.";
         }
 
@@ -457,14 +447,18 @@ namespace DarkwoodMP
                 Screen.SetResolution(int.Parse(wh[0]), int.Parse(wh[1]), FullScreenMode.Windowed);
                 yield return new WaitForSecondsRealtime(3f);
             }
-            if (sandbox != null) SaveRedirect.Begin(sandbox);
+            if (sandbox != null)
+            {
+                SaveRedirect.Begin(sandbox);
+                if (!WorldShare.RedirectWorks(sandbox)) { SaveRedirect.End(); yield break; }
+            }
             var w = Instance;
             MenuList.Click("Start Game");
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo($"[start window] clicked Start Game, window open: {w.Open}");
             foreach (var s in w._slots)
                 Plugin.Log.LogInfo($"[start window] slot {s.Id}: " + (s.Free ? "free" : Line(s)));
-            if (!w.Open) yield break;
+            if (!w.Open) { if (sandbox != null) SaveRedirect.End(); yield break; }
 
             string prefix = $"{Screen.width}x{Screen.height}-";
             IEnumerator Shot(string what)

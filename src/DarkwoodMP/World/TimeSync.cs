@@ -46,8 +46,7 @@ namespace DarkwoodMP.World
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
 
-            bool client = NetEnemies.ClientMode && ctl != null;
-            if (client)
+            if (NetEnemies.ClientMode && ctl != null)
             {
                 if (ctl.DoUpdateTime) ctl.DoUpdateTime = false; // the game turns it back on at times; keep it off
                 _clockStopped = true;

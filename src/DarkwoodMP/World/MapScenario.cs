@@ -34,16 +34,25 @@ namespace DarkwoodMP.World
         private static readonly Dictionary<string, (Step run, float timeout)> _steps = new Dictionary<string, (Step, float)>();
 
         public static void Add(string name, Step step, float timeout = 20f) => _steps[name] = (step, timeout);
-        public static IEnumerable<string> Names => _steps.Keys;
 
         /// <summary>The test area's centre: set by "centre X Z", else TestWorld's, else where our player stands.</summary>
         public static Vector3 Centre => _centre ?? StateDump.DefaultCentre();
         private static Vector3? _centre;
         public static void SetCentre(Vector3 at) => _centre = new Vector3(at.x, 0f, at.z);
-        /// <summary>The first centre the driver gave this game (the host's test area), which far-spot moves away from.</summary>
+        /// <summary>The first centre the driver gave this game (the host's test area), which mt-home returns to.</summary>
         public static Vector3? Home { get; private set; }
 
-        /// <summary>Run a step to its end or its time limit, then reply "done [info]" / "fail reason".</summary>
+        /// <summary>The levels of the step running now (the step's enumerator and the ones it yielded), and its result.</summary>
+        private static Stack<IEnumerator> _running;
+        private static Result _runningResult;
+
+        /// <summary>
+        /// Run a step to its end or its time limit, then reply "done [info]" / "fail reason". A step's nested
+        /// enumerators (Walk, TakeOut...) are stepped here rather than handed to Unity, so the time limit, the
+        /// exception catch and r.Fail apply inside them too; anything else a level yields (null, WaitForSeconds,
+        /// a Coroutine...) goes up to Unity as before. Every level is disposed at the end, however the step ends,
+        /// so the steps' finally blocks run.
+        /// </summary>
         public static IEnumerator Run(string name, string[] args, Action<string> reply)
         {
             if (!_steps.TryGetValue(name, out var s)) { reply($"fail unknown step {name} (known: {string.Join(", ", _steps.Keys.OrderBy(k => k))})"); yield break; }
@@ -52,14 +61,34 @@ namespace DarkwoodMP.World
             IEnumerator e;
             try { e = s.run(args, r); }
             catch (Exception ex) { reply($"fail {ex.GetType().Name}: {ex.Message}"); yield break; }
-            while (true)
+            var stack = new Stack<IEnumerator>();
+            stack.Push(e);
+            _running = stack;
+            _runningResult = r;
+            try
             {
-                bool more;
-                try { more = e.MoveNext(); }
-                catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: {ex}"); r.Fail($"{ex.GetType().Name}: {ex.Message}"); break; }
-                if (!more || r.Failure != null) break;
-                if (Time.realtimeSinceStartup > until) { r.Fail("timeout"); break; }
-                yield return e.Current;
+                while (r.Failure == null)
+                {
+                    var top = stack.Peek();
+                    bool more;
+                    try { more = top.MoveNext(); }
+                    catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: {ex}"); r.Fail($"{ex.GetType().Name}: {ex.Message}"); break; }
+                    if (r.Failure != null) break;
+                    if (!more)
+                    {
+                        DisposeLevel(stack.Pop(), name);
+                        if (stack.Count == 0) break;
+                        continue;
+                    }
+                    if (Time.realtimeSinceStartup > until) { r.Fail("timeout"); break; }
+                    if (top.Current is IEnumerator sub) { stack.Push(sub); continue; }
+                    yield return top.Current;
+                }
+            }
+            finally
+            {
+                while (stack.Count > 0) DisposeLevel(stack.Pop(), name);
+                if (_running == stack) { _running = null; _runningResult = null; }
             }
             WorldActions.TestAsPlayer = false;
             string line = r.Failure != null ? $"fail {r.Failure}" : r.Info != null ? $"done {r.Info}" : "done";
@@ -68,6 +97,22 @@ namespace DarkwoodMP.World
             line = line.Replace("\r", " ").Replace("\n", " ");
             Plugin.Log.LogInfo($"[map] {name} {string.Join(" ", args)}: {line}");
             reply(line);
+        }
+
+        private static void DisposeLevel(IEnumerator level, string name)
+        {
+            try { (level as IDisposable)?.Dispose(); }
+            catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: while ending it: {ex}"); }
+        }
+
+        /// <summary>Plugin.StopTests: end the running step now (its finally blocks run); it replies "fail stopped".</summary>
+        internal static void Stop()
+        {
+            var stack = _running;
+            if (stack == null) return;
+            _runningResult?.Fail("stopped");
+            while (stack.Count > 0) DisposeLevel(stack.Pop(), "stop");
+            _running = null; _runningResult = null;
         }
 
         // ---- helpers ----------------------------------------------------------------------------------------------
@@ -91,17 +136,24 @@ namespace DarkwoodMP.World
             // trap caught the host, which then couldn't get anywhere, and sprang a trap a later step was to use.
             var detour = detours > 0 ? Detour(p.transform.position, to, within) : null;
             if (detour.HasValue) yield return Walk(detour.Value, 20f, detours - 1);
-            var rb = p.GetComponent<Rigidbody>();
             while (true)
             {
                 var at = p.transform.position;
                 var d = new Vector3(to.x - at.x, 0f, to.z - at.z);
                 if (d.magnitude <= within) yield break;
-                var next = at + Vector3.ClampMagnitude(d, Mathf.Min(WalkSpeed * Time.deltaTime, d.magnitude - within * 0.5f));
-                p.transform.position = next;
-                if (rb != null) rb.position = next;
+                Place(at + Vector3.ClampMagnitude(d, Mathf.Min(WalkSpeed * Time.deltaTime, d.magnitude - within * 0.5f)));
                 yield return null;
             }
+        }
+
+        /// <summary>Put our player at (x, z) at once, at the height it stands at, its rigidbody too.</summary>
+        internal static void Place(Vector3 to)
+        {
+            var p = Player.Instance;
+            to.y = p.transform.position.y;
+            p.transform.position = to;
+            var rb = p.GetComponent<Rigidbody>();
+            if (rb != null) rb.position = to;
         }
 
         private const float TrapClearance = 110f;
@@ -137,8 +189,24 @@ namespace DarkwoodMP.World
         public static T Nearest<T>(IEnumerable<T> things, Vector3 to) where T : Component =>
             things.Where(t => t != null).OrderBy(t => StateDump.Flat(t.transform.position - to)).FirstOrDefault();
 
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
+        internal static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
+        internal static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
+
+        /// <summary>Everything our player carries: the bags and the hotbar.</summary>
+        internal static IEnumerable<InvItemClass> Carried(Player p) =>
+            p.Inventory.getAllItems().Concat(p.Hotbar.slots.Where(sl => !InvItemClass.isNull(sl.invItem)).Select(sl => sl.invItem));
+
+        /// <summary>Our player back to full health, flames put out, effects and bleeding stopped, out of a bear trap.</summary>
+        internal static void HealNow()
+        {
+            var p = Player.Instance;
+            if (p == null || !p.alive) return;
+            foreach (var b in p.GetComponentsInChildren<Burn>()) if (b != null) b.stop();
+            if (p.effects != null) p.effects.removeAllEffects();
+            p.bleeding = false;
+            if (p.inBearTrap) p.stopAllPerformingActionAnims();
+            p.setHealth(p.maxHealth);
+        }
 
         // ---- the starter steps ----------------------------------------------------------------------------------
 
@@ -164,8 +232,7 @@ namespace DarkwoodMP.World
             Add("time", Time_);
             Add("heal", Heal);
             Add("alive", Alive);
-            // The rest are in MapScenarioWorld.cs (one of each shared thing), MapScenarioIssues.cs (reported bugs) and
-            // MapScenarioFixChecks.cs (fixes from docs/INTERACTIONS.md that had no test in game).
+            // The rest are in the MapScenario*.cs files.
             MapScenarioWorld.Register();
             MapScenarioIssues.Register();
             MapScenarioStatus.Register();
@@ -192,8 +259,8 @@ namespace DarkwoodMP.World
             MapScenarioKnock.Register();
         }
 
-        private static IEnumerator None() { yield break; }
-        private static IEnumerator Info(Result r, string info) { r.Info = info; yield break; }
+        internal static IEnumerator None() { yield break; }
+        internal static IEnumerator Info(Result r, string info) { r.Info = info; yield break; }
         private static IEnumerator Wait(float s) { yield return new WaitForSeconds(s); }
 
         /// <summary>"toggle-door [open|close]": the door nearest the centre, opened or closed (toggled by default).</summary>
@@ -228,11 +295,10 @@ namespace DarkwoodMP.World
             var item = new InvItemClass(slot.invItem);
             p.openedItemInventory = inv; // as if its window were open
             yield return new WaitForSeconds(0.6f);
-            int Carried() => p.Inventory.getAllItems().Concat(p.Hotbar.slots.Where(sl => !InvItemClass.isNull(sl.invItem)).Select(sl => sl.invItem))
-                .Where(i => i.type == item.type).Sum(i => i.amount);
-            int before = Carried();
+            int Count() => Carried(p).Where(i => i.type == item.type).Sum(i => i.amount);
+            int before = Count();
             AsPlayer(() => { slot.removeItem(); p.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true); });
-            if (Carried() <= before) r.Fail($"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
+            if (Count() <= before) r.Fail($"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
@@ -248,8 +314,7 @@ namespace DarkwoodMP.World
             string type = a.Length > 0 ? a[0] : _lastTaken;
             int amount = a.Length > 1 ? int.Parse(a[1]) : 1;
             if (type == null) { r.Fail("nothing to drop (take-item first, or give a type)"); yield break; }
-            var carried = p.Inventory.getAllItems().Concat(p.Hotbar.slots.Where(sl => !InvItemClass.isNull(sl.invItem)).Select(sl => sl.invItem))
-                .FirstOrDefault(i => i.type == type);
+            var carried = Carried(p).FirstOrDefault(i => i.type == type);
             if (carried == null) { r.Fail($"not carrying {type}"); yield break; }
             var item = new InvItemClass(carried) { amount = Math.Min(amount, carried.amount) };
             Transform dropped = null;
@@ -271,11 +336,7 @@ namespace DarkwoodMP.World
             if (p == null) { r.Fail("no player"); yield break; }
             if (!p.alive || p.health <= 0f) { r.Fail($"our player is dead (health {p.health:0})"); yield break; }
             float was = p.health;
-            foreach (var b in p.GetComponentsInChildren<Burn>()) if (b != null) b.stop();
-            if (p.effects != null) p.effects.removeAllEffects();
-            p.bleeding = false;
-            if (p.inBearTrap) p.stopAllPerformingActionAnims();
-            p.setHealth(p.maxHealth);
+            HealNow();
             yield return new WaitForSeconds(0.3f);
             r.Info = $"health {was:0} -> {p.health:0} of {p.maxHealth:0}";
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -48,7 +49,7 @@ namespace DarkwoodMP.World
             {
                 var e = new Dictionary<string, object>
                 {
-                    ["name"] = go.name.Replace("(Clone)", "").Trim(),
+                    ["name"] = Clean(go.name),
                     ["pos"] = Pos(go.transform.position),
                 };
                 Set(ObjRef.Of(go).ToString(), e);
@@ -251,7 +252,7 @@ namespace DarkwoodMP.World
                     var ch = n != null ? n.GetComponent<Character>() : null;
                     var save = n != null ? n.GetComponent<SaveableObject>() : null;
                     if (ch == null || !ch.alive || save == null || save.uniqueId <= 0 || save.uniqueId >= SharedIds.ResolveLimit) continue;
-                    if (!ctx.Near(ch.transform.position) || (Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.NetIdOf(ch, out _))) continue;
+                    if (!ctx.Near(ch.transform.position) || (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(ch, out _))) continue;
                     ctx.Add(n.gameObject);
                 }
             });
@@ -303,7 +304,7 @@ namespace DarkwoodMP.World
             {
                 var flags = Singleton<Flags>.Instance;
                 if (flags == null) return;
-                var dict = HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(flags);
+                var dict = FlagsDict(flags);
                 // Not the flags that say where this game's own player is (FlagsSync.PlayersOwn): those are under "local".
                 var shared = dict.Values.Where(f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
                 var lines = shared.Select(f => f.name + "=" + f.isTrue).OrderBy(s => s, StringComparer.Ordinal).ToList();
@@ -322,7 +323,7 @@ namespace DarkwoodMP.World
             {
                 var flags = Singleton<Flags>.Instance;
                 if (flags == null) return;
-                var dict = HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(flags);
+                var dict = FlagsDict(flags);
                 foreach (var f in dict.Values)
                     if (f != null && FlagsSync.PlayersOwn(f.name)) ctx.Set(f.name, f.isTrue);
                 ctx.Set("place", Locations.Current());
@@ -355,7 +356,12 @@ namespace DarkwoodMP.World
         }
 
         private static readonly HashSet<string> TrapNames = new HashSet<string> { "beartrap", "chainTrap", "barrelExploding", "gasBottle_01", "broken_glass" };
-        private static string Clean(string n) => n.Replace("(Clone)", "").Trim();
+        /// <summary>A game object's name without Unity's "(Clone)".</summary>
+        internal static string Clean(string n) => n.Replace("(Clone)", "").Trim();
+
+        /// <summary>The story flags that are set (Flags.flagsDict).</summary>
+        internal static readonly HarmonyLib.AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
+            HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict");
 
         private static bool IsDropped(Inventory inv) => inv.name.StartsWith("DroppedItem", StringComparison.Ordinal);
 
@@ -397,8 +403,8 @@ namespace DarkwoodMP.World
                 case int i: sb.Append(i); break;
                 case uint u: sb.Append(u); break;
                 case long l: sb.Append(l); break;
-                case float f: sb.Append(((double)f).ToString("R", System.Globalization.CultureInfo.InvariantCulture)); break;
-                case double d: sb.Append(d.ToString("R", System.Globalization.CultureInfo.InvariantCulture)); break;
+                case float f: sb.Append(((double)f).ToString("R", CultureInfo.InvariantCulture)); break;
+                case double d: sb.Append(d.ToString("R", CultureInfo.InvariantCulture)); break;
                 case System.Collections.IDictionary dict:
                 {
                     var keys = dict.Keys.Cast<string>().OrderBy(k => k, StringComparer.Ordinal).ToList();

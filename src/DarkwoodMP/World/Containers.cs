@@ -56,8 +56,9 @@ namespace DarkwoodMP.World
         /// <summary>The item types that place each path (more than one item may place the same trap).</summary>
         private static Dictionary<string, HashSet<string>> _placeableTypes;
 
-        private static void BuildPlaceables()
+        private static void EnsurePlaceables()
         {
+            if (_placeables != null) return;
             var db = Singleton<ItemsDatabase>.Instance;
             if (db == null || db.itemsDict == null || db.itemsDict.Count == 0) return;
             _placeables = new Dictionary<Object, string>();
@@ -80,21 +81,21 @@ namespace DarkwoodMP.World
         /// <summary>The path (under Resources/Prefabs) of a prefab a player can place, or null.</summary>
         public static string PlaceablePath(Object prefab)
         {
-            if (_placeables == null) BuildPlaceables();
+            EnsurePlaceables();
             return prefab != null && _placeables != null && _placeables.TryGetValue(prefab, out var path) ? path : null;
         }
 
         /// <summary>Whether a player can place the prefab at this path (under Resources/Prefabs).</summary>
         public static bool IsPlaceable(string path)
         {
-            if (_placeables == null) BuildPlaceables();
+            EnsurePlaceables();
             return _placeablePaths != null && _placeablePaths.Contains(path);
         }
 
         /// <summary>The item types a player places the prefab at this path with, or null.</summary>
         public static HashSet<string> PlacedWith(string path)
         {
-            if (_placeables == null) BuildPlaceables();
+            EnsurePlaceables();
             return _placeableTypes != null && _placeableTypes.TryGetValue(path, out var types) ? types : null;
         }
 
@@ -137,9 +138,8 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The local player opened a container (Player.setOpenedItemInventory): look at it now, not at the next of
         /// the checks a few times a second. What it held before our player could touch it is the starting point;
-        /// a thing taken in the first quarter second after opening was otherwise in the starting point already, so
-        /// the take was never sent, and the item stayed in the container too (doubled; seen with three players
-        /// taking from one container at the same moment).
+        /// a thing taken in the first quarter second after opening would otherwise be in the starting point already,
+        /// so the take would never be sent and the item would stay in the container too (doubled).
         /// </summary>
         internal void OpenedNow()
         {
@@ -210,9 +210,13 @@ namespace DarkwoodMP.World
         /// <summary>Send what's in a container to the others now (a trader's new stock).</summary>
         public void SendContents(Inventory inv)
         {
-            if (inv == null) return;
+            if (inv != null) SendNow(inv, Serialize(inv));
+        }
+
+        private void SendNow(Inventory inv, string contents)
+        {
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent contents of {inv.name} {ObjRef.Of(inv.gameObject)}");
-            Send(ObjRef.Of(inv.gameObject), JsonConvert.SerializeObject(new Inventory.SaveState(inv)), except: 0);
+            Send(ObjRef.Of(inv.gameObject), contents, except: 0);
         }
 
         /// <summary>Host: send what's in a container to one client (a corpse it has only now been sent).</summary>
@@ -222,7 +226,7 @@ namespace DarkwoodMP.World
             if (!r.Valid || !_session.IsHost) return;
             var w = _session.Begin(MsgType.ContainerState);
             r.Write(w);
-            w.WriteBigStr(JsonConvert.SerializeObject(new Inventory.SaveState(inv))); // bigstr, as OnContainer reads it
+            w.WriteBigStr(Serialize(inv)); // bigstr, as OnContainer reads it
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
@@ -308,8 +312,7 @@ namespace DarkwoodMP.World
             string now = Contents(inv);
             if (_watched.TryGetValue(inv, out var before) && before == now) return;
             _watched[inv] = now;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent contents of {inv.name} {ObjRef.Of(inv.gameObject)}");
-            Send(ObjRef.Of(inv.gameObject), now, except: 0);
+            SendNow(inv, now);
         }
 
         // An emptied container that removes itself is destroyed as it closes; tell the others it's empty.
@@ -321,10 +324,20 @@ namespace DarkwoodMP.World
 
         private static readonly string Empty = JsonConvert.SerializeObject(new Inventory.SaveState());
 
+        /// <summary>A container's contents as the game saves them (Inventory.SaveState, as JSON).</summary>
+        private static string Serialize(Inventory inv) => JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+
         private string Contents(Inventory inv)
         {
             _refs[inv] = ObjRef.Of(inv.gameObject); // remembered, as the object may be gone at the last look
-            return JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+            return Serialize(inv);
+        }
+
+        /// <summary>The host's to everyone but except, a client's to the host.</summary>
+        private void Share(PacketWriter w, ulong except)
+        {
+            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+            else _session.SendToHost(w, Channel.Control, reliable: true);
         }
 
         private void Send(ObjRef r, string contents, ulong except)
@@ -333,8 +346,7 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.ContainerState);
             r.Write(w);
             w.WriteBigStr(contents);
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
+            Share(w, except);
         }
 
         /// <summary>
@@ -379,7 +391,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)} changed the contents of {inv.name}: refused ({why})");
                 var w = _session.Begin(MsgType.ContainerState);
                 obj.Write(w);
-                w.WriteBigStr(JsonConvert.SerializeObject(new Inventory.SaveState(inv)));
+                w.WriteBigStr(Serialize(inv));
                 _session.SendTo(from, w, Channel.Control, reliable: true);
                 return;
             }
@@ -434,11 +446,14 @@ namespace DarkwoodMP.World
         private sealed class Pending { public long Id; public GameObject Go; public string Prefab; public bool Placed; public float SendAt; }
         private readonly List<Pending> _pending = new List<Pending>();
 
+        /// <summary>A random id for something spawned while playing (ObjRef.RegisterSpawned).</summary>
+        private long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
+
         /// <summary>Core.AddPrefab made something; share it if it's a shared kind (and we made it, not a replay).</summary>
         public void Made(string prefab, GameObject go)
         {
             if (go == null || WorldActions.Replaying || !Sharing || !(SharedPrefabs.Contains(prefab) || Placing)) return;
-            long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
+            long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             _pending.Add(new Pending { Id = id, Go = go, Prefab = prefab, Placed = Placing, SendAt = Time.time + (Placing || prefab == GasolineTrail ? 0.2f : 1.5f) }); // dropped: once it has come to rest
         }
@@ -468,7 +483,7 @@ namespace DarkwoodMP.World
         private void ShareThrownSpawn(string prefab, GameObject go)
         {
             if (go == null || !_session.IsHost || !Sharing) return;
-            long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
+            long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {prefab} #{id} at {go.transform.position} (left by a thrown item)");
             SendSpawn(id, prefab, go.transform.position, go.transform.rotation, "", false, 0, except: 0);
@@ -489,6 +504,7 @@ namespace DarkwoodMP.World
                 if (placedNow ? !p.Placed : Time.time < p.SendAt) continue;
                 _pending.RemoveAt(i);
                 var inv = p.Go.GetComponent<Inventory>();
+                string contents = inv != null ? Serialize(inv) : "";
                 if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {p.Prefab} #{p.Id} at {p.Go.transform.position}");
                 var drop = p.Go.GetComponent<DeathDrop>();
                 if (p.Placed && _session.IsClient)
@@ -498,7 +514,7 @@ namespace DarkwoodMP.World
                     var go = p.Go;
                     long id = p.Id;
                     string prefab = p.Prefab;
-                    var w = SpawnMessage(id, prefab, go.transform.position, go.transform.rotation, inv != null ? JsonConvert.SerializeObject(new Inventory.SaveState(inv)) : "", true, 0);
+                    var w = SpawnMessage(id, prefab, go.transform.position, go.transform.rotation, contents, true, 0);
                     Authority.Request(w, $"placing {prefab} #{id}", (ok, why, result) =>
                     {
                         if (ok || go == null) return;
@@ -508,7 +524,7 @@ namespace DarkwoodMP.World
                     });
                     continue;
                 }
-                SendSpawn(p.Id, p.Prefab, p.Go.transform.position, p.Go.transform.rotation, inv != null ? JsonConvert.SerializeObject(new Inventory.SaveState(inv)) : "", p.Placed, drop != null ? drop.expAmount : 0, except: 0);
+                SendSpawn(p.Id, p.Prefab, p.Go.transform.position, p.Go.transform.rotation, contents, p.Placed, drop != null ? drop.expAmount : 0, except: 0);
                 if (drop != null && drop.additionalMapMarker != null) SendBagMarker(p.Id, drop.additionalMapMarker.transform.position, except: 0);
             }
         }
@@ -521,8 +537,7 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.DeathBagMarker);
             w.W.Write(id);
             w.Write(pos);
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
+            Share(w, except);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent the map marker of death bag #{id} at {pos}");
         }
 
@@ -544,8 +559,7 @@ namespace DarkwoodMP.World
         private void SendSpawn(long id, string prefab, Vector3 pos, Quaternion rot, string contents, bool placed, int exp, ulong except)
         {
             var w = SpawnMessage(id, prefab, pos, rot, contents, placed, exp);
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
+            Share(w, except);
         }
 
         private PacketWriter SpawnMessage(long id, string prefab, Vector3 pos, Quaternion rot, string contents, bool placed, int exp)
@@ -629,7 +643,7 @@ namespace DarkwoodMP.World
                 if (c == null || !_corpsesSent.Add(c)) continue;
                 var inv = c.GetComponent<Inventory>();
                 if (inv == null) continue;
-                Send(ObjRef.Of(c.gameObject), JsonConvert.SerializeObject(new Inventory.SaveState(inv)), except: 0);
+                Send(ObjRef.Of(c.gameObject), Serialize(inv), except: 0);
             }
         }
     }

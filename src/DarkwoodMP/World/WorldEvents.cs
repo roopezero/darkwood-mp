@@ -198,8 +198,7 @@ namespace DarkwoodMP.World
         internal bool HostShadowLights(Player p, bool anyTime = false)
         {
             if (!anyTime && (Singleton<CharacterSpawner>.Instance.shadowsRemove || Core.isDay())) return false;
-            if (p.whereAmI.bigLocation == null) return false;
-            var gen = p.whereAmI.bigLocation.generator;
+            var gen = p.whereAmI.bigLocation != null ? p.whereAmI.bigLocation.generator : null;
             if (gen == null) return false;
             var choices = Lights(gen);
             choices.RemoveAll(l => l == null || l.dontTurnOnByShadowsEvent);

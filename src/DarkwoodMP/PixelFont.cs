@@ -28,7 +28,7 @@ namespace DarkwoodMP
         public static int Scale => Screen.height >= 1000 ? 2 : 1;
 
         /// <summary>The height of a line of text, in screen pixels.</summary>
-        public static float Line => 13f * Scale;
+        public static float Line => LineAt(Scale);
 
         private static Face Get(Kind kind)
         {
@@ -108,12 +108,12 @@ namespace DarkwoodMP
         {
             if (string.IsNullOrEmpty(s) || Event.current.type != EventType.Repaint) return;
             int sc = scale > 0 ? scale : Scale;
-            float Line = LineAt(sc);
+            float lineH = LineAt(sc);
             float w = Width(s, kind, sc);
             float x = r.x;
             if (align == TextAnchor.MiddleCenter || align == TextAnchor.UpperCenter || align == TextAnchor.LowerCenter) x = r.x + (r.width - w) / 2f;
             else if (align == TextAnchor.MiddleRight || align == TextAnchor.UpperRight || align == TextAnchor.LowerRight) x = r.xMax - w;
-            float top = Mathf.Round(r.y + (r.height - Line) / 2f);
+            float top = Mathf.Round(r.y + (r.height - lineH) / 2f);
             x = Mathf.Round(x);
             var f = Get(kind);
             var old = GUI.color;
@@ -122,13 +122,13 @@ namespace DarkwoodMP
             {
                 var fb = Fallback(sc);
                 fb.normal.textColor = Color.white;
-                GUI.Label(new Rect(x, top - sc, w + 4, Line + 2 * sc), s, fb);
+                GUI.Label(new Rect(x, top - sc, w + 4, lineH + 2 * sc), s, fb);
                 GUI.color = old;
                 return;
             }
-            // tk2d gives each letter's corners from the pen (y up). A capital letter is put in the middle of Line,
+            // tk2d gives each letter's corners from the pen (y up). A capital letter is put in the middle of the line,
             // a pixel high, so descenders (g, p, y) still fit under it.
-            float baseTop = top + Mathf.Floor((Line - f.CapHeight * sc) / 2f) - sc + f.CapTop * sc;
+            float baseTop = top + Mathf.Floor((lineH - f.CapHeight * sc) / 2f) - sc + f.CapTop * sc;
             foreach (char c in s)
             {
                 var g = Glyph(f, c);

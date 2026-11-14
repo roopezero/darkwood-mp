@@ -165,12 +165,10 @@ namespace DarkwoodMP.World
             string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
             var known = wb.workbenchInventory.slots.Where(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.GetComponent<CraftingRecipes>() != null)
                 .Select(s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
-            r.Info = $"{Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
+            r.Info = $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
             if (drawn != null) r.Fail($"drawn wrong as it opened: {drawn}");
             else if (rec != null) r.Fail($"recipes drawn wrong as it opened: {rec}");
         }
-
-        private static string Ref(Component c) => ObjRef.Of(c.gameObject).ToString();
 
         /// <summary>"ui-wb-close": close it as the player does.</summary>
         private static IEnumerator WbClose(string[] a, Result r)
@@ -193,7 +191,7 @@ namespace DarkwoodMP.World
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
             if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
-            while (epoch > 0 && DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0 < epoch) yield return null;
+            while (epoch > 0 && MapScenarioSavage.Now < epoch) yield return null;
             var did = new List<string>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
@@ -277,7 +275,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             if (!inv.open) { r.Fail($"{saw.name}'s window didn't open"); yield break; }
             _saw = saw;
-            r.Info = $"{saw.name} {Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
+            r.Info = $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
         }
 
         private static string Label(Inventory inv) => inv.thisLabel != null && inv.thisLabel.rightText != null ? inv.thisLabel.rightText.text : null;
@@ -289,7 +287,7 @@ namespace DarkwoodMP.World
             var saw = _saw;
             var inv = saw != null ? saw.GetComponent<Inventory>() : null;
             if (inv == null || !inv.open) { r.Fail("the saw's window isn't open here"); yield break; }
-            float min = a.Length > 0 ? float.Parse(a[0], CultureInfo.InvariantCulture) : 0f;
+            float min = a.Length > 0 ? F(a[0]) : 0f;
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
             while ((saw.fuel < min || Label(inv) != Want()) && Time.realtimeSinceStartup < until) yield return null;

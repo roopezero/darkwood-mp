@@ -22,12 +22,12 @@ namespace DarkwoodMP
         public static bool IsWide(int width, int height) => height > 0 && (float)width / height > Wide;
 
         /// <summary>The zoom for this screen, as the game's refreshZoom would, but by height on wide screens.</summary>
-        internal static float ZoomFor(int width, int height) => Mathf.Max(1f, height / 1080f);
+        internal static float ZoomFor(int height) => Mathf.Max(1f, height / 1080f);
 
         internal static void Apply(Controller c)
         {
             if (!c.zoomCamera || !IsWide(Screen.width, Screen.height) || Screen.width <= 1920) return;
-            float zoom = ZoomFor(Screen.width, Screen.height);
+            float zoom = ZoomFor(Screen.height);
             if (Mathf.Approximately(zoom, c.cameraZoom)) return;
             c.cameraZoom = zoom;
             var cam = Singleton<CamMain>.Instance;

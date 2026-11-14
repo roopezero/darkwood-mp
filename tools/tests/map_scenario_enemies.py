@@ -1,6 +1,6 @@
 """Map test steps that fight each kind of enemy and creature in the game; same format as map_scenario.py.
 The steps are in src/DarkwoodMP/World/MapScenarioEnemies.cs. Run only these with
-MAP_SCENARIO=map_scenario_enemies tools/run-test.sh map (a core set, one of each kind of behaviour);
+tools/run-test.sh map:enemies (a core set, one of each kind of behaviour);
 EE_FULL=1 fights every kind.
 
 The host holds its clock at noon for the fights (ee-day), so no night comes with its worms and attackers.
@@ -69,29 +69,26 @@ PRE_JOIN = []
 # flags the dumps compare. A fight still sees its first hit, which comes at full health.
 SAFE = [("host", "dw-on", {"settle": 0}), ("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0})]
 
-STEPS = SAFE + [
-    ("host", "ee-day"),
-    ("client", "ee-arena"), ("host", "heal"),
-    # First, as the fights below take most of the map test's time:
-    # a joiner's flashlight against shadow armour (P9),
-    ("host", "ee-shadow-spawn"),
-    ("client", "ee-flashlight", {"settle": 0.5}),
-    ("host", "ee-shadow-check"),
-    # a scripted run-away activity runs from the nearest player (P8),
-    ("host", "ee-flee-activity"),
-    ("client", "ee-arena"),
-]
-if ONLY:
-    STEPS = STEPS[:len(SAFE) + 3]
-# Does the centipede hurt the host's own player, in the game's single-player way? (In the fight it goes for the
-# client but never hurts it.)
+STEPS = SAFE + [("host", "ee-day"), ("client", "ee-arena"), ("host", "heal")]
 if not ONLY:
-    STEPS += [("host", "ee-solo", "Centipede"), ("host", "heal"), ("host", "ee-solo", "Kamikaze"), ("host", "heal")]
+    STEPS += [
+        # First, as the fights below take most of the map test's time:
+        # a joiner's flashlight against shadow armour (P9),
+        ("host", "ee-shadow-spawn"),
+        ("client", "ee-flashlight", {"settle": 0.5}),
+        ("host", "ee-shadow-check"),
+        # a scripted run-away activity runs from the nearest player (P8),
+        ("host", "ee-flee-activity"),
+        ("client", "ee-arena"),
+        # Does the centipede hurt the host's own player, in the game's single-player way? (In the fight it goes for
+        # the client but never hurts it.)
+        ("host", "ee-solo", "Centipede"), ("host", "heal"), ("host", "ee-solo", "Kamikaze"), ("host", "heal"),
+    ]
 if FULL:
     # do spiders bite at all? (In the fights they come at the client but never hurt it.)
     STEPS += [("host", "ee-solo", "Spider01"), ("host", "heal")]
 for kind, wants, core in KINDS:
-    if (kind not in ONLY) if ONLY else not (core or FULL):
+    if not ((kind in ONLY) if ONLY else (core or FULL)):
         continue
     flags = wants.split()
     STEPS += [

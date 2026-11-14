@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DarkwoodMP.Net;
 using HarmonyLib;
 
@@ -162,16 +163,16 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Controller), nameof(Controller.startAfterNight))]
     static class AfterNightRewardPatch
     {
-        static void Prefix(out System.Collections.Generic.Dictionary<string, int> __state)
+        static void Prefix(out Dictionary<string, int> __state)
         {
             __state = null;
             var f = Singleton<Flags>.Instance;
             if (f == null || FlagsSync.Instance == null) return;
-            __state = new System.Collections.Generic.Dictionary<string, int>();
+            __state = new Dictionary<string, int>();
             foreach (var n in f.npcStates) if (n != null && n.name != null) __state[n.name] = n.reputation;
         }
 
-        static void Postfix(Controller __instance, System.Collections.Generic.Dictionary<string, int> __state)
+        static void Postfix(Controller __instance, Dictionary<string, int> __state)
         {
             var f = Singleton<Flags>.Instance;
             if (__state == null || f == null) return;

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
 using UnityEngine;
+using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
 
 namespace DarkwoodMP.World
@@ -27,11 +28,11 @@ namespace DarkwoodMP.World
 
         public static void Register()
         {
-            MapScenario.Add("nl-inventory", Inventory, timeout: 20f);
-            MapScenario.Add("nl-event", FireEvent, timeout: 20f);
-            MapScenario.Add("nl-herd", Herd, timeout: 20f);
-            MapScenario.Add("nl-motion", Motion, timeout: 90f);
-            MapScenario.Add("nl-clear", Clear, timeout: 10f);
+            Add("nl-inventory", Inventory, timeout: 20f);
+            Add("nl-event", FireEvent, timeout: 20f);
+            Add("nl-herd", Herd, timeout: 20f);
+            Add("nl-motion", Motion, timeout: 90f);
+            Add("nl-clear", Clear, timeout: 10f);
 
             StateDump.AddSection("nightobjects", ctx =>
             {
@@ -82,7 +83,7 @@ namespace DarkwoodMP.World
         // ---- what the night events do ----------------------------------------------------------------------------
 
         /// <summary>"nl-inventory": each night scenario's events, and for each the kinds of steps it runs.</summary>
-        private static IEnumerator Inventory(string[] a, MapScenario.Result r)
+        private static IEnumerator Inventory(string[] a, Result r)
         {
             var ns = Singleton<NightScenarios>.Instance;
             if (ns == null) { r.Fail("no NightScenarios"); return None(); }
@@ -156,7 +157,7 @@ namespace DarkwoodMP.World
         /// at the hideout nearest to us (the game puts its GameEvents under the player's big location). Waits for
         /// what its steps make (NightObjects).
         /// </summary>
-        private static IEnumerator FireEvent(string[] a, MapScenario.Result r)
+        private static IEnumerator FireEvent(string[] a, Result r)
         {
             var p = P;
             var ns = Singleton<NightScenarios>.Instance;
@@ -183,10 +184,11 @@ namespace DarkwoodMP.World
 
         // ---- enemy motion ----------------------------------------------------------------------------------------
 
-        private static NetPlayerProxy ClientProxy() => NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+        /// <summary>The first remote player's stand-in on the host (not the test dummy).</summary>
+        internal static NetPlayerProxy ClientProxy() => NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
 
         /// <summary>"nl-herd N [KIND]" (host): N enemies (DogMutated by default) by the client's player, after it.</summary>
-        private static IEnumerator Herd(string[] a, MapScenario.Result r)
+        private static IEnumerator Herd(string[] a, Result r)
         {
             int n = a.Length > 0 ? int.Parse(a[0]) : 6;
             string kind = a.Length > 1 ? a[1] : "DogMutated";
@@ -206,7 +208,7 @@ namespace DarkwoodMP.World
             r.Info = $"{_herd.Count} {kind} by the client";
         }
 
-        private static IEnumerator Clear(string[] a, MapScenario.Result r)
+        private static IEnumerator Clear(string[] a, Result r)
         {
             int n = 0;
             foreach (var c in _herd) if (c != null) { Object.Destroy(c.gameObject); n++; }
@@ -216,9 +218,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>"nl-motion SECS" (client): walk round in a circle while counting how the host's enemies are drawn.</summary>
-        private static IEnumerator Motion(string[] a, MapScenario.Result r)
+        private static IEnumerator Motion(string[] a, Result r)
         {
-            float secs = a.Length > 0 ? float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture) : 20f;
+            float secs = a.Length > 0 ? F(a[0]) : 20f;
             var p = P;
             if (p == null) { r.Fail("no player"); yield break; }
             EnemyMotion.Stats.Reset();
@@ -232,7 +234,7 @@ namespace DarkwoodMP.World
                 {
                     float ang = leg++ * Mathf.PI / 4f;
                     var to = centre + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 250f;
-                    var walk = MapScenario.Walk(to, 60f, detours: 0);
+                    var walk = Walk(to, 60f, detours: 0);
                     float legUntil = Time.realtimeSinceStartup + 6f;
                     while (Time.realtimeSinceStartup < until && Time.realtimeSinceStartup < legUntil && walk.MoveNext()) yield return walk.Current;
                     if (p.health < p.maxHealth * 0.5f) p.health = p.maxHealth;

@@ -67,8 +67,6 @@ namespace DarkwoodMP
         private DragSync _drag;
         private FuelSync _fuel;
         private WorldEvents _events;
-        private ThrowSync _throws;
-        private FireSync _fire;
         private bool _wasInWorld;
         private bool? _cursorBefore; // the system cursor's visibility before the panel showed it
         // Typed as an interface on purpose: no Steamworks type may appear in this class (GOG builds).
@@ -137,10 +135,14 @@ namespace DarkwoodMP
             else
             {
                 _session.LastRefusal = null;
-                bool ok = _tcp.Host(Cfg.ServerName.Value, Cfg.DirectPort.Value, Cfg.Password.Value, Cfg.MaxPlayers.Value);
+                bool ok = HostDirect();
                 Log.LogInfo($"[start game] hosting with Direct on port {Cfg.DirectPort.Value}: {(ok ? "started" : _tcp.Status)}");
             }
         }
+
+        /// <summary>Host with Direct on the configured port; a password or player limit given here is for this time only.</summary>
+        private bool HostDirect(string password = null, int maxPlayers = 0) =>
+            _tcp.Host(Cfg.ServerName.Value, Cfg.DirectPort.Value, password ?? Cfg.Password.Value, maxPlayers > 0 ? maxPlayers : Cfg.MaxPlayers.Value);
 
         internal void SetPanel(bool show)
         {
@@ -225,8 +227,8 @@ namespace DarkwoodMP
             new TraderSync(_session);
             new NpcSync(_session);
             _events = new WorldEvents(_session);
-            _throws = new ThrowSync(_session);
-            _fire = new FireSync(_session);
+            new ThrowSync(_session);
+            new FireSync(_session);
             new SlotShare(_session);
             Construction.Register(_session);
             ScriptedEvents.Register(_session);
@@ -266,21 +268,22 @@ namespace DarkwoodMP
         private readonly List<Coroutine> _tests = new List<Coroutine>();
         private void StartTest(System.Collections.IEnumerator routine) => _tests.Add(StartCoroutine(routine));
 
+        private static (int w, int h, FullScreenMode mode)? _sizeBefore;
+
         /// <summary>
         /// The --dwmp-* arguments for hosting, joining and testing: from the command line at start, or from
         /// TestControl before each test of a run.
         /// </summary>
-        private static (int w, int h, FullScreenMode mode)? _sizeBefore;
-
         internal void ApplyTestArgs(string[] args)
         {
+            string Arg(string name) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
+            bool Has(string name) => Array.IndexOf(args, name) >= 0;
             foreach (var a in args) if (a.StartsWith("--dwmp-test")) TestMode = true;
-            { int li = Array.IndexOf(args, "--dwmp-load-shots"); LoadingScreen.ShotsDir = li >= 0 && li + 1 < args.Length ? args[li + 1] : null; }
+            LoadingScreen.ShotsDir = Arg("--dwmp-load-shots");
             // "--dwmp-window WxH": play in a window of that size (to check the UI at other sizes); without it, the
             // size from before is put back.
             {
-                int wi = Array.IndexOf(args, "--dwmp-window");
-                var wh = wi >= 0 && wi + 1 < args.Length ? args[wi + 1].Split('x') : null;
+                var wh = Arg("--dwmp-window")?.Split('x');
                 if (wh != null && wh.Length == 2 && int.TryParse(wh[0], out int ww) && int.TryParse(wh[1], out int hh))
                 {
                     if (_sizeBefore == null) _sizeBefore = (Screen.width, Screen.height, Screen.fullScreenMode);
@@ -293,8 +296,6 @@ namespace DarkwoodMP
                     _sizeBefore = null;
                 }
             }
-            string Arg(string name) { int i = Array.IndexOf(args, name); return i >= 0 && i + 1 < args.Length ? args[i + 1] : null; }
-            bool Has(string name) => Array.IndexOf(args, name) >= 0;
             // "--dwmp-low-quality": Unity's lowest quality level; "--dwmp-fps N": at most N frames a second (vsync off).
             // For the map4 test, where five games share one machine. Only set, never put back (a test-only game).
             // The game sets vsync from its settings as it starts (Core), so Update keeps the cap in place.
@@ -309,7 +310,7 @@ namespace DarkwoodMP
             if (Has("--dwmp-host"))
             {
                 TcpBackend.TestMaxPlayers = int.TryParse(Arg("--dwmp-max-players"), out int mp) ? mp : 0;
-                _tcp.Host(Cfg.ServerName.Value, Cfg.DirectPort.Value, Arg("--dwmp-password") ?? Cfg.Password.Value, TcpBackend.TestMaxPlayers > 0 ? TcpBackend.TestMaxPlayers : Cfg.MaxPlayers.Value);
+                HostDirect(Arg("--dwmp-password"), TcpBackend.TestMaxPlayers);
             }
             // "--dwmp-continue N": load your own profile N once the main menu is up; "--dwmp-sandbox DIR": a copy of the saves in DIR.
             if (int.TryParse(Arg("--dwmp-continue"), out int profileId))
@@ -345,8 +346,7 @@ namespace DarkwoodMP
             if (Seconds("--dwmp-test-save", out float saveAfter)) StartTest(SaveAfterJoin(saveAfter));
             _spawnType = Arg("--dwmp-spawn");
             // "--dwmp-test-blast": once a player joins, an enemy bomb, damage aura and flame go off at them (see Combat.AreaHitsTest).
-            if (Has("--dwmp-test-blast")) StartTest(AreaHitsTest.Run());
-            if (Has("--dwmp-test-blast")) StartTest(EnemyFxTest.Run());
+            if (Has("--dwmp-test-blast")) { StartTest(AreaHitsTest.Run()); StartTest(EnemyFxTest.Run()); }
             // "--dwmp-test-away" (with --dwmp-dummy): knock an object near you, then be away (as in a separate location)
             // for a few seconds; logs the push sent and the enemies kept running near the dummy.
             if (Has("--dwmp-test-away")) StartTest(World.AwayTest.Run());
@@ -391,11 +391,31 @@ namespace DarkwoodMP
         {
             foreach (var c in _tests) if (c != null) StopCoroutine(c);
             _tests.Clear();
+            MapScenario.Stop();
+            OptionsTest.RestoreIfCutShort();
+            // The switches the map steps and the solo tests turn on, back to how a player's game has them.
+            UiRefresh.Enabled = true;
+            TrapFiredPatch.TestRefuse = null;
+            WorldShare.TestHoldSecs = 0f;
+            DoorPush.TestTouch = null;
+            SkillsPanel.TestMouse = null;
+            UiWindow.TestMouse = null;
+            MapScenarioItems2.AimAt = null;
+            MapScenarioItems2.Safe = false;
+            MapScenarioEnemies.TraceSpawns = false;
+            MapScenarioFarEvents.WatchSteps = false;
+            MapScenarioDogWatch.On = false;
+            EnemyMotion.Stats.On = false;
+            WorldActions.TestAsPlayer = false;
+            var player = Player.Instance;
+            if (player != null) { player.inShop = false; player.talkedToNPC = null; }
             Threat.Debug = false;
             WorldActions.Debug = false;
             LoadSpeed.Verify = false;
             Chapters.TestQuick = false;
             _spawnType = null;
+            _testPresence = false;
+            TcpBackend.TestMaxPlayers = 0;
             ConfirmDialog.Cancel();
             if (_session.Active) _session.Backend.Leave();
         }
@@ -423,16 +443,23 @@ namespace DarkwoodMP
             }
         }
 
+        /// <summary>A screenshot into <paramref name="path"/>: waits <paramref name="before"/> seconds, takes it, waits <paramref name="after"/>, then logs <paramref name="log"/> if given. No path: nothing.</summary>
+        private static System.Collections.IEnumerator Screenshot(string path, float before = 0f, float after = 0.5f, string log = null)
+        {
+            if (path == null) yield break;
+            if (before > 0f) yield return new WaitForSecondsRealtime(before);
+            ScreenCapture.CaptureScreenshot(path);
+            yield return new WaitForSecondsRealtime(after);
+            if (log != null) Log.LogInfo(log);
+        }
+
         private System.Collections.IEnumerator Shots(string dir, bool inWorldToo)
         {
             System.IO.Directory.CreateDirectory(dir);
             System.Collections.IEnumerator Shot(string name)
             {
-                yield return new WaitForSecondsRealtime(1.5f);
                 string path = System.IO.Path.Combine(dir, name + ".png");
-                ScreenCapture.CaptureScreenshot(path);
-                yield return new WaitForSecondsRealtime(0.5f);
-                Log.LogInfo($"[shots] {path}");
+                return Screenshot(path, before: 1.5f, log: $"[shots] {path}");
             }
             if (!inWorldToo)
             {
@@ -479,13 +506,8 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator SoloTest(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
-            System.Collections.IEnumerator Shot(string name)
-            {
-                yield return new WaitForSecondsRealtime(1.5f);
-                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, name + ".png"));
-                yield return new WaitForSecondsRealtime(0.5f);
-                Log.LogInfo($"[solo] shot {name}");
-            }
+            System.Collections.IEnumerator Shot(string name) =>
+                Screenshot(System.IO.Path.Combine(dir, name + ".png"), before: 1.5f, log: $"[solo] shot {name}");
             while (!WorldShare.WorldReady) yield return null;
             yield return new WaitForSecondsRealtime(6f);
             Log.LogInfo($"[solo] session active {_session.Active}");
@@ -607,12 +629,8 @@ namespace DarkwoodMP
         {
             var wh = size.Split('x');
             int w = int.Parse(wh[0]), h = int.Parse(wh[1]);
-            System.Collections.IEnumerator Shot(string name)
-            {
-                if (shots == null) yield break;
-                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shots, $"{size}-{name}.png"));
-                yield return new WaitForSecondsRealtime(0.5f);
-            }
+            System.Collections.IEnumerator Shot(string name) =>
+                Screenshot(shots == null ? null : System.IO.Path.Combine(shots, $"{size}-{name}.png"));
             // Loading a world sets the game's own resolution again, so in a world the size is set once it's up.
             if (!inWorld)
             {
@@ -685,12 +703,7 @@ namespace DarkwoodMP
             yield return null;
             yield return null;
             Log.LogInfo($"[menu-entry] {where}: clicked, panel open: {_showMenu} (entry taken: {took})");
-            if (shots != null)
-            {
-                yield return new WaitForSecondsRealtime(1f);
-                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shots, $"panel-{where.Replace(' ', '-')}.png"));
-                yield return new WaitForSecondsRealtime(0.5f);
-            }
+            if (shots != null) yield return Screenshot(System.IO.Path.Combine(shots, $"panel-{where.Replace(' ', '-')}.png"), before: 1f);
             SetPanel(false);
             yield return null;
         }
@@ -703,12 +716,9 @@ namespace DarkwoodMP
             var p = Player.Instance.transform;
             p.position += new Vector3(-300f, 0f, 250f);
             yield return new WaitForSecondsRealtime(2f);
-            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "testworld-area.png"));
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Screenshot(System.IO.Path.Combine(dir, "testworld-area.png"), after: 1f);
             OpenPanel();
-            yield return new WaitForSecondsRealtime(1f);
-            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "testworld-panel.png"));
-            yield return new WaitForSecondsRealtime(1f);
+            yield return Screenshot(System.IO.Path.Combine(dir, "testworld-panel.png"), before: 1f, after: 1f);
             SetPanel(false);
             // The nearest workbench open, for its storage and the Sort & Stack button under it.
             var wb = System.Linq.Enumerable.FirstOrDefault(System.Linq.Enumerable.OrderBy(UnityEngine.Object.FindObjectsOfType<Workbench>(), w => (w.transform.position - p.position).sqrMagnitude));
@@ -716,9 +726,7 @@ namespace DarkwoodMP
             {
                 yield return new WaitForSecondsRealtime(1f);
                 wb.open();
-                yield return new WaitForSecondsRealtime(1.5f);
-                ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, "testworld-workbench.png"));
-                yield return new WaitForSecondsRealtime(1f);
+                yield return Screenshot(System.IO.Path.Combine(dir, "testworld-workbench.png"), before: 1.5f, after: 1f);
                 Player.Instance.closeInventory();
             }
             Log.LogInfo("[testworld] shots done");
@@ -790,7 +798,7 @@ namespace DarkwoodMP
             }
         }
 
-        // Its own coroutine (a class of its own): its Steamworks types are only touched when Steam is there.
+        // The cast to SteamBackend is in the coroutine's MoveNext, which is only compiled when this test runs, with Steam there.
         private System.Collections.IEnumerator SteamSelfTest()
         {
             float until = Time.realtimeSinceStartup + 60f;
@@ -914,12 +922,38 @@ namespace DarkwoodMP
             int ok = 0, failed = 0;
             foreach (var type in AccessTools.GetTypesFromAssembly(typeof(Plugin).Assembly))
             {
-                if (type.GetCustomAttributes(typeof(HarmonyPatch), false).Length == 0) continue;
+                if (type.GetCustomAttributes(typeof(HarmonyPatch), false).Length == 0 || TestOnlyPatch(type)) continue;
                 try { _harmony.CreateClassProcessor(type).Patch(); ok++; }
                 catch (Exception e) { failed++; Log.LogError($"Patch {type.Name} doesn't fit this build of the game, skipped: {e.InnerException?.Message ?? e.Message}"); }
             }
             if (failed > 0) Log.LogWarning($"{failed} of {ok + failed} patches skipped; what they do won't be shared");
             else Log.LogInfo($"All {ok} patches applied");
+        }
+
+        /// <summary>
+        /// Patches that only the tests use (the map test's steps watch and steer the game through them): patched
+        /// by TestControl.Start, not in a player's game, so a game update that breaks one doesn't warn players and
+        /// "All N patches applied" counts only the mod's own. They are the patch classes in the MapScenario* files.
+        /// </summary>
+        private static bool TestOnlyPatch(Type type)
+        {
+            var outer = type;
+            while (outer.DeclaringType != null) outer = outer.DeclaringType;
+            return outer.Name.StartsWith("MapScenario", StringComparison.Ordinal)
+                || outer == typeof(LocationSetsPatch) || outer == typeof(EnemyTestSpawnTracePatch) || outer == typeof(FarEventsTestCountPatch);
+        }
+
+        /// <summary>TestControl.Start: apply the test-only patches (TestOnlyPatch).</summary>
+        internal void PatchTestOnly()
+        {
+            int ok = 0;
+            foreach (var type in AccessTools.GetTypesFromAssembly(typeof(Plugin).Assembly))
+            {
+                if (type.GetCustomAttributes(typeof(HarmonyPatch), false).Length == 0 || !TestOnlyPatch(type)) continue;
+                try { _harmony.CreateClassProcessor(type).Patch(); ok++; }
+                catch (Exception e) { Log.LogError($"Test patch {type.Name} doesn't fit this build of the game, skipped: {e.InnerException?.Message ?? e.Message}"); }
+            }
+            Log.LogInfo($"{ok} test patches applied");
         }
 
         /// <summary>After the frame's game code: what the player carries now (for undoing a refused request's change), and the mouse confined only while playing.</summary>
@@ -1177,7 +1211,7 @@ namespace DarkwoodMP
             if (Ui.Button(t[3], "Dusk")) TestWorld.SetTime(Singleton<Controller>.Instance.nightTime - 30);
             if (Ui.Button(t[4], "Night")) TestWorld.SetTime(Singleton<Controller>.Instance.nightTime + 30);
             Ui.Label(f, "Spawn an enemy near you:", MenuSkin.Dim);
-            var list = new System.Collections.Generic.List<string>(TestWorld.Enemies);
+            var list = new List<string>(TestWorld.Enemies);
             for (int i = 0; i < list.Count; i += 4)
             {
                 var r = f.Row(Ui.RowH, 0, 0, 0, 0);
@@ -1194,12 +1228,15 @@ namespace DarkwoodMP
             try
             {
                 if (!WorldShare.InWorld) return "";
-                int day = Singleton<Controller>.Instance.day;
-                int chapter = Singleton<WorldGenerator>.Instance != null ? Singleton<WorldGenerator>.Instance.chapterID : 0;
+                var (day, chapter) = DayAndChapter();
                 return chapter > 0 ? $"Day {day}, chapter {chapter}" : $"Day {day}";
             }
             catch { return ""; }
         }
+
+        /// <summary>The world's day, and its chapter (0 when there's no world generator).</summary>
+        private static (int day, int chapter) DayAndChapter() =>
+            (Singleton<Controller>.Instance.day, Singleton<WorldGenerator>.Instance != null ? Singleton<WorldGenerator>.Instance.chapterID : 0);
 
         private float _nextPresence;
         private string _lastPresence;
@@ -1235,8 +1272,7 @@ namespace DarkwoodMP
         {
             var parts = new List<string> { $"DarkwoodMP {PluginInfo.Version}" };
             if (!WorldShare.InWorld) { parts.Add("In the main menu"); return string.Join(" · ", parts); }
-            int day = Singleton<Controller>.Instance.day;
-            int chapter = Singleton<WorldGenerator>.Instance != null ? Singleton<WorldGenerator>.Instance.chapterID : 0;
+            var (day, chapter) = DayAndChapter();
             parts.Add(chapter > 0 ? $"Chapter {Mathf.Clamp(chapter, 1, 10)}, day {day}" : $"Day {day}");
             string biome = BiomeName();
             if (!string.IsNullOrEmpty(biome)) parts.Add(biome);
@@ -1290,7 +1326,13 @@ namespace DarkwoodMP
             }
         }
 
-        private void OnApplicationQuit() => _characters?.SaveNow();
+        private void OnApplicationQuit()
+        {
+            OptionsTest.RestoreIfCutShort();
+            // Our character goes to the host here, while the world is whole, and only here: OnDestroy's Dispose
+            // leaves the session (which waits for the TCP writers) without sending it again.
+            _characters?.SaveForQuit();
+        }
 
         /// <summary>A message over your character, as the game shows its own (and in the log).</summary>
         public static void Notice(string text)

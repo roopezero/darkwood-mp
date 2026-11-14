@@ -16,8 +16,7 @@ namespace DarkwoodMP.World
     ///
     /// Who it hurts is the host's to decide, as with every other hit on its enemies: the host's copy (or its own
     /// throw) deals the damage, and on a client nothing a thrown thing does to the host's enemies is sent as a hit
-    /// (not its impact, its explosion, or the flames it leaves; see ThrownHits). A client's own throw used to be
-    /// counted from the client's game; now the host's copy of it counts instead.
+    /// (not its impact, its explosion, or the flames it leaves; see ThrownHits).
     ///
     /// Something thrown that can be picked up again (a knife, a brick) lands only in the thrower's game: the
     /// others' copies fly and hit, then go, so it isn't there to pick up twice.
@@ -37,6 +36,13 @@ namespace DarkwoodMP.World
         }
 
         internal static GameObject Held(Player p) => HeldItem(p);
+
+        /// <summary>What the player holds ready to throw or drop, and its item type (before Player.throwItem / dropItem).</summary>
+        internal static (GameObject go, string type) Holding(Player p)
+        {
+            var cur = p.currentItem;
+            return (HeldItem(p), InvItemClass.isNull(cur) ? null : cur.baseClass?.type);
+        }
 
         /// <summary>The local player threw it (called after Player.throwItem).</summary>
         internal void Thrown(string type, GameObject go, Vector3 from, bool dropped = false)
@@ -167,11 +173,7 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Player), "dropItem")]
     static class PlayerDropPatch
     {
-        static void Prefix(Player __instance, out (GameObject go, string type) __state)
-        {
-            var cur = __instance.currentItem;
-            __state = (ThrowSync.Held(__instance), InvItemClass.isNull(cur) ? null : cur.baseClass?.type);
-        }
+        static void Prefix(Player __instance, out (GameObject go, string type) __state) => __state = ThrowSync.Holding(__instance);
 
         static void Postfix(Player __instance, (GameObject go, string type) __state)
         {
@@ -183,12 +185,7 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Player), "throwItem")]
     static class PlayerThrowPatch
     {
-        static void Prefix(Player __instance, out (GameObject go, string type) __state)
-        {
-            var go = ThrowSync.Held(__instance);
-            var cur = __instance.currentItem;
-            __state = (go, InvItemClass.isNull(cur) ? null : cur.baseClass?.type);
-        }
+        static void Prefix(Player __instance, out (GameObject go, string type) __state) => __state = ThrowSync.Holding(__instance);
 
         static void Postfix(Player __instance, (GameObject go, string type) __state)
         {
@@ -286,15 +283,15 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>Note what a landing or exploding thrown thing spawns (fire, fuel), so its flames count as thrown.</summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
+    [HarmonyPatch]
     static class ThrownSpawnPatch
     {
-        static void Postfix(GameObject __result) { if (ThrownHits.Depth > 0 && __result != null) ThrownHits.Spawned.Add(__result); }
-    }
+        static IEnumerable<System.Reflection.MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
+            yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
+        }
 
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
-    static class ThrownSpawnByNamePatch
-    {
         static void Postfix(GameObject __result) { if (ThrownHits.Depth > 0 && __result != null) ThrownHits.Spawned.Add(__result); }
     }
 

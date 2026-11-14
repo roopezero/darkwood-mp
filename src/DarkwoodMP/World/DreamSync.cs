@@ -23,7 +23,7 @@ namespace DarkwoodMP.World
     ///
     /// What isn't shared: each game runs the dream's enemies and things by itself (the host's enemies don't reach
     /// into dreams, and a client's dream characters are its own, World.Locations / Combat.NetEnemies). Dreams that
-    /// come from the story or from a kill (the night trader's) stay the player's own, as before.
+    /// come from the story or from a kill (the night trader's) stay the player's own.
     /// </summary>
     public static class DreamSync
     {
@@ -55,9 +55,9 @@ namespace DarkwoodMP.World
 
         internal static void PresetChosen(DreamPreset preset)
         {
-            if (!_hostLevelDream || preset == null || Core.loadingGame) return;
+            if (!_hostLevelDream || Core.loadingGame) return;
             _hostLevelDream = false;
-            if (S == null || !S.IsHost || !Hideouts.Together) return;
+            if (preset == null || S == null || !S.IsHost || !Hideouts.Together) return;
             Shared = preset.name;
             _ended = false;
             var w = S.Begin(MsgType.DreamStart);
@@ -73,11 +73,17 @@ namespace DarkwoodMP.World
         {
             if (Shared == null || d == null || !d.dreaming || _ended || WorldActions.Replaying || S == null) return;
             _ended = true;
-            var w = S.Begin(MsgType.DreamEnd);
-            w.WriteStr(d.outcome ?? "");
+            var w = EndMessage(d.outcome ?? "");
             if (S.IsHost) S.Broadcast(w, Channel.Control, reliable: true);
             else if (NetEnemies.ClientMode) S.SendToHost(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo($"[dream] our dream {Shared} ends ({d.outcome}): everyone's does");
+        }
+
+        private static PacketWriter EndMessage(string outcome)
+        {
+            var w = S.Begin(MsgType.DreamEnd);
+            w.WriteStr(outcome);
+            return w;
         }
 
         internal static void Started() => _ended = false;
@@ -104,9 +110,7 @@ namespace DarkwoodMP.World
             {
                 if (Shared == null || d == null || !d.dreaming || _ended) return;
                 Plugin.Log.LogInfo($"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours and everyone's end");
-                var w = S.Begin(MsgType.DreamEnd);
-                w.WriteStr(outcome);
-                S.Broadcast(w, Channel.Control, reliable: true, except: from);
+                S.Broadcast(EndMessage(outcome), Channel.Control, reliable: true, except: from);
                 EndHere(d, outcome);
                 return;
             }
@@ -164,16 +168,22 @@ namespace DarkwoodMP.World
                 d.presetList.RemoveAll(x => x != null && x.name == name); // as the host's draw took it
                 Shared = name;
                 _ended = false;
-                d.wantToDream = true;
-                d.startTransition.dreamToTransitionTo = name;
-                Core.forbidInputs = true;
-                if (Singleton<CamMain>.Instance != null) Singleton<CamMain>.Instance.gameObject.SetActive(true);
-                d.startTransition.transition();
+                GoInto(d, name);
             }
             catch (System.Exception e) { Shared = null; Plugin.Log.LogError($"[dream] couldn't go into {name}: {e}"); }
         }
 
-        /// <summary>For tests: the dream we go into next (host's) or are in.</summary>
+        /// <summary>Into the dream through the game's transition, as SkillsMenu.confirmSkills goes into a level dream.</summary>
+        private static void GoInto(Dreams d, string name)
+        {
+            d.wantToDream = true;
+            d.startTransition.dreamToTransitionTo = name;
+            Core.forbidInputs = true;
+            if (Singleton<CamMain>.Instance != null) Singleton<CamMain>.Instance.gameObject.SetActive(true);
+            d.startTransition.transition();
+        }
+
+        /// <summary>For tests (client): the host's dream we go into once our menus let us (null: none).</summary>
         internal static string Pending => _pendingStart;
 
         /// <summary>For tests (host): start a level dream as SkillsMenu.confirmSkills does after a level.</summary>
@@ -181,11 +191,7 @@ namespace DarkwoodMP.World
         {
             var d = Singleton<Dreams>.Instance;
             _hostLevelDream = true;
-            d.wantToDream = true;
-            d.startTransition.dreamToTransitionTo = name;
-            Core.forbidInputs = true;
-            if (Singleton<CamMain>.Instance != null) Singleton<CamMain>.Instance.gameObject.SetActive(true);
-            d.startTransition.transition();
+            GoInto(d, name);
         }
     }
 

@@ -28,9 +28,9 @@ namespace DarkwoodMP.Sync
             {
                 var astar = AstarPath.active;
                 if (astar == null) return true;
-                var g = astar.getNearestGraphFast(__instance.transform.position);
-                if (g == null || g.nodes == null || g.nodes.Length == 0 || g.nodeSize <= 0f) return true; // the game returns at once
                 Vector3 pos = __instance.transform.position;
+                var g = astar.getNearestGraphFast(pos);
+                if (g == null || g.nodes == null || g.nodes.Length == 0 || g.nodeSize <= 0f) return true; // the game returns at once
                 Vector3 d = pos - (Vector3)g.nodes[0].position;
                 int x = Mathf.RoundToInt(d.x / g.nodeSize), z = Mathf.RoundToInt(d.z / g.nodeSize);
                 int r = _nodeLightRadius;

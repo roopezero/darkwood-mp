@@ -11,8 +11,8 @@ namespace DarkwoodMP.World
     ///
     ///   a client's death never does it (the host runs the enemies and the clock; doing it here would only tear
     ///   down the host's enemies it's showing);
-    ///   the host's own death doesn't either while others are in the world, who may still be fighting; it does as
-    ///   before when the host is alone.
+    ///   the host's own death doesn't either while others are in the world, who may still be fighting; it does
+    ///   when the host is alone.
     /// </summary>
     static class DeathRules
     {

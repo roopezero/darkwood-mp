@@ -30,17 +30,10 @@ namespace DarkwoodMP.World
 
         public static bool Open => _win != null && _win.Open;
 
-        public static string KeyName
-        {
-            get
-            {
-                var k = Plugin.Cfg != null ? Plugin.Cfg.SkillsKey.Value : KeyCode.K;
-                return k.ToString();
-            }
-        }
+        private static KeyCode Key => Plugin.Cfg != null ? Plugin.Cfg.SkillsKey.Value : KeyCode.K;
+        public static string KeyName => Key.ToString();
 
-        /// <summary>The panel's title: the game's own word for them.</summary>
-        private static string Title => "Skills";
+        private const string Title = "Skills";
 
         private static UiWindow Win
         {
@@ -51,11 +44,8 @@ namespace DarkwoodMP.World
                 {
                     MinSize = new Vector2(300, 260),
                     FitContent = true,
-                    DefaultRect = () =>
-                    {
-                        // On the right, clear of the backpack (on the left) when the player opens it too.
-                        return UiWindow.RightSide(360 * UiWindow.S, 420 * UiWindow.S);
-                    },
+                    // On the right, clear of the backpack (on the left) when the player opens it too.
+                    DefaultRect = () => UiWindow.RightSide(360 * UiWindow.S, 420 * UiWindow.S),
                     Body = Draw,
                     Footer = DrawFooter,
                     FooterHeight = 26,
@@ -107,11 +97,8 @@ namespace DarkwoodMP.World
             }
             // Escape is taken in SkillsPanelEscape, before the game's pause menu sees it.
             if (coopPanelOpen || GUIUtility.keyboardControl != 0) return;
-            var key = Plugin.Cfg != null ? Plugin.Cfg.SkillsKey.Value : KeyCode.K;
-            if (key != KeyCode.None && Input.GetKeyDown(key))
-            {
-                Toggle();
-            }
+            var key = Key;
+            if (key != KeyCode.None && Input.GetKeyDown(key)) Toggle();
         }
 
         public static void OnGUI()
@@ -120,7 +107,6 @@ namespace DarkwoodMP.World
             MenuSkin.Ensure();
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
-            Win.Title = Title;
             Win.OnGUI();
             GUI.skin = skin;
         }
@@ -192,7 +178,8 @@ namespace DarkwoodMP.World
             GUI.Box(f.Next(UiWindow.S), GUIContent.none, MenuSkin.Line);
             f.Space(2);
             // Room for the longest description, so the window keeps its size whichever skill is shown.
-            float detailTop = f.Y, detailH = DetailHeight(tiers, f.Width);
+            MeasureDetails(tiers, f.Width);
+            float detailTop = f.Y;
             string show = _hover ?? _good ?? _negative;
             if (show != null)
             {
@@ -210,10 +197,10 @@ namespace DarkwoodMP.World
             f.Y = Mathf.Max(f.Y, detailTop + _detailH);
         }
 
-        /// <summary>The details' height for the skill with the longest description, at this width.</summary>
-        private static float DetailHeight(List<SkillTiers.Tier> tiers, float width)
+        /// <summary>Sets _detailH: the details' height for the skill with the longest description, at this width.</summary>
+        private static void MeasureDetails(List<SkillTiers.Tier> tiers, float width)
         {
-            if (Mathf.Abs(width - _detailW) < 0.5f) return _detailH;
+            if (Mathf.Abs(width - _detailW) < 0.5f) return;
             int lines = 2;
             foreach (var t in tiers)
                 foreach (var list in new[] { t.skills, t.negativeSkills })
@@ -223,7 +210,6 @@ namespace DarkwoodMP.World
             _detailW = width;
             // As Draw lays them out: the name (Line + 2S and a gap), the state (Line and a gap), the text (Ui.Text).
             _detailH = (PixelFont.Line + 2 * S + gap) + (PixelFont.Line + gap) + lines * (PixelFont.Line + S) + gap - S;
-            return _detailH;
         }
 
         private static void DrawFooter(Rect r)

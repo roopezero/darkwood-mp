@@ -113,7 +113,7 @@ namespace DarkwoodMP.World
         /// <summary>Joiner: the host said someone else talks to them: close our dialogue (once it has finished opening).</summary>
         private static void Refused(NPC npc, string reason)
         {
-            if (_ours == npc) { _ours = null; _oursRef = default; } // nothing of ours to let go
+            if (_ours == npc) { _ours = null; _oursRef = default; _oursName = ""; } // nothing of ours to let go
             Player.Instance?.displayMessage(reason);
             CloseWhenReady(npc, 40);
         }

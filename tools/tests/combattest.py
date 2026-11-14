@@ -12,7 +12,7 @@ first 1.5 s), then shows its wards and forest skills for 2 s with a torch in han
 SIGTERM ends it too, with the same summary. Exits 1 (a FAIL line) if something in UNTIL never happened."""
 import signal, socket, struct, sys, time
 sys.path.insert(0, sys.argv[0].rsplit("/", 1)[0])
-from worldtest import Reader, ask, frame, hello, rstr, s16  # same folder
+from worldtest import frame, join, rstr, s16  # same folder
 
 PORT = int(sys.argv[1]); X, Z = float(sys.argv[2]), float(sys.argv[3]); SECS = float(sys.argv[4])
 UNTIL = set(sys.argv[5].split(",")) if len(sys.argv) > 5 and sys.argv[5] else set()
@@ -20,24 +20,9 @@ stop = False
 def on_term(*_):
     global stop; stop = True
 signal.signal(signal.SIGTERM, on_term)
-s = socket.create_connection(("127.0.0.1", PORT), timeout=10)
-r = Reader(s)
-m = ask(s, r, hello(name="Fighter"), 20)
-assert m[0] == 4, f"expected SaveOffer, got {m[0]}"
-h = m[1:33]; size = struct.unpack_from("<I", m, 33)[0]
-got = 0; off = 0
-while got < size:
-    while off < size and off - got < 4 * (256 << 10):
-        s.sendall(frame(bytes([5]) + h + struct.pack("<II", off, 256 << 10))); off += 256 << 10
-    m = r.msg(20)
-    if m[0] == 6:
-        got += struct.unpack_from("<I", m, 37)[0]
-print(f"world downloaded ({got} bytes)", flush=True)
-s.sendall(hello(h, name="Fighter"))
-while True:
-    m = r.msg(20)
-    if m[0] == 2:
-        my_id = struct.unpack_from("<Q", m, 1)[0]; print("welcomed as", my_id, flush=True); break
+s, r, my_id, offer = join(PORT, "Fighter", timeout=20)
+print(f"world downloaded ({struct.unpack_from('<I', offer, 33)[0]} bytes)", flush=True)
+print("welcomed as", my_id, flush=True)
 
 held = ""  # the lit thing in hand
 away_bits = 0  # 1 away (a separate location or a dream)

@@ -16,6 +16,8 @@ namespace DarkwoodMP
         private static readonly List<Renderer> _hidden = new List<Renderer>();
         private static bool _active;
 
+        private static bool HardwareCursor => Singleton<Globals>.Instance != null && Singleton<Globals>.Instance.useHardwareCursor;
+
         public static void LateUpdate(bool windowsOpen)
         {
             var ui = Singleton<UI>.Instance;
@@ -28,8 +30,7 @@ namespace DarkwoodMP
                 {
                     _active = true;
                     if (cursor.idle != null) UnityEngine.Cursor.SetCursor(cursor.idle, new Vector2(32f, 32f), CursorMode.Auto);
-                    bool hw = Singleton<Globals>.Instance != null && Singleton<Globals>.Instance.useHardwareCursor;
-                    Plugin.Log.LogInfo($"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({(cursor.idle != null ? cursor.idle.width + "x" + cursor.idle.height : "none")}); hardware cursor setting {hw}");
+                    Plugin.Log.LogInfo($"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({(cursor.idle != null ? cursor.idle.width + "x" + cursor.idle.height : "none")}); hardware cursor setting {HardwareCursor}");
                 }
             }
             else if (_active)
@@ -38,8 +39,7 @@ namespace DarkwoodMP
                 foreach (var r in _hidden) if (r != null) r.enabled = true;
                 _hidden.Clear();
                 // With the hardware cursor setting on, the game's picture is the system cursor's anyway; otherwise the default again.
-                bool hw = Singleton<Globals>.Instance != null && Singleton<Globals>.Instance.useHardwareCursor;
-                if (!hw) UnityEngine.Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                if (!HardwareCursor) UnityEngine.Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
                 Plugin.Log.LogInfo("[cursor] the windows closed: the game's cursor sprite is back");
             }
         }

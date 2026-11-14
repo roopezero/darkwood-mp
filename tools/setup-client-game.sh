@@ -16,6 +16,9 @@
 # Safe to run again: it recopies what changed (a game update, a new build of the mod) and keeps the client's
 # player key, name and saves.
 set -euo pipefail
+. "$(dirname "$0")/lib.sh" # safe_rm, refuse_root, is_under
+refuse_root
+die() { echo "FAIL: $*" >&2; exit 1; }
 
 GAME_DIR="${GAME_DIR:-$HOME/.local/share/Steam/steamapps/common/Darkwood}"
 N="${1:-1}"
@@ -24,13 +27,25 @@ C="${CLIENT_GAME:-$HOME/.cache/darkwood-mp/client-game$SUF}"
 CH="${CLIENT_HOME:-$HOME/.cache/darkwood-mp/client-home$SUF}"
 
 [ -d "$GAME_DIR/BepInEx/core" ] || { echo "no BepInEx in $GAME_DIR (install the mod first)"; exit 1; }
+# The client folders must be apart from the real game and from your home: this script overwrites the game files,
+# the mod's settings and the player key in CLIENT_GAME, and the client game runs with HOME=CLIENT_HOME.
+G="$(realpath -e -- "$GAME_DIR")"; RC="$(realpath -m -- "$C")"; RH="$(realpath -m -- "$CH")"; H="$(realpath -m -- "$HOME")"
+[ "$RC" != "$G" ] && ! is_under "$RC" "$G" && ! is_under "$G" "$RC" || die "CLIENT_GAME=$C is the game folder, or inside it, or holds it: pick a folder of its own"
+[ "$RC" != / ] && [ "$RC" != "$H" ] && ! is_under "$H" "$RC" || die "CLIENT_GAME=$C is / or your home, or holds it: pick a folder of its own"
+[ "$RH" != / ] && [ "$RH" != "$H" ] && ! is_under "$H" "$RH" || die "CLIENT_HOME=$CH is / or your home, or holds it: the client game would use your own settings and logs"
+! is_under "$RH" "$G" && [ "$RH" != "$G" ] || die "CLIENT_HOME=$CH is inside the game folder: pick a folder of its own"
 mkdir -p "$C" "$CH"
 
 for f in Darkwood.x86_64 UnityPlayer.so libdoorstop.so darkwood_mp.sh steam_appid.txt; do
   [ -e "$GAME_DIR/$f" ] || continue
   cmp -s "$GAME_DIR/$f" "$C/$f" 2>/dev/null || cp -a "$GAME_DIR/$f" "$C/$f"
 done
-[ "$(readlink "$C/Darkwood_Data" 2>/dev/null)" = "$GAME_DIR/Darkwood_Data" ] || { rm -rf "$C/Darkwood_Data"; ln -s "$GAME_DIR/Darkwood_Data" "$C/Darkwood_Data"; }
+# Darkwood_Data: a link to the game's. Only a link is ever replaced; a real folder there is refused, not deleted.
+if [ "$(readlink "$C/Darkwood_Data" 2>/dev/null)" != "$GAME_DIR/Darkwood_Data" ]; then
+  if [ -L "$C/Darkwood_Data" ]; then safe_rm "$C" "$C/Darkwood_Data"
+  elif [ -e "$C/Darkwood_Data" ]; then die "$C/Darkwood_Data is a real folder, not a link to the game's: move it away yourself"; fi
+  ln -s "$GAME_DIR/Darkwood_Data" "$C/Darkwood_Data"
+fi
 
 mkdir -p "$C/BepInEx/config" "$C/BepInEx/plugins/DarkwoodMP" "$C/BepInEx/patchers"
 for d in core patchers; do

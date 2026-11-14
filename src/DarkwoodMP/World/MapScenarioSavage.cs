@@ -35,8 +35,7 @@ namespace DarkwoodMP.World
         /// <summary>Where both games write their samples: one machine runs both in the map test.</summary>
         private static string Dir => Path.Combine(Path.GetTempPath(), "dwmp-savage");
         private static string FileOf(string tag, string role) => Path.Combine(Dir, $"{tag}-{role}.tsv");
-        private static double Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
+        internal static double Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 
         private static readonly List<Character> _spawned = new List<Character>();
 
@@ -81,7 +80,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>A character's sprite animators: path, clip now, its wrap mode, fps and frames, and the legs it drives.</summary>
-        internal static string Anatomy(Character c)
+        private static string Anatomy(Character c)
         {
             var l = new List<string>();
             foreach (var an in c.GetComponentsInChildren<tk2dSpriteAnimator>(true))
@@ -136,7 +135,7 @@ namespace DarkwoodMP.World
         {
             if (a.Length < 3) { r.Fail("usage: sv-sample AT SECS TAG [--walk] [--provoke]"); yield break; }
             double at = double.Parse(a[0], CultureInfo.InvariantCulture);
-            float secs = float.Parse(a[1], CultureInfo.InvariantCulture);
+            float secs = F(a[1]);
             string tag = a[2];
             var s = Net.Session.Instance;
             bool host = s != null && s.IsHost;
@@ -175,7 +174,7 @@ namespace DarkwoodMP.World
                         if (clip == null || clip.frames == null) continue;
                         samples.Add(new S
                         {
-                            T = t, Id = id, Kind = c.name.Replace("(Clone)", "").Trim(), Path = PathOf(an, c.transform), Clip = clip.name,
+                            T = t, Id = id, Kind = StateDump.Clean(c.name), Path = PathOf(an, c.transform), Clip = clip.name,
                             Frame = an.CurrentFrame, Sprite = an.Sprite != null ? an.Sprite.spriteId : -1, Frames = clip.frames.Length,
                             Playing = an.Playing, State = state,
                         });

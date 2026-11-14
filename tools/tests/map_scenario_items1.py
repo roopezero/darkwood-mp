@@ -1,5 +1,5 @@
 """Map test steps for items used on the world; same format as map_scenario.py, and a whole scenario by itself
-(MAP_SCENARIO=map_scenario_items1 tools/run-test.sh map). The steps are in src/DarkwoodMP/World/MapScenarioItems1.cs
+(tools/run-test.sh map:items1). The steps are in src/DarkwoodMP/World/MapScenarioItems1.cs
 (and "trap-place" in MapScenarioWorld.cs, which places the game's own way: Player.progressBarCompleted).
 
 - Traps placed the way the player places them reach the other game, both ways, and go off there.

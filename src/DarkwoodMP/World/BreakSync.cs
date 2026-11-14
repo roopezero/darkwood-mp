@@ -10,9 +10,10 @@ namespace DarkwoodMP.World
     ///
     /// A hit on an item (Item.getHit) is sent as ItemHit with the damage and the health it left; the others make
     /// the same call, which breaks the item there when its health runs out (Item.die, setDeathState), so a hit
-    /// that breaks something is one message (an egg broken open is EggSync's EggDestroyed instead). An item broken without a hit is ItemBroken, a repair (setNormalState,
-    /// from building) ItemRepaired. An Explodes going off (Explodes.onActivate) is Explode; the others set off their
-    /// copy, and what its explosion breaks or damages there isn't sent again.
+    /// that breaks something is one message (an egg broken open is EggSync's EggDestroyed instead). An item broken
+    /// without a hit is ItemBroken, a repair (setNormalState, from building) ItemRepaired. An Explodes going off
+    /// (Explodes.onActivate) is Explode; the others set off their copy, and what its explosion breaks or damages
+    /// there isn't sent again.
     ///
     /// The host sends everything that happens in its world (its enemies' hits, fire, explosions, the host's player).
     /// A client sends only its own player's hits and shots, as requests: the host checks reach and the numbers,

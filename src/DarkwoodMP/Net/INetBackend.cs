@@ -5,7 +5,7 @@ namespace DarkwoodMP.Net
     /// <summary>
     /// A way of connecting players: Steam (lobbies + P2P relay) or direct (goasis-style TCP + server browser).
     /// Peers are identified by an opaque ulong that only has meaning to the backend that issued it.
-    /// Anything Steam-specific must stay inside SteamBackend so the mod still loads on the GOG build.
+    /// Steamworks types stay inside SteamBackend, Lobby and SteamTransport, so the mod still loads on the GOG build.
     /// </summary>
     public interface INetBackend : IDisposable
     {

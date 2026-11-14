@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using DarkwoodMP.Combat;
 using HarmonyLib;
@@ -54,8 +53,6 @@ namespace DarkwoodMP.World
             MapScenario.Add("fe-loading", Loading, timeout: 10f);
         }
 
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
         private static string Name(Location l) => Core.getTrueLocationName(l.name);
 
         private static int _refreshesAtReset;
@@ -72,8 +69,6 @@ namespace DarkwoodMP.World
                 string.Join(", ", locs.Select(l => $"{Name(l)} at {Fmt(l.transform.position)} ({EventCount(l)} enter/exit triggers{(Safe(l) ? "" : ", not safe")})")));
             yield return Info(r, $"{locs.Count} world locations");
         }
-
-        private static IEnumerator Info(Result r, string info) { r.Info = info; yield break; }
 
         private static IEnumerable<Location> WorldLocations() =>
             Object.FindObjectsOfType<Location>(true).Where(FarEvents.WorldLocation);
@@ -116,22 +111,13 @@ namespace DarkwoodMP.World
             WorldLocations().Where(l => StateDump.Flat(l.transform.position - at) <= within)
                 .OrderBy(l => StateDump.Flat(l.transform.position - at)).FirstOrDefault();
 
-        private static void Put(Vector3 to)
-        {
-            var p = Player.Instance;
-            to.y = p.transform.position.y;
-            p.transform.position = to;
-            var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = to;
-        }
-
         private static IEnumerator Jump(string[] a, Result r)
         {
             var p = Player.Instance;
             if (p == null || a.Length == 0) { r.Fail("no player or no target"); yield break; }
             string t = a[0];
             Vector3 to; string what;
-            if (t == "loc:auto" || t.StartsWith("loc:"))
+            if (t.StartsWith("loc:"))
             {
                 var l = t == "loc:auto" ? Auto() : WorldLocations().FirstOrDefault(x => Name(x) == t.Substring(4));
                 if (l == null) { r.Fail($"no location for {t}"); yield break; }
@@ -164,7 +150,7 @@ namespace DarkwoodMP.World
             else { r.Fail($"unknown target {t}"); yield break; }
             WatchSteps = false; // our own player moves: what it sets off from here on is its own
             float jumped = StateDump.Flat(to - p.transform.position);
-            Put(to);
+            Place(to);
             yield return null;
             r.Info = $"at {Fmt(to)}, {what}, jumped {jumped:0}";
         }

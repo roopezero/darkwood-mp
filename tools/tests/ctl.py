@@ -50,9 +50,8 @@ class Ctl:
 
 if __name__ == "__main__":
     port, words = int(sys.argv[1]), sys.argv[2:]
-    c = Ctl(port)
     try:
-        reply = c.cmd(*words)
+        reply = Ctl(port).cmd(*words)
     except (OSError, ConnectionError) as e:
         reply = f"no reply ({e})"
     if not good(reply):

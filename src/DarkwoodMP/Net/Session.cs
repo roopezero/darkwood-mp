@@ -60,6 +60,8 @@ namespace DarkwoodMP.Net
         /// in, or false after answering it yourself (a SaveOffer, or Refuse).
         /// </summary>
         public Func<ulong, byte[], bool> BeforeWelcome;
+        /// <summary>Host: whether a client's message may be handled (false drops it). Authority sets it.</summary>
+        public Func<ulong, MsgType, bool> AllowBare;
 
         private readonly Dictionary<MsgType, Action<ulong, PacketReader>> _handlers = new Dictionary<MsgType, Action<ulong, PacketReader>>();
         private readonly PacketWriter _pw = new PacketWriter();
@@ -75,6 +77,8 @@ namespace DarkwoodMP.Net
         // Host: those whose Hello passed the checks but who aren't in yet, by id: announced once (JoinNotice).
         private readonly Dictionary<ulong, string> _joining = new Dictionary<ulong, string>();
 
+        private static float Now => UnityEngine.Time.realtimeSinceStartup;
+
         public Session()
         {
             Instance = this;
@@ -89,7 +93,7 @@ namespace DarkwoodMP.Net
                 bool isNew = !Names.ContainsKey(id);
                 Names[id] = name;
                 // Not the host, nor whoever was already in when we joined (they're listed right after Welcome).
-                if (isNew && Connected && id != LocalId && id != HostId && UnityEngine.Time.realtimeSinceStartup - _welcomedAt > 3f) OnPlayerJoined?.Invoke(name);
+                if (isNew && Connected && id != LocalId && id != HostId && Now - _welcomedAt > 3f) OnPlayerJoined?.Invoke(name);
             });
             Register(MsgType.JoinNotice, (from, r) =>
             {
@@ -196,7 +200,7 @@ namespace DarkwoodMP.Net
             var hash = ClientWorldHash?.Invoke();
             w.WriteBytes(hash != null && hash.Length == 32 ? hash : new byte[32]); // the world we have; zeros: none
             SendToHost(w, Channel.Control, reliable: true);
-            _helloAt = UnityEngine.Time.realtimeSinceStartup;
+            _helloAt = Now;
             if (_heardHostAt < 0f) _heardHostAt = _helloAt; // the silence counts from the first Hello
             Plugin.Log.LogInfo("Sent Hello to host");
         }
@@ -253,10 +257,7 @@ namespace DarkwoodMP.Net
                 _joining[from] = name;
                 Plugin.Log.LogInfo($"{name} (#{from}) is joining");
                 OnPlayerJoining?.Invoke(name);
-                var jn = Begin(MsgType.JoinNotice);
-                jn.WriteStr(name);
-                jn.W.Write((byte)0);
-                Broadcast(jn, Channel.Control, reliable: true, except: from);
+                BroadcastJoinNotice(name, 0, except: from);
             }
             if (BeforeWelcome != null && !BeforeWelcome(from, worldHash)) return;
             _joining.Remove(from);
@@ -284,6 +285,17 @@ namespace DarkwoodMP.Net
             w.WriteStr(reason);
             SendTo(peer, w, Channel.Control, reliable: true);
             Backend.Kick(peer);
+            // Refused while joining (BeforeWelcome): the kick raises no peer-lost, so tell everyone they stopped joining.
+            if (IsHost && _joining.ContainsKey(peer)) OnPeerLost(peer);
+        }
+
+        /// <summary>Host: tell the clients someone is joining (what 0) or stopped joining (what 1).</summary>
+        private void BroadcastJoinNotice(string name, byte what, ulong except = 0)
+        {
+            var w = Begin(MsgType.JoinNotice);
+            w.WriteStr(name);
+            w.W.Write(what);
+            Broadcast(w, Channel.Control, reliable: true, except: except);
         }
 
         private PacketWriter WritePlayerInfo(ulong id, string name)
@@ -300,7 +312,7 @@ namespace DarkwoodMP.Net
             LocalId = r.R.ReadUInt64();
             Names[LocalId] = LocalName;
             Connected = true;
-            _welcomedAt = UnityEngine.Time.realtimeSinceStartup;
+            _welcomedAt = Now;
             Plugin.Log.LogInfo($"Joined the host's game as #{LocalId}");
             OnPeerConnected?.Invoke(HostId);
             OnWelcomed?.Invoke();
@@ -333,10 +345,7 @@ namespace DarkwoodMP.Net
             {
                 Plugin.Log.LogInfo($"{was} (#{who}) stopped joining");
                 OnPlayerStoppedJoining?.Invoke(was);
-                var w = Begin(MsgType.JoinNotice);
-                w.WriteStr(was);
-                w.W.Write((byte)1);
-                Broadcast(w, Channel.Control, reliable: true);
+                BroadcastJoinNotice(was, 1);
             }
             _joining.Remove(who);
             Names.Remove(who);
@@ -366,7 +375,8 @@ namespace DarkwoodMP.Net
             catch { return; }
             // Only the handshake (and fetching the world it offers) may come from someone not yet admitted.
             if (IsHost && r.Type != MsgType.Hello && r.Type != MsgType.NeedSave && !Peers.Contains(from)) return;
-            if (!IsHost && from == HostId) { _helloAt = -1f; _heardHostAt = UnityEngine.Time.realtimeSinceStartup; } // anything from the host answers our Hello
+            if (IsHost && AllowBare != null && !AllowBare(from, r.Type)) return;
+            if (!IsHost && from == HostId) { _helloAt = -1f; _heardHostAt = Now; } // anything from the host answers our Hello
             if (_handlers.TryGetValue(r.Type, out var h))
             {
                 try { h(from, r); }
@@ -386,12 +396,12 @@ namespace DarkwoodMP.Net
         {
             foreach (var b in _backends) b.Poll();
             // A Hello the host never answered (lost, or turned away by a race over Steam): send it again.
-            if (IsClient && !Connected && _helloAt >= 0f && UnityEngine.Time.realtimeSinceStartup - _helloAt > HelloRetry)
+            if (IsClient && !Connected && _helloAt >= 0f && Now - _helloAt > HelloRetry)
             {
                 Plugin.Log.LogInfo($"No answer to Hello in {HelloRetry:0} s: sending it again");
                 SendHello();
             }
-            if (IsClient && !Connected && _heardHostAt >= 0f && UnityEngine.Time.realtimeSinceStartup - _heardHostAt > JoinSilence)
+            if (IsClient && !Connected && _heardHostAt >= 0f && Now - _heardHostAt > JoinSilence)
             {
                 string why = $"The host hasn't answered for {JoinSilence:0} s, so joining stopped.";
                 Plugin.Log.LogWarning(why);

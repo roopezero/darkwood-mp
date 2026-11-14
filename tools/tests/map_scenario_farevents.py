@@ -1,5 +1,5 @@
 """Map test steps for players far apart; same format as map_scenario.py. The steps are in
-src/DarkwoodMP/World/MapScenarioFarEvents.cs; run these alone with MAP_SCENARIO=map_scenario_farevents.
+src/DarkwoodMP/World/MapScenarioFarEvents.cs; run these alone with tools/run-test.sh map:farevents.
 
 The client jumps to a far world location (the nearest one 5000 or more from the centre whose enter and exit
 events don't move the player or end anything). The host keeps it entered for them, and runs its enter events

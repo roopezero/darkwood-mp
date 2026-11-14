@@ -227,14 +227,27 @@ namespace DarkwoodMP.Combat
         private static readonly System.Reflection.MethodInfo AuraTick = AccessTools.Method(typeof(Character), "waitToDamageAroundMe");
         private static readonly System.Reflection.MethodInfo FlameTouch = AccessTools.Method(typeof(Flame), "onCollideWith");
 
-        internal static System.Collections.IEnumerator Run()
+        /// <summary>A joined player's proxy (not the dummy's), or null.</summary>
+        internal static NetPlayerProxy Joined()
         {
             NetPlayerProxy p = null;
-            while (p == null)
-            {
-                foreach (var x in NetPlayerProxy.All.Values) if (x != null && x.Owner != Sync.PlayerSync.DummyId) p = x;
-                yield return null;
-            }
+            foreach (var x in NetPlayerProxy.All.Values) if (x != null && x.Owner != Sync.PlayerSync.DummyId) p = x;
+            return p;
+        }
+
+        /// <summary>The living enemy of the host's nearest to a position, or null.</summary>
+        internal static Character NearestEnemy(Vector3 at)
+        {
+            Character c = null;
+            foreach (var x in AllCharacters.Active())
+                if (x != null && x.alive && NetEnemies.Eligible(x) && (c == null || (x.transform.position - at).sqrMagnitude < (c.transform.position - at).sqrMagnitude)) c = x;
+            return c;
+        }
+
+        internal static System.Collections.IEnumerator Run()
+        {
+            NetPlayerProxy p;
+            while ((p = Joined()) == null) yield return null;
             yield return new WaitForSeconds(4f);
             if (p == null) yield break;
             var at = p.transform.position;
@@ -256,13 +269,11 @@ namespace DarkwoodMP.Combat
             EnemyAreaHits.MarkEnemy(go);
             Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({(ex.explosionPrefab != null ? ex.explosionPrefab.name : "no flash")}) beside {p.OwnerName}");
             ex.onActivate();
-            if (go != null) Object.Destroy(go);
+            Object.Destroy(go);
             yield return new WaitForSeconds(1f);
 
             // The nearest enemy's damage aura, made wide enough to reach them.
-            Character c = null;
-            foreach (var x in AllCharacters.Active())
-                if (x != null && x.alive && NetEnemies.Eligible(x) && (c == null || (x.transform.position - at).sqrMagnitude < (c.transform.position - at).sqrMagnitude)) c = x;
+            var c = NearestEnemy(at);
             if (c != null)
             {
                 string name = c.name; int dmg = c.aroundMeDamage; float range = c.aroundMeDamageRange;
@@ -302,8 +313,7 @@ namespace DarkwoodMP.Combat
             yield return AccessTools.Method(typeof(Character), nameof(Character.spawnProjectile));
         }
         static void Prefix() => EnemyAreaHits.EnemyDepth++;
-        static void Postfix() => EnemyAreaHits.EnemyDepth--;
-        static System.Exception Finalizer(System.Exception __exception) { if (__exception != null) EnemyAreaHits.EnemyDepth = 0; return __exception; }
+        static void Finalizer() => EnemyAreaHits.EnemyDepth--;
     }
 
     /// <summary>What an enemy's projectile spawns as it explodes (fire) is the enemy's too.</summary>
@@ -315,16 +325,14 @@ namespace DarkwoodMP.Combat
             __state = EnemyAreaHits.ByEnemy(__instance.transform, __instance.objectThatSpawnedMe);
             if (__state) EnemyAreaHits.EnemyDepth++;
         }
-        static void Postfix(bool __state) { if (__state) EnemyAreaHits.EnemyDepth--; }
-        static System.Exception Finalizer(System.Exception __exception) { if (__exception != null) EnemyAreaHits.EnemyDepth = 0; return __exception; }
+        static void Finalizer(bool __state) { if (__state) EnemyAreaHits.EnemyDepth--; }
     }
 
     [HarmonyPatch(typeof(Player), "spawnBullet")]
     static class PlayerBulletSpawnPatch
     {
         static void Prefix() => EnemyAreaHits.PlayerDepth++;
-        static void Postfix() => EnemyAreaHits.PlayerDepth--;
-        static System.Exception Finalizer(System.Exception __exception) { if (__exception != null) EnemyAreaHits.PlayerDepth = 0; return __exception; }
+        static void Finalizer() => EnemyAreaHits.PlayerDepth--;
     }
 
     [HarmonyPatch]

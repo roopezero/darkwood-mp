@@ -2,19 +2,14 @@
 that passes the checks (answered with the host's world). The host must be in a world, with Password = test."""
 import socket, struct, sys, time
 sys.path.insert(0, sys.argv[0].rsplit("/", 1)[0])
+import worldtest
 from worldtest import PROTO
 
 HOST, PORT = "127.0.0.1", int(sys.argv[1]) if len(sys.argv) > 1 else 27720
 KEY_A = "a" * 64
-KEY_B = "b" * 64
-
-def s16(s):
-    b = s.encode()
-    return struct.pack("<H", len(b)) + b
 
 def hello(version=PROTO, game="darkwood", key=KEY_A, password="test", name="TestBot"):
-    p = struct.pack("<BH", 1, version) + s16(game) + s16(key) + s16(password) + s16("an older one") + s16(name) + bytes(32)
-    return struct.pack("<I", len(p)) + p
+    return worldtest.hello(key=key, name=name, version=version, game=game, password=password, mod="an older one")
 
 def read_msgs(sock, wait=1.5, waits_offer=False):
     sock.settimeout(10 if waits_offer else wait)
@@ -62,31 +57,47 @@ def read_msgs(sock, wait=1.5, waits_offer=False):
         out.append(("reset",))
     return out
 
-def attempt(label, msg, keep=False, waits_offer=False):
+def check(label, r, ok, want):
+    """FAIL when the messages r aren't what the host should answer (want, for the FAIL line)."""
+    if not ok: print(f"FAIL {label}: got {r}, expected {want}", flush=True)
+
+def refused(r, reason):
+    """The first answer is Refused with this reason (or one starting with it)."""
+    got = [m for m in r if m[0] != "PlayerState"]
+    return bool(got) and got[0][0] == "Refused" and got[0][1].startswith(reason)
+
+def closed(r):
+    return ("closed",) in r or ("reset",) in r
+
+def attempt(label, msg, reason=None, waits_offer=False):
+    """Hello and the host's answer: Refused with this reason (Session.HandleHello), or with none, a SaveOffer."""
     s = socket.create_connection((HOST, PORT), timeout=3)
     s.sendall(msg)
     r = read_msgs(s, waits_offer=waits_offer)
     print(f"{label:32} -> {r}")
-    if keep:
-        return s
     s.close()
+    if reason is None: check(label, r, any(m[0] == "SaveOffer" for m in r), "a SaveOffer")
+    else: check(label, r, refused(r, reason), f"Refused: {reason}")
 
-attempt("wrong password", hello(password="nope"))
-attempt("no password", hello(password=""))
-attempt("older protocol version", hello(version=PROTO - 1))
-attempt("other game", hello(game="go-game"))
+attempt("wrong password", hello(password="nope"), "Wrong password.")
+attempt("no password", hello(password=""), "This server needs a password.")
+attempt("older protocol version", hello(version=PROTO - 1), "The host has DarkwoodMP ")
+attempt("other game", hello(game="go-game"), "This server runs a different game.")
 attempt("good join (offered the world)", hello(), waits_offer=True)
 
-# Limits before Hello, and the keepalive timeout (Net/TcpBackend.cs).
-def raw(label, data, wait):
+# Limits before Hello, and the keepalive timeout (Net/TcpBackend.cs): each must end with the host closing the
+# connection, between lo and hi seconds after it opened.
+def raw(label, data, lo, hi):
     s = socket.create_connection((HOST, PORT), timeout=3)
     t0 = time.time()
     if data:
         s.sendall(data)
-    r = read_msgs(s, wait)
-    print(f"{label:32} -> {r} after {time.time() - t0:.0f}s")
+    r = read_msgs(s, hi)
+    took = time.time() - t0
+    print(f"{label:32} -> {r} after {took:.0f}s")
     s.close()
+    check(label, r, closed(r) and lo <= took <= hi + 0.5, f"closed after {lo}-{hi} s (took {took:.1f} s)")
 
-raw("too big before Hello", struct.pack("<I", 1 << 20) + bytes(64), 3)
-raw("no Hello (closed after 10 s)", b"", 14)
-raw("Ping, then silent (15 s)", hello() + struct.pack("<IB", 1, 135), 19)
+raw("too big before Hello", struct.pack("<I", 1 << 20) + bytes(64), 0, 3)        # PreHelloMax 64 KiB
+raw("no Hello (closed after 10 s)", b"", 9, 14)                                    # HelloTimeoutMs
+raw("Ping, then silent (15 s)", hello() + struct.pack("<IB", 1, 135), 14, 19)     # TimeoutMs, once it has pinged

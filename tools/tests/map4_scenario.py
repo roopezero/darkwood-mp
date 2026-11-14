@@ -1,5 +1,5 @@
-"""The scenario of the `map4` test (tools/run-test.sh map4): the host and three client games c1..c3 (the mod's
-limit of 4 players), or four with MAP_CLIENTS=4 (c4's steps are left out without it).
+"""The scenario of the `map4` test (tools/run-test.sh map4): the host and three client games c1..c3, or four
+with MAP_CLIENTS=4 (the most the mod takes: 5 players, the host included; c4's steps are left out without it).
 Same format as map_scenario.py; "all-clients" runs a step in each client game in turn, and
 ("all", "compare", WHO, SECTIONS) dumps every game around WHO's player and compares each client's with the host's.
 

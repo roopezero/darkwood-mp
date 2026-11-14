@@ -18,11 +18,11 @@ namespace DarkwoodMP.World
     public static class DoorLeaf
     {
         private static readonly Dictionary<Door, Vector3> Pending = new Dictionary<Door, Vector3>();
-        private static readonly AccessTools.FieldRef<Door, Rigidbody> BodyRB = AccessTools.FieldRefAccess<Door, Rigidbody>("bodyRB");
+        internal static readonly AccessTools.FieldRef<Door, Rigidbody> BodyRB = AccessTools.FieldRefAccess<Door, Rigidbody>("bodyRB");
         private static readonly AccessTools.FieldRef<Door, int> OpenForce = AccessTools.FieldRefAccess<Door, int>("openForce");
 
         /// <summary>How far the leaf is turned from shut, in degrees (Door.setCloseRotation leaves it at a local z of 90).</summary>
-        public static float Angle(Door d) => d.body == null ? 0f : Mathf.Abs(Mathf.DeltaAngle(d.body.localRotation.eulerAngles.z, 90f));
+        public static float Angle(Door d) => Mathf.Abs(Signed(d));
 
         /// <summary>True if the leaf is drawn open (more than 10 degrees from shut).</summary>
         public static bool Turned(Door d) => Angle(d) > 10f;
@@ -125,7 +125,6 @@ namespace DarkwoodMP.World
         private static readonly Dictionary<Door, Watched> _watched = new Dictionary<Door, Watched>();
         private static readonly Collider[] _near = new Collider[256];
         private static float _nextLook;
-        private static readonly AccessTools.FieldRef<Door, Rigidbody> BodyRB = AccessTools.FieldRefAccess<Door, Rigidbody>("bodyRB");
 
         /// <summary>Map test: count a push of this door as our player's, wherever the player stands.</summary>
         internal static Door TestTouch;
@@ -134,7 +133,7 @@ namespace DarkwoodMP.World
         {
             _s = s;
             s.Register(MsgType.DoorLeaf, OnLeaf);
-            s.OnSessionEnded += () => _watched.Clear();
+            s.OnSessionEnded += () => { _watched.Clear(); DoorLeaf.Clear(); };
         }
 
         public static void Update()
@@ -172,13 +171,13 @@ namespace DarkwoodMP.World
         /// <summary>
         /// This game opened a door (not a replay): watch it from now, from shut. Look finds open doors only once a
         /// second and takes their angle then as shared, so a leaf that swung open and came to rest within that
-        /// second was never sent, and each game's own swing from the open left the leaves apart (53 and 65 degrees
-        /// in map:sweep). So where the opener's leaf comes to rest goes to the host, which passes it on, as a push.
+        /// second would never be sent, and each game's own swing from the open would leave the leaves apart. So
+        /// where the opener's leaf comes to rest goes to the host, which passes it on, as a push.
         /// </summary>
         internal static void Opened(Door d)
         {
             if (!WorldActions.Sharing || WorldActions.Replaying || d == null || d.body == null || !d.opened || d.destroyed) return;
-            var rb = BodyRB(d);
+            var rb = DoorLeaf.BodyRB(d);
             if (rb == null) return;
             _watched[d] = new Watched { D = d, Rb = rb, Shared = 0f, Moving = true, Touched = true };
         }
@@ -191,7 +190,7 @@ namespace DarkwoodMP.World
                 var rb = _near[i].attachedRigidbody;
                 if (rb == null) continue;
                 var d = Door.getDoorScript(rb.transform);
-                if (d == null || _watched.ContainsKey(d) || !d.opened || d.destroyed || d.body == null || BodyRB(d) != rb) continue;
+                if (d == null || _watched.ContainsKey(d) || !d.opened || d.destroyed || d.body == null || DoorLeaf.BodyRB(d) != rb) continue;
                 _watched[d] = new Watched { D = d, Rb = rb, Shared = DoorLeaf.Signed(d) };
             }
         }
@@ -275,7 +274,7 @@ namespace DarkwoodMP.World
         static void Postfix(Door.SaveState __instance, Door door)
         {
             if (door != null && door.body != null)
-                __instance.rot = Mathf.Clamp(Mathf.DeltaAngle(door.body.localRotation.eulerAngles.z, 90f), -105f, 105f);
+                __instance.rot = Mathf.Clamp(DoorLeaf.Signed(door), -105f, 105f);
         }
     }
 

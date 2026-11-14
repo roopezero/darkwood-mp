@@ -192,8 +192,8 @@ namespace DarkwoodMP.Sync
             {
                 _cachedRoot = player.gameObject;
                 var all = player.GetComponentsInChildren<tk2dBaseSprite>(true);
-                var keep = new System.Collections.Generic.List<tk2dBaseSprite>();
-                var hashes = new System.Collections.Generic.List<int>();
+                var keep = new List<tk2dBaseSprite>();
+                var hashes = new List<int>();
                 bool dump = Plugin.LogPlayerSprites.Value && !_dumped;
                 foreach (var s in all)
                 {
@@ -212,6 +212,7 @@ namespace DarkwoodMP.Sync
                 _nextRescan = UnityEngine.Time.unscaledTime + 1f;
             }
 
+            var invRot = Quaternion.Inverse(root.rotation);
             snap.Position = root.position;
             snap.Rotation = root.rotation;
             snap.Alive = player.alive && !player.dying;
@@ -220,7 +221,7 @@ namespace DarkwoodMP.Sync
             var held = player.currentItem;
             snap.HeldLight = player.itemLightEmitter != null && !InvItemClass.isNull(held) && held.baseClass != null ? held.type ?? "" : "";
             var flames = player.itemParticleEmitter;
-            snap.HeldFlames = snap.HeldLight != "" && flames != null ? Quaternion.Inverse(root.rotation) * (flames.position - root.position) : Vector3.zero;
+            snap.HeldFlames = snap.HeldLight != "" && flames != null ? invRot * (flames.position - root.position) : Vector3.zero;
             var dot = player.lightDot;
             var ctl = Singleton<Controller>.Instance;
             snap.Lantern = dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot) ? dot.LightRadius : 0f;
@@ -237,7 +238,6 @@ namespace DarkwoodMP.Sync
             snap.Place = World.Locations.Current();
             snap.Health = (byte)(player.maxHealth > 0f ? Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100) : 0);
             snap.Sprites.Clear();
-            var invRot = Quaternion.Inverse(root.rotation);
             for (int i = 0; i < _sprites.Length && snap.Sprites.Count < 255; i++)
             {
                 var s = _sprites[i];

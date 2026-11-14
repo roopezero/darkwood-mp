@@ -54,7 +54,48 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.Request, OnRequest);
             s.Register(MsgType.Verdict, OnVerdict);
-            s.OnSessionEnded += () => { _pending.Clear(); InventoryWatch.Reset(); };
+            s.AllowBare = AllowBare;
+            s.OnSessionEnded += EndPending;
+        }
+
+        /// <summary>
+        /// The session ended with requests unanswered: tell each caller it was refused, so state kept until the Verdict
+        /// (a button waiting for the host, a disarm in progress) is let go. The inventory isn't undone: the host's world
+        /// is gone, and the caller's own rollback is all that runs.
+        /// </summary>
+        private static void EndPending()
+        {
+            var left = new List<Pending>(_pending.Values);
+            _pending.Clear();
+            _bareWarned.Clear();
+            foreach (var p in left)
+            {
+                try { p.Done?.Invoke(false, "the session ended", ""); }
+                catch (Exception e) { Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}"); }
+            }
+            InventoryWatch.Reset();
+        }
+
+        /// <summary>
+        /// Messages an honest client sends only inside a Request: their handlers check them only there (InReach, Refuse),
+        /// so the host drops one that comes from a client on its own.
+        /// </summary>
+        private static readonly HashSet<MsgType> RequestOnly = new HashSet<MsgType>
+        {
+            MsgType.WorldAction, MsgType.EnemyHit, MsgType.NpcHit, MsgType.NpcAttack, MsgType.Burning,
+            MsgType.Construct, MsgType.EventFired, MsgType.StoryRequest, MsgType.EggDestroyed, MsgType.InfectionCleared,
+            MsgType.TraderTrade, MsgType.StorageSort, MsgType.SkillSpend, MsgType.EssenceAdd, MsgType.SkillReset,
+            MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit,
+        };
+        private static readonly HashSet<(ulong, MsgType)> _bareWarned = new HashSet<(ulong, MsgType)>();
+
+        /// <summary>Host (Session.Dispatch): whether a client's message may be handled as it came.</summary>
+        private static bool AllowBare(ulong from, MsgType type)
+        {
+            if (Handling || !RequestOnly.Contains(type)) return true;
+            if (_bareWarned.Add((from, type)))
+                Plugin.Log.LogWarning($"[authority] dropped {type} from {S?.NameOf(from) ?? "#" + from}: it's only taken as a request");
+            return false;
         }
 
         /// <summary>
@@ -133,7 +174,7 @@ namespace DarkwoodMP.World
             w.WriteStr(_refusal ?? "");
             w.WriteStr(_result ?? "");
             s.SendTo(from, w, Channel.Control, reliable: true);
-            if (_refusal != null) Plugin.Log.LogInfo($"[authority] refused {(MsgType)inner[0]} from {s.NameOf(from)}: {_refusal}");
+            if (_refusal != null) Plugin.Log.LogInfo($"[authority] refused {(inner.Length > 0 ? ((MsgType)inner[0]).ToString() : "nothing")} from {s.NameOf(from)}: {_refusal}");
         }
 
         /// <summary>Host: the proxy (the host's stand-in) of the player whose request is being handled.</summary>
@@ -144,8 +185,7 @@ namespace DarkwoodMP.World
         public static bool Near(ulong player, Vector3 pos, float reach)
         {
             if (!NetPlayerProxy.All.TryGetValue(player, out var p) || p == null) return true;
-            var d = p.transform.position - pos;
-            return new Vector2(d.x, d.z).magnitude <= reach;
+            return Flat(p, pos) <= reach;
         }
 
         /// <summary>Host, in a request's handler: refuse it if the requesting player is further than reach from pos.</summary>
@@ -153,10 +193,16 @@ namespace DarkwoodMP.World
         {
             var p = Requester;
             if (p == null) return true; // not known yet (just joined): nothing to check against
-            float d = Vector2.Distance(new Vector2(p.transform.position.x, p.transform.position.z), new Vector2(pos.x, pos.z));
+            float d = Flat(p, pos);
             if (d <= reach) return true;
             Refuse($"{what} is {d:0} away from them (reach {reach:0})");
             return false;
+        }
+
+        private static float Flat(NetPlayerProxy p, Vector3 pos)
+        {
+            var d = p.transform.position - pos;
+            return new Vector2(d.x, d.z).magnitude;
         }
     }
 

@@ -109,6 +109,8 @@ namespace DarkwoodMP.World
             return true;
         }
 
+        private static string What(StoryKind kind, int chapter) => kind == StoryKind.Chapter ? $"chapter {chapter}" : $"the game's end ({kind})";
+
         private static float _lastRequest = -999f;
 
         /// <summary>Joiner: our player's event reached a story step; the host decides.</summary>
@@ -123,7 +125,7 @@ namespace DarkwoodMP.World
             w.W.Write((byte)(ge != null ? Math.Max(0, ge.events.IndexOf(e)) : 0));
             w.W.Write((byte)kind);
             w.W.Write(kind == StoryKind.Chapter ? e.intValue : 0);
-            string what = kind == StoryKind.Chapter ? $"chapter {e.intValue}" : $"the game's end ({kind})";
+            string what = What(kind, e.intValue);
             Authority.Request(w, what, (ok, reason, result) =>
             {
                 if (!ok) Plugin.Notice($"The host didn't start {what}: {reason}");
@@ -159,7 +161,7 @@ namespace DarkwoodMP.World
                 Authority.Refuse("that event isn't in the host's world, and they aren't in a place of their own");
                 return;
             }
-            Plugin.Log.LogInfo($"{s.NameOf(from)} set off {(kind == StoryKind.Chapter ? $"chapter {chapter}" : $"the game's end ({kind})")}: running it here");
+            Plugin.Log.LogInfo($"{s.NameOf(from)} set off {What(kind, chapter)}: running it here");
             try { Singleton<Controller>.Instance.StartCoroutine(StepFor(kind, chapter).fire(Player.Instance.gameObject)); }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run the story step: {e.Message}"); Authority.Refuse("it couldn't run"); }
         }
@@ -171,6 +173,7 @@ namespace DarkwoodMP.World
             var s = S;
             if (s == null || !s.IsHost || s.Peers.Count == 0 || _chapterSent) return;
             _chapterSent = true;
+            Characters.Instance?.ChapterStarted(HostChapter); // still the chapter being left
             Plugin.Log.LogInfo($"Starting chapter {chapter}: the players in your world follow once it's ready");
             var w = s.Begin(MsgType.ChapterStart);
             w.W.Write(chapter);

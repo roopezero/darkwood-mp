@@ -8,12 +8,12 @@ purpose before the join. Then a host's enemy (whose frozen copy passes through t
 host's player each push one of those dropped items, and the dropped items are then compared in every game (the
 `dropped` section, mapcompare.py's position tolerance)."""
 
+from mapsteps import SAFE_OFF, SAFE_ON
+
 # The host drops a rope that's still sliding when the world is read for the joiner, and at rest before it's in.
 PRE_JOIN = [("host", "kn-slide", "rope")]
 
-SAFE = [("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0})]
-
-STEPS = SAFE + [
+STEPS = SAFE_ON + [
     ("host", "ee-day"),
     ("host", "kn-info"), ("client", "kn-info"),
     ("host", "kn-enemy", "0"),
@@ -24,7 +24,6 @@ STEPS = SAFE + [
     ("host", "kn-info"), ("client", "kn-info"),
     ("all", "compare", "host", "dropped"),
     ("host", "ee-day", "off"),
-    ("host", "i2-safe", "off", {"settle": 0}), ("client", "i2-safe", "off", {"settle": 0}),
-]
+] + SAFE_OFF
 
 REQUIRE = ["dropped"]

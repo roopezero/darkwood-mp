@@ -2,6 +2,8 @@
 src/DarkwoodMP/World/MapScenarioNpcs.cs (and some from MapScenarioGaps.cs, MapScenarioWorld.cs and
 MapScenarioFixChecks.cs). Alone: MAP_SCENARIO=map_scenario_npcs tools/run-test.sh map."""
 
+from mapsteps import TRADER_AWAY, TRADER_BACK
+
 SETTLE = 1.5
 
 PRE_JOIN = []
@@ -19,15 +21,13 @@ WALK = [
 # client's hideout, rolls his stock, and takes the client's trade with him. When the client walks out, it goes.
 MORNING = [
     ("host", "wolf-away", {"settle": 3}),  # the morning brings the trader, not the wolf
-    ("host", "trader-away", {"settle": 0}),
-    ("client", "trader-away"),
+    *TRADER_AWAY,
     ("client", "an-start", {"settle": 4}),
     ("host", "host-copy", "here"),
     ("client", "trade", {"settle": 2}),
     ("client", "an-end"),
     ("host", "host-copy", "gone"),
-    ("host", "trader-back", {"settle": 0}),
-    ("client", "trader-back"),
+    *TRADER_BACK,
     ("host", "wolf-back"),
     ("host", "heal"),
     ("client", "heal"),
@@ -37,14 +37,12 @@ MORNING = [
 # kill nor the client's dead state is refused. Last: the client is in the killer's dream after it.
 KILL = [
     ("host", "wolf-away", {"settle": 3}),
-    ("host", "trader-away", {"settle": 0}),
-    ("client", "trader-away"),
+    *TRADER_AWAY,
     ("client", "an-start", "noreward", {"settle": 4}),
     ("host", "host-copy", "here"),
     ("client", "kill-trader", {"settle": 4}),
     ("host", "npc-died"),
-    ("host", "trader-back", {"settle": 0}),
-    ("client", "trader-back"),
+    *TRADER_BACK,
     ("host", "wolf-back"),
     ("host", "heal"),
 ]
@@ -56,8 +54,7 @@ FOLLOW = [
     ("client", "follow-go", "-450", "-400"),  # beside the hideout's night trader, as after talking to him
     ("host", "follow-recruit", "trader"),
     # The night trader never starts walking (it stays idle as a follower), so whether a follower walks after the
-    # joiner is left out; with an NPC that walks: ("client", "follow-go", "300", "0"), ("host", "follow-check"),
-    # ("client", "follow-near", NAME).
+    # joiner is left out: follow-check and follow-near need an NPC that walks.
     ("host", "follow-end", {"settle": 3}),
     ("client", "fx-goto", "centre"),
 ]

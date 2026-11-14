@@ -1,7 +1,7 @@
 """Map test steps for players far apart; same format as map_scenario.py. The steps are in
 src/DarkwoodMP/World/MapScenarioFar.cs. Spots are offsets from the test area's centre ("off:DX,DZ").
 
-Run on their own with MAP_SCENARIO=map_scenario_far tools/run-test.sh map."""
+Run on their own with tools/run-test.sh map:far."""
 
 SETTLE = 1.5
 

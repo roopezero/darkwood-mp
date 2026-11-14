@@ -20,8 +20,6 @@ namespace DarkwoodMP.World
     public static class MapScenarioMulti
     {
         private static Player P => Player.Instance;
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
         private static double Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 
         public static void Register()
@@ -400,7 +398,7 @@ namespace DarkwoodMP.World
 
         /// <summary>How far a door's body has swung on its hinge from where it sits closed (setCloseRotation puts its
         /// local z at 90).</summary>
-        internal static float DoorSwing(Door door) => Mathf.DeltaAngle(90f, door.body.localRotation.eulerAngles.z); // how far it has swung from shut (World.DoorLeaf swings a door opened while switched off)
+        private static float DoorSwing(Door door) => Mathf.DeltaAngle(90f, door.body.localRotation.eulerAngles.z);
 
         // ---- 5. night attackers, players in different hideouts -------------------------------------------------
 
@@ -446,9 +444,13 @@ namespace DarkwoodMP.World
             int max = sc.currentScenario == null ? 0 : sc.currentScenario.characters.Where(x => x != null && !string.IsNullOrEmpty(x.characterName)).Sum(x => Math.Max(0, x.amount));
             int from = NightSpawns.SentLog.Count;
             bool was = spawner.spawnNocturnalCharacters;
-            spawner.spawnNocturnalCharacters = true;
-            for (int i = 0; i < n; i++) { call.Invoke(spawner, null); yield return new WaitForSeconds(0.3f); }
-            spawner.spawnNocturnalCharacters = was;
+            // Put back in a finally: left on, night attackers would spawn in the daytime of every later step.
+            try
+            {
+                spawner.spawnNocturnalCharacters = true;
+                for (int i = 0; i < n; i++) { call.Invoke(spawner, null); yield return new WaitForSeconds(0.3f); }
+            }
+            finally { spawner.spawnNocturnalCharacters = was; }
             var sent = NightSpawns.SentLog.Skip(from).ToList();
             var per = sent.GroupBy(s => s.Hideout).ToDictionary(g => g.Key, g => g.ToList());
             r.Info = $"{string.Join("; ", where)} | {budget} | " +

@@ -23,8 +23,8 @@ namespace DarkwoodMP.World
     /// negative skills are offered).
     ///
     /// In co-op a client learns at once and asks the host (SkillSpend, a request) with its level and the skills it
-    /// has. The host checks the choice against the same rules and against the shared level; a refused choice is
-    /// taken back. The skills are each player's own (their character, World.Characters), so only the client's own
+    /// has. The host checks the choice against the same rules and against the shared level (the list of skills
+    /// is the client's word: they are its own character's); a refused choice is taken back. The skills are each player's own (their character, World.Characters), so only the client's own
     /// game changes.
     /// </summary>
     public static class SkillTree
@@ -60,21 +60,36 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>The tier a skill (good or negative) is in, by name; null: none.</summary>
-        public static SkillTiers.Tier TierOf(string name, out bool negative)
+        /// <summary>A skill (good or negative) by name, with its tier; null: none.</summary>
+        private static PlayerSkill Find(string name, out SkillTiers.Tier tier, out bool negative)
         {
+            tier = null;
             negative = false;
             var tiers = Tiers;
             if (tiers == null || string.IsNullOrEmpty(name)) return null;
             foreach (var t in tiers)
             {
-                if (t.skills.Any(sk => sk != null && sk.name == name)) return t;
-                if (t.negativeSkills.Any(sk => sk != null && sk.name == name)) { negative = true; return t; }
+                tier = t;
+                foreach (var sk in t.skills) if (sk != null && sk.name == name) return sk;
+                negative = true;
+                foreach (var sk in t.negativeSkills) if (sk != null && sk.name == name) return sk;
+                negative = false;
             }
+            tier = null;
             return null;
         }
 
-        public static string TierName(int index) => index >= 0 && index < 4 ? new[] { "I", "II", "III", "IV" }[index] : (index + 1).ToString();
+        private static PlayerSkill Find(string name) => Find(name, out _, out _);
+
+        /// <summary>The tier a skill (good or negative) is in, by name; null: none.</summary>
+        public static SkillTiers.Tier TierOf(string name, out bool negative)
+        {
+            Find(name, out var tier, out negative);
+            return tier;
+        }
+
+        private static readonly string[] TierNames = { "I", "II", "III", "IV" };
+        public static string TierName(int index) => index >= 0 && index < TierNames.Length ? TierNames[index] : (index + 1).ToString();
 
         // ---- the rules ------------------------------------------------------------------------------
 
@@ -159,18 +174,6 @@ namespace DarkwoodMP.World
         private static bool _waiting;
         /// <summary>Client: a choice is waiting for the host's answer.</summary>
         public static bool Waiting => _waiting;
-
-        private static PlayerSkill Find(string name)
-        {
-            var tiers = Tiers;
-            if (tiers == null || string.IsNullOrEmpty(name)) return null;
-            foreach (var t in tiers)
-            {
-                foreach (var sk in t.skills) if (sk != null && sk.name == name) return sk;
-                foreach (var sk in t.negativeSkills) if (sk != null && sk.name == name) return sk;
-            }
-            return null;
-        }
 
         /// <summary>Take a good skill (and the negative one that must go with it, or null), as SkillsMenu.confirmSkills gives them.</summary>
         public static bool Learn(string good, string negative, out string why)

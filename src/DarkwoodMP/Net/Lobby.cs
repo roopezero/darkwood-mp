@@ -10,7 +10,6 @@ namespace DarkwoodMP.Net
     /// </summary>
     public sealed class Lobby : IDisposable
     {
-        public const int MaxPlayers = Protocol.MaxPlayers;
         private const string KeyMod = "darkwoodmp";
         private const string KeyProto = "proto";
 
@@ -27,7 +26,6 @@ namespace DarkwoodMP.Net
 
         public event Action OnEntered;
         public event Action OnLeft;
-        public event Action<CSteamID> OnMemberJoined;
         public event Action<CSteamID> OnMemberLeft;
 
         private CallResult<LobbyCreated_t> _createResult;
@@ -65,7 +63,7 @@ namespace DarkwoodMP.Net
             if (InLobby) return;
             HostLost = false;
             Status = "Creating lobby...";
-            _createResult.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, MaxPlayers));
+            _createResult.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, Protocol.MaxPlayers));
         }
 
         public void Join(CSteamID lobby)
@@ -111,12 +109,7 @@ namespace DarkwoodMP.Net
             return list;
         }
 
-        public bool IsMember(CSteamID user)
-        {
-            if (!InLobby) return false;
-            foreach (var m in Members()) if (m == user) return true;
-            return false;
-        }
+        public bool IsMember(CSteamID user) => Members().Contains(user);
 
         private void OnLobbyCreated(LobbyCreated_t r, bool ioFailure)
         {
@@ -168,10 +161,7 @@ namespace DarkwoodMP.Net
             var who = new CSteamID(u.m_ulSteamIDUserChanged);
             var change = (EChatMemberStateChange)u.m_rgfChatMemberStateChange;
             if ((change & EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
-            {
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} joined the lobby");
-                OnMemberJoined?.Invoke(who);
-            }
             else
             {
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} left the lobby");

@@ -110,7 +110,7 @@ namespace DarkwoodMP.World
                     if (vine == null) vine = cp.GetComponentInChildren<Vine>();
                     if (vine != null) cp.getHit(x, null, vine);
                     else { cp.health = Mathf.Max(0f, cp.health - x); if (cp.health <= 0f) cp.detach(); } // getHit needs a segment for its sound
-                    if (s != null && s.IsHost) y = cp != null ? cp.health : 0f;
+                    if (s != null && s.IsHost) y = cp.health;
                     break;
                 }
                 case Action.ShadowArmorDied:
@@ -214,9 +214,7 @@ namespace DarkwoodMP.World
 
         static void Postfix(Item __instance, ObjRef __state)
         {
-            bool took = ObjectActions.Took && ObjectActions.Activating == __instance;
-            ObjectActions.Activating = null;
-            ObjectActions.Took = false;
+            bool took = ObjectActions.Took && ObjectActions.Activating == __instance; // both are reset in Finalizer
             if (!took || !__state.Valid || !WorldActions.Sharing) return;
             WorldActions.Send(Action.Removed, __instance.gameObject);
         }

@@ -26,7 +26,7 @@ namespace DarkwoodMP.World
     public sealed class WorldShare
     {
         public static WorldShare Instance { get; private set; }
-        public const int PieceSize = 256 << 10;
+        private const int PieceSize = 256 << 10;
         private const int PiecesInFlight = 4;
         private const int KeepWorlds = 3;
 
@@ -147,10 +147,10 @@ namespace DarkwoodMP.World
         {
             if (_session.IsHost) UpdateWatch();
             else UpdateDownload();
-            if (!_session.IsHost || _session.Peers.Count == 0) { if (!_session.IsHost) _hostWorldKey = 0; return; }
+            if (!_session.IsHost) { _hostWorldKey = 0; return; }
             if (!WorldReady) return;
-            int key = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-            if (_hostWorldKey != 0 && key != _hostWorldKey)
+            int key = ActiveScene; // tracked with nobody in, too: a joiner let in after a change has the new world already
+            if (_hostWorldKey != 0 && key != _hostWorldKey && _session.Peers.Count > 0)
             {
                 Plugin.Log.LogInfo("Your world changed: the players in it load it again");
                 SharedIds.ResetHost();
@@ -160,7 +160,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Client: ask to join again after a JoinWait.</summary>
-        private System.Collections.IEnumerator HelloAgain()
+        private IEnumerator HelloAgain()
         {
             yield return new WaitForSecondsRealtime(3f);
             // Not while a world is coming in (the offer came meanwhile): that Hello would only be offered it again.
@@ -201,6 +201,12 @@ namespace DarkwoodMP.World
         }
         private static float _readySince = -1f;
 
+        /// <summary>The loaded world's scene handle: it changes whenever the world is loaded again.</summary>
+        private static int ActiveScene => UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+
+        /// <summary>A profile's save folder (prof&lt;id&gt;) under a folder laid out as 1_4Save.</summary>
+        private static string ProfDir(string baseDir, int id) => Path.Combine(baseDir, "prof" + id);
+
         // =====================================================================
         // Host
         // =====================================================================
@@ -235,6 +241,7 @@ namespace DarkwoodMP.World
         /// <summary>True while the host saves a snapshot of its world for a joiner.</summary>
         public static bool Snapshotting { get; private set; }
         private float _lastSnapshot = -999f;
+        private int _lastSnapshotScene;
         private const float SnapshotReuse = 20f;
 
         /// <summary>
@@ -246,7 +253,7 @@ namespace DarkwoodMP.World
         /// static part (savs.dat: the map's layout and its pathfinding graph, about 9 MB, and savch.dat after chapter 1)
         /// is copied from the host's own save, as the game itself does: it writes savs.dat only when the world is made or
         /// a new location has been added (SaveManager.Save), and in that case it writes it into the snapshot too. Saving
-        /// it every time used to take most of the snapshot's time, on the host's main thread.
+        /// savs.dat would be most of the snapshot's time, on the host's main thread.
         ///
         /// When the static part was copied, sav.dat is saved by SnapshotSave: the world is read in one frame, as the
         /// game reads it, and written out as JSON on a worker thread (the writing was most of the stop). If that fails,
@@ -258,15 +265,16 @@ namespace DarkwoodMP.World
             var sm = Singleton<SaveManager>.Instance;
             if (sm == null || sm.dontSave || Core.loadingGame) yield break;
             string dir = Path.Combine(_cacheDir, "..", "host-snapshot");
-            string profDir = Path.Combine(dir, "prof" + Core.currentProfile.id);
-            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse && File.Exists(Path.Combine(profDir, "sav.dat"))) { _snapshotDir = profDir; yield break; }
-            string ownDir = Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id); // before the redirect below
+            string profDir = ProfDir(dir, Core.currentProfile.id);
+            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse && _lastSnapshotScene == ActiveScene && File.Exists(Path.Combine(profDir, "sav.dat"))) { _snapshotDir = profDir; yield break; }
+            string ownDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id); // before the redirect below
             var lastSaved = sm.lastTimeSaved; bool haveSaved = sm.haveSaved;
             var outside = Singleton<OutsideLocations>.Instance;
             bool newLocation = outside != null && outside.addedNewLocation;
             bool haveStatic = false;
             long copied = 0;
             System.Threading.Tasks.Task<long> writing = null;
+            void Restore() => RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation);
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
@@ -298,6 +306,7 @@ namespace DarkwoodMP.World
                     finally
                     {
                         SaveRedirect.EndTemporary();
+                        sm.updateFilePaths(); // SnapshotSave.Begin set them to the snapshot folder's
                         Snapshotting = false;
                     }
                 }
@@ -305,7 +314,7 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning($"Couldn't snapshot the world, offering the last save instead: {e.Message}");
-                RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation);
+                Restore();
                 yield break;
             }
             if (writing != null)
@@ -316,19 +325,20 @@ namespace DarkwoodMP.World
                 if (!writing.IsFaulted && File.Exists(Path.Combine(profDir, "sav.dat")))
                 {
                     Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner: the game stopped for {stopped} ms (static part copied from your save in {copied} ms, the world read in {stopped - copied} ms), sav.dat written in {writing.Result} ms on a worker thread");
-                    RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation);
+                    Restore();
                     _lastSnapshot = Time.realtimeSinceStartup;
+                    _lastSnapshotScene = ActiveScene;
                     _snapshotDir = profDir;
                     LastSnapshotOffThread = true;
                     yield break;
                 }
                 // Most likely the game changed a list while it was being written. Save it the game's way instead.
                 Plugin.Log.LogWarning($"Couldn't write the snapshot off the main thread, saving it the game's way: {writing.Exception?.GetBaseException().Message}");
-                if (!InWorld || Core.loadingGame) { RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation); yield break; }
+                if (!InWorld || Core.loadingGame) { Restore(); yield break; }
             }
             DragSync.NoteSnapshot();
             _snapshotDir = SaveSnapshotOnMainThread(sm, dir, profDir, haveStatic, copied, newLocation);
-            RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation);
+            Restore();
         }
 
         private string _snapshotDir;
@@ -354,6 +364,7 @@ namespace DarkwoodMP.World
                 LastSnapshotOffThread = false;
                 Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({(haveStatic ? $"static part copied from your save in {copied} ms" : "static part saved too: your save hasn't got one")}{(newLocation ? ", with a new location's static part" : "")})");
                 _lastSnapshot = Time.realtimeSinceStartup;
+                _lastSnapshotScene = ActiveScene;
                 return File.Exists(Path.Combine(profDir, "sav.dat")) ? profDir : null;
             }
             catch (Exception e)
@@ -364,6 +375,7 @@ namespace DarkwoodMP.World
             finally
             {
                 SaveRedirect.EndTemporary();
+                sm.updateFilePaths();
                 Snapshotting = false;
             }
         }
@@ -380,11 +392,11 @@ namespace DarkwoodMP.World
         private Snapshot FreshHostWorld()
         {
             var w = _hostWorld;
-            if (w == null || w.Scene != UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle) return null;
+            if (w == null || w.Scene != ActiveScene) return null;
             if (Plugin.Cfg.LiveWorld.Value) return Time.realtimeSinceStartup - w.MadeAt < SnapshotReuse ? w : null;
             var sm = Singleton<SaveManager>.Instance;
             if (sm == null || Core.currentProfile == null) return null;
-            return WorldFiles.Stamp(Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id)) == w.Stamp ? w : null;
+            return WorldFiles.Stamp(ProfDir(sm.baseSaveDirectory, Core.currentProfile.id)) == w.Stamp ? w : null;
         }
 
         /// <summary>
@@ -396,49 +408,54 @@ namespace DarkwoodMP.World
         private IEnumerator PrepareWorld()
         {
             _preparing = true;
-            yield return null; // the JoinWait goes out first
             Snapshot world = null;
-            int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-            var sm = Singleton<SaveManager>.Instance;
-            if (InWorld && sm != null)
+            try // an exception in here must not leave _preparing set: every later joiner would wait for ever
             {
-                string snapDir = null;
-                if (Plugin.Cfg.LiveWorld.Value) { yield return SaveSnapshot(); snapDir = _snapshotDir; }
-                else DragSync.ForgetSnapshot(); // the last save: where things were then isn't known
-                string profDir = snapDir ?? Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id);
-                string stamp = WorldFiles.Stamp(profDir);
-                if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene) world = _hostWorld;
-                else if (stamp.Length > 0)
+                yield return null; // the JoinWait goes out first
+                int scene = ActiveScene;
+                var sm = Singleton<SaveManager>.Instance;
+                if (InWorld && sm != null)
                 {
-                    string json = JsonConvert.SerializeObject(Core.currentProfile);
-                    int ids = SharedIds.CounterOf(snapDir != null);
-                    int day = Core.currentProfile.day;
-                    var job = System.Threading.Tasks.Task.Run(() => Pack(profDir, json));
-                    while (!job.IsCompleted) yield return null;
-                    if (job.IsFaulted) Plugin.Log.LogWarning($"Couldn't read the world for joiners: {job.Exception?.GetBaseException().Message}");
-                    else if ((world = job.Result) != null)
+                    string snapDir = null;
+                    if (Plugin.Cfg.LiveWorld.Value) { yield return SaveSnapshot(); snapDir = _snapshotDir; }
+                    else DragSync.ForgetSnapshot(); // the last save: where things were then isn't known
+                    string profDir = snapDir ?? (Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id));
+                    string stamp = profDir == null || !InWorld ? "" : WorldFiles.Stamp(profDir); // left the world meanwhile: nothing to offer
+                    if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene) world = _hostWorld;
+                    else if (stamp.Length > 0)
                     {
-                        world.Stamp = stamp;
-                        world.IdCounter = ids;
-                        Plugin.Log.LogInfo($"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
-                                           $"sent as {world.Sent.Length / 1024} KiB{(world.Packing == 1 ? " (Deflate)" : "")}; {world.Timing}");
+                        string json = JsonConvert.SerializeObject(Core.currentProfile);
+                        int ids = SharedIds.CounterOf(snapDir != null);
+                        int day = Core.currentProfile.day;
+                        var job = System.Threading.Tasks.Task.Run(() => Pack(profDir, json));
+                        while (!job.IsCompleted) yield return null;
+                        if (job.IsFaulted) Plugin.Log.LogWarning($"Couldn't read the world for joiners: {job.Exception?.GetBaseException().Message}");
+                        else if ((world = job.Result) != null)
+                        {
+                            world.Stamp = stamp;
+                            world.IdCounter = ids;
+                            Plugin.Log.LogInfo($"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
+                                               $"sent as {world.Sent.Length / 1024} KiB{(world.Packing == 1 ? " (Deflate)" : "")}; {world.Timing}");
+                        }
                     }
                 }
+                if (world != null)
+                {
+                    world.Scene = scene;
+                    world.MadeAt = Time.realtimeSinceStartup;
+                    _hostWorld = world;
+                }
             }
-            if (world != null)
+            finally
             {
-                world.Scene = scene;
-                world.MadeAt = Time.realtimeSinceStartup;
-                _hostWorld = world;
-            }
-            _preparing = false;
-
-            var waiting = _waiting.ToList();
-            _waiting.Clear();
-            foreach (var peer in waiting)
-            {
-                if (world == null) _session.Refuse(peer, "The host isn't in a saved game yet. Join once they've loaded their world.");
-                else Offer(peer, world);
+                _preparing = false;
+                var waiting = _waiting.ToList();
+                _waiting.Clear();
+                foreach (var peer in waiting)
+                {
+                    if (world == null) _session.Refuse(peer, NotInWorld);
+                    else Offer(peer, world);
+                }
             }
         }
 
@@ -534,9 +551,9 @@ namespace DarkwoodMP.World
             // The prologue on a new game: the intro film (WorldGenerator.playingIntro), then the forest
             // (dream_tutorial_00, a separate location), then a dream (dream_tutorial_01).
             var gen = Singleton<WorldGenerator>.Instance;
-            var outsideNow = Singleton<OutsideLocations>.Instance;
+            var outside = Singleton<OutsideLocations>.Instance;
             if ((gen != null && gen.playingIntro)
-                || (outsideNow != null && outsideNow.playerInOutsideLocation && outsideNow.currentLocationName == "dream_tutorial_00"))
+                || (outside != null && outside.playerInOutsideLocation && outside.currentLocationName == "dream_tutorial_00"))
                 return Prologue;
             var dreams = Singleton<Dreams>.Instance;
             if (dreams != null && dreams.dreaming)
@@ -546,13 +563,13 @@ namespace DarkwoodMP.World
             // A separate location is loaded only in the host's game, and the joiner would be put beside the host
             // there (Characters), on the world's grid of a game that hasn't loaded it. The snapshot would also be
             // saved while away, which the game itself never does.
-            var outside = Singleton<OutsideLocations>.Instance;
             if (outside != null && outside.playerInOutsideLocation) return "The host is away in another place. You'll join when they're back.";
             if (!WorldReady) return "The host's world is loading.";
             return null;
         }
 
         private const string Prologue = "The host is playing the prologue. You'll join when it's over.";
+        private const string NotInWorld = "The host isn't in a saved game yet. Join once they've loaded their world.";
 
         /// <summary>Test (map test's "hold-joiners"): for this many seconds from the first joiner, answer as if the
         /// host were in the prologue.</summary>
@@ -570,7 +587,7 @@ namespace DarkwoodMP.World
             // The world we offered this joiner, now downloaded: let them in with it, even if a newer snapshot would be
             // taken now. Over Steam's relay a download can outlast SnapshotReuse; asking for a fresh snapshot then
             // gave a new hash, a new offer and another download, for ever.
-            int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+            int scene = ActiveScene;
             if (_offered.TryGetValue(peer, out var offer) && offer.Scene == scene && WorldFiles.Equal(offer.World.Hash, clientHash))
             {
                 LetIn(peer, offer.World.IdCounter);
@@ -581,7 +598,7 @@ namespace DarkwoodMP.World
             {
                 // Make one (PrepareWorld), and offer it when it's ready. Until then the joiner is told to wait, and its
                 // Hellos meanwhile get the same answer.
-                if (!InWorld) { _session.Refuse(peer, "The host isn't in a saved game yet. Join once they've loaded their world."); return false; }
+                if (!InWorld) { _session.Refuse(peer, NotInWorld); return false; }
                 _waiting.Add(peer);
                 if (!_preparing) _runner.StartCoroutine(PrepareWorld());
                 WatchFrames(peer);
@@ -723,7 +740,7 @@ namespace DarkwoodMP.World
             string json = File.ReadAllText(pj);
             var profile = JsonConvert.DeserializeObject<GameProfile>(json);
             if (profile == null) return null;
-            return WorldFiles.Hash(json, WorldFiles.Read(Path.Combine(worldDir, "prof" + profile.id)));
+            return WorldFiles.Hash(json, WorldFiles.Read(ProfDir(worldDir, profile.id)));
         }
 
         private void OnSaveOffer(ulong from, PacketReader r)
@@ -855,7 +872,7 @@ namespace DarkwoodMP.World
                 }
                 if (!WorldFiles.Equal(WorldFiles.Hash(d.ProfileJson, files), d.Hash)) return "the world didn't arrive intact (hash mismatch)";
                 RemoveDir(dir);
-                string profDir = Path.Combine(dir, "prof" + d.Profile.id);
+                string profDir = ProfDir(dir, d.Profile.id);
                 Directory.CreateDirectory(profDir);
                 foreach (var f in files) File.WriteAllBytes(Path.Combine(profDir, f.Name), f.Data);
                 File.WriteAllText(Path.Combine(dir, "profile.json"), d.ProfileJson);
@@ -883,8 +900,8 @@ namespace DarkwoodMP.World
         {
             foreach (var old in new DirectoryInfo(_cacheDir).GetDirectories().OrderByDescending(x => x.LastWriteTimeUtc).Skip(KeepWorlds))
             {
-                if (SamePath(old.FullName, keep) || SamePath(old.FullName, SaveRedirect.Dir)) continue; // never the world being played
-                try { old.Delete(true); } catch { }
+                if (WorldFiles.SamePath(old.FullName, keep) || WorldFiles.SamePath(old.FullName, SaveRedirect.Dir)) continue; // never the world being played
+                try { WorldFiles.DeleteTree(old.FullName); } catch { }
             }
         }
 
@@ -892,53 +909,28 @@ namespace DarkwoodMP.World
         /// Deletes a folder of ours, to be made again at once. On Windows, a file in it that another program has open
         /// for a moment (a virus scanner, the search indexer) makes Directory.Delete fail, or leaves the folder waiting
         /// to be deleted so that making it again fails. So it's renamed out of the way first; if it can't be deleted
-        /// then, what's left is deleted the next time.
+        /// then, what's left is deleted the next time. Every delete goes through WorldFiles.DeleteTree, which refuses
+        /// (with a warning, deleting nothing) anything outside the mod's cache and save-redirect folders.
         /// </summary>
         internal static void RemoveDir(string dir)
         {
-            dir = Full(dir);
+            if (!WorldFiles.MayDelete(dir)) return; // refused, with a warning
+            dir = WorldFiles.Full(dir);
             string parent = Path.GetDirectoryName(dir), aside = Path.GetFileName(dir) + ".old-";
-            if (parent == null) { if (Directory.Exists(dir)) Directory.Delete(dir, true); return; }
             if (Directory.Exists(parent))
-                foreach (var old in Directory.GetDirectories(parent, aside + "*")) { try { Directory.Delete(old, true); } catch { } }
+                foreach (var old in Directory.GetDirectories(parent, aside + "*")) { try { WorldFiles.DeleteTree(old); } catch { } }
             if (!Directory.Exists(dir)) return;
             string moved = Path.Combine(parent, aside + DateTime.UtcNow.Ticks);
             try { Directory.Move(dir, moved); }
-            catch (Exception) { Directory.Delete(dir, true); return; } // can't be moved: delete it where it is
-            try { Directory.Delete(moved, true); } catch { }
-        }
-
-        private static readonly StringComparison PathCase =
-            Environment.OSVersion.Platform == PlatformID.Win32NT ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-
-        private static string Full(string p) =>
-            Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-        /// <summary>The same folder, however the two were written (separators, a trailing slash; case on Windows).</summary>
-        public static bool SamePath(string a, string b)
-        {
-            if (a == null || b == null) return false;
-            try { return string.Equals(Full(a), Full(b), PathCase); }
-            catch { return a == b; }
-        }
-
-        /// <summary>Whether path is dir or inside it.</summary>
-        public static bool IsUnder(string path, string dir)
-        {
-            if (path == null || dir == null) return false;
-            try
-            {
-                string p = Full(path), d = Full(dir);
-                return string.Equals(p, d, PathCase) || p.StartsWith(d + Path.DirectorySeparatorChar, PathCase);
-            }
-            catch { return false; }
+            catch (Exception) { WorldFiles.DeleteTree(dir); return; } // can't be moved: delete it where it is
+            try { WorldFiles.DeleteTree(moved); } catch { }
         }
 
         /// <summary>
         /// We're playing a copy of another host's world (from the cache), e.g. after leaving their game. Hosting it
         /// would hand joiners that stale copy as if it were a world of its own, so the panel won't host it.
         /// </summary>
-        public bool PlayingHostCopy => SaveRedirect.Active && IsUnder(SaveRedirect.Dir, _cacheDir);
+        public bool PlayingHostCopy => SaveRedirect.Active && WorldFiles.IsUnder(SaveRedirect.Dir, _cacheDir);
 
         private void Fail(string why)
         {
@@ -1006,25 +998,34 @@ namespace DarkwoodMP.World
         public static bool StartProfile(GameProfile profile, string saveDir)
         {
             if (saveDir != null) SaveRedirect.Begin(saveDir);
+            Core.currentProfile = profile;
+            if (saveDir != null && !RedirectWorks(saveDir))
+            {
+                Core.currentProfile = null;
+                SaveRedirect.End();
+                return false;
+            }
             // The menu always has five profile slots; put this one in its own.
             var slots = new List<GameProfile>();
             for (int i = 1; i <= Math.Max(5, profile.id); i++) slots.Add(i == profile.id ? profile : new GameProfile(i, _Active: false, 0));
             Core.profiles = slots;
-            Core.currentProfile = profile;
-            // The world's save path, as the game builds it. If its baseSaveDirectory was inlined somewhere before the
-            // redirect was patched in, it would show here: then don't load, rather than save into the player's own saves.
-            if (saveDir != null)
-            {
-                string save = Singleton<SaveManager>.Instance?.dynamicFile;
-                if (!IsUnder(save, saveDir))
-                {
-                    Plugin.Log.LogError($"The save redirect isn't working: the world would save to {save}, not under {saveDir}");
-                    Core.currentProfile = null;
-                    return false;
-                }
-            }
             Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initLoadGame());
             return true;
+        }
+
+        /// <summary>
+        /// Whether the game's saves really go under saveDir now that SaveRedirect points there: the profile list's
+        /// path and, with Core.currentProfile set, the world's save path, as the game builds them. If baseSaveDirectory
+        /// was inlined somewhere before the redirect was patched in, it would show here; the caller then doesn't load,
+        /// rather than save into the player's own saves, and ends the redirect.
+        /// </summary>
+        internal static bool RedirectWorks(string saveDir)
+        {
+            var sm = Singleton<SaveManager>.Instance;
+            string save = Core.currentProfile != null ? sm?.dynamicFile : sm?.localProfilesFile;
+            if (WorldFiles.IsUnder(save, saveDir)) return true;
+            Plugin.Log.LogError($"The save redirect isn't working: the world would save to {save}, not under {saveDir}");
+            return false;
         }
 
         /// <summary>"--dwmp-continue N": load your own profile N at start (for testing and hosting).</summary>
@@ -1036,10 +1037,21 @@ namespace DarkwoodMP.World
             if (sandboxDir != null) SaveRedirect.Begin(sandboxDir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
             var profile = state?.profiles?.FirstOrDefault(p => p != null && p.id == id && p.Active);
-            if (profile == null) { Plugin.Log.LogError($"--dwmp-continue: no saved profile {id}"); yield break; }
+            if (profile == null)
+            {
+                Plugin.Log.LogError($"--dwmp-continue: no saved profile {id}");
+                if (sandboxDir != null) SaveRedirect.End();
+                yield break;
+            }
+            Core.currentProfile = profile;
+            if (sandboxDir != null && !RedirectWorks(sandboxDir))
+            {
+                Core.currentProfile = null;
+                SaveRedirect.End();
+                yield break;
+            }
             Plugin.Log.LogInfo($"--dwmp-continue: loading your profile {id} (day {profile.day})");
             Core.profiles = state.profiles;
-            Core.currentProfile = profile;
             Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initLoadGame());
         }
     }

@@ -4,7 +4,8 @@ worldobs.py PORT SECS OUT: watches for at most SECS; SIGTERM (the runner, once t
 early, and what was recorded is written either way."""
 import json, pickle, signal, socket, struct, sys, time
 sys.path.insert(0, sys.argv[0].rsplit("/", 1)[0])
-from worldtest import Reader, ask, frame, hello, rstr, rbig, s16
+import worldtest
+from worldtest import frame, rstr, rbig, s16
 
 PORT, SECS, OUT = int(sys.argv[1]), float(sys.argv[2]), sys.argv[3]
 # --ask-location=NAME: 5 s after joining, ask the host where that separate location stands (LocationAsk), as a
@@ -14,18 +15,7 @@ stop = False
 def on_term(*_):
     global stop; stop = True
 signal.signal(signal.SIGTERM, on_term)
-s = socket.create_connection(("127.0.0.1", PORT), timeout=10); r = Reader(s)
-m = ask(s, r, hello(name="Observer"), 20); assert m[0] == 4, m[0]
-h = m[1:33]; size = struct.unpack_from("<I", m, 33)[0]; got = off = 0
-while got < size:
-    while off < size and off - got < 4 * (256 << 10):
-        s.sendall(frame(bytes([5]) + h + struct.pack("<II", off, 256 << 10))); off += 256 << 10
-    m = r.msg(20)
-    if m[0] == 6: got += struct.unpack_from("<I", m, 37)[0]
-s.sendall(hello(h, name="Observer"))
-while True:
-    m = r.msg(20)
-    if m[0] == 2: my_id = struct.unpack_from("<Q", m, 1)[0]; break
+s, r, my_id, _ = worldtest.join(PORT, "Observer")
 print("joined as", my_id, flush=True)
 host_pos = None
 ACTIONS = {41: "NpcDied", 21: "TrapFired", 22: "TrapSwitched", 23: "TrapDisarm", 31: "ItemOn", 32: "ItemOff", 33: "ItemUnlock", 34: "ItemSearched", 35: "PadlockUnlock", 1: "DoorOpen", 2: "DoorClose", 3: "DoorBarricade", 4: "DoorDestroyBarricade", 5: "DoorDestroy", 6: "DoorHit",
@@ -43,7 +33,7 @@ while time.time() - t0 < SECS and not stop:
         s.sendall(frame(bytes([115, 0]) + s16(ASK_LOC))); print(f"LocationAsk {ASK_LOC}", flush=True); ASK_LOC = None
     if host_pos and time.time() >= nxt:  # stand next to the host's character, so we're "near" what it does
         x, y, z = host_pos
-        s.sendall(frame(bytes([10]) + struct.pack("<Q", my_id) + struct.pack("<fff", x + 40, y, z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([1]) + s16("") + s16("") + bytes([0, 0, 100]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<f", 0)))
+        s.sendall(worldtest.player_state(my_id, x + 40, y, z))
         nxt = time.time() + 0.1
     try: m = r.msg(0.05)
     except socket.timeout: continue
@@ -79,7 +69,7 @@ while time.time() - t0 < SECS and not stop:
         print(f"ObjSpawn #{oid} {prefab} at {pos[0]:.0f},{pos[2]:.0f}: {items}", flush=True); recorded.append(m)
     elif t == 33:
         k = m[1]; oid = struct.unpack_from("<q", m, 2)[0]; x, y, z = struct.unpack_from("<fff", m, 10); last = m[38]
-        if last or not any(isinstance(e, bytes) and e[0] == 33 and e[1:10] == m[1:10] for e in recorded[-3:]):
+        if last or not any(e[0] == 33 and e[1:10] == m[1:10] for e in recorded[-3:]):
             print(f"ObjMove {KINDS.get(k, k)}:{oid} to {x:.0f},{z:.0f}{' (let go)' if last else ''}", flush=True)
         recorded.append(m)
     elif t == 35:
@@ -92,14 +82,15 @@ while time.time() - t0 < SECS and not stop:
         k = m[1]; oid = struct.unpack_from("<q", m, 2)[0]; n = m[10]; at = 11; desc = []
         for _ in range(n):
             slot = struct.unpack_from("<H", m, at)[0]; at += 2; old, at = rstr(m, at); new, at = rstr(m, at)
-            desc.append(f"{slot}: '{old}' -> {json.loads(new)['type'] + ' x' + str(json.loads(new)['amount']) if new else 'empty'}")
+            it = json.loads(new) if new else None
+            desc.append(f"{slot}: '{old}' -> {it['type'] + ' x' + str(it['amount']) if it else 'empty'}")
             slot_seen.append((k, oid, slot, old, new))
         print(f"ContainerSlots {KINDS.get(k, k)}:{oid}: {desc}", flush=True); recorded.append(m)
         # The host emptied the slot it filled: now our turn. Fill it (that stands), and claim the next slot held
         # something it never held (too late: refused). Then upgrade the workbench.
         if not slots_done and len(slot_seen) >= 2 and slot_seen[-1][4] == "":
             slots_done = True
-            k, oid, slot, _, filled = slot_seen[-2][0], slot_seen[-2][1], slot_seen[-2][2], None, slot_seen[-2][4]
+            k, oid, slot, _, filled = slot_seen[-2]
             p = bytes([37, k]) + struct.pack("<q", oid) + bytes([2])
             p += struct.pack("<H", slot) + s16("") + s16(filled)
             p += struct.pack("<H", slot + 1) + s16("bogus|1|1000|0|0") + s16("")
@@ -148,7 +139,7 @@ while time.time() - t0 < SECS and not stop:
     elif t == 39:
         print(f"WorkbenchLevel {struct.unpack_from('<i', m, 1)[0]}", flush=True); recorded.append(m)
     elif t in (62, 65):  # NightScenario, Weather: sent every 10 s; keep each new one
-        if any(isinstance(e, bytes) and e == m for e in recorded): continue
+        if m in recorded: continue
         if t == 62: print(f"NightScenario '{rstr(m, 1)[0]}'", flush=True)
         else:
             f = m[1]; start, dur, pre, light = struct.unpack_from("<ffff", m, 2); fog = struct.unpack_from("<iiii", m, 18)
@@ -172,4 +163,5 @@ while time.time() - t0 < SECS and not stop:
             print(f"RandomObjects night object {prefab} #{oid}", flush=True)
         recorded.append(m)
 print("time syncs:", len(times), "first/last:", times[:1], times[-1:])
-pickle.dump(recorded, open(OUT, "wb"))
+with open(OUT, "wb") as f:
+    pickle.dump(recorded, f)

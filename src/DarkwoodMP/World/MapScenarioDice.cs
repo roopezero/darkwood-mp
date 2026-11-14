@@ -35,7 +35,7 @@ namespace DarkwoodMP.World
                 uint h = 2166136261;
                 foreach (char c in string.Join("|", lines)) { h ^= c; h *= 16777619; }
                 r.Info = $"{lines.Count} locations with sets, digest {h:x8}";
-                return Nothing();
+                return None();
             });
             Add("dice-events", (a, r) =>
             {
@@ -82,11 +82,9 @@ namespace DarkwoodMP.World
                 }
                 foreach (var b in blasts) Plugin.Log.LogInfo($"[dice] explodes {b.Key}: {b.Value}");
                 r.Info = $"{steps} shared steps; {random} pick a random object, {nearest} the one nearest the own player; {functions} runFunction ({string.Join(",", names.Keys)}); {blasts.Count} kinds of unthrown spawning explosions";
-                return Nothing();
+                return None();
             });
         }
-
-        private static IEnumerator Nothing() { yield break; }
     }
 
     /// <summary>Notes which of its sets a Location kept (Location.Awake), for dice-sets.</summary>

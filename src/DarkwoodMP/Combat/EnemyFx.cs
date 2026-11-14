@@ -243,30 +243,24 @@ namespace DarkwoodMP.Combat
     {
         internal static System.Collections.IEnumerator Run()
         {
-            NetPlayerProxy p = null;
-            while (p == null)
-            {
-                foreach (var x in NetPlayerProxy.All.Values) if (x != null && x.Owner != Sync.PlayerSync.DummyId) p = x;
-                yield return null;
-            }
+            NetPlayerProxy p;
+            while ((p = AreaHitsTest.Joined()) == null) yield return null;
             yield return new WaitForSeconds(8f);
             if (p == null) yield break;
             var at = p.transform.position;
-            Character c = null;
-            foreach (var x in AllCharacters.Active())
-                if (x != null && x.alive && NetEnemies.Eligible(x) && (c == null || (x.transform.position - at).sqrMagnitude < (c.transform.position - at).sqrMagnitude)) c = x;
+            var c = AreaHitsTest.NearestEnemy(at);
             if (c != null)
             {
                 Plugin.Log.LogInfo($"--dwmp-test-blast: {c.name} screams as a banshee");
                 try { c.bansheeScream(); } catch (System.Exception e) { Plugin.Log.LogInfo($"--dwmp-test-blast: the scream failed here: {e.Message}"); }
             }
             Plugin.Log.LogInfo($"--dwmp-test-blast: the forest spirit's effect beside {p.OwnerName}");
-            try { Core.AddPooledPrefab("FX", "ForestSpirit_fastSpawnEff", at + new Vector3(100f, 0f, 0f), Quaternion.identity); }
+            try { Core.AddPooledPrefab("FX", EnemyPooledFxPatch.ForestSpirit, at + new Vector3(100f, 0f, 0f), Quaternion.identity); }
             catch (System.Exception e)
             {
                 // Chapter 1's FX pool hasn't got it: send it anyway, for the joiner's side of the message.
                 Plugin.Log.LogInfo($"--dwmp-test-blast: no such pooled effect here ({e.Message}): sent without the patch");
-                EnemyFx.SendPrefab(2, "ForestSpirit_fastSpawnEff", at + new Vector3(100f, 0f, 0f), 0f);
+                EnemyFx.SendPrefab(2, EnemyPooledFxPatch.ForestSpirit, at + new Vector3(100f, 0f, 0f), 0f);
             }
             yield return new WaitForSeconds(1f);
             var ctl = Singleton<Controller>.Instance;
@@ -306,17 +300,14 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Core), nameof(Core.AddPooledPrefab), new[] { typeof(string), typeof(string), typeof(Vector3), typeof(Quaternion) })]
     static class EnemyPooledFxPatch
     {
+        /// <summary>The one pooled FX effect enemies make (the forest spirit's teleport and spawn).</summary>
+        internal const string ForestSpirit = "ForestSpirit_fastSpawnEff";
+
         // A postfix: it isn't sent when the pool hasn't got it here (the call throws).
         static void Postfix(string pool, string prefab, Vector3 position, Transform __result)
         {
-            if (__result != null && pool == "FX" && prefab != null && EnemyFxNames.Pooled.Contains(prefab)) EnemyFx.SendPrefab(2, prefab, position, 0f);
+            if (__result != null && pool == "FX" && prefab == ForestSpirit) EnemyFx.SendPrefab(2, prefab, position, 0f);
         }
-    }
-
-    /// <summary>Pooled FX effects enemies make (the forest spirit's teleport and spawn).</summary>
-    static class EnemyFxNames
-    {
-        internal static readonly HashSet<string> Pooled = new HashSet<string> { "ForestSpirit_fastSpawnEff" };
     }
 
     /// <summary>Host: an enemy's animation switched its particle emitter (Character.modifyEmitter).</summary>

@@ -24,7 +24,8 @@ namespace DarkwoodMP.World
         private static tk2dTextMesh _line, _hint;
         private static bool _loggedTree;
         private static int _barFrame = -1;
-        private static UI _barUi, _shownUi;
+        private static UI _barUi, _shownUi, _tipUi;
+        private static Renderer _tip;     // the game's tip text's renderer in _tipUi's screen
         private static WorldGenerator _stageWg;
         private static bool _stageLoading;
         private static string _shotKey;
@@ -238,9 +239,6 @@ namespace DarkwoodMP.World
             if (p < 92f) return "Working out paths through the forest...";
             return "Bringing in characters and items...";
         }
-
-        private static UI _tipUi;
-        private static Renderer _tip;
 
         /// <summary>
         /// The game's tip along the top of the loading screen ("You are playing a challenging and unforgiving game.")

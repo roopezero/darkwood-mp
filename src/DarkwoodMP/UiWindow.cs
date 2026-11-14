@@ -318,15 +318,16 @@ namespace DarkwoodMP
             return Field(c[1], value, max, password, name);
         }
 
-        public static bool Check(Rect r, bool on, string text)
+        /// <summary>A check box with its label; when not enabled it can't be clicked and its label is dim.</summary>
+        public static bool Check(Rect r, bool on, string text, bool enabled = true)
         {
             float box = PixelFont.Line - 2 * S;
             var b = new Rect(r.x, r.y + (r.height - box) / 2, box, box);
-            bool hover = r.Contains(Event.current.mousePosition);
-            if (GUI.Button(r, GUIContent.none, MenuSkin.Plain)) on = !on;
+            bool hover = enabled && r.Contains(Event.current.mousePosition);
+            if (enabled && GUI.Button(r, GUIContent.none, MenuSkin.Plain)) on = !on;
             GUI.Box(b, GUIContent.none, MenuSkin.Sunken);
             if (on) GUI.Box(new Rect(b.x + 3 * S, b.y + 3 * S, b.width - 6 * S, b.height - 6 * S), GUIContent.none, MenuSkin.Line);
-            Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, hover ? MenuSkin.Bright : MenuSkin.Text);
+            Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text);
             return on;
         }
 

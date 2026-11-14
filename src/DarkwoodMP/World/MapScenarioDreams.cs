@@ -44,7 +44,7 @@ namespace DarkwoodMP.World
             if (D.dreaming) { D.outcome = ""; D.initiateEndDreaming(); r.Info = "ended our own dream"; }
             while (InDream) yield return new WaitForSeconds(0.5f);
             yield return new WaitForSeconds(2f);
-            r.Info = (r.Info ?? "not dreaming") + $"; at {P.transform.position.x:0} {P.transform.position.z:0}";
+            r.Info = (r.Info ?? "not dreaming") + $"; at {Fmt(P.transform.position)}";
         }
 
         /// <summary>"level-dream NAME" (host): a level brings the dream NAME, as SkillsMenu.confirmSkills starts it; wait until we're in it.</summary>
@@ -79,7 +79,7 @@ namespace DarkwoodMP.World
             AsPlayer(() => D.initiateEndDreaming());
             while (D.dreaming || D.switchingDream) yield return new WaitForSeconds(0.5f);
             yield return new WaitForSeconds(2f);
-            r.Info = $"back at {P.transform.position.x:0} {P.transform.position.z:0}; shared dream {DreamSync.Shared ?? "none"}";
+            r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
         }
 
         /// <summary>"back-from-dream" (client): the host's end ended ours.</summary>
@@ -87,7 +87,7 @@ namespace DarkwoodMP.World
         {
             while (D.dreaming || D.switchingDream) yield return new WaitForSeconds(0.5f);
             yield return new WaitForSeconds(2f);
-            r.Info = $"back at {P.transform.position.x:0} {P.transform.position.z:0}; shared dream {DreamSync.Shared ?? "none"}";
+            r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
             if (DreamSync.Shared != null) r.Fail($"still in a shared dream: {r.Info}");
         }
     }

@@ -65,11 +65,13 @@ namespace DarkwoodMP.Sync
         }
 
         /// <summary>Two players' bodies that close (flat distance) overlap or touch.</summary>
-        public static float Apart(Player p) => BodyRadius(p) * 2f + 10f;
+        public static float Apart(Player p) => Apart(BodyRadius(p));
+
+        private static float Apart(float radius) => radius * 2f + 10f;
 
         private static bool Free(Player p, Vector3 want, Vector3 at, float radius, List<Vector3> others, HashSet<Collider> background, bool gridHere)
         {
-            float apart = radius * 2f + 10f;
+            float apart = Apart(radius);
             foreach (var o in others)
                 if (new Vector2(o.x - at.x, o.z - at.z).magnitude < apart) return false;
 

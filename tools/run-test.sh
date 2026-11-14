@@ -9,7 +9,7 @@
 #
 # Items:
 #   a test name        (below)
-#   all                every scripted-peer test (the 25 of $ALL; not shots, options, map, map4)
+#   all                every scripted-peer test (the 25 of $ALL; not shots, options, drag, map, map4)
 #   full               all, then the full two-game map
 #   net combat world chars story menus authority      groups of scripted-peer tests (--list shows them)
 #   map                the full two-game scenario (tools/tests/map_scenario.py: every module in one world)
@@ -23,7 +23,7 @@
 # After each one: the game is sent back to its main menu, a client game stopped unless a map battery comes next,
 # leftover downloaded worlds removed from the mod's caches, and your saves compared with their hashes from the start.
 # At the end, a table: each item's result, time, first failure, its log, and the command that reruns it alone.
-#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, menu-entry, capture, host-world)
+#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world)
 #   RAN   no failure seen (no FAIL line, no time-out, no exception), but its printed lines are the result: read them
 #   SKIP  the test can't run here (steam without the Steam client): the reason is shown
 #   FAIL  a FAIL line, a time-out, an exception in Player.log, a failed step or differing dumps
@@ -79,6 +79,8 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 T="$ROOT/tools/tests"
+. "$ROOT/tools/lib.sh" # safe_rm, refuse_root
+refuse_root
 GAME_DIR="${GAME_DIR:-$HOME/.local/share/Steam/steamapps/common/Darkwood}"
 DATA="${DARKWOOD_DATA:-$HOME/.config/unity3d/Acid Wizard Studio/Darkwood}"
 SAVES="$DATA/1_4Save"
@@ -119,9 +121,9 @@ declare -A DESC=(
   [client-drop]="the host's connection closes: back to the main menu"
   [client-authority]="a refused action rolled back in our game"
   [map]="two games: every map module in one world, then their world states compared"
-  [map4]="five games: the host and four clients, near and far from each other, their world states compared"
+  [map4]="the host and MAP_CLIENTS client games (default 3), near and far from each other, their world states compared"
 )
-# Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots and options.
+# Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots, options and drag.
 declare -A GROUP=(
   [net]="handshake host-menu host-reload client-reload client-away client-drop steam"
   [combat]="host-combat host-elsewhere client-enemies"
@@ -202,15 +204,17 @@ if [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
   fi
 fi
 
-save_hash() { (cd "$SAVES" && find . -type f -exec sha256sum {} + | sort -k2); }
-BEFORE="$(save_hash)"
-rm -rf "$WORK/saves-backup"; cp -a "$SAVES" "$WORK/saves-backup" # just in case
-
-game_pid() { local p d; d="$(cd "$GAME_DIR" && pwd -P)"; for p in $(pgrep -x Darkwood.x86_64); do [ "$(readlink /proc/$p/cwd)" = "$d" ] && echo $p; done; }
-game_stop() { # stop the host game (not the client games) and wait until it has exited (at most 10 s)
-  local p i; p="$(game_pid)"; [ -n "$p" ] || return 0; kill $p
-  for i in $(seq 1 50); do [ -n "$(game_pid)" ] || return 0; sleep 0.2; done
+pids_in() { # pids_in DIR: the games running from folder DIR
+  local p d; d="$(cd "$1" 2>/dev/null && pwd -P)" || return 0
+  for p in $(pgrep -x Darkwood.x86_64); do [ "$(readlink /proc/$p/cwd)" = "$d" ] && echo $p; done
 }
+stop_in() { # stop_in DIR: stop the game running from DIR and wait until it has exited (at most 10 s)
+  local p i; p="$(pids_in "$1")"; [ -n "$p" ] || return 0; kill $p
+  for i in $(seq 1 50); do [ -n "$(pids_in "$1")" ] || return 0; sleep 0.2; done
+}
+game_pid() { pids_in "$GAME_DIR"; }
+game_stop() { stop_in "$GAME_DIR"; } # the host game, not the client games
+
 size() { stat -c %s "$1" 2>/dev/null || echo 0; }
 since() { tail -c +$(($2 + 1)) "$1" 2>/dev/null; } # since <file> <offset>: what was written to it during this test
 bg_until() { # bg_until <pattern> <seconds> <command...>: run a scripted player until the game logs <pattern>, then stop it
@@ -246,18 +250,15 @@ chome() { [ "$1" = 1 ] && echo "${CLIENT_HOME:-$HOME/.cache/darkwood-mp/client-h
 cctl() { echo $((27799 - $1)); }
 clog() { echo "$(cgame $1)/BepInEx/LogOutput.log"; }
 culog() { echo "$(chome $1)/.config/unity3d/Acid Wizard Studio/Darkwood/Player.log"; }
-client_pid() { local p d; d="$(cd "$(cgame $1)" 2>/dev/null && pwd -P)"; for p in $(pgrep -x Darkwood.x86_64); do [ "$(readlink /proc/$p/cwd)" = "$d" ] && echo $p; done; }
-client_game_stop() { # client_game_stop N
-  local p i; p="$(client_pid $1)"; [ -n "$p" ] || return 0; kill $p
-  for i in $(seq 1 50); do [ -n "$(client_pid $1)" ] || return 0; sleep 0.2; done
-}
+client_pid() { pids_in "$(cgame $1)"; }
+client_game_stop() { stop_in "$(cgame $1)"; } # client_game_stop N
 declare -A CULOG0 CLOG0
 client_game_start() { # client_game_start N <args...>: client game N, from its folder, taking commands on $(cctl N)
   local n=$1; shift
   client_game_stop $n
   local cg ch; cg="$(cgame $n)"; ch="$(chome $n)"
   CLIENT_GAME="$cg" CLIENT_HOME="$ch" GAME_DIR="$GAME_DIR" "$ROOT/tools/setup-client-game.sh" $n >/dev/null || die "couldn't set up client game $n"
-  rm -rf "$cg/BepInEx/cache/DarkwoodMP/worlds/"* "$(clog $n)"
+  safe_rm_in "$cg/BepInEx/cache/DarkwoodMP/worlds"; rm -f "$(clog $n)"
   mkdir -p "$(dirname "$(culog $n)")"; CULOG0[$n]=$(size "$(culog $n)"); CLOG0[$n]=0
   # The timeout is only a safety net (client_game_stop ends it): the full map scenario takes over an hour.
   (cd "$cg" && HOME="$ch" setsid timeout ${CLIENT_TIMEOUT:-7200} ./darkwood_mp.sh --inner --dwmp-test-control $(cctl $n) "$@" >"$WORK/client-game-$n.out" 2>&1 &) </dev/null >/dev/null 2>&1
@@ -266,7 +267,7 @@ client_join() { # client_join N <args...>: client game N joins with <args>: the 
   # first (it keeps running between map items), or a new one started with them
   local n=$1; shift
   if [ -z "${MAP_FRESH_CLIENT:-}" ] && [ -n "$(client_pid $n)" ] && [ "$($PY "$T/ctl.py" $(cctl $n) reset 2>&1)" = "" ]; then
-    rm -rf "$(cgame $n)/BepInEx/cache/DarkwoodMP/worlds/"*
+    safe_rm_in "$(cgame $n)/BepInEx/cache/DarkwoodMP/worlds"
     CULOG0[$n]=$(size "$(culog $n)"); CLOG0[$n]=$(size "$(clog $n)")
     echo "  (client game $n kept: back at its main menu, joining again)"
     $PY "$T/ctl.py" $(cctl $n) args "$@" || die "client game $n didn't take its arguments"
@@ -286,15 +287,37 @@ client_report() { # client_report N DIR: its log into DIR, what it refused, its 
   [ "$ex" = "0" ] && echo "  client game $n: no exceptions" || { echo "  CLIENT GAME $n EXCEPTIONS: $ex"; since "$(culog $n)" "${CULOG0[$n]:-0}" | grep -i -m3 -A6 exception; EXC=$((EXC + ex)); }
 }
 
+# A game this script didn't start may be yours, playing (and writing) your saves: stopping it would lose your
+# progress, and hashing the saves while it writes them gives a wrong baseline. Only the test's client games
+# (left over from a run that was cut off) may be running.
+for p in $(pgrep -x Darkwood.x86_64); do
+  d="$(readlink /proc/$p/cwd 2>/dev/null)"
+  for n in 1 2 3 4; do [ -n "$d" ] && [ "$d" = "$(cd "$(cgame $n)" 2>/dev/null && pwd -P)" ] && continue 2; done
+  echo "FAIL: Darkwood is running (process $p, in ${d:-a folder not readable here}): quit it first; the tests start and stop a game of their own"; exit 1
+done
+# A run whose test changed your saves left this marker: the backup in saves-backup is the copy from before that
+# run, and the next run would replace it with the changed saves.
+SAVES_CHANGED="$WORK/SAVES-CHANGED"
+case "$(realpath -m "$WORK")/" in "$(realpath -m "$SAVES")"/*) echo "FAIL: WORK=$WORK is inside your saves folder: pick another"; exit 1 ;; esac
+[ ! -e "$SAVES_CHANGED" ] || { echo "FAIL: a previous run changed your saves ($(cat "$SAVES_CHANGED" 2>/dev/null)). Their copy from before it is in $WORK/saves-backup: check your saves (restore them from that copy if they're wrong), then delete $SAVES_CHANGED to run the tests again."; exit 1; }
+copy_saves() { # copy_saves DEST: a fresh copy of the saves' contents in DEST (under $WORK), never a link to them
+  safe_rm "$WORK" "$1"
+  mkdir -p "$1" && cp -aL "$SAVES/." "$1/" || die "couldn't copy your saves to $1"
+  [ ! -L "$1" ] && [ "$(realpath "$1")" != "$(realpath "$SAVES")" ] || die "$1 is your saves folder itself, not a copy"
+}
+save_hash() { (cd "$SAVES" && find . -type f -exec sha256sum {} + | sort -k2); }
+BEFORE="$(save_hash)"
+copy_saves "$WORK/saves-backup" # just in case
+
 host() { # host <extra args...>: the game hosts a fresh copy of your save
-  rm -rf "$WORK/sandbox"; cp -a "$SAVES" "$WORK/sandbox"
+  copy_saves "$WORK/sandbox"
   ctl args --dwmp-host --dwmp-sandbox "$WORK/sandbox" --dwmp-continue 1 ${LOAD_SHOTS:+--dwmp-load-shots "$LOAD_SHOTS/host"} ${DWMP_ARGS:-} "$@"
   wait_log "loading your profile" 60
 }
 world_ready() { wait_log "World ready" 120; } # the host's world has loaded and players can join
 client() { # client <fake-host args...>: a scripted host on 27721; the game joins it
   [ -f "$WORK/world.pkl" ] || die "no $WORK/world.pkl: run 'capture' first"
-  rm -rf "$GAME_DIR/BepInEx/cache/DarkwoodMP/worlds/"*
+  safe_rm_in "$GAME_DIR/BepInEx/cache/DarkwoodMP/worlds"
   $PY "$T/worldtest.py" serve 27721 "$WORK/world.pkl" "$@" >"$WORK/serve.out" 2>&1 & local sp=$!
   sleep 0.5
   local extra=""; [ "${1:-}" = "--authority" ] && extra="--dwmp-test-client-actions"
@@ -303,18 +326,21 @@ client() { # client <fake-host args...>: a scripted host on 27721; the game join
   wait $sp; cat "$WORK/serve.out"
 }
 
-map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.py, results in DIR
-  local dir="$2" t0 rc
-  export MAP_SCENARIO="$1"
-  rm -rf "$dir"; mkdir -p "$dir"
-  echo "  scenario: $MAP_SCENARIO"
-  t0=$(date +%s)
-  ctl args --dwmp-host --dwmp-testworld --dwmp-reset --dwmp-debug-world
+test_world_up() { # test_world_up <extra args...>: the host plays a fresh test world and runs the pre-join steps
+  local t0; t0=$(date +%s)
+  ctl args --dwmp-host --dwmp-testworld --dwmp-reset --dwmp-debug-world "$@"
   wait_log "Test world: built" 150 || die "the test world wasn't built"
   since "$LOG" "$LOG0" | grep -o "Test world: built.*" | head -1
   echo "  phase: host's test world loaded and built in $(( $(date +%s) - t0 )) s"; t0=$(date +%s)
   $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
   echo "  phase: pre-join steps in $(( $(date +%s) - t0 )) s"
+}
+map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.py, results in DIR
+  local dir="$2" rc
+  export MAP_SCENARIO="$1"
+  safe_rm "$WORK" "$dir"; mkdir -p "$dir"
+  echo "  scenario: $MAP_SCENARIO"
+  test_world_up
   client_join 1 --dwmp-join 127.0.0.1:27720 --dwmp-debug-world
   $PY "$T/mapdriver.py" run $CTL $(cctl 1) "$dir"; rc=$?
   EXC=0; client_report 1 "$dir"
@@ -323,18 +349,35 @@ map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.
   [ $rc = 0 ] && [ "$EXC" = "0" ] && echo "  map: PASS" || echo "  map: FAIL (dumps and logs in $dir)"
 }
 
+server_up() { # whether the host's server still takes connections on 27720
+  $PY -c "import socket; socket.create_connection(('127.0.0.1', 27720), timeout=3); print('the server still takes connections')" 2>/dev/null || echo "the server has stopped"
+}
 exceptions() { # the host game's new exceptions in Player.log since the test began
   local ex; ex="$(since "$ULOG" "$ULOG0" | grep -ci exception)"
   [ "$ex" = "0" ] && echo "  no exceptions" || { echo "  EXCEPTIONS: $ex"; since "$ULOG" "$ULOG0" | grep -i -m3 -A6 exception; }
 }
 saves_check() {
-  [ "$(save_hash)" = "$BEFORE" ] && echo "  your saves: unchanged" || die "YOUR SAVES CHANGED: they're backed up as they were before the tests in $WORK/saves-backup"
+  [ "$(save_hash)" = "$BEFORE" ] && echo "  your saves: unchanged" && return
+  echo "$(date '+%F %T'), in test $t" >"$SAVES_CHANGED"
+  die "YOUR SAVES CHANGED: they're backed up as they were before the tests in $WORK/saves-backup (the next run refuses to start until you delete $SAVES_CHANGED)"
+}
+# The options test changes your real game settings (Unity's prefs file, as the host game runs with your HOME) and
+# puts them back itself, unless it is cut short. The file is copied before it and, with the game stopped (Unity
+# writes the file when it quits), put back after it if it changed.
+PREFS="$DATA/prefs"
+prefs_backup() { rm -f "$WORK/prefs-backup"; [ ! -f "$PREFS" ] || cp -p "$PREFS" "$WORK/prefs-backup"; }
+prefs_restore() {
+  [ -f "$WORK/prefs-backup" ] || { echo "  your game settings: there was no prefs file before the test, nothing to put back"; return; }
+  game_stop
+  game_alive && { echo "  FAIL: the game didn't stop, so your game settings weren't checked: the copy from before the test is $WORK/prefs-backup"; return; }
+  if cmp -s "$PREFS" "$WORK/prefs-backup"; then echo "  your game settings: unchanged"
+  else cp -p "$WORK/prefs-backup" "$PREFS" && echo "  your game settings: put back as they were before the test (the game is started again)"; fi
 }
 leftovers() { # downloaded worlds left in the mod's caches (host game and client game 1): listed, then removed
   local d n
   for d in "$GAME_DIR/BepInEx/cache/DarkwoodMP/worlds" "$(cgame 1)/BepInEx/cache/DarkwoodMP/worlds"; do
     n=$(ls -A "$d" 2>/dev/null | wc -l)
-    [ "$n" = 0 ] || { echo "  cleanup: $n downloaded world(s) left in $d, removed"; rm -rf "$d/"*; }
+    [ "$n" = 0 ] || { echo "  cleanup: $n downloaded world(s) left in $d, removed"; safe_rm_in "$d"; }
   done
 }
 
@@ -393,7 +436,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       host --dwmp-test-menu 10; world_ready
       $PY "$T/combattest.py" 27720 6057 350 60 | grep -E "HostAway|closed"
       sleep 4
-      $PY -c "import socket; socket.create_connection(('127.0.0.1', 27720), timeout=3); print('the server still takes connections')" 2>/dev/null || echo "the server has stopped"
+      server_up
       mod_log "test-menu|server stops" ;;
     host-chapter)
       host --dwmp-test-chapter --dwmp-debug-world; world_ready
@@ -407,14 +450,14 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       host --dwmp-test-end 5; world_ready
       $PY "$T/combattest.py" 27720 6057 350 60 end | grep -E "GameEnd|HostAway|closed|played"
       sleep 3
-      $PY -c "import socket; socket.create_connection(('127.0.0.1', 27720), timeout=3); print('the server still takes connections')" 2>/dev/null || echo "the server has stopped"
+      server_up
       mod_log "test-end|game's end|server" ;;
     host-authority)
       host --dwmp-dummy --dwmp-spawn DogMutated --dwmp-debug-world; wait_log "dwmp-spawn:" 60
       $PY "$T/authtest.py" 27720
       mod_log "authority\\]" ;;
     menu-entry)
-      rm -rf "$WORK/shots"; mkdir -p "$WORK/shots"
+      safe_rm "$WORK" "$WORK/shots"; mkdir -p "$WORK/shots"
       ctl args --dwmp-test-menu-entry --dwmp-shots "$WORK/shots"
       wait_log "main menu: clicked" 30
       host --dwmp-test-menu-entry --dwmp-shots "$WORK/shots"
@@ -422,7 +465,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       mod_log "menu-entry\\]"
       [ "$(since "$LOG" "$LOG0" | grep -c 'clicked, panel open: True')" -ge 2 ] || die "the menu entry didn't open the panel" ;;
     options)
-      rm -rf "$WORK/options"; mkdir -p "$WORK/options"
+      safe_rm "$WORK" "$WORK/options"; mkdir -p "$WORK/options"
       L1=$LOG0
       ctl args --dwmp-test-options "$WORK/options"
       wait_log "\[options\] done" 240
@@ -438,7 +481,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       mod_log "\[drag\]"
       mod_log "\[drag\] done: all passed" | grep -q . || die "the drag test failed (see the lines above)" ;;
     shots)
-      rm -rf "$WORK/shots"; host --dwmp-shots "$WORK/shots"; world_ready
+      safe_rm "$WORK" "$WORK/shots"; host --dwmp-shots "$WORK/shots"; world_ready
       bg_until "shots\] done" 60 $PY "$T/combattest.py" 27720 6057 350 60 >/dev/null
       ls "$WORK/shots" ;;
     steam)
@@ -475,16 +518,13 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       wait_log "Back at the main menu after the ending" 150
       mod_log "game's end|ending|epilogue|end screen|credits|main menu" ;;
     map4)
-      rm -rf "$WORK/map4"; mkdir -p "$WORK/map4"
+      safe_rm "$WORK" "$WORK/map4"; mkdir -p "$WORK/map4"
       export MAP_SCENARIO="${MAP_SCENARIO:-map4_scenario}" MAP_CLIENTS="${MAP_CLIENTS:-3}"
       echo "  scenario: $MAP_SCENARIO, $MAP_CLIENTS client games"
       # The mod takes 5 players, the host included; more clients than that need --dwmp-max-players (tests only).
       MAXP=""; [ "$MAP_CLIENTS" -gt 4 ] && MAXP="--dwmp-max-players $((MAP_CLIENTS + 1))"
       # Several games on one machine: small windows; the clients at the lowest quality and 30 frames a second.
-      ctl args --dwmp-host --dwmp-testworld --dwmp-reset --dwmp-debug-world --dwmp-window 960x540 $MAXP
-      wait_log "Test world: built" 150 || die "the test world wasn't built"
-      since "$LOG" "$LOG0" | grep -o "Test world: built.*" | head -1
-      $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
+      test_world_up --dwmp-window 960x540 $MAXP
       # A memory sample every 10 s while it runs: RSS of every game, and what's available.
       ( while :; do echo "$(date +%T) $(free -m | awk '/^Mem/{print "avail", $7}') $(free -m | awk '/^Swap/{print "swapused", $3}') $(ps -o rss= -p $(pgrep -x Darkwood.x86_64 | tr '\n' ',' | sed 's/,$//') 2>/dev/null | tr '\n' ' ')"; sleep 10; done ) >"$WORK/map4/memory.log" 2>&1 & MEMP=$!
       # One at a time: each client's world loaded before the next starts (the host sends each its save).
@@ -524,11 +564,12 @@ watchdog() {
     now="$(game_pid; for n in 1 2 3 4; do client_pid $n; done)"; [ -n "$now" ] && seen="$(echo $seen $now | tr ' ' '\n' | sort -u)"
     sleep 1
   done
-  for p in $seen; do d="$(readlink /proc/$p/cwd 2>/dev/null)" || continue
-    case "$d" in "$(cd "$GAME_DIR" && pwd -P)"|"$HOME/.cache/darkwood-mp/client-game"*) kill $p 2>/dev/null && echo "$(date +%T) run-test.sh had ended: stopped game $p in $d" >>"$WORK/watchdog.log" ;; esac
+  now=" $( { game_pid; for n in 1 2 3 4; do client_pid $n; done; } | tr '\n' ' ')"
+  for p in $seen; do [[ "$now" == *" $p "* ]] || continue; d="$(readlink /proc/$p/cwd 2>/dev/null)"
+    kill $p 2>/dev/null && echo "$(date +%T) run-test.sh had ended: stopped game $p in $d" >>"$WORK/watchdog.log"
   done
 }
-export RUNNER=$$ GAME_DIR WORK; export -f watchdog game_pid client_pid cgame
+export RUNNER=$$ GAME_DIR WORK; export -f watchdog pids_in game_pid client_pid cgame
 setsid bash -c watchdog </dev/null >/dev/null 2>&1 &
 echo "Running $TOTAL: ${ITEMS[*]}"
 game_start
@@ -542,8 +583,10 @@ for t in "${ITEMS[@]}"; do
   ctl title "Test ($N/$TOTAL): $t - $desc"
   ctl reset || { echo "  (no clean main menu: starting the game again)"; game_start; ctl title "Test ($N/$TOTAL): $t - $desc"; }
   LOG0=$(size "$LOG"); ULOG0=$(size "$ULOG")
+  [ "$t" = options ] && prefs_backup
   ( run_body "$t" ) 2>&1 | tee "$out"; rc=${PIPESTATUS[0]}
   exceptions 2>&1 | tee -a "$out"
+  [ "$t" = options ] && prefs_restore 2>&1 | tee -a "$out"
   # Cleanup: the game back at its main menu; the client game stopped unless the next item is a map one too.
   next="${ITEMS[$N]:-}"
   if ! game_alive; then echo "  cleanup: the game had stopped (it is started again for the next test)" | tee -a "$out"

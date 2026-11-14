@@ -26,8 +26,6 @@ namespace DarkwoodMP.World
     public static class InfectionSync
     {
         private static Session S => Session.Instance;
-        private static readonly System.Random _rng = new System.Random();
-        private static long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
 
         private struct Patch { public ObjRef Ref; public float X, Z; }
         private static readonly List<Patch> _cleared = new List<Patch>();
@@ -84,7 +82,7 @@ namespace DarkwoodMP.World
                 var inf = Find(p);
                 if (inf == null || inf.disappearing) continue;
                 // A client's player clears only what its burning weapon reached.
-                if (s.IsHost && Authority.Handling && !Authority.Near(from, inf.transform.position, WorldActions.Reach)) continue;
+                if (s.IsHost && !Authority.Near(from, inf.transform.position, WorldActions.Reach)) continue;
                 WorldActions.Replaying = true;
                 try { Clear(inf); }
                 catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't clear infection {p.Ref}: {e.Message}"); }
@@ -92,7 +90,7 @@ namespace DarkwoodMP.World
                 done.Add(p);
             }
             Plugin.Log.LogInfo($"[world] infection cleared: {done.Count} (from {s.NameOf(from)})" + (done.Count < n ? $", {n - done.Count} not here, already gone or out of reach" : ""));
-            if (s.IsHost && Authority.Handling && done.Count == 0 && n > 0) { Authority.Refuse("none of that infection is within their reach"); return; }
+            if (s.IsHost && done.Count == 0 && n > 0) { Authority.Refuse("none of that infection is within their reach"); return; }
             if (s.IsHost && done.Count > 0)
             {
                 var w = s.Begin(MsgType.InfectionCleared);
@@ -130,13 +128,13 @@ namespace DarkwoodMP.World
         /// <summary>Host: a new patch was made by the world (spread or a spider): send it.</summary>
         internal static void Spawned(Infection inf)
         {
-            long id = NewId();
+            long id = HostIds.NewId();
             ObjRef.RegisterSpawned(id, inf.gameObject);
             var parent = inf.transform.parent != null ? ObjRef.Of(inf.transform.parent.gameObject) : default;
             var p = inf.transform.position;
             var w = S.Begin(MsgType.InfectionSpawned);
             w.W.Write(id);
-            w.W.Write(p.x); w.W.Write(p.y); w.W.Write(p.z);
+            w.Write(p);
             parent.Write(w);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent infection spawned Spawned:{id} at {p}");
             S.Broadcast(w, Channel.Control, reliable: true);
@@ -147,7 +145,7 @@ namespace DarkwoodMP.World
             var s = S;
             if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
             long id = r.R.ReadInt64();
-            var pos = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var pos = r.ReadVector3();
             var parentRef = ObjRef.Read(r);
             if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null) return;
             var parent = parentRef.Valid ? ObjRef.Resolve<Transform>(parentRef) : null;
@@ -185,15 +183,15 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Infection), "spawnInfection")]
     static class InfectionSpreadPatch
     {
-        static bool Prefix()
+        static bool Prefix(out bool __state)
         {
-            if (NetEnemies.ClientMode) return false;
-            InfectionSync.Growing++;
-            return true;
+            __state = !NetEnemies.ClientMode;
+            if (__state) InfectionSync.Growing++;
+            return __state;
         }
-        static System.Exception Finalizer(System.Exception __exception)
+        static System.Exception Finalizer(System.Exception __exception, bool __state)
         {
-            if (!NetEnemies.ClientMode && InfectionSync.Growing > 0) InfectionSync.Growing--;
+            if (__state && InfectionSync.Growing > 0) InfectionSync.Growing--;
             return __exception;
         }
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -30,12 +31,13 @@ namespace DarkwoodMP
         public static string Title { get; private set; }
 
         private static Plugin _plugin;
-        private static readonly ConcurrentQueue<(string line, StreamWriter reply)> _commands = new ConcurrentQueue<(string, StreamWriter)>();
+        private static readonly ConcurrentQueue<(string line, ReplyWriter reply)> _commands = new ConcurrentQueue<(string, ReplyWriter)>();
         private static bool _busy;
 
         public static void Start(Plugin plugin, int port)
         {
             _plugin = plugin;
+            plugin.PatchTestOnly();
             var listener = new TcpListener(IPAddress.Loopback, port);
             listener.Start();
             Plugin.Log.LogInfo($"Test control on 127.0.0.1:{port}");
@@ -78,8 +80,9 @@ namespace DarkwoodMP
         {
             private readonly StreamWriter _to;
             private readonly ManualResetEventSlim _done;
+            public bool Sent { get; private set; }
             public ReplyWriter(StreamWriter to, ManualResetEventSlim done) : base(Stream.Null) { _to = to; _done = done; }
-            public override void WriteLine(string value) { try { _to.WriteLine(value); } catch { } _done.Set(); }
+            public override void WriteLine(string value) { Sent = true; try { _to.WriteLine(value); } catch { } _done.Set(); }
         }
 
         /// <summary>Called every frame (Plugin.Update): runs the commands that came in, one at a time.</summary>
@@ -88,57 +91,63 @@ namespace DarkwoodMP
             if (_busy || !_commands.TryDequeue(out var cmd)) return;
             var words = cmd.line.Split('\t');
             Plugin.Log.LogInfo($"[test control] {cmd.line.Replace('\t', ' ')}");
+            try { Run(words, cmd.reply); }
+            catch (Exception e)
+            {
+                // Without a reply the connection's thread waits for ever, and a set _busy stops every later command.
+                Plugin.Log.LogWarning($"[test control] {words[0]}: {e}");
+                _busy = false;
+                if (!cmd.reply.Sent) cmd.reply.WriteLine($"fail {e.GetType().Name}: {e.Message}".Replace("\r", " ").Replace("\n", " "));
+            }
+        }
+
+        private static void Run(string[] words, StreamWriter reply)
+        {
             switch (words[0])
             {
                 case "title":
                     Title = words.Length > 1 ? string.Join(" ", words, 1, words.Length - 1) : null;
-                    cmd.reply.WriteLine("ok");
+                    reply.WriteLine("ok");
                     break;
                 case "reset":
                     _busy = true;
-                    _plugin.StartCoroutine(Reset(cmd.reply));
+                    _plugin.StartCoroutine(Reset(reply));
                     break;
                 case "args":
-                    var args = new string[words.Length - 1];
-                    Array.Copy(words, 1, args, 0, args.Length);
-                    _plugin.ApplyTestArgs(args);
-                    cmd.reply.WriteLine("ok");
+                    _plugin.ApplyTestArgs(words.Skip(1).ToArray());
+                    reply.WriteLine("ok");
                     break;
                 case "do":
-                    if (words.Length < 2) { cmd.reply.WriteLine("fail usage: do STEP ARG..."); break; }
+                    if (words.Length < 2) { reply.WriteLine("fail usage: do STEP ARG..."); break; }
                     _busy = true;
-                    var stepArgs = new string[words.Length - 2];
-                    Array.Copy(words, 2, stepArgs, 0, stepArgs.Length);
-                    var doReply = cmd.reply;
-                    _plugin.StartCoroutine(MapScenario.Run(words[1], stepArgs, line => { _busy = false; doReply.WriteLine(line); }));
+                    var doReply = reply;
+                    _plugin.StartCoroutine(MapScenario.Run(words[1], words.Skip(2).ToArray(), line => { _busy = false; doReply.WriteLine(line); }));
                     break;
                 case "dump":
                     try
                     {
                         if (words.Length < 2) throw new ArgumentException("usage: dump PATH [X Z R]");
                         Vector3? at = null; float radius = StateDump.DefaultRadius;
-                        if (words.Length >= 4) at = new Vector3(F(words[2]), 0f, F(words[3]));
-                        if (words.Length >= 5) radius = F(words[4]);
-                        cmd.reply.WriteLine("ok " + StateDump.Write(words[1], at, radius));
+                        if (words.Length >= 4) at = new Vector3(MapScenario.F(words[2]), 0f, MapScenario.F(words[3]));
+                        if (words.Length >= 5) radius = MapScenario.F(words[4]);
+                        reply.WriteLine("ok " + StateDump.Write(words[1], at, radius));
                     }
-                    catch (Exception e) { Plugin.Log.LogWarning($"[test control] dump: {e}"); cmd.reply.WriteLine($"fail {e.GetType().Name}: {e.Message}"); }
+                    catch (Exception e) { Plugin.Log.LogWarning($"[test control] dump: {e}"); reply.WriteLine($"fail {e.GetType().Name}: {e.Message}"); }
                     break;
                 case "wait":
                     _busy = true;
-                    _plugin.StartCoroutine(Wait(words.Length > 1 ? words[1] : "", words.Length > 2 ? F(words[2]) : 60f,
-                        words.Length > 3 && int.TryParse(words[3], out int n) ? n : 1, cmd.reply));
+                    _plugin.StartCoroutine(Wait(words.Length > 1 ? words[1] : "", words.Length > 2 ? MapScenario.F(words[2]) : 60f,
+                        words.Length > 3 && int.TryParse(words[3], out int n) ? n : 1, reply));
                     break;
                 case "quit":
-                    cmd.reply.WriteLine("ok");
+                    reply.WriteLine("ok");
                     Application.Quit();
                     break;
                 default:
-                    cmd.reply.WriteLine($"error: unknown command {words[0]}");
+                    reply.WriteLine($"error: unknown command {words[0]}");
                     break;
             }
         }
-
-        private static float F(string s) => float.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
 
         /// <summary>Wait for something to happen in this game ("wait EVENT SECS").</summary>
         private static IEnumerator Wait(string what, float secs, int count, StreamWriter reply)
@@ -177,14 +186,19 @@ namespace DarkwoodMP
         /// <summary>Back to a clean main menu: the last test stopped, its session left, its world closed.</summary>
         private static IEnumerator Reset(StreamWriter reply)
         {
-            _plugin.StopTests();
+            try { _plugin.StopTests(); }
+            catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
             // A world still loading is let finish first: leaving in the middle of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 90f;
             while (!WorldShare.InWorld && !WorldShare.MainMenuReady() && Time.realtimeSinceStartup < until) yield return null;
             if (WorldShare.InWorld)
             {
-                if (Core.mainMenu) Singleton<MainMenu>.Instance.close(); // the pause menu
-                Core.returnToMainMenu();
+                try
+                {
+                    if (Core.mainMenu) Singleton<MainMenu>.Instance.close(); // the pause menu
+                    Core.returnToMainMenu();
+                }
+                catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
                 yield return null;
             }
             until = Time.realtimeSinceStartup + 90f;

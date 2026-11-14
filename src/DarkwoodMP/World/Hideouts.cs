@@ -30,7 +30,6 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
         private static bool Debug => WorldActions.Debug;
-        private static readonly System.Random _rng = new System.Random();
 
         /// <summary>Host: each joiner's own oven, as far as the host knows.</summary>
         private static readonly Dictionary<ulong, ExperienceMachine> _ovens = new Dictionary<ulong, ExperienceMachine>();
@@ -57,9 +56,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
-
-        internal static Location HideoutById(int id)
+        private static Location HideoutById(int id)
         {
             if (id <= 0) return null;
             foreach (var loc in Object.FindObjectsOfType<Location>())
@@ -113,15 +110,16 @@ namespace DarkwoodMP.World
             var proxy = Authority.Requester;
             if (proxy == null) { Authority.Refuse("where they are isn't known yet"); return; }
             var dest = NightSpawns.BigLocationAt(proxy.transform.position);
-            if (Why(HideoutById(hid), dest) is string why) { Authority.Refuse(why); return; }
-            Deliver(HideoutById(hid), dest);
+            var src = HideoutById(hid);
+            if (Why(src, dest) is string why) { Authority.Refuse(why); return; }
+            Deliver(src, dest);
         }
 
         /// <summary>Host: the body of transportAllItemsToCurrentHideout, delivering to dest, then tell everyone.</summary>
         internal static void Deliver(Location src, Location dest)
         {
             var slots = new List<InvSlot>(src.getAllInvSlots()); // empties src's unlocked containers
-            long id = NewId(), spawnerId = NewId();
+            long id = HostIds.NewId(), spawnerId = HostIds.NewId();
             var inv = MakePackage(dest, id);
             Inventory.moveSlots(slots, inv.slots);
             foreach (var item in inv.getAllItems("alcohol"))
@@ -281,10 +279,7 @@ namespace DarkwoodMP.World
                 return false;
             }
             // Client: lit here at once; the host says whether the old one goes out.
-            var w = s.Begin(MsgType.OvenLit);
-            ObjRef.Of(machine.gameObject).Write(w);
-            (prev != null ? ObjRef.Of(prev.gameObject) : default).Write(w);
-            Authority.Request(w, $"light the oven {machine.name}", (ok, reason, result) =>
+            Authority.Request(BeginOven(machine, prev), $"light the oven {machine.name}", (ok, reason, result) =>
             {
                 if (ok || machine == null) return;
                 if (!wasOn) machine.disable();
@@ -307,11 +302,18 @@ namespace DarkwoodMP.World
             return prev;
         }
 
-        private static void SendOven(ExperienceMachine lit, ExperienceMachine putOut)
+        /// <summary>OvenLit: the lit oven, then the one that goes out (an empty ref for none).</summary>
+        private static PacketWriter BeginOven(ExperienceMachine lit, ExperienceMachine other)
         {
             var w = S.Begin(MsgType.OvenLit);
             ObjRef.Of(lit.gameObject).Write(w);
-            (putOut != null ? ObjRef.Of(putOut.gameObject) : default).Write(w);
+            (other != null ? ObjRef.Of(other.gameObject) : default).Write(w);
+            return w;
+        }
+
+        private static void SendOven(ExperienceMachine lit, ExperienceMachine putOut)
+        {
+            var w = BeginOven(lit, putOut);
             if (Debug) Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + (putOut != null ? $", {putOut.name} out" : ""));
             S.Broadcast(w, Channel.Control, reliable: true);
         }

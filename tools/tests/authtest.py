@@ -8,7 +8,7 @@ for a refused one, first the state to roll back to (ObjState). Movement isn't a 
 fast is put back (PlayerCorrection)."""
 import json, socket, struct, sys, time
 sys.path.insert(0, sys.argv[0].rsplit("/", 1)[0])
-from worldtest import Reader, ask, frame, hello, rstr, s16
+from worldtest import Reader, ask, frame, hello, player_state, rstr, s16
 
 PORT = int(sys.argv[1])
 DOOR, TRAP, WARDROBE = 18933, 18924, 18914  # in profile 1's save, near the spawn (see host-world)
@@ -46,7 +46,7 @@ pos = None
 def state(x, z):
     global pos
     pos = (x, z)
-    s.sendall(frame(bytes([10]) + struct.pack("<Q", my_id) + struct.pack("<fff", x, 16.0, z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([1]) + s16("") + s16("") + bytes([0, 0, 100]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<f", 0)))
+    s.sendall(player_state(my_id, x, 16.0, z))
 
 def pump(secs, until=None):
     """Read messages for up to secs; returns the first one until(m) accepts (or None)."""
@@ -74,7 +74,8 @@ def pump(secs, until=None):
             if kind == 4: extra += f" health {struct.unpack_from('<i', m, 12)[0]}"
             print(f"  ObjState {k}:{oid} {desc}{extra}", flush=True)
         elif t == 43:
-            print(f"  PlayerCorrection to {struct.unpack_from('<fff', m, 1)[0]:.0f},{struct.unpack_from('<fff', m, 1)[2]:.0f}", flush=True)
+            cx, _, cz = struct.unpack_from("<fff", m, 1)
+            print(f"  PlayerCorrection to {cx:.0f},{cz:.0f}", flush=True)
         elif t == 38:
             k, oid = m[1], struct.unpack_from("<q", m, 2)[0]; slot = struct.unpack_from("<H", m, 10)[0]
             print(f"  ContainerSlotRefused {k}:{oid} slot {slot}", flush=True)

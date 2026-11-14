@@ -39,7 +39,7 @@ namespace DarkwoodMP
                     Body = DrawBody,
                     Footer = DrawButtons,
                     FooterHeight = 13 + 8,
-                    OnClose = () => Answer(false),
+                    OnClose = Closed,
                 };
             }
             _win.Title = title ?? "";
@@ -57,12 +57,15 @@ namespace DarkwoodMP
         /// <summary>Choose an answer, as the buttons do (for the tests).</summary>
         public static void Choose(bool yes) { if (Open) Answer(yes); }
 
+        // The close box answers No.
+        private static void Closed() => Answer(false);
+
         private static void Answer(bool yes)
         {
             var act = yes ? _onYes : _onNo;
             _onYes = _onNo = null;
             _deadline = 0f;
-            if (_win.Open) { _win.OnClose = null; _win.Close(); _win.OnClose = () => Answer(false); }
+            if (_win.Open) { _win.OnClose = null; _win.Close(); _win.OnClose = Closed; }
             _pending = act;
             Plugin.Log.LogInfo($"[confirm] answered {(yes ? "yes" : "no")}: {_win.Title}");
         }

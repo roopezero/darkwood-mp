@@ -32,8 +32,10 @@ namespace DarkwoodMP.World
 
         private static ulong _watching;
         private static readonly Dictionary<ulong, float> _lastAlive = new Dictionary<ulong, float>();
-        private static Collider[] _colliders;
         private static Rigidbody _body;
+
+        private static readonly AccessTools.FieldRef<Player, Light2D> FovLight = AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
+        private static readonly AccessTools.FieldRef<Player, float> CurrentFov = AccessTools.FieldRefAccess<Player, float>("currentFOV");
 
         /// <summary>The view cone as it was when spectating began, put back when it ends (NaN: not changed).</summary>
         private static float _coneLight = float.NaN, _coneLogic, _currentFov;
@@ -49,17 +51,16 @@ namespace DarkwoodMP.World
         internal static void AllAround(Player p)
         {
             if (p == null || p.FOVLogic == null) return;
-            var light = Traverse.Create(p).Field<Light2D>("FOVLight").Value;
-            var fov = Traverse.Create(p).Field<float>("currentFOV");
+            var light = FovLight(p);
             if (float.IsNaN(_coneLight))
             {
                 _coneLight = light != null ? light.LightConeAngle : p.FOVLogic.LightConeAngle;
                 _coneLogic = p.FOVLogic.LightConeAngle;
-                _currentFov = fov.Value;
+                _currentFov = CurrentFov(p);
             }
             if (light != null && light.LightConeAngle < 360f) light.LightConeAngle = 360f;
             if (p.FOVLogic.LightConeAngle < 360f) p.FOVLogic.LightConeAngle = 360f;
-            fov.Value = 370f;
+            CurrentFov(p) = 370f;
         }
 
         private static void RestoreCone()
@@ -68,10 +69,10 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             if (p != null && p.FOVLogic != null)
             {
-                var light = Traverse.Create(p).Field<Light2D>("FOVLight").Value;
+                var light = FovLight(p);
                 if (light != null) light.LightConeAngle = _coneLight;
                 p.FOVLogic.LightConeAngle = _coneLogic;
-                Traverse.Create(p).Field<float>("currentFOV").Value = _currentFov;
+                CurrentFov(p) = _currentFov;
             }
             _coneLight = float.NaN;
         }
@@ -87,8 +88,8 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             if (p == null || p.FOVLogic == null) return (-1f, -1f, -1f);
-            var light = Traverse.Create(p).Field<Light2D>("FOVLight").Value;
-            return (light != null ? light.LightConeAngle : -1f, p.FOVLogic.LightConeAngle, Traverse.Create(p).Field<float>("currentFOV").Value);
+            var light = FovLight(p);
+            return (light != null ? light.LightConeAngle : -1f, p.FOVLogic.LightConeAngle, CurrentFov(p));
         }
 
         /// <summary>
@@ -174,10 +175,7 @@ namespace DarkwoodMP.World
 
             // The dead character follows the camera, touching nothing.
             if (player != null)
-            {
-                _colliders = player.GetComponentsInChildren<Collider>();
-                foreach (var c in _colliders) if (c != null) c.enabled = false;
-            }
+                foreach (var c in player.GetComponentsInChildren<Collider>()) if (c != null) c.enabled = false;
             _body = player != null ? player.GetComponent<Rigidbody>() : null;
             Plugin.Notice("You died. Watching the others: click to switch.");
             Plugin.Instance.StartCoroutine(Run());
@@ -246,7 +244,6 @@ namespace DarkwoodMP.World
             Active = false;
             AllowPermadeath = false;
             _lastAlive.Clear();
-            _colliders = null;
             _body = null;
         }
 
@@ -267,10 +264,8 @@ namespace DarkwoodMP.World
         static bool Prefix(ref IEnumerator __result)
         {
             if (!Spectator.TryBegin()) return true;
-            __result = Nothing();
+            __result = ScriptedEvents.Nothing();
             return false;
         }
-
-        private static IEnumerator Nothing() { yield break; }
     }
 }

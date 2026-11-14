@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using HarmonyLib;
@@ -131,13 +130,11 @@ namespace DarkwoodMP.World
             });
         }
 
-        private static IEnumerator Nothing() { yield break; }
-        private static IEnumerator Real(float s) { yield return new WaitForSecondsRealtime(s); }
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
+        private static IEnumerator Nothing() => MapScenarioIssues.Nothing();
         private static List<string> LogSince(int mark) => MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).ToList();
-
-        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
-            StateDump.All<T>().Where(ok).OrderBy(t => StateDump.Flat(t.transform.position - to)).FirstOrDefault();
+        /// <summary>The log lines since `mark` that say something was refused (not this test's own [map] lines).</summary>
+        private static List<string> Refused(int mark) => LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component => MapScenarioIssues.NearestAll(to, ok);
 
         private static GameObject Place(string prefab, Vector3 at, bool save = true)
         {
@@ -212,7 +209,8 @@ namespace DarkwoodMP.World
 
         // ---- 11 dreams ----------------------------------------------------------------------------------------
 
-        private static int _noted;
+        private static int _noted;      // clock-note's minute
+        private static int _dreamTime;  // the dream's minute, from "dream start"
 
         /// <summary>"dream start|end": as if our player went into a dream (Dreams.startDreaming: the world's time kept in
         /// timeCopy, the clock showing the dream's, 5 hours on) or woke (endDreaming: the clock back to timeCopy). A
@@ -241,14 +239,13 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(0.5f);
         }
-        private static int _dreamTime;
 
         /// <summary>"clock-check noted|dream [SECS]": after SECS (3) real seconds, our clock is still the minute
         /// noted with clock-note (within 3: the host's world clock stood still while it dreamed), or still our dream's.</summary>
         private static IEnumerator ClockCheck(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
-            float secs = a.Length > 1 ? float.Parse(a[1], CultureInfo.InvariantCulture) : 3f;
+            float secs = a.Length > 1 ? F(a[1]) : 3f;
             yield return new WaitForSecondsRealtime(secs);
             int want = a.Length > 0 && a[0] == "dream" ? _dreamTime : _noted;
             int off = Math.Abs(((c.CurrentTime - want) % 1440 + 1440 + 720) % 1440 - 720);
@@ -526,7 +523,7 @@ namespace DarkwoodMP.World
             float d1 = InvItemClass.isNull(slot.invItem) ? -1f : slot.invItem.durability;
             yield return new WaitForSecondsRealtime(1.5f); // a few of Containers' looks at the open slots
             var sent = LogSince(mark).Where(l => l.Contains($"slot(s) of {inv.name}") && l.Contains("sent") && !l.Contains("[map]")).ToList();
-            var refused = LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+            var refused = Refused(mark);
             r.Info = $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} in {calls} refreshes";
             if (d1 < 0f || d1 >= d0) { r.Fail($"it didn't rot: {r.Info}"); p.openedItemInventory = null; yield break; }
             if (sent.Count > 0) r.Fail($"the rot was sent as our change: {sent[0].Trim()}; {r.Info}");
@@ -537,7 +534,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(2f);
             p.openedItemInventory = null;
             yield return new WaitForSecondsRealtime(0.5f);
-            refused = LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+            refused = Refused(mark);
             int carried1 = p.Inventory.slots.Concat(p.Hotbar.slots).Count(x => x != null && !InvItemClass.isNull(x.invItem) && x.invItem.type == food);
             r.Info += $"; carried {carried0} -> {carried1}";
             if (refused.Count > 0) r.Fail($"the take was refused: {refused[0].Trim()}; {r.Info}");
@@ -621,7 +618,7 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             AsPlayer(() => cp.getHit(dmg, p.transform, seg));
             yield return new WaitForSecondsRealtime(1.5f);
-            var refused = LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+            var refused = Refused(mark);
             r.Info = $"hit {dmg:0}: health {cp.health:0}, attached {cp.attached}";
             if (refused.Count > 0) r.Fail($"refused: {refused[0].Trim()}");
         }
@@ -633,7 +630,7 @@ namespace DarkwoodMP.World
             var cp = Vine();
             if (cp == null) { r.Fail("no vine"); yield break; }
             // "half": what one vine-cut half left
-            float health = a.Length < 2 ? -1f : a[1] == "half" ? cp.maxHealth - Mathf.Floor(cp.maxHealth / 2f) : float.Parse(a[1], CultureInfo.InvariantCulture);
+            float health = a.Length < 2 ? -1f : a[1] == "half" ? cp.maxHealth - Mathf.Floor(cp.maxHealth / 2f) : F(a[1]);
             bool Ok() => cp.attached == attached && (health < 0f || Mathf.Abs(cp.health - health) < 0.5f);
             float until = Time.realtimeSinceStartup + 5f;
             while (!Ok() && Time.realtimeSinceStartup < until) yield return new WaitForSecondsRealtime(0.25f);
@@ -667,7 +664,7 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             AsPlayer(() => crate.getHit(dmg, p.transform));
             yield return new WaitForSecondsRealtime(1.5f);
-            var refused = LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+            var refused = Refused(mark);
             r.Info = $"shadow {BreakSync.ShadowHealth(crate):0.#}, item health {hp} -> {crate.health}";
             if (refused.Count > 0) r.Fail($"refused: {refused[0].Trim()}");
             else if (crate.health != hp) r.Fail($"the item took the hit, not the shadow: {r.Info}");
@@ -680,7 +677,7 @@ namespace DarkwoodMP.World
             var crate = ShadowCrate();
             if (crate == null) { r.Fail("no crate at the shadow spot"); yield break; }
             bool alive = a.Length == 0 || a[0] == "alive";
-            float at = a.Length > 1 ? float.Parse(a[1], CultureInfo.InvariantCulture) : 1e9f;
+            float at = a.Length > 1 ? F(a[1]) : 1e9f;
             bool Ok()
             {
                 var sa = crate.GetComponent<ShadowArmor>();
@@ -696,6 +693,9 @@ namespace DarkwoodMP.World
         // ---- 68 a death bag's map marker ----------------------------------------------------------------------
 
         private static GameObject _marker;
+
+        /// <summary>The death bag nearest the transport spot (within 2500 of the centre).</summary>
+        private static DeathDrop Bag() => NearestAll<DeathDrop>(Spot("transport"), d => d.GetComponent<Inventory>() != null && StateDump.Flat(d.transform.position - Centre) < 2500f);
 
         /// <summary>"bag-drop": our player leaves a death bag as if they died in a separate location (Player.dropBody
         /// with OutsideLocations.playerInOutsideLocation and the thing that took them there): the game puts the bag
@@ -726,7 +726,6 @@ namespace DarkwoodMP.World
         private static IEnumerator BagCheck(string[] a, Result r)
         {
             bool here = a.Length == 0 || a[0] == "here";
-            DeathDrop Bag() => NearestAll<DeathDrop>(Spot("transport"), d => d.GetComponent<Inventory>() != null && StateDump.Flat(d.transform.position - Centre) < 2500f);
             bool Ok()
             {
                 var b = Bag();
@@ -746,7 +745,7 @@ namespace DarkwoodMP.World
         private static IEnumerator BagTake(string[] a, Result r)
         {
             var p = Player.Instance;
-            var bag = NearestAll<DeathDrop>(Spot("transport"), d => d.GetComponent<Inventory>() != null && StateDump.Flat(d.transform.position - Centre) < 2500f);
+            var bag = Bag();
             if (bag == null) { r.Fail("no bag"); yield break; }
             var inv = bag.GetComponent<Inventory>();
             yield return Walk(bag.transform.position);
@@ -764,7 +763,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1.5f);
             if (bag != null) AsPlayer(() => bag.GetComponent<Item>()?.activate()); // a bag without items: its experience taken
             yield return new WaitForSecondsRealtime(1.5f);
-            var refused = LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+            var refused = Refused(mark);
             r.Info = $"bag {(bag != null ? "still here" : "gone")}, marker {(_marker != null ? "still here" : "gone")}";
             if (refused.Count > 0) r.Fail($"refused: {refused[0].Trim()}");
             else if (bag != null || _marker != null) r.Fail(r.Info);

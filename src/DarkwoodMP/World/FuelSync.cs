@@ -71,6 +71,8 @@ namespace DarkwoodMP.World
             _pending.Clear();
         }
 
+        private static float FuelOf(Component c) => c is Generator g ? g.fuel : ((Saw)c).fuel;
+
         private void Send(Component c, ulong except, ulong to = 0)
         {
             var r = ObjRef.Of(c.gameObject);
@@ -79,13 +81,13 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
             w.W.Write(g != null ? IsGenerator : IsSaw);
-            w.W.Write(g != null ? g.fuel : ((Saw)c).fuel);
+            w.W.Write(FuelOf(c));
             w.W.Write((byte)(g != null && g.isOn ? 1 : 0));
             if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
             else if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
             else _session.SendToHost(w, Channel.Control, reliable: true);
             if (g != null && _session.IsHost) _sent[g] = (g.fuel, g.isOn);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent fuel {c.name} ({r}): {(g != null ? g.fuel : ((Saw)c).fuel):0.0}{(g != null ? g.isOn ? ", running" : ", off" : "")}");
+            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent fuel {c.name} ({r}): {FuelOf(c):0.0}{(g != null ? g.isOn ? ", running" : ", off" : "")}");
         }
 
         private void OnFuel(ulong from, PacketReader r)
@@ -100,7 +102,7 @@ namespace DarkwoodMP.World
             if (c == null) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got fuel for {obj}: not found here"); return; }
             var g = c as Generator;
             float max = g != null ? g.maxFuel : ((Saw)c).maxFuel;
-            float have = g != null ? g.fuel : ((Saw)c).fuel;
+            float have = FuelOf(c);
 
             if (_session.IsHost)
             {
@@ -131,7 +133,7 @@ namespace DarkwoodMP.World
             {
                 if (g != null)
                 {
-                    g.fuel = Mathf.Clamp(fuel, 0f, g.maxFuel);
+                    g.fuel = Mathf.Clamp(fuel, 0f, max);
                     if (_session.IsClient)
                     {
                         if (on && !g.isOn) { var item = g.GetComponent<Item>(); if (item != null) item.turnOn(); else g.turnOn(); }

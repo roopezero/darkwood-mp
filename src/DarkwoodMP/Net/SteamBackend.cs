@@ -9,14 +9,14 @@ namespace DarkwoodMP.Net
     /// </summary>
     public sealed class SteamBackend : INetBackend, IGuiSection
     {
-        public readonly Lobby Lobby = new Lobby();
+        private readonly Lobby _lobby = new Lobby();
         private readonly SteamTransport _transport = new SteamTransport();
 
         public string Name => "Steam";
-        public string Status => Lobby.Status;
-        public bool InSession => Lobby.InLobby;
-        public bool IsHost => Lobby.IsHost;
-        public ulong HostId => Lobby.Owner.m_SteamID;
+        public string Status => _lobby.Status;
+        public bool InSession => _lobby.InLobby;
+        public bool IsHost => _lobby.IsHost;
+        public ulong HostId => _lobby.Owner.m_SteamID;
         public ulong LocalId => SteamUser.GetSteamID().m_SteamID;
         public string SuggestedPlayerName => SteamFriends.GetPersonaName();
         // A Steam lobby is friends-only; nobody needs a password.
@@ -24,12 +24,12 @@ namespace DarkwoodMP.Net
         public string JoinPassword => "";
         public int MaxPlayers => Protocol.MaxPlayers;
 
-        public void Host() => Lobby.Host();
+        public void Host() => _lobby.Host();
 
         /// <summary>The lobby members' Steam names, comma-separated (for logs; keeps Steamworks types out of callers).</summary>
-        public string MemberNames() => string.Join(", ", Lobby.Members().ConvertAll(m => SteamFriends.GetFriendPersonaName(m)));
+        public string MemberNames() => string.Join(", ", _lobby.Members().ConvertAll(m => SteamFriends.GetFriendPersonaName(m)));
 
-        public void Kick(ulong peer) => _transport.CloseSession(new CSteamID(peer));
+        public void Kick(ulong peer) => _transport.CloseWhenSent(new CSteamID(peer));
 
         public event Action OnEntered;
         public event Action OnLeft;
@@ -39,28 +39,31 @@ namespace DarkwoodMP.Net
         public SteamBackend()
         {
             _transport.Init();
-            Lobby.Init();
-            _transport.ShouldAccept = id => Lobby.InLobby && (IsHost ? Lobby.IsMember(id) : id == Lobby.Owner);
+            _lobby.Init();
+            _transport.ShouldAccept = id => _lobby.InLobby && (IsHost ? _lobby.IsMember(id) : id == _lobby.Owner);
             _transport.OnMessage += (from, data, len, ch) => OnMessage?.Invoke(from.m_SteamID, data, len);
-            Lobby.OnEntered += () => OnEntered?.Invoke();
-            Lobby.OnLeft += () => { _transport.ClearPending(); OnLeft?.Invoke(); };
+            _lobby.OnEntered += () => OnEntered?.Invoke();
+            _lobby.OnLeft += () => { _transport.ClearPending(); OnLeft?.Invoke(); };
             // A player whose connection died without leaving the lobby (its PC lost power, its network dropped):
             // the lobby only notices much later. Only for peers that got in, or a host that let us in: a session
             // can also fail while it's first being set up, and Hello is sent again then.
             _transport.OnSessionLost += who =>
             {
                 var session = Session.Instance;
-                if (!Lobby.InLobby || session == null) return;
+                if (!_lobby.InLobby || session == null) return;
                 if (IsHost && session.Peers.Contains(who.m_SteamID))
                 {
                     Plugin.Log.LogInfo($"Lost the connection to #{who.m_SteamID}");
                     _transport.CloseSession(who);
                     OnPeerLost?.Invoke(who.m_SteamID);
                 }
-                else if (!IsHost && who == Lobby.Owner && session.Connected) Lobby.LoseHost("Lost the connection to the host");
+                else if (!IsHost && who == _lobby.Owner && session.Connected) _lobby.LoseHost("Lost the connection to the host");
             };
-            Lobby.OnMemberLeft += who =>
+            // Every member hears of every departure. A client only acts on the host's: for anyone else the host's
+            // PlayerLeft does the cleanup (and shows "X left", which needs the name still known then).
+            _lobby.OnMemberLeft += who =>
             {
+                if (!IsHost && who != _lobby.Owner) return;
                 _transport.CloseSession(who);
                 OnPeerLost?.Invoke(who.m_SteamID);
             };
@@ -71,16 +74,13 @@ namespace DarkwoodMP.Net
             if (!InSession)
             {
                 if (session.Active) { Ui.Text(f, "In a direct game.", MenuSkin.Dim); return; }
-                if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)")) Lobby.Host();
+                if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)")) _lobby.Host();
                 Ui.Text(f, "To join: accept a friend's Steam invite, or Join Game in the Steam friends list.", MenuSkin.Dim);
                 return;
             }
             Ui.Text(f, Status, MenuSkin.Bright);
-            if (Ui.Button(f, "Invite Steam friends")) Lobby.OpenInviteDialog();
-            if (!IsHost && session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
-            {
-                Rejoin();              // sends your character first
-            }
+            if (Ui.Button(f, "Invite Steam friends")) _lobby.OpenInviteDialog();
+            if (!IsHost && session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)")) Rejoin();
             if (Ui.Button(f, "Leave")) Leave();
         }
 
@@ -91,12 +91,12 @@ namespace DarkwoodMP.Net
         public void Rejoin()
         {
             if (IsHost || !InSession) return;
-            var lobby = Lobby.Id;
+            var lobby = _lobby.Id;
             Leave();
-            Lobby.Join(lobby);
+            _lobby.Join(lobby);
         }
 
-        public bool HostLost => Lobby.HostLost;
+        public bool HostLost => _lobby.HostLost;
 
         private string _presStatus, _presGroup, _presSize;
 
@@ -109,8 +109,8 @@ namespace DarkwoodMP.Net
         /// </summary>
         public void SetPresence(string status, int players)
         {
-            string group = Lobby.InLobby ? Lobby.Id.m_SteamID.ToString() : "";
-            string size = Lobby.InLobby ? players.ToString() : "";
+            string group = _lobby.InLobby ? _lobby.Id.m_SteamID.ToString() : "";
+            string size = _lobby.InLobby ? players.ToString() : "";
             if (status != _presStatus) { SteamFriends.SetRichPresence("status", status); _presStatus = status; }
             if (group != _presGroup) { SteamFriends.SetRichPresence("steam_player_group", group); _presGroup = group; }
             if (size != _presSize) { SteamFriends.SetRichPresence("steam_player_group_size", size); _presSize = size; }
@@ -122,12 +122,12 @@ namespace DarkwoodMP.Net
         public void Leave()
         {
             World.Characters.Instance?.SaveNow();
-            Lobby.Leave();
+            _lobby.Leave();
         }
 
         public void Dispose()
         {
-            Lobby.Dispose();
+            _lobby.Dispose();
             _transport.Dispose();
         }
     }

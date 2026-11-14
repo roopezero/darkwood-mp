@@ -26,21 +26,31 @@ namespace DarkwoodMP.World
         /// <summary>Joiner: true while building our copy after the host said yes (not sent again).</summary>
         internal static bool Confirming;
 
-        public static void Register(Session s) => s.Register(MsgType.Construct, OnConstruct);
+        public static void Register(Session s)
+        {
+            s.Register(MsgType.Construct, OnConstruct);
+            s.OnSessionEnded += Waiting.Clear;
+        }
 
         internal static bool IsWaiting(Constructible c) => Waiting.Contains(c);
 
-        /// <returns>False if it couldn't be named (nothing was sent).</returns>
-        internal static bool Send(Constructible c, int option)
+        private static PacketWriter Write(ObjRef r, int option)
         {
-            var r = ObjRef.Of(c.gameObject);
-            if (!r.Valid) return false;
             var w = S.Begin(MsgType.Construct);
             r.Write(w);
             w.W.Write(option);
+            return w;
+        }
+
+        /// <summary>Sends our build (nothing if it can't be named): the host's to everyone, a joiner's as a request.</summary>
+        internal static void Send(Constructible c, int option)
+        {
+            var r = ObjRef.Of(c.gameObject);
+            if (!r.Valid) return;
+            var w = Write(r, option);
             string what = $"build {c.name} {r} option {option}";
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {what}");
-            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return true; }
+            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
             string sound = option >= 0 && option < c.options.Count ? c.options[option].buildCompleteSound : null;
             Waiting.Add(c);
             Authority.Request(w, what, (ok, reason, _) =>
@@ -59,7 +69,6 @@ namespace DarkwoodMP.World
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {what}: {e.Message}"); }
                 finally { Confirming = false; }
             });
-            return true;
         }
 
         private static void OnConstruct(ulong from, PacketReader r)
@@ -82,13 +91,7 @@ namespace DarkwoodMP.World
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {obj}: {e.Message}"); }
             }
-            if (s.IsHost)
-            {
-                var w = s.Begin(MsgType.Construct);
-                obj.Write(w);
-                w.W.Write(option);
-                s.Broadcast(w, Channel.Control, reliable: true, except: from);
-            }
+            if (s.IsHost) s.Broadcast(Write(obj, option), Channel.Control, reliable: true, except: from);
         }
 
         /// <summary>Host: a joiner's build is one this world can still take, near them.</summary>
@@ -108,9 +111,9 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Constructible), nameof(Constructible.construct), new[] { typeof(bool), typeof(int) })]
     static class ConstructPatch
     {
-        static bool Prefix(Constructible __instance, bool manual, int forceOption, out (bool, ScriptedEvents.Part) __state)
+        static bool Prefix(Constructible __instance, bool manual, int forceOption, out bool __state)
         {
-            __state = (false, ScriptedEvents.Current);
+            __state = false;
             if (Construction.Confirming || !WorldActions.Sharing || !(manual || WorldActions.TestAsPlayer)) return true;
             if (Session.Instance.IsClient)
             {
@@ -133,22 +136,16 @@ namespace DarkwoodMP.World
                 Construction.Send(__instance, option);
                 return false;
             }
-            __state.Item1 = true;
+            __state = true;
             WorldActions.Depth++;
             return true;
         }
 
-        static void Postfix(Constructible __instance, int forceOption, (bool, ScriptedEvents.Part) __state)
+        static void Postfix(Constructible __instance, int forceOption, bool __state)
         {
-            if (!__state.Item1 || !WorldActions.Outermost()) return;
+            if (!__state || !WorldActions.Outermost()) return;
             int option = forceOption != -1 ? forceOption : __instance.chosenOption;
             Construction.Send(__instance, option);
-        }
-
-        static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part) __state)
-        {
-            if (__state.Item1) ScriptedEvents.Current = __state.Item2;
-            return __exception;
         }
     }
 }

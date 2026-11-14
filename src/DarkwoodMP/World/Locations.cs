@@ -29,7 +29,7 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
 
-        private struct Slot { public Vector3 Pos; public int Rot; public bool HasRot; }
+        private struct Slot { public Vector3 Pos; public int Rot; }
 
         /// <summary>Where each location stands. Host: what it promised or used; client: what the host said.</summary>
         private static readonly Dictionary<string, Slot> _slots = new Dictionary<string, Slot>();
@@ -43,7 +43,7 @@ namespace DarkwoodMP.World
         private static string _gridBefore;
         private static float _spawningSince;
 
-        public const float AskTimeout = 10f;
+        private const float AskTimeout = 10f;
 
         /// <summary>Host: how many locations we loaded for joiners (for the tests).</summary>
         public static int LoadedForOthers;
@@ -82,9 +82,6 @@ namespace DarkwoodMP.World
                    && Core.getTrueLocationName(o.currentLocationName ?? "") == Core.getTrueLocationName(l.name);
         }
 
-        /// <summary>Host: how many locations are kept running for joiners (for the tests).</summary>
-        public static int KeptCount => _kept.Count(l => l != null);
-
         /// <summary>
         /// Host: the separate location a joiner who says they're at `place` (their PlayerState) and stands at pos is in,
         /// when we have it at that spot; null for the world, a dream (each player's own), or a location we haven't got
@@ -103,14 +100,14 @@ namespace DarkwoodMP.World
             return d.x * d.x + d.z * d.z < LocationReach * LocationReach ? loc : null;
         }
 
+        /// <summary>Kept locations whose loose objects DragSync has noted (once each time it starts being kept).</summary>
+        private static readonly HashSet<Location> _noted = new HashSet<Location>();
+
         /// <summary>
         /// Host, twice a second: the locations joiners are in are entered (their objects and characters switched on, as
         /// the game does when its player goes there) even when our player isn't there, so our game runs their enemies
         /// and NetEnemies sends them to those joiners. One nobody is in any more is left again, unless our player is in it.
         /// </summary>
-        /// <summary>Kept locations whose loose objects DragSync has noted (once each time it starts being kept).</summary>
-        private static readonly HashSet<Location> _noted = new HashSet<Location>();
-
         private static void KeepRunning(OutsideLocations o)
         {
             if (Time.unscaledTime < _nextKeep) return;
@@ -241,6 +238,29 @@ namespace DarkwoodMP.World
             }
         }
 
+        private static HashSet<string> _real;
+
+        /// <summary>
+        /// Whether a location of this name exists. The game loads a location as a scene of that name
+        /// (LocationMarker.spawnLocation: SceneManager.LoadScene, then GameObject.Find(name)), and all of them,
+        /// dreams too, are the build's scenes under Assets/Locations/.
+        /// </summary>
+        private static bool IsReal(string name)
+        {
+            if (_real == null)
+            {
+                _real = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+                for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings; i++)
+                {
+                    string path = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i);
+                    if (path != null && path.Replace('\\', '/').Contains("/Locations/"))
+                        _real.Add(System.IO.Path.GetFileNameWithoutExtension(path));
+                }
+                Plugin.Log.LogInfo($"[locations] the game has {_real.Count} locations");
+            }
+            return _real.Count == 0 || _real.Contains(name); // none found: the build lists them differently, don't judge
+        }
+
         private static void OnAsk(ulong from, PacketReader r)
         {
             var s = S;
@@ -249,17 +269,22 @@ namespace DarkwoodMP.World
             string name = r.ReadStr();
             var o = Singleton<OutsideLocations>.Instance;
             if (o == null || string.IsNullOrEmpty(name)) return;
-            if (!_slots.TryGetValue(name, out var slot) || !slot.HasRot)
+            if (!_slots.TryGetValue(name, out var slot))
             {
                 if (o.spawnedLocations.TryGetValue(name, out var loc) && loc != null)
                 {
-                    slot = new Slot { Pos = loc.transform.position, Rot = Mathf.RoundToInt(loc.transform.eulerAngles.y), HasRot = true };
+                    slot = new Slot { Pos = loc.transform.position, Rot = Mathf.RoundToInt(loc.transform.eulerAngles.y) };
                     Plugin.Log.LogInfo($"[locations] {s.NameOf(from)} goes to {name}: it is at {slot.Pos.x:0},{slot.Pos.z:0} here (turned {slot.Rot})");
+                }
+                else if (!IsReal(name))
+                {
+                    Plugin.Log.LogWarning($"[locations] refused {s.NameOf(from)}'s ask for {name}: no such location");
+                    return;
                 }
                 else
                 {
                     Extend(o, o.actualSpawnedLocationsCount + 8);
-                    slot = new Slot { Pos = PositionsOf(o)[o.actualSpawnedLocationsCount], Rot = Core.getRandomHalfRotation(), HasRot = true };
+                    slot = new Slot { Pos = PositionsOf(o)[o.actualSpawnedLocationsCount], Rot = Core.getRandomHalfRotation() };
                     o.actualSpawnedLocationsCount++;
                     if (!dream) _toSpawn.Enqueue(name);
                     Plugin.Log.LogInfo($"[locations] {s.NameOf(from)} goes to {name}, which we haven't loaded: it gets spot {slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}" +
@@ -364,7 +389,7 @@ namespace DarkwoodMP.World
             string name = r.ReadStr();
             var pos = r.ReadVector3();
             int rot = r.R.ReadInt16();
-            _slots[name] = new Slot { Pos = pos, Rot = rot, HasRot = true };
+            _slots[name] = new Slot { Pos = pos, Rot = rot };
             _asked.Remove(name);
             Plugin.Log.LogInfo($"[locations] the host's {name} stands at {pos.x:0},{pos.z:0}, turned {rot}");
         }
@@ -407,7 +432,7 @@ namespace DarkwoodMP.World
                 return slot.Pos;
             }
             // Host: what our own load uses, turn included, so a joiner who asks meanwhile gets the same.
-            if (s.IsHost) _slots[name] = new Slot { Pos = picked, Rot = Core.getRandomHalfRotation(), HasRot = true };
+            if (s.IsHost) _slots[name] = new Slot { Pos = picked, Rot = Core.getRandomHalfRotation() };
             return picked;
         }
 
@@ -418,7 +443,7 @@ namespace DarkwoodMP.World
             var s = S;
             string name = m != null ? m.locationName : null;
             if (s == null || !s.Active || name == null) return rolled;
-            if (!_slots.TryGetValue(name, out var slot) || !slot.HasRot) return rolled;
+            if (!_slots.TryGetValue(name, out var slot)) return rolled;
             Plugin.Log.LogInfo($"[locations] {name} turned {slot.Rot} (the host's), not {rolled}");
             return slot.Rot;
         }
@@ -503,21 +528,14 @@ namespace DarkwoodMP.World
             var nameField = AccessTools.Field(original.DeclaringType, "locationName");
             if (nameField == null) throw new System.Exception("no locationName in spawnLocation's body");
             var list = code.ToList();
-            int done = 0;
-            for (int i = 0; i < list.Count; i++)
+            int i = list.FindIndex(c => c.Calls(getItem));
+            if (i < 0) throw new System.Exception("locationPositions[...] not found in spawnLocation's body");
+            list.InsertRange(i + 1, new[]
             {
-                if (done == 0 && list[i].Calls(getItem))
-                {
-                    list.InsertRange(i + 1, new[]
-                    {
-                        new CodeInstruction(OpCodes.Ldarg_0),
-                        new CodeInstruction(OpCodes.Ldfld, nameField),
-                        new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Locations), nameof(Locations.PositionFor))),
-                    });
-                    done++;
-                }
-            }
-            if (done != 1) throw new System.Exception("locationPositions[...] not found in spawnLocation's body");
+                new CodeInstruction(OpCodes.Ldarg_0),
+                new CodeInstruction(OpCodes.Ldfld, nameField),
+                new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(Locations), nameof(Locations.PositionFor))),
+            });
             return list;
         }
     }

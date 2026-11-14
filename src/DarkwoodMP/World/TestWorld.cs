@@ -75,7 +75,7 @@ namespace DarkwoodMP.World
         // ---- starting it (main menu) -------------------------------------------------------------------
 
         /// <summary>A copy exists already.</summary>
-        public static bool Exists => File.Exists(Path.Combine(Dir, "profiles.dat")) || Directory.Exists(Dir) && Directory.GetDirectories(Dir, "prof*").Length > 0;
+        public static bool Exists => File.Exists(Path.Combine(Dir, "profiles.dat")) || (Directory.Exists(Dir) && Directory.GetDirectories(Dir, "prof*").Length > 0);
 
         /// <summary>Load the test world (copying your saves first if there's no copy yet, or to reset it).</summary>
         public static IEnumerator Start(WorldShare world, bool reset)
@@ -99,7 +99,7 @@ namespace DarkwoodMP.World
             SaveRedirect.Begin(Dir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
             var profile = state?.profiles?.Where(p => p != null && p.Active).OrderBy(p => p.dead).ThenBy(p => p.id).FirstOrDefault();
-            if (profile == null) { Status = "The test world has no profile to load: reset it after playing a world."; yield break; }
+            if (profile == null) { SaveRedirect.End(); Status = "The test world has no profile to load: reset it after playing a world."; yield break; }
             Plugin.Log.LogInfo($"Test world: loading profile {profile.id} (day {profile.day})");
             yield return world.ContinueOwnProfile(profile.id, Dir);
         }
@@ -120,7 +120,7 @@ namespace DarkwoodMP.World
         public static void Update()
         {
             if (!Active || !WorldShare.WorldReady) { _checked = false; _labels.Clear(); return; }
-            if (!_checked)
+            if (!_checked && Player.Instance != null)
             {
                 // Built before, and saved since? If none of it is here (the world wasn't saved after), build it again.
                 _checked = true;
@@ -142,14 +142,14 @@ namespace DarkwoodMP.World
             {
                 if (!File.Exists(AreaFile)) return null;
                 var xz = File.ReadAllText(AreaFile).Split(' ');
-                return new Vector3(float.Parse(xz[0], System.Globalization.CultureInfo.InvariantCulture), 0f, float.Parse(xz[1], System.Globalization.CultureInfo.InvariantCulture));
+                var inv = System.Globalization.CultureInfo.InvariantCulture;
+                return new Vector3(float.Parse(xz[0], inv), 0f, float.Parse(xz[1], inv));
             }
             catch { return null; }
         }
 
         private static void Build(Vector3 at)
         {
-            if (Player.Instance == null) return;
             var spots = FreeSpots(at, Stations.Length);
             Generator gen = null;
             var lamps = new List<Item>();
@@ -183,12 +183,13 @@ namespace DarkwoodMP.World
             const float step = 160f;
             for (int ring = 1; ring < 30 && spots.Count < count; ring++)
             {
+                // The ring's square, in the order the saved test worlds were built with (the corners come up twice).
                 for (int i = -ring; i <= ring && spots.Count < count; i++)
                     foreach (var off in new[] { new Vector3(i, 0, -ring), new Vector3(i, 0, ring), new Vector3(-ring, 0, i), new Vector3(ring, 0, i) })
                     {
                         if (spots.Count >= count) break;
                         var p = around + off * step;
-                        if (spots.Any(s => (s - p).sqrMagnitude < step * step * 0.5f)) continue;
+                        if (spots.Contains(p)) continue;
                         if (Physics.OverlapSphere(p, 70f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player"))) continue;
                         spots.Add(p);
                     }

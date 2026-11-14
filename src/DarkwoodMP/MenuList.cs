@@ -92,7 +92,6 @@ namespace DarkwoodMP
         /// <summary>Screen pixels per font pixel for the entries: 3 at 1080 lines, 2 at 720.</summary>
         private static int TextScale => Mathf.Max(1, Mathf.RoundToInt(Screen.height / 360f));
 
-        private const float Left = 0.065f;   // the column's left edge, as a share of the width (the logo's, MenuLayout)
         private const float Bottom = 0.20f;  // the last entry's middle above the bottom, as a share of the height
         private const float RowLines = 1.6f; // the distance between entries, in lines
 
@@ -123,9 +122,9 @@ namespace DarkwoodMP
             _entries.Clear();
             if (_pause)
             {
-                Add("Resume", () => GameButton(Singleton<MainMenu>.Instance.ResumeBtn != null ? Singleton<MainMenu>.Instance.ResumeBtn.gameObject : null));
+                Add("Resume", () => GameButton(Go(Singleton<MainMenu>.Instance.ResumeBtn)));
                 Add("Multiplayer", () => Plugin.Instance.OpenPanel());
-                Add("Help", () => GameButton(Singleton<MainMenu>.Instance.HelpBtn != null ? Singleton<MainMenu>.Instance.HelpBtn.gameObject : null));
+                Add("Help", () => GameButton(Go(Singleton<MainMenu>.Instance.HelpBtn)));
                 Add("Options", Options);
                 Add("Back to main menu", () => ConfirmDialog.Ask("Back to main menu", "Leave this world for the main menu? " + LeaveText(), "Yes", ToMainMenu));
                 Add("Quit", () => ConfirmDialog.Ask("Quit", "Quit Darkwood? " + LeaveText(), "Yes", Quit));
@@ -218,12 +217,16 @@ namespace DarkwoodMP
         /// <summary>The game's entries stay (its code places, fades and enables them) but aren't drawn and can't be clicked.</summary>
         private static void HideGameButtons(MainMenu mm)
         {
-            Hide(mm.playBtn); Hide(mm.optionsBtn); Hide(mm.creditsBtn); Hide(mm.quitBtn); Hide(mm.mainMenuBtn);
-            Hide(mm.ResumeBtn != null ? mm.ResumeBtn.gameObject : null);
-            Hide(mm.HelpBtn != null ? mm.HelpBtn.gameObject : null);
+            foreach (var go in GameEntries(mm)) Hide(go);
             // With a controller, the game's A would click the hidden entries (MainMenu.controllerButtons).
-            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0 && mm.Menu0.activeInHierarchy && IsMenu0List(mm)) mm.controllerButtons.Clear();
+            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0 && IsMenu0List(mm)) mm.controllerButtons.Clear();
         }
+
+        /// <summary>The game's own entries in both menus (some are null in one of them).</summary>
+        private static GameObject[] GameEntries(MainMenu mm) =>
+            new[] { mm.playBtn, mm.optionsBtn, mm.creditsBtn, mm.quitBtn, mm.mainMenuBtn, Go(mm.ResumeBtn), Go(mm.HelpBtn) };
+
+        private static GameObject Go(Component c) => c != null ? c.gameObject : null;
 
         private static bool IsMenu0List(MainMenu mm)
         {
@@ -284,7 +287,7 @@ namespace DarkwoodMP
             if (!_shown || _entries.Count == 0) return;
             int sc = TextScale;
             float line = PixelFont.LineAt(sc), step = Mathf.Round(line * RowLines);
-            float x = Mathf.Round(Screen.width * Left);
+            float x = Mathf.Round(Screen.width * MenuLayout.Left); // the column's left edge is the logo's
             float y = Mathf.Round(Screen.height * (1f - Bottom) - step * (_entries.Count - 1) - line / 2f);
             bool active = !MenuWindows.AnyOpen;
             var e = Event.current;
@@ -323,7 +326,7 @@ namespace DarkwoodMP
         private static bool GameEntriesHidden(MainMenu mm)
         {
             if (mm == null) return false;
-            foreach (var go in new[] { mm.playBtn, mm.optionsBtn, mm.creditsBtn, mm.quitBtn, mm.mainMenuBtn })
+            foreach (var go in GameEntries(mm))
             {
                 if (go == null || !go.activeInHierarchy) continue;
                 foreach (var r in go.GetComponentsInChildren<Renderer>()) if (r.enabled) return false;

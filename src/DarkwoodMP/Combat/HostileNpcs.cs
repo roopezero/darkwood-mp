@@ -20,7 +20,7 @@ namespace DarkwoodMP.Combat
     /// A client's player turning a friendly NPC hostile doesn't do it in its own game: the hit goes to the host as
     /// NpcHit, a scripted "attack the player" as NpcAttack, and the host's copy turns on that player's stand-in.
     /// The host refuses one it hasn't got (an NPC only that client's game has, a hideout's own wolf or trader):
-    /// that NPC is the client's, and the hit or attack happens there, as before.
+    /// that NPC is the client's, and the hit or attack happens there.
     /// </summary>
     public static class HostileNpcs
     {
@@ -34,6 +34,20 @@ namespace DarkwoodMP.Combat
 
         /// <summary>Set while a client applies its own hit or attack to an NPC the host hasn't got.</summary>
         private static bool _ours;
+
+        // Client: the NPC whose hit was just left to the host, in this frame. MeleeSensor and Flame activate the
+        // weapon's effects right after getHit; those went to the host with the hit, so they don't run here too.
+        private static Character _forwarded;
+        private static int _forwardedFrame = -1;
+
+        /// <summary>Client: whether effects activating on this NPC now are those of a hit just left to the host.</summary>
+        internal static bool EffectsForwarded(Character c) =>
+            !_ours && c != null && c == _forwarded && Time.frameCount == _forwardedFrame;
+
+        private static bool Forwarded(Character c) { _forwarded = c; _forwardedFrame = Time.frameCount; return true; }
+
+        /// <summary>Client: the melee hit is over (ClientHitEffectsPatch).</summary>
+        internal static void EndHit() => _forwarded = null;
 
         public static void Clear() => _running.Clear();
 
@@ -125,7 +139,7 @@ namespace DarkwoodMP.Combat
                 return false;
             }
             // Something thrown hits the NPC in the host's copy of the throw.
-            if (ThrownHits.Now()) return true;
+            if (ThrownHits.Now()) return Forwarded(c);
             var flame = ThrownHits.CurrentFlame;
             if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame)) return false;
             bool fromPlayer = byPlayer || (attacker != null && attacker.GetComponent<Player>() != null);
@@ -155,7 +169,7 @@ namespace DarkwoodMP.Combat
                 finally { _ours = false; }
             }, inventory: false);
             Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", c.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
-            return true;
+            return Forwarded(c);
         }
 
         /// <summary>Client: a scripted "attack the player" on an NPC of ours. True if it isn't to be done here.</summary>
@@ -187,7 +201,8 @@ namespace DarkwoodMP.Combat
             proxy = null;
             var c = ObjRef.Resolve<Character>(obj);
             if (c == null || c.npc == null) { Authority.Refuse(NotHere); return null; }
-            if (!NetEnemies.InPlay(c)) { Authority.Refuse($"{c.name} isn't alive here"); return null; }
+            // Dead here (each player's NPC story is their own): there's nothing for us to run, so it's the client's.
+            if (!NetEnemies.InPlay(c)) { Authority.Refuse(NotHere); return null; }
             if (!NetPlayerProxy.All.TryGetValue(from, out proxy) || proxy == null) { Authority.Refuse("no stand-in for that player yet"); return null; }
             return c;
         }
@@ -221,8 +236,7 @@ namespace DarkwoodMP.Combat
         /// <summary>Host: send this NPC after a player's stand-in, as Character.attackPlayer does for our player.</summary>
         internal static void SendAfter(Character c, NetPlayerProxy proxy)
         {
-            if (c.aggressiveness != Aggressiveness.defensive) c.aggressiveness = Aggressiveness.attackOnSight;
-            c.attackCharacter(proxy.transform);
+            JoinerAi.GoFor(c, proxy.transform);
             Plugin.Log.LogInfo($"[npc] {c.name} sent after {proxy.OwnerName}");
         }
     }

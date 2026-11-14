@@ -26,7 +26,7 @@ namespace DarkwoodMP.World
         internal static bool Enabled = true;
 
         /// <summary>Whether the local player has this inventory's window open.</summary>
-        internal static bool Shown(Inventory inv)
+        private static bool Shown(Inventory inv)
         {
             var p = Player.Instance;
             if (inv == null || p == null) return false;

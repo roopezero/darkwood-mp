@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Globalization;
 using System.Linq;
 using DarkwoodMP.Combat;
 using UnityEngine;
@@ -19,8 +18,6 @@ namespace DarkwoodMP.World
     public static class MapScenarioFarWorld
     {
         private static Player P => Player.Instance;
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
 
         public static void Register()
         {
@@ -173,8 +170,8 @@ namespace DarkwoodMP.World
         private static IEnumerator FarDog(string[] a, Result r)
         {
             var spot = Spot(a.Length > 0 ? a[0] : "off:0,2400");
-            // Again at the far steps: the dog made before the join wanders off in the half hour of the full map test
-            // before them (it was found dead by the hideout), so a living one is put back on its spot, a dead one made anew.
+            // Run again at the far steps: the dog made before the join may have wandered off or died in the meantime, so
+            // a living one is put back on its spot and a dead one is made again.
             if (_dog != null && _dog.alive)
             {
                 spot.y = _dog.transform.position.y;
@@ -205,8 +202,7 @@ namespace DarkwoodMP.World
 
         private static string Describe(Character c)
         {
-            uint id = 0; NetEnemies.Instance?.NetIdOf(c, out id);
-            return $"{c.name} #{id} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}"
+            return $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}"
                    + $" {(c.GetComponent<SaveableObject>()?.dontSave == true ? "made from its prefab" : "our copy from the save")}";
         }
 

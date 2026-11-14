@@ -7,9 +7,9 @@ way) or isn't there ("gone"). What the trap spawns (a vine trap's vine) waits fo
 trap's bite (the bear trap's hold, its damage) is undone. Each refusal is followed by a compare of every game: the
 client must have no vine, trap or item the host hasn't."""
 
-SAFE = [("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0})]
+from mapsteps import SAFE_OFF, SAFE_ON
 
-STEPS = SAFE + [
+STEPS = SAFE_ON + [
     ("host", "heal"),
     ("client", "heal"),
     # A vine trap that isn't on the host any more: no vine in either game.
@@ -38,7 +38,6 @@ STEPS = SAFE + [
     # copy is spawned untargeted), which the vines section's "attached" shows; that was so before this test too.
     ("host", "heal"),
     ("client", "heal"),
-    ("host", "i2-safe", "off", {"settle": 0}), ("client", "i2-safe", "off", {"settle": 0}),
-]
+] + SAFE_OFF
 
 REQUIRE = ["traps"]

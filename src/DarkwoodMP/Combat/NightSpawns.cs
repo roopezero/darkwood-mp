@@ -9,7 +9,7 @@ namespace DarkwoodMP.Combat
     /// Night attackers and night worms, for every player. The game spawns both around Player.Instance only:
     /// CharacterSpawner.spawnNightChar sends one of the night scenario's attackers at the player while they are at
     /// a hideout (a Location with playerBase), and waitToSpawnWorm sends a night worm at them every five seconds
-    /// of a hard night. The host now does the same around each remote player's proxy, and joiners spawn neither
+    /// of a hard night. The host does the same around each remote player's proxy, and joiners spawn neither
     /// (anything they spawned would only be frozen and hidden there, see NetEnemies.LocalOnly).
     ///
     /// A joiner is at a hideout when the game's own WhereAmI check, run at their proxy's position on the host,

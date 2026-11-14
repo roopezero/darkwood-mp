@@ -1,9 +1,10 @@
-"""World-sharing tests for DarkwoodMP, and the helpers the other tests share (framing, Hello, str fields).
+"""World-sharing tests for DarkwoodMP, and the helpers the other tests share (framing, Hello, str fields, joining,
+PlayerState, Requests).
 
   worldtest.py fetch <port> <outfile>   act as a client: download the host's world, check its hash, save it
   worldtest.py serve <port> <infile>    act as a host: offer the saved world, serve it, welcome the client
 """
-import hashlib, json, os, pickle, re, socket, struct, sys, time, zlib
+import hashlib, json, math, os, pickle, re, socket, struct, sys, time, zlib
 T0 = time.time()  # our clock for EnemyState starts here
 
 GAME = "darkwood"
@@ -15,10 +16,10 @@ REPLAY = sys.argv[sys.argv.index("--replay") + 1] if "--replay" in sys.argv else
 CHARS = "--chars" in sys.argv
 RELOAD = "--reload" in sys.argv
 AWAY = "--away" in sys.argv    # 20 s in: HostAway (the host went back to its menu)
-DROP = "--drop" in sys.argv
+DROP = "--drop" in sys.argv    # 20 s in: just close the connection (the host quit or crashed)
 CHAPTER = "--chapter" in sys.argv  # with --reload: ChapterStart first (the client sends its character), then WorldReload
 END = int(sys.argv[sys.argv.index("--end") + 1]) if "--end" in sys.argv else 0  # 5 s in: GameEnd (1 the epilogue, 2 the end screen)
-AUTH = "--authority" in sys.argv  # refuse the client's door action (with the door's state to roll back to)    # 20 s in: just close the connection (the host quit or crashed)
+AUTH = "--authority" in sys.argv  # refuse the client's door action (with the door's state to roll back to)
 
 def s16(s):
     b = s.encode() if isinstance(s, str) else s
@@ -27,8 +28,9 @@ def s16(s):
 def frame(p):
     return struct.pack("<I", len(p)) + p
 
-def hello(h=bytes(32), key="c" * 64, name="WorldBot"):
-    return frame(struct.pack("<BH", 1, PROTO) + s16(GAME) + s16(key) + s16("") + s16("0.4.0") + s16(name) + h)
+def hello(h=bytes(32), key="c" * 64, name="WorldBot", version=PROTO, game=GAME, password="", mod="0.4.0"):
+    """Hello: u16 protocol, str game, str key, str password, str mod version, str name, 32 bytes world hash."""
+    return frame(struct.pack("<BH", 1, version) + s16(game) + s16(key) + s16(password) + s16(mod) + s16(name) + h)
 
 def ask(s, r, hb, timeout=10):
     """Send Hello and return the host's answer. JoinWait (34: it's loading, or in the prologue or a dream) means ask again soon."""
@@ -40,6 +42,46 @@ def ask(s, r, hb, timeout=10):
         print("  host says wait:", rstr(m, 1)[0], flush=True)
         time.sleep(3)
     raise RuntimeError("the host never let us in")
+
+def join(port, name, key="c" * 64, timeout=20):
+    """Join a host as a client: Hello until answered, download the offered world (4 pieces ahead), Hello again with its
+    hash and wait for Welcome. Returns (socket, Reader, our player id, the SaveOffer). Raises RuntimeError if the host
+    answers the first Hello with anything but a SaveOffer."""
+    s = socket.create_connection(("127.0.0.1", port), timeout=10); r = Reader(s)
+    offer = ask(s, r, hello(key=key, name=name), timeout)
+    if offer[0] != 4:
+        s.close(); raise RuntimeError(f"message {offer[0]} {rstr(offer, 1)[0] if offer[0] in (3, 34) else ''}")
+    h = offer[1:33]; size = struct.unpack_from("<I", offer, 33)[0]; got = off = 0
+    while got < size:
+        while off < size and off - got < 4 * (256 << 10):
+            s.sendall(frame(bytes([5]) + h + struct.pack("<II", off, 256 << 10))); off += 256 << 10
+        m = r.msg(timeout)
+        if m[0] == 6: got += struct.unpack_from("<I", m, 37)[0]
+    s.sendall(hello(h, key=key, name=name))
+    while True:
+        m = r.msg(timeout)
+        if m[0] == 2: return s, r, struct.unpack_from("<Q", m, 1)[0], offer
+
+def player_state(owner, x=0.0, y=16.0, z=0.0, more=0, health=100):
+    """PlayerState (10): u64 owner, vec3 pos, quat rot, u8 state (1 alive), str library, str held light, u8 sprites,
+    u8 more (2: in an after-night), u8 health %, str place, vec3 held flames, f32 lantern. Framed."""
+    return frame(bytes([10]) + struct.pack("<Q", owner) + struct.pack("<fff", x, y, z) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071)
+                 + bytes([1]) + s16("") + s16("") + bytes([0, more, health]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<f", 0))
+
+_seq = 0
+
+def request(s, pump, label, inner):
+    """Send inner as a Request (40: u32 seq + the message), pump(secs, until) up to 5 s for its Verdict (41: u32 seq,
+    u8 ok, str reason, str result) and print it. Returns the ok byte, or None with no verdict."""
+    global _seq
+    _seq += 1; seq = _seq
+    print(label, flush=True)
+    s.sendall(frame(bytes([40]) + struct.pack("<I", seq) + inner))
+    m = pump(5, lambda m: m[0] == 41 and struct.unpack_from("<I", m, 1)[0] == seq)
+    if m is None: print("  -> no verdict", flush=True); return None
+    ok = m[5]; reason, _ = rstr(m, 6)
+    print(f"  -> {'ok' if ok else 'refused'}{': ' + reason if reason else ''}", flush=True)
+    return ok
 
 def world_hash(profile_json, files):
     h = hashlib.sha256(profile_json.encode())
@@ -130,7 +172,14 @@ def serve(port, inp):
     print("fake host listening on", port, flush=True)
     c, addr = ls.accept()
     print("client connected from", addr, flush=True)
-    r = Reader(c); states = 0; t_end = None; fx = {}
+    r = Reader(c); states = 0; t_end = None
+    seen_fx = {}         # the client's PlayerSounds/PlayerShot/PlayerHurt, counted by type
+    pos = (0, 0, 0)      # where the client's player is now
+    nxt = 0              # when to send the next EnemyState
+    fx_step = 0          # our player's fx: 0 not sent, 1 on, 2 off
+    real_at = 0          # when the client's player first left the loading spot
+    efx = efx_off = despawned = corpse_gone = replayed = sent_back = checked = refused_event = False
+    char_sent = 0        # when we answered the client's CharRequest
     while True:
         try:
             m = r.msg(30 if t_end else 150)
@@ -155,7 +204,7 @@ def serve(port, inp):
             piece = blob[o:o + k]
             c.sendall(frame(bytes([6]) + w["hash"] + struct.pack("<II", o, len(piece)) + piece))
         elif t == 10:
-            states += 1; serve.at = struct.unpack_from("<fff", m, 9)  # where the client is now
+            states += 1; pos = struct.unpack_from("<fff", m, 9)
             if states == 1:
                 x, y, z = struct.unpack_from("<fff", m, 9)
                 print(f"first PlayerState from the client: the world is loaded (pos {x:.0f}, {y:.0f}, {z:.0f})", flush=True)
@@ -168,48 +217,46 @@ def serve(port, inp):
                     print("sent EnemySpawn for a save Dog and a new DogMutated", flush=True)
             if ENEMIES and t_end:
                 el = time.time() - t_end
-                if el < 6 and time.time() >= getattr(serve, "nxt", 0):
-                    import math
-                    serve.nxt = time.time() + 0.1
+                if el < 6 and time.time() >= nxt:
+                    nxt = time.time() + 0.1
                     p = struct.pack("<fH", time.time() - T0, 2)  # the host's clock, then how many
                     for i, ox in ((1, 150), (2, -150)):
                         a = el + i
                         p += struct.pack("<I", i) + struct.pack("<fff", px + ox + 60 * math.cos(a), 16, pz + 60 * math.sin(a)) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([0 if i == 1 and el > 3 else 1]) + struct.pack("<f", 1.0) + bytes([0])
                     c.sendall(frame(bytes([15]) + p))
                     # Our own player, beside theirs, and what it sounds and looks like (PlayerSounds, PlayerShot, PlayerHurt).
-                    c.sendall(frame(bytes([10]) + struct.pack("<Q", 1) + struct.pack("<fff", serve.at[0] + 80, 16, serve.at[2]) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([1]) + s16("") + s16("") + bytes([0, 0, 100]) + s16("") + struct.pack("<fff", 0, 0, 0) + struct.pack("<f", 0)))
-                    step = getattr(serve, "fx", 0)
+                    c.sendall(player_state(1, pos[0] + 80, 16, pos[2]))
                     # A second after the client says where its player really is (its first states come from the loading
                     # spot), so our puppet has got there and our sounds are near enough to be heard; by 4 s in at the latest.
-                    if serve.at[0] < 70000 and not getattr(serve, "real_at", 0): serve.real_at = time.time()
-                    if step == 0 and ((getattr(serve, "real_at", 0) and time.time() - serve.real_at > 1) or el > 4):
-                        print(f"our player at {serve.at[0] + 80:.0f},{serve.at[2]:.0f}, beside the client's", flush=True)
+                    if pos[0] < 70000 and not real_at: real_at = time.time()
+                    if fx_step == 0 and ((real_at and time.time() - real_at > 1) or el > 4):
+                        print(f"our player at {pos[0] + 80:.0f},{pos[2]:.0f}, beside the client's", flush=True)
                         c.sendall(frame(bytes([50]) + struct.pack("<Q", 1) + bytes([2]) + s16("player_melee_hit") + struct.pack("<f", 1.0) + s16("footsteps_grass") + struct.pack("<f", 0.5)))
                         c.sendall(frame(bytes([51]) + struct.pack("<Q", 1) + s16("") + s16("") + bytes([1]) + struct.pack("<fff", 0, 10, 0)))
                         c.sendall(frame(bytes([52]) + struct.pack("<Q", 1) + bytes([1]) + s16("FX/Bloodsplats/Shotsplat_stay") + struct.pack("<ff", 0, 45)))
                         c.sendall(frame(bytes([52]) + struct.pack("<Q", 1) + bytes([2]) + s16("fire_flamesV2_burningEnemy_01") + s16("fire_loop_01")))
-                        serve.fx = 1
-                    elif step == 1 and el > 5.5:
+                        fx_step = 1
+                    elif fx_step == 1 and el > 5.5:
                         c.sendall(frame(bytes([52]) + struct.pack("<Q", 1) + bytes([3])))
                         print("sent our player's fx: sounds, a shot, blood, burning on and off", flush=True)
-                        serve.fx = 2
+                        fx_step = 2
                     # The host's enemies' cues: once our player is where it really is, combat music on, the banshee's
                     # scream and the forest spirit's effect beside it, the DogMutated's emitter; then music off and the end
                     # of the host's after-night.
-                    if not getattr(serve, "efx", False) and ((getattr(serve, "real_at", 0) and time.time() - serve.real_at > 1.5) or el > 4.5):
-                        serve.efx = True
-                        qx, _, qz = serve.at
+                    if not efx and ((real_at and time.time() - real_at > 1.5) or el > 4.5):
+                        efx = True
+                        qx, _, qz = pos
                         c.sendall(frame(bytes([78, 1])))
                         c.sendall(frame(bytes([79, 1]) + s16("FX/BansheeScream") + struct.pack("<ffff", qx - 150, 16, qz, 0)))
                         c.sendall(frame(bytes([79, 2]) + s16("ForestSpirit_fastSpawnEff") + struct.pack("<fff", qx + 100, 16, qz)))
                         c.sendall(frame(bytes([79, 3]) + struct.pack("<Ii", 2, 1)))
                         print("sent CombatMusic on and three EnemyEffects", flush=True)
-                    if el > 5.5 and not getattr(serve, "efx_off", False):
-                        serve.efx_off = True
+                    if el > 5.5 and not efx_off:
+                        efx_off = True
                         c.sendall(frame(bytes([78, 0]))); c.sendall(frame(bytes([80])))
                         print("sent CombatMusic off and AfterNightEnded", flush=True)
-                elif el >= 6 and not getattr(serve, "despawned", False):
-                    c.sendall(frame(bytes([16]) + struct.pack("<I", 2) + bytes([0]))); serve.despawned = True
+                elif el >= 6 and not despawned:
+                    c.sendall(frame(bytes([16]) + struct.pack("<I", 2) + bytes([0]))); despawned = True
                     c.sendall(frame(bytes([16]) + struct.pack("<I", 1) + bytes([1])))
                     print("sent EnemyDespawn for the DogMutated, and for the Dog (dead since 3 s: its corpse stays)", flush=True)
                     # A corpse the client never saw die (dead when it joined, or one it walked away from): the host sends
@@ -218,16 +265,16 @@ def serve(port, inp):
                     c.sendall(frame(bytes([15]) + struct.pack("<fH", time.time() - T0, 1) + struct.pack("<I", 3) + struct.pack("<fff", px + 300, 16, pz) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([0]) + struct.pack("<f", 0.0) + bytes([0])))
                     c.sendall(frame(bytes([16]) + struct.pack("<I", 3) + bytes([1])))
                     print("sent a Dog's corpse at once (EnemySpawn, a dead EnemyState, EnemyDespawn keeping it)", flush=True)
-                elif el >= 7.5 and not getattr(serve, "corpse_gone", False):
-                    serve.corpse_gone = True
+                elif el >= 7.5 and not corpse_gone:
+                    corpse_gone = True
                     c.sendall(frame(bytes([16]) + struct.pack("<I", 3) + bytes([0])))
                     print("sent EnemyDespawn for that corpse, not kept (the host's is gone)", flush=True)
-            if REPLAY and t_end and time.time() - t_end > 5 and not getattr(serve, "replayed", False):
-                serve.replayed = True
+            if REPLAY and t_end and time.time() - t_end > 5 and not replayed:
+                replayed = True
                 recs = pickle.load(open(REPLAY, "rb"))
                 syncs = [m for m in recs if m[0] == 20]
                 day = struct.unpack_from("<I", syncs[0], 1)[0] if syncs else 2
-                for t2, minute in ((20, 600), (20, 605)):
+                for minute in (600, 605):
                     c.sendall(frame(bytes([20]) + struct.pack("<IH", day, minute))); time.sleep(1.0)
                 for m2 in recs:
                     if m2[0] != 20:
@@ -235,7 +282,7 @@ def serve(port, inp):
                 print(f"replayed {len([m for m in recs if m[0] != 20])} world messages and 2 time syncs", flush=True)
                 time.sleep(3)  # for the game to apply the last of them
             # Once the client has its character (so it has one to save before leaving), and a moment more.
-            if RELOAD and t_end and getattr(serve, "char_sent", 0) and time.time() - serve.char_sent > 2:
+            if RELOAD and t_end and char_sent and time.time() - char_sent > 2:
                 if CHAPTER:
                     c.sendall(frame(bytes([86]) + struct.pack("<i", 2)))
                     print("sent ChapterStart (chapter 2)", flush=True)
@@ -283,21 +330,21 @@ def serve(port, inp):
                 break
         elif t == 24 and CHARS:
             print("client asked for its character -> new", flush=True)
-            serve.char_sent = time.time()
+            char_sent = time.time()
             c.sendall(frame(bytes([26, 0]) + s32("") + s32("") + s32("") + struct.pack("<fff", 0, 0, 0)))
         elif t == 25 and CHARS:
             ps, at = rbig(m, 1); inv, at = rbig(m, at); hot, at = rbig(m, at)
             P = json.loads(ps); I = json.loads(inv)
             items = [(i["type"], i["amount"]) for i in I["invItems"]]
             print(f"client saved its character: pos {P['pos'][0]:.0f},{P['pos'][2]:.0f} health {P['health']:.0f} level {P['currentLevel']} items {items} slots {I['slotCount']}", flush=True)
-            if not getattr(serve, "sent_back", False):
-                serve.sent_back = True
+            if not sent_back:
+                sent_back = True
                 P["pos"][0] += 300; P["health"] = 50.0; I["slotCount"] -= 2
                 I["invItems"] = [{"slotId": 0, "type": "rope", "durability": 1.0, "amount": 3}]
                 c.sendall(frame(bytes([26, 1]) + s32(json.dumps(P)) + s32(json.dumps(I)) + s32(hot) + struct.pack("<fff", 0, 0, 0)))
                 print("sent it back changed: 300 east, health 50, 3 ropes", flush=True)
-            elif not getattr(serve, "checked", False):
-                serve.checked = True; t_end = time.time() - 100  # done
+            elif not checked:
+                checked = True; t_end = time.time() - 100  # done
         elif t == 40:  # a Request: refuse door actions (rolling the door back), allow the rest
             seq = struct.unpack_from("<I", m, 1)[0]; inner = m[5:]
             if AUTH and inner[0] == 21 and inner[1] in (1, 2):
@@ -310,9 +357,9 @@ def serve(port, inp):
             elif AUTH and inner[0] == 68 and inner[10] == 1:  # TalkLock: someone else is talking to them
                 c.sendall(frame(bytes([41]) + struct.pack("<I", seq) + bytes([0]) + s16("Somebody is talking to them") + s16("")))
                 print(f"refused the client's TalkLock of {inner[1]}:{struct.unpack_from('<q', inner, 2)[0]} (request {seq})", flush=True)
-            elif AUTH and inner[0] == 67 and inner[1] == 1 and not getattr(serve, "refused_event", False):
+            elif AUTH and inner[0] == 67 and inner[1] == 1 and not refused_event:
                 # The client's trigger: refused (it "had already happened here"). The client should run none of it.
-                serve.refused_event = True
+                refused_event = True
                 c.sendall(frame(bytes([41]) + struct.pack("<I", seq) + bytes([0]) + s16("test: that has already happened") + s16("")))
                 print(f"refused the client's EventFired {inner[1:12].hex()} (request {seq})", flush=True)
             else:
@@ -324,11 +371,11 @@ def serve(port, inp):
             c.sendall(frame(bytes([0xC9]) + ref + s32("")))
             print(f"client asked what {ref[0]}:{struct.unpack_from('<q', ref, 1)[0]} holds -> not here", flush=True)
         elif t in (50, 51, 52):  # PlayerSounds, PlayerShot, PlayerHurt: what our player sounded and looked like
-            fx[t] = fx.get(t, 0) + 1
+            seen_fx[t] = seen_fx.get(t, 0) + 1
         elif t in (17, 19):
             print("client sent", "EnemyHit" if t == 17 else "PlayerNoise", flush=True)
     print("PlayerStates received:", states, flush=True)
-    if fx: print("the client's player fx (50 sounds, 51 shots, 52 hurt):", fx, flush=True)
+    if seen_fx: print("the client's player fx (50 sounds, 51 shots, 52 hurt):", seen_fx, flush=True)
 
 if __name__ == "__main__":
     {"fetch": fetch, "serve": serve}[sys.argv[1]](int(sys.argv[2]), sys.argv[3])

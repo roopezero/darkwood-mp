@@ -12,6 +12,8 @@ back; the host's player hits it (its threat goes to the host) and walks back. Th
 
 import os
 
+from mapsteps import SAFE_OFF, SAFE_ON
+
 SETTLE = 1.0
 
 KINDS = ["Villager", "VillagerPitchfork", "Villager3_plank", "VillagerTorch", "Villager1_Burning", "Redneck03",
@@ -22,9 +24,7 @@ if ONLY:
 
 PRE_JOIN = []
 
-SAFE = [("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0})]
-
-STEPS = SAFE + [("host", "ee-day"), ("client", "ee-arena"), ("host", "heal")]
+STEPS = SAFE_ON + [("host", "ee-day"), ("client", "ee-arena"), ("host", "heal")]
 
 
 def rounds(tag, kind, n=1):
@@ -47,8 +47,7 @@ for kind in KINDS:
 if not ONLY:
     STEPS += rounds("many", "Villager,VillagerPitchfork,Villager3_plank")
 
-STEPS += [("client", "heal"), ("host", "alive"), ("client", "alive"), ("host", "ee-day", "off"),
-          ("host", "i2-safe", "off", {"settle": 0}), ("client", "i2-safe", "off", {"settle": 0})]
+STEPS += [("client", "heal"), ("host", "alive"), ("client", "alive"), ("host", "ee-day", "off")] + SAFE_OFF
 
 POST = []
 REQUIRE = []

@@ -154,8 +154,8 @@ namespace DarkwoodMP.World
                 // The host notes the switched-off ones too (where the save put them): a part of the world switched on
                 // later around a client's player settles there (a chair, a table shifting a few units), and that is
                 // then sent to everyone, so a client whose copy is still switched off has them settled too. Noted
-                // only once seen, they had settled already, nothing was sent, and the map4 test found a third
-                // client's copies 2 and 8 units from the host's and the two clients' there.
+                // only once seen, they would have settled already and nothing would be sent, leaving that client's
+                // copies a few units from everyone else's.
                 foreach (var b in Object.FindObjectsOfType<Rigidbody>(_session.IsHost)) Note(b, null);
             }
             Look(me);
@@ -250,9 +250,7 @@ namespace DarkwoodMP.World
                 }
                 var r = ObjRef.Pin(b.gameObject);
                 if (!r.Valid) continue;
-                var w = _session.Begin(MsgType.ObjMove);
-                Write(w, r, t.position, t.rotation, true);
-                _session.SendTo(who, w, Channel.Control, reliable: true);
+                _session.SendTo(who, Message(r, t.position, t.rotation, true), Channel.Control, reliable: true);
                 sent++;
                 if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {item.name} ({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
             }
@@ -330,21 +328,22 @@ namespace DarkwoodMP.World
         {
             if (item == null || !r.Valid) return;
             var t = item.transform;
-            var w = _session.Begin(MsgType.ObjMove);
-            Write(w, r, t.position, t.rotation, last);
+            var w = Message(r, t.position, t.rotation, last);
             if (last) { Rebase(item.gameObject); Recell(item.gameObject); } // and into the culling node of where it is now
-            bool reliable = last;
             int ch = last ? Channel.Control : Channel.State;
-            if (_session.IsHost) _session.Broadcast(w, ch, reliable);
-            else _session.SendToHost(w, ch, reliable);
+            if (_session.IsHost) _session.Broadcast(w, ch, reliable: last);
+            else _session.SendToHost(w, ch, reliable: last);
         }
 
-        private static void Write(PacketWriter w, ObjRef r, Vector3 pos, Quaternion rot, bool last)
+        /// <summary>ObjMove: ObjRef, vec3 pos, quat rot, u8 last.</summary>
+        private PacketWriter Message(ObjRef r, Vector3 pos, Quaternion rot, bool last)
         {
+            var w = _session.Begin(MsgType.ObjMove);
             r.Write(w);
             w.Write(pos);
             w.W.Write(rot.x); w.W.Write(rot.y); w.W.Write(rot.z); w.W.Write(rot.w);
             w.W.Write((byte)(last ? 1 : 0));
+            return w;
         }
 
         /// <summary>
@@ -357,9 +356,7 @@ namespace DarkwoodMP.World
             if (item == null) return false;
             if (Authority.Near(from, item.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach)) return true;
             Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)} dragged {item.name} from too far: put back");
-            var w = _session.Begin(MsgType.ObjMove);
-            Write(w, obj, item.transform.position, item.transform.rotation, true);
-            _session.SendTo(from, w, Channel.Control, reliable: true);
+            _session.SendTo(from, Message(obj, item.transform.position, item.transform.rotation, true), Channel.Control, reliable: true);
             return false;
         }
 
@@ -374,14 +371,9 @@ namespace DarkwoodMP.World
             bool last = (r.R.ReadByte() & 1) != 0;
 
             if (s.IsHost && !DragAllowed(from, obj, pos)) return;
-            if (s.IsHost) // pass a client's drag on
-            {
-                var w = s.Begin(MsgType.ObjMove);
-                Write(w, obj, pos, rot, last);
-                // Where it ended up goes back to its mover too: if the host's game had sent a push of its own for the
-                // same object at the same time, the mover got that one and would keep it.
-                s.Broadcast(w, last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
-            }
+            // Pass a client's drag on. Where it ended up goes back to its mover too: if the host's game had sent a push
+            // of its own for the same object at the same time, the mover got that one and would keep it.
+            if (s.IsHost) s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
 
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here"); return; }

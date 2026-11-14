@@ -274,7 +274,7 @@ namespace DarkwoodMP
         }
 
         private static float S => PixelFont.Scale;
-        private static float LabelW => 150;
+        private const float LabelW = 150;
 
         private static void DrawBody(Flow f)
         {
@@ -711,6 +711,8 @@ namespace DarkwoodMP
             _listScroll = GUI.BeginScrollView(listArea, _listScroll, view, false, _rows.Count * rowH > listArea.height, GUIStyle.none, GUI.skin.verticalScrollbar);
             if (_rows.Count == 0) Ui.Label(new Rect(6 * S, 4 * S, view.width - 12 * S, rowH), "The game's controls aren't loaded yet.", MenuSkin.Dim);
             var rc = Ui.Split(new Rect(0, 0, view.width, rowH), widths);
+            var maps = new RW.ControllerMap[3];
+            for (int col = 0; col < 3; col++) maps[col] = Map(ColumnTypes[col]);
             for (int i = 0; i < _rows.Count; i++)
             {
                 var b = _rows[i];
@@ -722,7 +724,7 @@ namespace DarkwoodMP
                 {
                     var cell = new Rect(rc[col + 1].x, y + S, rc[col + 1].width, rowH - 2 * S);
                     if (!b.Allowed[col]) continue;
-                    if (col == 2 || Map(ColumnTypes[col]) == null)
+                    if (col == 2 || maps[col] == null)
                     {
                         // The game doesn't let you change the controller's buttons: shown only.
                         Ui.Label(new Rect(cell.x + 4 * S, cell.y, cell.width - 4 * S, cell.height), PixelFont.Fit(b.Keys[col] ?? "-", cell.width - 6 * S), MenuSkin.Dim);
@@ -849,8 +851,8 @@ namespace DarkwoodMP
 
         /// <summary>
         /// End the mapping. From one of the mapper's own events (<paramref name="fromMapper"/>) it has already
-        /// stopped, so it isn't told to again: Stop raises events itself, and calling it from them recursed until the
-        /// stack ran out, which took the whole game down.
+        /// stopped, so it isn't told to again: Stop raises the mapper's events, which call this, and _stopping keeps
+        /// it from running again inside them.
         /// </summary>
         private static void StopMapping(string status, bool warn = false, bool fromMapper = false)
         {
@@ -870,7 +872,7 @@ namespace DarkwoodMP
         }
 
         /// <summary>The key maps into the game's store (ControlsMenu.Save), and the game's own copies of the maps refreshed.</summary>
-        internal static void SaveControls()
+        private static void SaveControls()
         {
             RW.ReInput.userDataStore?.Save();
             if (Menu != null && Menu.ControlsMenu != null) Menu.ControlsMenu.loadMaps();
@@ -921,11 +923,13 @@ namespace DarkwoodMP
             return l;
         }
 
+        private static Binding KeyboardRow(string label) => _rows.Find(r => r.Label == label && r.Allowed[0]);
+
         /// <summary>Start listening for a key for the keyboard row with this label, as a click on it does.</summary>
         internal static bool TestBeginMapping(string label)
         {
             if (_rows == null) BuildRows();
-            var b = _rows.Find(r => r.Label == label && r.Allowed[0]);
+            var b = KeyboardRow(label);
             if (b == null) return false;
             BeginMapping(b, 0);
             return true;
@@ -940,7 +944,7 @@ namespace DarkwoodMP
         internal static bool TestAssign(string label, KeyCode key)
         {
             if (_rows == null) BuildRows();
-            var b = _rows.Find(r => r.Label == label && r.Allowed[0]);
+            var b = KeyboardRow(label);
             var map = Map(RW.ControllerType.Keyboard);
             if (b == null || map == null) return false;
             var ident = RW.ReInput.controllers.Keyboard.GetElementIdentifierByKeyCode(key);
@@ -955,7 +959,7 @@ namespace DarkwoodMP
         internal static KeyCode TestKeyOf(string label)
         {
             BuildRows();
-            var b = _rows.Find(r => r.Label == label && r.Allowed[0]);
+            var b = KeyboardRow(label);
             var map = Map(RW.ControllerType.Keyboard);
             var em = b != null && map != null && b.MapIds[0] >= 0 ? map.GetElementMap(b.MapIds[0]) : null;
             return em != null ? em.keyCode : KeyCode.None;

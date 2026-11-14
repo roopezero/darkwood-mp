@@ -1,11 +1,11 @@
 """Compares the host's and the client's dumps of the shared world (StateDump.cs, the `map` test).
 
-    mapcompare.py HOST.json CLIENT.json [--require SECTION,SECTION...] [--ignore SECTION.FIELD,...]
+    mapcompare.py HOST.json CLIENT.json [--require SECTION,SECTION...]
 
 Entries are matched by key (their ObjRef); Placed entries whose key differs a little (the object lies a unit
 or two differently) are paired by name and position. Numbers must be equal, except fields with a tolerance
 (positions, the hour, durability, fuel). "local" (each player's own things) is printed, not compared.
-Prints a report per section and exits 1 on any difference, or if a required section is empty in both.
+Prints a report per section and exits 1 on any difference, or if a required section is empty or missing in both.
 """
 import json, re, sys
 
@@ -24,17 +24,15 @@ def base(key):
     return re.sub(r"#\d+$", "", key)
 
 
-def diff(a, b, path, pos_tol, out, ignore):
+def diff(a, b, path, pos_tol, out):
     """Differences between two values, as strings, into out."""
     field = path.rsplit(".", 1)[-1]
-    if field in ignore:
-        return
     if isinstance(a, dict) and isinstance(b, dict):
         for k in sorted(set(a) | set(b)):
             if k not in a or k not in b:
                 out.append(f"{path}.{k}: host {a.get(k, '-')!r} client {b.get(k, '-')!r}")
             else:
-                diff(a[k], b[k], f"{path}.{k}", pos_tol, out, ignore)
+                diff(a[k], b[k], f"{path}.{k}", pos_tol, out)
     elif field == "pos" and isinstance(a, list) and isinstance(b, list) and len(a) == len(b):
         if any(abs(x - y) > pos_tol for x, y in zip(a, b)):
             out.append(f"{path}: host {a} client {b}")
@@ -43,7 +41,7 @@ def diff(a, b, path, pos_tol, out, ignore):
             out.append(f"{path}: host {len(a)} long {short(a)} client {len(b)} long {short(b)}")
         else:
             for i, (x, y) in enumerate(zip(a, b)):
-                diff(x, y, f"{path}[{i}]", pos_tol, out, ignore)
+                diff(x, y, f"{path}[{i}]", pos_tol, out)
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
         if abs(a - b) > FIELD_TOL.get(field, 1e-6):
             out.append(f"{path}: host {a} client {b}")
@@ -85,16 +83,18 @@ def pair(h, c, pos_tol):
 
 def main():
     args = sys.argv[1:]
-    required, ignore = list(DEFAULT_REQUIRED), set()
+    required = list(DEFAULT_REQUIRED)
     if "--require" in args:
         i = args.index("--require"); required = [s for s in args[i + 1].split(",") if s]; del args[i:i + 2]
-    if "--ignore" in args:
-        i = args.index("--ignore"); ignore = set(args[i + 1].split(",")); del args[i:i + 2]
     host, client = (json.load(open(p)) for p in args[:2])
     hs, cs = host.get("sections", {}), client.get("sections", {})
     bad = 0
     print(f"host: {host.get('role')} around {host.get('centre')}; client: {client.get('role')} around {client.get('centre')}")
-    for name in sorted(set(hs) | set(cs)):
+    for name in sorted(set(hs) | set(cs) | set(required)):
+        if name not in hs and name not in cs:
+            print(f"  {name}: MISSING in both  <-- FAIL")  # a required section StateDump didn't write (a typo, or renamed)
+            bad += 1
+            continue
         h, c = hs.get(name, {}), cs.get(name, {})
         if "error" in h or "error" in c:
             print(f"  {name}: ERROR host {h.get('error', '-')} client {c.get('error', '-')}")
@@ -105,7 +105,7 @@ def main():
         diffs = []
         for k, a, b in pairs:
             out = []
-            diff(a, b, k, pos_tol, out, ignore)
+            diff(a, b, k, pos_tol, out)
             diffs += out
         far = []
         me = ((client.get("local", {}).get("player") or {}).get("player") or {}).get("pos")

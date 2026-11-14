@@ -33,7 +33,7 @@ namespace DarkwoodMP.Combat
     {
         public const float RelevantRange = 3000f;
         public const float StateInterval = 0.05f;
-        public const float CorpseLinger = 6f;
+        private const float CorpseLinger = 6f;
 
         public static NetEnemies Instance { get; private set; }
         private readonly Session _session;
@@ -53,7 +53,7 @@ namespace DarkwoodMP.Combat
             session.OnPeerDisconnected += id => { _known.Remove(id); _corpseKnown.Remove(id); };
             session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
             session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
-            session.OnSessionEnded += () => { HostileNpcs.Clear(); _known.Clear(); _corpseKnown.Clear(); _byCharHost.Clear(); _puppets.Clear(); _byChar.Clear(); EnemyMotion.Reset(); _corpses.Clear(); _corpseIds.Clear(); Frozen.Clear(); };
+            session.OnSessionEnded += () => { HostileNpcs.Clear(); _known.Clear(); _corpseKnown.Clear(); _byCharHost.Clear(); _byIdHost.Clear(); _puppets.Clear(); _byChar.Clear(); EnemyMotion.Reset(); _corpses.Clear(); _corpseIds.Clear(); Frozen.Clear(); };
         }
 
         /// <summary>
@@ -175,6 +175,7 @@ namespace DarkwoodMP.Combat
 
         private uint _nextId = 1;
         private readonly Dictionary<Character, Tracked> _byCharHost = new Dictionary<Character, Tracked>();
+        private readonly Dictionary<uint, Tracked> _byIdHost = new Dictionary<uint, Tracked>();
         private readonly Dictionary<ulong, HashSet<uint>> _known = new Dictionary<ulong, HashSet<uint>>();
         // Corpses each client was told to keep (EnemyDespawn with keep corpse): not sent again.
         private readonly Dictionary<ulong, HashSet<uint>> _corpseKnown = new Dictionary<ulong, HashSet<uint>>();
@@ -196,6 +197,7 @@ namespace DarkwoodMP.Combat
                         var t = new Tracked { Id = _nextId++, C = c };
                         Animators(c.transform, out t.Animators, out t.AnimatorPaths);
                         _byCharHost[c] = t;
+                        _byIdHost[t.Id] = t;
                         if (c.npc != null) HostileNpcs.HostStarted(c, t.Id);
                     }
                 var gone = new List<Character>();
@@ -210,8 +212,9 @@ namespace DarkwoodMP.Combat
                 }
                 foreach (var g in gone)
                 {
-                    if (g != null) HostileNpcs.HostStopped(g, _byCharHost[g].Id);
-                    Forget(_byCharHost[g].Id, keepCorpse: false); _byCharHost.Remove(g);
+                    uint id = _byCharHost[g].Id;
+                    if (g != null) HostileNpcs.HostStopped(g, id);
+                    Forget(id); _byCharHost.Remove(g); _byIdHost.Remove(id);
                 }
             }
             if (now >= _nextLoopCheck) { _nextLoopCheck = now + LoopCheckInterval; LoopCheck(now); }
@@ -243,7 +246,7 @@ namespace DarkwoodMP.Combat
                     bool dead = t.DiedAt >= 0;
                     bool corpseDone = dead && Time.time - t.DiedAt > CorpseLinger;
                     bool near = c.gameObject.activeInHierarchy && (c.transform.position - at).sqrMagnitude < RelevantRange * RelevantRange;
-                    if (corpseDone && corpses.Contains(t.Id)) continue; // it has it
+                    if (dead && corpses.Contains(t.Id)) continue; // it has it, settled or not (sending it again would make a second body)
                     if (corpseDone && !known.Contains(t.Id))
                     {
                         // A corpse it never saw settle: it gets it once it's near.
@@ -301,16 +304,7 @@ namespace DarkwoodMP.Combat
                 bool changed = cur != t.Loop;
                 if (!changed && !resend) continue;
                 t.Loop = cur;
-                foreach (var kv in _known)
-                {
-                    if (!kv.Value.Contains(t.Id)) continue;
-                    var w = _session.Begin(MsgType.EnemySound);
-                    w.W.Write(t.Id);
-                    w.WriteStr(cur);
-                    w.W.Write(1f);
-                    if (changed) _session.SendTo(kv.Key, w, Channel.Control, reliable: true);
-                    else _session.SendTo(kv.Key, w, Channel.State, reliable: false);
-                }
+                foreach (var peer in Knowing(t.Id)) SendSound(peer, t.Id, cur, 1f, reliable: changed);
             }
         }
 
@@ -341,13 +335,23 @@ namespace DarkwoodMP.Combat
             // turned hostile): after the spawn, on the same channel, so it comes after it.
             var loop = c.sounds != null ? c.sounds.idleAudioObject : null;
             if (loop != null && loop.IsPlaying() && !string.IsNullOrEmpty(loop.audioID))
-            {
-                var s = _session.Begin(MsgType.EnemySound);
-                s.W.Write(t.Id);
-                s.WriteStr(loop.audioID);
-                s.W.Write(1f);
-                _session.SendTo(peer, s, Channel.Control, reliable: true);
-            }
+                SendSound(peer, t.Id, loop.audioID, 1f, reliable: true);
+        }
+
+        /// <summary>EnemySound: reliable on the control channel, or unreliable on the state channel.</summary>
+        private void SendSound(ulong peer, uint id, string audio, float volume, bool reliable)
+        {
+            var w = _session.Begin(MsgType.EnemySound);
+            w.W.Write(id);
+            w.WriteStr(audio);
+            w.W.Write(volume);
+            _session.SendTo(peer, w, reliable ? Channel.Control : Channel.State, reliable);
+        }
+
+        /// <summary>Host: the clients that have this enemy (it's near them).</summary>
+        private IEnumerable<ulong> Knowing(uint id)
+        {
+            foreach (var kv in _known) if (kv.Value.Contains(id)) yield return kv.Key;
         }
 
         /// <summary>
@@ -382,12 +386,12 @@ namespace DarkwoodMP.Combat
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
-        private void Forget(uint id, bool keepCorpse)
+        private void Forget(uint id)
         {
             foreach (var kv in _known)
-                if (kv.Value.Remove(id)) SendDespawn(kv.Key, id, keepCorpse);
+                if (kv.Value.Remove(id)) SendDespawn(kv.Key, id, keepCorpse: false);
             foreach (var kv in _corpseKnown) // the host's corpse is gone, so theirs goes too
-                if (kv.Value.Remove(id) && !keepCorpse) SendDespawn(kv.Key, id, keepCorpse: false);
+                if (kv.Value.Remove(id)) SendDespawn(kv.Key, id, keepCorpse: false);
         }
 
         private static void WriteState(PacketWriter w, Tracked t)
@@ -415,12 +419,11 @@ namespace DarkwoodMP.Combat
         public void HostBlood(Character c, float yRot)
         {
             if (!_byCharHost.TryGetValue(c, out var t)) return;
-            foreach (var kv in _known)
+            foreach (var peer in Knowing(t.Id))
             {
-                if (!kv.Value.Contains(t.Id)) continue;
                 var w = _session.Begin(MsgType.EnemyBlood);
                 w.W.Write(t.Id); w.W.Write(yRot); w.W.Write((byte)(c.inWater ? 1 : 0));
-                _session.SendTo(kv.Key, w, Channel.State, reliable: false);
+                _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
 
@@ -436,10 +439,8 @@ namespace DarkwoodMP.Combat
         /// <summary>Host: the players that have this enemy (it's near them), for things only they need to see.</summary>
         public List<ulong> PeersSeeing(Character c)
         {
-            var list = new List<ulong>();
-            if (c == null || !_byCharHost.TryGetValue(c, out var t)) return list;
-            foreach (var kv in _known) if (kv.Value.Contains(t.Id)) list.Add(kv.Key);
-            return list;
+            if (c == null || !_byCharHost.TryGetValue(c, out var t)) return new List<ulong>();
+            return Knowing(t.Id).ToList();
         }
 
         /// <summary>Host: the net ID the clients know this enemy by (false if it isn't tracked).</summary>
@@ -465,15 +466,7 @@ namespace DarkwoodMP.Combat
         {
             var c = parent.GetComponentInParent<Character>();
             if (c == null || !_byCharHost.TryGetValue(c, out var t)) return;
-            foreach (var kv in _known)
-            {
-                if (!kv.Value.Contains(t.Id)) continue;
-                var w = _session.Begin(MsgType.EnemySound);
-                w.W.Write(t.Id);
-                w.WriteStr(audioId);
-                w.W.Write(volume);
-                _session.SendTo(kv.Key, w, Channel.State, reliable: false);
-            }
+            foreach (var peer in Knowing(t.Id)) SendSound(peer, t.Id, audioId, volume, reliable: false);
         }
 
         private void OnHit(ulong from, PacketReader r)
@@ -484,8 +477,7 @@ namespace DarkwoodMP.Combat
             byte f = r.R.ReadByte();
             var effects = PlayerDamage.ReadEffects(r);
             string weaponJson = r.ReadStr();
-            Tracked t = null;
-            foreach (var x in _byCharHost.Values) if (x.Id == id) { t = x; break; }
+            _byIdHost.TryGetValue(id, out var t);
             if (t == null || t.C == null || !InPlay(t.C)) { World.Authority.Refuse("that enemy isn't alive here"); return; }
             if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null) { World.Authority.Refuse("no stand-in for that player yet"); return; }
             ApplyHit(from, proxy, t.C, damage, f, effects, weaponJson);
@@ -513,13 +505,50 @@ namespace DarkwoodMP.Combat
                 c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true);
                 if (c != null) HealthBar(c, show: Player.Instance != null && Player.Instance.selectedObject == c.transform);
             }
-            if (c != null && c.effects != null) foreach (var e in effects) c.effects.activate(e); // bleeding, burning... from their weapon
+            if (c != null && c.effects != null) foreach (var e in WeaponEffects(weapon, effects)) c.effects.activate(e); // bleeding, burning... from their weapon
+        }
+
+        private static readonly Dictionary<InvItem, List<InvItemEffect>> _weaponEffects = new Dictionary<InvItem, List<InvItemEffect>>();
+
+        /// <summary>
+        /// Of the effects a hit came with, those the weapon's class can cause, with the class's own numbers rather
+        /// than the sent ones: its melee sensors' effects (MeleeSensor.effects) and its flames' (Flame.effect: a
+        /// firearm's shot is its `item` prefab, which Player.spawnBullet spawns, a flamethrower's flame among them;
+        /// also its muzzle and particle prefabs). Bare hands cause none.
+        /// </summary>
+        private static List<InvItemEffect> WeaponEffects(InvItemClass weapon, List<InvItemEffect> sent)
+        {
+            var result = new List<InvItemEffect>();
+            var b = weapon?.baseClass;
+            if (b == null || sent == null || sent.Count == 0) return result;
+            if (!_weaponEffects.TryGetValue(b, out var own))
+            {
+                own = new List<InvItemEffect>();
+                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, b.isFirearm ? b.item : null, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
+                {
+                    var go = o as GameObject ?? (o as Component)?.gameObject;
+                    if (go == null) continue;
+                    foreach (var ms in go.GetComponentsInChildren<MeleeSensor>(true))
+                        if (ms.effects != null) foreach (var e in ms.effects) if (e != null) own.Add(e);
+                    foreach (var fl in go.GetComponentsInChildren<Flame>(true)) if (fl.effect != null) own.Add(fl.effect);
+                }
+                _weaponEffects[b] = own;
+            }
+            var left = new List<InvItemEffect>(own);
+            foreach (var e in sent)
+            {
+                int i = left.FindIndex(x => x.type == e.type);
+                if (i < 0) { Plugin.Log.LogInfo($"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped"); continue; }
+                result.Add(left[i]);
+                left.RemoveAt(i);
+            }
+            return result;
         }
 
         /// <summary>How far a melee hit reaches (generous: the positions the host has are a little late).</summary>
-        public const float MeleeReach = 500f;
+        private const float MeleeReach = 500f;
         /// <summary>Most hits a player lands in a second with a melee weapon or bare hands (or a slow gun).</summary>
-        public const int MaxHitsPerSecond = 24;
+        private const int MaxHitsPerSecond = 24;
         private readonly Dictionary<ulong, Queue<float>> _hitTimes = new Dictionary<ulong, Queue<float>>();
 
         /// <summary>
@@ -528,7 +557,7 @@ namespace DarkwoodMP.Combat
         /// fireRate seconds (at most every 0.05 s for automatic and burst fire, 0.15 s for one shot a click), with half again as a margin for hits
         /// that arrive bunched up. Never under MaxHitsPerSecond.
         /// </summary>
-        public static int MaxHits(InvItemClass weapon)
+        private static int MaxHits(InvItemClass weapon)
         {
             var b = weapon?.baseClass;
             if (b == null || !b.isFirearm) return MaxHitsPerSecond;
@@ -564,15 +593,19 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// The most damage this weapon can deal in one hit, by the game's own numbers: its damage or special
-        /// damage, with its upgrades (getModdedDamage), doubled by the Strong skill's effect, with a margin.
+        /// The most damage this weapon can deal in one hit, by the game's own numbers for its class: its damage or
+        /// special damage, with every damage upgrade its class offers (InvItem.upgrades; not the upgrades the hit
+        /// says it has, which the client sends), doubled by the Strong skill's effect, with a margin.
         /// Bare hands: as the game's weakest weapons.
         /// </summary>
         public static float DamageCap(InvItemClass weapon)
         {
-            if (weapon == null || weapon.baseClass == null) return 40f;
-            int most = Mathf.Max(weapon.getModdedDamage(weapon.baseClass.damage), weapon.getModdedDamage(weapon.baseClass.specialDamage));
-            return Mathf.Max(10f, most * 2f * 1.25f);
+            var b = weapon?.baseClass;
+            if (b == null) return 40f;
+            float mod = 1f; // as getModdedDamage adds them up
+            if (b.upgrades != null) foreach (var u in b.upgrades) if (u != null && u.damageModifier > 1f) mod += u.damageModifier - 1f;
+            int most = Mathf.Max(b.damage, b.specialDamage);
+            return Mathf.Max(10f, most * mod * 2f * 1.25f);
         }
 
         // =====================================================================
@@ -681,7 +714,7 @@ namespace DarkwoodMP.Combat
 
         public Character CharacterOf(uint id)
         {
-            if (_session.IsHost) { foreach (var t in _byCharHost.Values) if (t.Id == id) return t.C; return null; }
+            if (_session.IsHost) return _byIdHost.TryGetValue(id, out var t) ? t.C : null;
             if (_puppets.TryGetValue(id, out var p)) return p.C;
             return _corpses.TryGetValue(id, out var c) ? c.C : null;
         }
@@ -1001,11 +1034,8 @@ namespace DarkwoodMP.Combat
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't play {c.name}'s cut here: {e.Message}"); }
         }
 
-        private static readonly System.Reflection.MethodInfo[] CutSteps =
-        {
-            HarmonyLib.AccessTools.Method(typeof(Character), "destroyComponents"),
-            HarmonyLib.AccessTools.Method(typeof(Character), "destroyComponents2"),
-        };
+        // destroyComponents and destroyComponents2, without setDeathCollider.
+        private static readonly System.Reflection.MethodInfo[] CutSteps = { CorpseSteps[0], CorpseSteps[1] };
 
         /// <summary>
         /// Client: the upper part of a copy cut in half on the host, once its cut has played: as on the host
@@ -1171,13 +1201,11 @@ namespace DarkwoodMP.Combat
             w.WriteStr(InvItemClass.isNull(item) ? "" : Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0)));
             World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}");
             // Our own hit shows its health bar, as getHit does; the host's health for it follows in its next state.
-            if (damage > 0f && _puppets.TryGetValue(id, out var hit) && hit.C != null) HealthBar(hit.C, show: true);
+            if (!_puppets.TryGetValue(id, out var p) || p.C == null) return;
+            if (damage > 0f) HealthBar(p.C, show: true);
             // Predicted: the blood shows at once; the host's for this hit (a moment later) isn't shown again.
-            if (_puppets.TryGetValue(id, out var p) && p.C != null)
-            {
-                Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", p.C.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
-                _predictedBlood[id] = Time.realtimeSinceStartup;
-            }
+            Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", p.C.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
+            _predictedBlood[id] = Time.realtimeSinceStartup;
         }
 
         private readonly Dictionary<uint, float> _predictedBlood = new Dictionary<uint, float>();
@@ -1194,7 +1222,8 @@ namespace DarkwoodMP.Combat
             foreach (var a in root.GetComponentsInChildren<tk2dSpriteAnimator>(true))
             {
                 string p = a.transform == root ? "." : a.name;
-                for (var t = a.transform.parent; t != null && t != root && a.transform != root; t = t.parent) p = t.name + "/" + p;
+                if (a.transform != root)
+                    for (var t = a.transform.parent; t != null && t != root; t = t.parent) p = t.name + "/" + p;
                 list.Add(a);
                 paths.Add(StableHash.Of(p));
             }

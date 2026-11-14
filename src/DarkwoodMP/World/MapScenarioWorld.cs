@@ -74,8 +74,6 @@ namespace DarkwoodMP.World
 
         // ---- finding things ------------------------------------------------------------------------------------
 
-        private static string Clean(string n) => n.Replace("(Clone)", "").Trim();
-
         /// <summary>"NAME" or "NAME@DX,DZ": that one of these, nearest to the centre (or centre + offset).</summary>
         internal static T Find<T>(string spec, Func<T, bool> ok = null) where T : Component
         {
@@ -89,8 +87,8 @@ namespace DarkwoodMP.World
             }
             var near = Object.FindObjectsOfType<T>().Where(t => t != null && StateDump.Flat(t.transform.position - Centre) < StateDump.DefaultRadius && (ok == null || ok(t))).ToList();
             // That name exactly, else one whose name starts with it.
-            var exact = near.Where(t => Clean(t.gameObject.name) == name).ToList();
-            return Nearest(exact.Count > 0 ? exact : near.Where(t => Clean(t.gameObject.name).StartsWith(name, StringComparison.Ordinal)), at);
+            var exact = near.Where(t => StateDump.Clean(t.gameObject.name) == name).ToList();
+            return Nearest(exact.Count > 0 ? exact : near.Where(t => StateDump.Clean(t.gameObject.name).StartsWith(name, StringComparison.Ordinal)), at);
         }
 
         /// <summary>The Nth nearest to the centre (broken ones counted too, so the numbers don't move).</summary>
@@ -99,8 +97,6 @@ namespace DarkwoodMP.World
                 .OrderBy(t => Mathf.Round(StateDump.Flat(t.transform.position - Centre))).ThenBy(t => ObjRef.Of(t.gameObject).ToString(), StringComparer.Ordinal)
                 .Skip(int.Parse(n)).FirstOrDefault();
 
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
         internal static string Ref(Component c) => c == null ? "-" : ObjRef.Of(c.gameObject).ToString();
         private static Player P => Player.Instance;
 
@@ -167,7 +163,7 @@ namespace DarkwoodMP.World
             var parts = new List<string>();
             foreach (var name in a)
             {
-                var t = Find<Transform>(name, x => x.parent == null || Clean(x.parent.name) != Clean(x.name));
+                var t = Find<Transform>(name, x => x.parent == null || StateDump.Clean(x.parent.name) != StateDump.Clean(x.name));
                 if (t == null) { parts.Add($"{name}: none"); continue; }
                 var comps = t.GetComponentsInChildren<Component>(true).Where(c => c != null && !(c is Transform) && !(c is Renderer) && !(c is MeshFilter))
                     .Select(c => (c.transform == t ? "" : c.name + ".") + c.GetType().Name).Distinct().Take(14);
@@ -188,17 +184,18 @@ namespace DarkwoodMP.World
 
         // ---- doors and windows -----------------------------------------------------------------------------------
 
-        private static Door DoorArg(string[] a, Result r)
+        /// <summary>The Nth of these (a[0]), or null after failing with the usage of the "what-..." steps.</summary>
+        private static T NthArg<T>(string[] a, Result r, string what) where T : Component
         {
-            var d = a.Length > 0 ? Nth<Door>(a[0]) : null;
-            if (d == null) r.Fail("usage: door-... N (no such door)");
-            return d;
+            var t = a.Length > 0 ? Nth<T>(a[0]) : null;
+            if (t == null) r.Fail($"usage: {what}-... N (no such {what})");
+            return t;
         }
 
         /// <summary>"door-lock N": lock it (as the story does; Door.lockMe).</summary>
         private static IEnumerator DoorLock(string[] a, Result r)
         {
-            var d = DoorArg(a, r); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
             if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
             d.lockMe("");
             yield return new WaitForSeconds(0.5f);
@@ -210,7 +207,7 @@ namespace DarkwoodMP.World
         /// <summary>"door-pick N": open its lock with a lockpick, as the player does (Locked.tryToLockpick).</summary>
         private static IEnumerator DoorPick(string[] a, Result r)
         {
-            var d = DoorArg(a, r); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
             var l = d.GetComponent<Locked>();
             if (l == null || !l.locked) { r.Fail($"{d.name} {Ref(d)} isn't locked here"); yield break; }
             yield return Walk(d.transform.position);
@@ -225,7 +222,7 @@ namespace DarkwoodMP.World
         /// <summary>"door-barricade N": nail planks over it, as the hammer's three strokes do (Door.barricade(byPlayer)).</summary>
         private static IEnumerator DoorBarricade(string[] a, Result r)
         {
-            var d = DoorArg(a, r); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
             yield return Walk(d.transform.position);
             if (d.opened) { AsPlayer(() => d.close(P.transform)); yield return new WaitForSeconds(0.5f); }
             for (int i = 0; i < 3 && !d.barricaded; i++) { AsPlayer(() => d.barricade(byPlayer: true)); yield return new WaitForSeconds(0.3f); }
@@ -237,7 +234,7 @@ namespace DarkwoodMP.World
         /// <summary>"door-hit N DAMAGE": our player hits it (its barricade first).</summary>
         private static IEnumerator DoorHit(string[] a, Result r)
         {
-            var d = DoorArg(a, r); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
             int dmg = a.Length > 1 ? int.Parse(a[1]) : 20;
             yield return Walk(d.transform.position);
             var was = WorldActions.DoorState.Of(d);
@@ -251,7 +248,7 @@ namespace DarkwoodMP.World
         /// host (FireSync.ClientIgnited, as its flamethrower does).</summary>
         private static IEnumerator DoorBurn(string[] a, Result r)
         {
-            var d = DoorArg(a, r); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
             yield return Walk(d.transform.position, 200f);
             if (d.GetComponent<Burn>() == null)
             {
@@ -265,17 +262,10 @@ namespace DarkwoodMP.World
             yield return Walk(Centre, 60f); // away from the fire
         }
 
-        private static Window WindowArg(string[] a, Result r)
-        {
-            var w = a.Length > 0 ? Nth<Window>(a[0]) : null;
-            if (w == null) r.Fail("usage: window-... N (no such window)");
-            return w;
-        }
-
         /// <summary>"window-barricade N": planks over it, the hammer's three strokes (Window.barricade(0, byPlayer)).</summary>
         private static IEnumerator WindowBarricade(string[] a, Result r)
         {
-            var w = WindowArg(a, r); if (w == null) yield break;
+            var w = NthArg<Window>(a, r, "window"); if (w == null) yield break;
             yield return Walk(w.transform.position);
             for (int i = 0; i < 3 && !w.barricaded; i++) { AsPlayer(() => w.barricade(0, byPlayer: true)); yield return new WaitForSeconds(0.3f); }
             yield return new WaitForSeconds(1f);
@@ -286,7 +276,7 @@ namespace DarkwoodMP.World
         /// <summary>"window-hit N DAMAGE": our player hits its barricade.</summary>
         private static IEnumerator WindowHit(string[] a, Result r)
         {
-            var w = WindowArg(a, r); if (w == null) yield break;
+            var w = NthArg<Window>(a, r, "window"); if (w == null) yield break;
             int dmg = a.Length > 1 ? int.Parse(a[1]) : 20;
             if (!w.barricaded) { r.Fail($"{w.name} {Ref(w)} isn't barricaded here"); yield break; }
             yield return Walk(w.transform.position);
@@ -417,16 +407,10 @@ namespace DarkwoodMP.World
             int tries = 0;
             if (WorldActions.Crate(crate) != null && !crate.searched)
             {
-                var beingDisarmed = AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
                 while (!crate.searched && tries < 12)
                 {
                     tries++;
-                    AsPlayer(() =>
-                    {
-                        P.disarmingTrap = true;
-                        beingDisarmed(P) = crate;
-                        P.progressBarCompleted();
-                    });
+                    FinishDisarm(crate);
                     yield return new WaitForSeconds(1.2f);
                 }
                 P.openedItemInventory = null;
@@ -580,8 +564,6 @@ namespace DarkwoodMP.World
             if (it != null && it.health == was && !it.destroyed) r.Fail($"{r.Info}: the hit did nothing");
         }
 
-        private static Trigger TrapNamed(string spec) => Find<Trigger>(spec);
-
         /// <summary>"trap-fire NAME": our player steps into a trap (its trigger with our player's collider).</summary>
         private static IEnumerator TrapFire(string[] a, Result r)
         {
@@ -727,6 +709,16 @@ namespace DarkwoodMP.World
             r.Info = _worldMade == null ? "gone" : $"health {_worldMadeHealth} -> {_worldMade.health} {ObjRef.Of(_worldMade.gameObject)}";
         }
 
+        private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed = AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
+
+        /// <summary>The progress bar's end as the player's action, with it as the trap being disarmed (Player.progressBarCompleted).</summary>
+        private static void FinishDisarm(Item it) => AsPlayer(() =>
+        {
+            P.disarmingTrap = true;
+            TrapBeingDisarmed(P) = it;
+            P.progressBarCompleted();
+        });
+
         /// <summary>"trap-disarm NAME": crouch over it and disarm it (the progress bar's end; a client's roll is the
         /// host's). It's either disarmed (gone, into our bags) or sprung.</summary>
         private static IEnumerator TrapDisarm(string[] a, Result r)
@@ -736,13 +728,7 @@ namespace DarkwoodMP.World
             var item = t.GetComponent<Item>();
             string what = $"{t.name} {Ref(t)} at {Fmt(t.transform.position)}";
             yield return Walk(t.transform.position, 90f);
-            var beingDisarmed = AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
-            AsPlayer(() =>
-            {
-                P.disarmingTrap = true;
-                beingDisarmed(P) = item;
-                P.progressBarCompleted();
-            });
+            FinishDisarm(item);
             float until = Time.realtimeSinceStartup + 4f;
             while (t != null && !t.triggered && Time.realtimeSinceStartup < until) yield return null;
             P.hidingInventory = false;
@@ -832,13 +818,10 @@ namespace DarkwoodMP.World
 
         // ---- the story, traders, enemies ---------------------------------------------------------------------------
 
-        private static Dictionary<string, Flags.Flag> FlagsDict() =>
-            AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(Singleton<Flags>.Instance);
-
         /// <summary>"flag N": flip the Nth story flag (Flags.setFlag).</summary>
         private static IEnumerator Flag(string[] a, Result r)
         {
-            var flag = FlagsDict().Values.Where(f => f != null).OrderBy(f => f.name, StringComparer.Ordinal).Skip(a.Length > 0 ? int.Parse(a[0]) : 0).FirstOrDefault();
+            var flag = StateDump.FlagsDict(Singleton<Flags>.Instance).Values.Where(f => f != null).OrderBy(f => f.name, StringComparer.Ordinal).Skip(a.Length > 0 ? int.Parse(a[0]) : 0).FirstOrDefault();
             if (flag == null) { r.Fail("no such flag"); yield break; }
             bool to = !flag.isTrue;
             Singleton<Flags>.Instance.setFlag(flag.name, to);
@@ -897,8 +880,8 @@ namespace DarkwoodMP.World
             r.Info = $"{npc.name}: [{was}] -> [{Contents(npc.inventory)}]";
         }
 
-        /// <summary>"trade": with the trade window open, give the trader one thing from our bags worth at least his
-        /// first thing and take that (as DialogueWindow.acceptTrade moves them), the difference in value onto the
+        /// <summary>"trade": with the trade window open, give the trader things from our bags worth at least his
+        /// cheapest thing and take that (as DialogueWindow.acceptTrade moves them), the difference in value onto the
         /// reputation as acceptTrade does. A client's trade goes to the host, which checks it against his stock; a
         /// refusal (rolled back here) fails the step. The dumps then compare his stock in both games.
         /// "trade --race AT": the same, at epoch second AT (players trading with him at the same moment); a refusal
@@ -936,7 +919,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.8f);
             if (ri >= 0)
             {
-                while (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0 < raceAt) yield return null;
+                while (MapScenarioSavage.Now < raceAt) yield return null;
                 // What's cheapest may have changed meanwhile; the same slot as the others, as it is now.
                 if (InvItemClass.isNull(slot.invItem) || slot.invItem.type != boughtType) { P.inShop = false; P.talkedToNPC = null; r.Fail($"{boughtType} gone from his slot before the race"); yield break; }
             }
@@ -973,13 +956,19 @@ namespace DarkwoodMP.World
             if (c == null) r.Fail("nothing spawned");
         }
 
+        /// <summary>The host's live enemy nearest to our player, within radius of the centre.</summary>
+        internal static Character HostEnemyNear(float radius)
+        {
+            var ne = Combat.NetEnemies.Instance;
+            return ne == null ? null : Nearest(Object.FindObjectsOfType<Character>().Where(x => x.alive && Combat.NetEnemies.Eligible(x) && ne.NetIdOf(x, out _)
+                && StateDump.Flat(x.transform.position - Centre) < radius), P.transform.position);
+        }
+
         /// <summary>"kill-enemy": our player hits the host's enemy nearest to us until it's dead (a client's hits go to
         /// the host, capped by its weapon).</summary>
         private static IEnumerator KillEnemy(string[] a, Result r)
         {
-            var ne = Combat.NetEnemies.Instance;
-            var c = Nearest(Object.FindObjectsOfType<Character>().Where(x => x.alive && Combat.NetEnemies.Eligible(x) && ne != null && ne.NetIdOf(x, out _)
-                && StateDump.Flat(x.transform.position - Centre) < 1500f), P.transform.position);
+            var c = HostEnemyNear(1500f);
             if (c == null) { r.Fail("no enemy of the host's here"); yield break; }
             string what = $"{c.name} {Ref(c)}";
             int hits = 0;

@@ -73,7 +73,7 @@ namespace DarkwoodMP.World
             s.Register(MsgType.LevelTaken, OnLevelTaken);
             s.Register(MsgType.SkillReset, OnSkillReset);
             SkillTree.Register(s);
-            s.OnSessionEnded += () => { _known = false; _saved = null; _savedPath = null; };
+            s.OnSessionEnded += () => { _known = false; _saved = null; _savedPath = null; _waitingReset = false; };
         }
 
         // ---- levels ---------------------------------------------------------------------------------
@@ -99,6 +99,9 @@ namespace DarkwoodMP.World
         /// <summary>The most levels a player can have now: the shared level, or what the shared essence allows.</summary>
         internal static int MostLevels(Player p) => p == null ? SharedLevel : Math.Max(SharedLevel, Allowed(p));
 
+        /// <summary>The stove's menu (LevelingMenu), or null.</summary>
+        private static LevelingMenu StoveMenu => Singleton<UI>.Instance != null ? Singleton<UI>.Instance.LevelingMenu : null;
+
         private static bool BarFull(Player p) => SharedLevel > 7 || SharedExp >= Req(p, SharedLevel);
 
         /// <summary>Set our player's essence to what the shared essence shows them, and refresh an open stove menu.</summary>
@@ -108,7 +111,7 @@ namespace DarkwoodMP.World
             int want = Display(p, p.currentLevel);
             if (p.experience == want) return;
             p.experience = want;
-            var menu = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.LevelingMenu : null;
+            var menu = StoveMenu;
             var skills = Singleton<SkillsMenu>.Instance;
             try
             {
@@ -203,7 +206,7 @@ namespace DarkwoodMP.World
         {
             int amount = r.R.ReadInt32();
             var p = Player.Instance;
-            if (!S.IsHost || !Authority.Handling || HostSaved(start: true) == null || p == null) return;
+            if (!S.IsHost || HostSaved(start: true) == null || p == null) return;
             if (amount <= 0 || amount > 100000) { SendState(from); Authority.Refuse($"implausible essence {amount}"); return; }
             if (BarFull(p)) { SendState(from); Authority.Refuse("the shared essence bar is full: someone has to take the level at a stove"); return; }
             SharedExp += amount;
@@ -259,12 +262,15 @@ namespace DarkwoodMP.World
 
         private static void OnSkillReset(ulong from, PacketReader r)
         {
-            if (!S.IsHost || !Authority.Handling || !S.Keys.TryGetValue(from, out var key)) return;
+            if (!S.IsHost || !S.Keys.TryGetValue(from, out var key)) return;
             if (!TakeReset(KeyHash(key), from, out string why)) { Authority.Refuse(why); return; }
             Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} reset their skills (day {Today})");
         }
 
         // ---- client ---------------------------------------------------------------------------------
+
+        /// <summary>The host, or playing alone: our game keeps the shared progression.</summary>
+        private static bool HostSide => (S != null && S.IsHost) || Solo;
 
         private static bool ClientActive => NetEnemies.ClientMode && WorldShare.InWorld && _known;
 
@@ -307,7 +313,7 @@ namespace DarkwoodMP.World
                 w.W.Write(amount);
                 Authority.Request(w, $"cook {amount} essence");
             }
-            else if ((S != null && S.IsHost) || Solo) HostSync();
+            else if (HostSide) HostSync();
         }
 
         /// <summary>Either side: our player took a level (SkillsMenu.confirmSkills).</summary>
@@ -315,7 +321,7 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             if (ClientActive) { SendLevel(p); Apply(p); }
-            else if ((S != null && S.IsHost) || Solo) HostSync();
+            else if (HostSide) HostSync();
         }
 
         /// <summary>Call every frame: the host takes in what its own game did by itself (picked-up essence, a loaded save).</summary>
@@ -342,7 +348,7 @@ namespace DarkwoodMP.World
         internal static void TakeLevelAtStove()
         {
             var p = Player.Instance;
-            var menu = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.LevelingMenu : null;
+            var menu = StoveMenu;
             if (p == null || menu == null) return;
             p.currentLevel++;
             p.gainSaturation(5f);
@@ -415,7 +421,7 @@ namespace DarkwoodMP.World
 
         private static bool CanResetHere(Player p)
         {
-            var menu = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.LevelingMenu : null;
+            var menu = StoveMenu;
             var skills = Singleton<SkillsMenu>.Instance;
             return p != null && p.inLevelingMenu && menu != null && menu.openedAndTweened && !menu.wantToLevel && (skills == null || !skills.opened);
         }

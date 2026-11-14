@@ -22,11 +22,9 @@ namespace DarkwoodMP.Combat
             var s = __instance;
             if (s.type != MeleeSensor.MeleeSensorType.character || s.attackerTransform == null) return false; // players don't hit players
             // Only the colliders: the game clears them as the pooled sensor is spawned again (MeleeSensor.OnSpawned),
-            // but never its gameObjectsToIgnore, which it fills and never reads. Checking those meant a pooled
-            // sensor that had once hit a player's stand-in never hit that stand-in again, for any enemy that uses it.
+            // but never its gameObjectsToIgnore, so a pooled sensor would never hit the same stand-in twice.
             if (s.collidersToIgnore.Contains(_collider)) return false;
             s.collidersToIgnore.Add(_collider);
-            s.gameObjectsToIgnore.Add(proxy.gameObject);
             if (!s.doesNotNeedLineOfSight && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
             {
                 if (World.MapScenarioDogWatch.On) Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
@@ -51,14 +49,14 @@ namespace DarkwoodMP.Combat
 
         private static void Postfix(Character __instance, Transform attackerTransform, bool normalHit, float __state)
         {
+            float dealt = __state - __instance.health;
             // The game splats blood for a normal hit that took health (not the night trader); show it to the clients too.
-            if (normalHit && __state - __instance.health > 0f && !__instance.isNightTrader && Net.Session.Instance != null && Net.Session.Instance.IsHost)
+            if (normalHit && dealt > 0f && !__instance.isNightTrader && Net.Session.Instance != null && Net.Session.Instance.IsHost)
             {
                 float y = attackerTransform != null ? (attackerTransform.rotation * Quaternion.Euler(90f, 180f, 0f)).eulerAngles.y : __instance.transform.eulerAngles.y;
                 NetEnemies.Instance?.HostBlood(__instance, y);
             }
             if (!Threat.Enabled || attackerTransform == null) return;
-            float dealt = __state - __instance.health;
             if (dealt > 0f) Threat.OnDamaged(__instance, attackerTransform.GetComponent<CharBase>(), dealt);
         }
     }
@@ -149,8 +147,7 @@ namespace DarkwoodMP.Combat
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p == null) continue;
-                WorldGrid.Grid g = p.InLocation != null ? wg.getGrid(Core.getTrueLocationName(p.InLocation.name))
-                                 : p.Away ? null : world;
+                var g = GridOf(wg, world, p);
                 if (g == null) continue;
                 if (!grids.TryGetValue(g, out var list)) grids[g] = list = new List<Centre>();
                 list.Add(Of(p));
@@ -187,8 +184,7 @@ namespace DarkwoodMP.Combat
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p == null) continue;
-                WorldGrid.Grid g = p.InLocation != null ? wg.getGrid(Core.getTrueLocationName(p.InLocation.name))
-                                 : p.Away ? null : world;
+                var g = GridOf(wg, world, p);
                 if (g == null || g == current) continue;
                 if (!others.TryGetValue(g, out var list)) others[g] = list = new List<Centre>();
                 list.Add(Of(p));
@@ -223,6 +219,10 @@ namespace DarkwoodMP.Combat
             dx = (int)((Screen.width + 500f * m) / zoom);
             dy = (int)((Screen.height + 500f * m) / zoom);
         }
+
+        /// <summary>The grid a player is in: their separate location's, the world's, or none (away in a place the host doesn't run).</summary>
+        private static WorldGrid.Grid GridOf(WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p) =>
+            p.InLocation != null ? wg.getGrid(Core.getTrueLocationName(p.InLocation.name)) : p.Away ? null : world;
 
         /// <summary>Another player's centre, with the rect their own game keeps running (ViewRects).</summary>
         private static Centre Of(NetPlayerProxy p)
@@ -369,11 +369,11 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop))]
     public static class HostLoopStopPatch
     {
-        private static void Prefix(CharacterSounds __instance, out bool __state) => __state = __instance != null && __instance.idleAudioObject != null;
+        private static void Prefix(CharacterSounds __instance, out bool __state) => __state = __instance.idleAudioObject != null;
 
         private static void Postfix(CharacterSounds __instance, string loopName, bool __state)
         {
-            if (!__state || !string.IsNullOrEmpty(loopName) || __instance == null || __instance.idleAudioObject != null) return;
+            if (!__state || !string.IsNullOrEmpty(loopName) || __instance.idleAudioObject != null) return;
             var s = Net.Session.Instance;
             if (s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null) return;
             NetEnemies.Instance.HostSound(__instance.transform, "", 0f);
@@ -408,7 +408,13 @@ namespace DarkwoodMP.Combat
             Threat.NoiseSource = Player.Instance;
         }
 
-        private static void Postfix(CharBase __state) => Threat.NoiseSource = __state;
+        // A Finalizer rather than a Postfix: it runs when a listener's heardSound throws too, which would otherwise
+        // leave NoiseSource set and every later noise counted as this player's (and a client's never sent).
+        private static System.Exception Finalizer(System.Exception __exception, CharBase __state)
+        {
+            Threat.NoiseSource = __state;
+            return __exception;
+        }
 
         private static bool CalledFromPlayer()
         {
@@ -426,7 +432,7 @@ namespace DarkwoodMP.Combat
         /// Above zero inside the game's code that makes noise only for this game's own player (PlayerNoiseSourcePatch):
         /// those methods are patched too, so their stack frames can't be told apart by type.
         /// </summary>
-        [System.ThreadStatic] public static int OwnNoise;
+        public static int OwnNoise;
 
         /// <summary>Host: a client's character made noise; raise it here, as theirs.</summary>
         public static void OnRemoteNoise(ulong from, Net.PacketReader r)
@@ -503,11 +509,14 @@ namespace DarkwoodMP.Combat
         {
             if (NetEnemies.ClientMode && __instance.type == MeleeSensor.MeleeSensorType.player) NetEnemies.HitEffects = __instance.effects;
         }
-        static void Postfix() => NetEnemies.HitEffects = null;
-        static System.Exception Finalizer(System.Exception __exception) { NetEnemies.HitEffects = null; return __exception; }
+        static void Postfix() { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); }
+        static System.Exception Finalizer(System.Exception __exception) { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); return __exception; }
     }
 
-    /// <summary>Client: effects don't run on the host's enemies here; the host runs them (they came with the hit).</summary>
+    /// <summary>
+    /// Client: effects don't run on the host's enemies here; the host runs them (they came with the hit). Nor do a
+    /// weapon's effects on a friendly NPC whose hit just went to the host (HostileNpcs.EffectsForwarded).
+    /// </summary>
     [HarmonyPatch]
     static class ClientNoPuppetEffectsPatch
     {
@@ -519,7 +528,7 @@ namespace DarkwoodMP.Combat
         {
             if (!NetEnemies.ClientMode || NetEnemies.Instance == null) return true;
             var c = __instance.GetComponent<Character>();
-            return c == null || (!NetEnemies.Instance.IsPuppet(c, out _) && !NetEnemies.Frozen.Contains(c));
+            return c == null || (!NetEnemies.Instance.IsPuppet(c, out _) && !NetEnemies.Frozen.Contains(c) && !HostileNpcs.EffectsForwarded(c));
         }
     }
 }
@@ -538,8 +547,7 @@ namespace DarkwoodMP.Combat
             if (requester != null) { HostileNpcs.SendAfter(__instance, requester); return false; }
             var best = Threat.BestPlayerFor(__instance);
             if (best == null || best is Player) return true; // the host's player: as the game does it
-            if (__instance.aggressiveness != Aggressiveness.defensive) __instance.aggressiveness = Aggressiveness.attackOnSight;
-            __instance.attackCharacter(best.transform);
+            JoinerAi.GoFor(__instance, best.transform);
             if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
             return false;
         }
@@ -554,26 +562,10 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
     static class ThreatPursuitTranspiler
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
-        {
-            var getInstance = AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
-            var getTransform = AccessTools.PropertyGetter(typeof(Component), nameof(Component.transform));
-            var pursuit = AccessTools.Method(typeof(Threat), nameof(Threat.PursuitTarget));
-            var list = new List<CodeInstruction>(instructions);
-            int swapped = 0;
-            for (int i = 0; i < list.Count - 1; i++)
-            {
-                if (list[i].Calls(getInstance) && list[i + 1].Calls(getTransform))
-                {
-                    var labels = list[i].labels;
-                    list[i] = new CodeInstruction(System.Reflection.Emit.OpCodes.Ldarg_0) { labels = labels };
-                    list[i + 1] = new CodeInstruction(System.Reflection.Emit.OpCodes.Call, pursuit);
-                    swapped++;
-                }
-            }
-            if (swapped == 0) Plugin.Log.LogWarning("ThreatPursuitTranspiler: no Player.Instance.transform in canSeeEnemy (game changed?)");
-            return list;
-        }
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
+            JoinerAi.Swap(instructions, JoinerAi.HostThen(AccessTools.PropertyGetter(typeof(Component), nameof(Component.transform))),
+                          AccessTools.Method(typeof(Threat), nameof(Threat.PursuitTarget)), "Character.canSeeEnemy",
+                          none: "ThreatPursuitTranspiler: no Player.Instance.transform in canSeeEnemy (game changed?)");
     }
 }
 
@@ -588,26 +580,16 @@ namespace DarkwoodMP.Combat
     static class PlayerPositionTranspiler
     {
         /// <param name="characterArg">The argument that holds the Character: 0 (`this`) in Character's own methods.</param>
-        public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, System.Reflection.MethodInfo helper, string where, int characterArg = 0)
-        {
-            var loadCharacter = characterArg == 0 ? System.Reflection.Emit.OpCodes.Ldarg_0 : System.Reflection.Emit.OpCodes.Ldarg_1;
-            var getInstance = AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
-            var playerTransform = AccessTools.Field(typeof(Player), "_transform");
-            var getPosition = AccessTools.PropertyGetter(typeof(Transform), nameof(Transform.position));
-            var list = new List<CodeInstruction>(instructions);
-            int swapped = 0;
-            for (int i = 0; i < list.Count - 2; i++)
-            {
-                if (!list[i].Calls(getInstance) || !list[i + 1].LoadsField(playerTransform) || !list[i + 2].Calls(getPosition)) continue;
-                var labels = list[i].labels;
-                list[i] = new CodeInstruction(loadCharacter) { labels = labels };
-                list[i + 1] = new CodeInstruction(System.Reflection.Emit.OpCodes.Call, helper) { labels = list[i + 1].labels };
-                list[i + 2] = new CodeInstruction(System.Reflection.Emit.OpCodes.Nop) { labels = list[i + 2].labels };
-                swapped++;
-            }
-            if (swapped == 0) Plugin.Log.LogWarning($"PlayerPositionTranspiler: no Player.Instance._transform.position in {where} (game changed?); it still uses the host's player");
-            return list;
-        }
+        public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, System.Reflection.MethodInfo helper, string where, int characterArg = 0) =>
+            JoinerAi.Swap(instructions, HostPosition, helper, where, arg: characterArg,
+                          none: $"PlayerPositionTranspiler: no Player.Instance._transform.position in {where} (game changed?); it still uses the host's player");
+
+        private static readonly System.Reflection.FieldInfo PlayerTransform = AccessTools.Field(typeof(Player), "_transform");
+        private static readonly System.Reflection.MethodInfo GetPosition = AccessTools.PropertyGetter(typeof(Transform), nameof(Transform.position));
+
+        /// <summary>Player.Instance._transform.position</summary>
+        private static int HostPosition(List<CodeInstruction> l, int i) =>
+            i + 2 < l.Count && l[i].Calls(JoinerAi.GetInstance) && l[i + 1].LoadsField(PlayerTransform) && l[i + 2].Calls(GetPosition) ? 3 : 0;
 
         public static System.Reflection.MethodInfo Nearest => AccessTools.Method(typeof(Threat), nameof(Threat.NearestPlayerPos));
         public static System.Reflection.MethodInfo Flee => AccessTools.Method(typeof(Threat), nameof(Threat.FleeFrom));

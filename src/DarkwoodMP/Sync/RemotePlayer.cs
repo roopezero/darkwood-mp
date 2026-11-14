@@ -146,9 +146,7 @@ namespace DarkwoodMP.Sync
         private void RemoveLantern()
         {
             if (_lantern == null) return;
-            _lantern.unlightGraphNodes();
-            var ctl = Singleton<Controller>.Instance;
-            if (ctl != null) while (ctl.logicLights.Remove(_lantern)) { }
+            Unlight(_lantern);
             Object.Destroy(_lantern.gameObject);
             _lantern = null;
         }
@@ -158,12 +156,20 @@ namespace DarkwoodMP.Sync
             if (_heldLight != null)
             {
                 var light = _heldLight.GetComponent<Light2D>();
-                if (light != null) { light.unlightGraphNodes(); Singleton<Controller>.Instance?.logicLights.Remove(light); }
+                if (light != null) Unlight(light);
                 Object.Destroy(_heldLight.gameObject);
             }
             if (_heldFlames != null) Object.Destroy(_heldFlames.gameObject);
             _heldLight = _heldFlames = null;
             _heldShown = "";
+        }
+
+        /// <summary>Take a puppet's light off the lighting graph and out of the game's list of lights.</summary>
+        private static void Unlight(Light2D light)
+        {
+            light.unlightGraphNodes();
+            var ctl = Singleton<Controller>.Instance;
+            if (ctl != null) while (ctl.logicLights.Remove(light)) { }
         }
 
         /// <summary>

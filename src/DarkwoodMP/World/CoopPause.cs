@@ -7,7 +7,7 @@ namespace DarkwoodMP.World
     /// The game doesn't stop while others are playing in it. Darkwood pauses (Core.pause: time scale 0, sound
     /// paused) for the pause menu, the map, the journal, dialogue, the padlock, the level-up and skill menus.
     /// The host's game runs the enemies and the clock for everyone, and a client's shows them, so in co-op the
-    /// pause only marks the game paused (Core.Paused, which stops the player's own input as before) and the
+    /// pause only marks the game paused (Core.Paused, which stops the player's own input as it does alone) and the
     /// world goes on, as in other co-op games. While a menu is open your character stands still, and enemies
     /// can still get you.
     ///

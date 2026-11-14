@@ -5,6 +5,7 @@ using System.Linq;
 using DarkwoodMP.Combat;
 using HarmonyLib;
 using UnityEngine;
+using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
 
 namespace DarkwoodMP.World
@@ -29,8 +30,6 @@ namespace DarkwoodMP.World
             MapScenario.Add("dw-off", (a, r) => { r.Info = Watch.Summary(); Stop(); return None(); });
             MapScenario.Add("dw-list", (a, r) => { r.Info = List(); return None(); });
         }
-
-        private static IEnumerator None() { yield break; }
 
         private static void Start()
         {

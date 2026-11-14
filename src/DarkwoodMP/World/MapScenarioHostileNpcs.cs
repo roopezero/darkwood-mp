@@ -24,7 +24,6 @@ namespace DarkwoodMP.World
 
         public static void Register()
         {
-            Add("npc-probe", Probe);
             Add("npc-spawn", Spawn);
             Add("npc-friendly", Friendly);
             Add("npc-hit", Hit, timeout: 30f);
@@ -41,7 +40,7 @@ namespace DarkwoodMP.World
         {
             var c = Npc(a[0]);
             if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
-            float dist = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+            float dist = F(a[1]);
             var away = P.transform.position - c.transform.position; away.y = 0f;
             if (away.sqrMagnitude < 1f) away = Vector3.right;
             var to = c.transform.position + away.normalized * dist;
@@ -59,8 +58,6 @@ namespace DarkwoodMP.World
                 .Select(x => $"{x.name}={x.isTrue}").OrderBy(x => x, StringComparer.Ordinal));
         }
 
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-
         private static string Kind(Character c) => Combat.NetEnemies.KindOf(c);
 
         /// <summary>The NPC of this kind nearest the centre, in this game.</summary>
@@ -74,31 +71,10 @@ namespace DarkwoodMP.World
             $"target {(c.target != null ? c.target.name : "none")}, hostile {Combat.HostileNpcs.TurnedHostile(c)}, run by host {Combat.NetEnemies.Eligible(c)}, " +
             $"frozen {Combat.NetEnemies.Frozen.Contains(c)}, save id {(c.GetComponent<SaveableObject>()?.uniqueId ?? 0)}";
 
-        /// <summary>"npc-probe NAME...": host: make each NPC prefab far off, log how it starts, and remove it.</summary>
-        private static IEnumerator Probe(string[] a, Result r)
-        {
-            var info = new List<string>();
-            foreach (var name in a)
-            {
-                GameObject go = null;
-                try { go = Core.AddPrefab("Characters/NPC/" + name, Centre + new Vector3(0f, 0f, -6000f), Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true); }
-                catch (Exception e) { info.Add($"{name}: {e.Message}"); }
-                if (go == null) { info.Add($"{name}: no prefab"); continue; }
-                yield return new WaitForSecondsRealtime(0.5f);
-                var c = go != null ? go.GetComponent<Character>() : null;
-                string line = c == null ? $"{name}: no Character" : c.npc == null ? $"{name}: not an NPC" : Props(c);
-                Plugin.Log.LogInfo($"[map] probe {line}");
-                info.Add(line);
-                if (go != null) Object.Destroy(go);
-                yield return null;
-            }
-            r.Info = string.Join("; ", info);
-        }
-
         /// <summary>"npc-spawn NAME DX DZ" (host): the NPC prefab NAME, at the centre plus (DX, DZ), saved with the world.</summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
-            var at = Centre + new Vector3(float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture), 0f, float.Parse(a[2], System.Globalization.CultureInfo.InvariantCulture));
+            var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Core.AddPrefab("Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
             if (go == null) { r.Fail($"no prefab Characters/NPC/{a[0]}"); yield break; }
             Core.addToSaveable(go, isDynamic: true, assignID: true);
@@ -128,7 +104,7 @@ namespace DarkwoodMP.World
         {
             var c = Npc(a[0]);
             if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
-            float dmg = float.Parse(a[1], System.Globalization.CultureInfo.InvariantCulture);
+            float dmg = F(a[1]);
             int times = a.Length > 2 ? int.Parse(a[2]) : 1;
             float was = c.health;
             _healthAtHit = P.health;

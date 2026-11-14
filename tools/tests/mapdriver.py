@@ -45,18 +45,24 @@ def fname(ctls, who):
     return "client" if len(clients(ctls)) == 1 else who
 
 
-def dump_all(ctls, tag, x, z, work):
-    """Every game's dump around (x, z), into WORK/TAG-host.json (or host.json for tag ""), and so on."""
-    pre = f"{tag}-" if tag else ""
-    paths, replies = {}, {}
-    for who in ["host"] + clients(ctls):
-        paths[who] = os.path.join(work, f"{pre}{'host' if who == 'host' else fname(ctls, who)}.json")
-    # All at once: one after another, things that move (a running rabbit) were seconds apart between the dumps.
-    threads = [threading.Thread(target=lambda w=w: replies.__setitem__(w, ctls[w].cmd('dump', paths[w], x, z))) for w in paths]
+def at_once(jobs):
+    """Run every function of {key: fn} at the same time; returns {key: its result}."""
+    out = {}
+    threads = [threading.Thread(target=lambda k=k, fn=fn: out.__setitem__(k, fn())) for k, fn in jobs.items()]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
+    return out
+
+
+def dump_all(ctls, tag, x, z, work):
+    """Every game's dump around (x, z), into WORK/TAG-host.json (or host.json for tag ""), and so on."""
+    pre = f"{tag}-" if tag else ""
+    paths = {who: os.path.join(work, f"{pre}{'host' if who == 'host' else fname(ctls, who)}.json")
+             for who in ["host"] + clients(ctls)}
+    # All at once: one after another, things that move (a running rabbit) were seconds apart between the dumps.
+    replies = at_once({w: (lambda w=w: ctls[w].cmd("dump", paths[w], x, z)) for w in paths})
     for who in paths:
         log(f"{who} dump: {replies.get(who, 'no reply')}")
     return paths
@@ -89,7 +95,7 @@ def compare(ctls, around, tag, require, work):
 
 def run_steps(ctls, steps, work=None):
     failed = 0
-    n = 0
+    mids = 0  # mid-way compares so far, for their dump names
     for n_step, step in enumerate(steps, 1):
         opts = step[-1] if isinstance(step[-1], dict) else {}
         words = [str(w) for w in (step[:-1] if opts else step)]
@@ -97,8 +103,8 @@ def run_steps(ctls, steps, work=None):
         t0 = time.time()
         if who in ("both", "all") and name == "compare":
             # ("all", "compare", WHO, SECTIONS): every game's dump there and then, around WHO's player, compared.
-            n += 1
-            reply = compare(ctls, args[0], f"mid{n}", args[1] if len(args) > 1 else "", work or ".")
+            mids += 1
+            reply = compare(ctls, args[0], f"mid{mids}", args[1] if len(args) > 1 else "", work or ".")
             ok = good(reply)
         elif "+" in who:
             # ("c1+c2+c3", STEP, ARGS...): the step in those games at once; an "AT" argument becomes an epoch second a
@@ -107,13 +113,7 @@ def run_steps(ctls, steps, work=None):
             games = who.split("+")
             at = f"{time.time() + float(opts.get('lead', 6)):.3f}"
             targs = [at if w == "AT" else w for w in args]
-            replies = {}
-            threads = [threading.Thread(target=lambda g=g: replies.__setitem__(g, ctls[g].cmd("do", name, *targs, timeout=180)))
-                       for g in games if g in ctls]
-            for t in threads:
-                t.start()
-            for t in threads:
-                t.join()
+            replies = at_once({g: (lambda g=g: ctls[g].cmd("do", name, *targs, timeout=180)) for g in games if g in ctls})
             ok = len(replies) == len(games) and all(good(r) for r in replies.values())
             reply = "; ".join(f"{g}: {replies.get(g, 'no game')}" for g in games)
             got = sum(1 for r in replies.values() if r.startswith("done got"))

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -38,7 +39,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Panel(string[] a, Result r)
         {
-            var fails = new System.Collections.Generic.List<string>();
+            var fails = new List<string>();
             if (P.Inventory.open) { P.getIntoInventory(); yield return new WaitForSecondsRealtime(1.5f); }
             SkillsPanel.TestPressKey();
             yield return new WaitForSecondsRealtime(2f);

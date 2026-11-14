@@ -22,7 +22,6 @@ namespace DarkwoodMP.World
     public static class EnemyLandings
     {
         private static Session S => Session.Instance;
-        private static readonly System.Random _rng = new System.Random();
 
         /// <summary>Host: the landing thrown thing of one of our enemies, while ThrownItem.onCollide runs.</summary>
         internal static ThrownItem Landing;
@@ -61,19 +60,37 @@ namespace DarkwoodMP.World
             foreach (var t in Thrown)
             {
                 if (t == null) continue;
-                var rb = t.GetComponent<Rigidbody>();
-                var v = rb != null ? rb.velocity : Vector3.zero;
-                var p = t.position;
-                var w = S.Begin(MsgType.EnemyProjectile);
-                w.W.Write(ThrowingBy);
-                w.WriteStr(Throwing);
-                w.W.Write(p.x); w.W.Write(p.y); w.W.Write(p.z);
-                w.W.Write(t.eulerAngles.y);
-                w.W.Write(v.x); w.W.Write(v.y); w.W.Write(v.z);
+                var w = BeginThrow(MsgType.EnemyProjectile, ThrowingBy, Throwing, t);
                 S.Broadcast(w, Channel.State, reliable: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown at {p}");
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown at {t.position}");
             }
             Thrown.Clear();
+        }
+
+        /// <summary>Host: the start of EnemyProjectile and EnemySensorThrown: thrower, name, position, yaw, velocity.</summary>
+        private static PacketWriter BeginThrow(MsgType type, uint by, string name, Transform t)
+        {
+            var rb = t.GetComponent<Rigidbody>();
+            var w = S.Begin(type);
+            w.W.Write(by);
+            w.WriteStr(name);
+            w.Write(t.position);
+            w.W.Write(t.eulerAngles.y);
+            w.Write(rb != null ? rb.velocity : Vector3.zero);
+            return w;
+        }
+
+        /// <summary>Client: a copy of the host's enemy's projectile, made harmless and sent flying for the look.</summary>
+        private static void Fly(ThrownItem ti, Rigidbody rb, Character thrower, Vector3 vel)
+        {
+            Copies.Add(ti);
+            Shown++;
+            var col = ti.GetComponent<Collider>();
+            if (thrower != null && thrower.collider != null && col != null) Physics.IgnoreCollision(col, thrower.collider);
+            ti.objectThatSpawnedMe = thrower != null ? thrower.transform : null;
+            ti.damage = 0;
+            rb.velocity = vel;
+            rb.AddTorque(0f, 225000f, 0f);
         }
 
         private static void OnProjectile(ulong from, PacketReader r)
@@ -82,9 +99,9 @@ namespace DarkwoodMP.World
             if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
             uint by = r.R.ReadUInt32();
             string type = r.ReadStr();
-            var pos = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var pos = r.ReadVector3();
             float yaw = r.R.ReadSingle();
-            var vel = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var vel = r.ReadVector3();
             Transform t;
             try { t = Core.AddPooledPrefab(type, pos, Quaternion.Euler(90f, yaw, 0f)); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show enemy #{by}'s {type}: {e.Message}"); return; }
@@ -92,15 +109,7 @@ namespace DarkwoodMP.World
             var ti = t.GetComponent<ThrownItem>();
             var rb = t.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { Core.RemovePooledPrefab(t); return; } // only thrown things are shown
-            Copies.Add(ti);
-            Shown++;
-            var thrower = NetEnemies.Instance?.CharacterOf(by);
-            var col = t.GetComponent<Collider>();
-            if (thrower != null && thrower.collider != null && col != null) Physics.IgnoreCollision(col, thrower.collider);
-            ti.objectThatSpawnedMe = thrower != null ? thrower.transform : null;
-            ti.damage = 0;
-            rb.velocity = vel;
-            rb.AddTorque(0f, 225000f, 0f);
+            Fly(ti, rb, NetEnemies.Instance?.CharacterOf(by), vel);
             ti.thrown = true;
             Plugin.Instance.StartCoroutine(Expire(ti, t));
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy #{by}'s {type} thrown at {pos}");
@@ -119,19 +128,10 @@ namespace DarkwoodMP.World
             foreach (var ti in SensorThrown)
             {
                 if (ti == null) continue;
-                var t = ti.transform;
-                var rb = t.GetComponent<Rigidbody>();
-                var v = rb != null ? rb.velocity : Vector3.zero;
-                var p = t.position;
-                var w = S.Begin(MsgType.EnemySensorThrown);
-                w.W.Write(SensorThrowingBy);
-                w.WriteStr(SensorThrowing);
-                w.W.Write(p.x); w.W.Write(p.y); w.W.Write(p.z);
-                w.W.Write(t.eulerAngles.y);
-                w.W.Write(v.x); w.W.Write(v.y); w.W.Write(v.z);
+                var w = BeginThrow(MsgType.EnemySensorThrown, SensorThrowingBy, SensorThrowing, ti.transform);
                 w.W.Write(ti.landTarget.x); w.W.Write(ti.landTarget.z);
                 S.Broadcast(w, Channel.State, reliable: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{SensorThrowingBy}'s {SensorThrowing} ({ti.name}) thrown at {p}");
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{SensorThrowingBy}'s {SensorThrowing} ({ti.name}) thrown at {ti.transform.position}");
             }
             SensorThrown.Clear();
         }
@@ -143,9 +143,9 @@ namespace DarkwoodMP.World
             if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
             uint by = r.R.ReadUInt32();
             string name = r.ReadStr();
-            var pos = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var pos = r.ReadVector3();
             float yaw = r.R.ReadSingle();
-            var vel = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var vel = r.ReadVector3();
             var land = new Vector3(r.R.ReadSingle(), 0f, r.R.ReadSingle());
             var thrower = NetEnemies.Instance?.CharacterOf(by);
             if (thrower == null) return; // not shown here: nobody would see it
@@ -161,15 +161,8 @@ namespace DarkwoodMP.World
             var rb = go.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { Object.Destroy(go); return; } // only thrown things are shown
             SensorCopies.Add(ti);
-            Copies.Add(ti);
-            Shown++;
-            var col = go.GetComponent<Collider>();
-            if (thrower.collider != null && col != null) Physics.IgnoreCollision(col, thrower.collider);
-            ti.objectThatSpawnedMe = thrower.transform;
-            ti.damage = 0;
             rb.drag = 2f; // as rangedAttack sets it
-            rb.velocity = vel;
-            rb.AddTorque(0f, 225000f, 0f);
+            Fly(ti, rb, thrower, vel);
             ti.landTarget = new Vector3(land.x, pos.y, land.z);
             ti.setFallSpeed(st.throwStrength);
             ti.thrown = true;
@@ -198,7 +191,8 @@ namespace DarkwoodMP.World
                 Object.Destroy(t.gameObject);
                 return;
             }
-            try { Core.RemovePooledPrefab(t); } catch { }
+            try { Core.RemovePooledPrefab(t); }
+            catch (System.Exception e) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] couldn't put back a projectile copy: {e.Message}"); }
             if (t != null && t.gameObject.activeSelf) t.gameObject.SetActive(false);
         }
 
@@ -218,14 +212,14 @@ namespace DarkwoodMP.World
             foreach (var go in Made)
             {
                 if (go == null) continue;
-                long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
+                long id = HostIds.NewId();
                 ObjRef.RegisterSpawned(id, go);
                 var p = go.transform.position;
                 var w = S.Begin(MsgType.EnemyLanded);
                 w.W.Write(id);
                 w.W.Write(LandingBy);
                 w.WriteStr(go.name);
-                w.W.Write(p.x); w.W.Write(p.y); w.W.Write(p.z);
+                w.Write(p);
                 w.W.Write(go.transform.eulerAngles.y);
                 S.Broadcast(w, Channel.Control, reliable: true);
                 if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{LandingBy}'s {go.name} landed: Spawned:{id} at {p}");
@@ -308,7 +302,7 @@ namespace DarkwoodMP.World
             long id = r.R.ReadInt64();
             uint by = r.R.ReadUInt32();
             string name = r.ReadStr();
-            var pos = new Vector3(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var pos = r.ReadVector3();
             float yaw = r.R.ReadSingle();
             if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null) return;
             var prefab = PrefabNamed(name);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using DarkwoodMP.Combat;
 using HarmonyLib;
@@ -88,28 +87,12 @@ namespace DarkwoodMP.World
         // ---- helpers ------------------------------------------------------------------------------------------------
 
         private static Player P => Player.Instance;
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
 
         private static IEnumerator GoTo(string[] a, Result r)
         {
             var to = Spot(a.Length > 0 ? a[0] : "");
             yield return Walk(to, 40f);
             r.Info = $"at {Fmt(P.transform.position)}";
-        }
-
-        /// <summary>The nearest spot to `at` with nothing solid on it.</summary>
-        private static Vector3 FreeSpot(Vector3 at)
-        {
-            for (int ring = 0; ring < 12; ring++)
-                for (int i = 0; i < Math.Max(1, ring * 6); i++)
-                {
-                    float an = i * Mathf.PI * 2f / Math.Max(1, ring * 6);
-                    var p = at + new Vector3(Mathf.Cos(an), 0f, Mathf.Sin(an)) * ring * 50f;
-                    if (!Physics.OverlapSphere(p, 60f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player")))
-                        return p;
-                }
-            return at;
         }
 
         /// <summary>The shared enemy (one with a net id) nearest to a spot.</summary>
@@ -121,11 +104,14 @@ namespace DarkwoodMP.World
                 && StateDump.Flat(c.transform.position - at) < within).OrderBy(c => StateDump.Flat(c.transform.position - at)).FirstOrDefault();
         }
 
-        private static uint IdOf(Character c) { uint id = 0; NetEnemies.Instance?.NetIdOf(c, out id); return id; }
+        /// <summary>The enemy's net id, or 0 if it has none.</summary>
+        internal static uint IdOf(Character c) { uint id = 0; NetEnemies.Instance?.NetIdOf(c, out id); return id; }
 
-        private static Character SpawnAt(Vector3 at, string type = "Dog")
+        /// <summary>A character of this type (not nocturnal, not sent at the player) on the free spot nearest `at`.</summary>
+        internal static Character SpawnAt(Vector3 at, string type = "Dog")
         {
-            var spot = FreeSpot(at);
+            var spot = MapScenarioEnemies.FreeSpot(at);
+            // spawnCharacterAround takes a non-zero offset times the distance as the position itself.
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, type, nocturnal: false, attackPlayer: false);
             if (c != null) c.transform.position = spot;
             return c;
@@ -150,7 +136,8 @@ namespace DarkwoodMP.World
         private static float _fxHealth;    // host: its health before the client's hit
         private static uint _fxId;         // client: the copy fx-hit hit
 
-        private static Character ById(uint id)
+        /// <summary>The enemy with this net id in this game, or null.</summary>
+        internal static Character ById(uint id)
         {
             var ne = NetEnemies.Instance;
             return ne == null ? null : Object.FindObjectsOfType<Character>().FirstOrDefault(c => c != null && ne.NetIdOf(c, out uint i) && i == id);
@@ -287,7 +274,7 @@ namespace DarkwoodMP.World
 
         private static readonly string[] SwitchHosts = { "candles_01", "Radio", "Stove" };
 
-        /// <summary>"ii-setup" (both games): make the station's candles (a saved object with nothing else to do) a switch (an InteractiveItem with an on and an
+        /// <summary>"ii-setup" (both games): make the first of SwitchHosts found near the centre (a saved object with nothing else to do) a switch (an InteractiveItem with an on and an
         /// off trigger, whose firing we can see). The test world has none of the game's own.</summary>
         private static IEnumerator IiSetup(string[] a, Result r)
         {
@@ -375,7 +362,7 @@ namespace DarkwoodMP.World
         {
             var p = P;
             string type = a.Length > 0 ? a[0] : "flare";
-            yield return Walk(FreeSpot(Spot("drop")), 40f);
+            yield return Walk(MapScenarioEnemies.FreeSpot(Spot("drop")), 40f);
             int free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0) free = p.Hotbar.slots.Count - 1;
             var slot = p.Hotbar.slots[free];

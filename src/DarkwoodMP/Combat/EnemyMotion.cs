@@ -12,7 +12,7 @@ namespace DarkwoodMP.Combat
     /// tell: between the two states around that moment when the next one is already here, or else carried on from
     /// the last one at the speed between the last two, for up to MaxAhead. The host sends about every 50-70 ms
     /// (StateInterval, rounded up to its frames), and states come late or in bunches (TCP, the host's or our own
-    /// slow frames, a lost one on Steam's unreliable channel), so drawing from the latest arrival, as before, made
+    /// slow frames, a lost one on Steam's unreliable channel), so drawing from the latest arrival would make
     /// enemies stop and jump. With the host's times the speed is the host's real speed, whenever the states came.
     ///
     /// The clock: the gap between our clock and the host's at each arrival is the host's clock offset plus how long
@@ -21,11 +21,9 @@ namespace DarkwoodMP.Combat
     /// (30 ms; half of how much arrivals vary).
     ///
     /// Why not further behind, which is smoother (every frame between two real states): a copy of the host's enemy
-    /// is solid here, and our player can't walk through it. Drawn 0.1-0.3 s behind the host, as at first, a dog
-    /// coming at our player stood well short of where it was on the host, so our player walked up to the copy while
-    /// its stand-in on the host was already inside the dog's bite and bumping into it (sleeping and eating dogs
-    /// woke). In the map test the players were bitten to death by dogs they kept clear of when drawn by the latest
-    /// state. Drawn at the host's present instead, a turning enemy is a little off until the next state comes.
+    /// is solid here, and our player can't walk through it. Drawn 0.1-0.3 s behind the host, a dog coming at our
+    /// player stands well short of where it is on the host, so our player walks into bites they seem to have dodged.
+    /// Drawn at the host's present instead, a turning enemy is a little off until the next state comes.
     /// </summary>
     public static class EnemyMotion
     {
@@ -46,7 +44,7 @@ namespace DarkwoodMP.Combat
         private const float Teleport = 600f;
         /// <summary>How far past its last state an enemy is carried on at its speed.</summary>
         private const float MaxAhead = 0.15f;
-        private const float MinDelay = 0f, MaxDelay = 0.03f;
+        private const float MaxDelay = 0.03f;
 
         private static bool _hasClock;
         private static float _offset, _lastSent = -1f, _interval = NetEnemies.StateInterval, _jitter, _delay = 0f;
@@ -76,7 +74,7 @@ namespace DarkwoodMP.Combat
         /// <summary>Called once a frame before the enemies are drawn: Delay moves towards what the arrivals need.</summary>
         public static void Frame(float dt)
         {
-            float want = Mathf.Clamp(_jitter * 0.5f, MinDelay, MaxDelay);
+            float want = Mathf.Min(_jitter * 0.5f, MaxDelay);
             _delay = Mathf.MoveTowards(_delay, want, 0.05f * dt); // at most 5% faster or slower, so it isn't seen
             Stats.Frame(dt);
             if (World.WorldActions.Debug && Time.unscaledTime >= _nextLog)

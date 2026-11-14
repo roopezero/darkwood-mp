@@ -41,6 +41,9 @@ namespace DarkwoodMP.World
         private static readonly System.Random _rng = new System.Random();
         private static float _nextPrune;
 
+        /// <summary>A random 62-bit id for a Spawned or shared object; one generator, so ids made in the same millisecond differ.</summary>
+        internal static long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
+
         /// <summary>How many ids this game gave out (host) or tied (client); for the tests.</summary>
         public static int Given, Tied;
 
@@ -77,7 +80,7 @@ namespace DarkwoodMP.World
                     if (now - at < Settle) continue;
                     _started.RemoveAt(i--);
                     if (go == null || !ObjRef.Unnamed(go)) continue;
-                    long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
+                    long id = NewId();
                     ObjRef.BindShared(id, go);
                     _outgoing.Add((id, go.name, go.transform.position));
                     Given++;

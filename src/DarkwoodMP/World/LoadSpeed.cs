@@ -20,7 +20,6 @@ namespace DarkwoodMP.World
     ///    through all of the grid's objects to see if it's already listed, and through all of its nodes to find the
     ///    one it's in. While a grid registers its objects, both are looked up in an index instead; the node found
     ///    is the same one (the first in the grid's list that the object is in).
-    ///
     /// 3. Load reads the save's two JSON files (about 11 MB) and parses them on the main thread, about 1.3 s,
     ///    right after the game's fixed 1.6 s wait (below). They're parsed on a background thread during that wait
     ///    instead, and Load takes the result if the text it read is the same; otherwise, or if the background
@@ -46,7 +45,6 @@ namespace DarkwoodMP.World
             return ((T[])e.copy)[index];
         }
 
-        internal static void Forget() => _copies.Clear();
 
         // ---- 3. the save's JSON, parsed while the screen fades -----------------------------------------------
 
@@ -56,7 +54,7 @@ namespace DarkwoodMP.World
         }
         private static Ahead<SaveManager.DynamicSave> _dynamic;
         private static Ahead<SaveManager.StaticSave> _static;
-        public static int AheadUsed, AheadMissed;
+        private static int AheadUsed, AheadMissed;
 
         /// <summary>The game is about to load the current profile's world: start parsing its files.</summary>
         internal static void ParseAhead()
@@ -108,7 +106,7 @@ namespace DarkwoodMP.World
 
         internal static bool Loading;
         private static readonly Dictionary<string, UnityEngine.Object> _prefabs = new Dictionary<string, UnityEngine.Object>();
-        public static int PrefabLookups, PrefabLoads;
+        private static int PrefabLookups, PrefabLoads;
 
         internal static UnityEngine.Object Prefab(string path)
         {
@@ -122,6 +120,7 @@ namespace DarkwoodMP.World
         internal static void LoadEnded()
         {
             Loading = false;
+            _copies.Clear();
             _prefabs.Clear(); // not held after loading, so the game can unload what it no longer uses
             Plugin.Log.LogInfo($"LoadSpeed: {PrefabLookups} prefabs made from {PrefabLoads} loads; save parsed ahead: {AheadUsed} used, {AheadMissed} not");
             AheadUsed = AheadMissed = 0;
@@ -140,6 +139,12 @@ namespace DarkwoodMP.World
 
         internal static void BeginBatch() { Batch = true; _grid = null; }
         internal static void EndBatch() { Batch = false; _grid = null; _listed = null; _cells = null; }
+
+        private static CullableObject CullableOf(GameObject go)
+        {
+            var co = go.GetComponent<CullableObject>();
+            return co != null ? co : go.AddComponent<CullableObject>();
+        }
 
         private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 
@@ -169,8 +174,7 @@ namespace DarkwoodMP.World
             if (w.currentGrid == null) return true;
             if (!ReferenceEquals(w.currentGrid, _grid)) Index(w);
 
-            var co = GO.GetComponent<CullableObject>();
-            if (co == null) co = GO.AddComponent<CullableObject>();
+            var co = CullableOf(GO);
             co.registered = true;
             var cullable = new WorldGrid.Cullable(GO, type);
             if (GO.GetComponent<Location>() != null) cullable.isLocation = true;
@@ -253,8 +257,7 @@ namespace DarkwoodMP.World
             if (w.currentGrid == null) return true;
             if (!ReferenceEquals(w.currentGrid, _grid)) Index(w);
 
-            var co = GO.GetComponent<CullableObject>();
-            if (co == null) co = GO.AddComponent<CullableObject>();
+            var co = CullableOf(GO);
             if (co.registered && co.node != null) co.node.removeCullable(GO);
             co.registered = true;
             if (GO.GetComponent<Location>() != null) return false;
@@ -347,9 +350,7 @@ namespace DarkwoodMP.World
 
         static void Postfix(bool __result)
         {
-            if (__result) return;
-            LoadSpeed.Forget();
-            LoadSpeed.LoadEnded();
+            if (!__result) LoadSpeed.LoadEnded();
         }
     }
 

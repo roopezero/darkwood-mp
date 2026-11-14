@@ -59,22 +59,20 @@ namespace DarkwoodMP.World
         internal void HostStocked(NPC npc)
         {
             if (!_session.IsHost || _session.Peers.Count == 0 || npc == null || npc.inventory == null) return;
-            Send(npc, to: 0);
+            string stock = StockOf(npc);
+            Send(npc, to: 0, stock);
             // The others put this stock on every copy of him they have (one stock per name): so do we.
-            string stock = null;
             foreach (var n in Object.FindObjectsOfType<NPC>())
-            {
-                if (n == null || n == npc || !n.trader || n.name != npc.name || n.inventory == null) continue;
-                if (stock == null) stock = JsonConvert.SerializeObject(new Inventory.SaveState(npc.inventory));
-                Apply(n, stock);
-            }
+                if (n != null && n != npc && n.trader && n.name == npc.name && n.inventory != null) Apply(n, stock);
         }
 
-        private void Send(NPC npc, ulong to)
+        private static string StockOf(NPC npc) => JsonConvert.SerializeObject(new Inventory.SaveState(npc.inventory));
+
+        private void Send(NPC npc, ulong to, string stock = null)
         {
             var w = _session.Begin(MsgType.TraderStock);
             w.WriteStr(npc.name);
-            w.WriteBigStr(JsonConvert.SerializeObject(new Inventory.SaveState(npc.inventory)));
+            w.WriteBigStr(stock ?? StockOf(npc));
             if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
             else _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent what {npc.name} has ({npc.inventory.getAllItems().Count} items)");
@@ -113,8 +111,7 @@ namespace DarkwoodMP.World
             foreach (var loc in Object.FindObjectsOfType<Location>(true))
             {
                 if (loc == null || !loc.playerBase || loc.traderPosition == null) continue;
-                var p = loc.traderPosition.transform.position;
-                float d = (p.x - at.x) * (p.x - at.x) + (p.z - at.z) * (p.z - at.z);
+                float d = WorldActions.FlatSq(loc.traderPosition.transform.position, at);
                 if (d < bestD) { bestD = d; best = loc; }
             }
             if (best == null) return false;
@@ -183,7 +180,7 @@ namespace DarkwoodMP.World
         {
             if (!_session.Connected || npc == null || npc.inventory == null) return;
             if (_session.IsHost && _session.Peers.Count == 0) return;
-            string name = npc.name, stock = JsonConvert.SerializeObject(new Inventory.SaveState(npc.inventory));
+            string name = npc.name, stock = StockOf(npc);
             FlagsSync.Instance?.Absorb(name, repChange); // it goes with the trade
             var at = npc.transform.position;
             var w = WriteTrade(name, at, took, gave, stock, repChange);
@@ -350,8 +347,7 @@ namespace DarkwoodMP.World
             foreach (var n in Object.FindObjectsOfType<NPC>())
             {
                 if (n == null || !n.trader || n.name != name || n.inventory == null) continue;
-                var p = n.transform.position;
-                float d = (p.x - at.x) * (p.x - at.x) + (p.z - at.z) * (p.z - at.z);
+                float d = WorldActions.FlatSq(n.transform.position, at);
                 if (d < bestD) { bestD = d; best = n; }
             }
             return best;
@@ -391,22 +387,21 @@ namespace DarkwoodMP.World
             return d;
         }
 
-        static void Prefix(DialogueWindow __instance, out object[] __state)
+        static void Prefix(DialogueWindow __instance, out (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
-            __state = null;
+            __state = default;
             if (__instance == null || __instance.npc == null || WorldActions.Replaying) return;
-            __state = new object[] { Count(__instance.exchangeTrader), Count(__instance.exchangePlayer), __instance.npc.reputation };
+            __state = (Count(__instance.exchangeTrader), Count(__instance.exchangePlayer), __instance.npc.reputation);
         }
 
-        static void Postfix(DialogueWindow __instance, object[] __state)
+        static void Postfix(DialogueWindow __instance, (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
-            if (__state == null || __instance.npc == null) return;
-            var took = (Dictionary<string, int>)__state[0];
-            var gave = (Dictionary<string, int>)__state[1];
+            var (took, gave, rep) = __state;
+            if (took == null || __instance.npc == null) return;
             if (took.Count == 0 && gave.Count == 0) return;
             // Accepted: both windows were emptied. Not accepted (not enough reputation, no room): the things are still in them.
             if (Count(__instance.exchangeTrader).Count != 0 || Count(__instance.exchangePlayer).Count != 0) return;
-            TraderSync.Instance?.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - (int)__state[2]);
+            TraderSync.Instance?.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - rep);
         }
     }
 }

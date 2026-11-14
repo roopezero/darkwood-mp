@@ -79,15 +79,14 @@ namespace DarkwoodMP.Combat
         // collides with, by collider instance id.
         private readonly HashSet<int> _ignored = new HashSet<int>();
         private Collider _body;
+        private Collider Body => _body != null ? _body : (_body = GetComponent<Collider>());
         private static readonly Collider[] Near = new Collider[128];
         private const float LooseRadius = 150f; // more than a stand-in moves in a frame, and its own size
 
         private void Ignore(Collider c)
         {
-            if (c == null || c.isTrigger) return;
-            if (_body == null) _body = GetComponent<Collider>();
-            if (_body == null || !_ignored.Add(c.GetInstanceID())) return;
-            Physics.IgnoreCollision(_body, c, true);
+            if (c == null || c.isTrigger || Body == null || !_ignored.Add(c.GetInstanceID())) return;
+            Physics.IgnoreCollision(Body, c, true);
         }
 
         /// <summary>
@@ -129,11 +128,10 @@ namespace DarkwoodMP.Combat
         public void IgnoreOurPlayer()
         {
             var player = Player.Instance;
-            if (player == null || player == _ignoredPlayer) return;
-            if (_body == null) _body = GetComponent<Collider>();
-            if (_body == null) return;
+            var body = Body;
+            if (player == null || player == _ignoredPlayer || body == null) return;
             foreach (var c in player.GetComponentsInChildren<Collider>(true))
-                if (c != null && !c.isTrigger) Physics.IgnoreCollision(_body, c, true);
+                if (c != null && !c.isTrigger) Physics.IgnoreCollision(body, c, true);
             _ignoredPlayer = player;
         }
 
@@ -264,11 +262,6 @@ namespace DarkwoodMP.Combat
                                    $"friend of the forest {proxy.FriendOfTheForest}, enemy of the forest {proxy.EnemyOfTheForest}" +
                                    (turnedInvisible ? $"; {stopped} enemies stop attacking them" : "") +
                                    $"; night worms sent at them: {NightSpawns.WormWanted(proxy)}; in light here: {Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
-        }
-
-        public static IEnumerable<Vector3> Positions()
-        {
-            foreach (var p in NetPlayerProxy.All.Values) if (p != null) yield return p.transform.position;
         }
 
         /// <summary>A CharBase that is a player: the host's own, or a remote one's proxy.</summary>

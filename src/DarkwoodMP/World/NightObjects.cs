@@ -35,6 +35,7 @@ namespace DarkwoodMP.World
         private sealed class Live { public long Id; public GameObject Go; public string Name; public Tag Tag; public Vector3 Pos; public Quaternion Rot; public ObjRef Parent; public byte Armed = 255; }
         private static readonly List<Live> _live = new List<Live>();
         private static readonly List<(byte kind, long id, Tag tag, Vector3 pos, Quaternion rot, ObjRef parent)> _incoming = new List<(byte, long, Tag, Vector3, Quaternion, ObjRef)>();
+        private static readonly List<(GameObject go, byte armed, float at)> _rearm = new List<(GameObject, byte, float)>();
         private static Session _session;
         private static float _nextCheck;
         private static readonly System.Random _rng = new System.Random();
@@ -42,8 +43,8 @@ namespace DarkwoodMP.World
         internal static CustomEvent Firing;
         internal static readonly Stack<GameEvent> Steps = new Stack<GameEvent>();
 
-        /// <summary>For the map test: what the host sent and the joiner made.</summary>
-        public static int SentCount, MadeCount;
+        /// <summary>For the map test: how many objects the host sent.</summary>
+        public static int SentCount;
 
         public static void Register(Session s)
         {
@@ -239,7 +240,6 @@ namespace DarkwoodMP.World
             }
             finally { WorldActions.Replaying = false; }
             if (go == null) return;
-            MadeCount++;
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{(kind == MadeBefore ? " (made before we came)" : "")}");
         }
 
@@ -260,7 +260,6 @@ namespace DarkwoodMP.World
             _rearm.RemoveAll(x => x.go == go);
             _rearm.Add((go, armed, Time.unscaledTime + 1f));
         }
-        private static readonly List<(GameObject go, byte armed, float at)> _rearm = new List<(GameObject, byte, float)>();
 
         private static GameObject Prefab(Tag tag)
         {

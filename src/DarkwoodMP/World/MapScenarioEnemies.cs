@@ -103,7 +103,6 @@ namespace DarkwoodMP.World
 
         private static string Short(string kind) => kind.Contains('/') ? kind.Substring(kind.LastIndexOf('/') + 1) : kind;
         private static bool IsKind(Character c, string kind) => c != null && c.name.Replace("(Clone)", "").Trim().Equals(Short(kind), StringComparison.OrdinalIgnoreCase);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
 
         internal static Vector3 FreeSpot(Vector3 at)
         {
@@ -121,16 +120,16 @@ namespace DarkwoodMP.World
         /// <summary>The (one) remote player's stand-in on the host.</summary>
         internal static NetPlayerProxy ClientProxy() => NetPlayerProxy.All.Values.FirstOrDefault(p => p != null && p.Owner != Sync.PlayerSync.DummyId);
 
-        internal static void HealNow()
+        /// <summary>KIND spawned at the spot, sent after "the player" if attack (null: it couldn't be).</summary>
+        private static Character SpawnAt(string kind, Vector3 spot, bool attack)
         {
-            var p = P;
-            if (p == null || !p.alive) return;
-            foreach (var b in p.GetComponentsInChildren<Burn>()) if (b != null) b.stop();
-            if (p.effects != null) p.effects.removeAllEffects();
-            p.bleeding = false;
-            if (p.inBearTrap) p.stopAllPerformingActionAnims();
-            p.setHealth(p.maxHealth);
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: attack);
+            if (c != null) c.transform.position = spot;
+            return c;
         }
+
+        /// <summary>Kill it as our player's own hit.</summary>
+        private static void Kill(Character c) => AsPlayer(() => c.getHit(c.health + 1000f, P.transform, false, true, false));
 
         // ---- host --------------------------------------------------------------------------------------------------
 
@@ -179,10 +178,9 @@ namespace DarkwoodMP.World
             var w = new Watch { Kind = kind, SpawnedAt = Time.realtimeSinceStartup };
             foreach (var c0 in Object.FindObjectsOfType<Character>()) w.Before.Add(c0.GetInstanceID());
             Character c;
-            try { c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true); }
+            try { c = SpawnAt(kind, spot, attack: true); }
             catch (Exception e) { r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}"); yield break; }
             if (c == null) { r.Fail($"couldn't spawn {kind}"); yield break; }
-            c.transform.position = spot;
             w.C = c; w.From = spot;
             w.Before.Add(c.GetInstanceID());
             _w = w;
@@ -202,9 +200,8 @@ namespace DarkwoodMP.World
         {
             string kind = a.Length > 0 ? a[0] : "Spider01";
             var spot = FreeSpot(P.transform.position + new Vector3(0f, 0f, -400f));
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true);
+            var c = SpawnAt(kind, spot, attack: true);
             if (c == null) { r.Fail($"couldn't spawn {kind}"); yield break; }
-            c.transform.position = spot;
             float lost = 0f, hp = P.health, until = Time.realtimeSinceStartup + 15f;
             while (Time.realtimeSinceStartup < until && lost <= 0f && c != null && c.alive)
             {
@@ -214,7 +211,7 @@ namespace DarkwoodMP.World
             }
             r.Info = $"{kind} beside our player: it hurt us for {lost:0}; {(c != null ? $"{Core.trueDistance(c.transform.position, P.transform.position):0} from us, alive {c.alive}" : "gone")}";
             HealNow();
-            if (c != null) { var cc = c; AsPlayer(() => cc.getHit(cc.health + 1000f, P.transform, false, true, false)); }
+            if (c != null) Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null) Object.Destroy(c.gameObject);
         }
@@ -259,7 +256,6 @@ namespace DarkwoodMP.World
         /// <summary>Host, while the fight lasts: whom the enemy goes for, how far it moved, and what it spawned.</summary>
         private static IEnumerator Monitor(Watch w)
         {
-            var proxy = ClientProxy();
             while (!w.Done && Time.realtimeSinceStartup - w.SpawnedAt < 200f)
             {
                 var c = w.C;
@@ -306,7 +302,7 @@ namespace DarkwoodMP.World
             if (alive.Count > 0)
             {
                 r.Fail($"still alive here: {string.Join(", ", alive.Select(c => c.name))}; {r.Info}");
-                foreach (var c in alive) AsPlayer(() => c.getHit(c.health + 1000f, P.transform, false, true, false));
+                foreach (var c in alive) Kill(c);
             }
         }
 
@@ -448,7 +444,6 @@ namespace DarkwoodMP.World
             else if (left.Count > 0) r.Fail($"still alive: {string.Join(", ", left)}; {r.Info}");
         }
 
-        /// <summary>Take a weapon of this type out (made in an empty hotbar slot), as the game's hotbar select does.</summary>
         /// <summary>A melee weapon that can cut a character in half (InvItem.canCutInHalf), from the game's item list.</summary>
         private static string CutWeapon()
         {
@@ -474,6 +469,7 @@ namespace DarkwoodMP.World
             return Mathf.Max(10f, Mathf.Max(it.getModdedDamage(it.baseClass.damage), it.getModdedDamage(it.baseClass.specialDamage)) * 2f);
         }
 
+        /// <summary>Take a weapon of this type out (made in an empty hotbar slot), as the game's hotbar select does.</summary>
         private static IEnumerator TakeOut(Player p, string type, Result r)
         {
             for (int attempt = 0; attempt < 4; attempt++)
@@ -552,9 +548,8 @@ namespace DarkwoodMP.World
             if (proxy == null) { r.Fail("no client player"); yield break; }
             var away = proxy.transform.position - P.transform.position; away.y = 0f;
             var spot = FreeSpot(proxy.transform.position + away.normalized * 300f);
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
+            var c = SpawnAt("Dog", spot, attack: false);
             if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
-            c.transform.position = spot;
             c.immobile = true; // it stays where it is, for the client's beam to find it
             _armor = c.gameObject.AddComponent<ShadowArmor>();
             _beamLog = "";
@@ -625,9 +620,8 @@ namespace DarkwoodMP.World
             r.Info = $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {(target is NetPlayerProxy np ? "client " + np.OwnerName : target is Player ? "host player" : target != null ? target.name : "nobody")}";
             bool hurt = _armor.health < _armorHealth;
             r.Info += "; " + _beamLog;
-            var armor = _armor;
             _armor = null;
-            if (c != null) { var cc = c; AsPlayer(() => cc.getHit(cc.health + 1000f, P.transform, false, true, false)); }
+            if (c != null) Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null) Object.Destroy(c.gameObject);
             if (!hurt) r.Fail($"the client's flashlight didn't hurt it: {r.Info}");
@@ -647,9 +641,8 @@ namespace DarkwoodMP.World
             var host = P.transform.position;
             var toClient = proxy.transform.position - host; toClient.y = 0f;
             var spot = FreeSpot(proxy.transform.position - toClient.normalized * 250f); // between the two players, nearer the client
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Chicken", nocturnal: false, attackPlayer: false);
+            var c = SpawnAt("Chicken", spot, attack: false);
             if (c == null) { r.Fail("couldn't spawn a chicken"); yield break; }
-            c.transform.position = spot;
             yield return new WaitForSeconds(1f);
             var act = new Character.Activity { type = Character.Activity.Type.runAway };
             act.run(c);
@@ -658,7 +651,7 @@ namespace DarkwoodMP.World
             float fromClient = Core.trueDistance(now, proxy.transform.position) - Core.trueDistance(spot, proxy.transform.position);
             float fromHost = Core.trueDistance(now, host) - Core.trueDistance(spot, host);
             r.Info = $"{c.name} from {Fmt(spot)} to {Fmt(now)}: {fromClient:0} further from the client, {fromHost:0} further from us";
-            var cc = c; AsPlayer(() => cc.getHit(cc.health + 1000f, P.transform, false, true, false));
+            Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null) Object.Destroy(c.gameObject);
             if (!(fromClient > 100f)) r.Fail($"it didn't run from the client: {r.Info}");

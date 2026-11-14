@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using DarkwoodMP.Combat;
@@ -33,8 +32,6 @@ namespace DarkwoodMP.World
         private static Vector3 Spot(string which) => Spots.TryGetValue(which, out var off) ? Centre + off : Centre;
 
         private static Player P => Player.Instance;
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
         private static string ItemName(InvItemClass i) => InvItemClass.isNull(i) ? "nothing" : i.type;
 
         private static readonly System.Reflection.MethodInfo AttackM = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
@@ -46,8 +43,8 @@ namespace DarkwoodMP.World
         internal static Vector3? AimAt;
         internal static bool Recording;
 
-        /// <summary>The sounds the host's characters heard lately (Character.heardSound): who, where, dangerous, when.</summary>
-        internal static readonly List<(Character c, Vector3 pos, bool dangerous, float at)> Heard = new List<(Character, Vector3, bool, float)>();
+        /// <summary>The sounds the host's characters heard lately (Character.heardSound): who, where, dangerous.</summary>
+        internal static readonly List<(Character c, Vector3 pos, bool dangerous)> Heard = new List<(Character, Vector3, bool)>();
 
         /// <summary>
         /// "i2-safe on|off": our player is healed whenever it's below half health
@@ -68,42 +65,29 @@ namespace DarkwoodMP.World
 
         public static void Register()
         {
-            MapScenario.Add("i2-safe", SafeStep);
+            Add("i2-safe", SafeStep);
             Recording = true;
-            MapScenario.Add("i2-dog", Dog);
-            MapScenario.Add("i2-note", Note);
-            MapScenario.Add("i2-fire", Fire, timeout: 90f);
-            MapScenario.Add("i2-hurt", Hurt, timeout: 15f);
-            MapScenario.Add("i2-shots-seen", ShotsSeen, timeout: 15f);
-            MapScenario.Add("i2-throw", Throw, timeout: 40f);
-            MapScenario.Add("i2-seen", Seen, timeout: 30f);
-            MapScenario.Add("i2-heard", HeardStep, timeout: 15f);
-            MapScenario.Add("i2-eats", Eats, timeout: 70f);
-            MapScenario.Add("i2-gone", Gone, timeout: 30f);
-            MapScenario.Add("i2-gassed", Gassed, timeout: 15f);
-            MapScenario.Add("i2-kill", Kill, timeout: 20f);
-            MapScenario.Add("i2-goto", (a, r) => Walk(FreeSpot(Spot(a.Length > 0 ? a[0] : "")), 40f), timeout: 40f);
-            MapScenario.Add("i2-lantern", Lantern, timeout: 15f);
-            MapScenario.Add("i2-lit", Lit, timeout: 15f);
-            MapScenario.Add("i2-map-pick", MapPick);
-            MapScenario.Add("i2-map-use", MapUse);
-            MapScenario.Add("i2-map-check", MapCheck, timeout: 20f);
+            Add("i2-dog", Dog);
+            Add("i2-note", Note);
+            Add("i2-fire", Fire, timeout: 90f);
+            Add("i2-hurt", Hurt, timeout: 15f);
+            Add("i2-shots-seen", ShotsSeen, timeout: 15f);
+            Add("i2-throw", Throw, timeout: 40f);
+            Add("i2-seen", Seen, timeout: 30f);
+            Add("i2-heard", HeardStep, timeout: 15f);
+            Add("i2-eats", Eats, timeout: 70f);
+            Add("i2-gone", Gone, timeout: 30f);
+            Add("i2-gassed", Gassed, timeout: 15f);
+            Add("i2-kill", Kill, timeout: 20f);
+            Add("i2-goto", (a, r) => Walk(MapScenarioEnemies.FreeSpot(Spot(a.Length > 0 ? a[0] : "")), 40f), timeout: 40f);
+            Add("i2-lantern", Lantern, timeout: 15f);
+            Add("i2-lit", Lit, timeout: 15f);
+            Add("i2-map-pick", MapPick);
+            Add("i2-map-use", MapUse);
+            Add("i2-map-check", MapCheck, timeout: 20f);
         }
 
         // ---- helpers ----------------------------------------------------------------------------------------------
-
-        private static Vector3 FreeSpot(Vector3 at)
-        {
-            for (int ring = 0; ring < 12; ring++)
-                for (int i = 0; i < Math.Max(1, ring * 6); i++)
-                {
-                    float a = i * Mathf.PI * 2f / Math.Max(1, ring * 6);
-                    var p = at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * ring * 50f;
-                    if (!Physics.OverlapSphere(p, 60f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player")))
-                        return p;
-                }
-            return at;
-        }
 
         private static readonly Dictionary<string, Character> _dogs = new Dictionary<string, Character>();   // host: by spot
         private static readonly Dictionary<string, uint> _dogIds = new Dictionary<string, uint>();            // client: by spot
@@ -135,13 +119,6 @@ namespace DarkwoodMP.World
             got(c);
         }
 
-        /// <summary>The shot dog bites back: our player is healed before it can kill us (a death changes the story
-        /// flags the dumps compare).</summary>
-        private static void StayAlive(Player p)
-        {
-            if (p.alive && p.health < p.maxHealth * 0.5f) p.setHealth(p.maxHealth);
-        }
-
         private static void Face(Vector3 at)
         {
             var d = at - P.transform.position; d.y = 0f;
@@ -158,7 +135,7 @@ namespace DarkwoodMP.World
             // hit the other player in the way.
             var s = Net.Session.Instance;
             var side = new Vector3(-d.z, 0f, d.x) * (s != null && s.IsClient ? -1f : 1f);
-            return FreeSpot(target + (d + side).normalized * dist);
+            return MapScenarioEnemies.FreeSpot(target + (d + side).normalized * dist);
         }
 
         private static (InvSlot slot, InvItemClass was) _hotbarWas, _bagWas;
@@ -229,7 +206,7 @@ namespace DarkwoodMP.World
             bool hungry = System.Array.IndexOf(a, "--hungry") >= 0;
             a = System.Array.FindAll(a, s => s != "--hungry");
             string name = a.Length > 0 ? a[0] : "gun";
-            var spot = FreeSpot(Spot(name));
+            var spot = MapScenarioEnemies.FreeSpot(Spot(name));
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
             if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
             c.transform.position = spot;
@@ -287,10 +264,16 @@ namespace DarkwoodMP.World
         {
             var d = DogOf(a.Length > 0 ? a[0] : "gun");
             if (d == null) { r.Info = "no dog (gone already)"; yield break; }
-            if (d.alive) AsPlayer(() => d.getHit(d.health + 500f, P.transform, false, true, false));
-            yield return new WaitForSeconds(1.5f);
-            r.Info = $"{d.name} alive {d.alive}";
-            if (d.alive) r.Fail("it's still alive");
+            yield return KillAsPlayer(d, r, 1.5f);
+        }
+
+        /// <summary>Our player kills C (a hit of all its health and more); WAIT seconds later it must be dead.</summary>
+        internal static IEnumerator KillAsPlayer(Character c, Result r, float wait)
+        {
+            if (c.alive) AsPlayer(() => c.getHit(c.health + 500f, P.transform, false, true, false));
+            yield return new WaitForSeconds(wait);
+            r.Info = $"{c.name} alive {c.alive}";
+            if (c.alive) r.Fail("it's still alive");
         }
 
         // ---- firearms ---------------------------------------------------------------------------------------------
@@ -333,9 +316,8 @@ namespace DarkwoodMP.World
                     {
                         AsPlayer(() => ReloadM.Invoke(p, null));
                         yield return new WaitForSeconds(0.3f);
-                        StayAlive(p);
                     }
-                    while ((p.reloading || gun.ammo == before) && Time.realtimeSinceStartup < until) { StayAlive(p); yield return null; }
+                    while ((p.reloading || gun.ammo == before) && Time.realtimeSinceStartup < until) yield return null;
                     loads += (loads == "" ? "" : ", ") + $"{before}->{gun.ammo}";
                     if (gun.ammo <= before) r.Fail($"the {type} didn't reload ({before} -> {gun.ammo} of {b.clipSize}, reloading {p.reloading}, {b.ammoType} in bags {p.Inventory.getItemInPlayer(b.ammoType)?.amount ?? 0})");
                 }
@@ -353,15 +335,14 @@ namespace DarkwoodMP.World
                     at = dog.transform.position;
                     AimAt = at;
                     Face(at);
-                    // A wall between us and the dog takes every shot (run on 3caf891: the host's six pistol shots all
-                    // hit Wall_upDown 105 away, the dog 180 away): step round the dog until the line of fire is clear,
-                    // as a player would.
+                    // A wall between us and the dog takes every shot: step round the dog until the line of fire is
+                    // clear, as a player would.
                     string first = LineOfFire(p, dog, out bool clear);
                     var round = p.transform.position - at; round.y = 0f;
                     for (int k = 1; k < 6 && !clear && dog != null; k++)
                     {
                         moved++;
-                        yield return Walk(FreeSpot(dog.transform.position + Quaternion.Euler(0f, 60f * k, 0f) * round.normalized * 180f), 15f);
+                        yield return Walk(MapScenarioEnemies.FreeSpot(dog.transform.position + Quaternion.Euler(0f, 60f * k, 0f) * round.normalized * 180f), 15f);
                         at = dog.transform.position;
                         AimAt = at;
                         Face(at);
@@ -372,7 +353,6 @@ namespace DarkwoodMP.World
                     p.currentAim = b.minAim; // as steady as aiming makes it (Player's aim narrows it to minAim)
                     AsPlayer(() => AttackM.Invoke(p, new object[] { 1f }));
                     if (gun.ammo < ammo) fired++;
-                    StayAlive(p);
                     yield return new WaitForSeconds(Mathf.Max(b.fireRate, 0.05f) + 0.05f);
                 }
                 yield return new WaitForSeconds(1.5f); // the host's answers
@@ -420,7 +400,7 @@ namespace DarkwoodMP.World
             string type = a[0], at = a.Length > 1 ? a[1] : "fire";
             Character dog = null;
             if (at == "meat" || at == "gun") { yield return WaitDog(at, c => dog = c); if (dog == null) { r.Fail($"no {at} dog here"); yield break; } }
-            var target = dog != null ? dog.transform.position : FreeSpot(Spot(at));
+            var target = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
             yield return Walk(Stand(target, type == "gasBomb" ? 340f : 250f), 30f); // (out of a gas cloud's reach)
             if (dog != null) target = dog.transform.position;
             try
@@ -434,7 +414,6 @@ namespace DarkwoodMP.World
                 bool threw = false;
                 for (int attempt = 0; attempt < 4 && !threw; attempt++)
                 {
-                    StayAlive(p);
                     if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
                     {
                         yield return TakeOut(type, r);
@@ -463,7 +442,7 @@ namespace DarkwoodMP.World
                 // A gas bomb thrown at a dog right beside us can break on it at once: gone before we look.
                 var ti = held != null ? held.GetComponent<ThrownItem>() : null;
                 float until = Time.realtimeSinceStartup + 6f;
-                while (held != null && ti != null && !ti.onGround && Time.realtimeSinceStartup < until) { StayAlive(p); yield return null; }
+                while (held != null && ti != null && !ti.onGround && Time.realtimeSinceStartup < until) yield return null;
                 r.Info = $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: "
                        + (held == null ? "gone on landing" : $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}");
             }
@@ -484,7 +463,7 @@ namespace DarkwoodMP.World
             if (it == null || it.item == null) { r.Fail($"no {type} in the database"); yield break; }
             string prefab = it.item.name;
             var dog = at == "meat" || at == "gun" ? DogOf(at) : null;
-            var near = dog != null ? dog.transform.position : FreeSpot(Spot(at));
+            var near = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
             GameObject copy = null;
             float until = Time.realtimeSinceStartup + 8f;
             while (copy == null && Time.realtimeSinceStartup < until)
@@ -601,7 +580,7 @@ namespace DarkwoodMP.World
 
         private static (InvSlot slot, InvItemClass was) _lanternWas;
 
-        /// <summary>"i2-lantern on|off":a lantern put on our hotbar (lit, as the game does for one there) or taken off.</summary>
+        /// <summary>"i2-lantern on|off": a lantern put on our hotbar (lit, as the game does for one there) or taken off.</summary>
         private static IEnumerator Lantern(string[] a, Result r)
         {
             var p = P;
@@ -739,7 +718,7 @@ namespace DarkwoodMP.World
             if (!MapScenarioItems2.Recording) return;
             var h = MapScenarioItems2.Heard;
             if (h.Count > 200) h.RemoveAt(0);
-            h.Add((__instance, Position, dangerousSound, Time.realtimeSinceStartup));
+            h.Add((__instance, Position, dangerousSound));
         }
     }
 }

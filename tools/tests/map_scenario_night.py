@@ -8,6 +8,8 @@ before it came), then the lights events while it plays; "nightobjects" (every ob
 anywhere) must match. Then eight dogs chase the client while it walks in a circle, and nl-motion counts how its
 copies are drawn (EnemyMotion): it fails if they stand still in over 10% of the frames they move."""
 
+from mapsteps import SAFE_OFF, SAFE_ON
+
 SETTLE = 1.5
 
 PRE_JOIN = [
@@ -22,14 +24,13 @@ STEPS = [
     # few units, differently in each game (it reaches the client: nightobjects matched; the wardrobe didn't).
     ("host", "nl-event", "CEvent_new_spawn_Mushroom_outside", {"settle": 2}),
     ("both", "compare", "client", "nightobjects"),
-    ("host", "i2-safe", "on", {"settle": 0}), ("client", "i2-safe", "on", {"settle": 0}),
+] + SAFE_ON + [
     ("client", "ee-arena"),
     ("host", "nl-herd", "8"),
     ("client", "nl-motion", "25"),
     ("host", "nl-clear"),
     ("client", "heal"), ("host", "heal"),
-    ("host", "i2-safe", "off", {"settle": 0}), ("client", "i2-safe", "off", {"settle": 0}),
-]
+] + SAFE_OFF
 
 POST = []
 

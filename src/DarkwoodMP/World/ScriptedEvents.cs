@@ -108,15 +108,12 @@ namespace DarkwoodMP.World
         /// <summary>Whether a step of this type is the host's (runs only in the host's game).</summary>
         public static bool IsHostStep(GameEvent.Type t) => HostSteps.Contains(t);
 
-        /// <summary>Whether a step of this type runs in the part being run now.</summary>
-        public static bool Runs(GameEvent.Type t) => Runs(PlayerSteps.Contains(t), HostSteps.Contains(t), t);
-
         /// <summary>
         /// Whether this step runs in the part being run now. A moveInventory between world containers only is the
         /// host's, not the player's (World.Hideouts.IsWorldMove).
         /// </summary>
         public static bool Runs(GameEvent ge) =>
-            Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type) : Runs(ge.type);
+            Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type) : Runs(IsPlayerStep(ge.type), IsHostStep(ge.type), ge.type);
 
         private static bool Runs(bool player, bool host, GameEvent.Type t)
         {
@@ -172,12 +169,16 @@ namespace DarkwoodMP.World
         /// <summary>True while EventTriggers.OnTriggerEnter runs for our own player's collider.</summary>
         internal static bool PlayerEntered;
 
-        /// <summary>Trigger types the world sets off by itself, in every game (the clock, things appearing, chains).</summary>
-        private static readonly HashSet<global::EventTrigger.Type> WorldTypes = new HashSet<global::EventTrigger.Type>
+        /// <summary>Trigger types the host's world sets off for everyone (see the class comment).</summary>
+        private static readonly HashSet<global::EventTrigger.Type> HostWorldTypes = new HashSet<global::EventTrigger.Type>
         {
-            global::EventTrigger.Type.onTime, global::EventTrigger.Type.onSpawned, global::EventTrigger.Type.onGameObjectActivated,
-            global::EventTrigger.Type.onFireGameEvents, global::EventTrigger.Type.refreshWhenTurnedOn, global::EventTrigger.Type.onDeath,
+            global::EventTrigger.Type.onTime, global::EventTrigger.Type.onDeath, global::EventTrigger.Type.refreshWhenTurnedOn,
+            global::EventTrigger.Type.onSpawned, global::EventTrigger.Type.onGameObjectActivated,
         };
+
+        /// <summary>Trigger types the world sets off by itself, in every game (the clock, things appearing, chains).</summary>
+        private static readonly HashSet<global::EventTrigger.Type> WorldTypes =
+            new HashSet<global::EventTrigger.Type>(HostWorldTypes) { global::EventTrigger.Type.onFireGameEvents };
 
         /// <summary>Whether a trigger of this type, set off now, is our own player's doing.</summary>
         internal static bool ByOurPlayer(global::EventTrigger.Type type)
@@ -201,13 +202,6 @@ namespace DarkwoodMP.World
 
         /// <summary>How many GameEvent step coroutines are running right now (a trigger set off inside one is a chain).</summary>
         internal static int StepDepth;
-
-        /// <summary>Trigger types the host's world sets off for everyone (see the class comment).</summary>
-        private static readonly HashSet<global::EventTrigger.Type> HostWorldTypes = new HashSet<global::EventTrigger.Type>
-        {
-            global::EventTrigger.Type.onTime, global::EventTrigger.Type.onDeath, global::EventTrigger.Type.refreshWhenTurnedOn,
-            global::EventTrigger.Type.onSpawned, global::EventTrigger.Type.onGameObjectActivated,
-        };
 
         /// <summary>
         /// Whether this trigger, set off now as fired, is one the host's world runs for everyone: the host sends it,
@@ -290,13 +284,13 @@ namespace DarkwoodMP.World
                 // Only the host's world sends these; a joiner runs the shared part (and the messages, if near).
                 if (s.IsHost) { Authority.Refuse("the world's own events are the host's"); return; }
                 var et = ObjRef.Resolve<EventTriggers>(obj);
-                var t = et != null && index < et.eventTriggers.Count ? et.eventTriggers[index] : null;
+                var t = TriggerAt(et, index);
                 if (Debug) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
                 if (t == null || (t.fired && !t.multipleFire)) return;
                 t.fired = true;
                 t.firedExit = false;
                 var ge = t.gameEvents;
-                if (ge != null && (!ge.fired || ge.multipleFire) && (ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive))
+                if (CanRun(ge))
                 {
                     var p = Player.Instance;
                     bool near = p != null && (p.transform.position - et.transform.position).sqrMagnitude < NearMessages * NearMessages;
@@ -309,7 +303,7 @@ namespace DarkwoodMP.World
             if (kind == Kind.Trigger)
             {
                 var et = ObjRef.Resolve<EventTriggers>(obj);
-                var t = et != null && index < et.eventTriggers.Count ? et.eventTriggers[index] : null;
+                var t = TriggerAt(et, index);
                 if (s.IsHost)
                 {
                     if (t == null) { Authority.Refuse("no such event here"); return; }
@@ -320,7 +314,7 @@ namespace DarkwoodMP.World
                 t.fired = true;
                 t.firedExit = false;
                 var ge = t.gameEvents;
-                if (ge != null && (!ge.fired || ge.multipleFire) && (ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive))
+                if (CanRun(ge))
                 {
                     var wasBy = By; if (s.IsHost) By = from;
                     try { RunAs(s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient, ge.fire); }
@@ -356,6 +350,13 @@ namespace DarkwoodMP.World
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
         }
+
+        private static global::EventTrigger TriggerAt(EventTriggers et, int index) =>
+            et != null && index < et.eventTriggers.Count ? et.eventTriggers[index] : null;
+
+        /// <summary>Whether a trigger's GameEvents may run now: not run yet (or run each time), and active or allowed to run inactive.</summary>
+        private static bool CanRun(GameEvents ge) =>
+            ge != null && (!ge.fired || ge.multipleFire) && (ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive);
 
         /// <summary>
         /// Requirements the host can check against its own world. The others are about the player who set it off

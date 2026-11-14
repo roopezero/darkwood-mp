@@ -56,7 +56,7 @@ namespace DarkwoodMP.World
             Instance = this;
             _session = session;
             session.Register(MsgType.FlagsDelta, OnDelta);
-            session.OnSessionEnded += () => { _baseline = null; _rewards.Clear(); };
+            session.OnSessionEnded += () => { _baseline = null; _rewards.Clear(); _deathsAllowed.Clear(); };
         }
 
         private static bool Sharing =>
@@ -111,7 +111,7 @@ namespace DarkwoodMP.World
             }
             // Journal entries that went (handed over in a dialogue).
             foreach (var kv in _baseline)
-                if (IsRemovable(kv.Key) && kv.Value != Removed && !now.ContainsKey(kv.Key)) changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key)) changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
             _baseline = now;
             if (changed.Count > 0) Send(changed, except: 0);
         }
@@ -194,9 +194,7 @@ namespace DarkwoodMP.World
             foreach (var n in f.npcStates)
             {
                 if (n == null || n.name == null) continue;
-                var jo = JObject.FromObject(n);
-                jo.Remove("reputation");
-                d["n:" + n.name] = jo.ToString(Formatting.None);
+                d["n:" + n.name] = NpcJson(n);
                 d["r:" + n.name] = n.reputation.ToString();
             }
             foreach (var dl in f.dialogues) if (dl != null) d["d:" + dl.name] = JsonConvert.SerializeObject(new CharacterDialogue.SaveState(dl));
@@ -211,6 +209,14 @@ namespace DarkwoodMP.World
                 foreach (var e in j.locationDirections) if (e != null && e.locationName != null) d["jd:" + e.locationName] = JsonConvert.SerializeObject(e);
             }
             return d;
+        }
+
+        /// <summary>An NPC's "n:" value: its state as JSON, without the reputation (that goes as "r:").</summary>
+        private static string NpcJson(Flags.NPCState n)
+        {
+            var jo = JObject.FromObject(n);
+            jo.Remove("reputation");
+            return jo.ToString(Formatting.None);
         }
 
         private void Send(List<KeyValuePair<string, string>> entries, ulong except)
@@ -269,29 +275,38 @@ namespace DarkwoodMP.World
         internal void DeathAllowed(string npc) { if (!string.IsNullOrEmpty(npc)) _deathsAllowed[npc] = UnityEngine.Time.unscaledTime; }
 
         /// <summary>
-        /// Host: a joiner's NPC state says the NPC is dead, and ours doesn't. A player's kill reaches us first as an
+        /// Host: checks a joiner's NPC state against our NPC's death. A player's kill reaches us first as an
         /// NpcDied request, which we check (reach, the NPC here) and which kills our copy; a dead state that didn't
-        /// come that way isn't taken (or any client could kill any NPC everywhere): they get our state back.
+        /// come that way isn't taken (or any client could kill any NPC everywhere). Nothing in the game brings a dead
+        /// NPC back, so a state that says alive over our dead one is out of date (sent before our death reached
+        /// them) and isn't taken either. Either way the sender gets our state back.
         /// </summary>
         private bool DeathOk(ulong from, string npc, string value)
         {
             var st = Singleton<Flags>.Instance.getNPCState(npc);
-            if (st != null && st.dead) return true;
             bool dead;
             try { dead = JObject.Parse(value).Value<bool?>("dead") ?? false; }
             catch { return true; } // not ours to judge: Apply reports it
+            if (st != null && st.dead)
+            {
+                if (dead) return true;
+                SendNpcState(from, npc, st);
+                return false;
+            }
             if (!dead) return true;
             if (_deathsAllowed.TryGetValue(npc, out float t) && UnityEngine.Time.unscaledTime - t < 30f) return true;
             Plugin.Log.LogInfo($"[authority] refused {_session.NameOf(from)}'s state of {npc}: dead, but no kill of theirs was allowed here");
-            var mine = Snapshot(true);
-            if (mine != null && mine.TryGetValue("n:" + npc, out var ours))
-            {
-                var w = _session.Begin(MsgType.FlagsDelta);
-                w.W.Write((ushort)1);
-                w.WriteStr("n:" + npc); w.WriteStr(ours);
-                _session.SendTo(from, w, Channel.Control, reliable: true);
-            }
+            SendNpcState(from, npc, st);
             return false;
+        }
+
+        private void SendNpcState(ulong to, string npc, Flags.NPCState st)
+        {
+            if (st == null || st.name == null) return;
+            var w = _session.Begin(MsgType.FlagsDelta);
+            w.W.Write((ushort)1);
+            w.WriteStr("n:" + npc); w.WriteStr(NpcJson(st));
+            _session.SendTo(to, w, Channel.Control, reliable: true);
         }
 
         /// <summary>Another game's reputation change ("+d"), or a reputation sent whole ("=v").</summary>

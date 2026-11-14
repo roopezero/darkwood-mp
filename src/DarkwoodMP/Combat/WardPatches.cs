@@ -143,23 +143,23 @@ namespace DarkwoodMP.Combat
     /// shadow creatures and shadow armour check those nodes (Core.isInLight). A puppet's torch or lantern is the
     /// item's own light prefab, which lights nodes as the game's do. A puppet's flashlight beam is a copy of the host's
     /// "Flashlight", which the game clips to the host's player's flashlight collider, so it would light nothing where
-    /// the puppet is. This moves the clip box to the puppet: the host's collider's place relative to the host's player,
-    /// put at the same place relative to the puppet.
+    /// the puppet is. That collider is sized and placed only by the host's own flashlight (Player.processFlashlight,
+    /// from the host's cursor), so it isn't used: the clip box is a square 1000 a side centred 500 ahead of the
+    /// puppet, which covers the beam from the puppet out to 1000 ahead (we don't know where its player aims).
     /// </summary>
     [HarmonyPatch(typeof(Light2D), nameof(Light2D.lightGraphNodes), new[] { typeof(Bounds) })]
     static class PuppetBeamLightPatch
     {
+        private const float Ahead = 500f, Side = 1000f;
+
         static void Prefix(Light2D __instance, ref Bounds _bounds)
         {
             var parent = __instance.transform.parent;
             if (parent == null || !parent.name.StartsWith("DarkwoodMP_Remote_")) return;
-            var host = Player.Instance;
-            var box = host != null ? host.flashlightCollider : null;
-            if (box == null) return;
-            Vector3 local = host.transform.InverseTransformPoint(box.transform.TransformPoint(box.center));
-            Vector3 scale = box.transform.lossyScale;
-            float side = Mathf.Max(Mathf.Abs(box.size.x * scale.x), Mathf.Abs(box.size.y * scale.y)) * 1.42f; // covers the box turned any way
-            _bounds = new Bounds(parent.TransformPoint(local), new Vector3(side, 10000f, side));
+            Vector3 fwd = parent.TransformDirection(Vector3.up); fwd.y = 0f; // players are rotated Euler(90, yaw, 0): local up is ahead
+            if (fwd.sqrMagnitude < 0.01f) return;
+            float side = Side * 1.42f; // covers the box turned any way
+            _bounds = new Bounds(parent.position + fwd.normalized * Ahead, new Vector3(side, 10000f, side));
         }
     }
 }

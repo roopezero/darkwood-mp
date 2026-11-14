@@ -111,12 +111,15 @@ namespace DarkwoodMP.Sync
             Plugin.Log.LogInfo($"[fx] sent: our player bled ({prefab})");
         }
 
-        private PacketWriter Begin(MsgType t)
+        /// <summary>A message about a player: its type, then the player's id.</summary>
+        private PacketWriter Begin(MsgType t, ulong owner)
         {
             _w.Begin(t);
-            _w.W.Write(_s.LocalId); // a client's is replaced by the host anyway
+            _w.W.Write(owner);
             return _w;
         }
+
+        private PacketWriter Begin(MsgType t) => Begin(t, _s.LocalId); // a client's is replaced by the host anyway
 
         private void Send(PacketWriter w, bool reliable)
         {
@@ -138,13 +141,7 @@ namespace DarkwoodMP.Sync
         }
 
         /// <summary>The host passes a client's message on to the other clients, with the sender's id in it.</summary>
-        private PacketWriter Relay(MsgType t, ulong owner)
-        {
-            if (!_s.IsHost) return null;
-            _w.Begin(t);
-            _w.W.Write(owner);
-            return _w;
-        }
+        private PacketWriter Relay(MsgType t, ulong owner) => _s.IsHost ? Begin(t, owner) : null;
 
         private void Relayed(PacketWriter w, ulong except, bool reliable)
         {

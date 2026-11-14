@@ -12,9 +12,9 @@ namespace DarkwoodMP.World
 {
     /// <summary>
     /// Map test steps for loose things knocked about (DragSync's pushed objects; tools/tests/map_scenario_knock.py).
-    /// The map:savage run found four of the save's dropped items that both games had moved 10-20 units, at rest 2-5
-    /// units apart. Here a host's enemy, the client's player and the host's player each push one of the dropped items
-    /// by the test centre, and the module then compares the dropped items in both games.
+    /// A host's enemy, the client's player and the host's player each push one of the save's dropped items by the
+    /// test centre, and the module then compares the dropped items in both games: an item both games move must come
+    /// to rest at the same place in each.
     ///
     ///   kn-info [R]          the dropped items within R (250) of the centre: where, their body and colliders, and
     ///                        whether DragSync watches them. The first call notes their order (nearest first), which
@@ -28,9 +28,8 @@ namespace DarkwoodMP.World
     ///                        the joiner is still loading, away from where the snapshot has it. That is what the test
     ///                        world's kit does when it doesn't fit the host's bags and a client joins at once.
     ///
-    /// The dropped items are on layer 25, which players' and enemies' bodies don't collide with: in the first run of
-    /// this module the dog and both players went through them and none moved. The kn-enemy and kn-player steps stay
-    /// to show that.
+    /// The dropped items are on layer 25, which players' and enemies' bodies don't collide with: kn-player and
+    /// kn-enemy check that walking through them changes nothing between the games.
     /// </summary>
     public static class MapScenarioKnock
     {
@@ -45,7 +44,8 @@ namespace DarkwoodMP.World
             Add("kn-slide", Slide, timeout: 10f);
         }
 
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
+        /// <summary>X and Z to one decimal (finer than MapScenario.Fmt: these items move a few units).</summary>
+        private static string Fmt1(Vector3 p) => FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
 
         private static IEnumerable<Item> Dropped(float radius) =>
             StateDump.All<Item>().Where(i => i != null && i.gameObject.name.StartsWith("DroppedItem", StringComparison.Ordinal)
@@ -86,7 +86,7 @@ namespace DarkwoodMP.World
             var list = Dropped(radius).OrderBy(i => StateDump.Flat(i.transform.position - Centre)).ToList();
             if (_order.Count == 0) _order.AddRange(list.Select(Ref));
             foreach (var i in list) Plugin.Log.LogInfo($"[knock] {Describe(i)}");
-            r.Info = string.Join("; ", list.Select(i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt(i.transform.position)}"));
+            r.Info = string.Join("; ", list.Select(i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt1(i.transform.position)}"));
             if (list.Count == 0) r.Fail("no dropped items by the centre");
             yield break;
         }
@@ -101,7 +101,7 @@ namespace DarkwoodMP.World
             yield return Walk(start - dir * 90f, 10f, detours: 0);
             yield return Walk(start + dir * 80f, 5f, detours: 0);
             yield return new WaitForSeconds(3f); // at rest, and sent
-            r.Info = $"{Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+            r.Info = $"{Ref(it)} from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
         }
 
         private static IEnumerator Slide(string[] a, Result r)
@@ -113,7 +113,7 @@ namespace DarkwoodMP.World
             if (b == null) { r.Fail($"couldn't drop {type}"); yield break; }
             Plugin.Instance.StartCoroutine(KeepSliding(b, since));
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt(t.position)}";
+            r.Info = $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt1(t.position)}";
         }
 
         private static IEnumerator KeepSliding(Rigidbody b, float since)
@@ -131,9 +131,9 @@ namespace DarkwoodMP.World
             var at = b.position;
             b.WakeUp();
             b.velocity = new Vector3(0f, 0f, 250f);
-            Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
+            Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
-            if (b != null) Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt(b.position)}");
+            if (b != null) Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
         }
 
         private static IEnumerator EnemyPush(string[] a, Result r)
@@ -163,7 +163,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             Object.Destroy(c.gameObject);
             yield return new WaitForSeconds(3f); // at rest, and sent
-            r.Info = $"{kind} through {Ref(it)}: from {Fmt(start)} to {Fmt(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+            r.Info = $"{kind} through {Ref(it)}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
         }
     }
 }

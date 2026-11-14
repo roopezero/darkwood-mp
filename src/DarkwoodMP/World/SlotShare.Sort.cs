@@ -57,7 +57,7 @@ namespace DarkwoodMP.World
             if (s.IsHost && done.Count > 0)
             {
                 var r = ObjRef.Of(inv.gameObject);
-                if (r.Valid) SendChanges(r, done, 0, toOnly: false);
+                if (r.Valid) SendChanges(r, done);
             }
         }
 
@@ -85,12 +85,15 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} sorted {inv.name}: refused ({why})");
                 return;
             }
-            if (done.Count > 0) SendChanges(obj, done, from, toOnly: false);
+            if (done.Count > 0) SendChanges(obj, done, from);
             Plugin.Log.LogInfo($"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} slot(s) changed here");
         }
 
-        /// <summary>ContainerSlots with these changes, in parts of at most 200 (its count is a byte): to one peer (toOnly), or to everyone but that peer.</summary>
-        private void SendChanges(ObjRef obj, List<Change> changes, ulong peer, bool toOnly)
+        /// <summary>
+        /// ContainerSlots with these changes, in parts of at most 200 (its count is a byte): to one peer (toOnly);
+        /// otherwise from the host to everyone but that peer, and from a client to the host.
+        /// </summary>
+        private void SendChanges(ObjRef obj, List<Change> changes, ulong peer = 0, bool toOnly = false)
         {
             var s = _session;
             for (int at = 0; at < changes.Count; at += 200)
@@ -101,7 +104,8 @@ namespace DarkwoodMP.World
                 w.W.Write((byte)n);
                 for (int k = at; k < at + n; k++) { w.W.Write((ushort)changes[k].Slot); w.WriteStr(changes[k].Old); w.WriteStr(changes[k].New); }
                 if (toOnly) s.SendTo(peer, w, Channel.Control, reliable: true);
-                else s.Broadcast(w, Channel.Control, reliable: true, except: peer);
+                else if (s.IsHost) s.Broadcast(w, Channel.Control, reliable: true, except: peer);
+                else s.SendToHost(w, Channel.Control, reliable: true);
             }
         }
 

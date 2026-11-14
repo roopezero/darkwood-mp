@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 
@@ -54,18 +55,18 @@ namespace DarkwoodMP
 
     /// <summary>
     /// The menu's own words (the options pages' tabs; the first page's entries, which MenuList hides and draws itself)
-    /// are pictures of words in one typeface. For one look with the rest of the menu, each picture is hidden and its word, from the game's own translations (the UI sheet), is drawn in that font
-    /// instead. The picture stays (hidden), so the game's code that swaps it on hover or fades it still works; the
+    /// are pictures of words in one typeface. For one look with the rest of the menu, each picture is hidden and its word, from the
+    /// game's own translations (the UI sheet), is drawn in that font instead. The picture stays (hidden), so the game's code that swaps it on hover or fades it still works; the
     /// word follows its fading and the button's hover. A language the font has no letters for keeps the pictures.
     /// </summary>
     public static class MenuWords
     {
-        public const string LabelName = "DarkwoodMP_Label";
-        public static readonly Vector3 Scale = new Vector3(2.5f, 2.5f, 2.5f);
-        public static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f, 1f); // as the pictures' words
+        private const string LabelName = "DarkwoodMP_Label";
+        private static readonly Vector3 Scale = new Vector3(2.5f, 2.5f, 2.5f);
+        private static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f, 1f); // as the pictures' words
 
         /// <summary>The picture's name (without its "_0_EN" ending) and the UI sheet's key for its word.</summary>
-        private static readonly System.Collections.Generic.Dictionary<string, string> Keys = new System.Collections.Generic.Dictionary<string, string>
+        private static readonly Dictionary<string, string> Keys = new Dictionary<string, string>
         {
             ["play"] = "Play", ["options"] = "Options", ["credits"] = "Credits", ["exit"] = "Quit",
             ["continue"] = "Resume", ["help"] = "Help", ["mainMenu"] = "Main_menu",
@@ -73,8 +74,8 @@ namespace DarkwoodMP
         };
 
         private sealed class Word { public global::Button Button; public tk2dBaseSprite Picture; public MeshRenderer PictureRenderer; public tk2dTextMesh Text; }
-        private static readonly System.Collections.Generic.List<Word> _words = new System.Collections.Generic.List<Word>();
-        private static readonly System.Collections.Generic.HashSet<int> _seen = new System.Collections.Generic.HashSet<int>();
+        private static readonly List<Word> _words = new List<Word>();
+        private static readonly HashSet<int> _seen = new HashSet<int>();
         private static float _nextScan;
 
         public static void Update(MainMenu mm)
@@ -168,7 +169,7 @@ namespace DarkwoodMP
     /// </summary>
     public static class MenuLayout
     {
-        private const float Left = 0.065f;      // the logo's left edge (and MenuList's), as a share of the screen's width
+        internal const float Left = 0.065f;     // the logo's left edge (and MenuList's), as a share of the screen's width
         private const float LogoTop = 0.12f;    // the logo's word's top below the screen's top, as a share of its height
         private const float Corner = 0.016f;    // the versions' distance from the right and bottom edges, as a share of the height
 

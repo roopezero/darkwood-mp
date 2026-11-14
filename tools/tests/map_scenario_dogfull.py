@@ -1,5 +1,5 @@
 """The full map scenario (map_scenario.py) with MapScenarioDogWatch on in both games from the join: what wakes the
-save's dogs and how many times they bite. Run with MAP_SCENARIO=map_scenario_dogfull tools/run-test.sh map."""
+save's dogs and how many times they bite. Run with tools/run-test.sh map:dogfull."""
 import map_scenario as _m
 
 IN_MAPS = False  # the whole scenario again: not one of the "maps" batteries

@@ -58,6 +58,8 @@ namespace DarkwoodMP
             string beforeText = File.ReadAllText(PrefsPath);
             File.WriteAllText(Path.Combine(dir, $"prefs-before-{where}.xml"), beforeText);
             var sizeBefore = (w: Screen.width, h: Screen.height, mode: Screen.fullScreenMode);
+            _before = before;
+            _sizeBefore = sizeBefore;
             Log($"{where} menu, screen {Screen.width}x{Screen.height}; prefs file {PrefsPath} with {before.Count} settings");
 
             // Through the menu's entry, as a click on it.
@@ -174,10 +176,28 @@ namespace DarkwoodMP
             RestorePrefs(before);
             OptionsWindow.Revert();       // the volumes heard as stored
             OptionsWindow.TestReloadControls();
+            _before = null;
             var diffs = Compare(before, ReadPrefs());
             Check(diffs.Count == 0, diffs.Count == 0 ? "the prefs file has every setting as before the test" : $"the prefs file differs from before: {string.Join("; ", diffs)}");
             if (inWorld) Core.showHidePauseMenu();
             Log($"done: {(_fails == 0 ? "all passed" : _fails + " failed")}");
+        }
+
+        // What Run changed, kept until it has put it back, so a run cut short (an exception, a reset's StopTests,
+        // the game quitting) still restores the player's settings.
+        private static Dictionary<string, (string type, string value)> _before;
+        private static (int w, int h, FullScreenMode mode) _sizeBefore;
+
+        /// <summary>Plugin.StopTests and quitting: put the settings back if a run stopped before it did.</summary>
+        internal static void RestoreIfCutShort()
+        {
+            var before = _before;
+            if (before == null) return;
+            _before = null;
+            Log("cut short: putting the settings back");
+            try { Screen.SetResolution(_sizeBefore.w, _sizeBefore.h, _sizeBefore.mode); } catch (Exception e) { Log($"couldn't put the screen size back: {e.Message}"); }
+            try { RestorePrefs(before); } catch (Exception e) { Log($"couldn't put the prefs back: {e.Message}"); }
+            try { OptionsWindow.Revert(); OptionsWindow.TestReloadControls(); } catch (Exception e) { Log($"couldn't reload the settings: {e.Message}"); }
         }
 
         private static IEnumerator Shot(string path)

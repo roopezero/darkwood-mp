@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using DarkwoodMP.Net;
 using HarmonyLib;
@@ -27,16 +26,13 @@ namespace DarkwoodMP.World
             Add("trap-place-far", TrapPlaceFar, timeout: 30f);
             Add("place-forged", PlaceForged);
             Add("door-lock-key", DoorLockKey);
-            Add("door-key", DoorKey, timeout: 40f); // the walk back from trap-place-far (1400 away) took 10 to 19 s, then up to 8 s for the refusal
+            Add("door-key", DoorKey, timeout: 40f); // the walk back from trap-place-far is 1400 long, then up to 8 s for the refusal
             Add("door-locked", DoorLocked);
             Add("porter-ready", PorterReady);
             Add("whistle", Whistle, timeout: 40f);
             Add("porter-came", PorterCame, timeout: 40f);
             Add("porter-forged", PorterForged);
         }
-
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
 
         // ---- placing ------------------------------------------------------------------------------------------
 
@@ -246,6 +242,9 @@ namespace DarkwoodMP.World
         private static bool PorterThere(Location loc) =>
             loc.porter != null || Object.FindObjectsOfType<PorterSpawner>().Any(s => s != null && StateDump.Flat(s.transform.position - loc.porterPosition.transform.position) < 50f);
 
+        private static string PorterInfo(Location loc) =>
+            $"at {loc.name}: porter {(loc.porter != null ? "here" : PorterThere(loc) ? "on its way" : "not called")}";
+
         /// <summary>"porter-ready" (host): daytime, the porter neither on the way nor there, so a whistle calls it.</summary>
         private static IEnumerator PorterReady(string[] a, Result r)
         {
@@ -273,7 +272,7 @@ namespace DarkwoodMP.World
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
             while (!PorterThere(loc) && Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp) yield return null;
-            r.Info = $"at {loc.name}: porter {(loc.porter != null ? "here" : PorterThere(loc) ? "on its way" : "not called")}";
+            r.Info = PorterInfo(loc);
             if (Authority.RolledBack != refused) r.Fail($"{r.Info}: the host refused the call");
             else if (!PorterThere(loc)) r.Fail(r.Info);
         }
@@ -285,7 +284,7 @@ namespace DarkwoodMP.World
             if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
             float giveUp = Time.realtimeSinceStartup + 10f;
             while (!PorterThere(loc) && Time.realtimeSinceStartup < giveUp) yield return null;
-            r.Info = $"at {loc.name}: porter {(loc.porter != null ? "here" : PorterThere(loc) ? "on its way" : "not called")}";
+            r.Info = PorterInfo(loc);
             if (!PorterThere(loc)) r.Fail(r.Info);
         }
 

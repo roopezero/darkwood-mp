@@ -143,8 +143,8 @@ namespace DarkwoodMP.World
             bool on = r.R.ReadByte() != 0;
             if (s.IsHost) { OnClientIgnited(obj, what, time, on); return; }
             if (!s.IsClient || from != s.HostId) return;
-            Component c = Resolve(obj, what);
             if (what == What.None || (int)what > 4) return;
+            Component c = Resolve(obj, what);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got Burning {obj} {(on ? "on" : "off")}: " + (c != null ? c.name : "not found here"));
             if (c == null) return;
             var burn = c.GetComponent<Burn>();

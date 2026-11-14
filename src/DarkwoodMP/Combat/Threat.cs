@@ -235,6 +235,5 @@ namespace DarkwoodMP.Combat
         }
 
         private static string Name(CharBase c) => c is NetPlayerProxy p ? p.OwnerName : c is Player ? "host player" : c.name;
-
     }
 }

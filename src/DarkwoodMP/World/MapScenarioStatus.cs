@@ -1,27 +1,22 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
+using System.IO;
 using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Sync;
-using HarmonyLib;
 using UnityEngine;
-using Object = UnityEngine.Object;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for what the README listed as not yet tried in game: a joiner waiting out the host's
-    /// prologue, the LAN search, the crouch while disarming, and watching the others after dying for good.
+    /// Map test steps for a joiner waiting out the host's prologue, the LAN search, the crouch while disarming,
+    /// and watching the others after dying for good.
     /// The list is tools/tests/map_scenario_status.py.
     /// </summary>
     public static class MapScenarioStatus
     {
         private static Player P => Player.Instance;
-        private static string Fmt(Vector3 p) => FormattableString.Invariant($"{p.x:0} {p.z:0}");
-        private static float F(string s) => float.Parse(s, CultureInfo.InvariantCulture);
 
         public static void Register()
         {
@@ -82,19 +77,11 @@ namespace DarkwoodMP.World
                 r.Fail($"the LAN tab didn't find the host (2 players, protocol {Net.Protocol.Version}): {r.Info}");
         }
 
-        private static Trigger FindTrap(string spec)
-        {
-            string name = spec; var at = Centre;
-            int i = spec.IndexOf('@');
-            if (i >= 0)
-            {
-                name = spec.Substring(0, i);
-                var d = spec.Substring(i + 1).Split(',');
-                at += new Vector3(F(d[0]), 0f, F(d[1]));
-            }
-            return Nearest(Object.FindObjectsOfType<Trigger>().Where(t => t.active && !t.triggered && t.canDisarm && t.GetComponent<Item>() != null
-                && t.gameObject.name.StartsWith(name, StringComparison.Ordinal)), at);
-        }
+        private static Trigger FindTrap(string spec) =>
+            MapScenarioWorld.Find<Trigger>(spec, t => t.active && !t.triggered && t.canDisarm && t.GetComponent<Item>() != null);
+
+        /// <summary>The other player's puppet (not the test dummy).</summary>
+        private static RemotePlayer Other() => PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
 
         private static string Clip(Player p) => p.torsoAnimator != null && p.torsoAnimator.CurrentClip != null ? p.torsoAnimator.CurrentClip.name : "-";
 
@@ -119,7 +106,7 @@ namespace DarkwoodMP.World
         /// InventoryGet or InventoryLoop in the library it says it uses).</summary>
         private static IEnumerator PuppetCrouch(string[] a, Result r)
         {
-            var rp = PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
+            var rp = Other();
             if (rp == null) { r.Fail("no other player"); yield break; }
             float until = Time.realtimeSinceStartup + 4f;
             string seen = "";
@@ -182,7 +169,7 @@ namespace DarkwoodMP.World
             if (!Spectator.Active) { Core.currentProfile.difficulty = was; r.Fail($"not spectating (alive {P.alive}, permadeath box {Singleton<UI>.Instance.permadeathBox != null})"); yield break; }
             yield return new WaitForSeconds(2f);
             var cam = Singleton<CamMain>.Instance;
-            var host = PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
+            var host = Other();
             bool follows = cam != null && host?.Root != null && cam.followTarget == host.Root.transform;
             float dist = host?.Root != null ? StateDump.Flat(P.transform.position - host.Root.transform.position) : -1f;
             bool touching = P.GetComponentsInChildren<Collider>().Any(c => c.enabled);
@@ -201,8 +188,8 @@ namespace DarkwoodMP.World
             var later = Spectator.ConeAngles();
             if (a.Length > 0)
             {
-                System.IO.Directory.CreateDirectory(a[0]);
-                string path = System.IO.Path.Combine(a[0], "spectator-view.png");
+                Directory.CreateDirectory(a[0]);
+                string path = Path.Combine(a[0], "spectator-view.png");
                 ScreenCapture.CaptureScreenshot(path);
                 yield return new WaitForSecondsRealtime(1f);
                 Plugin.Log.LogInfo($"[shots] {path}");
@@ -230,7 +217,7 @@ namespace DarkwoodMP.World
         {
             int from = MapScenarioIssues.LogMark();
             yield return new WaitForSeconds(3f);
-            var rp = PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
+            var rp = Other();
             if (rp == null) { r.Fail("no other player"); yield break; }
             NetPlayerProxy.All.TryGetValue(rp.Owner, out var proxy);
             var col = proxy != null ? proxy.GetComponent<Collider>() : null;
