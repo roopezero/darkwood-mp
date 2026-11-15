@@ -2,7 +2,7 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
-## Unreleased
+## 0.23.0
 
 *Protocol 27, so everyone must update (it doesn't play with 0.22.x).*
 
