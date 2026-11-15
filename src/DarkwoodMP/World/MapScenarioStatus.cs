@@ -36,6 +36,8 @@ namespace DarkwoodMP.World
                 else if (!WorldShare.LastSnapshotOffThread) r.Fail("the snapshot was saved the game's way, not on a worker thread: " + r.Info);
                 return Nothing();
             });
+            Add("story-at-join", StoryAtJoin);
+            Add("join-story", JoinStory);
             Add("lan-search", LanSearch, timeout: 30f);
             Add("disarm-crouch", DisarmCrouch);
             Add("puppet-crouch", PuppetCrouch);
@@ -47,6 +49,43 @@ namespace DarkwoodMP.World
         }
 
         private static IEnumerator Nothing() { yield break; }
+
+        /// <summary>
+        /// "story-at-join" (host, before the join): once the joiner's snapshot is read, while the joiner downloads and
+        /// loads it, change the story (the first NPC's reputation +1, a story flag set) as a player could meanwhile.
+        /// </summary>
+        private static IEnumerator StoryAtJoin(string[] a, Result r)
+        {
+            int noted = FlagsSync.SnapshotNoted;
+            Singleton<Controller>.Instance.StartCoroutine(ChangeStoryAfter(noted));
+            r.Info = "the story changes once the next snapshot is read";
+            yield break;
+        }
+
+        private static IEnumerator ChangeStoryAfter(int noted)
+        {
+            float until = Time.realtimeSinceStartup + 120f;
+            while (FlagsSync.SnapshotNoted == noted && Time.realtimeSinceStartup < until) yield return null;
+            if (FlagsSync.SnapshotNoted == noted) { Plugin.Log.LogWarning("[map] story-at-join: no snapshot was made"); yield break; }
+            yield return null; // after the frame the world was read in
+            var f = Singleton<Flags>.Instance;
+            var npc = f.npcStates.FirstOrDefault(n => n != null);
+            if (npc != null) npc.reputation += 1;
+            f.setFlag("player_firstOvenInteraction", activeModifier: true); // a shared one, not read by the game's code
+            Plugin.Log.LogInfo($"[map] story-at-join: after the snapshot, {npc?.name}'s reputation {npc?.reputation}, player_firstOvenInteraction set");
+        }
+
+        /// <summary>"join-story" (host, after the join): the story changes made while the joiner loaded were sent to it.</summary>
+        private static IEnumerator JoinStory(string[] a, Result r)
+        {
+            var lines = MapScenarioIssues.LogLines();
+            string changed = lines.LastOrDefault(l => l.Contains("[map] story-at-join: after the snapshot"));
+            string sent = lines.LastOrDefault(l => l.Contains("story changes since their snapshot sent to them"));
+            if (changed == null) r.Fail("the story wasn't changed during the join (story-at-join)");
+            else if (sent == null) r.Fail("no 'story changes since their snapshot sent to them' in the log");
+            else r.Info = sent.Substring(sent.IndexOf("] ") + 2);
+            yield break;
+        }
 
         /// <summary>"join-waited" (client): the log has the host's prologue wait, then our world came in.</summary>
         private static IEnumerator JoinWaited(string[] a, Result r)

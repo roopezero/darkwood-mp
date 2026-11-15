@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using HarmonyLib;
@@ -233,12 +234,31 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Flags that say where this game's own player is: WhereAmI.checkWhereAmI sets player_inFirstHideout (second,
-        /// third) every time it looks, true only while the player is at that hideout. Each game keeps its own (two
-        /// players at different places would otherwise overwrite each other's every two seconds).
+        /// Flags about this game's own player, which each game keeps for itself (not sent, and another game's not
+        /// taken): where the player is (PlayersPlace) and which one-time help popups this player has seen (PlayersPopup).
         /// </summary>
-        public static bool PlayersOwn(string flag) =>
+        public static bool PlayersOwn(string flag) => PlayersPlace(flag) || PlayersPopup(flag);
+
+        /// <summary>
+        /// Where this game's own player is: WhereAmI.checkWhereAmI sets player_inFirstHideout (second, third) every
+        /// time it looks, true only while the player is at that hideout. Two players at different places would
+        /// otherwise overwrite each other's every two seconds.
+        /// </summary>
+        public static bool PlayersPlace(string flag) =>
             flag == "player_inFirstHideout" || flag == "player_inSecondHideout" || flag == "player_inThirdHideout";
+
+        /// <summary>
+        /// The game's one-time help popups, each shown on this game's screen and then marked as seen: the secondary
+        /// attack hint the first time the player takes a melee weapon in hand (Player.onDoneSwitchingItem), the map
+        /// hint (Map), the active skill hint (SkillsMenu.tryShowActiveSkillsHelpPopup), and the reload hint the first
+        /// time something that can be reloaded runs out (InvItemClass.drainDurability, player_firstDrainReloadableItem).
+        /// The game reads them only to decide whether to show that popup, so another player having seen it says nothing
+        /// about ours: sharing them would hide a hint from a player who never saw it. (A joiner starts with the host's,
+        /// which came with the host's save: what a joiner's game marks seen isn't kept with their character.)
+        /// </summary>
+        public static bool PlayersPopup(string flag) =>
+            flag == "player_shownSecondaryAttackPopup" || flag == "player_shownMapPopup" || flag == "player_shownActiveSkillPopup"
+            || flag == "player_firstDrainReloadableItem";
 
         private static Dictionary<string, string> Snapshot(bool host)
         {
@@ -276,7 +296,47 @@ namespace DarkwoodMP.World
             return jo.ToString(Formatting.None);
         }
 
-        private void Send(List<KeyValuePair<string, string>> entries, ulong except)
+        /// <summary>Host: what the story was in the frame the last joiner's snapshot was read (null: not known).</summary>
+        private static Dictionary<string, string> _atSnapshot;
+
+        /// <summary>
+        /// Host, in the frame the world is read for a joiner's snapshot: the story as the snapshot has it. What changes
+        /// after that, while the joiner downloads and loads it, reaches the joiner no other way: FlagsDelta is taken
+        /// only by games in the world (a loading one drops it), and with nobody in yet nothing is sent at all, the
+        /// first look after the joiner is let in taking what there is then as known. JoinerInWorld sends the difference.
+        /// </summary>
+        public static void NoteSnapshot() { _atSnapshot = Snapshot(true); SnapshotNoted++; }
+        /// <summary>How many snapshots' story was noted (for the tests).</summary>
+        internal static int SnapshotNoted;
+
+        /// <summary>Host: the world offered to joiners isn't a snapshot (LiveWorld off: the last save).</summary>
+        public static void ForgetSnapshot() => _atSnapshot = null;
+
+        /// <summary>
+        /// Host: a joiner is in the world it loaded (it asked for its character). Every story entry that changed since
+        /// its snapshot is sent to that joiner alone (FlagsDelta; reputation whole, "=v"; entries handed over, "-").
+        /// </summary>
+        public void JoinerInWorld(ulong who)
+        {
+            if (!_session.IsHost || _atSnapshot == null) return;
+            var now = Snapshot(true);
+            if (now == null) return;
+            var changed = new List<KeyValuePair<string, string>>();
+            foreach (var kv in now)
+            {
+                if (_atSnapshot.TryGetValue(kv.Key, out var was) && was == kv.Value) continue;
+                changed.Add(new KeyValuePair<string, string>(kv.Key, kv.Key.StartsWith("r:") ? "=" + kv.Value : kv.Value));
+            }
+            bool shared = SharedDream; // as Flush: a dream entry the game dropped as the dream ended isn't sent
+            foreach (var kv in _atSnapshot)
+                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                    changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+            if (changed.Count == 0) return;
+            Send(changed, except: 0, to: who);
+            Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {changed.Count} story changes since their snapshot sent to them ({string.Join(", ", changed.Take(8).Select(e => e.Key))}{(changed.Count > 8 ? ", ..." : "")})");
+        }
+
+        private void Send(List<KeyValuePair<string, string>> entries, ulong except, ulong to = 0)
         {
             // In chunks, to keep each message well under any size limit.
             for (int start = 0; start < entries.Count; start += 64)
@@ -285,7 +345,8 @@ namespace DarkwoodMP.World
                 var w = _session.Begin(MsgType.FlagsDelta);
                 w.W.Write((ushort)n);
                 for (int i = start; i < start + n; i++) { w.WriteStr(entries[i].Key); w.WriteStr(entries[i].Value); }
-                if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+                if (_session.IsHost && to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
+                else if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
                 else _session.SendToHost(w, Channel.Control, reliable: true);
             }
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");

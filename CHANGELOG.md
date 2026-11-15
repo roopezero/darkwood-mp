@@ -7,9 +7,11 @@ Newest first. "Protocol N" is the network version: players can only play togethe
 *Protocol 27, plays with 0.25.x (no message changed).*
 
 - The prologue's house door opens when either player unlocks it with the key from the wardrobe. A key, note or item found in a dream that everyone dreams together (the prologue, the level dreams) now reaches everyone's journal, and goes again when the dream ends. Before, the key stayed in the finder's journal only, the host refused the joiner's unlock, and nobody could get through.
+- Story changes the host makes while a player is loading into its world (a quest flag, an NPC's reputation) now reach that player once they're in; they used to be missed until changed again.
+- The game's one-time hints (secondary attack, map, active skill, reload) are kept by each player's game for its own player instead of being shared.
 - A journal entry that two games both had, with small differences, is no longer sent back and forth between them for good (seen with a note in the church dream).
 
-How it was tested: with the two-game map test only (`map:prologue`): the host takes the key and the joiner unlocks and opens the door, then the other way round, both in the real forest stage; the key is in both journals while dreaming and gone from both after the prologue. `map:dreams` passes, without the note going back and forth (the previous build sent it 40 times in four minutes); `host-world` passes and `client-world` and `client-authority` ran clean. Nobody has played it together yet.
+How it was tested: with the two-game map test only (`map:prologue`): the host takes the key and the joiner unlocks and opens the door, then the other way round, both in the real forest stage; the key is in both journals while dreaming and gone from both after the prologue. `map:dreams` passes, without the note going back and forth (the previous build sent it 40 times in four minutes); `host-world` passes and `client-world` and `client-authority` ran clean. Nobody has played it together yet. The story catch-up and the per-player hints: `map:join` (the host changes a flag and a reputation just after the joiner's snapshot; without the catch-up the dumps differed, with it they match) and `map:prologue` followed by `map:repair`, `map:savage` and `map:ui`.
 
 ## 0.25.1
 

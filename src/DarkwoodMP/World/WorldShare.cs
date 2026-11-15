@@ -307,6 +307,7 @@ namespace DarkwoodMP.World
                     try
                     {
                         DragSync.NoteSnapshot(); // the same frame the world is read in
+                        FlagsSync.NoteSnapshot();
                         writing = SnapshotSave.Begin(sm, Path.Combine(profDir, "sav.dat"));
                         SharedIds.OnSaved(sm.currentUniqueID); // as the patch on SaveManager.Save records it
                     }
@@ -349,6 +350,7 @@ namespace DarkwoodMP.World
                 if (!InWorld || Core.loadingGame) { Restore(); yield break; }
             }
             DragSync.NoteSnapshot();
+            FlagsSync.NoteSnapshot();
             _snapshotDir = SaveSnapshotOnMainThread(sm, dir, profDir, haveStatic, copied, newLocation);
             Restore();
         }
@@ -430,7 +432,7 @@ namespace DarkwoodMP.World
                 {
                     string snapDir = null;
                     if (Plugin.Cfg.LiveWorld.Value) { yield return SaveSnapshot(); snapDir = _snapshotDir; }
-                    else DragSync.ForgetSnapshot(); // the last save: where things were then isn't known
+                    else { DragSync.ForgetSnapshot(); FlagsSync.ForgetSnapshot(); } // the last save: what was where then isn't known
                     string profDir = snapDir ?? (Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id));
                     string stamp = profDir == null || !InWorld ? "" : WorldFiles.Stamp(profDir); // left the world meanwhile: nothing to offer
                     if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene) world = _hostWorld;
