@@ -39,6 +39,7 @@ namespace DarkwoodMP.World
         public static Vector3 Centre => _centre ?? StateDump.DefaultCentre();
         private static Vector3? _centre;
         public static void SetCentre(Vector3 at) => _centre = new Vector3(at.x, 0f, at.z);
+        public static void ResetCentre() { _centre = null; Home = null; }
         /// <summary>The first centre the driver gave this game (the host's test area), which mt-home returns to.</summary>
         public static Vector3? Home { get; private set; }
 

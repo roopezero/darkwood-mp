@@ -189,6 +189,9 @@ namespace DarkwoodMP
         {
             try { _plugin.StopTests(); }
             catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
+            // The next test's area is the test world's again, not one a step of the last test moved it to (a game
+            // kept between map items, e.g. map:prologue's "centre-me").
+            MapScenario.ResetCentre();
             // A world still loading is let finish first: leaving in the middle of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 90f;
             while (!WorldShare.InWorld && !WorldShare.MainMenuReady() && Time.realtimeSinceStartup < until) yield return null;

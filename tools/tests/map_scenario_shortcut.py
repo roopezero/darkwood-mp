@@ -27,7 +27,10 @@ STEPS = [
     # Closed again; the client opens it with the host far away, and the host gets it open.
     ("host", "vs-reset"),
     ("client", "vs-reset"),
+    # The walk home crosses the meadow's mushroom traps, whose gas can kill the host after it arrives: safe for it.
+    ("host", "i2-safe", "on"),
     ("host", "mt-home"),
+    ("host", "i2-safe", "off"),
     ("client", "vs-check", "closed"),
     ("client", "vs-open", {"settle": 3}),
     ("client", "vs-check", "open"),
