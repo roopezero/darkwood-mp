@@ -486,9 +486,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: whether the lock's key is in the journal. Keys are journal entries, shared by FlagsSync, so a key a
-        /// client's player picked up is in the host's journal too: the client sends its journal changes just before
-        /// the unlock (LockShare.Send), on the same ordered channel.
+        /// Host: whether the lock's key is in the journal. Keys are journal entries, shared by FlagsSync (a key found
+        /// in a shared dream too, such as the prologue's), so a key a client's player picked up is in the host's
+        /// journal too: the client sends its journal changes and the key just before the unlock (LockShare.Send,
+        /// FlagsSync.SendKey), on the same ordered channel.
         /// </summary>
         public static bool HasKey(Locked l)
         {
@@ -1157,8 +1158,12 @@ namespace DarkwoodMP.World
         public static void Send(Locked l, float how)
         {
             // With a key: the host checks the key is in its journal, so our journal's news (the key just picked
-            // up) goes first.
-            if (how == 1f && Net.Session.Instance != null && Net.Session.Instance.IsClient) FlagsSync.Instance?.FlushNow();
+            // up) goes first, and the key itself again, in case the host didn't take it before.
+            if (how == 1f && Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            {
+                FlagsSync.Instance?.FlushNow();
+                FlagsSync.Instance?.SendKey(l.keyType);
+            }
             var door = l.GetComponent<Door>();
             if (door != null) WorldActions.Send(WorldActions.Action.DoorUnlock, door.gameObject, how);
             else WorldActions.Send(WorldActions.Action.ItemUnlock, l.gameObject, how);

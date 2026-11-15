@@ -20,8 +20,11 @@ namespace DarkwoodMP.World
     /// "journal updated" popup for an entry, a note or a place (not for a place the game finds quietly, and not for
     /// anything the game has no text for: JournalPopupTextPatch). An entry, note, key or item can also go: a dialogue's
     /// removeItem takes a key or quest item the player hands over. That goes as the value "-", and the entry is
-    /// removed in the other games too. (The game also drops what a player picked up in a dream, which is theirs
-    /// alone and isn't in the snapshot.)
+    /// removed in the other games too. What a player picks up in a dream is marked inDream, and the game drops it
+    /// from the journal as the dream ends (Journal.clearDreamEntries). In a dream every game is in (SharedDream: the
+    /// prologue's stages, the level dreams) it's shared like the rest, still marked inDream, so the key to a door in
+    /// the dream opens it for everyone and every game drops it as its own dream ends; that drop isn't sent. In a
+    /// dream of one player's own it's theirs alone and isn't in the snapshot.
     ///
     /// Every two seconds each game looks for entries that changed since it last sent or got them, and sends those
     /// (FlagsDelta: u16 n, n x (str key, str value)); the host applies a client's and passes them on. Flags are set
@@ -110,14 +113,67 @@ namespace DarkwoodMP.World
                 changed.Add(kv);
             }
             // Journal entries that went (handed over in a dialogue).
+            // Dream entries dropped as the dream ended aren't sent: every game drops its own.
+            bool shared = SharedDream;
             foreach (var kv in _baseline)
-                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key)) changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                    changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
             _baseline = now;
             if (changed.Count > 0) Send(changed, except: 0);
         }
 
         /// <summary>The value that says a journal entry was removed.</summary>
         private const string Removed = "-";
+        /// <summary>
+        /// Whether our game is in a dream every game is in (DreamSync.Shared), so what's found in it is shared. Once
+        /// the dream ends here, it isn't. (Going from one prologue stage to the next isn't an end: the game keeps what
+        /// was found in the first stage until the dreaming ends, Dreams.endDreaming.)
+        /// </summary>
+        internal static bool SharedDream
+        {
+            get
+            {
+                var d = Singleton<Dreams>.Instance;
+                return DreamSync.Shared != null && d != null && d.dreaming;
+            }
+        }
+
+        /// <summary>Whether a journal entry's value (its JSON) is one found in a dream (inDream).</summary>
+        private static bool DreamEntry(string value) => value != null && value.Contains("\"inDream\":true");
+
+        /// <summary>
+        /// Client: our journal's key of this type, sent again (FlagsDelta) just before we unlock with it, on the same
+        /// ordered channel as the unlock request, so the host's check (WorldActions.HasKey) finds it even when the
+        /// two-second sending missed it or the host didn't take it then.
+        /// </summary>
+        internal void SendKey(string type)
+        {
+            if (!Sharing || string.IsNullOrEmpty(type)) return;
+            var j = Singleton<UI>.Instance?.journal;
+            if (j == null || !j.keysDict.TryGetValue(type, out var k) || k == null) return;
+            if (k.inDream && !SharedDream) return; // a key of a dream of our own: the host can't have it
+            string json = JsonConvert.SerializeObject(k);
+            if (_baseline != null) _baseline["jk:" + type] = json;
+            Send(new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("jk:" + type, json) }, except: 0);
+        }
+
+        /// <summary>Our journal's entry for a "je:", "jn:", "jk:" or "ji:" key, as Snapshot writes it (null: none).</summary>
+        private static string OwnJournal(string key)
+        {
+            var j = Singleton<UI>.Instance?.journal;
+            if (j == null || key.Length < 4) return null;
+            string name = key.Substring(3);
+            object e = key[1] switch
+            {
+                'e' => j.journalEntriesDict.TryGetValue(name, out var x) ? x : null,
+                'n' => j.notesDict.TryGetValue(name, out var n) ? n : null,
+                'k' => j.keysDict.TryGetValue(name, out var k) ? k : null,
+                'i' => j.itemsDict.TryGetValue(name, out var i) ? i : null,
+                _ => null,
+            };
+            return e != null ? JsonConvert.SerializeObject(e) : null;
+        }
+
         private static bool IsRemovable(string key) =>
             key.Length > 3 && key[0] == 'j' && key[2] == ':' && (key[1] == 'e' || key[1] == 'n' || key[1] == 'k' || key[1] == 'i');
 
@@ -201,10 +257,11 @@ namespace DarkwoodMP.World
             var j = Singleton<UI>.Instance?.journal;
             if (j != null)
             {
-                foreach (var e in j.journalEntriesDict.Values) if (e != null && !e.inDream) d["je:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.notesDict.Values) if (e != null && !e.inDream) d["jn:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.keysDict.Values) if (e != null && !e.inDream) d["jk:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.itemsDict.Values) if (e != null && !e.inDream) d["ji:" + e.type] = JsonConvert.SerializeObject(e);
+                bool dream = SharedDream; // what's found in a dream: only a shared dream's (see the class)
+                foreach (var e in j.journalEntriesDict.Values) if (e != null && (dream || !e.inDream)) d["je:" + e.type] = JsonConvert.SerializeObject(e);
+                foreach (var e in j.notesDict.Values) if (e != null && (dream || !e.inDream)) d["jn:" + e.type] = JsonConvert.SerializeObject(e);
+                foreach (var e in j.keysDict.Values) if (e != null && (dream || !e.inDream)) d["jk:" + e.type] = JsonConvert.SerializeObject(e);
+                foreach (var e in j.itemsDict.Values) if (e != null && (dream || !e.inDream)) d["ji:" + e.type] = JsonConvert.SerializeObject(e);
                 foreach (var name in j.locationsDict.Keys) d["jl:" + name] = "";
                 foreach (var e in j.locationDirections) if (e != null && e.locationName != null) d["jd:" + e.locationName] = JsonConvert.SerializeObject(e);
             }
@@ -257,6 +314,14 @@ namespace DarkwoodMP.World
                         if (_baseline != null)
                         {
                             if (kv.Value == Removed && IsRemovable(kv.Key)) _baseline.Remove(kv.Key);
+                            else if (IsRemovable(kv.Key))
+                            {
+                                // A journal entry: what our journal has now, which can differ from theirs (one we
+                                // had already, made by our own game). Taking theirs as the baseline would send ours
+                                // back at every look, and theirs again, for good. One we didn't take isn't ours to send.
+                                string own = OwnJournal(kv.Key);
+                                if (own != null) _baseline[kv.Key] = own; else _baseline.Remove(kv.Key);
+                            }
                             else _baseline[kv.Key] = kv.Value; // known now; not ours to send back
                         }
                     }
@@ -393,6 +458,12 @@ namespace DarkwoodMP.World
                     _ => false,
                 };
                 if (gone) Plugin.Log.LogInfo($"Journal: another player no longer has {name} (handed over): removed here too");
+                return;
+            }
+            if (kind != 'l' && kind != 'd' && DreamEntry(value) && !SharedDream)
+            {
+                // Found in a shared dream that has ended here (or not begun): the game would never drop it.
+                Plugin.Log.LogInfo($"Journal: another player's {name} from a dream we aren't in: not taken");
                 return;
             }
             string popup = null;

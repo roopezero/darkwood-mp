@@ -35,6 +35,9 @@ night, npcs, repair (a door and furniture repaired by the client stay repaired),
 `map:prologue` is the one battery that doesn't play the test world: its module says `HOST_WORLD = "new"`, so the host
 starts a new game on a fresh copy of your saves (the prologue not skipped, hosting once the intro film is over) and
 the client joins it in the forest; `FINAL_AROUND_HOST = True` takes the final dumps around the host at the hideout.
+In the forest each player in turn takes the house door's key from the wardrobe and the other unlocks and opens the
+door with it (the key is a dream entry, shared because the forest is dreamt together); the key must be in both
+journals until the prologue ends and in neither after it. About 6.5 minutes.
 `map_scenario_core.py` holds the scenario's first steps (door, take and drop, clock), which used to live only in
 `map_scenario.py`; the full scenario is unchanged (same PRE_JOIN, STEPS, POST and REQUIRE, checked by hash).
 
