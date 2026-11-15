@@ -53,6 +53,10 @@ THROWS = [
     ("host", "i2-note", {"settle": 0}),
     ("client", "i2-throw", "meat_soporific", "meat", {"settle": 0}),
     ("host", "i2-seen", "meat_soporific", "meat", "lands"),
+    # and steps back, as a player who wants the dog to eat does: a dog heading for meat turns on a player it
+    # bumps into or still sees while chasing (the game's reactToCharacter, checkForNewEnemyCloserThanTarget), so
+    # with the client standing in its face it only gets to meat that lands within a bite of it
+    ("client", "i2-goto", "centre", {"settle": 0}),
     ("host", "i2-eats", "meat"),
     ("client", "i2-gone"),
     ("client", "heal"),                 # (the dog bit while it was hunting)

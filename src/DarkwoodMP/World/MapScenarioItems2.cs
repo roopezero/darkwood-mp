@@ -549,6 +549,8 @@ namespace DarkwoodMP.World
             until = Time.realtimeSinceStartup + 20f;
             while (lure != null && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
             r.Info = $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {(lure == null ? "eaten up" : $"still there (health {lure.health})")}";
+            if (lure != null && d != null)
+                r.Info += $"; the dog is {d.behaviour} after {(d.target != null ? d.target.name : "nothing")}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
             if (lure != null) r.Fail(r.Info);
         }
 
