@@ -81,7 +81,7 @@ namespace DarkwoodMP.World
         /// <summary>Client: our player's flame set this alight here; ask the host to light its copy (put ours out if it says no).</summary>
         internal void ClientIgnited(GameObject go)
         {
-            if (go == null || !NetEnemies.ClientMode || WorldActions.Replaying) return;
+            if (go == null || !NetEnemies.ClientMode || WorldActions.Replaying || WorldActions.OursAlone(go)) return;
             var what = Kind(go);
             if (what == What.None || what == What.Enemy) return;
             var r = ObjRef.Of(go);

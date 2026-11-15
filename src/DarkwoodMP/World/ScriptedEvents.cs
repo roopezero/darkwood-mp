@@ -297,6 +297,12 @@ namespace DarkwoodMP.World
         /// <returns>False if it couldn't be named (nothing was sent).</returns>
         internal static bool SendTrigger(EventTriggers et, int index, bool world, Action accepted)
         {
+            // In a dream of our own (or a place the host doesn't run): the host hasn't got it, so it runs here alone.
+            if (WorldActions.OursAlone(et.gameObject))
+            {
+                if (Debug) Plugin.Log.LogInfo($"[world] event {et.name} #{index}: ours alone, run here");
+                return false;
+            }
             var r = ObjRef.Of(et.gameObject);
             if (!r.Valid) return false;
             var w = S.Begin(MsgType.EventFired);
@@ -319,6 +325,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void SendExit(EventTriggers et, int index)
         {
+            if (WorldActions.OursAlone(et.gameObject)) return; // nobody else has it
             var r = ObjRef.Of(et.gameObject);
             if (!r.Valid) return;
             var w = S.Begin(MsgType.EventFired);
@@ -453,14 +460,25 @@ namespace DarkwoodMP.World
             Send(w, $"world event {name}", accepted);
         }
 
+        /// <summary>A Verdict's result: the requester is where the host doesn't run, so the event is all theirs.</summary>
+        internal const string Alone = "alone";
+
         /// <summary>The host tells everyone; a joiner asks, and runs accepted (its own and the shared part) on a yes.</summary>
         private static void Send(PacketWriter w, string what, Action accepted)
         {
             if (Debug) Plugin.Log.LogInfo($"[world] sent {what}");
             if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
-            Authority.Request(w, what, (ok, reason, _) =>
+            Authority.Request(w, what, (ok, reason, result) =>
             {
                 if (!ok) { Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})"); return; }
+                if (result == Alone)
+                {
+                    // We were somewhere the host doesn't run (Authority.AcceptAway): every part of it is ours.
+                    Plugin.Log.LogInfo($"[world] {what}: ours alone, the host says; running all of it here");
+                    try { RunAs(Part.All, replaying: false, accepted); }
+                    catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}"); }
+                    return;
+                }
                 if (Debug) Plugin.Log.LogInfo($"[world] {what}: the host agreed, running our part and the shared part");
                 try { RunAs(Part.PlayerAndShared, replaying: false, accepted); }
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}"); }
@@ -519,6 +537,7 @@ namespace DarkwoodMP.World
                     // A trigger the host doesn't have (in a separate location only the joiner has loaded) is still
                     // the joiner's to use, if the world events it fires are ones the host has: the joiner's trip is its
                     // own, and the world events are what a joiner may ask for by name anyway (kind 2).
+                    if (t == null && Authority.RequesterAway) { Authority.AcceptAway($"event {obj} #{index}", Alone); return; }
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
                 }
@@ -549,6 +568,7 @@ namespace DarkwoodMP.World
                 bool known = events != null && events.worldEvents.TryGetValue(name, out ge) && ge != null;
                 if (s.IsHost)
                 {
+                    if (!known && Authority.RequesterAway) { Authority.AcceptAway($"world event {name}", Alone); return; }
                     if (!known) { Authority.Refuse($"no world event {name} here"); return; }
                     if (ge.fired && !ge.multipleFire) { Authority.Refuse($"{name} has already happened"); return; }
                 }
@@ -826,6 +846,8 @@ namespace DarkwoodMP.World
             if (type == EpilogueSync.PanEvent) return true; // each game runs its own, when the host says (EpilogueSync)
             if (type == null || !__instance.worldEvents.TryGetValue(type, out var ge) || ge == null || (ge.fired && !ge.multipleFire)) return true;
             if (!WorldActions.ByLocalPlayer() && !ScriptedEvents.OnStack(typeof(DialogueWindow))) return true;
+            // A dream NPC's outcome in a dream of our own: the host isn't there, so it's ours alone, as in single player.
+            if (WorldActions.InOwnArea()) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] world event {type}: ours alone, run here"); return true; }
             var events = __instance;
             ScriptedEvents.SendWorldEvent(type, () => { if (events != null) events.fireWorldEvent(type); });
             // A joiner runs it (its own and the shared part) once the host says yes.

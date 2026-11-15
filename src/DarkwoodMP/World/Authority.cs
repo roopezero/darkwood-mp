@@ -181,6 +181,26 @@ namespace DarkwoodMP.World
         public static NetPlayerProxy Requester =>
             Handling && NetPlayerProxy.All.TryGetValue(From, out var p) ? p : null;
 
+        /// <summary>
+        /// Host, in a request's handler: the requesting player is somewhere the host's game doesn't run (their
+        /// stand-in is Away: a dream of their own, a separate location the host hasn't got at their spot). What they
+        /// did there isn't in the host's world, so it can't be checked here, nor refused.
+        /// </summary>
+        public static bool RequesterAway => Requester is NetPlayerProxy p && p != null && p.Away;
+
+        /// <summary>
+        /// Host, in a request's handler: take back a refusal made while checking it, because the request is about a
+        /// place only the requester has (RequesterAway). It is accepted and not applied here; result tells the
+        /// requester so (ScriptedEvents: "alone" runs the event's every part there).
+        /// </summary>
+        public static void AcceptAway(string what, string result = "")
+        {
+            if (!Handling) return;
+            Plugin.Log.LogInfo($"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({_refusal ?? "not here"}), so it's theirs alone: accepted, not applied here");
+            _refusal = null;
+            _result = result ?? "";
+        }
+
         /// <summary>Host: whether this player's stand-in is within reach of pos (true if it isn't known yet).</summary>
         public static bool Near(ulong player, Vector3 pos, float reach)
         {

@@ -154,8 +154,9 @@ namespace DarkwoodMP.World
             var open = new List<Inventory>();
             if (player != null)
             {
-                if (IsWorldContainer(player.openedItemInventory)) open.Add(player.openedItemInventory);
-                if (IsWorldContainer(player.openedItemInventory2)) open.Add(player.openedItemInventory2);
+                // Not one only our player has (in a dream of our own): the host hasn't got it, so it's ours, as alone.
+                if (IsWorldContainer(player.openedItemInventory) && !WorldActions.OursAlone(player.openedItemInventory.gameObject)) open.Add(player.openedItemInventory);
+                if (IsWorldContainer(player.openedItemInventory2) && !WorldActions.OursAlone(player.openedItemInventory2.gameObject)) open.Add(player.openedItemInventory2);
             }
             // Slot by slot (SlotShare): the workbench's storage, used by everyone at once; and, on a client, every
             // container, so each change is the host's to accept (a refused one is undone for our player). Ordinary
@@ -453,6 +454,7 @@ namespace DarkwoodMP.World
         public void Made(string prefab, GameObject go)
         {
             if (go == null || WorldActions.Replaying || !Sharing || !(SharedPrefabs.Contains(prefab) || Placing)) return;
+            if (WorldActions.OursAlone(go)) return; // dropped in a dream of our own: nobody else is there
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             _pending.Add(new Pending { Id = id, Go = go, Prefab = prefab, Placed = Placing, SendAt = Time.time + (Placing || prefab == GasolineTrail ? 0.2f : 1.5f) }); // dropped: once it has come to rest

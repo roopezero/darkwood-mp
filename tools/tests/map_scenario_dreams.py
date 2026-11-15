@@ -61,4 +61,12 @@ POST = [
     ("host", "end-level-dream", {"settle": 0}),
     ("client", "back-from-dream"),
     ("client", "heal"),
-] + home("client", "host") + home("host", "client")
+] + home("client", "host") + home("host", "client") + [
+    # A dream of the client's own (as a story dream is): the host hasn't got it, so what the client's player does
+    # there is the client's alone. Its wardrobe (a container and a trigger) and a door: nothing refused or destroyed,
+    # the wardrobe's chomper comes out in the client's game; then the client wakes by itself.
+    ("client", "own-dream", CHURCH, {"settle": 0}),
+    ("client", "own-dream-use"),
+    ("client", "dream-clear", {"settle": 0}),
+    ("client", "heal"),
+]

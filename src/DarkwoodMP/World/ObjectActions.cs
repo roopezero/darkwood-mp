@@ -263,7 +263,7 @@ namespace DarkwoodMP.World
         {
             if (!WorldActions.Sharing || !NetEnemies.ClientMode) return true;
             var r = ObjRef.Of(__instance.gameObject);
-            if (!r.Valid) return true;
+            if (!r.Valid || WorldActions.OursAlone(__instance.gameObject)) return true;
             ObjectActions.RequestFeeder(__instance, r);
             return false;
         }

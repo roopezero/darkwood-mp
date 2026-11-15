@@ -771,6 +771,7 @@ namespace DarkwoodMP.World
             var share = SlotShare.Instance;
             var inv = Inv(__instance);
             if (share == null || inv == null || !WorldActions.Sharing || share.Watching(inv)) return;
+            if (WorldActions.OursAlone(inv.gameObject)) return; // the host hasn't got it (Containers.Poll)
             share.Check(inv, askHost: false); // as it is now (over within this frame: no waiting for the host)
             __state = inv;
         }
