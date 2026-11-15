@@ -204,6 +204,11 @@ namespace DarkwoodMP.World
             if (_session.IsHost && _session.Peers.Count == 0) return;
             string name = npc.name, stock = StockOf(npc);
             FlagsSync.Instance?.Absorb(name, repChange); // it goes with the trade
+            // Reputation our player earned just before (in the same dialogue, or since the last two-second FlagsDelta)
+            // goes first, on the same reliable Control channel, so the host's copy has it when it checks the trade's
+            // (CheckReputation). The trade's own change was absorbed above, so it isn't sent twice. Before WriteTrade:
+            // the flush builds its message with Session.Begin, in the same writer the trade's is built in.
+            if (!_session.IsHost) FlagsSync.Instance?.FlushNow();
             var at = npc.transform.position;
             var who = ObjRef.Of(npc.gameObject);
             var w = WriteTrade(name, who, at, took, gave, stock, repChange);

@@ -239,7 +239,9 @@ namespace DarkwoodMP.Net
         /// chapter, 2 the epilogue, 3 the end screen), i32 the chapter (kind 1). Our player's event reached a step
         /// that starts a chapter or ends the game, which our game didn't run (a request; the host checks it's the next
         /// chapter, or the last for the end, and that the player is near the event, or away in a place of their own
-        /// if the host hasn't got it, then runs the step itself; see World.Chapters).
+        /// if the host hasn't got it, then runs the step itself; see World.Chapters). While the host can't run it yet
+        /// (in a dream, its world not ready, on its way to another part of the story) it holds it and runs it once it
+        /// can: the Verdict is ok with result "pending: why" ("done: ..." if it had already started it).
         /// </summary>
         StoryRequest = 88,
         /// <summary>
