@@ -139,7 +139,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Where our view is drawn from: "view: ours ..." when Player.FOVLight, FOVDot and lightDot are on our player with meshes of their own.</summary>
-        private static string ViewSource()
+        internal static string ViewSource()
         {
             var p = Player.Instance;
             if (p == null) return "view: no player";

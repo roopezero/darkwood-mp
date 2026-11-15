@@ -2,6 +2,14 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.23.1
+
+*Protocol 27, plays with 0.23.0 (no message changed).*
+
+- Walking into the Dry Meadow's markings (the painted signs where savages roam) no longer blacks out everyone else's screen. The place's darkness, tint, particles and whispers are now only for the players standing in it; before, one player walking in made every other player's screen black wherever they were, until the last player inside walked out.
+
+How it was tested: with the two-game map test and the four-game test, nobody has played it together yet. New map tests walk players up to the markings at running speed, together and 1500 and 6000 behind, and in and out while others stay inside: each game is dark only while its own player is in it, and each game's view is watched every frame on the way. The four-game test also checked each player's torch, flashlight and lantern in every other game, and four lanterns lit together at the Old Woods hideout (every game's view stays its own). The village shortcut tests now screenshot and check the view after each trip, with the host going first and with a joiner going first; the view matched single player each time, so the "can't see the left side" report isn't reproduced yet. On the final build: map:view, map:whispers, map:lights, map:shortcut, map:shortcut2, the four-game view test and the release's scripted tests (capture, handshake, host-combat, client-enemies, client-chars) passed.
+
 ## 0.23.0
 
 *Protocol 27, so everyone must update (it doesn't play with 0.22.x).*

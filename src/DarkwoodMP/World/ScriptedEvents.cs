@@ -22,7 +22,9 @@ namespace DarkwoodMP.World
     /// - the story's turning points (a new chapter, the game's end): the host's whoever set them off, and never
     ///   run in a joiner's game (World.Chapters).
     /// - shared: everything else (objects shown, hidden, moved or removed, sprites, animations, sounds, flags,
-    ///   characters spawned, chained events). It runs in every game. A joiner's own copies of enemies an event
+    ///   characters spawned, chained events). It runs in every game. Except in an area trigger that fires each
+    ///   time a player walks in: there the steps that only change how the place looks and sounds (colour fades,
+    ///   particles, sounds) are the player's own (IsAreaLook). A joiner's own copies of enemies an event
     ///   spawns stay frozen and hidden as always (NetEnemies.LocalOnly); the host's are the ones that show.
     ///
     /// A joiner that sets one off asks the host first (EventFired as a Request) and runs nothing until the host
@@ -118,8 +120,60 @@ namespace DarkwoodMP.World
         /// Whether this step runs in the part being run now. A moveInventory between world containers only is the
         /// host's, not the player's (World.Hideouts.IsWorldMove).
         /// </summary>
-        public static bool Runs(GameEvent ge) =>
-            Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type) : Runs(IsPlayerStep(ge.type), IsHostStep(ge.type), ge.type);
+        public static bool Runs(GameEvent ge, GameObject thisGO) =>
+            Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type)
+            : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO), IsHostStep(ge.type), ge.type);
+
+        // ---- what only the player in an area sees and hears ----------------------------------------------
+
+        /// <summary>
+        /// Steps that change only how a place looks and sounds to whoever stands in it. A place's area trigger that
+        /// fires each time a player walks in (and its exit each time they walk out) uses them for its mood: the Dry
+        /// Meadow's markings (gridObj_signs, area_signs_01) fade in spot_black and TINT, sprites over the whole
+        /// screen, and start their particles; others start 2D whispers. Run in every game, as shared steps, one player
+        /// walking in blacked out the screen of every other player wherever they were, until the last player inside
+        /// walked out (and a player stepping back over the edge blacked out those who had left). In such a trigger
+        /// these are the player's own: only the game of the player who walked in (or out) runs them.
+        /// </summary>
+        private static readonly HashSet<GameEvent.Type> LookSteps = new HashSet<GameEvent.Type>
+        {
+            GameEvent.Type.tweenColor, GameEvent.Type.particle, GameEvent.Type.sound, GameEvent.Type.changeIdleSound,
+        };
+        /// <summary>runFunction steps of that kind: a particle system's emission switched on or off.</summary>
+        private static readonly HashSet<string> LookFunctions = new HashSet<string> { "resumeEmission", "stopEmission" };
+
+        /// <summary>The GameEvents that a repeatable area trigger runs on enter or exit (built when needed).</summary>
+        private static HashSet<GameEvents> _areaEvents;
+        private static bool _areasDirty = true;
+
+        /// <summary>Area triggers came or went (a scene loaded or unloaded, an EventTriggers woke up): look again.</summary>
+        internal static void AreasChanged() => _areasDirty = true;
+
+        /// <summary>Whether this step only changes how a place looks or sounds, in a repeatable area trigger's events.</summary>
+        internal static bool IsAreaLook(GameEvent ge, GameObject thisGO)
+        {
+            if (ge == null || thisGO == null) return false;
+            if (!LookSteps.Contains(ge.type) && !(ge.type == GameEvent.Type.runFunction && ge.Value != null && LookFunctions.Contains(ge.Value))) return false;
+            if (_areasDirty || _areaEvents == null)
+            {
+                var set = new HashSet<GameEvents>();
+                foreach (var et in UnityEngine.Object.FindObjectsOfType<EventTriggers>(true))
+                {
+                    if (et == null || et.eventTriggers == null) continue;
+                    foreach (var t in et.eventTriggers)
+                        if (t != null && t.type == global::EventTrigger.Type.area && t.multipleFire)
+                        {
+                            if (t.gameEvents != null) set.Add(t.gameEvents);
+                            if (t.gameEventsExit != null) set.Add(t.gameEventsExit);
+                        }
+                }
+                _areaEvents = set;
+                _areasDirty = false;
+            }
+            foreach (var g in thisGO.GetComponents<GameEvents>())
+                if (g != null && _areaEvents.Contains(g) && g.events.Contains(ge)) return true;
+            return false;
+        }
 
         private static bool Runs(bool player, bool host, GameEvent.Type t)
         {
@@ -147,7 +201,12 @@ namespace DarkwoodMP.World
         private static Session S => Session.Instance;
         private static bool Debug => WorldActions.Debug;
 
-        public static void Register(Session s) => s.Register(MsgType.EventFired, OnFired);
+        public static void Register(Session s)
+        {
+            s.Register(MsgType.EventFired, OnFired);
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
+            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => AreasChanged();
+        }
 
         // ---- what a coroutine was started with ----------------------------------------------------------
 
@@ -558,7 +617,7 @@ namespace DarkwoodMP.World
         static bool Prefix(GameEvent __instance, GameObject thisGO, ref IEnumerator __result)
         {
             // A new chapter and the game's end are the host's, whoever set them off (see World.Chapters).
-            if (Chapters.IsStoryStep(__instance) ? Chapters.StoryStepRuns(__instance, thisGO) : ScriptedEvents.Runs(__instance)) return true;
+            if (Chapters.IsStoryStep(__instance) ? Chapters.StoryStepRuns(__instance, thisGO) : ScriptedEvents.Runs(__instance, thisGO)) return true;
             __result = ScriptedEvents.Nothing();
             return false;
         }
@@ -606,6 +665,13 @@ namespace DarkwoodMP.World
             if (__state.Item3) { ScriptedEvents.Current = __state.Item1; ScriptedEvents.Firing = __state.Item2; ScriptedEvents.By = __state.Item4; }
             return __exception;
         }
+    }
+
+    /// <summary>An EventTriggers woke up (a place built, an object spawned): the repeatable areas may have changed.</summary>
+    [HarmonyPatch(typeof(EventTriggers), "Awake")]
+    static class AreaTriggersChangedPatch
+    {
+        static void Postfix() => ScriptedEvents.AreasChanged();
     }
 
     // ---- who set it off -------------------------------------------------------------------------------
@@ -733,7 +799,18 @@ namespace DarkwoodMP.World
             bool client = Session.Instance.IsClient;
             if (f.World && client) return true; // not ours to send (HostsWorldTrigger keeps these from starting here)
             var ge = __instance;
-            bool sent = ScriptedEvents.SendTrigger(f.Triggers, f.Index, f.World, () => { if (ge != null) ge.fire(); });
+            var et = f.Triggers;
+            var trigger = f.Index < et.eventTriggers.Count ? et.eventTriggers[f.Index] : null;
+            bool repeatableArea = trigger != null && trigger.type == global::EventTrigger.Type.area && trigger.multipleFire;
+            int exitedBefore = et.exited;
+            bool sent = ScriptedEvents.SendTrigger(f.Triggers, f.Index, f.World, () =>
+            {
+                if (ge == null) return;
+                // Our player walked in and out again before the host's yes came: its exit (the darkness and the
+                // sounds faded out) has run here already, so the enter's look of the place mustn't come after it.
+                if (repeatableArea && et != null && et.exited > exitedBefore) ScriptedEvents.RunAs(ScriptedEvents.Part.SharedOnly, replaying: false, ge.fire);
+                else ge.fire();
+            });
             // A joiner runs its part once the host says yes (ScriptedEvents.Send).
             return !(client && sent);
         }
