@@ -151,6 +151,7 @@ namespace DarkwoodMP.World
             _session.SendTo(from, w, Channel.Control, reliable: true);
             Progression.HostSendTo(from); // after the character: the shared essence and level (World.Progression)
             DragSync.Instance?.JoinerInWorld(from); // loose things that moved since the snapshot it loaded
+            FlagsSync.Instance?.JoinerInWorld(from); // story changes made since the snapshot it loaded
             if (dead) { Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good in this world: they watch the others"); return; }
             Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character: " + (rec != null ? $"theirs, from {DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}" + (earlier ? $" in chapter {rec.Chapter}: beside you" : "") : copy ? "a copy of yours" : "a new one"));
         }

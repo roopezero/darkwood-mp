@@ -314,7 +314,8 @@ namespace DarkwoodMP.World
                 var flags = Singleton<Flags>.Instance;
                 if (flags == null) return;
                 var dict = FlagsDict(flags);
-                // Not the flags that say where this game's own player is (FlagsSync.PlayersOwn): those are under "local".
+                // Not the flags about this game's own player (FlagsSync.PlayersOwn: where it is, the help popups it
+                // has seen): those are under "local", since each game keeps its own.
                 var shared = dict.Values.Where(f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
                 var lines = shared.Select(f => f.name + "=" + f.isTrue).OrderBy(s => s, StringComparer.Ordinal).ToList();
                 var section = new Dictionary<string, object> { ["count"] = lines.Count, ["true"] = shared.Count(f => f.isTrue), ["hash"] = Hash(lines) };
@@ -337,8 +338,16 @@ namespace DarkwoodMP.World
                 if (flags == null) return;
                 var dict = FlagsDict(flags);
                 foreach (var f in dict.Values)
-                    if (f != null && FlagsSync.PlayersOwn(f.name)) ctx.Set(f.name, f.isTrue);
+                    if (f != null && FlagsSync.PlayersPlace(f.name)) ctx.Set(f.name, f.isTrue);
                 ctx.Set("place", Locations.Current());
+            });
+            AddLocal("popups", ctx =>
+            {
+                // The one-time help popups this game's player has seen (FlagsSync.PlayersPopup): each game's own.
+                var flags = Singleton<Flags>.Instance;
+                if (flags == null) return;
+                foreach (var f in FlagsDict(flags).Values)
+                    if (f != null && FlagsSync.PlayersPopup(f.name)) ctx.Set(f.name, f.isTrue);
             });
             AddLocal("player", ctx =>
             {
