@@ -30,8 +30,10 @@ namespace DarkwoodMP.World
     /// A joiner that sets one off asks the host first (EventFired as a Request) and runs nothing until the host
     /// says yes; then it runs its own part and the shared part. The host checks the trigger hasn't fired yet, the
     /// player is near it and the world-side requirements hold, marks it fired, runs the host's part and the shared
-    /// part, and passes it on; the other games run the shared part and mark it fired, so it doesn't fire again for
-    /// the next player. If the host says no (it had already happened there), nothing of it ran in the joiner's game,
+    /// part, and passes it on; the other games run the shared part and mark it fired, so its shared part doesn't run
+    /// again for the next player. Its player steps that a later player gets (a trip somewhere, its messages, ordinary
+    /// items: LaterStep) are still owed to each other player, and run for them alone when they set it off (kind 5,
+    /// Part.LaterPlayer), once each. If the host says no (it had already happened there), nothing of it ran in the joiner's game,
     /// so there is nothing to undo. Waiting costs one round trip; running the shared part early and undoing it on a
     /// refusal can't be done reliably, since an event's steps show, hide, move and remove objects, set flags and chain
     /// to other events, and the game keeps no record of what they changed. When the host's own player sets one off,
@@ -81,6 +83,11 @@ namespace DarkwoodMP.World
             /// own part only the messages.
             /// </summary>
             SharedAndMessages = 5,
+            /// <summary>
+            /// Our player set off a once-only trigger that already fired for another player: only the steps a later
+            /// player gets (LaterStep: its trip, its messages, ordinary items given); everything else ran once.
+            /// </summary>
+            LaterPlayer = 6,
         }
 
         /// <summary>How near the trigger a joiner's player must be to see the messages of a world-set-off event.</summary>
@@ -121,7 +128,8 @@ namespace DarkwoodMP.World
         /// host's, not the player's (World.Hideouts.IsWorldMove).
         /// </summary>
         public static bool Runs(GameEvent ge, GameObject thisGO) =>
-            Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type)
+            Current == Part.LaterPlayer ? LaterStep(ge)
+            : Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type)
             : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO), IsHostStep(ge.type), ge.type);
 
         // ---- what only the player in an area sees and hears ----------------------------------------------
@@ -204,7 +212,7 @@ namespace DarkwoodMP.World
         public static void Register(Session s)
         {
             s.Register(MsgType.EventFired, OnFired);
-            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
+            s.OnSessionEnded += () => { Owed.Clear(); Asking.Clear(); Given.Clear(); };            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => AreasChanged();
         }
 
@@ -288,7 +296,176 @@ namespace DarkwoodMP.World
 
         // ---- sending ------------------------------------------------------------------------------------
 
-        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4 }
+        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5 }
+
+        /// <summary>Client: tell the host where our player is now, ahead of a request it checks our reach for.</summary>
+        private static void FlushPosition()
+        {
+            if (S != null && S.IsClient) Sync.PlayerSync.Instance?.FlushNow();
+        }
+
+        // ---- a once-only trigger, for the next player ---------------------------------------------------
+        //
+        // A once-only trigger fires once in the shared world: its shared steps (objects shown or hidden, flags, sounds)
+        // ran in every game, and only the game of the player who set it off ran that player's own steps. If those take
+        // the player somewhere (through a hole, down a ladder, into a place) or hand them something, the next player who
+        // walks through it found it marked fired and got nothing: stuck on the wrong side. So a trigger marked fired by
+        // another game's player stays owed to ours (Owed), and when our player sets it off, the steps a later player gets
+        // (LaterStep) run for them alone (Part.LaterPlayer), after the host's yes (kind 5) in a joiner's game. The host
+        // remembers who had their part (Given), so each player gets it once.
+
+        /// <summary>Once-only triggers that fired for another player, whose player steps our player hasn't had yet.</summary>
+        private static readonly HashSet<global::EventTrigger> Owed = new HashSet<global::EventTrigger>();
+        /// <summary>Joiner: owed triggers asked for and not answered yet.</summary>
+        private static readonly HashSet<global::EventTrigger> Asking = new HashSet<global::EventTrigger>();
+        /// <summary>Host: (joiner, trigger) pairs that had their own part (they set it off, or got it as a later player).</summary>
+        private static readonly HashSet<(ulong, global::EventTrigger)> Given = new HashSet<(ulong, global::EventTrigger)>();
+
+        /// <summary>For the tests: whether our player is still owed its part of this trigger.</summary>
+        internal static bool IsOwed(global::EventTrigger t) => t != null && Owed.Contains(t);
+
+        /// <summary>
+        /// Whether a later player gets this step of a once-only trigger that fired for someone else. Decided per step
+        /// type, by what the step changes:
+        /// - Trips (transportPlayerToObject without activeModifier, transportToOutsideLocation, startDream, endDream,
+        ///   returnToWorld): yes. They move only the player who runs them, and leaving one player behind is the bug.
+        ///   A new chapter (transportPlayerToObject with activeModifier) is not a trip: World.Chapters runs it once for
+        ///   everyone.
+        /// - What goes with a trip and only shows on that player's screen (displayMessage, cameraEffect, timeScale,
+        ///   forbidInputs, switchCantChangeForbidInputs, switchVisibleUI): yes, all of them, so inputs taken away for a
+        ///   trip also come back.
+        /// - The player's own records (addJournalItem, addAllJournalItems, addRecipes, unlockAchievement): yes; each
+        ///   player has their own.
+        /// - addOrRemoveInvItem: only an addition to the player's own inventory (activeModifier) of ordinary items. Not
+        ///   an important item (InvItem.isImportantItem: the story's quest items) or a key (KeyReference): the story has
+        ///   one of those, the first player holds it and can hand it over, and a second copy would let a quest step be
+        ///   done twice or sold. Not a removal or a swap (activeModifier2, relentlessPursuit): the story took its one
+        ///   item from the first player, and taking it again would cost the next player something for nothing. Not one
+        ///   into a world inventory (no activeModifier): containers are shared, and it was added there once.
+        /// - openDialogue: no. A conversation's outcome (flags, world events, what the speaker gives or takes) is the
+        ///   shared story's, and it happened once.
+        /// - moveInventory: no; it moves things into a shared container.
+        /// - endGame and every shared or host step: no; they ran once, in every game.
+        /// </summary>
+        internal static bool LaterStep(GameEvent e)
+        {
+            if (e == null || e.disabled) return false;
+            switch (e.type)
+            {
+                case GameEvent.Type.transportPlayerToObject: return !e.activeModifier;
+                case GameEvent.Type.transportToOutsideLocation: case GameEvent.Type.startDream: case GameEvent.Type.endDream:
+                case GameEvent.Type.returnToWorld:
+                case GameEvent.Type.displayMessage: case GameEvent.Type.cameraEffect: case GameEvent.Type.timeScale:
+                case GameEvent.Type.forbidInputs: case GameEvent.Type.switchCantChangeForbidInputs: case GameEvent.Type.switchVisibleUI:
+                case GameEvent.Type.addJournalItem: case GameEvent.Type.addAllJournalItems: case GameEvent.Type.addRecipes:
+                case GameEvent.Type.unlockAchievement:
+                    return true;
+                case GameEvent.Type.addOrRemoveInvItem:
+                    if (!e.activeModifier || e.activeModifier2 || e.relentlessPursuit) return false;
+                    foreach (var o in e.prefabList)
+                    {
+                        var item = (o as GameObject)?.GetComponent<InvItem>();
+                        if (item != null && (item.isImportantItem || item.GetComponent<KeyReference>() != null)) return false;
+                    }
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>Whether a later player would get anything of these events.</summary>
+        internal static bool HasLaterSteps(GameEvents ge) => ge != null && ge.events.Exists(LaterStep);
+
+        /// <summary>Another player's once-only trigger fired here (only its shared part ran): our player is owed its own.</summary>
+        private static void Owe(global::EventTrigger t, string what)
+        {
+            if (t == null || t.multipleFire || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
+            if (Debug) Plugin.Log.LogInfo($"[world] {what} fired for another player: our player gets its own part when they set it off");
+        }
+
+        /// <summary>Whether this owed trigger, set off now by our player, is to run as a later player's part (LaterPart).</summary>
+        internal static bool LaterFor(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type)
+        {
+            if (t == null || et == null || !t.fired || t.multipleFire || t.type != type || !Owed.Contains(t)) return false;
+            var s = S;
+            return s != null && s.Active && WorldActions.Sharing && Current == Part.All && SettingOff;
+        }
+
+        /// <summary>
+        /// Our player set off an owed trigger: as EventTrigger.fire does (its delay, requirements, an area's warm-up,
+        /// the item it reacts to), then the later player's steps, at once on the host, after the host's yes in a
+        /// joiner's game.
+        /// </summary>
+        internal static IEnumerator LaterPart(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type, string value)
+        {
+            if (t.delay > 0f) yield return new WaitForSeconds(t.delay);
+            if (t.disabled || !t.requirementsMet() || !Owed.Contains(t) || Asking.Contains(t)) yield break;
+            if (t.warmupTime != 0f && type == global::EventTrigger.Type.area)
+            {
+                yield return new WaitForSeconds(t.warmupTime);
+                if (et == null || et.entered <= et.exited) yield break;
+            }
+            if ((type == global::EventTrigger.Type.onTakeInvItem || type == global::EventTrigger.Type.onPlaceItem)
+                && !string.IsNullOrEmpty(t.reactsToItemType) && t.reactsToItemType != value) yield break;
+            var ge = t.gameEvents;
+            if (ge == null || !(ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive)) yield break;
+            int index = et.eventTriggers.IndexOf(t);
+            string what = $"our part of {et.name} #{index}";
+            var s = S;
+            if (s == null || !s.Active) yield break;
+            if (s.IsHost) { RunLater(t, ge, what); yield break; }
+            var r = ObjRef.Of(et.gameObject);
+            if (!r.Valid) yield break;
+            FlushPosition();
+            var w = s.Begin(MsgType.EventFired);
+            w.W.Write((byte)Kind.PlayerPart);
+            r.Write(w);
+            w.W.Write((byte)index);
+            w.WriteStr("");
+            Asking.Add(t);
+            if (Debug) Plugin.Log.LogInfo($"[world] asking for {what} {r}: it fired for another player");
+            Authority.Request(w, what, (ok, reason, _) =>
+            {
+                Asking.Remove(t);
+                if (!ok) { Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})"); return; }
+                RunLater(t, ge, what);
+            }, inventory: false);
+        }
+
+        /// <summary>Run the later player's steps of ge here, as GameEvents.fire starts them (it does nothing once fired).</summary>
+        private static void RunLater(global::EventTrigger t, GameEvents ge, string what)
+        {
+            if (!Owed.Remove(t) || ge == null) return;
+            Plugin.Log.LogInfo($"[world] {what}: it fired for another player, running only our player's steps ({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
+            RunAs(Part.LaterPlayer, replaying: false, () =>
+            {
+                foreach (var e in ge.events)
+                {
+                    if (e == null) continue;
+                    try
+                    {
+                        if (ge.dontRunIfInactive) ge.StartCoroutine(e.fire(ge.gameObject));
+                        else Singleton<Controller>.Instance.StartCoroutine(e.fire(ge.gameObject));
+                    }
+                    catch (Exception ex) { Plugin.Log.LogWarning($"Couldn't run {what}: {ex.Message}"); }
+                }
+            });
+        }
+
+        /// <summary>Host: a joiner asks for its own part of a once-only trigger that already fired (kind 5).</summary>
+        private static void OnPlayerPart(ulong from, EventTriggers et, global::EventTrigger t)
+        {
+            if (t == null) { Authority.Refuse("no such trigger here"); return; }
+            if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
+            if (!t.fired || t.multipleFire) { Authority.Refuse("that hasn't happened here"); return; }
+            if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
+            if (Given.Contains((from, t))) { Authority.Refuse("they have had their part of it"); return; }
+            if (!Authority.InReach(et.transform.position, 3000f, et.name)) return;
+            foreach (var req in t.eventRequirements)
+                if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet()) { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
+            Given.Add((from, t));
+            Plugin.Log.LogInfo($"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
+        }
 
         /// <summary>
         /// Our player set off this trigger and its GameEvents are about to run: a joiner asks the host and runs its own
@@ -299,6 +476,7 @@ namespace DarkwoodMP.World
         {
             var r = ObjRef.Of(et.gameObject);
             if (!r.Valid) return false;
+            FlushPosition();
             var w = S.Begin(MsgType.EventFired);
             w.W.Write((byte)(world ? Kind.WorldTrigger : Kind.Trigger));
             r.Write(w);
@@ -321,6 +499,7 @@ namespace DarkwoodMP.World
         {
             var r = ObjRef.Of(et.gameObject);
             if (!r.Valid) return;
+            FlushPosition();
             var w = S.Begin(MsgType.EventFired);
             w.W.Write((byte)Kind.TriggerExit);
             r.Write(w);
@@ -501,6 +680,17 @@ namespace DarkwoodMP.World
                 return;
             }
 
+            if (kind == Kind.PlayerPart)
+            {
+                // Only a request to the host; nothing runs here and it isn't passed on.
+                if (s.IsHost && Authority.Handling)
+                {
+                    var pet = ObjRef.Resolve<EventTriggers>(obj);
+                    OnPlayerPart(from, pet, TriggerAt(pet, index));
+                }
+                return;
+            }
+
             if (kind == Kind.TriggerExit)
             {
                 var et = ObjRef.Resolve<EventTriggers>(obj);
@@ -521,6 +711,7 @@ namespace DarkwoodMP.World
                     // own, and the world events are what a joiner may ask for by name anyway (kind 2).
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
+                    if (t != null) Given.Add((from, t)); // their own part runs in their game
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
                 var wasBy = By; if (s.IsHost) By = from;
@@ -537,6 +728,7 @@ namespace DarkwoodMP.World
                         {
                             try { RunAs(part, replaying: s.IsClient, ge.fire); }
                             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run event {et.name} #{index}: {e.Message}"); }
+                            Owe(t, $"{et.name} #{index}");
                         }
                     }
                 }
@@ -741,9 +933,16 @@ namespace DarkwoodMP.World
     static class EventTriggerStartPatch
     {
         /// <summary>A joiner leaves the triggers the world sets off by itself to the host, which sends them.</summary>
-        static bool Prefix(global::EventTrigger __instance, global::EventTrigger.Type TriggerType, EventTriggers thisEventTriggers, ref IEnumerator __result, out bool __state)
+        static bool Prefix(global::EventTrigger __instance, global::EventTrigger.Type TriggerType, string Value, EventTriggers thisEventTriggers, ref IEnumerator __result, out bool __state)
         {
             __state = false;
+            // A once-only trigger that fired for another player: our player's own part of it (ScriptedEvents.LaterPart).
+            if (ScriptedEvents.LaterFor(__instance, thisEventTriggers, TriggerType))
+            {
+                __state = true;
+                __result = ScriptedEvents.LaterPart(__instance, thisEventTriggers, TriggerType, Value);
+                return false;
+            }
             if (!Combat.NetEnemies.ClientMode || !ScriptedEvents.HostsWorldTrigger(__instance, thisEventTriggers, TriggerType)) return true;
             if (WorldActions.Debug && !(__instance.fired && !__instance.multipleFire) && !__instance.disabled)
                 Plugin.Log.LogInfo($"[world] left {thisEventTriggers.name} #{thisEventTriggers.eventTriggers.IndexOf(__instance)} ({TriggerType}) to the host");

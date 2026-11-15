@@ -74,23 +74,40 @@ namespace DarkwoodMP.Sync
             if (now >= _nextSend)
             {
                 _nextSend = now + 1f / Mathf.Max(1, Plugin.SendRate.Value);
-                if (_capture.Capture(_snap))
-                {
-                    _snap.Owner = _session.LocalId;
-                    // A joiner isn't shown until its character is placed (World.Characters.Placing), off the others.
-                    if (_session.Active && _session.Connected && !(World.Characters.Instance?.Placing ?? false))
-                    {
-                        var w = _session.Begin(MsgType.PlayerState);
-                        _snap.Write(w);
-                        if (_session.IsHost) _session.Broadcast(w, Channel.State, reliable: false);
-                        else _session.SendToHost(w, Channel.State, reliable: false);
-                    }
-                }
+                Send(reliable: false);
             }
 
             foreach (var r in Remotes.Values) r.Tick();
             MapMarkers.Tick();
         }
+
+        /// <summary>
+        /// Client: send where our player is now, reliably on Control, ahead of a request the host checks against our
+        /// position (a trigger set off the moment we arrived somewhere). Control is ordered, so the host has handled
+        /// this (through its MoveCheck, as every PlayerState) before the request. The State channel's updates are
+        /// unreliable and can come later, so without it the host's stand-in could still be where we were before a
+        /// teleport, and the request would be refused as too far away.
+        /// </summary>
+        public void FlushNow()
+        {
+            if (_session.IsClient) Send(reliable: true);
+        }
+
+        private void Send(bool reliable)
+        {
+            if (!_capture.Capture(_snap)) return;
+            _snap.Owner = _session.LocalId;
+            // A joiner isn't shown until its character is placed (World.Characters.Placing), off the others.
+            if (!_session.Active || !_session.Connected || (World.Characters.Instance?.Placing ?? false)) return;
+            var w = _session.Begin(MsgType.PlayerState);
+            _snap.Write(w);
+            var ch = reliable ? Channel.Control : Channel.State;
+            if (_session.IsHost) _session.Broadcast(w, ch, reliable);
+            else _session.SendToHost(w, ch, reliable);
+        }
+
+        /// <summary>Host: where this client's player last said it was, as MoveCheck let it be (false if not known).</summary>
+        public bool TryChecked(ulong from, out Vector3 pos) => _moves.TryGood(from, out pos);
 
         private void OnPlayerState(ulong from, PacketReader r)
         {

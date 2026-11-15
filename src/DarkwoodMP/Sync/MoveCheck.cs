@@ -35,6 +35,14 @@ namespace DarkwoodMP.Sync
             session.Register(MsgType.PlayerCorrection, OnCorrection);
         }
 
+        /// <summary>Where this player last was, as the check let them be (their newest PlayerState, or where they were put back).</summary>
+        public bool TryGood(ulong from, out Vector3 pos)
+        {
+            bool known = _tracks.TryGetValue(from, out var t);
+            pos = known ? t.Good : default;
+            return known;
+        }
+
         /// <summary>Stop tracking this player: the next position they send is taken as it is.</summary>
         public void Forget(ulong from) => _tracks.Remove(from);
 
