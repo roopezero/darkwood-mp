@@ -94,10 +94,10 @@ STEPS = [
     ("host", "hit", "*", "10"),
     ("client", "hit", "*", "10"),
     # Furniture the world makes by itself in each game (as a location's characters): the host gives it an id, the
-    # client's copy (made a few seconds later at the same spot) is tied to it, and the host's hit lands. (A copy
-    # 18 away is tied too, but then the dumps differ in where it stands, which nothing moves.)
+    # client's copy (made a few seconds later, 10 away, as two games' physics settle a location's furniture apart)
+    # is tied to it and put where the host's stands (the dumps compare where it is), and the host's hit lands.
     ("host", "world-furniture", "-80", "60"),
-    ("client", "world-furniture", "-80", "60"),
+    ("client", "world-furniture", "-72", "66"),
     ("host", "ids-tied"),
     ("client", "ids-tied"),
     ("host", "ids-hit"),

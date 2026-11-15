@@ -305,6 +305,44 @@ namespace DarkwoodMP.World
             foreach (var b in root.GetComponentsInChildren<Rigidbody>(true)) Note(b, null);
         }
 
+        /// <summary>
+        /// Host: an object the world made has just been given an id (HostIds) and announced where it stands now. It is
+        /// noted there at once, so if it settles or is pushed later (a location loaded for a joiner, whose furniture
+        /// only settles once it's switched on), the place it comes to rest is sent as a drag's end, like any push.
+        /// </summary>
+        public void Watch(GameObject go)
+        {
+            if (go == null || !_session.IsHost) return;
+            Note(go.GetComponent<Rigidbody>(), null);
+        }
+
+        /// <summary>
+        /// Client: our copy of an object the host gave an id to has just been tied to it. A loose one goes to where the
+        /// host has it (the host decides where things are): each game's physics settles a fresh copy on its own, so the
+        /// two can come to rest a few units apart, and nothing else would move ours. Left alone while it's being
+        /// dragged, held still for another game's move, or kinematic (carried, fixed in place). True if it was moved.
+        /// </summary>
+        public bool PutAtHost(GameObject go, Vector3 pos)
+        {
+            if (go == null || !_session.IsClient) return false;
+            var b = go.GetComponent<Rigidbody>();
+            var item = LooseItem(b);
+            if (item == null || b.isKinematic || item == _dragging || item == _settling || _moving.ContainsKey(go)) return false;
+            var t = go.transform;
+            float d = (t.position - pos).magnitude;
+            if (d < PushMinMove) return false;
+            var r = ObjRef.Of(go);
+            if (r.Valid && OtherOwner(r) != null) return false;
+            t.position = pos;
+            b.position = pos;
+            b.velocity = Vector3.zero; b.angularVelocity = Vector3.zero;
+            b.Sleep(); // where the host has it: not to drift off by itself here
+            Rebase(go);
+            Recell(go);
+            if (WorldActions.Debug) Plugin.Log.LogInfo(System.FormattableString.Invariant($"[world] {go.name} ({r}) put where the host has it, {d:0.0} units from where it settled here"));
+            return true;
+        }
+
         /// <summary>Notes the loose objects around center not noted yet (spawned, or come into the world since).</summary>
         private void Look(Vector3 center)
         {
@@ -412,7 +450,12 @@ namespace DarkwoodMP.World
             if (s.IsHost) s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
 
             var item = ObjRef.Resolve<Item>(obj);
-            if (item == null) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here"); return; }
+            if (item == null)
+            {
+                if (s.IsClient && last && obj.K == ObjRef.Kind.Spawned) HostIds.HostMoved(obj.Id, pos); // for when our copy is tied
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here");
+                return;
+            }
             var go = item.gameObject;
             if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o)) o.Heard = Time.unscaledTime; // its drag goes on
             if (item == _dragging) { _hostAt[go] = (pos, rot); return; } // we're holding it: kept for if we have to let go

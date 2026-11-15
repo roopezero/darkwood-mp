@@ -194,7 +194,7 @@ namespace DarkwoodMP.World
                     {
                         var found = Resolve<T>(new ObjRef { K = Kind.Placed, Id = key });
                         go = found != null ? found.gameObject : null;
-                        if (go != null && !_sharedIds.ContainsKey(go)) BindShared(r.Id, go);
+                        if (go != null && !_sharedIds.ContainsKey(go) && BindShared(r.Id, go)) HostIds.Place(r.Id, go);
                     }
                     break;
                 case Kind.Enemy:

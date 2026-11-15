@@ -39,6 +39,9 @@ namespace DarkwoodMP.World
         private static readonly HashSet<GameObject> _lateChecked = new HashSet<GameObject>();
         private static readonly HashSet<GameObject> _lateTied = new HashSet<GameObject>(); // still in _started: a fresh id may take over
         private static readonly List<(long id, string name, Vector3 pos, int place)> _outgoing = new List<(long, string, Vector3, int)>();
+        // Client: where the host last had each announced object (as announced, or where an ObjMove for it that came
+        // before we tied it put it), for our copy to go there once it's tied (Place).
+        private static readonly Dictionary<long, Vector3> _hostAt = new Dictionary<long, Vector3>();
         private static readonly System.Random _rng = new System.Random();
         private static float _nextPrune;
 
@@ -53,7 +56,7 @@ namespace DarkwoodMP.World
             _session = s;
             s.Register(MsgType.HostIds, OnHostIds);
             s.OnPeerConnected += SendAllTo;
-            s.OnSessionEnded += () => { _started.Clear(); _pending.Clear(); _outgoing.Clear(); _late.Clear(); _lateChecked.Clear(); _lateTied.Clear(); Given = 0; Tied = 0; };
+            s.OnSessionEnded += () => { _started.Clear(); _pending.Clear(); _outgoing.Clear(); _late.Clear(); _lateChecked.Clear(); _lateTied.Clear(); _hostAt.Clear(); Given = 0; Tied = 0; };
         }
 
         private static bool Hosting => _session != null && _session.IsHost && WorldActions.Sharing;
@@ -83,6 +86,7 @@ namespace DarkwoodMP.World
                     if (go == null || !ObjRef.Unnamed(go)) continue;
                     long id = NewId();
                     ObjRef.BindShared(id, go);
+                    DragSync.Instance?.Watch(go); // where it settles from here on is sent (as announced: it may not have yet)
                     _outgoing.Add((id, go.name, go.transform.position, PlaceOf(go)));
                     Given++;
                 }
@@ -149,6 +153,7 @@ namespace DarkwoodMP.World
             if (best < 0 || !ObjRef.BindShared(list[best].id, go)) return;
             _lateTied.Add(go);
             Tied++;
+            Place(list[best].id, go);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] tied {go.name} at {go.transform.position} to the host's #{list[best].id} (given out a while ago)");
         }
 
@@ -172,8 +177,27 @@ namespace DarkwoodMP.World
             if (_lateTied.Remove(best)) ObjRef.Unbind(best);
             if (!ObjRef.BindShared(id, best)) return false;
             Tied++;
+            Place(id, best);
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] tied {name} at {best.transform.position} to the host's #{id}");
             return true;
+        }
+
+        /// <summary>
+        /// Client: our object was just tied to the host's id. The host decides where things stand, so a loose one
+        /// (furniture, a box: physics settles each game's copy on its own, a few units apart) goes to where the host
+        /// has it (DragSync.PutAtHost: not while it's dragged, carried or being moved by another game). Called by
+        /// ObjRef too, when it ties an id it is asked for by the announced name and position.
+        /// </summary>
+        internal static void Place(long id, GameObject go)
+        {
+            if (go == null || _session == null || _session.IsHost || !_hostAt.TryGetValue(id, out var pos)) return;
+            DragSync.Instance?.PutAtHost(go, pos);
+        }
+
+        /// <summary>Client: the host sent where an object we haven't tied yet came to rest (ObjMove, last).</summary>
+        internal static void HostMoved(long id, Vector3 pos)
+        {
+            if (_hostAt.ContainsKey(id)) _hostAt[id] = pos;
         }
 
         private static void Send(List<(long id, string name, Vector3 pos, int place)> list, byte flags, ulong to)
@@ -219,6 +243,7 @@ namespace DarkwoodMP.World
                 var pos = r.ReadVector3();
                 int place = r.R.ReadInt32();
                 ObjRef.Announced(id, name, pos);
+                _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it loaded, found by name and position when named.
                 if ((flags & MadeBefore) != 0) { AddLate(id, name, pos, place); continue; }
                 if (!Joined || !TryBind(id, name, pos, place)) _pending.Add((id, name, pos, place, until));
