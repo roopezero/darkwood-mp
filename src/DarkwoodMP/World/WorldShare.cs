@@ -98,9 +98,10 @@ namespace DarkwoodMP.World
         /// Joiner, going back to the main menu: leave the host's game (our character is sent first, while the world
         /// is still whole), so the menu's Multiplayer window is ready to join this server or another one again.
         /// </summary>
+        private bool _joiningWorld; // LoadWorld is leaving our world for the host's: not a player's going to the menu
         public void ClientToMainMenu()
         {
-            if (!_session.IsClient) return;
+            if (!_session.IsClient || _joiningWorld) return;
             Plugin.Log.LogInfo("Back to the main menu: leaving the host's game");
             _session.Backend.Leave();
         }
@@ -976,7 +977,10 @@ namespace DarkwoodMP.World
                 if (Core.mainMenu) Singleton<MainMenu>.Instance.close();
                 LoadStatus = "Leaving your game to join the host's world...";
                 Plugin.Log.LogInfo(LoadStatus);
-                Core.returnToMainMenu();
+                // On our way into the host's world (a WorldReload, a chapter): the session stays (ClientToMainMenu).
+                _joiningWorld = true;
+                try { Core.returnToMainMenu(); }
+                finally { _joiningWorld = false; }
             }
             LoadStatus = $"Loading the host's world (day {profile.day})..."; // waiting for the main menu first
             float until = Time.realtimeSinceStartup + 120f;

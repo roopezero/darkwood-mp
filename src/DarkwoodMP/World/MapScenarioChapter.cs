@@ -34,8 +34,14 @@ namespace DarkwoodMP.World
             Add("chapter-in", In, timeout: 560f);
             // "chapter-offmap" (client): join again with our kept place off the map; we must be beside the host.
             Add("chapter-offmap", OffMap, timeout: 400f);
-            // "chapter-all N" (host): N players in our new chapter, each beside us.
+            // "chapter-all N" (host): N players in our new chapter, each beside us, and chapter 2 started once.
             Add("chapter-all", All, timeout: 240f);
+            // "chapter-own-dream [NAME]" (host): our player goes into a dream of its own (NAME, not shared).
+            Add("chapter-own-dream", OwnDream, timeout: 60f);
+            // "chapter-pending" (client): the host told us the chapter we set off waits for it (a notice), not refused.
+            Add("chapter-pending", Pending, timeout: 30f);
+            // "chapter-held" (host): a joiner's chapter is held while we dream: no chapter starts yet.
+            Add("chapter-held", HeldStep, timeout: 30f);
         }
 
         internal static string Hotbar(Player p) =>
@@ -140,13 +146,65 @@ namespace DarkwoodMP.World
             var host = Host();
             float d = host.HasValue ? StateDump.Flat(p.transform.position - host.Value) : -1f;
             string ui = HotbarUi(p);
-            r.Info = $"chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(p)}, host {(host.HasValue ? $"{d:0} away" : "not seen")}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
-            if (_mark != null && hot != _mark) r.Fail($"our hotbar isn't ours: {hot}, had {_mark}; {r.Info}");
+            int told = Count("[notice] The host is starting chapter 2");
+            r.Info = $"told {told}x; chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(p)}, host {(host.HasValue ? $"{d:0} away" : "not seen")}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
+            if (told != 1) r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
+            else if (_mark != null && hot != _mark) r.Fail($"our hotbar isn't ours: {hot}, had {_mark}; {r.Info}");
             else if (!ui.StartsWith("ui ok")) r.Fail($"the hotbar shown isn't ours: {r.Info}");
             else if (!OnGround(p)) r.Fail($"no ground under our player: {r.Info}");
             else if (!host.HasValue) r.Fail($"the host isn't shown: {r.Info}");
             else if (d > 800f) r.Fail($"not beside the host: {r.Info}");
         }
+
+        private static Dreams D => Singleton<Dreams>.Instance;
+        private static bool Dreaming => Core.EnteringDream || (D != null && (D.dreaming || D.dreamPrepared || D.switchingDream || (D.currentTransition != null && D.currentTransition.isPlaying)));
+
+        private static IEnumerator OwnDream(string[] a, Result r)
+        {
+            // A dream of our own only (as the epilogue's startDream step starts one, not a level's: that one is shared).
+            string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
+            Core.forbidInputs = true;
+            P.halt();
+            D.wantToDream = true;
+            D.StartCoroutine(D.prepareDream(name));
+            float giveUp = Time.realtimeSinceStartup + 40f;
+            while (!(D != null && D.dreaming) && Time.realtimeSinceStartup < giveUp) yield return new WaitForSecondsRealtime(0.5f);
+            yield return new WaitForSecondsRealtime(1f);
+            r.Info = $"dreaming {D?.dreaming} ({D?.preset?.name}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
+            if (!(D != null && D.dreaming)) r.Fail($"not in a dream: {r.Info}");
+            else if (DreamSync.Shared != null) r.Fail($"the dream is shared, not ours: {r.Info}");
+        }
+
+        private static IEnumerator Pending(string[] a, Result r)
+        {
+            float giveUp = Time.realtimeSinceStartup + 20f;
+            string line = null, refused = null;
+            while (Time.realtimeSinceStartup < giveUp)
+            {
+                var lines = MapScenarioIssues.LogLines();
+                line = lines.LastOrDefault(l => l.Contains("[notice] The host will start chapter"));
+                refused = lines.LastOrDefault(l => l.Contains("[notice] The host didn't start chapter"));
+                if (line != null || refused != null) break;
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
+            r.Info = (line ?? refused ?? "no answer from the host").Trim();
+            if (refused != null) r.Fail($"refused: {r.Info}");
+            else if (line == null) r.Fail(r.Info);
+        }
+
+        private static IEnumerator HeldStep(string[] a, Result r)
+        {
+            yield return new WaitForSecondsRealtime(5f);
+            var lines = MapScenarioIssues.LogLines();
+            string held = lines.LastOrDefault(l => l.Contains("which can't run here yet"));
+            r.Info = $"{(held ?? "nothing held").Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
+            if (held == null) r.Fail($"no chapter held: {r.Info}");
+            else if (Chapter != 1 || Chapters.Generating) r.Fail($"the chapter started in our dream: {r.Info}");
+            else if (!Dreaming) r.Fail($"our dream ended too soon for the test: {r.Info}");
+        }
+
+        /// <summary>How many lines of our log have this text.</summary>
+        private static int Count(string text) => MapScenarioIssues.LogLines().Count(l => l.Contains(text));
 
         private static IEnumerator All(string[] a, Result r)
         {
@@ -162,8 +220,10 @@ namespace DarkwoodMP.World
                 if (seen.Count >= want) break;
                 yield return new WaitForSecondsRealtime(1f);
             }
-            r.Info = $"chapter {Chapter}, hotbar {Hotbar(P)}, players beside us: {string.Join(" ", seen)}";
+            int starts = Count("Starting chapter 2:"), runs = Count("set off chapter 2") - Count("can't run here yet");
+            r.Info = $"chapter {Chapter}, hotbar {Hotbar(P)}, players beside us: {string.Join(" ", seen)}; started {starts}x, a joiner's run {runs}x";
             if (seen.Count < want) r.Fail($"{seen.Count} of {want} players beside us: {r.Info}");
+            else if (starts != 1 || runs > 1) r.Fail($"chapter 2 didn't start once: {r.Info}");
             // The host's own hotbar is the game's to carry over; only what's in which slot is checked here (the amounts of a
             // stack can change as the chapter's save is loaded).
             else if (_mark != null && !Keeps(Hotbar(P), _mark)) r.Fail($"our hotbar changed: {r.Info}, had {_mark}");
@@ -203,7 +263,7 @@ namespace DarkwoodMP.World
             return n.Length == h.Length && h.Select((t, i) => t == "-" || t == n[i]).All(ok => ok);
         }
 
-        private static string Pos(Player p) => Pos(p.transform);
+        private static string Pos(Player p) => p == null ? "(no player)" : Pos(p.transform);
         private static string Pos(Transform t) => $"({t.position.x:0}, {t.position.z:0})";
     }
 }

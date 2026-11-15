@@ -7,7 +7,8 @@ Each client puts things of its own in its hotbar, whose size differs from the ho
 have the client's slots, not the host's). Last, one client goes far off the map and joins again: it must come back
 beside the host. Everyone goes into the bunker at the end of chapter 1, and c1 goes
 out of its exit, whose event starts chapter 2 (a joiner's game asks the host for it; CHAPTER_BY=host: the host's game
-runs the chapter's step itself, everyone in the world). Every client follows the host, and must be in the host's chapter 2, on the ground beside the host, with its own
+runs the chapter's step itself, everyone in the world). By default the host is in a dream of its own as c1 goes out
+(CHAPTER_DREAM=0: awake): the host holds the chapter and starts it once it wakes, once. Every client follows the host, and must be in the host's chapter 2, on the ground beside the host, with its own
 hotbar (not the host's). The chapter changes the world for good, so these are POST steps, after the dumps.
 """
 import os
@@ -25,8 +26,22 @@ BY = os.environ.get("CHAPTER_BY", "c1")
 
 if BY == "host":
     START = [("host", "chapter-go", {"timeout": 320, "settle": 0})]
+elif os.environ.get("CHAPTER_DREAM", "1") == "1":
+    # As players reach the end of chapter 1: all in the bunker; the host goes into a dream of its own (not shared,
+    # as the night trader's killer's is) and one of them goes out of the exit meanwhile. The host holds the chapter (the client is
+    # told it's on its way, not refused) and starts it once it wakes: once, for everyone.
+    START = [
+        ("host", "loc-go", BUNKER, {"settle": 3}),
+        *[(c, "loc-go", BUNKER, {"settle": 3}) for c in NAMES],
+        ("host", "chapter-own-dream", {"settle": 0}),
+        (BY, "chapter-fire", EXIT, {"settle": 0}),
+        (BY, "chapter-pending", {"settle": 0}),
+        ("host", "chapter-held", {"settle": 0}),
+        ("host", "dream-clear", {"settle": 0}),
+        ("host", "chapter-go", "wait", {"timeout": 320, "settle": 0}),
+    ]
 else:
-    # As players reach the end of chapter 1: all in the bunker, and one of them goes out of its exit.
+    # CHAPTER_DREAM=0: as above, with the host awake, so the chapter runs as the request comes.
     START = [
         ("host", "loc-go", BUNKER, {"settle": 3}),
         *[(c, "loc-go", BUNKER, {"settle": 3}) for c in NAMES],
