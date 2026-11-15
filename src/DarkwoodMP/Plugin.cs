@@ -328,6 +328,9 @@ namespace DarkwoodMP
             if (Has("--dwmp-test-world")) StartTest(WorldTest.Run());
             // "--dwmp-test-client-actions": as a client, use up a rope and open a door; the scripted host refuses it.
             if (Has("--dwmp-test-client-actions")) StartTest(WorldTest.ClientActions());
+            // "--dwmp-test-client-menu": as a client, once our character has come, go back to the main menu as the pause
+            // menu does (the session must end), then join the same server again from the Multiplayer window.
+            if (Has("--dwmp-test-client-menu")) StartTest(ClientMenuRejoin(Arg("--dwmp-join")));
             // "--dwmp-steam-test": host a Steam lobby once Steam is up, log it, leave (the most one account can test).
             if (Has("--dwmp-steam-test")) StartTest(SteamSelfTest());
             // "--dwmp-test-reload N": N seconds after a player joins, your game loads its world again (players should follow).
@@ -922,6 +925,22 @@ namespace DarkwoodMP
             yield return new WaitForSeconds(seconds);
             Log.LogInfo("--dwmp-test-save: saving the world");
             Singleton<SaveManager>.Instance.Save(doJson: true, force: true);
+        }
+
+        private System.Collections.IEnumerator ClientMenuRejoin(string address)
+        {
+            while (!(_session.IsClient && WorldShare.WorldReady && World.Characters.Instance != null && World.Characters.Instance.HasCharacter)) yield return null;
+            yield return new WaitForSeconds(3f);
+            Log.LogInfo("[menu test] back to the main menu, as the pause menu's Back to main menu does");
+            if (Core.mainMenu) Singleton<MainMenu>.Instance.close();
+            Core.returnToMainMenu();
+            yield return null;
+            while (!WorldShare.MainMenuReady()) yield return null;
+            Log.LogInfo(_session.Active ? "[menu test] FAIL: at the main menu, still in the host's game" : "[menu test] PASS: at the main menu, out of the host's game");
+            yield return new WaitForSeconds(1f);
+            Log.LogInfo($"[menu test] joining {address} again from the Multiplayer window");
+            _direct.JoinForTest(address);
+            Log.LogInfo(_tcp.InSession ? "[menu test] PASS: joining again" : $"[menu test] FAIL: not joining ({_tcp.Status})");
         }
 
         private System.Collections.IEnumerator JoinWhenReady(string address)

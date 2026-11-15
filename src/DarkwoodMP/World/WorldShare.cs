@@ -94,6 +94,17 @@ namespace DarkwoodMP.World
             StopServer(_session.Begin(MsgType.HostAway));
         }
 
+        /// <summary>
+        /// Joiner, going back to the main menu: leave the host's game (our character is sent first, while the world
+        /// is still whole), so the menu's Multiplayer window is ready to join this server or another one again.
+        /// </summary>
+        public void ClientToMainMenu()
+        {
+            if (!_session.IsClient) return;
+            Plugin.Log.LogInfo("Back to the main menu: leaving the host's game");
+            _session.Backend.Leave();
+        }
+
         /// <summary>Host: send the players a last message (HostAway, GameEnd) and stop the server once they've gone.</summary>
         public void StopServer(PacketWriter farewell)
         {
@@ -1063,10 +1074,19 @@ namespace DarkwoodMP.World
 
 namespace DarkwoodMP.World
 {
-    /// <summary>The host going back to the main menu stops its server (WorldShare.HostToMainMenu).</summary>
+    /// <summary>
+    /// Going back to the main menu ends the session: the host's stops its server (WorldShare.HostToMainMenu), a
+    /// joiner's leaves the host's game (WorldShare.ClientToMainMenu). The game only goes back to the main menu
+    /// when its player chose to (the pause menu, the permadeath screen, the credits); the mod's own reloads and
+    /// chapter changes load the next world without it.
+    /// </summary>
     [HarmonyLib.HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
     static class HostToMainMenuPatch
     {
-        static void Prefix() => WorldShare.Instance?.HostToMainMenu();
+        static void Prefix()
+        {
+            WorldShare.Instance?.HostToMainMenu();
+            WorldShare.Instance?.ClientToMainMenu();
+        }
     }
 }

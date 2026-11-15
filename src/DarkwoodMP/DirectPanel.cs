@@ -107,15 +107,18 @@ namespace DarkwoodMP
 
         public void Draw(Flow f)
         {
-            if (_session.Active && _session.Backend != _tcp) { Ui.Text(f, "In a Steam game.", MenuSkin.Dim); return; }
+            if (_session.Active && _session.Backend != _tcp)
+            {
+                Ui.Text(f, _session.IsHost ? "In a Steam game." : "In a Steam game. Joining a server here leaves it.", MenuSkin.Dim);
+                if (!_session.IsHost) JoinButtons(f);
+                return;
+            }
             if (_tcp.InSession) { DrawInSession(f); return; }
 
             if (_session.LastRefusal != null) Ui.Text(f, $"Refused: {_session.LastRefusal}", MenuSkin.Warn);
             else if (_tcp.Status != "Not connected") Ui.Text(f, _tcp.Status);
 
-            var row = f.Row(Ui.RowH, 0, 0);
-            if (Ui.Button(row[0], "Find servers...")) OpenServerBrowser();
-            if (Ui.Button(row[1], "Connect to address...")) OpenAddress();
+            JoinButtons(f);
 
             f.Space(4);
             if (Plugin.CantHostReason != null) return; // said once, at the top of the window
@@ -150,6 +153,15 @@ namespace DarkwoodMP
             if (!_tcp.IsHost && _session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
                 _tcp.Rejoin(); // sends your character first
             if (Ui.Button(f, _tcp.IsHost ? "Stop hosting" : "Leave")) _tcp.Leave();
+            // A joiner can go straight to another server (or this one again): Connect leaves this game first.
+            if (!_tcp.IsHost) JoinButtons(f);
+        }
+
+        private void JoinButtons(Flow f)
+        {
+            var row = f.Row(Ui.RowH, 0, 0);
+            if (Ui.Button(row[0], "Find servers...")) OpenServerBrowser();
+            if (Ui.Button(row[1], "Connect to address...")) OpenAddress();
         }
 
         private static void AddressRow(Flow f, string addr, string note)
@@ -347,6 +359,9 @@ namespace DarkwoodMP
             return info == null || info.Incompatibility == null; // unknown: let them try
         }
 
+        /// <summary>For the tests: Connect, as the browser's Connect button does.</summary>
+        internal void JoinForTest(string addr) => Connect(addr, "");
+
         /// <summary>Joins the server, asking for its password first if it has one.</summary>
         private void Connect(string addr, string password = null)
         {
@@ -357,6 +372,10 @@ namespace DarkwoodMP
                 _passwordWin.Show();
                 return;
             }
+            // Joining leaves the game we're in (a joiner's, Steam or direct; hosts get no join buttons while hosting).
+            if (_session.Active && _session.IsHost) return;
+            if (_session.Active) { Plugin.Log.LogInfo($"Joining {addr}: leaving the game we're in first"); _session.Backend.Leave(); }
+            if (_tcp.InSession) _tcp.Leave(); // still connecting, not in yet
             _session.LastRefusal = null;
             _browser.Joined(addr);
             Plugin.Cfg.LastAddress.Value = addr;

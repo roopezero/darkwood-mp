@@ -15,6 +15,7 @@ ENEMIES = "--enemies" in sys.argv
 REPLAY = sys.argv[sys.argv.index("--replay") + 1] if "--replay" in sys.argv else None
 CHARS = "--chars" in sys.argv
 RELOAD = "--reload" in sys.argv
+MENU = "--menu" in sys.argv    # with --chars: the client goes back to its main menu, leaves, and joins again
 AWAY = "--away" in sys.argv    # 20 s in: HostAway (the host went back to its menu)
 DROP = "--drop" in sys.argv    # 20 s in: just close the connection (the host quit or crashed)
 CHAPTER = "--chapter" in sys.argv  # with --reload: ChapterStart first (the client sends its character), then WorldReload
@@ -305,6 +306,22 @@ def serve(port, inp):
                 c2, _ = ls.accept(); r2 = Reader(c2)
                 m2 = r2.msg(30)
                 print(f"client came back: message type {m2[0]} (1 = Hello)", flush=True)
+                break
+            if MENU and t_end and char_sent:
+                # The game goes back to its main menu by itself (--dwmp-test-client-menu): it must send its character,
+                # close the connection, and then join again on a new one.
+                got_save = False
+                try:
+                    while True:
+                        m2 = r.msg(30)
+                        if m2[0] == 25: got_save = True
+                except Exception as e:
+                    print(f"the client closed its connection ({type(e).__name__}); character saved before leaving: {got_save}", flush=True)
+                c.close()
+                c2, _ = ls.accept(); r2 = Reader(c2)
+                m2 = r2.msg(30)
+                print(f"client came back: message type {m2[0]} (1 = Hello)", flush=True)
+                c2.close()
                 break
             if END and t_end and time.time() - t_end > 5:
                 if END == 1:

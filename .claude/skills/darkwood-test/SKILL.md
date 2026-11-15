@@ -58,6 +58,7 @@ A test takes about 20 seconds to a minute and a half. The runner waits for the g
 | `client-end` | client | `GameEnd` (the end screen): the game leaves, shows it, then the credits and the main menu (`--dwmp-test-quick-end` skips the credits) |
 | `client-epilogue` | client | `GameEnd` (the epilogue): the game leaves and starts the epilogue (skipped after 5 s in the test), then the credits and the main menu |
 | `client-away` | client | `HostAway`: the game leaves and goes back to the main menu |
+| `client-menu` | client | `--dwmp-test-client-menu`: our player goes back to the main menu as the pause menu does; the game must send its character, leave the session (`[menu test] PASS`) and join the same server again from the Multiplayer window (the scripted host gets a new Hello) |
 | `client-drop` | client | the host's connection just closes: the game goes back to the main menu |
 | `client-authority` | client | `--dwmp-test-client-actions`: our player uses a rope and opens a door; the scripted host refuses it (`ObjState` + `Verdict`); the door is closed again and the rope is back |
 

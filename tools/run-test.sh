@@ -66,6 +66,7 @@
 #   client-end      GameEnd (the end screen): the game leaves, shows it, the credits, the main menu
 #   client-epilogue GameEnd (the epilogue): phase 0, the game goes into it and stays connected; phase 1, the credits, the main menu
 #   client-drop     the host's connection just closes: the game goes back to the main menu
+#   client-menu     our player goes back to the main menu: the game leaves the host's game, then joins it again
 #   client-authority  the host refuses our player's door action: the door and the rope it used come back
 # Two-game tests (a second, real game joins as the client, from its own folder: tools/setup-client-game.sh):
 #   map, map:NAME the host plays the test world (a fresh copy in the mod's cache, --dwmp-testworld --dwmp-reset), the
@@ -95,7 +96,7 @@ ULOG="$DATA/Player.log"
 PY="python3 -I"
 CTL=27799
 
-ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-authority host-drag menu-entry client-reload client-chapter client-away client-end client-epilogue client-drop client-authority host-end host-chapter steam"
+ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-authority host-drag menu-entry client-reload client-chapter client-away client-menu client-end client-epilogue client-drop client-authority host-end host-chapter steam"
 declare -A DESC=(
   [handshake]="refusals (password, version, game) and a valid join"
   [capture]="download the host's world for the client tests"
@@ -126,13 +127,14 @@ declare -A DESC=(
   [client-reload]="the host's world changed: the game rejoins"
   [client-away]="HostAway: back to the main menu"
   [client-drop]="the host's connection closes: back to the main menu"
+  [client-menu]="our player goes back to the main menu: out of the host's game, then joins it again"
   [client-authority]="a refused action rolled back in our game"
   [map]="two games: every map module in one world, then their world states compared"
   [map4]="the host and MAP_CLIENTS client games (default 3), near and far from each other, their world states compared"
 )
 # Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots, options and drag.
 declare -A GROUP=(
-  [net]="handshake host-menu host-reload client-reload client-away client-drop steam"
+  [net]="handshake host-menu host-reload client-reload client-away client-menu client-drop steam"
   [combat]="host-combat host-elsewhere client-enemies"
   [world]="capture host-world client-world host-death"
   [chars]="host-chars client-chars host-progress"
@@ -330,6 +332,7 @@ client() { # client <fake-host args...>: a scripted host on 27721; the game join
   sleep 0.5
   local extra=""; [ "${1:-}" = "--authority" ] && extra="--dwmp-test-client-actions"
   [ "${1:-}" = "--end" ] && extra="--dwmp-test-quick-end"
+  [ "${1:-}" = "--menu" ] && extra="--dwmp-test-client-menu"
   ctl args --dwmp-join 127.0.0.1:27721 --dwmp-debug-world ${LOAD_SHOTS:+--dwmp-load-shots "$LOAD_SHOTS/client"} ${DWMP_ARGS:-} $extra
   wait $sp; cat "$WORK/serve.out"
 }
@@ -585,6 +588,11 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       awk '{for (i = 6; i <= NF; i++) if ($i > m[i]) m[i] = $i} END {printf "    peak RSS (MB):"; for (i = 6; i in m; i++) printf " %d", m[i] / 1024; print ""}' "$WORK/map4/memory.log"
       for n in 1 2 3 4; do client_game_stop $n; done
       [ $MAPRC = 0 ] && [ "$EXC" = "0" ] && echo "  map4: PASS" || echo "  map4: FAIL (dumps and logs in $WORK/map4)" ;;
+    client-menu)
+      client --menu --chars
+      wait_log "menu test. .*joining" 60
+      mod_log "menu test|main menu|leaving|Sent Hello"
+      grep -q "client came back: message type 1" "$WORK/serve.out" || die "the game didn't join again" ;;
     client-away|client-drop)
       client "--${t#client-}"
       wait_log "Back at the main menu" 30
