@@ -2,7 +2,7 @@
 
 DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com/app/274520/Darkwood/) together with up to four friends. One player hosts their world, the others join it, and you survive the forest together: the same enemies, the same nights, the same story.
 
-- Works with the **Steam** and **GOG** versions, on **Windows** and **Linux**.
+- Works with the **Steam** and **GOG** versions, on **Windows** and **Linux**. Built and tested against **Darkwood 1.4**.
 - Steam and GOG players can play together.
 - Join through **Steam invites**, or with a **direct connection** and a built-in server browser.
 
