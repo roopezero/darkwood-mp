@@ -90,8 +90,22 @@ namespace DarkwoodMP.World
 
         // ---- helpers ----------------------------------------------------------------------------------------------
 
-        /// <summary>This game's BepInEx log, as written so far (the disk log is flushed every second or two).</summary>
+        // Where this test's part of the log starts: the game keeps running between test items (tools/run-test.sh), and
+        // an earlier item's lines (the scripted peers' refused slot changes in host-authority) aren't this test's.
+        private static int _logStart;
+
+        /// <summary>Test control's reset, before each test item: later LogLines start here.</summary>
+        internal static void MarkLogStart() { _logStart = 0; try { _logStart = Math.Max(0, AllLogLines().Count - 1); } catch { } }
+
+        /// <summary>This game's BepInEx log since the last test reset, as written so far (the disk log is flushed every second or two).</summary>
         internal static List<string> LogLines()
+        {
+            var all = AllLogLines();
+            // A log shorter than the mark is a new one (the game was started again): all of it is this test's.
+            return _logStart > 0 && _logStart < all.Count ? all.GetRange(_logStart, all.Count - _logStart) : all;
+        }
+
+        private static List<string> AllLogLines()
         {
             // BepInEx writes the file from a buffer it flushes every 2 s: without this, a line logged just before a
             // step was often missing (join-waited found no "World ready" after a quick join).
