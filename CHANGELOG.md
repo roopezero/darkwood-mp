@@ -2,6 +2,15 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.24.0
+
+*Protocol 27, plays with 0.23.x (no message changed).*
+
+- Sort & Stack at the workbench pours gasoline cans into each other, as dropping one can on another does: you're left with full cans and at most one part-full one, and a can poured empty is gone. Lanterns are topped up from each other the same way, but an empty lantern is kept. Before, the cans were only put in order.
+- Going back to the main menu from a host's game leaves it (your character is sent to the host first). The Multiplayer window used to still show that game, and you had to press Leave before joining it or another one again. While you're in someone's game, the window now also has *Find servers...* and *Connect to address...*, and joining another server leaves the one you're in.
+
+How it was tested: with scripted peers only, nobody has played it together yet. `host-world` sorted gasoline cans at 10%, 15% and 20% into one can at 45% (lanterns weren't tried). The new `client-menu` test sends a joiner back to the main menu as the pause menu does: its character reached the host, the session was over at the main menu, and joining the same server again from the Multiplayer window sent a new Hello. `client-reload`, `client-chapter`, `client-away`, `client-drop`, `client-end` and `host-menu` still pass (reloads and chapter changes keep the connection). Switching straight from one server to another, and joining over Steam, weren't tried. On the final build: capture, handshake, host-combat, client-enemies, client-chars, host-world and client-menu passed.
+
 ## 0.23.1
 
 *Protocol 27, plays with 0.23.0 (no message changed).*
