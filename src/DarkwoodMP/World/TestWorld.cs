@@ -26,7 +26,7 @@ namespace DarkwoodMP.World
     public static class TestWorld
     {
         public static string Dir => Path.Combine(Paths.CachePath, "DarkwoodMP", "testworld");
-        /// <summary>Where the area was built ("x z"), in the test world's folder; gone with a reset.</summary>
+        /// <summary>Where the area was built ("x z chapter"), in the test world's folder; gone with a reset.</summary>
         private static string AreaFile => Path.Combine(Dir, "darkwoodmp-testarea.txt");
 
         /// <summary>The world being played is the test world.</summary>
@@ -125,7 +125,12 @@ namespace DarkwoodMP.World
                 // Built before, and saved since? If none of it is here (the world wasn't saved after), build it again.
                 _checked = true;
                 FindLabels();
-                if (_labels.Count == 0) Build(Center() ?? Player.Instance.transform.position);
+                // Built in another chapter (the map is a new one): not built again here, so the kit isn't handed
+                // out a second time on top of the player's things from the last chapter.
+                int built = AreaChapter();
+                if (_labels.Count == 0 && built != 0 && built != Chapters.HostChapter)
+                    Plugin.Log.LogInfo($"Test world: built in chapter {built}, not again in chapter {Chapters.HostChapter}");
+                else if (_labels.Count == 0) Build(Center() ?? Player.Instance.transform.position);
             }
             if (Time.unscaledTime >= _nextLabelScan)
             {
@@ -146,6 +151,17 @@ namespace DarkwoodMP.World
                 return new Vector3(float.Parse(xz[0], inv), 0f, float.Parse(xz[1], inv));
             }
             catch { return null; }
+        }
+
+        /// <summary>The chapter the area was built in (0: not noted, as files written before it was).</summary>
+        private static int AreaChapter()
+        {
+            try
+            {
+                var xz = File.Exists(AreaFile) ? File.ReadAllText(AreaFile).Split(' ') : new string[0];
+                return xz.Length > 2 && int.TryParse(xz[2], out int c) ? c : 0;
+            }
+            catch { return 0; }
         }
 
         private static void Build(Vector3 at)
@@ -169,7 +185,7 @@ namespace DarkwoodMP.World
                 catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't place {st.Prefab}: {e.Message}"); }
             }
             if (gen != null) foreach (var l in lamps) if (!gen.powerItems.Contains(l)) gen.powerItems.Add(l);
-            try { File.WriteAllText(AreaFile, FormattableString.Invariant($"{at.x:0} {at.z:0}")); }
+            try { File.WriteAllText(AreaFile, FormattableString.Invariant($"{at.x:0} {at.z:0} {Chapters.HostChapter}")); }
             catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't note where the area is: {e.Message}"); }
             GiveKit();
             Plugin.Log.LogInfo($"Test world: built {built} of {Stations.Length} test stations around {at}");

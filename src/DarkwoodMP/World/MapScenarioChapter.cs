@@ -92,12 +92,18 @@ namespace DarkwoodMP.World
                 if (t != null) { et = e; break; }
             }
             if (et == null) { r.Fail($"no trigger for {a[0]} here (in {Locations.Current() ?? "the world"})"); yield break; }
+            // Its area is off while we land in it and the host sees us there: the host checks the exit is within
+            // reach of where it last saw us, and the area set off in the frame we landed sent it before our new
+            // place (refused: "5995 away", at the spot loc-go left us).
+            var cols = et.GetComponents<Collider>().Where(c => c.enabled).ToList();
+            foreach (var c in cols) c.enabled = false;
             Place(et.transform.position + new Vector3(40f, 0f, 0f));
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(2f);
             r.Info = $"set off {et.name} ({t.type}) for {a[0]} at {Pos(et.transform)} in {Locations.Current() ?? "the world"}, chapter {Chapter}";
             var type = t.type;
             AsPlayer(() => et.fireEventTrigger(type));
             yield return new WaitForSeconds(1f);
+            foreach (var c in cols) if (c != null) c.enabled = true;
         }
 
         /// <summary>

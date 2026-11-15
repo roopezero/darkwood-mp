@@ -213,6 +213,7 @@ namespace DarkwoodMP
             _playerSync.OnRemoteDied += n => Notice($"{n} died");
             _world = new WorldShare(_session, this, Paths.CachePath);
             SaveRedirect.Init();
+            WorldTeardown.Init();
             PlayerDamage.Register(_session);
             EnemyAreaHits.Register(_session);
             EnemyFx.Register(_session);

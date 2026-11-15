@@ -350,6 +350,14 @@ new_game_up() { # new_game_up: the host starts a new game (prologue not skipped)
   wait_log "hosting with Direct" 600 || die "the new game wasn't hosted"
   echo "  phase: host's new game made, its intro film over and hosting in $(( $(date +%s) - t0 )) s"
 }
+leave_worlds() { # leave_worlds N: client games 1..N, then the host, back to their main menus, as players leave
+  # Before the reports, so what each game throws while its world is torn down (Character.OnDestroy and the
+  # like) is counted in this test; a client game stopped in its world later, or the host sent back after its
+  # check, threw it where nothing counted it.
+  local n r; for n in $(seq 1 $1); do [ -n "$(client_pid $n)" ] || continue
+    r="$($PY "$T/ctl.py" $(cctl $n) reset 2>&1)"; [ -z "$r" ] || echo "  (client game $n didn't go back to its main menu: $r)"; done
+  ctl reset >/dev/null || echo "  (the host didn't go back to its main menu)"
+}
 map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.py, results in DIR
   local dir="$2" rc
   export MAP_SCENARIO="$1"
@@ -359,6 +367,7 @@ map_body() { # map_body SCENARIO DIR: the two-game test of tools/tests/SCENARIO.
   if grep -q '^HOST_WORLD *= *"new"' "$T/$MAP_SCENARIO.py"; then new_game_up; else test_world_up; fi
   client_join 1 --dwmp-join 127.0.0.1:27720 --dwmp-debug-world
   $PY "$T/mapdriver.py" run $CTL $(cctl 1) "$dir"; rc=$?
+  leave_worlds 1
   EXC=0; client_report 1 "$dir"
   flushed; since "$LOG" "$LOG0" >"$dir/host-LogOutput.log" # the host's side of the run, read with the client's
   mod_log "\[map\]|refused|authority\]" | head -12 | sed 's/^/  host: /'
@@ -569,6 +578,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       done
       $PY "$T/mapdriver.py" run $CTL $PORTS "$WORK/map4"; MAPRC=$?
       kill $MEMP 2>/dev/null
+      leave_worlds $MAP_CLIENTS
       EXC=0; for n in $(seq 1 $MAP_CLIENTS); do client_report $n "$WORK/map4"; done
       mod_log "\[map\]|refused|authority\]" | head -16 | sed 's/^/  host: /'
       echo "  memory (MB available, swap used, RSS KB of each game; lowest available):"; sort -k3 -n "$WORK/map4/memory.log" | head -1 | sed 's/^/    /'
