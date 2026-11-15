@@ -2,6 +2,14 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.25.1
+
+*Protocol 27, plays with 0.25.0, 0.24.x and 0.23.x (no message changed).*
+
+- Opening the port on the router now finds routers that it missed before. The mod looked for the router with a search sent to the whole local network, and on a computer whose firewall drops the router's replies to that kind of search (Fedora's default firewall does), no router was found and the port wasn't opened. The search now also goes straight to the router, whose reply gets through.
+
+How it was tested: on one real router. Before the fix, a test script that searched the same way the mod did found no router; asked directly, the router answered. With the script, the router opened TCP and UDP port 33333 to this computer, someone on another internet connection reached it over TCP and got an answer once this computer's own firewall allowed the port, and stopping removed both forwards. The fixed mod's own search, run on its own outside the game, found the router. A hosted game opening its port on that router wasn't tried. `host-upnp` still passes against the scripted router. On the final build: capture, handshake, host-combat, client-enemies, client-chars and host-upnp passed.
+
 ## 0.25.0
 
 *Protocol 27, plays with 0.24.x and 0.23.x (no message changed).*

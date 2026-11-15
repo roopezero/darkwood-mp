@@ -222,28 +222,42 @@ namespace DarkwoodMP.Net
             return null;
         }
 
-        /// <summary>SSDP M-SEARCH from every local IPv4 address (a VPN may hold the default route); the LOCATIONs that answer.</summary>
+        /// <summary>
+        /// SSDP M-SEARCH from every local IPv4 address (a VPN may hold the default route); the LOCATIONs that answer.
+        /// Each search goes to the multicast group and also straight to each default gateway's port 1900. A stateful
+        /// firewall (firewalld's default zone, for one) drops the router's answers to a multicast search, since they
+        /// come from the router's address and not the group's; answers to a search sent to the router itself get through.
+        /// </summary>
         private static List<string> Discover()
         {
             var found = new List<string>();
             var socks = new List<UdpClient>();
-            var group = new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900);
+            var targets = new List<IPEndPoint> { new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900) };
+            foreach (IPAddress gw in GatewayAddresses()) targets.Add(new IPEndPoint(gw, 1900));
             try
             {
                 foreach (string ip in TcpBackend.LocalAddresses())
                 {
+                    UdpClient u;
                     try
                     {
-                        var u = new UdpClient(new IPEndPoint(IPAddress.Parse(ip), 0));
+                        u = new UdpClient(new IPEndPoint(IPAddress.Parse(ip), 0));
                         u.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
                         socks.Add(u);
-                        foreach (string st in SearchTargets)
-                        {
-                            byte[] q = Encoding.ASCII.GetBytes($"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {st}\r\n\r\n");
-                            u.Send(q, q.Length, group);
-                        }
                     }
-                    catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] SSDP from {ip}: {e.Message}"); }
+                    catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] SSDP from {ip}: {e.Message}"); continue; }
+                    foreach (IPEndPoint to in targets)
+                    {
+                        try
+                        {
+                            foreach (string st in SearchTargets)
+                            {
+                                byte[] q = Encoding.ASCII.GetBytes($"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {st}\r\n\r\n");
+                                u.Send(q, q.Length, to);
+                            }
+                        }
+                        catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] SSDP from {ip} to {to}: {e.Message}"); }
+                    }
                 }
                 int until = Environment.TickCount + 2500;
                 while (until - Environment.TickCount > 0 && socks.Count > 0)
@@ -446,16 +460,19 @@ namespace DarkwoodMP.Net
             return null;
         }
 
-        /// <summary>The default gateways (IPv4) on port 5351; Mono's list, or Linux's route table if that's empty.</summary>
+        /// <summary>The NAT-PMP endpoints: the default gateways on port 5351, or the test router.</summary>
         private static List<IPEndPoint> Gateways()
         {
-            var list = new List<IPEndPoint>();
             if (TestRouter != null && TcpBackend.TryParseAddress(TestRouter, out string th, out int tp))
-            {
-                list.Add(new IPEndPoint(IPAddress.Parse(th), tp));
-                return list;
-            }
-            void Add(IPAddress a) { if (a != null && a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(IPAddress.Any) && !list.Exists(e => e.Address.Equals(a))) list.Add(new IPEndPoint(a, 5351)); }
+                return new List<IPEndPoint> { new IPEndPoint(IPAddress.Parse(th), tp) };
+            return GatewayAddresses().ConvertAll(a => new IPEndPoint(a, 5351));
+        }
+
+        /// <summary>The default gateways (IPv4): Mono's list, or Linux's route table if that's empty.</summary>
+        private static List<IPAddress> GatewayAddresses()
+        {
+            var list = new List<IPAddress>();
+            void Add(IPAddress a) { if (a != null && a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(IPAddress.Any) && !list.Contains(a)) list.Add(a); }
             try
             {
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
