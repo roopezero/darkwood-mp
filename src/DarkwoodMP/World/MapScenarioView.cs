@@ -100,7 +100,7 @@ namespace DarkwoodMP.World
                 while (StateDump.Flat(to - p.transform.position) > 1f)
                 {
                     var d = to - p.transform.position; d.y = 0f;
-                    Place(p.transform.position + Vector3.ClampMagnitude(d, speed * Time.deltaTime));
+                    Place(p.transform.position + Vector3.ClampMagnitude(d, speed * FrameTime));
                     yield return eof;
                     w.Frame(false);
                 }
@@ -119,6 +119,19 @@ namespace DarkwoodMP.World
             return parts.Count == 0 ? "none" : string.Join(", ", parts);
         }
 
+        /// <summary>The area triggers by the mark: our player's entries and exits as the game counted them, and whether it stands on each.</summary>
+        private static string AreasNow()
+        {
+            var p = Player.Instance;
+            if (_mark == null || p == null) return "no mark";
+            var parts = new List<string>();
+            foreach (var et in Object.FindObjectsOfType<EventTriggers>())
+                if (et != null && et.reactsToPlayer && StateDump.Flat(et.transform.position - _mark.Value) < 700f
+                    && et.eventTriggers.Exists(t => t != null && t.type == global::EventTrigger.Type.area))
+                    parts.Add($"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
+            return parts.Count == 0 ? "none" : string.Join("; ", parts);
+        }
+
         /// <summary>
         /// "vw-color [dark|clear] NAME...": with dark or clear, the first NAME (the screen-covering spot_black) must be
         /// faded in (alpha over 0.5) or out (under 0.1) in this game; the fades take up to 14 s, so this waits up to 16 s.
@@ -134,7 +147,7 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + (want == null ? 0f : 16f);
             while (!Ok() && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.25f);
             r.Info = $"{Me()} {StateDump.Flat(Player.Instance.transform.position - (_mark ?? Vector3.zero)):0} from the mark: {ColorsNow(names)}";
-            if (!Ok()) r.Fail($"{names[0]} isn't {want} here: {r.Info}");
+            if (!Ok()) r.Fail($"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
         }
 
         private static IEnumerator Tree(string[] a, Result r)
@@ -338,7 +351,7 @@ namespace DarkwoodMP.World
             var eof = new WaitForEndOfFrame();
             while (gone < total)
             {
-                float step = Mathf.Min(speed * Time.deltaTime, total - gone);
+                float step = Mathf.Min(speed * FrameTime, total - gone);
                 gone += step;
                 Place(p.transform.position + dir * step);
                 Face(p.transform.position + dir * 100f);
