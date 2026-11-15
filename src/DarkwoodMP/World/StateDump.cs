@@ -317,7 +317,10 @@ namespace DarkwoodMP.World
                 // Not the flags that say where this game's own player is (FlagsSync.PlayersOwn): those are under "local".
                 var shared = dict.Values.Where(f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
                 var lines = shared.Select(f => f.name + "=" + f.isTrue).OrderBy(s => s, StringComparer.Ordinal).ToList();
-                ctx.Set("flags", new Dictionary<string, object> { ["count"] = lines.Count, ["true"] = shared.Count(f => f.isTrue), ["hash"] = Hash(lines) });
+                var section = new Dictionary<string, object> { ["count"] = lines.Count, ["true"] = shared.Count(f => f.isTrue), ["hash"] = Hash(lines) };
+                // A short list is given whole, so a difference names the flag.
+                if (lines.Count <= 40) section["list"] = string.Join(" ", lines);
+                ctx.Set("flags", section);
                 var npcs = flags.npcStates.Where(n => n != null).Select(n => $"{n.name}:{n.reputation}:{n.dead}").OrderBy(s => s, StringComparer.Ordinal).ToList();
                 ctx.Set("npcs", new Dictionary<string, object> { ["count"] = npcs.Count, ["hash"] = Hash(npcs) });
             });
