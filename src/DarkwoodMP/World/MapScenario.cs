@@ -128,6 +128,16 @@ namespace DarkwoodMP.World
 
         public const float WalkSpeed = 600f; // under MoveCheck.MaxSpeed, so the host doesn't correct it
 
+        /// <summary>
+        /// The time a scripted walk moves our player for in one frame: the frame's, but at most a fortieth of a
+        /// second. The walks put the player at the next spot each frame (Place), so a slow frame (a place's things
+        /// coming into view) was one long jump, and the physics saw the player only after it, already well inside an
+        /// area trigger. EventTriggers.OnTriggerEnter skips an entry when the player has been in the area before and
+        /// is already standing on it (its check against counting one entry twice), so walking back into the Markings
+        /// sometimes didn't darken. A player moved by the game's physics touches the edge first, and isn't skipped.
+        /// </summary>
+        public static float FrameTime => Mathf.Min(Time.deltaTime, 1f / 40f);
+
         /// <summary>Move our player in a straight line (by a spot beside any armed trap on it) until within `within` of the spot (x, z).</summary>
         public static IEnumerator Walk(Vector3 to, float within = 120f, int detours = 2)
         {
@@ -142,7 +152,7 @@ namespace DarkwoodMP.World
                 var at = p.transform.position;
                 var d = new Vector3(to.x - at.x, 0f, to.z - at.z);
                 if (d.magnitude <= within) yield break;
-                Place(at + Vector3.ClampMagnitude(d, Mathf.Min(WalkSpeed * Time.deltaTime, d.magnitude - within * 0.5f)));
+                Place(at + Vector3.ClampMagnitude(d, Mathf.Min(WalkSpeed * FrameTime, d.magnitude - within * 0.5f)));
                 yield return null;
             }
         }
