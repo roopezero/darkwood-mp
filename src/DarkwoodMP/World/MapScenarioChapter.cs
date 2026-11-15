@@ -20,6 +20,14 @@ namespace DarkwoodMP.World
         /// <summary>The hotbar this game's player had before the chapter ("chapter-mark"), kept across the world reload.</summary>
         private static string _mark;
 
+        /// <summary>Our log's line count at "chapter-mark". The game keeps running between the tests of a full run, so
+        /// the log also holds earlier tests' lines (host-chapter starts chapter 2 too); the checks here read only this run's.</summary>
+        private static int _logFrom;
+
+        /// <summary>Our log's lines since "chapter-mark", without the test's own "[map]" result lines (they quote other lines).</summary>
+        private static System.Collections.Generic.List<string> Lines() =>
+            MapScenarioIssues.LogLines().Skip(_logFrom).Where(l => !l.Contains("[map]")).ToList();
+
         public static void Register()
         {
             // "chapter-mark N" (client): empty our hotbar and put things in it that only this client has (N: 0, 1, 2...);
@@ -53,6 +61,7 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Mark(string[] a, Result r)
         {
+            _logFrom = MapScenarioIssues.LogMark();
             var p = P;
             // A second argument: that many hotbar slots, taken as the game's hotbar upgrade item gives one.
             int want = a.Length > 1 ? int.Parse(a[1]) : 0;
@@ -181,7 +190,7 @@ namespace DarkwoodMP.World
             string line = null, refused = null;
             while (Time.realtimeSinceStartup < giveUp)
             {
-                var lines = MapScenarioIssues.LogLines();
+                var lines = Lines();
                 line = lines.LastOrDefault(l => l.Contains("[notice] The host will start chapter"));
                 refused = lines.LastOrDefault(l => l.Contains("[notice] The host didn't start chapter"));
                 if (line != null || refused != null) break;
@@ -195,7 +204,7 @@ namespace DarkwoodMP.World
         private static IEnumerator HeldStep(string[] a, Result r)
         {
             yield return new WaitForSecondsRealtime(5f);
-            var lines = MapScenarioIssues.LogLines();
+            var lines = Lines();
             string held = lines.LastOrDefault(l => l.Contains("which can't run here yet"));
             r.Info = $"{(held ?? "nothing held").Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
             if (held == null) r.Fail($"no chapter held: {r.Info}");
@@ -203,8 +212,8 @@ namespace DarkwoodMP.World
             else if (!Dreaming) r.Fail($"our dream ended too soon for the test: {r.Info}");
         }
 
-        /// <summary>How many lines of our log have this text.</summary>
-        private static int Count(string text) => MapScenarioIssues.LogLines().Count(l => l.Contains(text));
+        /// <summary>How many lines of our log since "chapter-mark" have this text.</summary>
+        private static int Count(string text) => Lines().Count(l => l.Contains(text));
 
         private static IEnumerator All(string[] a, Result r)
         {
