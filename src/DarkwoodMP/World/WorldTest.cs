@@ -454,7 +454,8 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// World.StackSizes at 50: 30 bandages picked up one by one go in one slot; Sort &amp; Stack makes one stack
-        /// of 3 + 3 + 40 nails in the workbench's storage; two gasoline cans stay two (their amount is fuel); with the
+        /// of 3 + 3 + 40 nails in the workbench's storage and pours gasoline cans at 10%, 15% and 20% into one at 45%;
+        /// two gasoline cans picked up stay two (their amount is fuel); with the
         /// setting at 0 a bandage stacks to the game's own size again.
         /// </summary>
         private static IEnumerator StacksStep(Player player, Vector3 at)
@@ -522,6 +523,31 @@ namespace DarkwoodMP.World
                 Check(nails.Count == 1 && nails[0] == 46, $"sort & stack of 3 + 3 + 40 nails: {string.Join(", ", nails.Select(a => "x" + a))}");
                 ClearNails();
                 yield return new WaitForSeconds(0.8f);
+
+                // Gasoline cans at 10%, 15% and 20%: poured into one can at 45%, the other two gone.
+                if (gas != null)
+                {
+                    float max = Singleton<ItemsDatabase>.Instance.getItem(gas, instantiate: false).maxDurability;
+                    void ClearGas() { foreach (var sl in storage.slots) if (!InvItemClass.isNull(sl.invItem) && sl.invItem.type == gas) { sl.inventory = storage; sl.removeItem(); } }
+                    ClearGas();
+                    frees.Clear();
+                    for (int i = 0; i < storage.slots.Count; i++) if (InvItemClass.isNull(storage.slots[i].invItem)) frees.Add(i);
+                    float[] parts = { 0.10f, 0.15f, 0.20f };
+                    for (int j = 0; j < 3; j++)
+                    {
+                        var sl = storage.slots[frees[j * (frees.Count - 1) / 2]];
+                        sl.inventory = storage; sl.createItem(gas, 1);
+                        sl.invItem.durability = max * parts[j]; sl.invItem.refresh();
+                    }
+                    yield return new WaitForSeconds(0.8f);
+                    SlotShare.Instance?.SortPressed(storage);
+                    yield return new WaitForSeconds(0.8f);
+                    var cans = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == gas).Select(sl => sl.invItem.durability).ToList();
+                    Check(cans.Count == 1 && Mathf.Abs(cans[0] - max * 0.45f) < 0.01f * max,
+                        $"sort & stack of {gas} at 10% + 15% + 20% of {max}: {string.Join(", ", cans.Select(d => d.ToString("0.#")))}");
+                    ClearGas();
+                    yield return new WaitForSeconds(0.8f);
+                }
                 player.openedItemInventory2 = null;
             }
             else Check(false, $"sort & stack of nails: no workbench storage with 3 free slots ({frees.Count} free)");

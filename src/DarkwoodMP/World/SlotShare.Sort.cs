@@ -18,6 +18,13 @@ namespace DarkwoodMP.World
     /// different things, and items with upgrades are only moved, never merged, so a weapon keeps its durability,
     /// its loaded rounds and its upgrades.
     ///
+    /// Items whose fuel is their durability (InvItem.stacksDurability: gasoline, the lantern) never stack, but the game
+    /// pours one into another when a player drops one on the other (InvSlot.swapItems): up to the item's maxDurability,
+    /// and what doesn't fit stays in the one poured from. Sort &amp; Stack pours them the same way, each into the earlier
+    /// ones of the same type in slot order, so the cans end up full but one. A can poured empty is gone, as one is when
+    /// its fuel runs out (InvItemClass.drainDurability). One the game keeps when it's empty (a reloadable, repairable or
+    /// regenerating item, or one that rots: the lantern) stays, empty, so a sort never takes a player's lantern.
+    ///
     /// Item type (not the item's name in the player's language) is the order within a category, so every game
     /// sorts the same contents into the same slots whatever language it runs in.
     ///
@@ -116,6 +123,14 @@ namespace DarkwoodMP.World
             public bool Mergeable =>
                 Base != null && Base.stackable && !Base.hasAmmo && Base.maxAmount > 1
                 && (State.upgrades == null || State.upgrades.Count == 0) && (State.modifiers == null || State.modifiers.Count == 0);
+            /// <summary>Fuel kept as durability: poured into another of its type, never stacked (see the class comment).</summary>
+            public bool Pours =>
+                Base != null && Base.stacksDurability && Base.maxDurability > 0f
+                && (State.upgrades == null || State.upgrades.Count == 0) && (State.modifiers == null || State.modifiers.Count == 0);
+            /// <summary>Whether the game takes this item away when it's empty (InvItemClass.drainDurability).</summary>
+            public bool GoneWhenEmpty =>
+                !Base.hasAmmo && !Base.canBeReloaded && !Base.repairable && !Base.regeneratesWhenInactive && Base.rottenItem == null;
+            public bool Empty => Pours && GoneWhenEmpty && State.durability <= 0.001f;
             public bool SameItem(Stack o) => State.type == o.State.type && State.isRecipe == o.State.isRecipe && State.recipeFor == o.State.recipeFor;
         }
 
@@ -148,7 +163,23 @@ namespace DarkwoodMP.World
                     src.State.amount -= n;
                 }
             }
-            stacks.RemoveAll(st => st.State.amount <= 0 && st.Mergeable);
+
+            // Pour: each item whose fuel is its durability tops up the earlier ones of its type, in slot order.
+            for (int b = 0; b < stacks.Count; b++)
+            {
+                var src = stacks[b];
+                if (!src.Pours) continue;
+                for (int a = 0; a < b && src.State.durability > 0.001f; a++)
+                {
+                    var dst = stacks[a];
+                    float max = dst.Base.maxDurability;
+                    if (!dst.Pours || dst.State.type != src.State.type || dst.State.durability >= max) continue;
+                    float n = Mathf.Min(src.State.durability, max - dst.State.durability);
+                    dst.State.durability += n;
+                    src.State.durability -= n;
+                }
+            }
+            stacks.RemoveAll(st => (st.State.amount <= 0 && st.Mergeable) || st.Empty);
 
             stacks.Sort((x, y) =>
             {
