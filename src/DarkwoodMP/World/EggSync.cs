@@ -33,6 +33,7 @@ namespace DarkwoodMP.World
         /// <summary>This game broke the egg; the caller checked it's ours to send (BreakSync.OurPlayers).</summary>
         public static void Send(Item egg)
         {
+            if (WorldActions.OursAlone(egg.gameObject)) return; // in a dream of our own: nobody else has it
             var r = ObjRef.Of(egg.gameObject);
             if (!r.Valid) return;
             // The hit that broke it can leave its health below 0; the others' copies are broken at 0 (Break), and

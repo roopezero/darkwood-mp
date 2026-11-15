@@ -248,6 +248,9 @@ namespace DarkwoodMP.World
         /// <summary>For tests (client): the host's dream we go into once our menus let us (null: none).</summary>
         internal static string Pending => _pendingStart;
 
+        /// <summary>For tests (client): go into a dream of our own (as a story step's startDream does), not shared.</summary>
+        internal static void TestOwnDream(string name) => GoInto(Singleton<Dreams>.Instance, name);
+
         /// <summary>For tests (host): start a level dream as SkillsMenu.confirmSkills does after a level.</summary>
         internal static void TestLevelDream(string name)
         {

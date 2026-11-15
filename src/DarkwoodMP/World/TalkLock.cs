@@ -80,7 +80,7 @@ namespace DarkwoodMP.World
         /// <summary>Our player's dialogue with this NPC opened.</summary>
         internal static void Opened(NPC npc)
         {
-            if (!WorldActions.Sharing) return;
+            if (!WorldActions.Sharing || WorldActions.OursAlone(npc.gameObject)) return; // a dream's NPC of our own: nobody else can talk to it
             var r = ObjRef.Of(npc.gameObject);
             if (!r.Valid) return;
             _ours = npc; _oursRef = r; _oursName = UniqueName(npc);

@@ -126,9 +126,42 @@ namespace DarkwoodMP.World
             return false;
         }
 
+        /// <summary>
+        /// Client: our player is somewhere the host doesn't run: a dream of our own (not the shared one,
+        /// DreamSync.Shared), also while going into it, or a separate location the host didn't place
+        /// (Locations.HostRunsHere). What happens there is ours alone, as in single player.
+        /// </summary>
+        public static bool InOwnArea()
+        {
+            var s = S;
+            if (s == null || !s.IsClient) return false;
+            var d = Singleton<Dreams>.Instance;
+            if (d != null && DreamSync.Shared == null && (d.dreaming || d.dreamPrepared || d.switchingDream)) return true;
+            return !Locations.HostRunsHere();
+        }
+
+        /// <summary>
+        /// Client: this thing is in an area only our player is in (InOwnArea, or NetEnemies.LocalOnly: a dream's
+        /// place of our own, a scene of its own). The host doesn't have it, so asking the host about it is only
+        /// refused: our player's doing there runs here alone (Part.All), as in single player, and isn't sent. A shared
+        /// dream's things (the level dream, a prologue stage) are the host's to decide, as the world's are. Null: only
+        /// where our player is counts.
+        /// </summary>
+        public static bool OursAlone(GameObject go)
+        {
+            var s = S;
+            if (s == null || !s.IsClient) return false;
+            if (go == null) return InOwnArea();
+            var d = Singleton<Dreams>.Instance;
+            if (DreamSync.Shared != null && d != null && d.dreamLocation != null && (d.dreaming || d.dreamPrepared || d.switchingDream)
+                && (d.preset == null || d.preset.name == DreamSync.Shared) && go.transform.IsChildOf(d.dreamLocation.transform)) return false;
+            return NetEnemies.LocalOnly(go) || InOwnArea();
+        }
+
         public static void Send(Action a, GameObject go, float x = 0, float y = 0, bool f1 = false, bool f2 = false, string str = "", bool byPlayerKnown = false)
         {
             if (S.IsClient && !byPlayerKnown && !ByLocalPlayer()) return;
+            if (OursAlone(go)) { if (Debug) Plugin.Log.LogInfo($"[world] {a} on {go.name}: ours alone (not where the host runs), not sent"); return; }
             Send(a, ObjRef.Of(go), go.name, x, y, f1, f2, str);
         }
 
@@ -139,6 +172,7 @@ namespace DarkwoodMP.World
         public static void Send(Action a, ObjRef r, string name, float x = 0, float y = 0, bool f1 = false, bool f2 = false, string str = "")
         {
             if (!r.Valid) return;
+            if (S.IsClient && OursAlone(ObjRef.Resolve<Transform>(r) is Transform t && t != null ? t.gameObject : null)) { if (Debug) Plugin.Log.LogInfo($"[world] {a} {r} ({name}): ours alone, not sent"); return; }
             if (S.IsClient && HammerStroke.Depth > 0) { HammerStroke.Held.Add(() => Send(a, r, name, x, y, f1, f2, str)); return; }
             var w = S.Begin(MsgType.WorldAction);
             WriteAction(w, a, r, x, y, f1, f2, str);
@@ -170,7 +204,11 @@ namespace DarkwoodMP.World
 
             if (s.IsHost && Authority.Handling && !Allowed(a, obj, x, y, f1, str))
             {
-                SendState(from, obj, padlock: a == Action.PadlockUnlock);
+                // A player in a dream of their own (or a place the host doesn't have) acted on their own copy of it:
+                // not the host's to refuse, nor to apply. Their game no longer sends these (OursAlone); this is for one
+                // that was on the way as they went.
+                if (Authority.RequesterAway) { Authority.AcceptAway($"{a} {obj}"); return; }
+                SendState(from, obj, padlock: a == Action.PadlockUnlock, goneMeansGone: GoneMeansGone(a));
                 return;
             }
 
@@ -514,13 +552,17 @@ namespace DarkwoodMP.World
         /// window: u8 flags (1 barricaded), i32 barricade health. trap: u8 flags (1 armed).
         /// item: u8 flags (1 switched on, 2 locked, 4 searched, 8 broken, 16 its InteractiveItem is on, 32 its feeder is full), i32 health. padlock (when the request was
         /// about the padlock): u8 flags (1 locked). explosive (an Explodes that isn't an item): u8 flags (1 gone off).
-        /// gone: nothing (it isn't in the host's world).
+        /// gone: nothing (it isn't in the host's world; sent only when the request was one after which a thing goes, GoneMeansGone).
         /// </summary>
-        public static void SendState(ulong to, ObjRef obj, bool padlock = false)
+        public static void SendState(ulong to, ObjRef obj, bool padlock = false, bool goneMeansGone = true)
         {
+            var go = ObjRef.Resolve<Transform>(obj);
+            // Not found here: only after a pickup, a break or a trap (things that go) does that mean the client's copy
+            // should go too. A door, a lock or a switch the host hasn't got is one the client has and the host doesn't
+            // (a place of its own): nothing to roll it back to, and it mustn't be destroyed.
+            if (go == null && !goneMeansGone) return;
             var w = S.Begin(MsgType.ObjState);
             obj.Write(w);
-            var go = ObjRef.Resolve<Transform>(obj);
             Door door = go != null ? go.GetComponent<Door>() : null;
             Window window = go != null ? go.GetComponent<Window>() : null;
             Trigger trap = go != null ? go.GetComponent<Trigger>() : null;
@@ -560,6 +602,14 @@ namespace DarkwoodMP.World
             S.SendTo(to, w, Channel.Control, reliable: true);
         }
 
+        /// <summary>
+        /// Whether a thing a request was about that the host can't find is gone for good (Kind.Gone removes the
+        /// requester's copy): taken off the ground, broken, blown up, or a trap set off, disarmed or taken.
+        /// </summary>
+        internal static bool GoneMeansGone(Action a) =>
+            a == Action.Removed || a == Action.ItemHit || a == Action.ItemBroken || a == Action.Explode
+            || a == Action.TrapFired || a == Action.TrapSwitched || a == Action.TrapDisarm;
+
         /// <summary>Client: put our copy of this thing as the host has it (a refused request's rollback).</summary>
         private static void OnObjState(ulong from, PacketReader r)
         {
@@ -574,7 +624,11 @@ namespace DarkwoodMP.World
                 switch (kind)
                 {
                     case Kind.Gone:
-                        if (go != null && (go.GetComponent<Trigger>() != null || go.GetComponent<Item>() != null)) UnityEngine.Object.Destroy(go.gameObject);
+                        if (go == null || (go.GetComponent<Trigger>() == null && go.GetComponent<Item>() == null)) break;
+                        // Ours alone (a dream of our own): the host not having it says nothing about ours.
+                        if (OursAlone(go.gameObject)) { Plugin.Log.LogInfo($"[world] the host hasn't got {go.name} {obj}: ours alone, kept"); break; }
+                        Plugin.Log.LogInfo($"[world] {go.name} {obj} is gone on the host: removed ours");
+                        UnityEngine.Object.Destroy(go.gameObject);
                         break;
                     case Kind.Door:
                     {
@@ -989,6 +1043,7 @@ namespace DarkwoodMP.World
         {
             if (!trap.setByPlayer && trap.GetComponent<Item>() == null) return false; // a level's scripted trigger zone, not a trap
             if (!Net.Session.Instance.IsClient) return true;
+            if (WorldActions.OursAlone(trap.gameObject)) return false; // in a dream of our own: the game's own, as alone
             return other != null && (other.GetComponent<Player>() != null || other.GetComponent<ThrownItem>() != null);
         }
 
@@ -1108,7 +1163,7 @@ namespace DarkwoodMP.World
             var trap = Trap(__instance);
             if (trap == null) return;
             var r = ObjRef.Of(trap.gameObject);
-            if (!r.Valid) return; // not a shared trap: the game rolls it, as alone
+            if (!r.Valid || WorldActions.OursAlone(trap.gameObject)) return; // not a shared trap (or one only we have): the game rolls it, as alone
             __instance.disarmingTrap = false; // the game's own roll is skipped
             // The crouch co-op adds (DisarmAnimation) ends here too: with disarmingTrap already cleared, the
             // stand-up in DisarmDonePatch may not see that a disarm ended, which left our player crouched for good.
