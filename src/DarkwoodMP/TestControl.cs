@@ -208,6 +208,7 @@ namespace DarkwoodMP
             until = Time.realtimeSinceStartup + 90f;
             while ((!WorldShare.MainMenuReady() || SaveRedirect.Active) && Time.realtimeSinceStartup < until) yield return null;
             Plugin.Instance.SetPanel(false);
+            MapScenarioIssues.MarkLogStart(); // the next test's log scans start here
             _busy = false;
             reply.WriteLine(WorldShare.MainMenuReady() ? "ready" : "error: no main menu after 90 s");
         }
