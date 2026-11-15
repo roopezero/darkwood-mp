@@ -16,9 +16,9 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 | Item | What runs |
 |---|---|
 | a test name | that test (`handshake`, `host-world`, `client-drop`, ...) |
-| `all` | the 25 scripted-peer tests (not `shots`, `options`, `map`, `map4`) |
+| `all` | the 28 scripted-peer tests (not `shots`, `options`, `map`, `map4`) |
 | `full` | `all`, then `map` |
-| `net` | handshake host-menu host-reload client-reload client-away client-menu client-drop steam |
+| `net` | handshake host-menu host-upnp host-reload client-reload client-away client-menu client-drop steam |
 | `combat` | host-combat host-elsewhere client-enemies |
 | `world` | capture host-world client-world host-death |
 | `chars` | host-chars client-chars host-progress |

@@ -20,7 +20,7 @@ tools/run-test.sh --list                         # every test, group and map bat
 tools/run-test.sh ITEM...                        # tests, groups and batteries, mixed, any order
 tools/run-test.sh map:enemies map:world host-world
 tools/run-test.sh net combat                     # groups: net combat world chars story menus authority
-tools/run-test.sh all                            # the 25 scripted-peer tests;  full = all + map
+tools/run-test.sh all                            # the 28 scripted-peer tests;  full = all + map
 tools/run-test.sh maps                           # every map battery, each in its own fresh world
 tools/run-test.sh --plan client-world            # what would run (prerequisites added), without running
 ```
@@ -42,6 +42,7 @@ A test takes about 20 seconds to a minute and a half. The runner waits for the g
 | `host-elsewhere` | host | the host is away as in a separate location (stand-in grid): enemies near the dummy keep running, its puppet is hidden; a knocked object near the host is sent where it came to rest (ObjMove); the observer asks where `outside_bunker_underground_part2_01` stands (`LocationAsk`), gets the host's spot (`LocationSlot`) and the host loads it there (`[locations] loaded ... (promised ...)`: the two must match) |
 | `host-reload` | host | the host reloads its world: the player gets `WorldReload` |
 | `host-menu` | host | the host goes back to the main menu: the player gets `HostAway` and leaves, the server stops |
+| `host-upnp` | host | `--dwmp-upnp-test`: Direct hosting opens its port on `fakerouter.py` (never the real router), first as a UPnP router that takes only permanent leases and sits behind carrier-grade NAT (`private` in the log), then as a NAT-PMP one that gives other ports (TCP 30000, UDP 30001); the reset after each must remove both mappings (`port mapping (MODE): PASS`) |
 | `host-chapter` | host | `storytest.py` asks for chapter 2 (`StoryRequest`) from a stand-in chapter event (`--dwmp-test-chapter`): refused from 4000 away, for chapter 3, from an event the host hasn't got while not away, and for the epilogue; allowed beside it. The host really builds chapter 2 in the sandbox: `ChapterStart`, `WorldReload`, the new world offered, the character back as kind 3 |
 | `host-end` | host | `--dwmp-test-end 5`: the host starts the epilogue; the player gets `GameEnd` and the server stops |
 | `host-authority` | host | `authtest.py` asks for things the host must allow or refuse: a door from beside it and from 4000 away, impossible door actions, a container from too far, a trap disarm (the host's roll, `result 1/0`) and again, a lockpick on a door with no lock, a padlock from too far, with a wrong code and with its code, a locked crate picked from too far and from beside it (`result 1`), hits a second from beside the dog (30 with a pump-action shotgun and 28 with a submachine gun in one second all allowed, 30 with bare hands: 6 refused, NetEnemies.MaxHits), a 99999 bare-hands hit (capped to 40), a hit on no enemy, two players pouring 10 and 15 into the same generator at once (`fuel sum: ... PASS`: the host's level goes up by 25), a pour of more than a can holds (refused) and pours until the tank is full (the last one only partly taken, then refused), a sustained speed hack (`PlayerCorrection`) and a normal walk (none) |
@@ -68,7 +69,7 @@ The loading screen: run any host or client test with `LOAD_SHOTS=DIR` (e.g. `LOA
 
 The test world isn't in the runner. To check it, launch the game by hand with `--dwmp-testworld --dwmp-reset --dwmp-shots DIR`: it copies your saves into `BepInEx/cache/DarkwoodMP/testworld` (your real saves are only read), loads that copy, builds the test area and screenshots it into DIR. The log says `Test world: built N of 19 test stations`. `--dwmp-sandbox` isn't needed for this, since the test world plays its copy through the save redirect.
 
-A full pass is `tools/run-test.sh full` (`all`, 25 tests, about 12 minutes, then `map`). Batteries: `docs/MULTIPLAYER_TESTING_GUIDE.md`.
+A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then `map`). Batteries: `docs/MULTIPLAYER_TESTING_GUIDE.md`.
 
 ## Reading results
 

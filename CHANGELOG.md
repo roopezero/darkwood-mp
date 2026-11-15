@@ -2,6 +2,14 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.25.0
+
+*Protocol 27, plays with 0.24.x and 0.23.x (no message changed).*
+
+- Hosting with Direct asks your router to open the port, so friends over the internet can join without you setting up port forwarding. The mod tries UPnP first, then NAT-PMP, opens the port for TCP (the game) and UDP (the server browser), keeps it open while you host and closes it again when you stop or quit. The Multiplayer window says what the router answered and shows your internet address. If the router refused, it says so (forward the port by hand then), and if the router's own internet address is a shared one (your provider's carrier-grade NAT, or a second router in front), it warns that opening the port won't be enough and suggests Steam or a VPN. It's on by default; untick *Open the port on my router* in the Multiplayer window, the Start Game window or Options (`[Host] OpenPort`) to leave the router alone. Steam hosting is unchanged and doesn't need it.
+
+How it was tested: against a scripted router only (`host-upnp`, new). No real router has been tried yet, and the user didn't play it. The scripted router acted first as a UPnP router that takes only permanent forwards and sits behind carrier-grade NAT, then as a NAT-PMP router that hands out other ports than asked. Each time, hosting opened TCP and UDP 27720 to this computer, the warning or the router's ports showed up, and stopping removed both. Tests never contact the real router: a game started for testing only opens the port on the scripted one. The check box was looked at in the Options window's screenshots; the Multiplayer window's status line for a real router wasn't seen on screen. On the final build: capture, handshake, host-combat, client-enemies, client-chars, host-upnp, menu-entry and options passed.
+
 ## 0.24.0
 
 *Protocol 27, plays with 0.23.x (no message changed).*

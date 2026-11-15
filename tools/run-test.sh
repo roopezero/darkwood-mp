@@ -23,13 +23,14 @@
 # After each one: the game is sent back to its main menu, a client game stopped unless a map battery comes next,
 # leftover downloaded worlds removed from the mod's caches, and your saves compared with their hashes from the start.
 # At the end, a table: each item's result, time, first failure, its log, and the command that reruns it alone.
-#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world)
+#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world, host-drag, host-upnp)
 #   RAN   no failure seen (no FAIL line, no time-out, no exception), but its printed lines are the result: read them
 #   SKIP  the test can't run here (steam without the Steam client): the reason is shown
 #   FAIL  a FAIL line, a time-out, an exception in Player.log, a failed step or differing dumps
 #
 # Host tests (the game hosts a COPY of your save; your own saves are never opened):
 #   handshake     refusals (password, version, game, same key) and joins, against the TCP host
+#   host-upnp     Direct hosting opens its port on a scripted router (UPnP, then NAT-PMP) and closes it when it stops
 #   capture       download the host's world into $WORK/world.pkl (needed by the client tests)
 #   host-combat   a spawned enemy, the dummy and a scripted fighter: threat, bites, hits, blood, noise, area damage,
 #                 swings and aims (PlayerCue), invisibility and wards, player fx
@@ -96,7 +97,7 @@ ULOG="$DATA/Player.log"
 PY="python3 -I"
 CTL=27799
 
-ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-authority host-drag menu-entry client-reload client-chapter client-away client-menu client-end client-epilogue client-drop client-authority host-end host-chapter steam"
+ALL="capture handshake host-combat host-world client-world client-enemies client-chars host-chars host-progress host-death host-elsewhere host-reload host-menu host-upnp host-authority host-drag menu-entry client-reload client-chapter client-away client-menu client-end client-epilogue client-drop client-authority host-end host-chapter steam"
 declare -A DESC=(
   [handshake]="refusals (password, version, game) and a valid join"
   [capture]="download the host's world for the client tests"
@@ -108,6 +109,7 @@ declare -A DESC=(
   [host-elsewhere]="the host in a separate location: the world kept running around the dummy"
   [host-reload]="the host reloads its world; the player is told to reload"
   [host-menu]="the host goes to the main menu: the server stops"
+  [host-upnp]="Direct hosting opens its port on a scripted router (UPnP, then NAT-PMP) and closes it again"
   [host-authority]="what a player asks for, allowed or refused by the host"
   [host-drag]="two players at the same thing: one drag at a time, container batches whole or not at all"
   [host-chapter]="a player sets off the next chapter: everyone follows the host into it"
@@ -134,7 +136,7 @@ declare -A DESC=(
 )
 # Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots, options and drag.
 declare -A GROUP=(
-  [net]="handshake host-menu host-reload client-reload client-away client-menu client-drop steam"
+  [net]="handshake host-menu host-upnp host-reload client-reload client-away client-menu client-drop steam"
   [combat]="host-combat host-elsewhere client-enemies"
   [world]="capture host-world client-world host-death"
   [chars]="host-chars client-chars host-progress"
@@ -144,7 +146,7 @@ declare -A GROUP=(
 )
 GROUP_NAMES="net combat world chars story menus authority"
 # Tests with a verdict of their own (PASS rather than RAN when nothing failed).
-VERDICT=" map map4 options drag menu-entry capture host-world host-drag "
+VERDICT=" map map4 options drag menu-entry capture host-world host-drag host-upnp "
 
 # Map batteries: every tools/tests/map_scenario_NAME.py is the battery map:NAME. "maps" runs those without
 # "IN_MAPS = False" (a module that only repeats the whole scenario, as map_scenario_dogfull.py does).
@@ -460,6 +462,23 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       wait_log "dwmp-spawn:" 60
       $PY "$T/combattest.py" 27720 6057 350 90 reload | grep -E "WorldReload|HostAway|message counts"
       mod_log "world changed" ;;
+    host-upnp)
+      # The router is tools/tests/fakerouter.py on 127.0.0.1: once as a UPnP router (permanent leases only, behind
+      # carrier-grade NAT), once as a NAT-PMP one (other external ports than asked). Hosting must open the game's
+      # port for TCP and UDP, and stopping (the reset) must close both.
+      for mode in upnp pmp; do
+        how=UPnP; [ $mode = pmp ] && how=NAT-PMP
+        $PY "$T/fakerouter.py" $mode 27731 150 >"$WORK/router.out" 2>&1 & rp=$!
+        sleep 0.5
+        host --dwmp-upnp-test 127.0.0.1:27731; world_ready
+        wait_log "\[port mapping\] $how:" 30
+        ctl reset >/dev/null
+        wait_log "removed $how mapping" 15
+        kill -TERM $rp 2>/dev/null; wait $rp; cat "$WORK/router.out"
+      done
+      mod_log "port mapping|upnp-test"
+      mod_log "port mapping\] UPnP:.*private" | grep -q . && echo "  PASS UPnP: carrier-grade NAT reported" || echo "  FAIL UPnP: the router's 100.64 address wasn't reported as a second NAT"
+      mod_log "port mapping\] NAT-PMP:.*TCP 30000, UDP 30001" | grep -q . && echo "  PASS NAT-PMP: the router's own ports used" || echo "  FAIL NAT-PMP: the ports the router gave weren't used" ;;
     host-menu)
       host --dwmp-test-menu 10; world_ready
       $PY "$T/combattest.py" 27720 6057 350 60 | grep -E "HostAway|closed"

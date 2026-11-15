@@ -132,7 +132,8 @@ namespace DarkwoodMP
             if (Ui.Button(m[1], "-", cfg.MaxPlayers.Value > 2)) cfg.MaxPlayers.Value--;
             Ui.Label(m[2], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright, TextAnchor.MiddleCenter);
             if (Ui.Button(m[3], "+", cfg.MaxPlayers.Value < Protocol.MaxPlayers)) cfg.MaxPlayers.Value++;
-            Ui.Text(f, $"Friends connect on TCP port {cfg.DirectPort.Value}, and the browser asks on UDP {cfg.DirectPort.Value}. Over the internet, forward both, or use a VPN (Tailscale, ZeroTier).", MenuSkin.Dim);
+            cfg.OpenPort.Value = Ui.Check(f.Next(Ui.RowH), cfg.OpenPort.Value, "Open the port on my router (UPnP)");
+            Ui.Text(f, PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value), MenuSkin.Dim);
             if (Ui.Button(f, "Start hosting"))
             {
                 _session.LastRefusal = null;
@@ -147,8 +148,11 @@ namespace DarkwoodMP
             {
                 Ui.Text(f, "Friends find you in their LAN tab, or add one of these:", MenuSkin.Dim);
                 foreach (var ip in TcpBackend.LocalAddresses()) AddressRow(f, $"{ip}:{_tcp.Port}", "LAN / VPN");
-                if (_publicIp != null) AddressRow(f, $"{_publicIp}:{_tcp.Port}", "internet: forward the port");
+                var map = _tcp.Mapper;
+                if (map.Mapped && map.ExternalIp != null && !map.BehindAnotherNat) AddressRow(f, $"{map.ExternalIp}:{map.ExternalPort}", "internet");
+                else if (_publicIp != null) AddressRow(f, $"{_publicIp}:{_tcp.Port}", map.Mapped ? "internet" : "internet: forward the port");
                 else if (Ui.Button(f, _lookingUp ? "Looking up..." : "Show my public IP (asks api.ipify.org)") && !_lookingUp) LookUpPublicIp();
+                if (map.Status.Length > 0) Ui.Text(f, map.Status, map.Mapped && !map.BehindAnotherNat ? (Color?)null : MenuSkin.Warn);
             }
             if (!_tcp.IsHost && _session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
                 _tcp.Rejoin(); // sends your character first
@@ -170,6 +174,11 @@ namespace DarkwoodMP
             Ui.Label(c[0], PixelFont.Fit($"{addr}  ({note})", c[0].width));
             if (Ui.Button(c[1], "Copy")) GUIUtility.systemCopyBuffer = addr;
         }
+
+        /// <summary>What the host's friends connect on, and what the host has to do for internet play.</summary>
+        public static string PortHint(int port, bool openPort) => openPort
+            ? $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Your router is asked to forward both; if it can't, the window says so: forward them by hand, or use a VPN (Tailscale, ZeroTier)."
+            : $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Over the internet, forward both, or use a VPN (Tailscale, ZeroTier).";
 
         private void LookUpPublicIp()
         {

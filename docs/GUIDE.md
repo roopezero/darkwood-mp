@@ -23,9 +23,9 @@ The panel and the windows it opens look like Half-Life's and Counter-Strike 1.6'
 
 **Steam:** in your world, *Host with Steam*, then *Invite Steam friends*. Friends accept the invite, or use *Join Game* in their friends list, even if their game isn't running yet.
 
-**Steam friends** (Steam version only): your Steam rich presence says what you're doing, for example `DarkwoodMP 0.24.0 · Chapter 1, day 3 · Dry Meadow · Hosting, 2/4 players` (or `In the main menu`, `Playing alone`, `In Keeper's game, 2/4 players`). The map part is the area of the map you're in, named as the game's map names it, and is left out inside a separate location. Friends see it in *View game info* on your name in their friends list. The line under your name in the list stays "Darkwood": Steam shows text there only from rich presence tokens that the game's developer uploads to Steamworks, and Darkwood has none, so a mod can't set it. In a Steam lobby, Steam is also told which players are together (`steam_player_group` and its size), so it can group them in friends lists. It's updated every 5 seconds, only when it changed.
+**Steam friends** (Steam version only): your Steam rich presence says what you're doing, for example `DarkwoodMP 0.25.0 · Chapter 1, day 3 · Dry Meadow · Hosting, 2/4 players` (or `In the main menu`, `Playing alone`, `In Keeper's game, 2/4 players`). The map part is the area of the map you're in, named as the game's map names it, and is left out inside a separate location. Friends see it in *View game info* on your name in their friends list. The line under your name in the list stays "Darkwood": Steam shows text there only from rich presence tokens that the game's developer uploads to Steamworks, and Darkwood has none, so a mod can't set it. In a Steam lobby, Steam is also told which players are together (`steam_player_group` and its size), so it can group them in friends lists. It's updated every 5 seconds, only when it changed.
 
-**Direct, hosting:** in your world, under *Direct connection*, set a server name, a port (default **27720**), an optional password and the most players, then *Start hosting*. The panel lists the addresses friends can use, each with a *Copy* button. The public IP is looked up from api.ipify.org, but only when you click for it.
+**Direct, hosting:** in your world, under *Direct connection*, set a server name, a port (default **27720**), an optional password and the most players, then *Start hosting*. The panel lists the addresses friends can use, each with a *Copy* button. With *Open the port on my router* ticked (the default), the router is asked to forward the port, and the panel says what it answered and shows your internet address from the router. Otherwise the public IP is looked up from api.ipify.org, but only when you click for it.
 
 **Direct, joining:** *Find servers...* opens the server browser. Pick a server and *Connect* (or double-click it); a server with a password asks for it first. *Connect to address...* joins by address without the browser.
 - *Favorites* has the servers you added with *Add server...* (`host` or `host:port`) or *Add to favorites*.
@@ -34,7 +34,18 @@ The panel and the windows it opens look like Half-Life's and Counter-Strike 1.6'
 
 The columns are a padlock for a password, the server's name, players, its world (day and chapter) and ping; click a heading to sort by it, again to turn the order round. A server your version can't join is greyed out, and the line under the list says why.
 
-**Ports:** the host listens on its port over **TCP** (the game) and over **UDP** on the same number (the browser). For internet play, forward both on the host's router, or use a VPN such as Tailscale or ZeroTier. The host's own firewall must allow both too. Windows asks the first time. On Fedora:
+**Ports:** the host listens on its port over **TCP** (the game) and over **UDP** on the same number (the browser). For internet play, both must be forwarded on the host's router, or everyone can use a VPN such as Tailscale or ZeroTier.
+
+**Opening the port on the router:** when you start hosting with Direct, the mod asks your router to forward the port, TCP and UDP, to your computer: with UPnP first, then NAT-PMP (Apple's routers and many others). The forward lasts an hour and is renewed every half hour while you host, and it's removed when you stop hosting or quit. Only your own router is asked. The Multiplayer window says what happened:
+- *Your router opened port 27720 (TCP and UDP)*: friends can connect on the internet address shown.
+- *Your router didn't open the port*: UPnP and NAT-PMP are turned off on the router, or it has neither. Turn UPnP on in the router's settings, or forward the port by hand.
+- *Port 27720 is already forwarded to another computer*: pick another port, or change the router's forward.
+- *Its internet address is a shared or private one*: there's another NAT in front of your router: your internet provider's (carrier-grade NAT, common on mobile and some fibre connections), or a second router such as the provider's modem. Opening the port on your router doesn't reach you from the internet then. Use Steam or a VPN, or put the modem in bridge mode.
+- With NAT-PMP, the router may pick other port numbers than asked. Friends connect to the TCP one shown. If the UDP one differs, their server browsers can't see you over the internet, but joining by address works.
+
+The router agreeing doesn't prove that friends can reach you (your firewall, or a provider that blocks incoming connections, can still stop them), and the mod can't check that from your side. Untick *Open the port on my router* (in the Multiplayer window, the Start Game window or Options) to leave the router alone.
+
+The host's own firewall must allow both ports too. Windows asks the first time. On Fedora:
 
 ```
 sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo firewall-cmd --reload
@@ -115,6 +126,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 | General | `SkillsKey` | `K` | The key that opens and closes the Skills panel (a Unity `KeyCode` name, e.g. `N`) |
 | General | `PlayerName` | (empty) | Your name for others. Empty means your Steam name, or your OS user name |
 | Host | `ServerName`, `Port`, `Password`, `MaxPlayers` | Darkwood, 27720, (none), 5 | Your Direct server |
+| Host | `OpenPort` | `true` | When hosting with Direct, ask the router to forward the port (UPnP or NAT-PMP), and remove it when you stop. `false` leaves the router alone |
 | Host | `LiveWorld` | `true` | Joiners get the world as it is now. `false` sends your last save |
 | Host | `SnapshotOffThread` | `true` | The snapshot for a joiner is written on a worker thread, so your game stops only while the world is read |
 | Host | `NewCharacters` | `fresh` | Someone new starts `fresh` (no items, beside you) or as a `copy` of your character |
@@ -138,7 +150,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 - **Linux: the game doesn't start from Steam.** Check the launch options say `./darkwood_mp.sh %command%`.
 - **The main menu has no Join Game (it shows the game's own entries).** Look in `BepInEx/LogOutput.log` for `DarkwoodMP ... loaded`. If it says some patches were skipped, the game build differs from the one the mod was made for (a game update, or the GOG build); what those patches do won't be shared.
-- **"No answer" when joining by address.** The host's router must forward the port (TCP and UDP), and its firewall must allow it. On a LAN, check the host's firewall first.
+- **"No answer" when joining by address.** The host's router must forward the port (TCP and UDP), and its firewall must allow it. On a LAN, check the host's firewall first. Over the internet, read what the host's Multiplayer window says about the router (see *Opening the port on the router*).
 - **Refused: "different DarkwoodMP version".** Everyone needs a mod version with the same protocol (see the release notes).
 - **A Steam join stops partway through the world download.** Fixed in 0.11.1: only the host needs it.
 - **Refused: "isn't in a saved game yet".** The host has to be in their world, not the menu.
@@ -162,3 +174,4 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 - A client's own character (health, what it carries, skills) is kept by its own game, as a prediction the host doesn't check; the host checks what crosses between it and the world (containers, hits, actions). Damage a client takes from the host's enemies is the host's.
 - In the epilogue each game runs its own copy of the epilogue's places and their scripted scenes; the players are taken from part to part together, but what happens inside a part (the scenes, the crawl through the burning forest) plays out in each game by itself (only the Being set on fire and the pan over the burning forest are shared), and the outcomes screen uses the host's ending (the credits follow the host's). A joiner whose game can't go into the epilogue within 30 seconds (still in a dream, loading) leaves and sees the end screen instead. A real chapter change and a real epilogue (from the end of chapter 2) were tried only with scripted players; see [INTERACTIONS.md](INTERACTIONS.md), gap 26.
 - Nightmare and hard-mode permadeath work as in single player, in each player's own game.
+- Opening the port on the router works only with a router that has UPnP or NAT-PMP turned on, for IPv4, and can't get past a second NAT (your provider's, or a modem in front of your router). It was tested against a scripted router, not real ones yet. If the game is killed while hosting, a router that took only a permanent forward keeps it until you remove it in the router's settings, or host and stop hosting again.

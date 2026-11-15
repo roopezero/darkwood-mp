@@ -40,6 +40,10 @@ namespace DarkwoodMP.Net
         public static int TestMaxPlayers;
         public int Port { get; private set; }
         public string ServerName { get; private set; } = "";
+        /// <summary>Host: whether to ask the router to forward the port (UPnP / NAT-PMP), read each time hosting starts.</summary>
+        public Func<bool> MapPort = () => false;
+        /// <summary>Opens the port on the router while hosting, when <see cref="MapPort"/> says so.</summary>
+        public readonly PortMapper Mapper = new PortMapper();
         /// <summary>Host: how many are playing, for the info query (set by the session).</summary>
         public Func<int> PlayerCount = () => 1;
 
@@ -93,6 +97,7 @@ namespace DarkwoodMP.Net
         // ---- hosting -------------------------------------------------------
 
         public bool HostLost { get; private set; }
+        private bool _quitting;
 
         public bool Host(string serverName, int port, string password, int maxPlayers)
         {
@@ -138,6 +143,7 @@ namespace DarkwoodMP.Net
             StartThread("DarkwoodMP accept", () => AcceptLoop(listener, gen));
             if (_info != null) { var udp = _info; StartThread("DarkwoodMP info", () => InfoLoop(udp, gen)); }
             Plugin.Log.LogInfo(Status);
+            if (MapPort()) Mapper.Start(port);
             OnEntered?.Invoke();
             return true;
         }
@@ -474,6 +480,7 @@ namespace DarkwoodMP.Net
             List<Conn> all;
             lock (_conns) { all = new List<Conn>(_conns.Values); _conns.Clear(); }
             foreach (var c in all) Close(c, flush: true); // a leaving client's character, the host's HostAway
+            Mapper.Stop(wait: _quitting); // nothing to do unless we hosted with the port opened
             try { _listener?.Stop(); } catch { }
             try { _info?.Close(); } catch { }
             _listener = null; _info = null;
@@ -514,6 +521,7 @@ namespace DarkwoodMP.Net
         {
             List<Conn> all;
             lock (_conns) all = new List<Conn>(_conns.Values);
+            _quitting = true; // the router's mappings are removed before the process ends
             Leave();
             int until = Environment.TickCount + 1000;
             foreach (var c in all)

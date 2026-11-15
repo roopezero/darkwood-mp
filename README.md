@@ -69,7 +69,7 @@ The main menu looks different: a column of entries in the lower left (*Start Gam
 Choose *Start Game*, pick a save (or *New Game*), tick **Host a multiplayer game**, and choose *Steam* or *Direct*. You can also start hosting from inside your world: press Escape and choose *Multiplayer*.
 
 - **Steam:** once you're in your world, use *Invite Steam friends* in the Multiplayer window. No port forwarding needed.
-- **Direct:** set a server name, and a password if you want one (from the pause menu, then click *Start hosting*). The Multiplayer window lists the addresses friends can use. For friends on the same network, that's all. For friends over the internet, forward port **27720**, both **TCP and UDP**, on your router, or all of you can use a VPN such as Tailscale or ZeroTier. Allow the game through your firewall when Windows asks.
+- **Direct:** set a server name, and a password if you want one (from the pause menu, then click *Start hosting*). The Multiplayer window lists the addresses friends can use. For friends on the same network, that's all. For friends over the internet, the mod asks your router to open port **27720** (UPnP) and says whether it did. If your router won't, forward port 27720, both **TCP and UDP**, on your router yourself, or all of you can use a VPN such as Tailscale or ZeroTier. Allow the game through your firewall when Windows asks.
 
 ### Joining
 
@@ -84,7 +84,7 @@ If things ever look out of sync, open the Multiplayer window (Escape, *Multiplay
 
 - **The menu looks like the normal game.** The mod didn't load. On Linux, check the launch options are exactly `./darkwood_mp.sh %command%`. On Windows, check that `winhttp.dll` is next to `Darkwood.exe` (see the Windows Defender note above). If there's no `BepInEx\LogOutput.log` in the game folder after starting the game, and your `Darkwood.exe` is 32-bit, use `DarkwoodMP-win_x86.zip` instead.
 - **"Different DarkwoodMP version".** Everyone needs the same mod version.
-- **"No answer" when joining by address.** The host's router must forward port 27720 (TCP and UDP), and the host's firewall must allow it.
+- **"No answer" when joining by address.** The host's router must forward port 27720 (TCP and UDP), and the host's firewall must allow it. The host's Multiplayer window says whether the router opened the port. If it says the router's internet address is a shared one, your internet provider shares one address between many homes, and forwarding can't help: use Steam or a VPN.
 - **"The host is watching the prologue's intro"** (or "in a dream"). Wait: you join by yourself when they're out of it.
 - **"The host is playing the ending".** Nobody can join during the epilogue; join after it. A save that is already in the epilogue can't be hosted.
 - **The LAN tab finds nothing.** The host's firewall must allow UDP port 27720.

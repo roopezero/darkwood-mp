@@ -39,9 +39,10 @@ Steam (easiest, no port forwarding):
 Direct (for GOG, or without Steam):
   Host: set a server name and an optional password (from the pause menu,
   then click "Start hosting"). The Multiplayer window shows the addresses
-  friends can use. For play over the internet, the host must forward port
-  27720 on their router, both TCP and UDP, or everyone can use a VPN such
-  as Tailscale or ZeroTier.
+  friends can use. For play over the internet, the mod asks the host's
+  router to open port 27720 (UPnP) and says whether it did. If the router
+  won't, the host must forward port 27720 on it, both TCP and UDP, or
+  everyone can use a VPN such as Tailscale or ZeroTier.
   Windows asks to allow the game through the firewall the first time:
   allow it.
   Join: choose Join Game in the main menu. The LAN tab finds games on your

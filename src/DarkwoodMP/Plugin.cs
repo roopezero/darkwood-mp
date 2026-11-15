@@ -18,7 +18,7 @@ namespace DarkwoodMP
     {
         public const string Guid = "com.darkwoodmp.coop";
         public const string Name = "DarkwoodMP";
-        public const string Version = "0.24.0";
+        public const string Version = "0.25.0";
     }
 
     public sealed class ModConfig
@@ -28,6 +28,7 @@ namespace DarkwoodMP
         public ConfigEntry<bool> SkipIntro;
         public ConfigEntry<string> PlayerName;
         public ConfigEntry<int> DirectPort;
+        public ConfigEntry<bool> OpenPort;
         public ConfigEntry<string> LastAddress;
         public ConfigEntry<string> Password;
         public ConfigEntry<string> ServerName;
@@ -142,6 +143,12 @@ namespace DarkwoodMP
             }
         }
 
+        /// <summary>
+        /// Whether Direct hosting asks the router to forward the port. A test game never touches the real router
+        /// (the tests host over and over); it opens the port only on the fake router of --dwmp-upnp-test.
+        /// </summary>
+        private static bool OpensPort() => PortMapper.TestRouter != null || (Cfg.OpenPort.Value && !TestMode);
+
         /// <summary>Host with Direct on the configured port; a password or player limit given here is for this time only.</summary>
         private bool HostDirect(string password = null, int maxPlayers = 0) =>
             _tcp.Host(Cfg.ServerName.Value, Cfg.DirectPort.Value, password ?? Cfg.Password.Value, maxPlayers > 0 ? maxPlayers : Cfg.MaxPlayers.Value);
@@ -171,6 +178,7 @@ namespace DarkwoodMP
                 SendRate = Config.Bind("Network", "SendRate", 20, "Player state updates per second."),
                 ServerName = Config.Bind("Host", "ServerName", "Darkwood", "Your server's name in other players' server browsers."),
                 DirectPort = Config.Bind("Host", "Port", TcpBackend.DefaultPort, "Port to host on: TCP for the game, UDP for the server browser."),
+                OpenPort = Config.Bind("Host", "OpenPort", true, "When hosting with Direct, ask your router to forward the port (UPnP or NAT-PMP), and close it again when you stop. Off: forward it by hand."),
                 Password = Config.Bind("Host", "Password", "", "Password players need to join your server (empty for none)."),
                 MaxPlayers = Config.Bind("Host", "MaxPlayers", Protocol.MaxPlayers, "Most players at once, you included."),
                 LiveWorld = Config.Bind("Host", "LiveWorld", true, "Players who join get the world as it is now (a snapshot saved for them, your own save untouched). Off: as you last saved it."),
@@ -185,7 +193,7 @@ namespace DarkwoodMP
             };
 
             _session = new Session { LocalKey = PlayerKey.Load(Paths.ConfigPath) };
-            _tcp = new TcpBackend { PlayerCount = () => _session.PlayerCount };
+            _tcp = new TcpBackend { PlayerCount = () => _session.PlayerCount, MapPort = OpensPort };
             _session.Add(_tcp);
             _browser = new ServerBrowser(Paths.ConfigPath);
             _direct = new DirectPanel(_tcp, _browser, _session);
@@ -313,6 +321,10 @@ namespace DarkwoodMP
 
             // "--dwmp-host": start hosting directly at once (testing / always-on hosts); "--dwmp-password P" for this time only.
             // "--dwmp-max-players N" (tests only): this many players, even beyond the mod's 4 (map4 with four clients).
+            // "--dwmp-upnp-test HOST:PORT" (tests only): the router is tools/tests/fakerouter.py there; nothing is discovered.
+            // Set for each test of a run, so the tests after this one don't keep it.
+            PortMapper.TestRouter = Arg("--dwmp-upnp-test");
+            if (PortMapper.TestRouter != null) Log.LogInfo($"--dwmp-upnp-test: the router is {PortMapper.TestRouter}");
             if (Has("--dwmp-host"))
             {
                 TcpBackend.TestMaxPlayers = int.TryParse(Arg("--dwmp-max-players"), out int mp) ? mp : 0;

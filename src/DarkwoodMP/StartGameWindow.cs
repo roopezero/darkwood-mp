@@ -337,6 +337,7 @@ namespace DarkwoodMP
                     Ui.Label(pm[5], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright, TextAnchor.MiddleCenter);
                     if (Ui.Button(pm[6], "+", on && !steam && cfg.MaxPlayers.Value < Protocol.MaxPlayers)) cfg.MaxPlayers.Value++;
                     cfg.Password.Value = Ui.Field(f, "Password", cfg.Password.Value, 32, password: true);
+                    cfg.OpenPort.Value = Check(f.Next(Ui.RowH), cfg.OpenPort.Value, "Open the port on my router (UPnP)", on && !steam);
                 });
 
                 var ch = f.Row(Ui.RowH, 90, 0, 0);
@@ -346,7 +347,7 @@ namespace DarkwoodMP
                 if (Choice(ch[2], "Copy of you", copy, on)) cfg.NewCharacters.Value = "copy";
                 Ui.Text(f, steam
                     ? "Friends join by your Steam invite, or Join Game in the Steam friends list. Hosting starts once your world has loaded."
-                    : $"Friends connect on TCP port {cfg.DirectPort.Value} and the browser asks on UDP {cfg.DirectPort.Value}: forward both, or use a VPN (Tailscale, ZeroTier). Hosting starts once your world has loaded.",
+                    : DirectPanel.PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value) + " Hosting starts once your world has loaded.",
                     MenuSkin.Dim);
             });
         }

@@ -406,6 +406,8 @@ namespace DarkwoodMP
             c = Setting(f, "Port");
             string port = Ui.Field(Ui.Split(c[1], 80, 0)[0], cfg.DirectPort.Value.ToString(), 5);
             if (int.TryParse(port, out int p) && p > 0 && p <= 65535) cfg.DirectPort.Value = p;
+            c = Setting(f, "");
+            cfg.OpenPort.Value = Ui.Check(c[1], cfg.OpenPort.Value, "Open it on my router (UPnP, NAT-PMP)");
             c = Setting(f, "Password");
             cfg.Password.Value = Ui.Field(c[1], cfg.Password.Value, 32, password: true);
             c = Setting(f, "Max players");

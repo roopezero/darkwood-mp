@@ -15,7 +15,7 @@ A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1
 ```
 src/DarkwoodMP/
   Plugin.cs, DirectPanel.cs     entry point, config, F7 panel, --dwmp-* test arguments
-  Net/                          Session (handshake, relay), backends (TcpBackend, SteamBackend + Lobby + SteamTransport),
+  Net/                          Session (handshake, relay), backends (TcpBackend + PortMapper (UPnP/NAT-PMP), SteamBackend + Lobby + SteamTransport),
                                 Packets (MsgType list + Protocol.Version), ServerBrowser/ServerInfo, PlayerKey
   Sync/                         player puppets: PlayerSnapshot (tk2d sprites), RemotePlayer, PlayerSync
   Combat/                       NetPlayerProxy (remote players for the host's AI), Threat, NetEnemies (enemy replication),
