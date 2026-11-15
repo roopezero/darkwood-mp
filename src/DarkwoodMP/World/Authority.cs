@@ -214,6 +214,11 @@ namespace DarkwoodMP.World
             var p = Requester;
             if (p == null) return true; // not known yet (just joined): nothing to check against
             float d = Flat(p, pos);
+            // The stand-in follows the puppet, which moves on the next frame; the player's newest position (a
+            // PlayerState flushed just before this request, Sync.PlayerSync.FlushNow) has already been through
+            // MoveCheck, so it's as trustworthy as the stand-in and newer. Either will do.
+            if (d > reach && Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.TryChecked(From, out var at))
+                d = Mathf.Min(d, new Vector2(at.x - pos.x, at.z - pos.z).magnitude);
             if (d <= reach) return true;
             Refuse($"{what} is {d:0} away from them (reach {reach:0})");
             return false;

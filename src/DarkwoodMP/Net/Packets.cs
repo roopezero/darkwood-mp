@@ -185,7 +185,8 @@ namespace DarkwoodMP.Net
         Construct = 66,
         /// <summary>
         /// Either way: u8 kind (1 a trigger a player set off, 2 a world event, 3 a trigger the host's world set off by
-        /// itself, 4 a player left an area trigger: its exit events), ObjRef (u8 kind, i64 id) of the EventTriggers (kind 2: none, 0 and 0), u8 the trigger's index in it,
+        /// itself, 4 a player left an area trigger: its exit events, 5 a player set off a once-only trigger that already
+        /// fired for another player: only its own steps), ObjRef (u8 kind, i64 id) of the EventTriggers (kind 2: none, 0 and 0), u8 the trigger's index in it,
         /// str the world event's name (kinds 1 and 3: the world events the trigger's steps fire by name, one per line,
         /// or ""; a game that doesn't have the trigger, such as one in a separate location its player hasn't been to,
         /// runs those instead, and the host accepts such a trigger from a client if it has them all). From a client (kinds 1 and 2): its player set off this
@@ -195,7 +196,10 @@ namespace DarkwoodMP.Net
         /// from the host is also a world event a character's animation fired there (ScriptedEvents.FromAnimation). Kind 4
         /// (str ""), either way (from a client a request, though its own exit already ran there): the sender's player walked out of that area and its exit events ran
         /// there; the host runs the host's and the shared steps and passes it on, the others the shared steps, each
-        /// game only if its own player isn't still in the area. See World.ScriptedEvents.
+        /// game only if its own player isn't still in the area. Kind 5 (str ""), only from a client as a request: the host
+        /// checks it fired, that this player hasn't had its part of it, reach and what it needs, and runs nothing; the
+        /// client then runs its own steps of it (those a later player gets: ScriptedEvents.LaterStep). Not passed on.
+        /// See World.ScriptedEvents.
         /// </summary>
         EventFired = 67,
         /// <summary>
@@ -493,7 +497,7 @@ namespace DarkwoodMP.Net
     public static class Protocol
     {
         /// <summary>Bump whenever the wire format changes; a host refuses other versions.</summary>
-        public const ushort Version = 27;
+        public const ushort Version = 28;
         public const string Game = "darkwood";
         /// <summary>Most players in one game, the host included: the host and four friends (map4 with MAP_CLIENTS=4 plays five).</summary>
         public const int MaxPlayers = 5;

@@ -123,6 +123,7 @@ namespace DarkwoodMP.World
             _lastRequest = Time.realtimeSinceStartup;
             var ge = thisGO != null ? thisGO.GetComponent<GameEvents>() : null;
             var r = ge != null ? ObjRef.Of(thisGO) : default;
+            Sync.PlayerSync.Instance?.FlushNow(); // the host checks our reach (a stage starts as we arrive): our newest position first
             var w = S.Begin(MsgType.StoryRequest);
             r.Write(w);
             w.W.Write((byte)(ge != null ? Math.Max(0, ge.events.IndexOf(e)) : 0));
