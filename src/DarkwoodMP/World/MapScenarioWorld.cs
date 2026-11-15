@@ -679,7 +679,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>"place-furniture DX DZ": place a piece of furniture that can be broken there (centre + offset), as
-        /// a placed trap is placed (shared as ObjSpawn): the first of a few prefabs that is breakable.</summary>
+        /// a placed trap is placed (shared as ObjSpawn): the first of a few prefabs that is breakable. Each is first
+        /// tried unshared, in this game only, and only the one kept is placed as shared: a tried one that isn't kept
+        /// is removed here with Object.Destroy, which no other game hears of, so it mustn't have been sent (a slow
+        /// frame let the tried chair's ObjSpawn out before it was removed, and it stayed in the client's game).</summary>
         private static IEnumerator PlaceFurniture(string[] a, Result r)
         {
             var at = Centre + new Vector3(F(a[0]), 0f, F(a[1]));
@@ -687,19 +690,22 @@ namespace DarkwoodMP.World
             yield return Walk(at, 150f);
             foreach (var prefab in new[] { "Furnitures/Cottage/chair_1", "Furnitures/Cottage/table_1", "Furnitures/Cottage/shelf" })
             {
+                var tried = Core.AddPrefab(prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
+                yield return null; yield return null; // its health is set in Start
+                var t = tried != null ? tried.GetComponent<Item>() : null;
+                bool breakable = t != null && t.destructible && !t.destroyed && t.health > 1 && !t.hasInventory;
+                if (tried != null) Object.Destroy(tried);
+                if (!breakable) continue;
+                yield return null; // the tried one is gone
                 GameObject made;
                 Containers.Placing = true;
                 try { made = Core.AddPrefab(prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true); }
                 finally { Containers.Placing = false; }
-                yield return null; yield return null; // its health is set in Start
+                yield return new WaitForSeconds(2f);
                 var it = made != null ? made.GetComponent<Item>() : null;
-                if (it != null && it.destructible && !it.destroyed && it.health > 1 && !it.hasInventory)
-                {
-                    yield return new WaitForSeconds(2f);
-                    r.Info = $"{prefab} {ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {it.health}";
-                    yield break;
-                }
-                if (made != null) Object.Destroy(made);
+                if (it == null) { r.Fail($"{prefab}: none placed"); yield break; }
+                r.Info = $"{prefab} {ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {it.health}";
+                yield break;
             }
             r.Fail("none of the prefabs is breakable furniture");
         }
