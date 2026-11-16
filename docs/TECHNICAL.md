@@ -124,5 +124,6 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 236 | EnemyProjectile | H→C | u32 enemy, str projectile (pooled prefab), f32 x, y, z, f32 yaw, f32 vx, vy, vz: a host enemy threw this; clients show it flying (it hurts nobody there and leaves nothing) |
 | 237 | EnemyLandedGone | H→C | i64 spawned id: what an EnemyLanded made is gone on the host; clients remove theirs (their copies never end by themselves) |
 | 100 | DoorLeaf | both | ObjRef door, f32 signed degrees from shut: an open door's leaf a player walked into came to rest there; the host checks the pusher is near and the door is open, and sends it to everyone, the pusher too (`World/DoorLeaf.cs`, DoorPush) |
+| 101 | EnemyArmor | H→C | u32 enemy, u8 on: after its EnemySpawn (which carries a u8 shadow armour flag), the enemy's shadow armour was put on (1) or died (0) on the host |
 
 The browser's UDP query is goasis's: the datagram `info` SEP END, answered with `INFO` SEP name SEP players SEP max SEP password SEP localchars SEP version SEP `game=darkwood` SEP `proto=N` [SEP `world=Day 3, chapter 1`] SEP END, where SEP is byte 0 and END is byte 237.
