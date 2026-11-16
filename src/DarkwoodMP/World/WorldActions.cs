@@ -629,6 +629,7 @@ namespace DarkwoodMP.World
                         // Ours alone (a dream of our own): the host not having it says nothing about ours.
                         if (OursAlone(go.gameObject)) { Plugin.Log.LogInfo($"[world] the host hasn't got {go.name} {obj}: ours alone, kept"); break; }
                         Plugin.Log.LogInfo($"[world] {go.name} {obj} is gone on the host: removed ours");
+                        Containers.CloseIfOpen(go.gameObject);
                         UnityEngine.Object.Destroy(go.gameObject);
                         break;
                     case Kind.Door:
