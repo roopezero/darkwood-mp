@@ -159,10 +159,13 @@ namespace DarkwoodMP.Sync
         /// <summary>Draw name tags above puppets (IMGUI; avoids depending on a font asset).</summary>
         public void DrawNameTags()
         {
+            // Not over the pause menu or the mod's windows; on the map, beside the players' markers; not over a
+            // cutscene, a game menu or anything else that isn't the world in play (UiState).
+            if (World.UiState.MenuOver) return;
             if (MapMarkers.MapOpen) { MapMarkers.DrawNames(); return; }
+            if (World.UiState.WorldOverlaysHidden) return;
             var cam = Camera.main;
             if (cam == null) return;
-            if (Player.Instance != null && Player.Instance.inEpilogue) return; // the ending shows no UI
             foreach (var r in Remotes.Values)
             {
                 if (r.Root == null || !r.Root.activeSelf) continue;

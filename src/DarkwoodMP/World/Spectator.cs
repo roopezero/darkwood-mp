@@ -291,7 +291,7 @@ namespace DarkwoodMP.World
         /// <summary>The spectating line at the bottom of the screen.</summary>
         public static void DrawGui()
         {
-            if (!Active) return;
+            if (!Active || UiState.MenuOver) return; // not over the pause menu or the mod's windows
             string name = Session.Instance?.NameOf(_watching) ?? "?";
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
             if (Epilogue) { GUI.Label(rect, $"Watching {name}. Click for the next player.", Plugin.NameTagStyle); return; }
