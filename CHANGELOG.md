@@ -2,6 +2,22 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## Unreleased
+
+*Protocol 29: doesn't play with 0.26.0 or older. Everyone needs to update.*
+
+Fixes from the 0.25.1 playtest:
+- **Only the player who dives, dives.** In the chapter 2 village cellar, one player diving made every player dive wherever they were, and could leave them unable to move. Any scripted step that acts on "the player" now acts only on the player who set it off.
+- **Anyone can dive once the oxygen tank has been filled.** Once any player has a full tank, every player can dive in the cellar, as often as they like, without carrying it. This is saved with the host's world. Each player gets the first dive's dream once.
+- **Short scripted trips aren't undone.** The host took a joiner's short scripted teleport (1000-3000 units) for cheating and put them back.
+- **Any player can move the story on.** A story event set off by opening a door, flipping a switch, disarming a trap or hitting a story character now goes to the player who did it. Before, the host's player got it, and the player who did it was refused. The same goes for what happens when a joiner kills a story character or switches on a machine. A player who joins later, or after the host reloads, still gets their own part of a one-time event someone else set off before, such as a trip down a hole.
+- **Shadows.** A crate's shadow that was burnt off before a player joined is gone for them too. Night enemies' black shadow armour now shows in every game, and goes when the host's armour is burnt off.
+- **Container windows close when the container goes.** A corpse or container removed while a player had it open left its window on screen until they left the game.
+- **Name tags are hidden under menus and cutscenes**, and so are the HUD and any open inventory under the pause menu. They come back as they were when it closes.
+- **Descriptions for items and map locations that had none**, such as the Tubular magazine, with stats from the game's data. They're in English whatever the game's language.
+
+How it was tested: with scripted players and the two-game map test only; nobody has played this build together yet. New map batteries cover each fix: `map:dive` (a player-targeted step, the trip check, the shared tank and the once-per-player dream), `map:story` (door, switch, trap and hit triggers set off by the joiner and by the host) and `map:story2` (a joiner switching on a machine; a once-only trigger owed after a join and after the host's record is reloaded). New steps were also added to `map:gaps` (a dead shadow in a loaded save), `map:enemies` (a copy's armour shown and removed), `map:corpse` (a corpse removed while its window is open) and `map:ui` (HUD under the pause menu). Two more tests are new or extended: `tooltips` (no item or chapter 1 map location without a description) and `shots` (name tags and the HUD under the pause menu). Each new step failed without its fix and passed with it, except `map:gaps`, `map:enemies` and `map:ui`, which weren't run without their fixes. Diving was tested with the cellar loaded into the chapter 1 test world, and the armour on a dog given it, not a red chomper.
+
 ## 0.26.0
 
 *Protocol 28: doesn't play with 0.25.x or older. Everyone needs to update.*
