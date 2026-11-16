@@ -366,16 +366,19 @@ namespace DarkwoodMP.World
     /// The shadow on a shadow-covered item died (ObjectActions, ShadowArmorDied). The host sends it; on a client the
     /// shadow dies only when the host says so, whatever its own copy's light check and hits came to. A shadow on a
     /// character (a night enemy) is the enemy's: left to the game here and to the host's enemies.
+    /// die(instant: true) comes only from Item.loadValues, when the save being loaded says the shadow is already dead.
+    /// Everyone loaded the host's save, so it runs in every game and isn't sent (a joiner who loads after the shadow
+    /// died would otherwise keep it, and the item under it stays shut).
     /// </summary>
     [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.die))]
     static class ShadowArmorDiedPatch
     {
         static bool OnItem(ShadowArmor sa) => sa != null && sa.GetComponent<Item>() != null && sa.GetComponent<Character>() == null;
 
-        static bool Prefix(ShadowArmor __instance, out ObjRef __state)
+        static bool Prefix(ShadowArmor __instance, bool instant, out ObjRef __state)
         {
             __state = default;
-            if (!OnItem(__instance) || Session.Instance == null || !WorldShare.InWorld) return true;
+            if (instant || !OnItem(__instance) || Session.Instance == null || !WorldShare.InWorld) return true;
             if (Session.Instance.IsClient && !WorldActions.Replaying) return false; // the host's word
             if (Session.Instance.IsHost) __state = ObjRef.Of(__instance.gameObject);
             return true;
