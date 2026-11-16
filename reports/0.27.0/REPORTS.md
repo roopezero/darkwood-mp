@@ -11,3 +11,11 @@ Objects must stay in sync when they're bumped or pushed, as they do when dragged
 ### P02. Request: Soft collision between players
 
 Players pass through each other. They should push each other out of themselves, gently, not as a hard collision.
+
+### P03. Request: Deterministic physics and RNG, for rollback netcode
+
+Could the mod use deterministic physics and random numbers, so that it could use rollback netcode? The user thinks it's possible.
+
+### P04. Question: Rollback for player movement and actions
+
+Rollback for transforms (player actions, movement and the like): wouldn't that be possible, as the host is the authority and decides whether an operation is valid?
