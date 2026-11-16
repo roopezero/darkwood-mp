@@ -397,7 +397,7 @@ Ranked by what two players would notice first in normal play.
 | Crawling (badly hurt, special scenes) | Slow crawl animation | `startCrawling`, `canCrawlTowardsMoveDirection` | Shared as sprites |
 | Dodge (skill) | Quick step, stamina, interrupts actions | `Player.dodge` | Shared as sprites and position; stamina local |
 | Jumping through a window | Animation, the player crosses the window | `initiateJumpThroughWindow`, `jumpThroughWindow`, `endJumpThroughWindow` | Shared as sprites and position (MoveCheck allows it) |
-| Teleports (home, story spots, random spawn) | Instant move | `teleportTo`, `transportToHome`, `transportToRandomSpawnPoint` | Shared: MoveCheck treats jumps over `Teleport` as the game's own |
+| Teleports (home, story spots, random spawn) | Instant move | `teleportTo`, `transportToHome`, `transportToRandomSpawnPoint` | Shared: MoveCheck treats jumps over `Teleport` as the game's own; a shorter scripted trip (`transportPlayerToObject`, the cellar's dive) in an event the host agreed to is expected (`MoveCheck.ExpectTrip`), so it isn't put back (map:dive) |
 | Entering a building ("inside") | Some enemies follow "the player" inside to waypoints (`Character` ~2018, forest spirit 6501) | `CharBase.checkGround` sets `isInside` from `Ground.isInside` | Partly: the proxy is a CharBase but these checks name `Player.Instance` only |
 | Going to another location / dream | Separate scene | `OutsideLocations`, `Dreams.startDreaming` | Each player's own (README "Your own places") |
 

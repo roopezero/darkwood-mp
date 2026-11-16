@@ -7,6 +7,9 @@ dive. It's now the player's own. O1 (each time): the client sets it off, only th
 the host. O2 (once): the client first; the host, as a later player, still gets its own part, and the shared step ran
 once in each game.
 
+T1: the cellar's dive is a short scripted trip (transportPlayerToObject); the host's movement check took such a jump
+for a speed hack and put the client back. The host now expects a trip it agreed to.
+
 Last, the client goes into the cellar and logs its dive triggers (dive-scan: requirements, steps, the tank items).
 """
 
@@ -29,6 +32,10 @@ STEPS = [
     ("client", "own-count", "O2", "2", "1"),
     ("host", "own-count", "O2", "2", "1"),
     ("client", "own-fire", "O2", "0"),
+    # A scripted trip of 1800 (over what the movement check lets a player walk in half a second, under its teleport
+    # distance) that the host agreed to: it must not put the client back.
+    *[(who, "trip-setup", "T1", "0", "600", "1800", "600") for who in ("host", "client")],
+    ("client", "trip-go", "T1"),
     ("client", "loc-go", CELLAR, {"settle": 3}),
     ("client", "dive-scan", "cellar"),
     ("client", "loc-back"),

@@ -523,7 +523,44 @@ namespace DarkwoodMP.World
             foreach (var req in t.eventRequirements)
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet()) { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
             Given.Add((from, t));
+            ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo($"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
+        }
+
+        /// <summary>
+        /// Host: the joiner's game is about to run these events, which the host agreed to. A trip in them
+        /// (transportPlayerToObject, not a chapter's) moves the joiner's player by itself, often by less than
+        /// MoveCheck.Teleport (the village cellar's dive under water), which the movement check took for a speed hack
+        /// and put them back. Tell it where each trip lands, so that jump is taken as the teleport it is.
+        /// </summary>
+        private static void ExpectTrips(ulong from, GameEvents ge)
+        {
+            var sync = Sync.PlayerSync.Instance;
+            if (sync == null || ge == null) return;
+            float delay = 0f;
+            foreach (var e in ge.events)
+            {
+                if (e == null || e.disabled) continue;
+                delay += Mathf.Max(0f, e.delay);
+                if (e.type != GameEvent.Type.transportPlayerToObject || e.activeModifier) continue;
+                var to = FirstTarget(e);
+                if (to == null) continue;
+                // The step fades the screen to black first (floatValue seconds, 0.5 by default), then moves the player.
+                sync.ExpectTrip(from, to.transform.position, 10f + delay + Mathf.Max(e.floatValue, 0.5f));
+                if (Debug) Plugin.Log.LogInfo($"[world] {S.NameOf(from)} is to be taken to {to.name} at {to.transform.position}");
+            }
+        }
+
+        /// <summary>The object a step's first target resolves to (as GameEvent.fire puts its targets in order), or null.</summary>
+        private static GameObject FirstTarget(GameEvent e)
+        {
+            if (e.targetGameObjects != null)
+                foreach (var go in e.targetGameObjects) if (go != null) return go;
+            var objects = Singleton<UniqueObjects>.Instance?.objects;
+            if (e.targetUniqueObjects != null && objects != null)
+                foreach (var name in e.targetUniqueObjects)
+                    if (name != null && objects.TryGetValue(name, out var uo) && uo != null) return uo.gameObject;
+            return null;
         }
 
         /// <summary>
@@ -790,6 +827,7 @@ namespace DarkwoodMP.World
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
                     if (t != null) Given.Add((from, t)); // their own part runs in their game
+                    if (t != null) ExpectTrips(from, t.gameEvents);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
                 var wasBy = By; if (s.IsHost) By = from;
@@ -822,6 +860,7 @@ namespace DarkwoodMP.World
                     if (!known && Authority.RequesterAway) { Authority.AcceptAway($"world event {name}", Alone); return; }
                     if (!known) { Authority.Refuse($"no world event {name} here"); return; }
                     if (ge.fired && !ge.multipleFire) { Authority.Refuse($"{name} has already happened"); return; }
+                    ExpectTrips(from, ge);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got world event {name}" + (known ? "" : ": not found here"));
                 if (!known) return;

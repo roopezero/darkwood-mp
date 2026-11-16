@@ -31,6 +31,63 @@ namespace DarkwoodMP.World
             Add("own-setup", OwnSetup);
             Add("own-fire", OwnFire, timeout: 30f);
             Add("own-count", OwnCount, timeout: 15f);
+            Add("trip-setup", TripSetup);
+            Add("trip-go", TripGo, timeout: 40f);
+        }
+
+        // ---- a short scripted trip, which the host's movement check must let through ---------------------------
+
+        private sealed class Trip { public EventTriggers Et; public Transform To; }
+        private static readonly Dictionary<string, Trip> _trips = new Dictionary<string, Trip>();
+
+        /// <summary>
+        /// "trip-setup ID DX DZ DX2 DZ2" (both games): an area trigger ID at the centre plus (DX, DZ), each time, whose
+        /// one step takes the player to a marker at the centre plus (DX2, DZ2) (transportPlayerToObject, as the
+        /// cellar's dive does).
+        /// </summary>
+        private static IEnumerator TripSetup(string[] a, Result r)
+        {
+            if (a.Length < 5) { r.Fail("trip-setup ID DX DZ DX2 DZ2"); yield break; }
+            var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
+            var go = Root("dwmp_trip_" + a[0], pos);
+            var to = Root("dwmp_trip_to_" + a[0], Centre + new Vector3(F(a[3]), 0f, F(a[4]))).transform;
+            var ge = go.AddComponent<GameEvents>();
+            ge.multipleFire = true;
+            ge.events.Add(new GameEvent { type = GameEvent.Type.transportPlayerToObject, targetGameObjects = new List<GameObject> { to.gameObject }, floatValue = 0.1f, magnitude = 0.1f, eventAmount = 1 });
+            var et = go.AddComponent<EventTriggers>();
+            var t = new global::EventTrigger { type = global::EventTrigger.Type.area, multipleFire = true, gameEvents = ge };
+            et.eventTriggers.Add(t);
+            t.thisEventTriggers = et;
+            _trips[a[0]] = new Trip { Et = et, To = to };
+            yield return null;
+            r.Info = $"trip {a[0]} {ObjRef.Of(go)} from {Fmt(pos)} to {Fmt(to.position)}, {StateDump.Flat(to.position - pos):0} away";
+        }
+
+        /// <summary>
+        /// "trip-go ID": our player sets off trip ID, arrives at its marker and must stay there: the host may not put
+        /// it back (PlayerCorrection) as if it had moved too fast.
+        /// </summary>
+        private static IEnumerator TripGo(string[] a, Result r)
+        {
+            if (a.Length < 1 || !_trips.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("trip-go ID (trip-setup first)"); yield break; }
+            yield return Walk(m.Et.transform.position, 100f);
+            yield return new WaitForSeconds(1f);
+            int corrections = Sync.MoveCheck.Corrections;
+            var p = Player.Instance;
+            bool There() => StateDump.Flat(p.transform.position - m.To.position) < 150f;
+            AsPlayer(() => m.Et.fireEventTrigger(global::EventTrigger.Type.area));
+            m.Et.entered++;
+            float until = Time.realtimeSinceStartup + 10f;
+            while (!There() && Time.realtimeSinceStartup < until) yield return null;
+            bool arrived = There();
+            yield return new WaitForSeconds(3f); // a correction comes within a few State updates
+            r.Info = $"arrived {arrived}, now at {Fmt(p.transform.position)} ({StateDump.Flat(p.transform.position - m.To.position):0} from the marker), " +
+                     $"put back {Sync.MoveCheck.Corrections - corrections} time(s)";
+            if (!arrived) r.Fail($"the trip didn't take us there: {r.Info}");
+            else if (!There() || Sync.MoveCheck.Corrections != corrections) r.Fail($"the host put us back: {r.Info}");
+            Core.forbidInputs = false;
+            yield return Walk(Centre); // a jump back would be a speed hack to the host's movement check
+            yield return new WaitForSeconds(1f);
         }
 
         private sealed class Made { public EventTriggers Et; public global::EventTrigger T; public LaterTestCounter C; }

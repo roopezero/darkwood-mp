@@ -109,6 +109,9 @@ namespace DarkwoodMP.Sync
         /// <summary>Host: where this client's player last said it was, as MoveCheck let it be (false if not known).</summary>
         public bool TryChecked(ulong from, out Vector3 pos) => _moves.TryGood(from, out pos);
 
+        /// <summary>Host: an event it agreed to takes this client's player to `to` (MoveCheck.ExpectTrip).</summary>
+        public void ExpectTrip(ulong from, Vector3 to, float seconds) => _moves.ExpectTrip(from, to, seconds);
+
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
