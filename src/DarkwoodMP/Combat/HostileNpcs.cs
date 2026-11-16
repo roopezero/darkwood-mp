@@ -170,7 +170,8 @@ namespace DarkwoodMP.Combat
             Plugin.Log.LogInfo($"[npc] our hit on {c.name} for {damage:0} goes to the host");
             Authority.Request(w, $"hit on {c.name} for {damage:0}", (ok, reason, result) =>
             {
-                if (ok || reason != NotHere || c == null || !c.alive || Player.Instance == null) return;
+                if (ok) { ScriptedEvents.HitApplied(c, result); return; }
+                if (reason != NotHere || c == null || !c.alive || Player.Instance == null) return;
                 // Only our game has it: our hit, here.
                 _ours = true;
                 try

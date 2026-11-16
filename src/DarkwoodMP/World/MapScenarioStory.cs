@@ -36,9 +36,13 @@ namespace DarkwoodMP.World
             return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
         }
 
-        /// <summary>"door:N" (the Nth door from the centre, MapScenarioWorld.Nth), "trap:NAME" (an armed trap) or an item's NAME.</summary>
+        /// <summary>
+        /// "door:N" (the Nth door from the centre, MapScenarioWorld.Nth), "trap:NAME" (an armed trap), "enemy" (the
+        /// host's enemy nearest to our player) or an item's NAME.
+        /// </summary>
         private static GameObject Thing(string spec)
         {
+            if (spec == "enemy") return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
             if (spec.StartsWith("door:")) return MapScenarioWorld.Nth<Door>(spec.Substring(5))?.gameObject;
             if (spec.StartsWith("trap:"))
                 return MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null)?.gameObject;
@@ -59,6 +63,9 @@ namespace DarkwoodMP.World
             if (go == null) { r.Fail($"no {a[1]} here"); yield break; }
             var type = (global::EventTrigger.Type)System.Enum.Parse(typeof(global::EventTrigger.Type), a[2]);
             bool multi = a[3] == "multi";
+            // The world's animals hit doors on the host now and then; one broken there refuses the next opening.
+            var door = go.GetComponent<Door>();
+            if (door != null) door.health = 100000;
             var trap = go.GetComponent<Trigger>();
             if (trap != null) { trap.staysAfterDisarming = true; go.GetComponent<Item>().disarmChance = 2f; }
             var m = new Made { Thing = go };
@@ -82,7 +89,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "act-do ID open|close|on|off|disarm OWN": our player does it to ID's thing, as the player would; OWN steps
+        /// "act-do ID open|close|on|off|disarm|hit OWN": our player does it to ID's thing, as the player would; OWN steps
         /// must then act on our player (2, or 0).
         /// </summary>
         private static IEnumerator Do(string[] a, Result r)
@@ -104,7 +111,7 @@ namespace DarkwoodMP.World
                     bool open = a[1] == "open";
                     if (door.opened != open) AsPlayer(() => { if (open) door.open(p.transform.position, p.transform, 0f); else door.close(p.transform); });
                     yield return new WaitForSeconds(0.5f);
-                    state = $"open={door.opened}";
+                    state = $"open={door.opened} broken={door.destroyed} health={door.health}";
                     if (door.opened != open) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
                     break;
                 }
@@ -117,6 +124,14 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(0.5f);
                     state = $"on={it.isOn}";
                     if (it.isOn != on) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
+                    break;
+                }
+                case "hit":
+                {
+                    // A light hit by our player (a client's goes to the host, which applies it).
+                    var ch = m.Thing.GetComponent<Character>();
+                    AsPlayer(() => ch.getHit(1f, p.transform, false, true, false, true, false, false, false));
+                    state = $"alive={ch.alive}";
                     break;
                 }
                 default:
@@ -149,7 +164,7 @@ namespace DarkwoodMP.World
             while (m.C.N < shared && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
-            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})";
+            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + (m.Thing != null && m.Thing.GetComponent<Door>() is Door d ? $"; door open={d.opened} broken={d.destroyed} health={d.health}" : "");
             if (got != own || m.C.N != shared) r.Fail(r.Info);
         }
     }

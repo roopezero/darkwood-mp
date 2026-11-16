@@ -351,6 +351,21 @@ namespace DarkwoodMP.World
             finally { LeftToActor = was; LeftCount = count; }
         }
 
+        /// <summary>The end of the host's result for a hit whose onGetAttackedByPlayer triggers it left to the hitter (Combat.NetEnemies.ApplyHit).</summary>
+        internal const string Attacked = " attacked";
+
+        /// <summary>
+        /// Client: the host applied our player's hit on its character c. Our copy never takes the hit (the host's
+        /// health is the one), so its triggers didn't go off here: if the host left them to us, set them off now, as
+        /// our player's, so we run our part, the host its own and the shared one, and the others the shared one.
+        /// </summary>
+        internal static void HitApplied(Character c, string result)
+        {
+            if (c == null || result == null || !result.EndsWith(Attacked)) return;
+            if (Debug) Plugin.Log.LogInfo($"[world] our hit on {c.name}: its triggers are ours to set off");
+            AsOwnAction(() => Core.sendTriggerInfo(c.gameObject, global::EventTrigger.Type.onGetAttackedByPlayer));
+        }
+
         /// <summary>Do a as our own player's action (OwnAction): the triggers it sets off are ours, and shared from here.</summary>
         internal static void AsOwnAction(Action a)
         {

@@ -9,6 +9,10 @@ already happened. Now only the player who did it sets the trigger off, and the o
 Each trigger has two steps that act on the player who runs them and one shared step (act-count ID OWN SHARED).
 D1 (once, a door): the client opens it, then the host as a later player. D2 (each time, a door): the host, then the
 client. S1 (each time, a lamp switched on): the client. P1 (once, a trap disarmed; the host rolls it): the client.
+
+H1 (each time, onGetAttackedByPlayer on the host's dog): a client's hit is applied on the host, where it set the
+trigger off as a whole event for the host's player, and never in the client's game. Now the host leaves it to the
+hitter: the client runs its part, the host its own and the shared one. Then the host hits it.
 """
 
 PRE_JOIN = []
@@ -35,7 +39,7 @@ STEPS = [
     ("host", "act-do", "D2", "open", "2"),
     ("client", "act-count", "D2", "0", "1"),
     ("host", "act-count", "D2", "2", "1"),
-    ("client", "act-do", "D2", "close", "0"),
+    ("host", "act-do", "D2", "close", "0"),
     ("client", "act-do", "D2", "open", "2"),
     ("host", "act-count", "D2", "2", "2"),
     ("client", "act-count", "D2", "2", "2"),
@@ -47,5 +51,14 @@ STEPS = [
     ("client", "act-do", "P1", "disarm", "2"),
     ("host", "act-count", "P1", "0", "1"),
     ("client", "act-count", "P1", "2", "1"),
+    # H1: the client hits the host's dog, then the host.
+    ("host", "spawn", "Dog", {"settle": 3}),
+    *[(who, "act-setup", "H1", "enemy", "onGetAttackedByPlayer", "multi") for who in ("host", "client")],
+    ("client", "act-do", "H1", "hit", "2"),
+    ("host", "act-count", "H1", "0", "1"),
+    ("client", "act-count", "H1", "2", "1"),
+    ("host", "act-do", "H1", "hit", "2"),
+    ("client", "act-count", "H1", "2", "2"),
+    ("host", "act-count", "H1", "2", "2"),
 ]
 REQUIRE = []

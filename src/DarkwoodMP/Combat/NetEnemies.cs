@@ -545,7 +545,11 @@ namespace DarkwoodMP.Combat
             // player, it shows if we have that enemy selected, and an open bar is refreshed.
             if (applied > 0f)
             {
-                c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true);
+                // Its onGetAttackedByPlayer triggers are the hitter's to set off (their part, ours and the shared
+                // one, as any trigger of theirs): left to them, and the result tells them (ScriptedEvents.Attacked).
+                int left = ScriptedEvents.LeavingToActor(ScriptedEvents.HitTypes, () =>
+                    c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true));
+                if (left > 0) World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + ScriptedEvents.Attacked);
                 if (c != null) HealthBar(c, show: Player.Instance != null && Player.Instance.selectedObject == c.transform);
             }
             if (c != null && c.effects != null) foreach (var e in WeaponEffects(weapon, effects)) c.effects.activate(e); // bleeding, burning... from their weapon
@@ -1389,9 +1393,11 @@ namespace DarkwoodMP.Combat
             PlayerDamage.WriteEffects(w, effects);
             var item = Player.Instance != null ? Player.Instance.currentItem : null;
             w.WriteStr(InvItemClass.isNull(item) ? "" : Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0)));
-            World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}");
+            _puppets.TryGetValue(id, out var p);
+            var hit = p?.C;
+            World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}", (ok, reason, result) => { if (ok) ScriptedEvents.HitApplied(hit, result); });
             // Our own hit shows its health bar, as getHit does; the host's health for it follows in its next state.
-            if (!_puppets.TryGetValue(id, out var p) || p.C == null) return;
+            if (p == null || p.C == null) return;
             if (damage > 0f) HealthBar(p.C, show: true);
             // Predicted: the blood shows at once; the host's for this hit (a moment later) isn't shown again.
             Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", p.C.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
