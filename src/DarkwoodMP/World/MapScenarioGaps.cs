@@ -86,6 +86,7 @@ namespace DarkwoodMP.World
             MapScenario.Add("shadow-ready", ShadowReady);
             MapScenario.Add("shadow-hit", ShadowHit, timeout: 20f);
             MapScenario.Add("shadow-check", ShadowCheck, timeout: 30f);
+            MapScenario.Add("shadow-reload", ShadowReload);
             // 68 death bag marker
             MapScenario.Add("bag-drop", BagDrop, timeout: 20f);
             MapScenario.Add("bag-check", BagCheck, timeout: 20f);
@@ -702,6 +703,23 @@ namespace DarkwoodMP.World
             var s = crate.GetComponent<ShadowArmor>();
             r.Info = $"shadow {(s != null ? $"alive, going to {BreakSync.ShadowHealth(crate):0.#}" : "gone")}, item health {crate.health}, destroyed {crate.destroyed}";
             if (!Ok() || crate.destroyed) r.Fail(r.Info);
+        }
+
+        /// <summary>"shadow-reload": the crate is loaded again from a save that says its shadow is dead, as a joiner who
+        /// joins after it died loads it: the prefab's shadow is back, then Item.SaveState.loadValues (with no shadow
+        /// state) kills it with die(instant: true). The shadow isn't checked here; shadow-check dead does that.</summary>
+        private static IEnumerator ShadowReload(string[] a, Result r)
+        {
+            var crate = ShadowCrate();
+            if (crate == null) { r.Fail("no crate at the shadow spot"); yield break; }
+            if (crate.GetComponent<ShadowArmor>() != null) { r.Fail("the crate's shadow is still alive before the reload"); yield break; }
+            var saved = new Item.SaveState(crate); // no shadow, so no saS
+            crate.shadowArmor = crate.gameObject.AddComponent<ShadowArmor>();
+            yield return null; // its Start makes the effect
+            yield return null;
+            saved.loadValues(crate);
+            yield return null;
+            r.Info = $"after loadValues: shadow {(crate.GetComponent<ShadowArmor>() != null ? "alive" : "gone")}";
         }
 
         // ---- 68 a death bag's map marker ----------------------------------------------------------------------

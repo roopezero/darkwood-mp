@@ -116,7 +116,7 @@ Other enemies and enemy mechanics:
 | Hostile NPC Wolfman_att | 2G | `npc-spawn` (PRE_JOIN, friendly at join), `npc-friendly`, `npc-hit` (health drops on the host), `npc-host-runs FIRST client`, `npc-attacks-us`, `npc-kill`, `npc-dead` (story state), `compare enemies,story` (hostile) |
 | Hostile NPC Doctor_confronted2 | 2G | `npc-provoke` (a scripted attack in the client's game), `npc-host-runs`, `npc-kill`, `npc-dead` |
 | A hostile NPC already hostile when someone joins | none | both NPCs are friendly at the join |
-| Shadow armour (chapter 2 night enemies) | 2G~ | `ee-shadow-spawn`/`ee-flashlight`/`ee-shadow-check`: a Dog with a `ShadowArmor` component added; the client's flashlight hurts it and it turns on the client. No real shadow-armoured creature |
+| Shadow armour (chapter 2 night enemies) | 2G~ | `ee-shadow-spawn`/`ee-armor-check`/`ee-flashlight`/`ee-shadow-check`/`ee-armor-burn`: a Dog with a `ShadowArmor` component added; the client's copy wears it untouched by its own light and loses it when the host's dies; the client's flashlight hurts it and it turns on the client. No real shadow-armoured creature |
 | Forest spirit (ForestSpirit2) | 2G~ | `spirit leaves/stays` (fixchecks): a Dog with `forestSpirit = true` for one `checkStuff` call. The real spirit, its teleport and its spawn event are untested (INTERACTIONS gap 17) |
 | Run-away activity runs from the nearest player | 2G | `ee-flee-activity` (a chicken runs from the client) |
 | Night attackers per occupied hideout | 2G~ | `mt-night` (map4_multi) counts what the host spawned per hideout; that the attackers reach and fight the clients isn't asserted. SC: `host-combat --dwmp-test-night` |

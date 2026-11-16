@@ -15,6 +15,9 @@ STEPS = [
     ("host", "shadow-hit", "20"),
     ("host", "shadow-check", "dead"),
     ("client", "shadow-check", "dead"),
+    # R01: a client that loads the crate from a save where its shadow is dead (a later joiner) has no shadow either
+    ("client", "shadow-reload"),
+    ("client", "shadow-check", "dead"),
     # 65: a vine each game made by itself; the client cuts half, the host the rest
     ("host", "vine-make", {"settle": 0}),
     ("client", "vine-make"),

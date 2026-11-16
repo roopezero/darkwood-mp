@@ -50,6 +50,7 @@ namespace DarkwoodMP.Combat
             session.Register(MsgType.PlayerNoise, PlayerNoisePatch.OnRemoteNoise);
             session.Register(MsgType.PlayerCue, PlayerCues.OnCue);
             session.Register(MsgType.EnemyBlood, OnBlood);
+            session.Register(MsgType.EnemyArmor, OnArmor);
             session.OnPeerDisconnected += id => { _known.Remove(id); _corpseKnown.Remove(id); };
             session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
             session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
@@ -179,6 +180,7 @@ namespace DarkwoodMP.Combat
             public List<tk2dSpriteAnimator> Animators;
             public List<int> AnimatorPaths;
             public string Loop = ""; // the loop it was playing at the last LoopCheck
+            public bool Armor; // it wore shadow armour at the last ArmorSync: what the clients that know it were told
         }
 
         private uint _nextId = 1;
@@ -225,7 +227,11 @@ namespace DarkwoodMP.Combat
                     Forget(id); _byCharHost.Remove(g); _byIdHost.Remove(id);
                 }
             }
-            if (now >= _nextLoopCheck) { _nextLoopCheck = now + LoopCheckInterval; LoopCheck(now); }
+            if (now >= _nextLoopCheck)
+            {
+                _nextLoopCheck = now + LoopCheckInterval; LoopCheck(now);
+                foreach (var t in _byCharHost.Values) if (t.C != null && t.DiedAt < 0) ArmorSync(t);
+            }
             if (now < _nextState) return;
             _nextState = now + StateInterval;
 
@@ -323,9 +329,37 @@ namespace DarkwoodMP.Combat
             return save != null && !string.IsNullOrEmpty(save.prefabName) ? save.prefabName : c.name.Replace("(Clone)", "").Trim();
         }
 
+        /// <summary>Whether a character wears shadow armour now (ShadowArmor.die destroys the component).</summary>
+        private static bool HasArmor(Character c)
+        {
+            var a = c != null ? c.GetComponent<ShadowArmor>() : null;
+            return a != null && a.enabled;
+        }
+
+        /// <summary>
+        /// Host: the clients that know this enemy are told when its shadow armour is put on (CharacterSpawner adds it
+        /// to a chapter 2+ night spawn after spawning it) or dies (light, or a hit). Only the host decides that: a
+        /// client's copy shows the armour and never checks light or takes damage (ShadowArmorCopyPatch).
+        /// </summary>
+        private void ArmorSync(Tracked t)
+        {
+            bool now = HasArmor(t.C);
+            if (now == t.Armor) return;
+            t.Armor = now;
+            foreach (var peer in Knowing(t.Id))
+            {
+                var w = _one.Begin(MsgType.EnemyArmor);
+                w.W.Write(t.Id);
+                w.W.Write((byte)(now ? 1 : 0));
+                _session.SendTo(peer, w, Channel.Control, reliable: true);
+            }
+            Plugin.Log.LogInfo($"[enemy] {t.Id} {t.C.name}: shadow armour {(now ? "on" : "gone")}");
+        }
+
         private void SendSpawn(ulong peer, Tracked t)
         {
             var c = t.C;
+            ArmorSync(t); // first, so that the others that know it were told what this one is told
             var save = c.GetComponent<SaveableObject>();
             string name = KindOf(c);
             // The prefab's path under Resources/Prefabs, as the save system knows it (Core.AddPrefab's argument).
@@ -338,6 +372,7 @@ namespace DarkwoodMP.Combat
             w.WriteStr(name);
             w.Write(c.transform.position);
             WriteRot(w, c.transform.rotation);
+            w.W.Write((byte)(t.Armor ? 1 : 0));
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             // The loop it's playing now (one that started before it was sent, e.g. an NPC's aggressive one as it
             // turned hostile): after the spawn, on the same channel, so it comes after it.
@@ -853,6 +888,7 @@ namespace DarkwoodMP.Combat
             string name = r.ReadStr();
             Vector3 pos = r.ReadVector3();
             Quaternion rot = ReadRot(r);
+            bool armor = r.R.ReadByte() != 0;
             if (_puppets.ContainsKey(id)) return;
 
             Character c = null; bool ours = false;
@@ -901,8 +937,53 @@ namespace DarkwoodMP.Combat
             _puppets[id] = p;
             _byChar[c] = p;
             if (c.npc != null) HostileNpcs.ClientStarted(c, id);
+            SetArmor(c, armor, fade: false);
             Plugin.Log.LogInfo($"Showing the host's {name} #{id} ({(ours ? "made from its prefab" : "our copy from the save")}{(wasOff ? ", switched on" : "")}); {Frozen.Count} of our own characters are frozen");
             LogFovBlockers(c, $"#{id} shown");
+        }
+
+        /// <summary>Client: EnemyArmor, the host's enemy's shadow armour put on or gone.</summary>
+        private void OnArmor(ulong from, PacketReader r)
+        {
+            if (from != _session.HostId || !ClientMode) return;
+            uint id = r.R.ReadUInt32();
+            bool on = r.R.ReadByte() != 0;
+            if (_puppets.TryGetValue(id, out var p) && p.C != null) SetArmor(p.C, on, fade: true);
+        }
+
+        /// <summary>
+        /// Client: a copy wears shadow armour as the host's enemy does. The armour only shows its effect: its light
+        /// check and damage do nothing on a copy (ShadowArmorCopyPatch), and it goes when the host's does (EnemyArmor),
+        /// fading as the game's ShadowArmor.die makes it. A copy from our save may wear armour the host's no longer
+        /// does; that goes at once.
+        /// </summary>
+        internal static void SetArmor(Character c, bool on, bool fade)
+        {
+            try
+            {
+                var a = c.GetComponent<ShadowArmor>();
+                if (on && a == null)
+                {
+                    c.shadowArmor = c.gameObject.AddComponent<ShadowArmor>(); // its Start makes the effect
+                    Plugin.Log.LogInfo($"[enemy] {c.name}: shadow armour shown");
+                }
+                else if (!on && a != null)
+                {
+                    if (a.effectGO == null) Object.Destroy(a); // not started yet: no effect to stop
+                    else a.die(instant: !fade);
+                    Plugin.Log.LogInfo($"[enemy] {c.name}: shadow armour gone");
+                }
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't change {c.name}'s shadow armour: {e.Message}"); }
+        }
+
+        /// <summary>Client: a ShadowArmor on a copy of the host's enemy, or on one of our own frozen characters.</summary>
+        internal static bool IsCopy(ShadowArmor a)
+        {
+            var s = Session.Instance;
+            if (a == null || s == null || !s.IsClient) return false;
+            var c = a.GetComponent<Character>();
+            return c != null && (Frozen.Contains(c) || (Instance != null && Instance._byChar.ContainsKey(c)));
         }
 
         private void OnState(ulong from, PacketReader r)
