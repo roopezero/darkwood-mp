@@ -401,6 +401,9 @@ namespace DarkwoodMP
             if (Arg("--dwmp-test-options") is string optDir) StartTest(OptionsTest.Run(optDir, Has("--dwmp-continue")));
             // "--dwmp-test-drag": a window moved and resized by made-up mouse events, slowly and fast ("[drag]" lines).
             if (Has("--dwmp-test-drag")) StartTest(DragTest.Run());
+            // "--dwmp-test-tooltips DIR": once in a world, dump the items' and map elements' data into DIR and check that
+            // each has a description (the game's or the mod's, World/Tooltips.cs) ("[tooltips]" lines).
+            if (Arg("--dwmp-test-tooltips") is string tipDir) StartTest(World.Tooltips.Test(tipDir));
             // "--dwmp-test-drag-real": the test window open for two minutes for a real mouse to drag ("[drag-real]" lines).
             if (Has("--dwmp-test-drag-real")) StartTest(DragTest.RunReal());
             if (Arg("--dwmp-solo-test") is string solo) StartTest(SoloTest(solo));

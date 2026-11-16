@@ -23,7 +23,7 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 | `world` | capture host-world client-world host-death |
 | `chars` | host-chars client-chars host-progress |
 | `story` | host-chapter client-chapter host-end client-end client-epilogue |
-| `menus` | menu-entry shots options |
+| `menus` | menu-entry shots options drag tooltips |
 | `authority` | host-authority client-authority |
 | `map` | the full two-game scenario: every module in one world (`tools/tests/map_scenario.py`) |
 | `map:NAME` | `tools/tests/map_scenario_NAME.py` alone, from a fresh test world and a fresh client join |
@@ -55,7 +55,7 @@ Each item's output goes to `$WORK/logs/ITEM.out` (`map:far` is `map-far.out`); m
 `$WORK/map` (full) or `$WORK/map-NAME`. The run ends with a table: item, result, seconds, the first failure line, and
 for each failed item its log and the command that reruns it alone (`WORK=... tools/run-test.sh ITEM`).
 
-- **PASS**: the test has a verdict of its own and nothing failed: map, map:*, map4, options, menu-entry, capture
+- **PASS**: the test has a verdict of its own and nothing failed: map, map:*, map4, options, tooltips, menu-entry, capture
   (world.pkl written), host-world (world_rec.pkl written).
 - **RAN**: nothing failed (no FAIL line, no time-out, no exception), but the test prints what it saw and a person
   reads it. Most scripted-peer tests are this today (see the follow-ups).

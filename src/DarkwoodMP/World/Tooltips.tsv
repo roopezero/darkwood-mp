@@ -1,0 +1,287 @@
+# Made by tools/gen_tooltips.py from the game's item data; see World/Tooltips.cs for the format.
+item	acid	1	A small pill. Whatever is in it, the world won't look the same for a while. For 20 minutes I take less damage, I'm faster and I tire less. Cookable.
+item	ammo_clip_mediumCal	1	A full magazine of medium caliber rounds. Used in: {item:weapon_assault_01_burst}.
+item	ammo_clip_smallCal	1	A full magazine of small caliber rounds. Used in: {item:weapon_pistol_02_semi} and {item:weapon_submachine_01_full}.
+item	ammo_single_mediumCal	1	A single medium caliber round. Used in: {item:weapon_rifle_02_boltAction}.
+item	ammo_single_pellet	1	Small lead pellets. Used in: {item:weapon_pistol_01_pellet} and {item:weapon_rifle_01_pellet}.
+item	ammo_single_shotgun	1	Shotgun shells. Used in: {item:weapon_shotgun_01_breakAction_Double}, {item:weapon_shotgun_02_pumpAction} and {item:weapon_shotgun_03_singleShot}.
+item	antler	1	A deer's antlers.
+item	armor_light	1	Light armour. It takes some of the blows for me. Worn, it takes 25% off the damage I take.
+item	axe_edge	1	The head of an axe, without a handle. Used to make {item:axe}.
+item	bark_01	1	A strip of tree bark.
+item	battery9v	1	A 9 volt battery. Used in: {item:flashlight} and {item:flashlight_02}.
+item	blanket_sister	1	A thick, warm blanket.
+item	bone	1	A bone, picked clean.
+item	book	1	An old book with swollen pages.
+item	cable	1	A length of electric cable.
+item	cassette	1	A cassette tape.
+item	chainTrap	1	A trap made of chains, for anything that walks into it.
+item	chicken_egg	1	An ordinary chicken egg. For 60 seconds I tire less.
+item	chicken_head	1	The head of a chicken.
+item	chitin	1	A hard piece of shell from something that crawled. Used to make {item:armor_light}.
+item	dead_rat	1	A dead rat. A poor meal, but a meal. Heals 60 over 60 seconds. Cookable.
+item	electronics	1	Wires, chips and bits of circuit boards. Used to make {item:watch}.
+item	firecraft_boltHandle	1	The bolt handle of a rifle. Used to make {item:weapon_rifle_02_boltAction}.
+item	firecraft_handgunFrame	1	The frame of a handgun. Used to make {item:weapon_pistol_02_semi}.
+item	firecraft_longBarrel	1	A long gun barrel. Used to make {item:weapon_rifle_02_boltAction}, {item:weapon_shotgun_01_breakAction_Double}, {item:weapon_shotgun_02_pumpAction} and {item:weapon_shotgun_03_singleShot}.
+item	firecraft_tubularMagazine	1	A tube magazine for a shotgun. Used to make {item:weapon_shotgun_02_pumpAction}.
+item	firecraft_weaponParts	1	Assorted gun parts: springs, pins and screws. Used to make {item:weapon_pistol_02_semi}, {item:weapon_rifle_02_boltAction}, {item:weapon_shotgun_01_breakAction_Double}, {item:weapon_shotgun_02_pumpAction} and {item:weapon_shotgun_03_singleShot}.
+item	fish	1	A fish. Still fresh. Heals 51 over 60 seconds. For 60 seconds I tire less. Cookable.
+item	flare	1	Burns bright red for a while once lit. Throwable.
+item	flashlight	1	A flashlight.
+item	flashlight_02	1	A sturdy military flashlight.
+item	hammer	1	A heavy hammer.
+item	healthUpgrade	1	A thick red liquid. Drinking it should make me sturdier for good.
+item	home_apple	1	An apple.
+item	home_chemical_bottle_01	1	A bottle of detergent.
+item	home_chemical_bottle_02	1	A bottle of detergent.
+item	home_chemical_spray_01	1	A spray can. There's still something in it.
+item	home_clothes	1	Some old clothes.
+item	home_money	1	Some money. Out here it buys little.
+item	home_pear	1	A pear.
+item	home_scissor	1	A pair of scissors.
+item	home_shirt	1	A warm sweater.
+item	home_towel	1	A towel.
+item	hotbarPlus_01	1	A belt with more pouches. Using it makes my hotbar bigger, up to 4 times.
+item	humanArm_01	1	A human arm.
+item	humanEar_01	1	A human ear.
+item	humanFinger_01	1	A human finger.
+item	humanLeg_01	1	A human leg.
+item	ice_01	1	A piece of ice. It doesn't melt. For 30 seconds I tire less.
+item	invPlus_01	1	A bigger bag. Using it makes my backpack bigger, up to 3 times.
+item	junk	1	Bent pieces of scrap metal. Used to make {item:barrelExploding}, {item:beartrap}, {item:chainTrap}, {item:gasBottle} and 8 more.
+item	kupaWilka	1	Something the Wolf left for me.
+item	lifePotion	1	A twitching embryo. It looks alive. Heals 900 over 3 seconds. Stops bleeding. Cures poison. Cookable.
+item	lockpick	1	With a steady hand I can open locks with it.
+item	map	1	My map of the area.
+item	map_borderBurned	1	A hand-drawn map. It marks {ui:sub_burned_01}.
+item	map_doctorEntrance	1	A hand-drawn map.
+item	map_pigShed	1	A hand-drawn map. It marks {ui:big_pigsheds_01}.
+item	map_radioTower	1	A hand-drawn map. It marks {ui:sub_radioTower}.
+item	map_villageTree	1	A hand-drawn map. It marks {ui:sub_border_gate_05_treeVillage}.
+item	matchstick	1	A single matchstick. Throwable. Used to make {item:molotov} and {item:torch}.
+item	molotov	1	A bottle of fuel with a rag in its neck. It bursts into flames where it lands. Throwable.
+item	mushroom_rotten	1	A rotten mushroom. I wouldn't eat it. Used to make {item:gasBomb} and {item:gasBottle}.
+item	nail	1	Nails. I can always use more of them. Used to make {item:ammo_single_pellet}, {item:pitchfork}, {item:plank_nails}, {item:sickle} and {item:workbenchUpgrade_01}.
+item	pigHead	1	The head of a pig.
+item	pills	1	A pill of unknown origin. For 60 seconds I tire less.
+item	pincers	1	A pair of pliers. Used to make {item:workbenchUpgrade_05}.
+item	piotrek_parts_1	1	A car battery.
+item	piotrek_parts_2	1	A rubber fan belt from a car engine.
+item	piotrek_parts_3	1	A car tire.
+item	piotrek_parts_4	1	A car's exhaust pipe.
+item	piotrek_parts_5	1	A car's rearview mirror.
+item	piotrek_parts_6	1	A car's steering wheel.
+item	pipe_metal	1	A length of metal pipe. Used to make {item:weapon_pistol_03_oneShot}, {item:weapon_shotgun_05_oneShot} and {item:workbenchUpgrade_08}.
+item	pitchfork	1	A pitchfork. It keeps things at a distance. Damage 14.
+item	playerUpgradeIngredient	1	A strange stone, warm to the touch. Someone in the woods may know what it's for. Used to make {item:healthUpgrade} and {item:staminaUpgrade}.
+item	potato_01	1	A raw potato. For 30 seconds I tire less.
+item	rag	1	A dirty rag. Used to make {item:armor_light}, {item:bandages}, {item:lantern}, {item:molotov} and {item:torch}.
+item	ring2	1	A ring.
+item	ring_wedding	1	A wedding ring.
+item	rope	1	A length of rope. Used to make {item:hotbarPlus_01} and {item:invPlus_01}.
+item	shiny_rock	1	A stone that shines in the dark.
+item	shiny_rock_cross	1	Something shiny. It catches the light.
+item	shovel_edge	1	The blade of a shovel, without a handle. Used to make {item:pitchfork} and {item:shovel}.
+item	spring	1	A metal spring.
+item	staminaUpgrade	1	A cloudy gray liquid. Drinking it should let me run longer for good.
+item	stone_weird_01	1	A stone with an odd shape.
+item	tape	1	A roll of tape. Used to make {item:axe}, {item:pitchfork}, {item:shovel}, {item:weapon_pistol_02_semi} and 4 more.
+item	toolbox	1	A toolbox with a few tools left in it. Used to make {item:workbenchUpgrade_02}.
+item	torch	1	A burning torch. It sets things on fire. Damage 10. Gives light.
+item	toy_rocket	1	A child's toy rocket.
+item	violin	1	An old violin. Someone must miss it.
+item	watch	1	A wristwatch. It still works.
+item	weapon_rifle_02_boltAction	1	A bolt-action hunting rifle. Slow to work, but it hits hard and far. Damage 70, holds 1. Takes {item:ammo_single_mediumCal}.
+item	weapon_shotgun_01_breakAction_Double	1	A double-barrelled shotgun. Two shots before reloading. Damage 10 per pellet, 15 pellets a shot, holds 2. Takes {item:ammo_single_shotgun}.
+item	weapon_shotgun_02_pumpAction	1	A pump-action shotgun. Damage 10 per pellet, 15 pellets a shot, holds 8. Takes {item:ammo_single_shotgun}.
+item	weapon_shotgun_03_singleShot	1	A single-shot shotgun. One shell at a time. Damage 10 per pellet, 15 pellets a shot, holds 1. Takes {item:ammo_single_shotgun}.
+item	welder	1	A small welder. Used to make {item:workbenchUpgrade_04}.
+item	wire	1	A roll of wire. Used to make {item:lockpick}, {item:watch}, {item:weapon_pistol_01_pellet}, {item:weapon_rifle_01_pellet} and {item:workbenchUpgrade_05}.
+item	wood	1	A wooden board. Used to make {item:plank_nails}, {item:toolbox}, {item:torch}, {item:weapon_pistol_01_pellet} and 2 more.
+loc	med_cottageTrailer_mapIcon	1	A trailer in the meadow, decked out for a wedding.
+loc	landmark_brokenTree_01	1	A huge tree, split down the middle. Easy to find my way by.
+loc	landmark_antiTankGun_01	1	An old anti-tank gun, rusting where it was left.
+loc	mini_bodies_01	1	Bodies, left where they fell.
+loc	mini_mutated_roots_02	1	Something grows here that shouldn't.
+loc	mini_mutated_roots_01	1	Something grows here that shouldn't.
+loc	mini_tent_camp_01	1	An abandoned camp. Worth searching.
+loc	landmark_brokenTree_02	1	A huge tree, split down the middle. Easy to find my way by.
+loc	landmark_shrine_02	1	A small wayside shrine.
+loc	landmark_brokenTractor_01	1	A tractor left to rot in a field.
+loc	med_wolfman_camp_01	1	The Wolf's camp, deep in the trees.
+loc	landmark_shrine_01	1	A small wayside shrine.
+loc	landmark_brokenTruck_01	1	A truck that never made it out of the woods.
+loc	mini_tent_camp_02	1	An abandoned camp. Worth searching.
+loc	landmark_hole_01	1	A hole in the ground, too deep to see the bottom.
+loc	mini_tank_wreck_02	1	The burned-out wreck of a tank.
+loc	mini_tank_wreck_01	1	The burned-out wreck of a tank.
+loc	med_wolfman_camp_02	1	The Wolf's camp, deep in the trees.
+loc	med_musicianHideout_01	1	An old silo. Someone has made a home in it.
+loc	med_bunker_enter_01	1	A way down under the ground.
+loc	big_pigsheds_01	1	Old pig sheds. Something still lives in them.
+loc	big_piotrek_01	1	Piotrek's house and farm.
+loc	big_hunter_01	1	A hunter's house at the edge of the forest.
+loc	big_burned_houses_01	1	A few houses, burned to the ground.
+loc	big_church_ruins_01	1	What is left of a church.
+loc	big_farm_02	1	An old farmhouse in the Silent Forest. Somewhere to hold out through the night.
+loc	big_hideout_03	1	A hideout in the Old Woods. Somewhere to hold out through the night.
+loc	med_musican_house_01	1	A house I'd rather not go back to.
+loc	med_cottage_tree_01	1	A cottage under a big tree. Somewhere to hold out through the night.
+loc	sub_border_road_01	1	An old road at the edge of the woods.
+loc	big_trainWreck_01	1	A train that came off its rails.
+loc	med_wolfmanHideout_01	1	The ruins of an old barn.
+loc	sub_gate_doctorEntrance_01	1	The road that leads to the doctor's house.
+loc	sub_burned_house_small_01	1	A small house, burned out.
+loc	sub_border_gate_02_bridge	1	A bridge over the water.
+loc	sub_border_cottage_01	1	A cottage at the edge of the forest.
+loc	sub_gate_meadowForest_01	1	The way from the meadow into the Silent Forest.
+loc	sub_border_river_01	1	A brook at the edge of the meadow.
+loc	sub_gate_villageEntrance_01	1	The road to the village.
+skip	aw_artur_drawings	journal item
+skip	aw_grzegorz	journal item
+skip	aw_gutek	journal item
+skip	aw_ivanka	journal item
+skip	aw_karolina	journal item
+skip	aw_killerfriend	journal item
+skip	aw_kuba	journal item
+skip	aw_maciek	journal item
+skip	aw_marcin	journal item
+skip	aw_mazyrun	journal item
+skip	aw_mugelisica	journal item
+skip	aw_mugelisica_2	journal item
+skip	aw_nullwinter	journal item
+skip	aw_piotrek	journal item
+skip	book_wiedza_lekarska_01	journal item
+skip	book_wiedza_lekarska_02	journal item
+skip	book_wiedza_lekarska_02_burned	journal item
+skip	box_church_drawings	journal item
+skip	box_church_escaped	journal item
+skip	box_church_key	journal item
+skip	box_church_killedChomper	journal item
+skip	bullet	journal item
+skip	chemical_bottle_01	no name (dev item)
+skip	cigarettes_klubowe	journal item
+skip	cigarettes_klubowe2	journal item
+skip	cowbell_01	journal item
+skip	cowbell_02	journal item
+skip	cross_01_c	journal item
+skip	doctor_photo	journal item
+skip	doctor_wife_photo	journal item
+skip	drewniana_kurka_blood	journal item
+skip	drewniane_kurki	journal item
+skip	exp_epickiEXP	no name (dev item)
+skip	exp_piskle	no name (dev item)
+skip	fartPillow	no name (dev item)
+skip	fists	no name (dev item)
+skip	flashlight_rechargable	no name (dev item)
+skip	grannyPainting_01	journal item
+skip	grannyPainting_02	journal item
+skip	grannyPainting_03	journal item
+skip	grannyPainting_04	journal item
+skip	grannyPainting_05	journal item
+skip	hunter_photo_1	journal item
+skip	jar_roadToHome	journal item
+skip	journal_clone	journal item
+skip	kartkiEkspedycja	journal item
+skip	kasetaZniszczona	journal item
+skip	kebab	no name (dev item)
+skip	key_21	journal item
+skip	key_baba_sister	journal item
+skip	key_big_farm_02_shed	journal item
+skip	key_border_burnedCottage	journal item
+skip	key_bunker_act1	journal item
+skip	key_doctorHideout	journal item
+skip	key_epilog_sypialnia	journal item
+skip	key_epilog_wyjscieZpokoju	journal item
+skip	key_mushroomGranny_boy_01	journal item
+skip	key_outside_doctor_01_rozwalonyDom	journal item
+skip	key_outside_village_ch1_cottage01_underground_01	journal item
+skip	key_radioTower_01	journal item
+skip	key_sawmill	journal item
+skip	key_treeVillage_mainKey	journal item
+skip	key_village_brother_key_01	journal item
+skip	key_wolfmanHideout_01	journal item
+skip	klisza	journal item
+skip	lesnyLudek	journal item
+skip	lotto	journal item
+skip	maszynaDoMiesa	journal item
+skip	medalion_brother	journal item
+skip	medical_tools_01	journal item
+skip	medical_tools_02	journal item
+skip	noiseLure	no name (dev item)
+skip	notatnik_doktora_01_ch2_01	journal item
+skip	notatnik_doktora_01_ch2_02	journal item
+skip	notatnik_doktora_01_ch2_03	journal item
+skip	notatnik_doktora_01_ch2_04	journal item
+skip	notatnik_doktora_01_ch2_05	journal item
+skip	notatnik_doktora_01_ch2_06	journal item
+skip	notatnik_doktora_01_swamp_01	journal item
+skip	notatnik_doktora_burnedMap	journal item
+skip	note_burnedHouse_01	journal item
+skip	note_elephant_door	journal item
+skip	note_elephant_picture	journal item
+skip	note_gate_meadowForest_01	journal item
+skip	note_generator	journal item
+skip	note_hideout_swamp_01	journal item
+skip	note_journal_bloody	journal item
+skip	note_kapelusznik_01	journal item
+skip	note_kapelusznik_02	journal item
+skip	note_kapelusznik_03	journal item
+skip	note_macius_1	journal item
+skip	note_macius_2	journal item
+skip	note_mail	journal item
+skip	note_mail_2	journal item
+skip	note_nightGiftMushroom_01	journal item
+skip	note_pigshed_02	journal item
+skip	note_pigshed_flyer	journal item
+skip	note_przyjaciolka_wolf_01	journal item
+skip	note_psalm91	journal item
+skip	note_radioTower_02	journal item
+skip	note_rozdarteOpakowaniePapierosow	journal item
+skip	note_shadowarmor_01	journal item
+skip	note_signs_01	journal item
+skip	note_snail_journal_01	journal item
+skip	note_snail_junk_01	journal item
+skip	note_snail_numbers_01	journal item
+skip	note_truck_01	journal item
+skip	note_wallOfTrees_01	journal item
+skip	note_wiazki_01	journal item
+skip	note_wilk_klucz	journal item
+skip	note_wolfman_stolenItems	journal item
+skip	note_xmass	journal item
+skip	photo_burnedCottage_01	journal item
+skip	photo_burnedCottage_02	journal item
+skip	photo_doctor	journal item
+skip	photo_forest_dog	journal item
+skip	photo_forest_redneck_01	journal item
+skip	photo_forest_redneck_02	journal item
+skip	photo_karmiciel	journal item
+skip	photo_mushroomGranny	journal item
+skip	photo_roadToHome	journal item
+skip	pingpong_01	journal item
+skip	player_epilogue_test_item	no name (dev item)
+skip	radio_small_01	journal item
+skip	radio_small_01c	journal item
+skip	recipe	its popup names the recipe it teaches
+skip	rock_blood	journal item
+skip	rocket_blueprint_01	journal item
+skip	rope_journal	journal item
+skip	screwdriver_epilog	journal item
+skip	skrety_01	journal item
+skip	swiecznik_01	journal item
+skip	syfon	journal item
+skip	syringe_01	journal item
+skip	teddyBear	no name (dev item)
+skip	termometr	journal item
+skip	tooth	no name (dev item)
+skip	twins_church_01	journal item
+skip	twins_church_01_dream	journal item
+skip	unitra_doctor	journal item
+skip	uzytek_z_grzybow_01	journal item
+skip	violin_old	journal item
+skip	weapon_flamethrower_homeMade	no name (dev item)
+skip	weapon_flamethrower_military	no name (dev item)
+skip	weapon_shotgun_04_fullAuto_ZePSUTY	no name (dev item)
+skip	wedding_invitation	journal item
+skip	wedding_invitation_2	journal item

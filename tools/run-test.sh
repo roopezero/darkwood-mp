@@ -23,7 +23,7 @@
 # After each one: the game is sent back to its main menu, a client game stopped unless a map battery comes next,
 # leftover downloaded worlds removed from the mod's caches, and your saves compared with their hashes from the start.
 # At the end, a table: each item's result, time, first failure, its log, and the command that reruns it alone.
-#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world, host-drag, host-upnp, shots)
+#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, tooltips, menu-entry, capture, host-world, host-drag, host-upnp, shots)
 #   RAN   no failure seen (no FAIL line, no time-out, no exception), but its printed lines are the result: read them
 #   SKIP  the test can't run here (steam without the Steam client): the reason is shown
 #   FAIL  a FAIL line, a time-out, an exception in Player.log, a failed step or differing dumps
@@ -54,6 +54,7 @@
 #                 screenshots into $WORK/solo
 #   shots         screenshots into $WORK/shots: the world, the pause menu, its confirm dialog, the co-op panel
 #   options       the Options window from both menus: a volume and a key stored in the game's settings, then put back
+#   tooltips      every item and map location has a description (the game's or the mod's); dump in $WORK/tooltips
 #                 (the prefs file compared); screenshots of every tab at 1920x1080 and 1280x720 into $WORK/options
 #   drag          a window moved and resized by made-up mouse events, slowly and fast, in the main menu (issue #18)
 #   steam         host a Steam lobby with your account and leave
@@ -122,6 +123,7 @@ declare -A DESC=(
   [shots]="screenshots of the world, the pause menu and the co-op panel"
   [options]="the Options window: settings stored the game's way and put back, every tab at two sizes"
   [drag]="a window dragged and resized slowly and fast moves exactly as far as the mouse"
+  [tooltips]="every item and map location has a description, the game's or the mod's"
   [steam]="host a Steam lobby and leave"
   [client-world]="the host's world changes replayed in the game"
   [client-enemies]="the host's enemies shown, moved and despawned"
@@ -134,19 +136,19 @@ declare -A DESC=(
   [map]="two games: every map module in one world, then their world states compared"
   [map4]="the host and MAP_CLIENTS client games (default 3), near and far from each other, their world states compared"
 )
-# Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots, options and drag.
+# Groups of scripted-peer tests. Between them they hold every test of $ALL, and shots, options, drag and tooltips.
 declare -A GROUP=(
   [net]="handshake host-menu host-upnp host-reload client-reload client-away client-menu client-drop steam"
   [combat]="host-combat host-elsewhere client-enemies"
   [world]="capture host-world client-world host-death"
   [chars]="host-chars client-chars host-progress"
   [story]="host-chapter client-chapter host-end client-end client-epilogue"
-  [menus]="menu-entry shots options drag"
+  [menus]="menu-entry shots options drag tooltips"
   [authority]="host-authority host-drag client-authority"
 )
 GROUP_NAMES="net combat world chars story menus authority"
 # Tests with a verdict of their own (PASS rather than RAN when nothing failed).
-VERDICT=" map map4 options drag menu-entry capture host-world host-drag host-upnp shots "
+VERDICT=" map map4 options drag tooltips menu-entry capture host-world host-drag host-upnp shots "
 
 # Map batteries: every tools/tests/map_scenario_NAME.py is the battery map:NAME. "maps" runs those without
 # "IN_MAPS = False" (a module that only repeats the whole scenario, as map_scenario_dogfull.py does).
@@ -539,6 +541,12 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       LOG0=$L1
       mod_log "\[options\] (PASS|FAIL|done|put back|deleted|main|pause)"
       [ "$(mod_log "\[options\] done: all passed" | wc -l)" -ge 2 ] || die "the Options test failed (see the lines above)" ;;
+    tooltips)
+      safe_rm "$WORK" "$WORK/tooltips"; mkdir -p "$WORK/tooltips"
+      host --dwmp-test-tooltips "$WORK/tooltips"
+      wait_log "\[tooltips\] done" 180
+      mod_log "\[tooltips\]"
+      mod_log "\[tooltips\] done: all passed" | grep -q . || die "the tooltips test failed (see the lines above)" ;;
     drag)
       ctl args --dwmp-test-drag
       wait_log "\[drag\] done" 90
