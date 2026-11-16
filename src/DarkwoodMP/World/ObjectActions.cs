@@ -126,7 +126,7 @@ namespace DarkwoodMP.World
                     break;
                 }
                 case Action.Removed:
-                    if (t.GetComponent<Item>() != null || t.GetComponent<Lure>() != null) Object.Destroy(t.gameObject);
+                    if (t.GetComponent<Item>() != null || t.GetComponent<Lure>() != null) { Containers.CloseIfOpen(t.gameObject); Object.Destroy(t.gameObject); }
                     break;
                 case Action.FeederUsed:
                     t.GetComponent<Feeder>()?.makeInactive();

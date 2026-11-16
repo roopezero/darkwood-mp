@@ -8,6 +8,7 @@ game, also after the players' areas were switched off and on again, and what it 
      location each game loads while playing together; the chicken lady's house is one): the client kills her, the
      host loots her.
   3. The same with the doctor, killed by the host.
+  4. A corpse that goes while the client has it open: no window may be left on the client's screen (R03).
 
 Alone: tools/run-test.sh map:corpse."""
 
@@ -67,6 +68,18 @@ STEPS = [
     ("host", "sn-info", DOCTOR),
     ("client", "sn-info", DOCTOR),
     *_corpse_everywhere(DOCTOR),
+    # 4. A container's window when the container goes while it's open (R03): the client opens a corpse of the
+    #    host's dog, and the host removes the corpse (NetEnemies.OnDespawn destroys ours); then the client's
+    #    Inventory destroyed directly while open (the safety net, Containers.DropOrphanedWindows).
+    ("host", "cw-dog", {"settle": 1}),
+    ("client", "cw-open", {"settle": 0.5}),
+    ("host", "cw-remove", {"settle": 1}),
+    ("client", "cw-closed"),
+    ("host", "cw-dog", {"settle": 1}),
+    ("client", "cw-open", {"settle": 0.5}),
+    ("client", "cw-break"),
+    ("client", "cw-closed"),
+    ("host", "cw-remove", {"settle": 1}),
     ("host", "heal"),
     ("client", "heal"),
     ("host", "alive"),

@@ -755,6 +755,9 @@ namespace DarkwoodMP.Combat
         /// while playing), rather than our own copy from the save.</summary>
         public bool MadeHere(Character c) => c != null && _byChar.TryGetValue(c, out var p) && p.Ours;
 
+        /// <summary>Client: a corpse of one of the host's enemies that the host told us to keep (EnemyDespawn with keep corpse).</summary>
+        internal bool KeptCorpse(Character c) => c != null && _corpseIds.ContainsKey(c);
+
         public Character CharacterOf(uint id)
         {
             if (_session.IsHost) return _byIdHost.TryGetValue(id, out var t) ? t.C : null;
@@ -1240,7 +1243,7 @@ namespace DarkwoodMP.Combat
             {
                 c.cuttingInHalf = true; c.cutInHalf = true;
                 var item = c.GetComponent<Item>(); if (item != null) Object.Destroy(item);
-                var inv = c.GetComponent<Inventory>(); if (inv != null) Object.Destroy(inv);
+                var inv = c.GetComponent<Inventory>(); if (inv != null) { World.Containers.CloseIfOpen(c.gameObject); Object.Destroy(inv); }
                 var sel = c.GetComponent<Selectable>(); if (sel != null) Object.Destroy(sel);
                 if (c.capsuleCollider != null) Object.Destroy(c.capsuleCollider);
                 if (c.collider != null) c.collider.isTrigger = true;
@@ -1333,6 +1336,7 @@ namespace DarkwoodMP.Combat
                 Plugin.Log.LogInfo($"The host's corpse #{id} ({p.C.name}) is gone there: removed here");
                 // Destroyed, our copy from the save too: the host's is out of its world for good, and a hidden copy
                 // would still be in ours (its body searchable by name, saved with our world).
+                World.Containers.CloseIfOpen(p.C.gameObject);
                 Object.Destroy(p.C.gameObject);
                 return;
             }
@@ -1343,6 +1347,7 @@ namespace DarkwoodMP.Combat
             StopSounds(p.C, keepDeathSound: false);
             // An NPC the host calmed down (or one out of our range): our copy of it is ours to run again.
             if (p.C.npc != null && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours)) { Recull(p); return; }
+            World.Containers.CloseIfOpen(p.C.gameObject); // its window, if our player has its corpse open: gone or hidden, it is gone for us
             if (p.Ours) Object.Destroy(p.C.gameObject); else { Hide(p.C); Recull(p); }
         }
 

@@ -266,6 +266,7 @@ namespace DarkwoodMP.World
             long id = r.R.ReadInt64();
             if (!ObjRef.Spawned.TryGetValue(id, out var go) || go == null) return;
             if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy landed Spawned:{id} gone: {go.name} removed");
+            Containers.CloseIfOpen(go);
             Object.Destroy(go);
         }
 
