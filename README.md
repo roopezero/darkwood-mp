@@ -20,7 +20,7 @@ DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com
 - **Dying for good** (Nightmare, or Hard with no lives left) lets you watch your friends until the game is over.
 - **Your saves are safe.** When you join someone's game, your own saves aren't touched.
 - **A new menu.** A cleaner main and pause menu, a Start Game window that shows who you've played each save with, and a full Options window with key rebinding.
-- **Quality of life, also when playing alone:** each workbench upgrade adds a row of storage, a *Sort & Stack* button at the workbench, bigger stacks (50 of every stackable item by default, the host's setting), faster world loading, better framing on ultrawide screens, and the mouse is free to leave the window in menus.
+- **Quality of life, also when playing alone:** each workbench upgrade adds a row of storage, a *Sort & Stack* button at the workbench, bigger stacks (50 of every stackable item by default, the host's setting), faster world loading, better framing on ultrawide screens, the mouse is free to leave the window in menus, and descriptions for the items and map locations the game left without one.
 
 See [docs/GUIDE.md](docs/GUIDE.md) for everything the mod does, in detail.
 

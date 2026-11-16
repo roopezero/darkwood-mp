@@ -80,6 +80,8 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 **Notices** appear over your character when someone joins, leaves or dies.
 
+**Descriptions:** many of the game's items show only a name when you point at them (their description is empty in every language), and the map's locations have none. The mod adds a short English line for those, also when playing alone: what the item is, and what the game's data says about it (damage, magazine, ammunition, armour, effects, what it's used to make, what a map marks). A description the game has is never changed. Journal items (notes, keys, photos, drawings) have their own page in the journal and get none. On the map, the location's line comes above the game's "you are here". Item and location names in these lines are the game's own, in your language.
+
 ## What's shared
 
 | | |
