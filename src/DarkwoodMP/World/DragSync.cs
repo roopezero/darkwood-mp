@@ -19,13 +19,17 @@ namespace DarkwoodMP.World
     ///
     /// Pushed objects too: every loose object (an Item with a rigidbody: furniture, placed objects, dropped items) is
     /// noted where it is known to be in every game (where it was when sharing began or it was first seen, then
-    /// wherever it was last sent or heard to be). Four times a second each is compared with that; one that's more
+    /// wherever it was last sent or heard to be). Ten times a second each is compared with that; one that's more
     /// than half a unit or two degrees away and at rest again is settled, so a push between two checks is caught
-    /// too. The host sends where it is as a drag's end (ObjMove, last), whatever moved it (its player, an explosion,
-    /// an enemy, physics settling). A client sends only what its own player was at while it was away from there
-    /// (the host checks it as it checks a drag: the mover within reach of the object and of where it went), and
-    /// puts anything else back, however far it went (settling, a nudge, its copy of an explosion): if the host's
-    /// copy moved too, the host's word on it comes as an ObjMove. So the last word is the host's resting position.
+    /// too. While it's still sliding, where it is goes out too, unreliably, as a drag's moves do, so the other games
+    /// show it sliding rather than jumping to its rest; they glide the last bit to where it came to rest. The host sends where it is as a drag's end (ObjMove, last), whatever moved it (its player, an explosion,
+    /// an enemy, physics settling). A client sends only what its own player was at while it was away from there,
+    /// or hit in the seconds before (a shot pushes from afar; the host checks it as it checks a drag: the mover
+    /// within reach of the object and of where it went), and puts anything else back, however far it went
+    /// (settling, a nudge, its copy of an explosion): if the host's copy moved too, the host's word on it comes as
+    /// an ObjMove. So the last word is the host's resting position. The host passes each rest back to its mover
+    /// too; a client skips that echo of its own word (OurEcho), which would put the thing back under its player
+    /// if they had pushed it on in the meantime.
     /// An object put where another game said is left asleep, so it doesn't drift from there by itself.
     ///
     /// The object keeps the ObjRef it had before it moved (ObjRef.Pin), so the ones named by where they stand
@@ -44,6 +48,8 @@ namespace DarkwoodMP.World
     {
         private const float SendInterval = 0.1f;
         private const float StaleAfter = 3f; // a mover that stopped sending (left, lost the last packet): let go
+        private const float GlideFor = 0.6f;  // at most this long to glide to where another game's move came to rest
+        private const float GlideMax = 300f;  // further than this, it's put there at once
 
         private readonly Session _session;
 
@@ -57,6 +63,8 @@ namespace DarkwoodMP.World
         private bool _claimed;        // client: the host agreed that our player drags _dragging (we send its moves)
         // client: where the host (or the player who owns the drag) last said the thing we're holding is, for letting go
         private readonly Dictionary<GameObject, (Vector3 pos, Quaternion rot)> _hostAt = new Dictionary<GameObject, (Vector3, Quaternion)>();
+        // client: where we said a thing came to rest, oldest first, until the host passes each back to us (its echo)
+        private readonly Dictionary<GameObject, List<Vector3>> _unechoed = new Dictionary<GameObject, List<Vector3>>();
 
         // who is dragging what (by ObjRef): decided on the host, as the host said on a client
         private sealed class Owner { public ulong Id; public float Heard; public ObjRef Ref; }
@@ -81,11 +89,14 @@ namespace DarkwoodMP.World
 
         // loose objects and where they're known to be, checked until they're back at rest wherever they are
         private const float PushWatchRadius = 600f;
-        private const float PushWatchInterval = 0.25f;
+        private const float PushWatchInterval = 0.1f; // also how often a thing still sliding is sent
+        private const float PushLookInterval = 0.25f;  // new loose things noted around the players
+        private float _nextLook;
         private const float PushMinMove = 0.5f;    // world units (a crate is about 50 across)
         private const float PushMinTurn = 2f;      // degrees
         private const float PushTouch = 120f;      // a client's player this close to a thing that moved moved it
         private const float PushGiveUpAfter = 10f; // still moving after this: sent as it is
+        private const float PushHitFor = 3f;       // a thing our player hit moves by that hit for this long
         private sealed class Loose
         {
             public Item Item;
@@ -96,6 +107,7 @@ namespace DarkwoodMP.World
             public Quaternion Rot;
             public float Since = -1f; // when it was first seen away from there (-1: it isn't)
             public bool Touched;      // a client's own player was at it while it was away from there
+            public float HitAt = -1f; // when our player last hit it (a shot pushes from afar)
         }
         private readonly Dictionary<Rigidbody, Loose> _loose = new Dictionary<Rigidbody, Loose>();
         private bool _looseFound; // every loose object in the world so far has been noted
@@ -118,7 +130,7 @@ namespace DarkwoodMP.World
             {
                 foreach (var m in _moving.Values) Release(m);
                 _moving.Clear(); ForgetLoose(); _dragging = null; _settling = null;
-                _owners.Clear(); _corrected.Clear(); _hostAt.Clear(); _claimed = false;
+                _owners.Clear(); _corrected.Clear(); _hostAt.Clear(); _unechoed.Clear(); _claimed = false;
             };
         }
 
@@ -192,10 +204,14 @@ namespace DarkwoodMP.World
                 // copies a few units from everyone else's.
                 foreach (var b in Object.FindObjectsOfType<Rigidbody>(_session.IsHost)) Note(b, null);
             }
-            Look(me);
-            if (_session.IsHost)
-                foreach (var proxy in Combat.NetPlayerProxy.All.Values)
-                    if (proxy != null && proxy.alive && !proxy.Away) Look(proxy.transform.position);
+            if (Time.unscaledTime >= _nextLook)
+            {
+                _nextLook = Time.unscaledTime + PushLookInterval;
+                Look(me);
+                if (_session.IsHost)
+                    foreach (var proxy in Combat.NetPlayerProxy.All.Values)
+                        if (proxy != null && proxy.alive && !proxy.Away) Look(proxy.transform.position);
+            }
             // A client away (spectating) has no player of its own to push anything: it takes the host's word on all.
             // Our pushes count wherever the host runs our area too (a separate location it placed, the shared dream):
             // only in an area that's ours alone does what our player knocks over stay ours.
@@ -215,8 +231,16 @@ namespace DarkwoodMP.World
                 float moved = (t.position - p.Pos).magnitude;
                 if (moved < PushMinMove && Quaternion.Angle(t.rotation, p.Rot) < PushMinTurn) { p.Since = -1f; p.Touched = false; continue; }
                 if (p.Since < 0f) p.Since = nowT;
-                if (_session.IsClient && !clientAway && !p.Touched && p.Col != null && p.Col.bounds.SqrDistance(me) < PushTouch * PushTouch) p.Touched = true;
-                if (!AtRest(p.Body) && nowT - p.Since < PushGiveUpAfter) continue;
+                if (_session.IsClient && !clientAway && !p.Touched && (p.Col != null && p.Col.bounds.SqrDistance(me) < PushTouch * PushTouch
+                    || p.HitAt >= 0f && nowT - p.HitAt < PushHitFor)) p.Touched = true;
+                if (!AtRest(p.Body) && nowT - p.Since < PushGiveUpAfter)
+                {
+                    // Still sliding: where it is now goes out too (unreliably, as a drag's moves), so the other games
+                    // show it sliding there instead of jumping to where it comes to rest. Only what this game has the
+                    // word on: the host's, or a client's own player's push.
+                    if (_session.IsHost || p.Touched) Send(p.Item, p.Ref, last: false);
+                    continue;
+                }
                 if (_session.IsClient && !p.Touched)
                 {
                     // Not our player's doing (settling, a nudge, our copy of an explosion): the host decides where it
@@ -234,6 +258,20 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] pushed {p.Item.name} ({p.Ref}) {moved:0.0} units: sent where it is");
             }
             if (gone != null) foreach (var b in gone) _loose.Remove(b);
+        }
+
+        /// <summary>
+        /// Our player hit this thing (Item.getHit). A shot pushes it from as far as the gun reaches, where the
+        /// player isn't within PushTouch of it, and a client would put it back as not its player's doing (and the
+        /// host's copy, which gets the hit but not its push, doesn't move). So for a few seconds a move of it counts
+        /// as our player's push.
+        /// </summary>
+        public void Hit(Item item)
+        {
+            var b = item != null ? item.GetComponent<Rigidbody>() : null;
+            if (b == null) return;
+            if (!_loose.ContainsKey(b)) Note(b, null);
+            if (_loose.TryGetValue(b, out var p)) p.HitAt = Time.unscaledTime;
         }
 
         // Host: every loose object where the last snapshot for joiners has it (WorldShare.SaveSnapshot).
@@ -406,7 +444,34 @@ namespace DarkwoodMP.World
             if (last) { Rebase(item.gameObject); Recell(item.gameObject); } // and into the culling node of where it is now
             int ch = last ? Channel.Control : Channel.State;
             if (_session.IsHost) _session.Broadcast(w, ch, reliable: last);
-            else _session.SendToHost(w, ch, reliable: last);
+            else
+            {
+                _session.SendToHost(w, ch, reliable: last);
+                if (last)
+                {
+                    if (!_unechoed.TryGetValue(item.gameObject, out var sent)) _unechoed[item.gameObject] = sent = new List<Vector3>();
+                    if (sent.Count < 16) sent.Add(t.position);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Client: this ObjMove is the host passing back where we said the thing came to rest (the host sends every
+        /// rest position to everyone, its mover too). Our copy is there already, or our player has pushed it on since,
+        /// and then putting it back there would undo that push for a moment (the next rest is sent anyway): with a
+        /// link of 100 ms or more, an echo came in while our player was still pushing, and the thing jumped back and
+        /// held still under them. Anything else said about it (the host's own word, a refusal, another player's move)
+        /// isn't ours and is taken, and the echoes still to come after it are taken too, so every game ends with the
+        /// host's last word, as before.
+        /// </summary>
+        private bool OurEcho(GameObject go, Vector3 pos)
+        {
+            if (!_unechoed.TryGetValue(go, out var sent)) return false;
+            int i = sent.FindIndex(p => (p - pos).sqrMagnitude < 0.01f);
+            if (i < 0) { _unechoed.Remove(go); return false; }
+            sent.RemoveRange(0, i + 1);
+            if (sent.Count == 0) _unechoed.Remove(go);
+            return true;
         }
 
         /// <summary>ObjMove: ObjRef, vec3 pos, quat rot, u8 last.</summary>
@@ -459,6 +524,11 @@ namespace DarkwoodMP.World
             var go = item.gameObject;
             if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o)) o.Heard = Time.unscaledTime; // its drag goes on
             if (item == _dragging) { _hostAt[go] = (pos, rot); return; } // we're holding it: kept for if we have to let go
+            if (s.IsClient && last && OurEcho(go, pos))
+            {
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {go.name} ({obj}): the host passed back where we left it");
+                return;
+            }
             if (!_moving.TryGetValue(go, out var m))
             {
                 ObjRef.Pin(go); // before it moves, so it's still found by the same name
@@ -616,7 +686,11 @@ namespace DarkwoodMP.World
             }
             if (!owned && !last)
             {
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj} without a claim: dropped");
+                // A push still sliding (nobody drags it): passed on to be shown, if the pusher is at it. Where it comes
+                // to rest is checked and taken as its last move.
+                var it = ObjRef.Resolve<Item>(obj);
+                if (it != null && Authority.Near(from, it.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach)) return true;
+                if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj} from too far without a claim: dropped");
                 return false;
             }
             if (!DragAllowed(from, obj, pos))
@@ -698,8 +772,17 @@ namespace DarkwoodMP.World
                 bool stale = Time.unscaledTime - m.Heard > StaleAfter;
                 if (m.Last || stale)
                 {
+                    // Glide the last bit to where it came to rest, as it slid there in the mover's game (a jump of
+                    // more than GlideMax, a correction, is made at once); then it's there exactly, and let go.
+                    float off = (m.T.position - m.Pos).magnitude;
+                    bool there = off < 0.5f && Quaternion.Angle(m.T.rotation, m.Rot) < 1f;
+                    if (!there && off < GlideMax && !stale && Time.unscaledTime - m.Heard < GlideFor)
+                    {
+                        m.T.SetPositionAndRotation(Vector3.Lerp(m.T.position, m.Pos, k), Quaternion.Slerp(m.T.rotation, m.Rot, k));
+                        continue;
+                    }
                     m.T.SetPositionAndRotation(m.Pos, m.Rot);
-                    if (Time.unscaledTime - m.Heard > 0.25f || stale) { Release(m); Rebase(kv.Key); Recell(kv.Key); (done ??= new List<GameObject>()).Add(kv.Key); }
+                    if (there || Time.unscaledTime - m.Heard > GlideFor || stale) { Release(m); Rebase(kv.Key); Recell(kv.Key); (done ??= new List<GameObject>()).Add(kv.Key); }
                     continue;
                 }
                 m.T.SetPositionAndRotation(Vector3.Lerp(m.T.position, m.Pos, k), Quaternion.Slerp(m.T.rotation, m.Rot, k));

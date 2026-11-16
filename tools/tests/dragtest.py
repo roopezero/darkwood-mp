@@ -151,9 +151,13 @@ t5 = time.time()
 a.send(bytes([48]) + ref(STOOL)); pump(0.8)
 check(not any(o == a.id for o, _ in owners(b, t5)), "a DragClaim outside a Request is dropped")
 
-# 6. A move without a claim is dropped (a drag's end, a push, is still taken).
-move(a, sx + 300, sz); pump(0.5)
-check(not moves(b, t5, last=False), "a drag move without a claim isn't passed on")
+# 6. A move without a claim (a push still sliding) is passed on only from a mover at it and to near it: one to 3000
+#    away is dropped (a drag's end, a push's rest, is checked the same way and taken).
+move(a, sx + 3000, sz); pump(0.5)
+check(not moves(b, t5, last=False), "a move without a claim to far away isn't passed on")
+t6 = time.time()
+move(a, sx + 20, sz); pump(0.5)
+check(len(moves(b, t6, last=False)) >= 1, "a slide move without a claim, beside it, is passed on")
 
 # 7. Out of reach: the drag is taken away and the mover lets go.
 ok, _ = claim(b, "Other takes hold of it again")

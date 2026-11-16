@@ -93,6 +93,9 @@ namespace DarkwoodMP.World
         static void Postfix(Item __instance, int damage, Transform attackerTransform, bool normalHit, BreakSync.ItemState __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null) return;
+            // Our player's hit pushes what it hits (a shot's AddForceAtPosition comes right after it): where it comes
+            // to rest is our player's doing, however far away they stood.
+            if (BreakSync.OurPlayers(attackerTransform)) DragSync.Instance?.Hit(__instance);
             if (__state.Same(BreakSync.ItemState.Of(__instance)) || !BreakSync.OurPlayers(attackerTransform)) return;
             // An egg this hit broke: EggSync's message breaks it in the other games, wherever it is there.
             if (!__state.Destroyed && __instance.destroyed && EggSync.IsEgg(__instance)) { EggSync.Send(__instance); return; }
