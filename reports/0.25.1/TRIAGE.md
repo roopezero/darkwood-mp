@@ -197,8 +197,14 @@ The go-ahead came with "no questions asked", so Phase 2 started without a stop a
 
 Order: R05/R04/R06, R01/R02, R03 and R10/R08 in parallel; R07 alongside. R09 comes after R05 is merged, since both change `World/ScriptedEvents.cs`. The protocol is bumped once, at merge.
 
-(Entries filled in as fixes land.)
+| ID | Status | Commit | Verified by |
+|---|---|---|---|
+| R10 | fixed | d6492ef | `shots` (overlays hidden under the pause menu, shown after); cutscenes, dialogue and journal: manual (checklist 1) |
+| R08 | fixed | 4174ef0 | `shots` (HUD "none" under the menu, restored after) and the new `map:ui` step `ui-pause` (client and host with a container open): PASS |
+
+(More entries as fixes land.)
 
 ## Manual verification checklist
 
-(Filled in as fixes land.)
+1. **R10.** Host + 1 client, standing near each other. The client talks to an NPC, opens the journal, reads a note, and sets off a story cutscene or the chapter text. Expected: the host's name tag is hidden throughout on the client's screen. With only the backpack or a container open, the tag stays visible.
+2. **R08.** Host + 1 client. The client opens a crate and the backpack, then presses Esc. Expected: no HUD, container window or name tag shows over the dimmed world. Resume: the crate window, backpack, hotbar and bars come back as they were. Then repeat, and while the client's menu is open, the host takes everything from the crate. Expected after Resume: the crate window shows the host's change, and no stray window is left. Alone: Esc in a world hides the HUD, and Resume brings it back.
