@@ -44,6 +44,12 @@ namespace DarkwoodMP.World
     public sealed class FlagsSync
     {
         public const float Interval = 2f;
+        /// <summary>
+        /// The mod's own flags start with this (World.SharedTank's). The game's setFlag refuses a name that isn't in its
+        /// flag list, so they go straight into Flags.flagsDict (SetModFlag); Flags.SaveState saves every entry there,
+        /// so they're in the host's save and a joiner's snapshot, and the game itself never reads them.
+        /// </summary>
+        public const string ModPrefix = "dwmp_";
         public static FlagsSync Instance { get; private set; }
         private readonly Session _session;
         /// <summary>The after-night reward each trader got, by name: the day and the amount.</summary>
@@ -458,6 +464,7 @@ namespace DarkwoodMP.World
                 case 'f':
                     if (PlayersOwn(name)) break;
                     var parts = value.Split('|');
+                    if (name.StartsWith(ModPrefix)) { SetModFlag(f, name, bool.Parse(parts[0]), int.Parse(parts[1])); break; }
                     f.setFlag(name, bool.Parse(parts[0]));
                     f.setFlag(name, int.Parse(parts[1]));
                     break;
@@ -474,6 +481,14 @@ namespace DarkwoodMP.World
                     if (dialogue != null) JsonConvert.DeserializeObject<CharacterDialogue.SaveState>(value).loadValues(dialogue);
                     break;
             }
+        }
+
+        /// <summary>Set one of the mod's own flags (ModPrefix) in Flags.flagsDict, which the game's setFlag won't take.</summary>
+        internal static void SetModFlag(Flags f, string name, bool on, int amount)
+        {
+            if (!f.flagsDict.TryGetValue(name, out var flag) || flag == null) f.flagsDict[name] = flag = new Flags.Flag { name = name };
+            flag.isTrue = on;
+            flag.amount = amount;
         }
 
         /// <summary>The trade window with this NPC is open: its reputation label shows the new value at once.</summary>

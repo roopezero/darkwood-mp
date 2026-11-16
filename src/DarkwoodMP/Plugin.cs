@@ -1058,6 +1058,7 @@ namespace DarkwoodMP
             _containers.Update(); ModProfiler.Mark("containers");
             _characters.Update(); ModProfiler.Mark("characters");
             _flags.Update(); ModProfiler.Mark("flags");
+            World.SharedTank.Update(); // also without co-op: the flag is kept for when others join
             _drag.Update(); ModProfiler.Mark("drag");
             DoorPush.Update(); ModProfiler.Mark("door push");
             _fuel.Update(); ModProfiler.Mark("fuel");

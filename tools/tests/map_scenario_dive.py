@@ -36,6 +36,27 @@ STEPS = [
     # distance) that the host agreed to: it must not put the client back.
     *[(who, "trip-setup", "T1", "0", "600", "1800", "600") for who in ("host", "client")],
     ("client", "trip-go", "T1"),
+    # O3: a trigger that fires each time with events that run once, as the cellar's first dive (its dream): the host
+    # first, then the client still gets its own part, once.
+    *[(who, "own-setup", "O3", "0", "-600", "eventsonce") for who in ("host", "client")],
+    ("host", "own-fire", "O3", "2"),
+    ("client", "own-count", "O3", "0", "1"),
+    ("client", "own-fire", "O3", "2"),
+    ("client", "own-count", "O3", "2", "1"),
+    ("host", "own-count", "O3", "2", "1"),
+    ("client", "own-fire", "O3", "0"),
+    # K1: the full oxygen tank. Without it the client gets the "no tank" branch; once the host has held one, the
+    # flag reaches the client and is saved, and the tank's branch runs for every player, also after the host lost it.
+    *[(who, "tank-setup", "K1", "-600", "0") for who in ("host", "client")],
+    ("client", "tank-fire", "K1", "0", "1"),
+    ("client", "tank-flag", "0"),
+    ("host", "tank-give"),
+    ("client", "tank-flag", "1"),
+    ("host", "tank-take"),
+    ("host", "tank-flag", "1"),
+    ("client", "tank-fire", "K1", "1", "1"),
+    ("client", "tank-fire", "K1", "2", "1"),
+    ("host", "tank-fire", "K1", "1", "0"),
     ("client", "loc-go", CELLAR, {"settle": 3}),
     ("client", "dive-scan", "cellar"),
     ("client", "loc-back"),

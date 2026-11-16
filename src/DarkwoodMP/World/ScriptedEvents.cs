@@ -435,17 +435,29 @@ namespace DarkwoodMP.World
         /// <summary>Whether a later player would get anything of these events.</summary>
         internal static bool HasLaterSteps(GameEvents ge) => ge != null && ge.events.Exists(LaterStep);
 
+        /// <summary>
+        /// Whether this trigger runs its events only once: it fires once, or it fires each time but its GameEvents run
+        /// once. The village cellar's first dive is the second kind: the passage's trigger fires on every use, but its
+        /// dream (startDream_outside_village_ch2_cellar_01) runs once, so a second player diving never had it.
+        /// </summary>
+        private static bool Once(global::EventTrigger t) =>
+            !t.multipleFire || (t.gameEvents != null && !t.gameEvents.multipleFire);
+
+        /// <summary>Whether a once-only trigger (Once) has had its one run.</summary>
+        private static bool OnceDone(global::EventTrigger t) =>
+            !t.multipleFire ? t.fired : t.gameEvents != null && !t.gameEvents.multipleFire && t.gameEvents.fired;
+
         /// <summary>Another player's once-only trigger fired here (only its shared part ran): our player is owed its own.</summary>
         private static void Owe(global::EventTrigger t, string what)
         {
-            if (t == null || t.multipleFire || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
+            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
             if (Debug) Plugin.Log.LogInfo($"[world] {what} fired for another player: our player gets its own part when they set it off");
         }
 
         /// <summary>Whether this owed trigger, set off now by our player, is to run as a later player's part (LaterPart).</summary>
         internal static bool LaterFor(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type)
         {
-            if (t == null || et == null || !t.fired || t.multipleFire || t.type != type || !Owed.Contains(t)) return false;
+            if (t == null || et == null || !Once(t) || !OnceDone(t) || t.type != type || !Owed.Contains(t)) return false;
             var s = S;
             return s != null && s.Active && WorldActions.Sharing && Current == Part.All && SettingOff;
         }
@@ -516,7 +528,7 @@ namespace DarkwoodMP.World
         {
             if (t == null) { Authority.Refuse("no such trigger here"); return; }
             if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
-            if (!t.fired || t.multipleFire) { Authority.Refuse("that hasn't happened here"); return; }
+            if (!Once(t) || !OnceDone(t)) { Authority.Refuse("that hasn't happened here"); return; }
             if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
             if (Given.Contains((from, t))) { Authority.Refuse("they have had their part of it"); return; }
             if (!Authority.InReach(et.transform.position, 3000f, et.name)) return;
