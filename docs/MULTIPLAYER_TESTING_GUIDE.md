@@ -28,6 +28,7 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 | `map` | the full two-game scenario: every module in one world (`tools/tests/map_scenario.py`) |
 | `map:NAME` | `tools/tests/map_scenario_NAME.py` alone, from a fresh test world and a fresh client join |
 | `maps` | every map battery, one after another, except modules with `IN_MAPS = False` |
+| `map4` | the host and three client games (`MAP_CLIENTS=4` for four), `tools/tests/map4_scenario.py`; `MAP_SCENARIO=map4_push` plays the pushing scenario instead (players' bodies pushing furniture, lamps and door leaves, re-bumps by other players, a hit's push, a client whose copy is switched off, a far house, players standing in each other) |
 
 The batteries are data: every `tools/tests/map_scenario_NAME.py` is `map:NAME`, so a new module is a battery as soon
 as it exists. Now: core, corpse (story NPCs' corpses: killed by either player, shown and looted once in both games; and a corpse removed while a player has it open leaves no window), dreams, enemies, far, farevents, fixchecks, gaps, hostile, issues, items1, items2, lights (the lights on the other players' puppets, and each game's view drawn from its own player), locations,
@@ -127,3 +128,11 @@ is not a pass with the default.
     night (journal differs), npcs (`npc-died`), status (`join-waited`: world not ready).
 - Real verdicts for the RAN tests: worldobs.py (host-world, host-death, host-elsewhere) and storytest.py
   (host-chapter) need their expected events listed and checked, as combattest.py now does.
+
+## Lag
+
+Every test runs on localhost, where messages arrive at once. `DWMP_LAG_MS=N` in the environment of `tools/run-test.sh`
+(the games inherit it) holds every message a game gets for N ms before handling it, in order (`Net/Session.cs`), as an
+internet link does: `DWMP_LAG_MS=120 MAP_SCENARIO=map4_push tools/run-test.sh map4`. Without it, a client's own push
+coming back from the host a moment later (P01 in `reports/0.27.0/TRIAGE.md`) never showed.
+

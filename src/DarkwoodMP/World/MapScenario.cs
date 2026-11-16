@@ -271,6 +271,7 @@ namespace DarkwoodMP.World
             MapScenarioUi.Register();
             MapScenarioSavage.Register();
             MapScenarioKnock.Register();
+            MapScenarioPush.Register();
             MapScenarioRepair.Register();
             MapScenarioWbRows.Register();
             MapScenarioLights.Register();

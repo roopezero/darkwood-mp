@@ -12,7 +12,9 @@ import json, re, sys
 POS_TOL = 1.5
 SECTION_POS_TOL = {"enemies": 60.0, "enemylooks": 60.0,  # enemies move: the client shows them a little behind the host
                    "npcpos": 60.0}  # and so do NPCs (NpcSync: twice a second, when they moved 30)
-FIELD_TOL = {"hour": 0.26, "durability": 0.051, "fuel": 1.01}
+FIELD_TOL = {"hour": 0.26, "durability": 0.051, "fuel": 1.01,
+             "yaw": 2.01,  # a loose thing's turn: DragSync sends a turn of 2 degrees or more (PushMinTurn)
+             "leaf": 4.01}  # an open door's leaf: DoorPush sends a turn of more than 4 degrees (MinChange)
 DEFAULT_REQUIRED = ["doors", "containers", "items", "story", "time"]
 # The host sends a client only the enemies within NetEnemies.RelevantRange (3000) of that client's player, so an enemy
 # only in the host's dump, this far or more from the client's player (its dump's local player pos), isn't missing.

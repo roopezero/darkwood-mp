@@ -136,7 +136,36 @@ namespace DarkwoodMP.Net
                 if (b.HostLost) OnHostLost?.Invoke(b.Status);
             };
             b.OnPeerLost += id => { if (Backend == b) OnPeerLost(id); };
-            b.OnMessage += (from, data, len) => { if (Backend == b) Dispatch(from, data, len); };
+            b.OnMessage += (from, data, len) => { if (Backend == b) Received(from, data, len); };
+        }
+
+        // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
+        // (in order) before it's handled, as a link over the internet does. Tests only; a localhost run has none.
+        private static readonly float LagSecs = ReadLag();
+        private readonly Queue<(float at, ulong from, byte[] data)> _late = new Queue<(float, ulong, byte[])>();
+
+        private static float ReadLag()
+        {
+            var v = Environment.GetEnvironmentVariable("DWMP_LAG_MS");
+            return int.TryParse(v, out int ms) && ms > 0 ? ms / 1000f : 0f;
+        }
+
+        private void Received(ulong from, byte[] data, int length)
+        {
+            if (LagSecs <= 0f) { Dispatch(from, data, length); return; }
+            var copy = new byte[length];
+            Buffer.BlockCopy(data, 0, copy, 0, length);
+            _late.Enqueue((UnityEngine.Time.unscaledTime + LagSecs, from, copy));
+        }
+
+        private void DeliverLate()
+        {
+            float now = UnityEngine.Time.unscaledTime;
+            while (_late.Count > 0 && _late.Peek().at <= now)
+            {
+                var m = _late.Dequeue();
+                Dispatch(m.from, m.data, m.data.Length);
+            }
         }
 
         public void Register(MsgType type, Action<ulong, PacketReader> handler) => _handlers[type] = handler;
@@ -361,6 +390,7 @@ namespace DarkwoodMP.Net
             Connected = false;
             _helloAt = -1f;
             _heardHostAt = -1f;
+            _late.Clear();
             _joining.Clear();
             OnSessionEnded?.Invoke();
         }
@@ -395,6 +425,7 @@ namespace DarkwoodMP.Net
         public void Update()
         {
             foreach (var b in _backends) b.Poll();
+            if (_late.Count > 0) DeliverLate();
             // A Hello the host never answered (lost, or turned away by a race over Steam): send it again.
             if (IsClient && !Connected && _helloAt >= 0f && Now - _helloAt > HelloRetry)
             {
