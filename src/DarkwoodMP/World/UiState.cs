@@ -30,7 +30,10 @@ namespace DarkwoodMP.World
                 if (WorldShare.PauseMenuInWorld) return "pause menu";
                 if (MenuWindows.AnyOpen) return "mod menu";
                 if (Core.loadingGame) return "loading";
-                if (Core.HideUI) return "UI hidden";
+                // Core.HideUI is a static the game never clears on a new world: after the epilogue or the credits
+                // (hideVisibleUI) it stays true into the next save loaded in the same session, with the HUD back on.
+                // So it counts only while hideVisibleUI's bars are actually off.
+                if (Core.HideUI && BarsOff()) return "UI hidden";
                 if (Core.EnteringDream) return "entering a dream";
                 var ctl = Singleton<Controller>.Instance;
                 if (ctl != null && ctl.playingCutscene) return "cutscene";
@@ -52,6 +55,12 @@ namespace DarkwoodMP.World
                 }
                 return null;
             }
+        }
+
+        private static bool BarsOff()
+        {
+            var ui = Singleton<UI>.Instance;
+            return ui == null || ui.bars == null || !ui.bars.activeSelf;
         }
 
         /// <summary>Player.inMenu without the item context menu (that one is over the backpack, with the world in view).</summary>

@@ -512,6 +512,11 @@ namespace DarkwoodMP
             yield return Shot("world");
             string hudBefore = PauseHud.Shown();
             Log.LogInfo($"[shots] world: HUD shown {hudBefore}");
+            ShotsUi("world", hidden: false);
+            // Core.HideUI left true by an earlier world (the epilogue, the credits) with the HUD back on: tags still drawn.
+            Core.HideUI = true;
+            ShotsUi("world-stale-hide", hidden: false);
+            Core.HideUI = false;
             Core.showHidePauseMenu();
             float clockBefore = Singleton<Controller>.Instance.CurrentTime;
             yield return Shot("pause-menu");

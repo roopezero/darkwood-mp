@@ -225,6 +225,11 @@ Protocol bumped 28 -> 29 at merge (R02 changed `EnemySpawn` and added `EnemyArmo
 
 (More entries as fixes land.)
 
+**Phase 3 (full suite, once, on the merged tree):** `tools/run-test.sh full shots tooltips map:corpse map:ui map:dive map:story map:story2`, 36 items in 92 min. PASS or RAN (no failure) for everything except:
+- `shots` and `map:ui` (host `ui-pause`): tags stayed hidden after the pause menu, reason "UI hidden". The test game runs across items, and `Core.HideUI` is a static the game sets in `UI.hideVisibleUI` (epilogue, credits) and never clears on a new world, so an earlier item's ending left it on. A player loading a save after the ending in the same session would hit it too. Fix: `World/UiState.cs` counts `Core.HideUI` only while the HUD bars are off; `shots` now checks a stale `HideUI` (`world-stale-hide`, which fails without the fix). Rerun: `shots` PASS, `map:ui` PASS.
+- `map`: one difference, the crate `Saved:21361` 17 units apart at the compare after `drag-race` (both games had reported it at rest at the same spot; the host's player was standing beside it). Not touched by these fixes; `map:world` (which holds `drag-race`) rerun alone: PASS. Treated as flaky; worth watching.
+- `steam`: SKIP (Steam client not running).
+
 ## Manual verification checklist
 
 1. **R10.** Host + 1 client, standing near each other. The client talks to an NPC, opens the journal, reads a note, and sets off a story cutscene or the chapter text. Expected: the host's name tag is hidden throughout on the client's screen. With only the backpack or a container open, the tag stays visible.
