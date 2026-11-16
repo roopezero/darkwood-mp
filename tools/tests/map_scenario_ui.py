@@ -40,6 +40,10 @@ STEPS = [
     ("host", "ui-wb-set", "-1", "-", "0", "-2", "rope", "9"),
     ("client", "ui-wb-open"),
     ("client", "ui-wb-check", "-1", "-", "0", "-2", "rope", "9"),
+    # The pause menu over the open storage hides the HUD and the name tags, and closing it brings the same HUD
+    # back, the storage's window too (R08, R10).
+    ("client", "ui-pause"),
+    ("host", "ui-pause"),
     # Put back as it was.
     ("host", "ui-wb-set", "-2", "-", "0", "-3", "-", "0", "-7", "-", "0", "-8", "-", "0"),
     ("client", "ui-wb-check", "-1", "-", "0", "-2", "-", "0", "-3", "-", "0", "-7", "-", "0", "-8", "-", "0"),

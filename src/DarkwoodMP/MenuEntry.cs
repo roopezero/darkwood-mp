@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
@@ -41,12 +42,14 @@ namespace DarkwoodMP
             var backdrop = mm.transform.Find("Background");
             if (backdrop != null && backdrop.gameObject.activeSelf) { backdrop.gameObject.SetActive(false); _hiddenBackdrop = backdrop.gameObject; }
             if (mm.blackScreen != null && !mm.blackScreen.activeSelf) { mm.blackScreen.SetActive(true); _dimmed = true; }
+            PauseHud.Hide(); // the HUD would show through with the world
             // In co-op the game goes on, with its own sound; alone it's paused and the menu's music plays as before.
             if (World.CoopPause.InCoop && mm.menuMusic != null) { mm.menuMusic.Stop(0.3f); mm.menuMusic = null; }
         }
 
         internal static void PauseMenuClosed(MainMenu mm)
         {
+            PauseHud.Restore();
             if (_hiddenBackdrop != null) { _hiddenBackdrop.SetActive(true); _hiddenBackdrop = null; }
             if (_dimmed && mm.blackScreen != null) mm.blackScreen.SetActive(false);
             _dimmed = false;
@@ -248,5 +251,109 @@ namespace DarkwoodMP
     static class MenuEntryClosePatch
     {
         static void Postfix(MainMenu __instance) => MenuEntry.PauseMenuClosed(__instance);
+    }
+
+    /// <summary>The menu went away without close (the game turned it off): the HUD comes back too.</summary>
+    [HarmonyPatch(typeof(MainMenu), "OnDisable")]
+    static class MenuEntryDisablePatch
+    {
+        static void Postfix() => PauseHud.Restore();
+    }
+
+    /// <summary>
+    /// The player's HUD under the pause menu in a world. The menu shows the world dimmed behind it (MenuEntry), and
+    /// without this the HUD would show through as well: the backpack, the hotbar, the crafting window, an open
+    /// container's windows, the bars, the clock, the upgrade menu, the progress bar and the messages over the
+    /// player. As the menu opens, the ones that are on are switched off and noted; as it goes, exactly those are
+    /// switched back on (a container's window only if that container is still open: in co-op the world goes on
+    /// behind the menu). Not UI.showPlayerUI, which would show the bars during a cutscene. The windows are
+    /// deactivated, as the game's UI.hidePlayerUI does; the progress bar, the messages and the clock only have
+    /// their renderers off, so their timers go on. Playing alone too: the world shows through there as well.
+    /// </summary>
+    public static class PauseHud
+    {
+        private sealed class Off { public GameObject Go; public Func<bool> Still; }
+        private static readonly List<Off> _off = new List<Off>();
+        private static readonly List<Renderer> _renderers = new List<Renderer>();
+        private static bool _hidden;
+
+        public static void Hide()
+        {
+            if (_hidden) return;
+            var p = Player.Instance;
+            var ui = Singleton<UI>.Instance;
+            if (p == null || ui == null) return;
+            _hidden = true;
+            Window(p.Inventory, null);
+            Window(p.Hotbar, null);
+            Window(p.Crafting, null);
+            var c1 = p.openedItemInventory; var c2 = p.openedItemInventory2;
+            Window(c1, () => p.openedItemInventory == c1 || p.openedItemInventory2 == c1);
+            Window(c2, () => p.openedItemInventory == c2 || p.openedItemInventory2 == c2);
+            var up = ui.upgradeItemMenu;
+            if (up != null && up.opened) Deactivate(up.gameObject, () => up.opened);
+            Deactivate(ui.bars, null);
+            if (ui.clock != null) Renderers(ui.clock.gameObject, self: true);
+            if (p.progressBar != null) Renderers(p.progressBar.gameObject, self: false);
+            foreach (var go in p.attachedGameObjects) if (go != null) Renderers(go, self: false);
+            Plugin.Log.LogInfo($"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} renderers");
+        }
+
+        public static void Restore()
+        {
+            if (!_hidden) return;
+            _hidden = false;
+            int back = 0;
+            foreach (var o in _off)
+            {
+                if (o.Go == null || o.Go.activeSelf) continue;
+                bool still;
+                try { still = o.Still == null || o.Still(); } catch { still = false; }
+                if (still) { o.Go.SetActive(true); back++; }
+            }
+            foreach (var r in _renderers) if (r != null) r.enabled = true;
+            Plugin.Log.LogInfo($"[pause hud] restored: {back} of {_off.Count} windows, {_renderers.Count} renderers");
+            _off.Clear();
+            _renderers.Clear();
+        }
+
+        private static void Window(Inventory inv, Func<bool> still)
+        {
+            if (inv != null) Deactivate(inv.thisUI, still);
+        }
+
+        private static void Deactivate(GameObject go, Func<bool> still)
+        {
+            if (go == null || !go.activeSelf || _off.Exists(o => o.Go == go)) return;
+            go.SetActive(false);
+            _off.Add(new Off { Go = go, Still = still });
+        }
+
+        private static void Renderers(GameObject go, bool self)
+        {
+            var rs = self ? new[] { go.GetComponent<Renderer>() } : go.GetComponentsInChildren<Renderer>(false);
+            foreach (var r in rs)
+                if (r != null && r.enabled) { r.enabled = false; _renderers.Add(r); }
+        }
+
+        /// <summary>For the tests: the parts of the HUD shown now, by name ("none" if none).</summary>
+        public static string Shown()
+        {
+            var p = Player.Instance;
+            var ui = Singleton<UI>.Instance;
+            if (p == null || ui == null) return "no player";
+            var on = new List<string>();
+            void Go(string name, GameObject go) { if (go != null && go.activeInHierarchy) on.Add(name); }
+            Go("backpack", p.Inventory != null ? p.Inventory.thisUI : null);
+            Go("hotbar", p.Hotbar != null ? p.Hotbar.thisUI : null);
+            Go("crafting", p.Crafting != null ? p.Crafting.thisUI : null);
+            Go("container", p.openedItemInventory != null ? p.openedItemInventory.thisUI : null);
+            Go("container2", p.openedItemInventory2 != null ? p.openedItemInventory2.thisUI : null);
+            if (ui.upgradeItemMenu != null && ui.upgradeItemMenu.opened) Go("upgrade", ui.upgradeItemMenu.gameObject);
+            Go("bars", ui.bars);
+            var cr = ui.clock != null ? ui.clock.GetComponent<Renderer>() : null;
+            if (cr != null && cr.enabled && cr.gameObject.activeInHierarchy) on.Add("clock");
+            return on.Count == 0 ? "none" : string.Join(" ", on);
+        }
     }
 }

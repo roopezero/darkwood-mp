@@ -507,11 +507,14 @@ namespace DarkwoodMP
             while (_session.Active && _session.Peers.Count == 0) yield return null;
             yield return new WaitForSecondsRealtime(8f);
             yield return Shot("world");
+            string hudBefore = PauseHud.Shown();
+            Log.LogInfo($"[shots] world: HUD shown {hudBefore}");
             Core.showHidePauseMenu();
             float clockBefore = Singleton<Controller>.Instance.CurrentTime;
             yield return Shot("pause-menu");
             Log.LogInfo($"[shots] {MenuList.Check()}");
             ShotsUi("pause-menu", hidden: true);
+            ShotsHud("pause-menu", "none");
             MenuList.Click("Back to main menu");
             yield return Shot("pause-menu-confirm");
             ConfirmDialog.Cancel();
@@ -523,7 +526,15 @@ namespace DarkwoodMP
             Core.showHidePauseMenu();
             yield return Shot("world-after");
             ShotsUi("world-after", hidden: false);
+            ShotsHud("world-after", hudBefore);
             Log.LogInfo("[shots] done");
+        }
+
+        /// <summary>The shots test: the HUD shown at this shot (PauseHud.Shown), as it should be.</summary>
+        private static void ShotsHud(string shot, string want)
+        {
+            string now = PauseHud.Shown();
+            Log.LogInfo($"[shots] {shot}: {(now == want ? "PASS" : "FAIL")} HUD shown {now}, want {want}");
         }
 
         /// <summary>The shots test: whether world overlays (name tags) are hidden at this shot, as they should be.</summary>

@@ -37,6 +37,7 @@ namespace DarkwoodMP.World
             Add("ui-trader-show", TraderShow, timeout: 30f);
             Add("ui-trader-check", TraderCheck);
             Add("ui-trader-hide", TraderHide);
+            Add("ui-pause", Pause, timeout: 20f);
             Add("ui-refresh", (a, r) => { UiRefresh.Enabled = a.Length == 0 || a[0] != "off"; r.Info = $"UiRefresh {(UiRefresh.Enabled ? "on" : "off")}"; return Nothing(); });
         }
 
@@ -148,6 +149,34 @@ namespace DarkwoodMP.World
             string.Join(",", recipe.requirements.Where(q => q.item != null).Select(q => q.amount > 0
                 ? $"{q.item.type}x{q.amount} have {P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}"
                 : $"{q.item.type} dur {q.durabilityAmount:0.##}"));
+
+        // ---- the pause menu over open windows (R08, R10) ------------------------------------------------------
+
+        /// <summary>"ui-pause": with the workbench open, open the pause menu: the HUD (the backpack, the hotbar, the
+        /// storage's window, the bars, the clock) is hidden and so are world overlays (UiState); close it: the same
+        /// HUD is back as before and the storage's window draws its slots.</summary>
+        private static IEnumerator Pause(string[] a, Result r)
+        {
+            var wb = Bench();
+            var st = wb != null ? wb.normalInventory : null;
+            if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
+            string before = PauseHud.Shown();
+            if (!before.Contains("container2")) { r.Fail($"the storage's window isn't shown before: {before}"); yield break; }
+            Core.showHidePauseMenu();
+            yield return new WaitForSecondsRealtime(1f);
+            string under = PauseHud.Shown();
+            bool hidden = UiState.WorldOverlaysHidden;
+            string why = UiState.Reason;
+            if (Core.mainMenu) Core.showHidePauseMenu();
+            yield return new WaitForSecondsRealtime(1f);
+            string after = PauseHud.Shown();
+            r.Info = $"HUD before: {before}; under the menu: {under} (overlays hidden {hidden}, {why}); after: {after}";
+            if (under != "none") r.Fail($"HUD shown under the pause menu: {under}");
+            else if (!hidden) r.Fail("world overlays not hidden under the pause menu");
+            else if (after != before) r.Fail($"HUD after the menu: {after}, before: {before}");
+            else if (UiState.WorldOverlaysHidden) r.Fail($"world overlays still hidden after the menu ({UiState.Reason})");
+            else if (Drawn(st) is string bad) r.Fail($"the storage's window after the menu: {bad}");
+        }
 
         // ---- the workbench ---------------------------------------------------------------------------------------
 

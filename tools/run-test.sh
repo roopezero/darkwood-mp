@@ -23,7 +23,7 @@
 # After each one: the game is sent back to its main menu, a client game stopped unless a map battery comes next,
 # leftover downloaded worlds removed from the mod's caches, and your saves compared with their hashes from the start.
 # At the end, a table: each item's result, time, first failure, its log, and the command that reruns it alone.
-#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world, host-drag, host-upnp)
+#   PASS  the test has a verdict of its own and it passed (map, map:*, map4, options, drag, menu-entry, capture, host-world, host-drag, host-upnp, shots)
 #   RAN   no failure seen (no FAIL line, no time-out, no exception), but its printed lines are the result: read them
 #   SKIP  the test can't run here (steam without the Steam client): the reason is shown
 #   FAIL  a FAIL line, a time-out, an exception in Player.log, a failed step or differing dumps
@@ -146,7 +146,7 @@ declare -A GROUP=(
 )
 GROUP_NAMES="net combat world chars story menus authority"
 # Tests with a verdict of their own (PASS rather than RAN when nothing failed).
-VERDICT=" map map4 options drag menu-entry capture host-world host-drag host-upnp "
+VERDICT=" map map4 options drag menu-entry capture host-world host-drag host-upnp shots "
 
 # Map batteries: every tools/tests/map_scenario_NAME.py is the battery map:NAME. "maps" runs those without
 # "IN_MAPS = False" (a module that only repeats the whole scenario, as map_scenario_dogfull.py does).
