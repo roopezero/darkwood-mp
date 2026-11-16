@@ -462,7 +462,7 @@ namespace DarkwoodMP.World
         public static void OnGUI()
         {
             var p = Player.Instance;
-            if (!WorldShare.InWorld || !CanResetHere(p)) return;
+            if (!WorldShare.InWorld || UiState.MenuOver || !CanResetHere(p)) return;
             int waiting = (Hideouts.Together || Solo) ? Math.Max(0, SharedLevel - p.currentLevel) : 0;
             int points = SkillTree.Points(p);
             bool morning = InMorning(0);

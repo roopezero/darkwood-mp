@@ -511,6 +511,7 @@ namespace DarkwoodMP
             float clockBefore = Singleton<Controller>.Instance.CurrentTime;
             yield return Shot("pause-menu");
             Log.LogInfo($"[shots] {MenuList.Check()}");
+            ShotsUi("pause-menu", hidden: true);
             MenuList.Click("Back to main menu");
             yield return Shot("pause-menu-confirm");
             ConfirmDialog.Cancel();
@@ -521,7 +522,15 @@ namespace DarkwoodMP
             SetPanel(false);
             Core.showHidePauseMenu();
             yield return Shot("world-after");
+            ShotsUi("world-after", hidden: false);
             Log.LogInfo("[shots] done");
+        }
+
+        /// <summary>The shots test: whether world overlays (name tags) are hidden at this shot, as they should be.</summary>
+        private static void ShotsUi(string shot, bool hidden)
+        {
+            bool now = World.UiState.WorldOverlaysHidden;
+            Log.LogInfo($"[shots] {shot}: {(now == hidden ? "PASS" : "FAIL")} world overlays hidden {now} ({World.UiState.Reason ?? "the world in play"}), want {hidden}");
         }
 
         private System.Collections.IEnumerator SoloTest(string dir)

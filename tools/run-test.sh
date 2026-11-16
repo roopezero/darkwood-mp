@@ -552,7 +552,10 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
     shots)
       safe_rm "$WORK" "$WORK/shots"; host --dwmp-shots "$WORK/shots"; world_ready
       bg_until "shots\] done" 60 $PY "$T/combattest.py" 27720 6057 350 60 >/dev/null
-      ls "$WORK/shots" ;;
+      ls "$WORK/shots"
+      mod_log "\[shots\] .*(PASS|FAIL)"
+      mod_log "\[shots\] done" | grep -q . || die "the shots test didn't finish"
+      ! mod_log "\[shots\] .*FAIL" | grep -q . || die "the shots test found the overlays or the HUD wrong (see the lines above)" ;;
     steam)
       ctl args --dwmp-steam-test
       wait_log "steam-test: left\|steam-test: no Steam" 80
