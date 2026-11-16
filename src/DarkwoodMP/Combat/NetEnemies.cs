@@ -545,10 +545,18 @@ namespace DarkwoodMP.Combat
             // player, it shows if we have that enemy selected, and an open bar is refreshed.
             if (applied > 0f)
             {
+                // A death this hit causes sets off the character's onDeath as that player's doing (World.ScriptedEvents.Cause).
                 // Its onGetAttackedByPlayer triggers are the hitter's to set off (their part, ours and the shared
                 // one, as any trigger of theirs): left to them, and the result tells them (ScriptedEvents.Attacked).
-                int left = ScriptedEvents.LeavingToActor(ScriptedEvents.HitTypes, () =>
-                    c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true));
+                var wasCause = World.ScriptedEvents.Cause;
+                World.ScriptedEvents.Cause = from;
+                int left;
+                try
+                {
+                    left = ScriptedEvents.LeavingToActor(ScriptedEvents.HitTypes, () =>
+                        c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true));
+                }
+                finally { World.ScriptedEvents.Cause = wasCause; }
                 if (left > 0) World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + ScriptedEvents.Attacked);
                 if (c != null) HealthBar(c, show: Player.Instance != null && Player.Instance.selectedObject == c.transform);
             }

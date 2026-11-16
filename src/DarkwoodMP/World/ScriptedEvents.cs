@@ -44,7 +44,8 @@ namespace DarkwoodMP.World
     /// its own copy of them, and the host sends each one as it runs it (EventFired kind 3). A joiner then runs the
     /// shared part, and of its player's own part only the messages, and only if its player is near the trigger
     /// (Part.SharedAndMessages, NearMessages): a dialogue, an item given or a trip somewhere stays the host's player's,
-    /// as it was in the host's single-player world. So an event set off by a death happens once, in the host's world,
+    /// as it was in the host's single-player world, unless a joiner caused it (killed the NPC, broke the item, switched
+    /// on the machine: Cause), whose game then runs its own and the shared part (kind 6, SendCaused). So an event set off by a death happens once, in the host's world,
     /// also when the one who died was killed in a joiner's game (NPC deaths are shared, and the joiner's copy dies by
     /// the host's say). Not the host's: triggers in an area only the joiner is in (a dream, a separate location the
     /// host didn't place: NetEnemies.LocalOnly), appearing or coming into view for things made while playing or that
@@ -267,7 +268,8 @@ namespace DarkwoodMP.World
         public static void Register(Session s)
         {
             s.Register(MsgType.EventFired, OnFired);
-            s.OnSessionEnded += () => { Owed.Clear(); Asking.Clear(); Given.Clear(); };            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
+            s.OnSessionEnded += () => { OwedParts.SessionEnded(); Asking.Clear(); };
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => AreasChanged();
         }
 
@@ -444,7 +446,72 @@ namespace DarkwoodMP.World
 
         // ---- sending ------------------------------------------------------------------------------------
 
-        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5 }
+        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5, WorldTriggerCaused = 6 }
+
+        // ---- who caused a world trigger -----------------------------------------------------------------
+        //
+        // A world trigger can still have a player behind it: the one who killed the NPC (onDeath), broke the item
+        // (an item's onDeath) or switched on the machine whose ActionWhenTurnedOn keeps setting it off
+        // (refreshWhenTurnedOn). Run whole on the host, its player part (an item, a dialogue, a trip, a journal entry)
+        // went to the host's player even when a joiner did it. Now the host runs the host's and the shared part, the
+        // joiner who caused it its own and the shared part (EventFired kind 6), and the others the shared part as
+        // for any world trigger (kind 3). Without a player behind it (the clock, a saved object appearing) it stays
+        // as it was.
+
+        /// <summary>Host: the joiner whose action is being applied now (a hit, an NPC's death, an item broken or switched on), or 0.</summary>
+        internal static ulong Cause;
+
+        /// <summary>Host: who switched an item on, while it's on: a joiner's peer id (the host's own player isn't kept).</summary>
+        private static readonly ConditionalWeakTable<Item, Switcher> Switchers = new ConditionalWeakTable<Item, Switcher>();
+        private sealed class Switcher { public ulong Peer; }
+
+        /// <summary>Host: an item was switched on, by Cause (a joiner's ItemOn) or by the host's own player or world.</summary>
+        internal static void SwitchedOn(Item item)
+        {
+            var s = S;
+            if (item == null || s == null || !s.IsHost) return;
+            Switchers.Remove(item);
+            if (Cause != 0) Switchers.Add(item, new Switcher { Peer = Cause });
+        }
+
+        /// <summary>Host: the joiner who switched this item on, or 0.</summary>
+        internal static ulong SwitcherOf(Item item) => item != null && Switchers.TryGetValue(item, out var sw) ? sw.Peer : 0;
+
+        /// <summary>Host: the joiner behind a world trigger of this type set off now, or 0 (none, or they've gone).</summary>
+        internal static ulong CauseFor(global::EventTrigger.Type type)
+        {
+            var s = S;
+            if (Cause == 0 || s == null || !s.IsHost || !s.Peers.Contains(Cause)) return 0;
+            return type == global::EventTrigger.Type.onDeath || type == global::EventTrigger.Type.refreshWhenTurnedOn ? Cause : 0;
+        }
+
+        /// <summary>
+        /// Host: a world trigger a joiner caused is about to run its GameEvents here. Tell that joiner to run its own
+        /// and the shared part (kind 6), and the others the shared part (kind 3). False if it couldn't be named or the
+        /// joiner has gone (then it runs as any world trigger).
+        /// </summary>
+        internal static bool SendCaused(EventTriggers et, int index, ulong cause)
+        {
+            var s = S;
+            if (s == null || !s.IsHost || et == null || !s.Peers.Contains(cause)) return false;
+            var r = ObjRef.Of(et.gameObject);
+            if (!r.Valid) return false;
+            var t = TriggerAt(et, index);
+            string names = WorldEventsOf(t);
+            foreach (var kind in new[] { Kind.WorldTrigger, Kind.WorldTriggerCaused })
+            {
+                var w = s.Begin(MsgType.EventFired);
+                w.W.Write((byte)kind);
+                r.Write(w);
+                w.W.Write((byte)index);
+                w.WriteStr(names);
+                if (kind == Kind.WorldTrigger) s.Broadcast(w, Channel.Control, reliable: true, except: cause);
+                else s.SendTo(cause, w, Channel.Control, reliable: true);
+            }
+            if (t != null) { OwedParts.Give(cause, t); ExpectTrips(cause, t.gameEvents); }
+            Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({t?.type}): {s.NameOf(cause)} caused it, so its player part is theirs");
+            return true;
+        }
 
         /// <summary>Client: tell the host where our player is now, ahead of a request it checks our reach for.</summary>
         private static void FlushPosition()
@@ -458,19 +525,24 @@ namespace DarkwoodMP.World
         // ran in every game, and only the game of the player who set it off ran that player's own steps. If those take
         // the player somewhere (through a hole, down a ladder, into a place) or hand them something, the next player who
         // walks through it found it marked fired and got nothing: stuck on the wrong side. So a trigger marked fired by
-        // another game's player stays owed to ours (Owed), and when our player sets it off, the steps a later player gets
-        // (LaterStep) run for them alone (Part.LaterPlayer), after the host's yes (kind 5) in a joiner's game. The host
-        // remembers who had their part (Given), so each player gets it once.
+        // another game's player stays owed to ours (IsOwed), and when our player sets it off, the steps a later player
+        // gets (LaterStep) run for them alone (Part.LaterPlayer), after the host's yes (kind 5) in a joiner's game. The
+        // host remembers who had their part, by player key, so each player gets it once. What is owed is worked out from
+        // the loaded world and that record (World.OwedParts), so it also holds for a mid-game joiner and after the world
+        // is loaded again.
 
-        /// <summary>Once-only triggers that fired for another player, whose player steps our player hasn't had yet.</summary>
-        private static readonly HashSet<global::EventTrigger> Owed = new HashSet<global::EventTrigger>();
         /// <summary>Joiner: owed triggers asked for and not answered yet.</summary>
         private static readonly HashSet<global::EventTrigger> Asking = new HashSet<global::EventTrigger>();
-        /// <summary>Host: (joiner, trigger) pairs that had their own part (they set it off, or got it as a later player).</summary>
-        private static readonly HashSet<(ulong, global::EventTrigger)> Given = new HashSet<(ulong, global::EventTrigger)>();
 
-        /// <summary>For the tests: whether our player is still owed its part of this trigger.</summary>
-        internal static bool IsOwed(global::EventTrigger t) => t != null && Owed.Contains(t);
+        /// <summary>The host's refusal of a later player's part they've had already (the joiner stops asking for it).</summary>
+        private const string HadIt = "they have had their part of it";
+
+        /// <summary>Whether our player is still owed its part of this fired once-only trigger.</summary>
+        internal static bool IsOwed(global::EventTrigger t) =>
+            t != null && Once(t) && OnceDone(t) && HasLaterSteps(t.gameEvents) && OwedParts.Owed(t);
+
+        /// <summary>Our player had (or is having now) its own part of this trigger (it ran in our game).</summary>
+        internal static void HadOurPart(global::EventTrigger t) { if (t != null && Once(t)) OwedParts.Had(t); }
 
         /// <summary>
         /// Whether a later player gets this step of a once-only trigger that fired for someone else. Decided per step
@@ -543,14 +615,14 @@ namespace DarkwoodMP.World
         /// <summary>Another player's once-only trigger fired here (only its shared part ran): our player is owed its own.</summary>
         private static void Owe(global::EventTrigger t, string what)
         {
-            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
+            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || (S.IsHost && !OwedParts.HostOwe(t))) return;
             if (Debug) Plugin.Log.LogInfo($"[world] {what} fired for another player: our player gets its own part when they set it off");
         }
 
         /// <summary>Whether this owed trigger, set off now by our player, is to run as a later player's part (LaterPart).</summary>
         internal static bool LaterFor(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type)
         {
-            if (t == null || et == null || !Once(t) || !OnceDone(t) || t.type != type || !Owed.Contains(t)) return false;
+            if (t == null || et == null || t.type != type || !IsOwed(t)) return false;
             var s = S;
             return s != null && s.Active && WorldActions.Sharing && Current == Part.All && SettingOff;
         }
@@ -563,7 +635,7 @@ namespace DarkwoodMP.World
         internal static IEnumerator LaterPart(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type, string value)
         {
             if (t.delay > 0f) yield return new WaitForSeconds(t.delay);
-            if (t.disabled || !t.requirementsMet() || !Owed.Contains(t) || Asking.Contains(t)) yield break;
+            if (t.disabled || !t.requirementsMet() || !IsOwed(t) || Asking.Contains(t)) yield break;
             if (t.warmupTime != 0f && type == global::EventTrigger.Type.area)
             {
                 yield return new WaitForSeconds(t.warmupTime);
@@ -591,7 +663,14 @@ namespace DarkwoodMP.World
             Authority.Request(w, what, (ok, reason, _) =>
             {
                 Asking.Remove(t);
-                if (!ok) { Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})"); return; }
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})");
+                    // Had it already (before a reload, or in an earlier session), or the host won't give it: don't
+                    // ask again each time. Too far away is asked again next time.
+                    if (reason == null || !reason.Contains("(reach")) HadOurPart(t);
+                    return;
+                }
                 RunLater(t, ge, what);
             }, inventory: false);
         }
@@ -599,7 +678,8 @@ namespace DarkwoodMP.World
         /// <summary>Run the later player's steps of ge here, as GameEvents.fire starts them (it does nothing once fired).</summary>
         private static void RunLater(global::EventTrigger t, GameEvents ge, string what)
         {
-            if (!Owed.Remove(t) || ge == null) return;
+            if (!IsOwed(t) || ge == null) return;
+            HadOurPart(t);
             Plugin.Log.LogInfo($"[world] {what}: it fired for another player, running only our player's steps ({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
             RunAs(Part.LaterPlayer, replaying: false, () =>
             {
@@ -623,11 +703,11 @@ namespace DarkwoodMP.World
             if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
             if (!Once(t) || !OnceDone(t)) { Authority.Refuse("that hasn't happened here"); return; }
             if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
-            if (Given.Contains((from, t))) { Authority.Refuse("they have had their part of it"); return; }
+            if (OwedParts.Given(from, t)) { Authority.Refuse(HadIt); return; }
             if (!Authority.InReach(et.transform.position, 3000f, et.name)) return;
             foreach (var req in t.eventRequirements)
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet()) { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
-            Given.Add((from, t));
+            OwedParts.Give(from, t);
             ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo($"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
         }
@@ -878,23 +958,26 @@ namespace DarkwoodMP.World
             int index = r.R.ReadByte();
             string name = r.ReadStr();
 
-            if (kind == Kind.WorldTrigger)
+            if (kind == Kind.WorldTrigger || kind == Kind.WorldTriggerCaused)
             {
-                // Only the host's world sends these; a joiner runs the shared part (and the messages, if near).
+                // Only the host's world sends these; a joiner runs the shared part (and the messages, if near), and
+                // the joiner who caused it (kind 6) its own part too.
                 if (s.IsHost) { Authority.Refuse("the world's own events are the host's"); return; }
+                bool ours = kind == Kind.WorldTriggerCaused;
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
-                if (Debug) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
-                if (t == null) { RunWorldEvents(name, Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
+                if (Debug || ours) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}{(ours ? " (we caused it: our part too)" : "")}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
+                if (t == null) { RunWorldEvents(name, ours ? Part.PlayerAndShared : Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
                 if (t.fired && !t.multipleFire) return;
                 t.fired = true;
                 t.firedExit = false;
+                if (ours) HadOurPart(t);
                 var ge = t.gameEvents;
                 if (CanRun(ge))
                 {
                     var p = Player.Instance;
                     bool near = p != null && (p.transform.position - et.transform.position).sqrMagnitude < NearMessages * NearMessages;
-                    try { RunAs(near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire); }
+                    try { RunAs(ours ? Part.PlayerAndShared : near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire); }
                     catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world trigger {et.name} #{index}: {e.Message}"); }
                 }
                 return;
@@ -932,7 +1015,7 @@ namespace DarkwoodMP.World
                     if (t == null && Authority.RequesterAway) { Authority.AcceptAway($"event {obj} #{index}", Alone); return; }
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
-                    if (t != null) Given.Add((from, t)); // their own part runs in their game
+                    if (t != null) OwedParts.Give(from, t); // their own part runs in their game
                     if (t != null) ExpectTrips(from, t.gameEvents);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
@@ -1191,6 +1274,7 @@ namespace DarkwoodMP.World
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
                     Part = ScriptedEvents.Part.All, ByPlayer = true, World = true,
+                    By = ScriptedEvents.CauseFor(TriggerType), // a joiner behind it gets its player part (SendCaused)
                     Triggers = thisEventTriggers, Index = thisEventTriggers.eventTriggers.IndexOf(__instance),
                 });
                 return;
@@ -1232,12 +1316,19 @@ namespace DarkwoodMP.World
             if (f.World && client) return true; // not ours to send (HostsWorldTrigger keeps these from starting here)
             var ge = __instance;
             var et = f.Triggers;
+            // A world trigger a joiner caused: the host's and the shared part here, the joiner's own part in its game.
+            if (f.World && f.By != 0 && ScriptedEvents.SendCaused(et, f.Index, f.By))
+            {
+                ScriptedEvents.RunAs(ScriptedEvents.Part.HostAndShared, replaying: false, ge.fire);
+                return false;
+            }
             var trigger = f.Index < et.eventTriggers.Count ? et.eventTriggers[f.Index] : null;
             bool repeatableArea = trigger != null && trigger.type == global::EventTrigger.Type.area && trigger.multipleFire;
             int exitedBefore = et.exited;
             bool sent = ScriptedEvents.SendTrigger(f.Triggers, f.Index, f.World, () =>
             {
                 if (ge == null) return;
+                if (client) ScriptedEvents.HadOurPart(trigger); // ours ran here: not owed to us after this
                 // Our player walked in and out again before the host's yes came: its exit (the darkness and the
                 // sounds faded out) has run here already, so the enter's look of the place mustn't come after it.
                 if (repeatableArea && et != null && et.exited > exitedBefore) ScriptedEvents.RunAs(ScriptedEvents.Part.SharedOnly, replaying: false, ge.fire);
@@ -1265,6 +1356,28 @@ namespace DarkwoodMP.World
             // A joiner runs it (its own and the shared part) once the host says yes.
             return !Session.Instance.IsClient;
         }
+    }
+
+    /// <summary>Host: remember who switched an item on (ScriptedEvents.SwitchedOn), for its refreshWhenTurnedOn triggers.</summary>
+    [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
+    static class SwitcherPatch
+    {
+        static void Postfix(Item __instance) => ScriptedEvents.SwitchedOn(__instance);
+    }
+
+    /// <summary>
+    /// Host: an item that's on sets off its refreshWhenTurnedOn triggers from its ActionWhenTurnedOn's Update, long
+    /// after it was switched on: whoever switched it on is their cause.
+    /// </summary>
+    [HarmonyPatch(typeof(ActionWhenTurnedOn), nameof(ActionWhenTurnedOn.Update))]
+    static class SwitchedOnUpdatePatch
+    {
+        static void Prefix(ActionWhenTurnedOn __instance, out ulong __state)
+        {
+            __state = ScriptedEvents.Cause;
+            if (__instance.turnedOn) ScriptedEvents.Cause = ScriptedEvents.SwitcherOf(__instance.GetComponent<Item>());
+        }
+        static Exception Finalizer(Exception __exception, ulong __state) { ScriptedEvents.Cause = __state; return __exception; }
     }
 
     /// <summary>A world event a character's animation fires is the host's (ScriptedEvents.FromAnimation).</summary>

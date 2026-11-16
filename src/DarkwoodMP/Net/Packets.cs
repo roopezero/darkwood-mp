@@ -201,6 +201,8 @@ namespace DarkwoodMP.Net
         /// game only if its own player isn't still in the area. Kind 5 (str ""), only from a client as a request: the host
         /// checks it fired, that this player hasn't had its part of it, reach and what it needs, and runs nothing; the
         /// client then runs its own steps of it (those a later player gets: ScriptedEvents.LaterStep). Not passed on.
+        /// Kind 6, only from the host to the one client that caused a world trigger (killed the NPC, broke the item,
+        /// switched on the machine): as kind 3, but that client runs its own and the shared steps (the others get kind 3).
         /// See World.ScriptedEvents.
         /// </summary>
         EventFired = 67,
