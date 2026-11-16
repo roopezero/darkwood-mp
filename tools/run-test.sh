@@ -264,6 +264,8 @@ culog() { echo "$(chome $1)/.config/unity3d/Acid Wizard Studio/Darkwood/Player.l
 client_pid() { pids_in "$(cgame $1)"; }
 client_game_stop() { stop_in "$(cgame $1)"; } # client_game_stop N
 declare -A CULOG0 CLOG0
+# When client game N started, in a file: each item runs in a subshell, so a variable wouldn't last to the next one.
+cstart_file() { echo "$WORK/client-game-$1.started"; }
 client_game_start() { # client_game_start N <args...>: client game N, from its folder, taking commands on $(cctl N)
   local n=$1; shift
   client_game_stop $n
@@ -271,13 +273,23 @@ client_game_start() { # client_game_start N <args...>: client game N, from its f
   CLIENT_GAME="$cg" CLIENT_HOME="$ch" GAME_DIR="$GAME_DIR" "$ROOT/tools/setup-client-game.sh" $n >/dev/null || die "couldn't set up client game $n"
   safe_rm_in "$cg/BepInEx/cache/DarkwoodMP/worlds"; rm -f "$(clog $n)"
   # A game starting moves the old Player.log to Player-prev.log and writes a new one: read it from its start.
-  mkdir -p "$(dirname "$(culog $n)")"; CULOG0[$n]=0; CLOG0[$n]=0
+  mkdir -p "$(dirname "$(culog $n)")"; CULOG0[$n]=0; CLOG0[$n]=0; date +%s >"$(cstart_file $n)"
   # The timeout is only a safety net (client_game_stop ends it): the full map scenario takes over an hour.
+  # client_join starts a new game before an item once this one is near it (CLIENT_KEEP_FOR).
   (cd "$cg" && HOME="$ch" setsid timeout ${CLIENT_TIMEOUT:-7200} ./darkwood_mp.sh --inner --dwmp-test-control $(cctl $n) "$@" >"$WORK/client-game-$n.out" 2>&1 &) </dev/null >/dev/null 2>&1
 }
 client_join() { # client_join N <args...>: client game N joins with <args>: the running one sent back to its main menu
   # first (it keeps running between map items), or a new one started with them
   local n=$1; shift
+  # A kept game runs into its timeout in a long list (`maps` takes over two hours): one that has run for more
+  # than CLIENT_KEEP_FOR seconds (default: the timeout less 30 minutes, more than the longest map item) is
+  # started again instead, so the timeout never ends it in the middle of an item.
+  local started age keep_for=${CLIENT_KEEP_FOR:-$(( ${CLIENT_TIMEOUT:-7200} - 1800 ))}
+  started=$(cat "$(cstart_file $n)" 2>/dev/null || true); age=$(( $(date +%s) - ${started:-0} ))
+  if [ -n "$started" ] && [ $age -gt $keep_for ] && [ -n "$(client_pid $n)" ]; then
+    echo "  (client game $n has run for ${age} s: starting it again before its timeout)"
+    client_game_start $n "$@"; return
+  fi
   if [ -z "${MAP_FRESH_CLIENT:-}" ] && [ -n "$(client_pid $n)" ] && [ "$($PY "$T/ctl.py" $(cctl $n) reset 2>&1)" = "" ]; then
     safe_rm_in "$(cgame $n)/BepInEx/cache/DarkwoodMP/worlds"
     CULOG0[$n]=$(size "$(culog $n)"); CLOG0[$n]=$(size "$(clog $n)")
