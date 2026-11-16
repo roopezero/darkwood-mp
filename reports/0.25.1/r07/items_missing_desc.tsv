@@ -1,0 +1,248 @@
+key	resource_path	EN_name	desc_state
+fists	InventoryItems/_other/fists		nokey
+hammer	InventoryItems/_other/hammer	Hammer	empty
+healthUpgrade	InventoryItems/_other/healthUpgrade	Red potion	empty
+playerUpgradeIngredient	InventoryItems/_other/playerUpgradeIngredient	Odd stone	empty
+recipe	InventoryItems/_other/recipe	Recipe	nokey
+staminaUpgrade	InventoryItems/_other/staminaUpgrade	Gray potion	empty
+ammo_clip_mediumCal	InventoryItems/ammo/ammo_clip_mediumCal	Medium caliber magazine	empty
+ammo_clip_smallCal	InventoryItems/ammo/ammo_clip_smallCal	Small caliber magazine	empty
+ammo_single_mediumCal	InventoryItems/ammo/ammo_single_mediumCal	Medium caliber bullet	empty
+ammo_single_pellet	InventoryItems/ammo/ammo_single_pellet	Pellet gun ammo	empty
+ammo_single_shotgun	InventoryItems/ammo/ammo_single_shotgun	Shotgun shells	empty
+battery9v	InventoryItems/ammo/battery9v	9v battery	empty
+acid	InventoryItems/consumables/acid	Acid pill	empty
+chicken_egg	InventoryItems/consumables/chicken_egg	Chicken egg	empty
+dead_rat	InventoryItems/consumables/dead_rat	Dead rat	empty
+fish	InventoryItems/consumables/fish	Fish	empty
+lifePotion	InventoryItems/consumables/lifePotion	Embryo	empty
+pills	InventoryItems/consumables/pills	Pill	empty
+potato_01	InventoryItems/consumables/potato_01	Potato	nokey
+exp_epickiEXP	InventoryItems/expObjs/exp_epickiEXP		nokey
+exp_piskle	InventoryItems/expObjs/exp_piskle	?	empty
+firecraft_boltHandle	InventoryItems/firearms/firecraft_boltHandle	Bolt handle	empty
+firecraft_handgunFrame	InventoryItems/firearms/firecraft_handgunFrame	Handgun frame	empty
+firecraft_longBarrel	InventoryItems/firearms/firecraft_longBarrel	Long barrel	empty
+firecraft_tubularMagazine	InventoryItems/firearms/firecraft_tubularMagazine	Tubular magazine	empty
+firecraft_weaponParts	InventoryItems/firearms/firecraft_weaponParts	Weapon parts	empty
+weapon_flamethrower_homeMade	InventoryItems/firearms/weapon_flamethrower_homeMade		nokey
+weapon_flamethrower_military	InventoryItems/firearms/weapon_flamethrower_military		nokey
+weapon_rifle_02_boltAction	InventoryItems/firearms/weapon_rifle_02_boltAction	Hunting rifle	empty
+weapon_shotgun_01_breakAction_Double	InventoryItems/firearms/weapon_shotgun_01_breakAction_Double	Double barrel shotgun	empty
+weapon_shotgun_02_pumpAction	InventoryItems/firearms/weapon_shotgun_02_pumpAction	Pump action shotgun	empty
+weapon_shotgun_03_singleShot	InventoryItems/firearms/weapon_shotgun_03_singleShot	Single shot shotgun	empty
+weapon_shotgun_04_fullAuto_ZePSUTY	InventoryItems/firearms/weapon_shotgun_04_fullAuto_ZePSUTY		nokey
+book	InventoryItems/home/book	Book	empty
+home_apple	InventoryItems/home/home_apple	Apple	nokey
+home_chemical_bottle_01	InventoryItems/home/home_chemical_bottle_01	Detergent	nokey
+home_chemical_bottle_02	InventoryItems/home/home_chemical_bottle_02	Detergent	nokey
+home_chemical_spray_01	InventoryItems/home/home_chemical_spray_01	Spray can	nokey
+home_clothes	InventoryItems/home/home_clothes	Clothes	nokey
+home_money	InventoryItems/home/home_money	Money	nokey
+home_pear	InventoryItems/home/home_pear	Pear	nokey
+home_scissor	InventoryItems/home/home_scissor	Scissors	nokey
+home_shirt	InventoryItems/home/home_shirt	Sweater	nokey
+home_towel	InventoryItems/home/home_towel	Towel	nokey
+aw_artur_drawings	InventoryItems/journalItems/aw_artur_drawings	Scribbles	nokey
+aw_grzegorz	InventoryItems/journalItems/aw_grzegorz	Grzegorz	nokey
+aw_gutek	InventoryItems/journalItems/aw_gutek	Family photo	nokey
+aw_ivanka	InventoryItems/journalItems/aw_ivanka	Ivanka	nokey
+aw_karolina	InventoryItems/journalItems/aw_karolina	Karolina	nokey
+aw_killerfriend	InventoryItems/journalItems/aw_killerfriend	Killerfriend	nokey
+aw_kuba	InventoryItems/journalItems/aw_kuba	Drawings	nokey
+aw_maciek	InventoryItems/journalItems/aw_maciek	Maciek	nokey
+aw_marcin	InventoryItems/journalItems/aw_marcin	Marcin	nokey
+aw_mazyrun	InventoryItems/journalItems/aw_mazyrun	Mazyrun	nokey
+aw_mugelisica	InventoryItems/journalItems/aw_mugelisica	Mugetron and Lisica	nokey
+aw_mugelisica_2	InventoryItems/journalItems/aw_mugelisica_2	Mugetron and Lisica	nokey
+aw_nullwinter	InventoryItems/journalItems/aw_nullwinter	Null Winter	nokey
+aw_piotrek	InventoryItems/journalItems/aw_piotrek	Piotrek	nokey
+book_wiedza_lekarska_01	InventoryItems/journalItems/book_wiedza_lekarska_01	My medical book	empty
+book_wiedza_lekarska_02	InventoryItems/journalItems/book_wiedza_lekarska_02	Doctor's notes	nokey
+book_wiedza_lekarska_02_burned	InventoryItems/journalItems/book_wiedza_lekarska_02_burned	Burned book	nokey
+box_church_drawings	InventoryItems/journalItems/box_church_drawings	Drawings from the box	empty
+box_church_escaped	InventoryItems/journalItems/box_church_escaped	Strange box	nokey
+box_church_key	InventoryItems/journalItems/box_church_key	Twisted key	empty
+box_church_killedChomper	InventoryItems/journalItems/box_church_killedChomper	Strange box	nokey
+bullet	InventoryItems/journalItems/bullet	Bullet	nokey
+cigarettes_klubowe	InventoryItems/journalItems/cigarettes_klubowe	Pack of cigarettes	empty
+cigarettes_klubowe2	InventoryItems/journalItems/cigarettes_klubowe2	Pack of cigarettes	empty
+cowbell_01	InventoryItems/journalItems/cowbell_01	Rusty iron cowbell	nokey
+cowbell_02	InventoryItems/journalItems/cowbell_02	Iron cowbell	nokey
+cross_01_c	InventoryItems/journalItems/cross_01_c	Cross	empty
+doctor_photo	InventoryItems/journalItems/doctor_photo	Destroyed photo	nokey
+doctor_wife_photo	InventoryItems/journalItems/doctor_wife_photo	Torn photo	empty
+drewniana_kurka_blood	InventoryItems/journalItems/drewniana_kurka_blood	Bloodstained plastic chick	empty
+drewniane_kurki	InventoryItems/journalItems/drewniane_kurki	Plastic chickens	nokey
+grannyPainting_01	InventoryItems/journalItems/grannyPainting_01	Painting from 1972	nokey
+grannyPainting_02	InventoryItems/journalItems/grannyPainting_02	Painting from 1973	nokey
+grannyPainting_03	InventoryItems/journalItems/grannyPainting_03	Painting from 1978	nokey
+grannyPainting_04	InventoryItems/journalItems/grannyPainting_04	Painting from 1979	nokey
+grannyPainting_05	InventoryItems/journalItems/grannyPainting_05	Painting from 1975	nokey
+hunter_photo_1	InventoryItems/journalItems/hunter_photo_1	Photo	empty
+jar_roadToHome	InventoryItems/journalItems/jar_roadToHome	Jar with a sample	nokey
+journal_clone	InventoryItems/journalItems/journal_clone	Weird book	nokey
+kartkiEkspedycja	InventoryItems/journalItems/kartkiEkspedycja	Ration stamps	nokey
+kasetaZniszczona	InventoryItems/journalItems/kasetaZniszczona	Old cassette	nokey
+key_21	InventoryItems/journalItems/key_21		nokey
+key_baba_sister	InventoryItems/journalItems/key_baba_sister	Key covered in chicken feces	empty
+key_big_farm_02_shed	InventoryItems/journalItems/key_big_farm_02_shed	Chest key	empty
+key_border_burnedCottage	InventoryItems/journalItems/key_border_burnedCottage	Key from the burned cottage	empty
+key_bunker_act1	InventoryItems/journalItems/key_bunker_act1	Key to the underground	empty
+key_doctorHideout	InventoryItems/journalItems/key_doctorHideout	Key to a train car	empty
+key_epilog_sypialnia	InventoryItems/journalItems/key_epilog_sypialnia	Bedroom key	nokey
+key_epilog_wyjscieZpokoju	InventoryItems/journalItems/key_epilog_wyjscieZpokoju		nokey
+key_mushroomGranny_boy_01	InventoryItems/journalItems/key_mushroomGranny_boy_01	Mushroom Granny key	empty
+key_outside_doctor_01_rozwalonyDom	InventoryItems/journalItems/key_outside_doctor_01_rozwalonyDom	Rusty key	empty
+key_outside_village_ch1_cottage01_underground_01	InventoryItems/journalItems/key_outside_village_ch1_cottage01_underground_01	Cellar key	empty
+key_radioTower_01	InventoryItems/journalItems/key_radioTower_01	Old key to the radio tower	nokey
+key_sawmill	InventoryItems/journalItems/key_sawmill	Sawmill key	empty
+key_treeVillage_mainKey	InventoryItems/journalItems/key_treeVillage_mainKey	Key	empty
+key_village_brother_key_01	InventoryItems/journalItems/key_village_brother_key_01		nokey
+key_wolfmanHideout_01	InventoryItems/journalItems/key_wolfmanHideout_01	Key to Wolf's hideout	empty
+klisza	InventoryItems/journalItems/klisza	Photographic film	nokey
+lesnyLudek	InventoryItems/journalItems/lesnyLudek	Chestnut man	nokey
+lotto	InventoryItems/journalItems/lotto	Lottery ticket	nokey
+maszynaDoMiesa	InventoryItems/journalItems/maszynaDoMiesa	Meat grinder	nokey
+medalion_brother	InventoryItems/journalItems/medalion_brother	Dog tag	empty
+medical_tools_01	InventoryItems/journalItems/medical_tools_01		nokey
+medical_tools_02	InventoryItems/journalItems/medical_tools_02	Medical tools	nokey
+notatnik_doktora_01_ch2_01	InventoryItems/journalItems/notatnik_doktora_01_ch2_01	Doctor's note #1	nokey
+notatnik_doktora_01_ch2_02	InventoryItems/journalItems/notatnik_doktora_01_ch2_02	Doctor's note #2	nokey
+notatnik_doktora_01_ch2_03	InventoryItems/journalItems/notatnik_doktora_01_ch2_03	Doctor's note #3	nokey
+notatnik_doktora_01_ch2_04	InventoryItems/journalItems/notatnik_doktora_01_ch2_04	Doctor's note #4	nokey
+notatnik_doktora_01_ch2_05	InventoryItems/journalItems/notatnik_doktora_01_ch2_05	Doctor's note #5	nokey
+notatnik_doktora_01_ch2_06	InventoryItems/journalItems/notatnik_doktora_01_ch2_06	Doctor's note #6	nokey
+notatnik_doktora_01_swamp_01	InventoryItems/journalItems/notatnik_doktora_01_swamp_01	Notepad	nokey
+notatnik_doktora_burnedMap	InventoryItems/journalItems/notatnik_doktora_burnedMap	Burned page with a map.	nokey
+note_burnedHouse_01	InventoryItems/journalItems/note_burnedHouse_01	Note from the burned house	nokey
+note_elephant_door	InventoryItems/journalItems/note_elephant_door	Note	empty
+note_elephant_picture	InventoryItems/journalItems/note_elephant_picture	Child's drawing	nokey
+note_gate_meadowForest_01	InventoryItems/journalItems/note_gate_meadowForest_01	Note	nokey
+note_generator	InventoryItems/journalItems/note_generator	Generator note	nokey
+note_hideout_swamp_01	InventoryItems/journalItems/note_hideout_swamp_01	Note	empty
+note_journal_bloody	InventoryItems/journalItems/note_journal_bloody	Bloodied journal	nokey
+note_kapelusznik_01	InventoryItems/journalItems/note_kapelusznik_01	Torn page from a journal #1	nokey
+note_kapelusznik_02	InventoryItems/journalItems/note_kapelusznik_02	Torn page from a journal #2	nokey
+note_kapelusznik_03	InventoryItems/journalItems/note_kapelusznik_03	Torn page from a journal #3	nokey
+note_macius_1	InventoryItems/journalItems/note_macius_1	Note - desertion #1	nokey
+note_macius_2	InventoryItems/journalItems/note_macius_2	Note - desertion #2	nokey
+note_mail	InventoryItems/journalItems/note_mail	Postcard	nokey
+note_mail_2	InventoryItems/journalItems/note_mail_2		nokey
+note_nightGiftMushroom_01	InventoryItems/journalItems/note_nightGiftMushroom_01	Mushroom note	empty
+note_pigshed_02	InventoryItems/journalItems/note_pigshed_02	Madman's scribblings.	empty
+note_pigshed_flyer	InventoryItems/journalItems/note_pigshed_flyer	Flyer	empty
+note_przyjaciolka_wolf_01	InventoryItems/journalItems/note_przyjaciolka_wolf_01	Note from the Wolf	empty
+note_psalm91	InventoryItems/journalItems/note_psalm91	Scrap of paper	empty
+note_radioTower_02	InventoryItems/journalItems/note_radioTower_02	Journal from the radio tower #2	nokey
+note_rozdarteOpakowaniePapierosow	InventoryItems/journalItems/note_rozdarteOpakowaniePapierosow	Cigarette pack	empty
+note_shadowarmor_01	InventoryItems/journalItems/note_shadowarmor_01	Note about the black shell	nokey
+note_signs_01	InventoryItems/journalItems/note_signs_01	A note with a photo of signs	nokey
+note_snail_journal_01	InventoryItems/journalItems/note_snail_journal_01	Note	empty
+note_snail_junk_01	InventoryItems/journalItems/note_snail_junk_01	Note	empty
+note_snail_numbers_01	InventoryItems/journalItems/note_snail_numbers_01	Note	empty
+note_truck_01	InventoryItems/journalItems/note_truck_01	Note from the truck	nokey
+note_wallOfTrees_01	InventoryItems/journalItems/note_wallOfTrees_01	Note about walls of trees	nokey
+note_wiazki_01	InventoryItems/journalItems/note_wiazki_01	Note about the bundle of roots	nokey
+note_wilk_klucz	InventoryItems/journalItems/note_wilk_klucz	Note with a key	nokey
+note_wolfman_stolenItems	InventoryItems/journalItems/note_wolfman_stolenItems		nokey
+note_xmass	InventoryItems/journalItems/note_xmass	Christmas card	empty
+photo_burnedCottage_01	InventoryItems/journalItems/photo_burnedCottage_01	Photo	empty
+photo_burnedCottage_02	InventoryItems/journalItems/photo_burnedCottage_02	Photo	empty
+photo_doctor	InventoryItems/journalItems/photo_doctor	Photo of the Doctor	empty
+photo_forest_dog	InventoryItems/journalItems/photo_forest_dog	Photo	empty
+photo_forest_redneck_01	InventoryItems/journalItems/photo_forest_redneck_01	Photo	empty
+photo_forest_redneck_02	InventoryItems/journalItems/photo_forest_redneck_02	Photo	empty
+photo_karmiciel	InventoryItems/journalItems/photo_karmiciel	Photo of the sow	nokey
+photo_mushroomGranny	InventoryItems/journalItems/photo_mushroomGranny	Photo of a family	nokey
+photo_roadToHome	InventoryItems/journalItems/photo_roadToHome	Photo of a road	nokey
+pingpong_01	InventoryItems/journalItems/pingpong_01	Ping-pong ball	nokey
+radio_small_01	InventoryItems/journalItems/radio_small_01	Damaged short-wave radio	nokey
+radio_small_01c	InventoryItems/journalItems/radio_small_01c	Weird short-wave radio	nokey
+rock_blood	InventoryItems/journalItems/rock_blood	Bloodstained rock	empty
+rocket_blueprint_01	InventoryItems/journalItems/rocket_blueprint_01	Blueprint	empty
+rope_journal	InventoryItems/journalItems/rope_journal	Bloodstained rope	nokey
+screwdriver_epilog	InventoryItems/journalItems/screwdriver_epilog	Large screwdriver	nokey
+skrety_01	InventoryItems/journalItems/skrety_01	Tobacco	nokey
+swiecznik_01	InventoryItems/journalItems/swiecznik_01	A note with a key attached to it.	nokey
+syfon	InventoryItems/journalItems/syfon	Siphon	nokey
+syringe_01	InventoryItems/journalItems/syringe_01	Syringe	nokey
+termometr	InventoryItems/journalItems/termometr	Thermometer	nokey
+twins_church_01	InventoryItems/journalItems/twins_church_01	Medallion	empty
+twins_church_01_dream	InventoryItems/journalItems/twins_church_01_dream	Medallion	empty
+unitra_doctor	InventoryItems/journalItems/unitra_doctor		nokey
+uzytek_z_grzybow_01	InventoryItems/journalItems/uzytek_z_grzybow_01	Mushroom book	empty
+violin_old	InventoryItems/journalItems/violin_old	Violin	nokey
+wedding_invitation	InventoryItems/journalItems/wedding_invitation	Invitation	nokey
+wedding_invitation_2	InventoryItems/journalItems/wedding_invitation_2		nokey
+map	InventoryItems/maps/map	Map	nokey
+map_borderBurned	InventoryItems/maps/map_borderBurned	Map	empty
+map_doctorEntrance	InventoryItems/maps/map_doctorEntrance	Map	empty
+map_pigShed	InventoryItems/maps/map_pigShed	Map	empty
+map_radioTower	InventoryItems/maps/map_radioTower	Map	empty
+map_villageTree	InventoryItems/maps/map_villageTree	Map	empty
+axe_edge	InventoryItems/materials/axe_edge	Axe blade	empty
+chitin	InventoryItems/materials/chitin	Shell	empty
+electronics	InventoryItems/materials/electronics	Electronic parts	empty
+junk	InventoryItems/materials/junk	Scrap metal	empty
+nail	InventoryItems/materials/nail	Nail	empty
+pincers	InventoryItems/materials/pincers	Pliers	empty
+pipe_metal	InventoryItems/materials/pipe_metal	Metal pipe	empty
+rag	InventoryItems/materials/rag	Rag	empty
+rope	InventoryItems/materials/rope	Rope	empty
+shovel_edge	InventoryItems/materials/shovel_edge	Shovel blade	empty
+spring	InventoryItems/materials/spring	Spring	empty
+tape	InventoryItems/materials/tape	Tape	empty
+toolbox	InventoryItems/materials/toolbox	Toolbox	empty
+welder	InventoryItems/materials/welder	Welder	empty
+wire	InventoryItems/materials/wire	Wire	empty
+wood	InventoryItems/materials/wood	Board	empty
+pitchfork	InventoryItems/meleeWeapons/pitchfork	Pitchfork	empty
+torch	InventoryItems/meleeWeapons/torch	Torch	empty
+antler	InventoryItems/misc/antler	Antlers	empty
+bark_01	InventoryItems/misc/bark_01	Tree bark	nokey
+blanket_sister	InventoryItems/misc/blanket_sister	Warm blanket	empty
+bone	InventoryItems/misc/bone	Bone	empty
+cable	InventoryItems/misc/cable	Cable	empty
+cassette	InventoryItems/misc/cassette	Cassette tape	nokey
+chemical_bottle_01	InventoryItems/misc/chemical_bottle_01		nokey
+chicken_head	InventoryItems/misc/chicken_head	Chicken head	empty
+humanArm_01	InventoryItems/misc/humanArm_01	Arm	nokey
+humanEar_01	InventoryItems/misc/humanEar_01	Ear	nokey
+humanFinger_01	InventoryItems/misc/humanFinger_01	Finger	nokey
+humanLeg_01	InventoryItems/misc/humanLeg_01	Leg	nokey
+ice_01	InventoryItems/misc/ice_01	Ice	nokey
+kebab	InventoryItems/misc/kebab		nokey
+kupaWilka	InventoryItems/misc/kupaWilka	The Wolf's gift	nokey
+lockpick	InventoryItems/misc/lockpick	Lockpick	empty
+mushroom_rotten	InventoryItems/misc/mushroom_rotten	Rotten mushroom	empty
+pigHead	InventoryItems/misc/pigHead	Pig head	empty
+ring2	InventoryItems/misc/ring2	Ring	empty
+ring_wedding	InventoryItems/misc/ring_wedding	Wedding ring	nokey
+shiny_rock	InventoryItems/misc/shiny_rock	Shiny stone	nokey
+shiny_rock_cross	InventoryItems/misc/shiny_rock_cross	A shiny object	empty
+stone_weird_01	InventoryItems/misc/stone_weird_01	Weird stone	empty
+teddyBear	InventoryItems/misc/teddyBear	.	empty
+tooth	InventoryItems/misc/tooth	.	nokey
+toy_rocket	InventoryItems/misc/toy_rocket	Toy	empty
+player_epilogue_test_item	InventoryItems/player_epilogue_test_item		nokey
+piotrek_parts_1	InventoryItems/questItems/piotrek_parts_1	Battery	empty
+piotrek_parts_2	InventoryItems/questItems/piotrek_parts_2	Fan belt	empty
+piotrek_parts_3	InventoryItems/questItems/piotrek_parts_3	Tire	empty
+piotrek_parts_4	InventoryItems/questItems/piotrek_parts_4	Exhaust pipe	empty
+piotrek_parts_5	InventoryItems/questItems/piotrek_parts_5	Rearview mirror	empty
+piotrek_parts_6	InventoryItems/questItems/piotrek_parts_6	Steering wheel	empty
+violin	InventoryItems/questItems/violin	Violin	empty
+flare	InventoryItems/thrownItems/flare	Flare	empty
+matchstick	InventoryItems/thrownItems/matchstick	Matchstick	empty
+molotov	InventoryItems/thrownItems/molotov	Molotov cocktail	empty
+noiseLure	InventoryItems/thrownItems/noiseLure		nokey
+chainTrap	InventoryItems/traps/chainTrap	Chain trap	empty
+fartPillow	InventoryItems/traps/fartPillow		nokey
+armor_light	InventoryItems/useable/armor_light	Light armor	empty
+flashlight	InventoryItems/useable/flashlight	Flashlight	empty
+flashlight_02	InventoryItems/useable/flashlight_02	Military flashlight	empty
+flashlight_rechargable	InventoryItems/useable/flashlight_rechargable		nokey
+hotbarPlus_01	InventoryItems/useable/hotbarPlus_01	Hotbar upgrade	empty
+invPlus_01	InventoryItems/useable/invPlus_01	Inventory upgrade	empty
+watch	InventoryItems/useable/watch	Watch	empty
