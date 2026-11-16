@@ -545,7 +545,11 @@ namespace DarkwoodMP.Combat
             // player, it shows if we have that enemy selected, and an open bar is refreshed.
             if (applied > 0f)
             {
-                c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true);
+                // A death this hit causes sets off the character's onDeath as that player's doing (World.ScriptedEvents.Cause).
+                var wasCause = World.ScriptedEvents.Cause;
+                World.ScriptedEvents.Cause = from;
+                try { c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true); }
+                finally { World.ScriptedEvents.Cause = wasCause; }
                 if (c != null) HealthBar(c, show: Player.Instance != null && Player.Instance.selectedObject == c.transform);
             }
             if (c != null && c.effects != null) foreach (var e in WeaponEffects(weapon, effects)) c.effects.activate(e); // bleeding, burning... from their weapon

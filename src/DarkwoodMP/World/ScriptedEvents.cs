@@ -44,7 +44,8 @@ namespace DarkwoodMP.World
     /// its own copy of them, and the host sends each one as it runs it (EventFired kind 3). A joiner then runs the
     /// shared part, and of its player's own part only the messages, and only if its player is near the trigger
     /// (Part.SharedAndMessages, NearMessages): a dialogue, an item given or a trip somewhere stays the host's player's,
-    /// as it was in the host's single-player world. So an event set off by a death happens once, in the host's world,
+    /// as it was in the host's single-player world, unless a joiner caused it (killed the NPC, broke the item, switched
+    /// on the machine: Cause), whose game then runs its own and the shared part (kind 6, SendCaused). So an event set off by a death happens once, in the host's world,
     /// also when the one who died was killed in a joiner's game (NPC deaths are shared, and the joiner's copy dies by
     /// the host's say). Not the host's: triggers in an area only the joiner is in (a dream, a separate location the
     /// host didn't place: NetEnemies.LocalOnly), appearing or coming into view for things made while playing or that
@@ -351,7 +352,72 @@ namespace DarkwoodMP.World
 
         // ---- sending ------------------------------------------------------------------------------------
 
-        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5 }
+        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5, WorldTriggerCaused = 6 }
+
+        // ---- who caused a world trigger -----------------------------------------------------------------
+        //
+        // A world trigger can still have a player behind it: the one who killed the NPC (onDeath), broke the item
+        // (an item's onDeath) or switched on the machine whose ActionWhenTurnedOn keeps setting it off
+        // (refreshWhenTurnedOn). Run whole on the host, its player part (an item, a dialogue, a trip, a journal entry)
+        // went to the host's player even when a joiner did it. Now the host runs the host's and the shared part, the
+        // joiner who caused it its own and the shared part (EventFired kind 6), and the others the shared part as
+        // for any world trigger (kind 3). Without a player behind it (the clock, a saved object appearing) it stays
+        // as it was.
+
+        /// <summary>Host: the joiner whose action is being applied now (a hit, an NPC's death, an item broken or switched on), or 0.</summary>
+        internal static ulong Cause;
+
+        /// <summary>Host: who switched an item on, while it's on: a joiner's peer id (the host's own player isn't kept).</summary>
+        private static readonly ConditionalWeakTable<Item, Switcher> Switchers = new ConditionalWeakTable<Item, Switcher>();
+        private sealed class Switcher { public ulong Peer; }
+
+        /// <summary>Host: an item was switched on, by Cause (a joiner's ItemOn) or by the host's own player or world.</summary>
+        internal static void SwitchedOn(Item item)
+        {
+            var s = S;
+            if (item == null || s == null || !s.IsHost) return;
+            Switchers.Remove(item);
+            if (Cause != 0) Switchers.Add(item, new Switcher { Peer = Cause });
+        }
+
+        /// <summary>Host: the joiner who switched this item on, or 0.</summary>
+        internal static ulong SwitcherOf(Item item) => item != null && Switchers.TryGetValue(item, out var sw) ? sw.Peer : 0;
+
+        /// <summary>Host: the joiner behind a world trigger of this type set off now, or 0 (none, or they've gone).</summary>
+        internal static ulong CauseFor(global::EventTrigger.Type type)
+        {
+            var s = S;
+            if (Cause == 0 || s == null || !s.IsHost || !s.Peers.Contains(Cause)) return 0;
+            return type == global::EventTrigger.Type.onDeath || type == global::EventTrigger.Type.refreshWhenTurnedOn ? Cause : 0;
+        }
+
+        /// <summary>
+        /// Host: a world trigger a joiner caused is about to run its GameEvents here. Tell that joiner to run its own
+        /// and the shared part (kind 6), and the others the shared part (kind 3). False if it couldn't be named or the
+        /// joiner has gone (then it runs as any world trigger).
+        /// </summary>
+        internal static bool SendCaused(EventTriggers et, int index, ulong cause)
+        {
+            var s = S;
+            if (s == null || !s.IsHost || et == null || !s.Peers.Contains(cause)) return false;
+            var r = ObjRef.Of(et.gameObject);
+            if (!r.Valid) return false;
+            var t = TriggerAt(et, index);
+            string names = WorldEventsOf(t);
+            foreach (var kind in new[] { Kind.WorldTrigger, Kind.WorldTriggerCaused })
+            {
+                var w = s.Begin(MsgType.EventFired);
+                w.W.Write((byte)kind);
+                r.Write(w);
+                w.W.Write((byte)index);
+                w.WriteStr(names);
+                if (kind == Kind.WorldTrigger) s.Broadcast(w, Channel.Control, reliable: true, except: cause);
+                else s.SendTo(cause, w, Channel.Control, reliable: true);
+            }
+            if (t != null) { Given.Add((cause, t)); ExpectTrips(cause, t.gameEvents); }
+            Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({t?.type}): {s.NameOf(cause)} caused it, so its player part is theirs");
+            return true;
+        }
 
         /// <summary>Client: tell the host where our player is now, ahead of a request it checks our reach for.</summary>
         private static void FlushPosition()
@@ -784,14 +850,16 @@ namespace DarkwoodMP.World
             int index = r.R.ReadByte();
             string name = r.ReadStr();
 
-            if (kind == Kind.WorldTrigger)
+            if (kind == Kind.WorldTrigger || kind == Kind.WorldTriggerCaused)
             {
-                // Only the host's world sends these; a joiner runs the shared part (and the messages, if near).
+                // Only the host's world sends these; a joiner runs the shared part (and the messages, if near), and
+                // the joiner who caused it (kind 6) its own part too.
                 if (s.IsHost) { Authority.Refuse("the world's own events are the host's"); return; }
+                bool ours = kind == Kind.WorldTriggerCaused;
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
-                if (Debug) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
-                if (t == null) { RunWorldEvents(name, Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
+                if (Debug || ours) Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}{(ours ? " (we caused it: our part too)" : "")}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
+                if (t == null) { RunWorldEvents(name, ours ? Part.PlayerAndShared : Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
                 if (t.fired && !t.multipleFire) return;
                 t.fired = true;
                 t.firedExit = false;
@@ -800,7 +868,7 @@ namespace DarkwoodMP.World
                 {
                     var p = Player.Instance;
                     bool near = p != null && (p.transform.position - et.transform.position).sqrMagnitude < NearMessages * NearMessages;
-                    try { RunAs(near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire); }
+                    try { RunAs(ours ? Part.PlayerAndShared : near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire); }
                     catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world trigger {et.name} #{index}: {e.Message}"); }
                 }
                 return;
@@ -1090,6 +1158,7 @@ namespace DarkwoodMP.World
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
                     Part = ScriptedEvents.Part.All, ByPlayer = true, World = true,
+                    By = ScriptedEvents.CauseFor(TriggerType), // a joiner behind it gets its player part (SendCaused)
                     Triggers = thisEventTriggers, Index = thisEventTriggers.eventTriggers.IndexOf(__instance),
                 });
                 return;
@@ -1129,6 +1198,12 @@ namespace DarkwoodMP.World
             if (f.World && client) return true; // not ours to send (HostsWorldTrigger keeps these from starting here)
             var ge = __instance;
             var et = f.Triggers;
+            // A world trigger a joiner caused: the host's and the shared part here, the joiner's own part in its game.
+            if (f.World && f.By != 0 && ScriptedEvents.SendCaused(et, f.Index, f.By))
+            {
+                ScriptedEvents.RunAs(ScriptedEvents.Part.HostAndShared, replaying: false, ge.fire);
+                return false;
+            }
             var trigger = f.Index < et.eventTriggers.Count ? et.eventTriggers[f.Index] : null;
             bool repeatableArea = trigger != null && trigger.type == global::EventTrigger.Type.area && trigger.multipleFire;
             int exitedBefore = et.exited;
@@ -1162,6 +1237,28 @@ namespace DarkwoodMP.World
             // A joiner runs it (its own and the shared part) once the host says yes.
             return !Session.Instance.IsClient;
         }
+    }
+
+    /// <summary>Host: remember who switched an item on (ScriptedEvents.SwitchedOn), for its refreshWhenTurnedOn triggers.</summary>
+    [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
+    static class SwitcherPatch
+    {
+        static void Postfix(Item __instance) => ScriptedEvents.SwitchedOn(__instance);
+    }
+
+    /// <summary>
+    /// Host: an item that's on sets off its refreshWhenTurnedOn triggers from its ActionWhenTurnedOn's Update, long
+    /// after it was switched on: whoever switched it on is their cause.
+    /// </summary>
+    [HarmonyPatch(typeof(ActionWhenTurnedOn), nameof(ActionWhenTurnedOn.Update))]
+    static class SwitchedOnUpdatePatch
+    {
+        static void Prefix(ActionWhenTurnedOn __instance, out ulong __state)
+        {
+            __state = ScriptedEvents.Cause;
+            if (__instance.turnedOn) ScriptedEvents.Cause = ScriptedEvents.SwitcherOf(__instance.GetComponent<Item>());
+        }
+        static Exception Finalizer(Exception __exception, ulong __state) { ScriptedEvents.Cause = __state; return __exception; }
     }
 
     /// <summary>A world event a character's animation fires is the host's (ScriptedEvents.FromAnimation).</summary>

@@ -280,6 +280,7 @@ namespace DarkwoodMP.World
             MapScenarioChapter.Register();
             MapScenarioLater.Register();
             MapScenarioDive.Register();
+            MapScenarioStory2.Register();
         }
 
         internal static IEnumerator None() { yield break; }

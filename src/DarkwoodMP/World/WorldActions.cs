@@ -217,6 +217,9 @@ namespace DarkwoodMP.World
             int thrownDepth = ThrownHits.Depth; var flame = ThrownHits.CurrentFlame;
             ThrownHits.Depth = 0; ThrownHits.CurrentFlame = null;
             Replaying = true;
+            // A world trigger this sets off (an NPC's or item's onDeath, an item switched on) is the sender's doing.
+            var wasCause = ScriptedEvents.Cause;
+            if (s.IsHost) ScriptedEvents.Cause = from;
             try
             {
                 if (a == Action.TrapDisarm && Crate(ObjRef.Resolve<Item>(obj)) is Item crate)
@@ -343,7 +346,7 @@ namespace DarkwoodMP.World
                 }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {a} to {obj}: {e.Message}"); }
-            finally { Replaying = false; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; }
+            finally { Replaying = false; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; ScriptedEvents.Cause = wasCause; }
 
             if (s.IsHost)
             {
