@@ -124,13 +124,68 @@ namespace DarkwoodMP.World
         public static bool IsHostStep(GameEvent.Type t) => HostSteps.Contains(t);
 
         /// <summary>
+        /// Whether a step acts on the player of the game that runs it: the unique object "player" (or another unique
+        /// name that stands for the player's object) or the player's own object, or one inside it, among its targets.
+        /// Each game resolves these to its own Player.Instance, so run as a shared step every player did it: the
+        /// cellar's dive holes call runFunction diveIn on "player", which stops the player and takes its inputs away,
+        /// and one player diving made everyone dive. Such a step is the player's own, whatever its type.
+        /// A modifyMainScript step other than eventToFireAfterLoad doesn't use its targets (GameEvent.fire skips them).
+        /// An eventToFireAfterLoad step puts GameEvents on the list this game runs after its next load: the cellar's
+        /// "addDivingOutEventAfterLoad" lists "setPlayerDivingOut" (diveOut on "player") for the diver coming back from
+        /// the dive's dream. It's the player's own when what it lists acts on the player.
+        /// </summary>
+        public static bool TargetsPlayer(GameEvent ge) => TargetsPlayer(ge, nested: true);
+
+        /// <summary>
+        /// Player functions the story calls on "player" that change the world around them, not the player: a wolf put
+        /// in the player's hideout, the wolfman taken from it, Maciek put beside them, the world events refreshed, the
+        /// night shadows started or ended. They stay shared, as before.
+        /// </summary>
+        private static readonly HashSet<string> WorldFunctions = new HashSet<string>
+        {
+            "spawnWolfInCurrentHideout", "wolf_stealSister", "special_teleportMaciek", "special_refreshWorldEvents",
+            "tryToSpawnShadow", "endShadows", "shadowLightsTurnOff",
+        };
+
+        private static bool TargetsPlayer(GameEvent ge, bool nested)
+        {
+            if (ge == null) return false;
+            if (ge.type == GameEvent.Type.runFunction && ge.Value != null && WorldFunctions.Contains(ge.Value)) return false;
+            if (ge.type == GameEvent.Type.modifyMainScript)
+            {
+                if (ge.mainScriptModify != GameEvent.MainScriptModify.eventToFireAfterLoad || !nested || ge.targetGameObjects == null) return false;
+                foreach (var go in ge.targetGameObjects)
+                    if (go != null)
+                        foreach (var listed in go.GetComponents<GameEvents>())
+                            if (listed != null && listed.events.Exists(e => TargetsPlayer(e, nested: false))) return true;
+                return false;
+            }
+            var p = Player.Instance;
+            if (ge.targetUniqueObjects != null && ge.targetUniqueObjects.Count > 0)
+            {
+                var objects = Singleton<UniqueObjects>.Instance?.objects;
+                foreach (var name in ge.targetUniqueObjects)
+                {
+                    if (name == "player") return true;
+                    if (p != null && name != null && objects != null && objects.TryGetValue(name, out var uo) && uo != null && IsPlayersObject(uo.gameObject, p)) return true;
+                }
+            }
+            if (p != null && ge.targetGameObjects != null)
+                foreach (var go in ge.targetGameObjects)
+                    if (go != null && IsPlayersObject(go, p)) return true;
+            return false;
+        }
+
+        private static bool IsPlayersObject(GameObject go, Player p) => go == p.gameObject || go.transform.IsChildOf(p.transform);
+
+        /// <summary>
         /// Whether this step runs in the part being run now. A moveInventory between world containers only is the
         /// host's, not the player's (World.Hideouts.IsWorldMove).
         /// </summary>
         public static bool Runs(GameEvent ge, GameObject thisGO) =>
             Current == Part.LaterPlayer ? LaterStep(ge)
             : Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type)
-            : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO), IsHostStep(ge.type), ge.type);
+            : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO) || TargetsPlayer(ge), IsHostStep(ge.type), ge.type);
 
         // ---- what only the player in an area sees and hears ----------------------------------------------
 
@@ -346,6 +401,8 @@ namespace DarkwoodMP.World
         ///   shared story's, and it happened once.
         /// - moveInventory: no; it moves things into a shared container.
         /// - endGame and every shared or host step: no; they ran once, in every game.
+        /// - Any other step that acts on the player (TargetsPlayer: a runFunction on "player", such as diveIn): yes;
+        ///   it acted only on the first player's own.
         /// </summary>
         internal static bool LaterStep(GameEvent e)
         {
@@ -368,25 +425,39 @@ namespace DarkwoodMP.World
                         if (item != null && (item.isImportantItem || item.GetComponent<KeyReference>() != null)) return false;
                     }
                     return true;
-                default:
+                case GameEvent.Type.openDialogue: case GameEvent.Type.moveInventory: case GameEvent.Type.endGame:
                     return false;
+                default:
+                    return TargetsPlayer(e);
             }
         }
 
         /// <summary>Whether a later player would get anything of these events.</summary>
         internal static bool HasLaterSteps(GameEvents ge) => ge != null && ge.events.Exists(LaterStep);
 
+        /// <summary>
+        /// Whether this trigger runs its events only once: it fires once, or it fires each time but its GameEvents run
+        /// once. The village cellar's first dive is the second kind: the passage's trigger fires on every use, but its
+        /// dream (startDream_outside_village_ch2_cellar_01) runs once, so a second player diving never had it.
+        /// </summary>
+        private static bool Once(global::EventTrigger t) =>
+            !t.multipleFire || (t.gameEvents != null && !t.gameEvents.multipleFire);
+
+        /// <summary>Whether a once-only trigger (Once) has had its one run.</summary>
+        private static bool OnceDone(global::EventTrigger t) =>
+            !t.multipleFire ? t.fired : t.gameEvents != null && !t.gameEvents.multipleFire && t.gameEvents.fired;
+
         /// <summary>Another player's once-only trigger fired here (only its shared part ran): our player is owed its own.</summary>
         private static void Owe(global::EventTrigger t, string what)
         {
-            if (t == null || t.multipleFire || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
+            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
             if (Debug) Plugin.Log.LogInfo($"[world] {what} fired for another player: our player gets its own part when they set it off");
         }
 
         /// <summary>Whether this owed trigger, set off now by our player, is to run as a later player's part (LaterPart).</summary>
         internal static bool LaterFor(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type)
         {
-            if (t == null || et == null || !t.fired || t.multipleFire || t.type != type || !Owed.Contains(t)) return false;
+            if (t == null || et == null || !Once(t) || !OnceDone(t) || t.type != type || !Owed.Contains(t)) return false;
             var s = S;
             return s != null && s.Active && WorldActions.Sharing && Current == Part.All && SettingOff;
         }
@@ -457,14 +528,51 @@ namespace DarkwoodMP.World
         {
             if (t == null) { Authority.Refuse("no such trigger here"); return; }
             if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
-            if (!t.fired || t.multipleFire) { Authority.Refuse("that hasn't happened here"); return; }
+            if (!Once(t) || !OnceDone(t)) { Authority.Refuse("that hasn't happened here"); return; }
             if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
             if (Given.Contains((from, t))) { Authority.Refuse("they have had their part of it"); return; }
             if (!Authority.InReach(et.transform.position, 3000f, et.name)) return;
             foreach (var req in t.eventRequirements)
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet()) { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
             Given.Add((from, t));
+            ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo($"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
+        }
+
+        /// <summary>
+        /// Host: the joiner's game is about to run these events, which the host agreed to. A trip in them
+        /// (transportPlayerToObject, not a chapter's) moves the joiner's player by itself, often by less than
+        /// MoveCheck.Teleport (the village cellar's dive under water), which the movement check took for a speed hack
+        /// and put them back. Tell it where each trip lands, so that jump is taken as the teleport it is.
+        /// </summary>
+        private static void ExpectTrips(ulong from, GameEvents ge)
+        {
+            var sync = Sync.PlayerSync.Instance;
+            if (sync == null || ge == null) return;
+            float delay = 0f;
+            foreach (var e in ge.events)
+            {
+                if (e == null || e.disabled) continue;
+                delay += Mathf.Max(0f, e.delay);
+                if (e.type != GameEvent.Type.transportPlayerToObject || e.activeModifier) continue;
+                var to = FirstTarget(e);
+                if (to == null) continue;
+                // The step fades the screen to black first (floatValue seconds, 0.5 by default), then moves the player.
+                sync.ExpectTrip(from, to.transform.position, 10f + delay + Mathf.Max(e.floatValue, 0.5f));
+                if (Debug) Plugin.Log.LogInfo($"[world] {S.NameOf(from)} is to be taken to {to.name} at {to.transform.position}");
+            }
+        }
+
+        /// <summary>The object a step's first target resolves to (as GameEvent.fire puts its targets in order), or null.</summary>
+        private static GameObject FirstTarget(GameEvent e)
+        {
+            if (e.targetGameObjects != null)
+                foreach (var go in e.targetGameObjects) if (go != null) return go;
+            var objects = Singleton<UniqueObjects>.Instance?.objects;
+            if (e.targetUniqueObjects != null && objects != null)
+                foreach (var name in e.targetUniqueObjects)
+                    if (name != null && objects.TryGetValue(name, out var uo) && uo != null) return uo.gameObject;
+            return null;
         }
 
         /// <summary>
@@ -731,6 +839,7 @@ namespace DarkwoodMP.World
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
                     if (t != null) Given.Add((from, t)); // their own part runs in their game
+                    if (t != null) ExpectTrips(from, t.gameEvents);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
                 var wasBy = By; if (s.IsHost) By = from;
@@ -763,6 +872,7 @@ namespace DarkwoodMP.World
                     if (!known && Authority.RequesterAway) { Authority.AcceptAway($"world event {name}", Alone); return; }
                     if (!known) { Authority.Refuse($"no world event {name} here"); return; }
                     if (ge.fired && !ge.multipleFire) { Authority.Refuse($"{name} has already happened"); return; }
+                    ExpectTrips(from, ge);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got world event {name}" + (known ? "" : ": not found here"));
                 if (!known) return;
