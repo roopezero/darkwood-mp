@@ -40,6 +40,13 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - To launch it yourself: `cd <game> && setsid timeout 300 ./darkwood_mp.sh --inner <--dwmp-* args> &`. Without `--inner` the script expects Steam's command line. Stop it with `kill $(pgrep -x Darkwood.x86_64)`; never `pkill -f Darkwood`, which matches your own shell.
 - Only **one copy of the game** runs per machine, so "the other player" in tests is always a Python script. Use the `darkwood-test` skill, and run tests after every change to game-facing code.
 
+## Tests
+
+- One test or battery: `tools/run-test.sh NAME...` (e.g. `tools/run-test.sh host-world`, `tools/run-test.sh map:ui`; `map:NAME` runs `tools/tests/map_scenario_NAME.py` alone in a fresh test world). `tools/run-test.sh --list` lists them all; `--plan NAME` shows what would run.
+- A custom subset of map steps: `MAP_SCENARIO=module tools/run-test.sh map` runs `tools/tests/module.py`.
+- The full suite (`tools/run-test.sh full` = `all` + `map`) takes well over an hour: run it once at the end, in the background, not after each change.
+- The game needs a display: check `echo $DISPLAY` before a run (see the `darkwood-test` skill).
+
 ## Safety: the user's saves
 
 - The user's real saves are in `~/.config/unity3d/Acid Wizard Studio/Darkwood/1_4Save`. **Never let a test write there.** Host tests play a copy (`--dwmp-sandbox DIR`, which `tools/run-test.sh` sets up). Client tests are redirected into the mod's cache by design.
