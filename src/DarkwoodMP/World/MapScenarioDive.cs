@@ -1,0 +1,204 @@
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+using static DarkwoodMP.World.MapScenario;
+
+namespace DarkwoodMP.World
+{
+    /// <summary>For MapScenarioDive: put on the player; a runFunction step on the player calls this (SendMessage with the trigger's ID).</summary>
+    public sealed class PlayerStepCounter : MonoBehaviour
+    {
+        public readonly Dictionary<string, int> N = new Dictionary<string, int>();
+        private void DwmpOwnCount(string id) => N[id] = Of(id) + 1;
+        public int Of(string id) => N.TryGetValue(id, out var n) ? n : 0;
+    }
+
+    /// <summary>
+    /// Steps of the two-game map test for diving in the village cellar and steps that act on the player
+    /// (tools/tests/map_scenario_dive.py).
+    ///
+    /// A step whose target is the player (the unique object "player", or the player's own object) was run as a shared
+    /// step, so each game ran it on its own player: one player diving in the cellar (runFunction diveIn on "player")
+    /// made every player dive. Now it's the player's own (ScriptedEvents.TargetsPlayer), and a later player of a
+    /// once-only trigger gets it too.
+    /// </summary>
+    public static class MapScenarioDive
+    {
+        public static void Register()
+        {
+            Add("dive-scan", Scan, timeout: 30f);
+            Add("own-setup", OwnSetup);
+            Add("own-fire", OwnFire, timeout: 30f);
+            Add("own-count", OwnCount, timeout: 15f);
+        }
+
+        private sealed class Made { public EventTriggers Et; public global::EventTrigger T; public LaterTestCounter C; }
+        private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
+
+        private static PlayerStepCounter Counter()
+        {
+            var p = Player.Instance;
+            return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
+        }
+
+        private static GameObject Root(string name, Vector3 pos)
+        {
+            var old = GameObject.Find(name);
+            if (old != null) Object.Destroy(old);
+            var go = new GameObject(name);
+            go.transform.position = pos;
+            return go;
+        }
+
+        /// <summary>
+        /// "own-setup ID DX DZ once|multi|eventsonce" (both games): an area trigger ID at the centre plus (DX, DZ) with three
+        /// runFunction steps: one on the unique object "player", one on our player's own object (each counts on our
+        /// player, by ID), and a shared one on a counter beside it.
+        /// </summary>
+        private static IEnumerator OwnSetup(string[] a, Result r)
+        {
+            if (a.Length < 4) { r.Fail("own-setup ID DX DZ once|multi|eventsonce"); yield break; }
+            string id = a[0];
+            var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
+            bool multi = a[3] != "once"; // eventsonce: the trigger fires each time, its GameEvents run once (the cellar's first dive)
+            var m = new Made();
+            var go = Root("dwmp_own_" + id, pos);
+            var ge = go.AddComponent<GameEvents>();
+            ge.multipleFire = a[3] == "multi";
+            var counter = Counter();
+            counter.N.Remove(id);
+            m.C = Root("dwmp_own_count_" + id, pos).AddComponent<LaterTestCounter>();
+            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetUniqueObjects = new List<string> { "player" }, eventAmount = 1 });
+            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetGameObjects = new List<GameObject> { Player.Instance.gameObject }, eventAmount = 1 });
+            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpLaterCount", targetGameObjects = new List<GameObject> { m.C.gameObject }, eventAmount = 1 });
+            m.Et = go.AddComponent<EventTriggers>();
+            m.T = new global::EventTrigger { type = global::EventTrigger.Type.area, multipleFire = multi, gameEvents = ge };
+            m.Et.eventTriggers.Add(m.T);
+            m.T.thisEventTriggers = m.Et;
+            _made[id] = m;
+            yield return null;
+            r.Info = $"trigger {id} {ObjRef.Of(go)} at {Fmt(pos)}, {a[3]}; the unique object player is ours: {Singleton<UniqueObjects>.Instance.getObject("player") == Player.Instance.gameObject}";
+        }
+
+        /// <summary>"own-fire ID OWN": our player walks to trigger ID and sets it off; OWN steps must act on our player (2, or 0).</summary>
+        private static IEnumerator OwnFire(string[] a, Result r)
+        {
+            if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("own-fire ID OWN (own-setup first)"); yield break; }
+            int want = int.Parse(a[1]);
+            yield return Walk(m.Et.transform.position, 100f);
+            yield return new WaitForSeconds(0.5f);
+            var c = Counter();
+            int had = c.Of(a[0]);
+            AsPlayer(() => m.Et.fireEventTrigger(global::EventTrigger.Type.area));
+            m.Et.entered++;
+            float until = Time.realtimeSinceStartup + 6f;
+            while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want) yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(1f);
+            int got = c.Of(a[0]) - had;
+            r.Info = $"{got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
+            if (got != want) r.Fail(r.Info);
+            MapScenario.Place(Centre);
+        }
+
+        /// <summary>"own-count ID OWN SHARED": in this game, OWN steps of ID acted on our player and its shared step ran SHARED times.</summary>
+        private static IEnumerator OwnCount(string[] a, Result r)
+        {
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("own-count ID OWN SHARED (own-setup first)"); yield break; }
+            int own = int.Parse(a[1]), shared = int.Parse(a[2]);
+            float until = Time.realtimeSinceStartup + 4f;
+            while (m.C.N < shared && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(1f);
+            int got = Counter().Of(a[0]);
+            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})";
+            if (got != own || m.C.N != shared) r.Fail(r.Info);
+        }
+
+        private static string Name(Object o) => o == null ? "null" : o.name;
+
+        private static string Req(EventTriggerRequirement q) =>
+            $"{q.type}{(q.type == EventTriggerRequirement.Type.playerState ? "/" + q.playerState : "")} item={Name(q.itemType)} key='{q.keyType}' n={q.amount} mod={q.activeModifier} dest={Name(q.destTransform)}";
+
+        private static string Ev(GameEvent e) =>
+            $"{e.type} '{e.Value}' '{e.Value2}' mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}" +
+            $" prefabs=[{string.Join(",", (e.prefabList ?? new List<Object>()).Select(Name))}]" +
+            $" targets=[{string.Join(",", (e.targetGameObjects ?? new List<GameObject>()).Select(g => g == null ? "null" : $"{g.name}@{Fmt(g.transform.position)}"))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}]" +
+            $" loc={e.locationObjects?.Count ?? 0}{(e.disabled ? " disabled" : "")}";
+
+        /// <summary>
+        /// "dive-scan PATTERN": log every trigger (with its requirements) and every GameEvents under the objects whose
+        /// root's name contains PATTERN, and anything anywhere that names an oxygen tank or a dive.
+        /// </summary>
+        private static IEnumerator Scan(string[] a, Result r)
+        {
+            string pat = a.Length > 0 ? a[0] : "cellar";
+            var sb = new System.Text.StringBuilder();
+            int n = 0;
+            bool Wanted(Component c)
+            {
+                if (c == null) return false;
+                var root = c.transform.root;
+                return c.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || root.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || c.GetComponentsInParent<Transform>(true).Any(t => t.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0);
+            }
+            bool Mentions(GameEvents g) => g != null && g.events.Any(e => e != null &&
+                ((e.Value ?? "").IndexOf("dive", System.StringComparison.OrdinalIgnoreCase) >= 0
+                 || (e.prefabList ?? new List<Object>()).Any(o => o != null && o.name.Contains("oxygen"))));
+            foreach (var et in Object.FindObjectsOfType<EventTriggers>(true))
+            {
+                if (et == null || et.eventTriggers == null) continue;
+                bool any = Wanted(et) || et.eventTriggers.Any(t => t != null && (Mentions(t.gameEvents) || Mentions(t.gameEventsElse)
+                    || t.eventRequirements.Any(q => q != null && q.itemType != null && q.itemType.name.Contains("oxygen"))));
+                if (!any) continue;
+                sb.Append($"\n{et.transform.root.name}/{et.name} at {Fmt(et.transform.position)} active={et.gameObject.activeInHierarchy}");
+                foreach (var t in et.eventTriggers)
+                {
+                    if (t == null) continue;
+                    n++;
+                    sb.Append($"\n  > {t.type} '{t.reactsToItemType}' fired={t.fired} multi={t.multipleFire}{(t.disabled ? " disabled" : "")} removeItem={t.removeItemThatTriggeredMe}");
+                    foreach (var q in t.eventRequirements) if (q != null) sb.Append($"\n    req {Req(q)}");
+                    foreach (var (label, ge) in new[] { ("do", t.gameEvents), ("else", t.gameEventsElse), ("exit", t.gameEventsExit) })
+                        if (ge != null)
+                        {
+                            sb.Append($"\n    {label}: {ge.name} multi={ge.multipleFire}");
+                            foreach (var e in ge.events) if (e != null) sb.Append($"\n      {Ev(e)}");
+                        }
+                }
+            }
+            foreach (var g in Object.FindObjectsOfType<GameEvents>(true))
+            {
+                if (g == null || g.GetComponent<EventTriggers>() != null || !(Wanted(g) || Mentions(g))) continue;
+                sb.Append($"\n[events] {g.transform.root.name}/{g.name} at {Fmt(g.transform.position)} multi={g.multipleFire}");
+                foreach (var e in g.events) if (e != null) sb.Append($"\n      {Ev(e)}");
+            }
+            foreach (var type in new[] { "oxygenTank_full", "oxygenTank_empty" })
+            {
+                var db = Singleton<ItemsDatabase>.Instance;
+                var prefab = db != null && db.itemsDict.TryGetValue(type, out var path) ? Resources.Load(path) as GameObject : null;
+                var inv = prefab != null ? prefab.GetComponent<InvItem>() : null;
+                var jd = Singleton<JournalDatabase>.Instance;
+                sb.Append($"\n[item] {type}: prefab={(prefab != null)} important={inv?.isImportantItem} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}" +
+                          $" inJournal={Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(type)} carried={MapScenarioWorld.CarriedOf(type)}");
+            }
+            // Every loaded step that acts on the player (ScriptedEvents.TargetsPlayer), by type and function, and how
+            // many of them also name other targets.
+            var onPlayer = new Dictionary<string, int>();
+            int mixed = 0;
+            foreach (var g in Object.FindObjectsOfType<GameEvents>(true))
+                foreach (var e in g.events)
+                    if (e != null && ScriptedEvents.TargetsPlayer(e))
+                    {
+                        string k = e.type + (e.type == GameEvent.Type.runFunction ? " " + e.Value : "") + (ScriptedEvents.IsPlayerStep(e.type) ? " (player step)" : "");
+                        onPlayer[k] = (onPlayer.TryGetValue(k, out var c) ? c : 0) + 1;
+                        if ((e.targetGameObjects?.Count ?? 0) + (e.targetUniqueObjects?.Count ?? 0) > 1) mixed++;
+                    }
+            sb.Append($"\n[on player] {string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
+            var uo = Singleton<UniqueObjects>.Instance?.getObject("player");
+            sb.Append($"\n[unique] player -> {Name(uo)} is Player.Instance: {uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");
+            Plugin.Log.LogInfo($"[dive] scan {pat}:{sb}");
+            r.Info = $"{n} triggers (in the log)";
+            yield break;
+        }
+    }
+}

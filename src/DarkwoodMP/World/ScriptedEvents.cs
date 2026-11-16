@@ -124,13 +124,68 @@ namespace DarkwoodMP.World
         public static bool IsHostStep(GameEvent.Type t) => HostSteps.Contains(t);
 
         /// <summary>
+        /// Whether a step acts on the player of the game that runs it: the unique object "player" (or another unique
+        /// name that stands for the player's object) or the player's own object, or one inside it, among its targets.
+        /// Each game resolves these to its own Player.Instance, so run as a shared step every player did it: the
+        /// cellar's dive holes call runFunction diveIn on "player", which stops the player and takes its inputs away,
+        /// and one player diving made everyone dive. Such a step is the player's own, whatever its type.
+        /// A modifyMainScript step other than eventToFireAfterLoad doesn't use its targets (GameEvent.fire skips them).
+        /// An eventToFireAfterLoad step puts GameEvents on the list this game runs after its next load: the cellar's
+        /// "addDivingOutEventAfterLoad" lists "setPlayerDivingOut" (diveOut on "player") for the diver coming back from
+        /// the dive's dream. It's the player's own when what it lists acts on the player.
+        /// </summary>
+        public static bool TargetsPlayer(GameEvent ge) => TargetsPlayer(ge, nested: true);
+
+        /// <summary>
+        /// Player functions the story calls on "player" that change the world around them, not the player: a wolf put
+        /// in the player's hideout, the wolfman taken from it, Maciek put beside them, the world events refreshed, the
+        /// night shadows started or ended. They stay shared, as before.
+        /// </summary>
+        private static readonly HashSet<string> WorldFunctions = new HashSet<string>
+        {
+            "spawnWolfInCurrentHideout", "wolf_stealSister", "special_teleportMaciek", "special_refreshWorldEvents",
+            "tryToSpawnShadow", "endShadows", "shadowLightsTurnOff",
+        };
+
+        private static bool TargetsPlayer(GameEvent ge, bool nested)
+        {
+            if (ge == null) return false;
+            if (ge.type == GameEvent.Type.runFunction && ge.Value != null && WorldFunctions.Contains(ge.Value)) return false;
+            if (ge.type == GameEvent.Type.modifyMainScript)
+            {
+                if (ge.mainScriptModify != GameEvent.MainScriptModify.eventToFireAfterLoad || !nested || ge.targetGameObjects == null) return false;
+                foreach (var go in ge.targetGameObjects)
+                    if (go != null)
+                        foreach (var listed in go.GetComponents<GameEvents>())
+                            if (listed != null && listed.events.Exists(e => TargetsPlayer(e, nested: false))) return true;
+                return false;
+            }
+            var p = Player.Instance;
+            if (ge.targetUniqueObjects != null && ge.targetUniqueObjects.Count > 0)
+            {
+                var objects = Singleton<UniqueObjects>.Instance?.objects;
+                foreach (var name in ge.targetUniqueObjects)
+                {
+                    if (name == "player") return true;
+                    if (p != null && name != null && objects != null && objects.TryGetValue(name, out var uo) && uo != null && IsPlayersObject(uo.gameObject, p)) return true;
+                }
+            }
+            if (p != null && ge.targetGameObjects != null)
+                foreach (var go in ge.targetGameObjects)
+                    if (go != null && IsPlayersObject(go, p)) return true;
+            return false;
+        }
+
+        private static bool IsPlayersObject(GameObject go, Player p) => go == p.gameObject || go.transform.IsChildOf(p.transform);
+
+        /// <summary>
         /// Whether this step runs in the part being run now. A moveInventory between world containers only is the
         /// host's, not the player's (World.Hideouts.IsWorldMove).
         /// </summary>
         public static bool Runs(GameEvent ge, GameObject thisGO) =>
             Current == Part.LaterPlayer ? LaterStep(ge)
             : Hideouts.IsWorldMove(ge) ? Runs(player: false, host: true, ge.type)
-            : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO), IsHostStep(ge.type), ge.type);
+            : Runs(IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO) || TargetsPlayer(ge), IsHostStep(ge.type), ge.type);
 
         // ---- what only the player in an area sees and hears ----------------------------------------------
 
@@ -346,6 +401,8 @@ namespace DarkwoodMP.World
         ///   shared story's, and it happened once.
         /// - moveInventory: no; it moves things into a shared container.
         /// - endGame and every shared or host step: no; they ran once, in every game.
+        /// - Any other step that acts on the player (TargetsPlayer: a runFunction on "player", such as diveIn): yes;
+        ///   it acted only on the first player's own.
         /// </summary>
         internal static bool LaterStep(GameEvent e)
         {
@@ -368,8 +425,10 @@ namespace DarkwoodMP.World
                         if (item != null && (item.isImportantItem || item.GetComponent<KeyReference>() != null)) return false;
                     }
                     return true;
-                default:
+                case GameEvent.Type.openDialogue: case GameEvent.Type.moveInventory: case GameEvent.Type.endGame:
                     return false;
+                default:
+                    return TargetsPlayer(e);
             }
         }
 
