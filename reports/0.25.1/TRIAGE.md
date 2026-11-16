@@ -193,7 +193,11 @@ Not created. One issue per report, R01-R10, with the title from the summary tabl
 
 ## Progress (Phase 2)
 
-(Filled in as fixes land.)
+The go-ahead came with "no questions asked", so Phase 2 started without a stop after triage, and the proposed answers above were taken as the decisions: R06 1(a-c), R07 2(a-d) and R09-B 3. Change any of them and the matching fix changes with it.
+
+Order: R05/R04/R06, R01/R02, R03 and R10/R08 in parallel; R07 alongside. R09 comes after R05 is merged, since both change `World/ScriptedEvents.cs`. The protocol is bumped once, at merge.
+
+(Entries filled in as fixes land.)
 
 ## Manual verification checklist
 
