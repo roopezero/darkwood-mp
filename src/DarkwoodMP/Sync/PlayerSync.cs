@@ -78,6 +78,7 @@ namespace DarkwoodMP.Sync
             }
 
             foreach (var r in Remotes.Values) r.Tick();
+            PlayerSeparation.Update(this, _session.LocalId);
             MapMarkers.Tick();
         }
 

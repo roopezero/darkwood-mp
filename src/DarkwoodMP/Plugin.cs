@@ -39,6 +39,7 @@ namespace DarkwoodMP
         public ConfigEntry<KeyCode> SkillsKey;
         public ConfigEntry<string> HostWith;
         public ConfigEntry<int> StackSize;
+        public ConfigEntry<bool> SoftPlayerCollision;
     }
 
     [BepInPlugin(PluginInfo.Guid, PluginInfo.Name, PluginInfo.Version)]
@@ -189,6 +190,7 @@ namespace DarkwoodMP
                 LastAddress = Config.Bind("Network", "LastAddress", "", "Last server joined directly."),
                 SkipIntro = Config.Bind("General", "SkipIntro", true, "Start without the studio logo (about 6 seconds sooner at the main menu)."),
                 SkillsKey = Config.Bind("General", "SkillsKey", KeyCode.K, "Key that opens and closes the Skills panel (spend skill points)."),
+                SoftPlayerCollision = Config.Bind("General", "SoftPlayerCollision", true, "Players standing in each other are eased apart, gently (no hard bump). Off: players pass through each other."),
                 LogPlayerSprites = Config.Bind("Debug", "LogPlayerSprites", false, "Log every sprite in the player hierarchy once (which are synced/skipped)."),
             };
 
