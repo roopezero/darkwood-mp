@@ -82,4 +82,21 @@ namespace DarkwoodMP.Combat
             return ahead >= -50f && ahead <= MaxBeam && aside <= Mathf.Max(100f, ahead * 0.5f + 50f);
         }
     }
+
+    /// <summary>
+    /// Client: shadow armour on a copy of the host's enemy (NetEnemies.SetArmor) or on one of our frozen characters
+    /// only shows its effect. Its light check (which would hurt it, set it on our player and show its health bar) and
+    /// its damage do nothing: the host's armour takes them, and the host says when it dies (EnemyArmor).
+    /// </summary>
+    [HarmonyPatch]
+    static class ShadowArmorCopyPatch
+    {
+        static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
+        {
+            yield return AccessTools.Method(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight));
+            yield return AccessTools.Method(typeof(ShadowArmor), nameof(ShadowArmor.damageMe), new[] { typeof(float), typeof(bool) });
+        }
+
+        static bool Prefix(ShadowArmor __instance) => !NetEnemies.IsCopy(__instance);
+    }
 }

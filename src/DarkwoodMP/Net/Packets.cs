@@ -59,8 +59,10 @@ namespace DarkwoodMP.Net
         PlayerInfo = 12,
         /// <summary>Host -> client: an enemy hit you (see Combat.PlayerDamage).</summary>
         PlayerDamage = 13,
-        /// <summary>Host -> client: u32 id, i32 save id, str prefab path, str prefab name, vec3 pos, quat rot.</summary>
+        /// <summary>Host -> client: u32 id, i32 save id, str prefab path, str prefab name, vec3 pos, quat rot, u8 shadow armour (1 it wears it: Combat.NetEnemies.SetArmor).</summary>
         EnemySpawn = 14,
+        /// <summary>Host -> client: u32 id, u8 on. After its EnemySpawn, the enemy's shadow armour (ShadowArmor) was put on (1) or died (0) on the host.</summary>
+        EnemyArmor = 101,
         /// <summary>Host -> client: f32 the host's clock when sent (Time.unscaledTime; the client draws enemies by it, Combat.EnemyMotion), u16 n, n x (u32 id, vec3 pos, quat rot, u8 state (1 alive or in a pre-death stage, 2 asleep, 4 cut in half: Character.cuttingInHalf), f32 health, u8 m, m x (i32 animator, i32 clip, u16 frame, u8 playing)).</summary>
         EnemyState = 15,
         /// <summary>Host -> client: u32 id, u8 keep corpse.</summary>

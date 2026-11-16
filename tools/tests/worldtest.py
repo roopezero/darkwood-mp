@@ -213,7 +213,7 @@ def serve(port, inp):
                 t_end = time.time(); px, pz = x, z
                 if ENEMIES:
                     def spawn(i, uid, path, name, ox):
-                        c.sendall(frame(bytes([14]) + struct.pack("<Ii", i, uid) + s16(path) + s16(name) + struct.pack("<fff", px + ox, 16, pz) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071)))
+                        c.sendall(frame(bytes([14]) + struct.pack("<Ii", i, uid) + s16(path) + s16(name) + struct.pack("<fff", px + ox, 16, pz) + struct.pack("<ffff", 0.7071, 0, 0, 0.7071) + bytes([0])))  # no shadow armour
                     spawn(1, 707, "Characters/Dog", "Dog", 150)
                     spawn(2, 0, "Characters/DogMutated", "DogMutated", -150)
                     print("sent EnemySpawn for a save Dog and a new DogMutated", flush=True)

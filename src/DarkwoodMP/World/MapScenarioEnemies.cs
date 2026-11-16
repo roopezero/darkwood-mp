@@ -32,6 +32,8 @@ namespace DarkwoodMP.World
             Add("ee-shadow-spawn", ShadowSpawn, timeout: 15f);
             Add("ee-flashlight", Flashlight, timeout: 20f);
             Add("ee-shadow-check", ShadowCheck, timeout: 10f);
+            Add("ee-armor-check", ArmorCheck, timeout: 10f);
+            Add("ee-armor-burn", ArmorBurn, timeout: 15f);
             Add("ee-flee-activity", FleeActivity, timeout: 15f);
             Add("ee-day", Day, timeout: 10f);
         }
@@ -611,7 +613,8 @@ namespace DarkwoodMP.World
             if (beam == null || !beam.gameObject.activeSelf) r.Fail($"our flashlight isn't on: {r.Info}");
         }
 
-        /// <summary>"ee-shadow-check" (host): the client's flashlight took the shadow armour's health and set the dog on the client.</summary>
+        /// <summary>"ee-shadow-check [keep]" (host): the client's flashlight took the shadow armour's health and set the
+        /// dog on the client. Then the dog is killed, unless "keep" (ee-armor-burn goes on with it).</summary>
         private static IEnumerator ShadowCheck(string[] a, Result r)
         {
             if (_armor == null) { r.Fail("no shadow armour (ee-shadow-spawn first)"); yield break; }
@@ -620,12 +623,64 @@ namespace DarkwoodMP.World
             r.Info = $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {(target is NetPlayerProxy np ? "client " + np.OwnerName : target is Player ? "host player" : target != null ? target.name : "nobody")}";
             bool hurt = _armor.health < _armorHealth;
             r.Info += "; " + _beamLog;
+            bool keep = a.Length > 0 && a[0] == "keep";
+            _armoredDog = keep ? c : null;
             _armor = null;
+            if (keep) { if (!hurt) r.Fail($"the client's flashlight didn't hurt it: {r.Info}"); else if (!(target is NetPlayerProxy)) r.Fail($"it didn't go for the client: {r.Info}"); yield break; }
             if (c != null) Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null) Object.Destroy(c.gameObject);
             if (!hurt) r.Fail($"the client's flashlight didn't hurt it: {r.Info}");
             else if (!(target is NetPlayerProxy)) r.Fail($"it didn't go for the client: {r.Info}");
+        }
+
+        private static Character _armoredDog;
+
+        /// <summary>"ee-armor-check on|off" (client): our copy of the host's shadow-armoured dog wears the armour, with its
+        /// effect and its health untouched (no light check or damage on a copy; the client's flashlight was on it), or
+        /// wears none (waiting up to 5 s).</summary>
+        private static IEnumerator ArmorCheck(string[] a, Result r)
+        {
+            bool on = a.Length == 0 || a[0] == "on";
+            var p = P;
+            var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog")).OrderBy(e => Core.trueDistance(e.c.transform.position, p.transform.position)).Select(e => e.c).FirstOrDefault();
+            if (dog == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            var dest = HarmonyLib.AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
+            bool Ok()
+            {
+                var sa = dog.GetComponent<ShadowArmor>();
+                if (!on) return sa == null;
+                return sa != null && sa.effectGO != null && sa.health >= sa.maxHealth - 0.01f && dest(sa) >= sa.maxHealth - 0.01f;
+            }
+            float until = Time.realtimeSinceStartup + 5f;
+            while (!Ok() && Time.realtimeSinceStartup < until) yield return new WaitForSecondsRealtime(0.25f);
+            var s = dog.GetComponent<ShadowArmor>();
+            r.Info = s == null ? $"{dog.name}: no shadow armour" : $"{dog.name}: shadow armour {s.health:0.#} (going to {dest(s):0.#}) of {s.maxHealth:0}, effect {(s.effectGO != null ? "shown" : "none")}";
+            if (!Ok()) r.Fail(r.Info);
+        }
+
+        /// <summary>"ee-armor-burn [done]" (host): the dog's shadow armour is burnt off (as light does: damageMe, then
+        /// its Update kills it), waiting until it's gone; "done" kills the dog and removes it.</summary>
+        private static IEnumerator ArmorBurn(string[] a, Result r)
+        {
+            var c = _armoredDog;
+            if (c == null) { r.Fail("no shadow-armoured dog kept (ee-shadow-check keep first)"); yield break; }
+            if (a.Length > 0 && a[0] == "done")
+            {
+                _armoredDog = null;
+                Kill(c);
+                yield return new WaitForSeconds(1f);
+                if (c != null) Object.Destroy(c.gameObject);
+                yield break;
+            }
+            var sa = c.GetComponent<ShadowArmor>();
+            if (sa == null) { r.Fail("its shadow armour is gone already"); yield break; }
+            sa.damageMe(sa.maxHealth * sa.normalDamageMod * 2f);
+            sa.health = Mathf.Min(sa.health, 1f); // its Update takes health down 9 a second; this ends it next frame
+            float until = Time.realtimeSinceStartup + 5f;
+            while (c.GetComponent<ShadowArmor>() != null && Time.realtimeSinceStartup < until) yield return new WaitForSecondsRealtime(0.1f);
+            r.Info = $"{c.name}: shadow armour {(c.GetComponent<ShadowArmor>() == null ? "gone" : "still on")}, alive {c.alive}";
+            if (c.GetComponent<ShadowArmor>() != null) r.Fail(r.Info);
         }
 
         // ---- P8: a scripted run-away activity ---------------------------------------------------------------------

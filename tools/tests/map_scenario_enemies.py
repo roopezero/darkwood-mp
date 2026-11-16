@@ -75,8 +75,13 @@ if not ONLY:
         # First, as the fights below take most of the map test's time:
         # a joiner's flashlight against shadow armour (P9),
         ("host", "ee-shadow-spawn"),
+        ("client", "ee-armor-check", "on"),      # R02: the client's copy wears it too
         ("client", "ee-flashlight", {"settle": 0.5}),
-        ("host", "ee-shadow-check"),
+        ("client", "ee-armor-check", "on"),      # its own light check and damage didn't touch the copy's
+        ("host", "ee-shadow-check", "keep"),
+        ("host", "ee-armor-burn"),               # the host's dies; the client's copy's goes with it
+        ("client", "ee-armor-check", "off"),
+        ("host", "ee-armor-burn", "done"),
         # a scripted run-away activity runs from the nearest player (P8),
         ("host", "ee-flee-activity"),
         ("client", "ee-arena"),
