@@ -2,16 +2,25 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
-## Unreleased
+## 0.26.0
 
-*Protocol 27, plays with 0.25.x (no message changed).*
+*Protocol 28: doesn't play with 0.25.x or older. Everyone needs to update.*
 
-- The prologue's house door opens when either player unlocks it with the key from the wardrobe. A key, note or item found in a dream that everyone dreams together (the prologue, the level dreams) now reaches everyone's journal, and goes again when the dream ends. Before, the key stayed in the finder's journal only, the host refused the joiner's unlock, and nobody could get through.
-- Story changes the host makes while a player is loading into its world (a quest flag, an NPC's reputation) now reach that player once they're in; they used to be missed until changed again.
-- The game's one-time hints (secondary attack, map, active skill, reload) are kept by each player's game for its own player instead of being shared.
-- A journal entry that two games both had, with small differences, is no longer sent back and forth between them for good (seen with a note in the church dream).
+Fixed:
+- **The prologue's house door opens when a joiner unlocks it.** The key from the wardrobe is found in a dream, and keys, notes and items found in dreams weren't shared. So the host refused the joiner's unlock with "nobody has the key", rolled the door back to locked, and couldn't open it either: nobody could get through. Now anything found in a dream that everyone dreams together (the prologue, the level dreams) reaches everyone's journal and goes again when the dream ends, and the key reaches the host before the unlock does.
+- **A joiner dropped out of the game whenever the host's world changed.** Since 0.25.1, a joiner left the session every time the host's world reloaded or a new chapter started, because the mod's own trip into the host's new world counted as going back to the main menu. Joiners now stay in.
+- **A dream that only a joiner is in works as in single player.** In a story dream of their own, or a place the host hasn't got, the host refused everything the joiner did (triggers, doors, chests), so the dream's way out could be stuck, and a refusal could remove the chest or trigger from the joiner's game. What a joiner does where only they are now stays in their game.
+- **A chapter or the ending can't be lost.** When a joiner reached the end of a chapter while the host was in a dream or still loading, the host refused to start the next chapter, and the story couldn't go on. The host now waits until it can and starts it then, once. The joiner is told it's coming.
+- **Every player gets their own part of a one-time event.** When one player set off an event that happens once, such as a trip down a hole or into a dream, the next player to reach it got nothing and could be stuck. Each player now gets their own part (the trip, its screen effects, journal entries, ordinary items); the shared part still happens once, and quest items and keys aren't handed out twice.
+- **An event set off just after arriving somewhere isn't refused as too far away.** The host now knows where the joiner is before it checks.
+- **A trade right after earning reputation isn't refused.** The new reputation reaches the host before the trade.
+- **Story changes made while a player loads in now reach them** (a quest flag, an NPC's reputation). They used to be missed until changed again.
+- **One-time hints are each player's own** (secondary attack, map, active skill, reload).
+- **Loose objects stand where the host has them.** Things that each game makes for itself in a place the host loaded, such as a wardrobe, could settle a few steps apart in each game. A joiner's copy is now moved to the host's spot.
+- A journal entry that two games had in slightly different forms is no longer sent back and forth between them for good.
+- The game's pathfinding could throw an error when a place loaded while a door or window was changing its paths (single player can hit this too). The mod now lets those changes finish first.
 
-How it was tested: with the two-game map test only (`map:prologue`): the host takes the key and the joiner unlocks and opens the door, then the other way round, both in the real forest stage; the key is in both journals while dreaming and gone from both after the prologue. `map:dreams` passes, without the note going back and forth (the previous build sent it 40 times in four minutes); `host-world` passes and `client-world` and `client-authority` ran clean. Nobody has played it together yet. The story catch-up and the per-player hints: `map:join` (the host changes a flag and a reputation just after the joiner's snapshot; without the catch-up the dumps differed, with it they match) and `map:prologue` followed by `map:repair`, `map:savage` and `map:ui`.
+How it was tested: with scripted players and the two-game map test only; nobody has played this build together yet. Each fix has a map test step: the prologue door in the real forest stage, with the host taking the key and the joiner unlocking it, then the other way round (`map:prologue`); a joiner alone in the church dream opening its wardrobe and door (`map:dreams`); the host in a dream of its own while the joiner sets off chapter 2, which then started once for both (`map:chapter`); a trade right after earning reputation (`map:trade`); two players each getting their part of a one-time trigger, and a trigger set off on arrival after a teleport (`map:later`); story changes just after a joiner's snapshot (`map:join`); a chair settling apart in the two games (`map:world`). The old behaviour was reproduced in a test run for the story catch-up and the journal loop; the key door was traced in the logs and the game code, and the dream, chapter, trigger and trade fixes come from reading the code. On the final build the full set ran: all 26 scripted-peer tests (ran clean or passed; Steam skipped, no Steam client) and all 38 map batteries passed, except one battery the test runner itself stopped at its two-hour limit; the runner was fixed and that battery passed again. Several test steps were fixed along the way that failed for reasons of their own (reading earlier tests' logs, walking through slow frames, a dog lured from too far).
 
 ## 0.25.1
 
