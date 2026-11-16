@@ -209,7 +209,7 @@ Order: R05/R04/R06, R01/R02, R03 and R10/R08 in parallel; R07 alongside. R09 com
 | R04 | fixed | 62913c4 (and R06) | Read in game (`dive-scan`): the dive needs `oxygenTank_full` in that player's own bags (cause 1, fixed by R06). The cellar trip is about 500 units, so it isn't put back, but granted trips of 1000-3000 units were; now the host expects a granted trip. `map:dive` T1 (an 1800-unit trip: put back 0 times, 1 time without the fix): PASS |
 | R06 | fixed | 97c731a | `map:dive` K1 (the client without a tank gets "no tank"; the host gets one, and `dwmp_oxygenTankFilled` reaches the client and the save; the host drops the tank; then both pass, twice) and O3 (the first-dive dream once per player): PASS, FAILED without the fix. No dive step takes the tank away, so nothing was skipped. A real world reload and a mid-game joiner weren't tested; the flag being in `Flags.SaveState` stands in for both: manual (checklist 7) |
 
-Protocol bumped 28 -> 29 at merge (c.f. R02; R06 sends `dwmp_` flags in FlagsDelta).
+Protocol bumped 28 -> 29 at merge (R02 changed `EnemySpawn` and added `EnemyArmor`; R06 sends `dwmp_` flags in FlagsDelta).
 
 **R07 review:** every added text is in [R07_TOOLTIPS.md](R07_TOOLTIPS.md), and all of them are marked draft, because each starts with a hand-written sentence. Stat parts come only from game fields. Points to check:
 - Raw numbers that read oddly. For example, the Embryo "Heals 900 over 3 seconds" is the effect's raw value; the health scale isn't in the code, since `maxHealth` is set in the player prefab.
