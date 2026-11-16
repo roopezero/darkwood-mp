@@ -2,9 +2,9 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
-## Unreleased
+## 0.28.0
 
-*Protocol 29: plays with 0.27.0 (a push from 0.27.0 is shown as a jump, as before).*
+*Protocol 29: plays with 0.27.0 (a push from a 0.27.0 player is shown as a jump, as before).*
 
 - **Pushed things stay where they were pushed, for everyone.** Something a player knocks with a hit or a shot from further away now moves for everyone; it used to be put back in the shooter's game. Over a real connection, a client pushing something on had it jump back under them for a moment, when the host's answer to its last push arrived. An open door's leaf pushed past 105 degrees now ends at the same angle for everyone. Others now see a pushed or hit thing slide, and a door's leaf swing, rather than jump to where it stopped. A leaf pushed slowly, or by the host's enemies, now ends at the same angle for everyone.
 - **Soft collision between players.** Two players standing in each other are eased apart, gently; walking into someone only slows you down. `SoftPlayerCollision` in the settings turns it off.
