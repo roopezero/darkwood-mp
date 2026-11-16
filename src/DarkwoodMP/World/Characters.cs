@@ -70,7 +70,7 @@ namespace DarkwoodMP.World
         private readonly Dictionary<string, Record> _records = new Dictionary<string, Record>();
         private string _recordsDir; // which world _records belong to
 
-        private static string KeyHash(string key)
+        internal static string KeyHash(string key)
         {
             using (var sha = SHA256.Create())
                 return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key ?? ""))).Substring(0, 32);

@@ -23,6 +23,31 @@ namespace DarkwoodMP.World
         {
             MapScenario.Add("caused-setup", CausedSetup);
             MapScenario.Add("caused-check", CausedCheck, timeout: 20f);
+            MapScenario.Add("owed-loaded", OwedLoaded);
+            MapScenario.Add("owed-reload", OwedReload);
+        }
+
+        /// <summary>
+        /// "owed-loaded ID" (after later-setup ID): the trigger and its events are marked fired, as a world loaded
+        /// after someone else set it off has them (a mid-game join, a reload: no EventFired came for it).
+        /// </summary>
+        private static IEnumerator OwedLoaded(string[] a, Result r)
+        {
+            var et = a.Length > 0 ? GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>() : null;
+            if (et == null || et.eventTriggers.Count == 0) { r.Fail("no such trigger (later-setup first)"); yield break; }
+            var t = et.eventTriggers[0];
+            t.fired = true;
+            if (t.gameEvents != null) t.gameEvents.fired = true;
+            yield return null;
+            r.Info = $"{et.name} marked fired as loaded; owed to our player {ScriptedEvents.IsOwed(t)}";
+        }
+
+        /// <summary>"owed-reload" (host): the host's game saves and is started again: what's owed is written and read back.</summary>
+        private static IEnumerator OwedReload(string[] a, Result r)
+        {
+            OwedParts.TestReload();
+            yield return null;
+            r.Info = "who is owed what written beside the save and read back";
         }
 
         private static Vector3 At(string dx, string dz) =>

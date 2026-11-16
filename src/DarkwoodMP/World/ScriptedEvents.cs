@@ -268,7 +268,8 @@ namespace DarkwoodMP.World
         public static void Register(Session s)
         {
             s.Register(MsgType.EventFired, OnFired);
-            s.OnSessionEnded += () => { Owed.Clear(); Asking.Clear(); Given.Clear(); };            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
+            s.OnSessionEnded += () => { OwedParts.SessionEnded(); Asking.Clear(); };
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => AreasChanged();
         }
 
@@ -414,7 +415,7 @@ namespace DarkwoodMP.World
                 if (kind == Kind.WorldTrigger) s.Broadcast(w, Channel.Control, reliable: true, except: cause);
                 else s.SendTo(cause, w, Channel.Control, reliable: true);
             }
-            if (t != null) { Given.Add((cause, t)); ExpectTrips(cause, t.gameEvents); }
+            if (t != null) { OwedParts.Give(cause, t); ExpectTrips(cause, t.gameEvents); }
             Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({t?.type}): {s.NameOf(cause)} caused it, so its player part is theirs");
             return true;
         }
@@ -431,19 +432,24 @@ namespace DarkwoodMP.World
         // ran in every game, and only the game of the player who set it off ran that player's own steps. If those take
         // the player somewhere (through a hole, down a ladder, into a place) or hand them something, the next player who
         // walks through it found it marked fired and got nothing: stuck on the wrong side. So a trigger marked fired by
-        // another game's player stays owed to ours (Owed), and when our player sets it off, the steps a later player gets
-        // (LaterStep) run for them alone (Part.LaterPlayer), after the host's yes (kind 5) in a joiner's game. The host
-        // remembers who had their part (Given), so each player gets it once.
+        // another game's player stays owed to ours (IsOwed), and when our player sets it off, the steps a later player
+        // gets (LaterStep) run for them alone (Part.LaterPlayer), after the host's yes (kind 5) in a joiner's game. The
+        // host remembers who had their part, by player key, so each player gets it once. What is owed is worked out from
+        // the loaded world and that record (World.OwedParts), so it also holds for a mid-game joiner and after the world
+        // is loaded again.
 
-        /// <summary>Once-only triggers that fired for another player, whose player steps our player hasn't had yet.</summary>
-        private static readonly HashSet<global::EventTrigger> Owed = new HashSet<global::EventTrigger>();
         /// <summary>Joiner: owed triggers asked for and not answered yet.</summary>
         private static readonly HashSet<global::EventTrigger> Asking = new HashSet<global::EventTrigger>();
-        /// <summary>Host: (joiner, trigger) pairs that had their own part (they set it off, or got it as a later player).</summary>
-        private static readonly HashSet<(ulong, global::EventTrigger)> Given = new HashSet<(ulong, global::EventTrigger)>();
 
-        /// <summary>For the tests: whether our player is still owed its part of this trigger.</summary>
-        internal static bool IsOwed(global::EventTrigger t) => t != null && Owed.Contains(t);
+        /// <summary>The host's refusal of a later player's part they've had already (the joiner stops asking for it).</summary>
+        private const string HadIt = "they have had their part of it";
+
+        /// <summary>Whether our player is still owed its part of this fired once-only trigger.</summary>
+        internal static bool IsOwed(global::EventTrigger t) =>
+            t != null && Once(t) && OnceDone(t) && HasLaterSteps(t.gameEvents) && OwedParts.Owed(t);
+
+        /// <summary>Our player had (or is having now) its own part of this trigger (it ran in our game).</summary>
+        internal static void HadOurPart(global::EventTrigger t) { if (t != null && Once(t)) OwedParts.Had(t); }
 
         /// <summary>
         /// Whether a later player gets this step of a once-only trigger that fired for someone else. Decided per step
@@ -516,14 +522,14 @@ namespace DarkwoodMP.World
         /// <summary>Another player's once-only trigger fired here (only its shared part ran): our player is owed its own.</summary>
         private static void Owe(global::EventTrigger t, string what)
         {
-            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || !Owed.Add(t)) return;
+            if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents) || (S.IsHost && !OwedParts.HostOwe(t))) return;
             if (Debug) Plugin.Log.LogInfo($"[world] {what} fired for another player: our player gets its own part when they set it off");
         }
 
         /// <summary>Whether this owed trigger, set off now by our player, is to run as a later player's part (LaterPart).</summary>
         internal static bool LaterFor(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type)
         {
-            if (t == null || et == null || !Once(t) || !OnceDone(t) || t.type != type || !Owed.Contains(t)) return false;
+            if (t == null || et == null || t.type != type || !IsOwed(t)) return false;
             var s = S;
             return s != null && s.Active && WorldActions.Sharing && Current == Part.All && SettingOff;
         }
@@ -536,7 +542,7 @@ namespace DarkwoodMP.World
         internal static IEnumerator LaterPart(global::EventTrigger t, EventTriggers et, global::EventTrigger.Type type, string value)
         {
             if (t.delay > 0f) yield return new WaitForSeconds(t.delay);
-            if (t.disabled || !t.requirementsMet() || !Owed.Contains(t) || Asking.Contains(t)) yield break;
+            if (t.disabled || !t.requirementsMet() || !IsOwed(t) || Asking.Contains(t)) yield break;
             if (t.warmupTime != 0f && type == global::EventTrigger.Type.area)
             {
                 yield return new WaitForSeconds(t.warmupTime);
@@ -564,7 +570,14 @@ namespace DarkwoodMP.World
             Authority.Request(w, what, (ok, reason, _) =>
             {
                 Asking.Remove(t);
-                if (!ok) { Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})"); return; }
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})");
+                    // Had it already (before a reload, or in an earlier session), or the host won't give it: don't
+                    // ask again each time. Too far away is asked again next time.
+                    if (reason == null || !reason.Contains("(reach")) HadOurPart(t);
+                    return;
+                }
                 RunLater(t, ge, what);
             }, inventory: false);
         }
@@ -572,7 +585,8 @@ namespace DarkwoodMP.World
         /// <summary>Run the later player's steps of ge here, as GameEvents.fire starts them (it does nothing once fired).</summary>
         private static void RunLater(global::EventTrigger t, GameEvents ge, string what)
         {
-            if (!Owed.Remove(t) || ge == null) return;
+            if (!IsOwed(t) || ge == null) return;
+            HadOurPart(t);
             Plugin.Log.LogInfo($"[world] {what}: it fired for another player, running only our player's steps ({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
             RunAs(Part.LaterPlayer, replaying: false, () =>
             {
@@ -596,11 +610,11 @@ namespace DarkwoodMP.World
             if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
             if (!Once(t) || !OnceDone(t)) { Authority.Refuse("that hasn't happened here"); return; }
             if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
-            if (Given.Contains((from, t))) { Authority.Refuse("they have had their part of it"); return; }
+            if (OwedParts.Given(from, t)) { Authority.Refuse(HadIt); return; }
             if (!Authority.InReach(et.transform.position, 3000f, et.name)) return;
             foreach (var req in t.eventRequirements)
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet()) { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
-            Given.Add((from, t));
+            OwedParts.Give(from, t);
             ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo($"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
         }
@@ -863,6 +877,7 @@ namespace DarkwoodMP.World
                 if (t.fired && !t.multipleFire) return;
                 t.fired = true;
                 t.firedExit = false;
+                if (ours) HadOurPart(t);
                 var ge = t.gameEvents;
                 if (CanRun(ge))
                 {
@@ -906,7 +921,7 @@ namespace DarkwoodMP.World
                     if (t == null && Authority.RequesterAway) { Authority.AcceptAway($"event {obj} #{index}", Alone); return; }
                     if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
                     if (t != null && !TriggerAllowed(et, t)) return;
-                    if (t != null) Given.Add((from, t)); // their own part runs in their game
+                    if (t != null) OwedParts.Give(from, t); // their own part runs in their game
                     if (t != null) ExpectTrips(from, t.gameEvents);
                 }
                 if (Debug) Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
@@ -1210,6 +1225,7 @@ namespace DarkwoodMP.World
             bool sent = ScriptedEvents.SendTrigger(f.Triggers, f.Index, f.World, () =>
             {
                 if (ge == null) return;
+                if (client) ScriptedEvents.HadOurPart(trigger); // ours ran here: not owed to us after this
                 // Our player walked in and out again before the host's yes came: its exit (the darkness and the
                 // sounds faded out) has run here already, so the enter's look of the place mustn't come after it.
                 if (repeatableArea && et != null && et.exited > exitedBefore) ScriptedEvents.RunAs(ScriptedEvents.Part.SharedOnly, replaying: false, ge.fire);
