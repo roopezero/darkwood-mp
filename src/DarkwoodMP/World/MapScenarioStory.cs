@@ -43,7 +43,18 @@ namespace DarkwoodMP.World
         private static GameObject Thing(string spec)
         {
             if (spec == "enemy") return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
-            if (spec.StartsWith("door:")) return MapScenarioWorld.Nth<Door>(spec.Substring(5))?.gameObject;
+            if (spec.StartsWith("door:"))
+            {
+                // The Nth door that isn't broken in the save (the test world has broken ones, which the host won't open).
+                int want = int.Parse(spec.Substring(5));
+                for (int i = 0, whole = 0; i < 64; i++)
+                {
+                    var d = MapScenarioWorld.Nth<Door>(i.ToString());
+                    if (d == null) return null;
+                    if (!d.destroyed && whole++ == want) return d.gameObject;
+                }
+                return null;
+            }
             if (spec.StartsWith("trap:"))
                 return MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null)?.gameObject;
             return MapScenarioWorld.Find<Item>(spec, i => i.switchable)?.gameObject;
@@ -63,7 +74,7 @@ namespace DarkwoodMP.World
             if (go == null) { r.Fail($"no {a[1]} here"); yield break; }
             var type = (global::EventTrigger.Type)System.Enum.Parse(typeof(global::EventTrigger.Type), a[2]);
             bool multi = a[3] == "multi";
-            // The world's animals hit doors on the host now and then; one broken there refuses the next opening.
+            // So nothing in the test area breaks it during the steps (the host doesn't open a broken door).
             var door = go.GetComponent<Door>();
             if (door != null) door.health = 100000;
             var trap = go.GetComponent<Trigger>();

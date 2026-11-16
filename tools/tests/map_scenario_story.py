@@ -18,7 +18,7 @@ hitter: the client runs its part, the host its own and the shared one. Then the 
 PRE_JOIN = []
 
 TRIGGERS = [
-    ("D1", "door:0", "onOpenDoor", "once"),
+    ("D1", "door:0", "onOpenDoor", "once"),  # door:N: the Nth door that is not broken
     ("D2", "door:1", "onOpenDoor", "multi"),
     ("S1", "Lamp_round_yellow", "onTurnOn", "multi"),
     ("P1", "trap:beartrap@0,-60", "onDisarmed", "once"),
@@ -39,7 +39,7 @@ STEPS = [
     ("host", "act-do", "D2", "open", "2"),
     ("client", "act-count", "D2", "0", "1"),
     ("host", "act-count", "D2", "2", "1"),
-    ("host", "act-do", "D2", "close", "0"),
+    ("client", "act-do", "D2", "close", "0"),
     ("client", "act-do", "D2", "open", "2"),
     ("host", "act-count", "D2", "2", "2"),
     ("client", "act-count", "D2", "2", "2"),
