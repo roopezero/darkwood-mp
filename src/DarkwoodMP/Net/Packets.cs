@@ -75,7 +75,7 @@ namespace DarkwoodMP.Net
         PlayerNoise = 19,
         /// <summary>Host -> clients: u32 day, u16 minute of the day.</summary>
         TimeSync = 20,
-        /// <summary>Either way: u8 action, ObjRef, f32 a, f32 b, u8 flags, str s: a door, window, lock, padlock, crate, trap, switch, breakable item, explosion, feeder, pickup or NPC call (the actions are listed in World.WorldActions.Action).</summary>
+        /// <summary>Either way: u8 action, ObjRef, f32 a, f32 b, u8 flags (1, 2: the action's own; 4, host to clients: a player did it and sends the triggers it set off, so applying it doesn't set them off), str s: a door, window, lock, padlock, crate, trap, switch, breakable item, explosion, feeder, pickup or NPC call (the actions are listed in World.WorldActions.Action).</summary>
         WorldAction = 21,
         /// <summary>Either way: ObjRef, bigstr contents (Inventory.SaveState as JSON) of a container.</summary>
         ContainerState = 22,

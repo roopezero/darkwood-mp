@@ -162,31 +162,39 @@ namespace DarkwoodMP.World
         {
             if (S.IsClient && !byPlayerKnown && !ByLocalPlayer()) return;
             if (OursAlone(go)) { if (Debug) Plugin.Log.LogInfo($"[world] {a} on {go.name}: ours alone (not where the host runs), not sent"); return; }
-            Send(a, ObjRef.Of(go), go.name, x, y, f1, f2, str);
+            // The host's player's own: the triggers it set off here are sent as our player's, so the joiners leave them to that.
+            bool byPlayer = S.IsHost && SetsOffTriggers(a) && ScriptedEvents.OurPlayersAction();
+            Send(a, ObjRef.Of(go), go.name, x, y, f1, f2, str, byPlayer);
         }
+
+        /// <summary>Actions whose replay can set off a trigger that the player who did it sends (ScriptedEvents.ActionTypes).</summary>
+        private static bool SetsOffTriggers(Action a) => a == Action.DoorOpen || a == Action.DoorClose || a == Action.ItemOn || a == Action.ItemOff;
 
         /// <summary>
         /// Send an action on a thing named before the call (it may be gone by now, like a barrel that blew up).
         /// The caller has checked that it's ours to send.
         /// </summary>
-        public static void Send(Action a, ObjRef r, string name, float x = 0, float y = 0, bool f1 = false, bool f2 = false, string str = "")
+        /// <param name="byPlayer">Host: our player did it (flags 4: the triggers it sets off come from us as our player's).</param>
+        public static void Send(Action a, ObjRef r, string name, float x = 0, float y = 0, bool f1 = false, bool f2 = false, string str = "", bool byPlayer = false)
         {
             if (!r.Valid) return;
             if (S.IsClient && OursAlone(ObjRef.Resolve<Transform>(r) is Transform t && t != null ? t.gameObject : null)) { if (Debug) Plugin.Log.LogInfo($"[world] {a} {r} ({name}): ours alone, not sent"); return; }
             if (S.IsClient && HammerStroke.Depth > 0) { HammerStroke.Held.Add(() => Send(a, r, name, x, y, f1, f2, str)); return; }
             var w = S.Begin(MsgType.WorldAction);
-            WriteAction(w, a, r, x, y, f1, f2, str);
+            WriteAction(w, a, r, x, y, f1, f2, str, byPlayer && S.IsHost);
             if (Debug) Plugin.Log.LogInfo($"[world] sent {a} {r} ({name})");
             if (S.IsHost) S.Broadcast(w, Channel.Control, reliable: true);
             else Authority.Request(w, $"{a} {r} ({name})");
         }
 
-        internal static void WriteAction(PacketWriter w, Action a, ObjRef r, float x, float y, bool f1, bool f2, string str)
+        /// <param name="byPlayer">Flags 4, host to joiners: a player did it (a joiner's action passed on, or the host's
+        /// player's), and sends the triggers it sets off itself, so applying it here doesn't set them off.</param>
+        internal static void WriteAction(PacketWriter w, Action a, ObjRef r, float x, float y, bool f1, bool f2, string str, bool byPlayer = false)
         {
             w.W.Write((byte)a);
             r.Write(w);
             w.W.Write(x); w.W.Write(y);
-            w.W.Write((byte)((f1 ? 1 : 0) | (f2 ? 2 : 0)));
+            w.W.Write((byte)((f1 ? 1 : 0) | (f2 ? 2 : 0) | (byPlayer ? 4 : 0)));
             w.WriteStr(str ?? "");
         }
 
@@ -201,6 +209,8 @@ namespace DarkwoodMP.World
             byte f = r.R.ReadByte();
             string str = r.ReadStr();
             bool f1 = (f & 1) != 0, f2 = (f & 2) != 0;
+            // A joiner's action (to the host), or one the host says a player did: that player sets off its triggers.
+            bool byPlayer = s.IsHost || (f & 4) != 0;
 
             if (s.IsHost && Authority.Handling && !Allowed(a, obj, x, y, f1, str))
             {
@@ -217,6 +227,8 @@ namespace DarkwoodMP.World
             int thrownDepth = ThrownHits.Depth; var flame = ThrownHits.CurrentFlame;
             ThrownHits.Depth = 0; ThrownHits.CurrentFlame = null;
             Replaying = true;
+            var leftWas = ScriptedEvents.LeftToActor;
+            if (byPlayer) ScriptedEvents.LeftToActor = ScriptedEvents.ActionTypes;
             try
             {
                 if (a == Action.TrapDisarm && Crate(ObjRef.Resolve<Item>(obj)) is Item crate)
@@ -343,14 +355,14 @@ namespace DarkwoodMP.World
                 }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {a} to {obj}: {e.Message}"); }
-            finally { Replaying = false; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; }
+            finally { Replaying = false; ScriptedEvents.LeftToActor = leftWas; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; }
 
             if (s.IsHost)
             {
                 ObjectActions.AfterOnHost(a, obj, f1);
                 // The host passes a client's action on to the others.
                 var w = s.Begin(MsgType.WorldAction);
-                WriteAction(w, a, obj, x, y, f1, f2, str);
+                WriteAction(w, a, obj, x, y, f1, f2, str, byPlayer: true);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
         }
@@ -620,6 +632,9 @@ namespace DarkwoodMP.World
             var kind = (Kind)r.R.ReadByte();
             var go = ObjRef.Resolve<Transform>(obj);
             Replaying = true;
+            // A rollback puts the thing as it is, it isn't anyone doing it: the triggers it would set off aren't.
+            var leftWas = ScriptedEvents.LeftToActor;
+            ScriptedEvents.LeftToActor = ScriptedEvents.ActionTypes;
             try
             {
                 switch (kind)
@@ -704,7 +719,7 @@ namespace DarkwoodMP.World
                 if (Debug) Plugin.Log.LogInfo($"[world] the host's state of {obj} ({kind}) applied");
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply the host's state of {obj}: {e.Message}"); }
-            finally { Replaying = false; }
+            finally { Replaying = false; ScriptedEvents.LeftToActor = leftWas; }
         }
 
         // ---- what changed ------------------------------------------------------
@@ -1184,7 +1199,8 @@ namespace DarkwoodMP.World
                 {
                     if (ok && result == "1")
                     {
-                        trap.disarm();
+                        // Our player's disarm: its onDisarmed triggers are ours to set off and share.
+                        ScriptedEvents.AsOwnAction(trap.disarm);
                         Player.Instance.displayMessage(Language.Get("Playermsg_disarmedSuccess", "UI"));
                     }
                     else if (ok)

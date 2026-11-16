@@ -308,9 +308,87 @@ namespace DarkwoodMP.World
         private static readonly HashSet<global::EventTrigger.Type> WorldTypes =
             new HashSet<global::EventTrigger.Type>(HostWorldTypes) { global::EventTrigger.Type.onFireGameEvents };
 
+        // ---- triggers set off by a shared action ---------------------------------------------------------
+        // A door opened or closed, a thing switched on or off and a trap disarmed are shared actions: the player who
+        // does it does it at once, and the other games apply it as a replay. The triggers on the thing (ActionTypes)
+        // are set off by the player who did it, in its game, and sent from there as any trigger of theirs is (a
+        // joiner asks, the host passes it on): so the actor runs its own part, the host its part and the shared one,
+        // everyone else the shared one, once. A replay that set them off again ran the whole event in every game (the
+        // host's player got the joiner's steps), and the joiner's own request then came too late ("already happened").
+
+        /// <summary>Trigger types a player's shared action on a thing sets off (see above).</summary>
+        internal static readonly HashSet<global::EventTrigger.Type> ActionTypes = new HashSet<global::EventTrigger.Type>
+        {
+            global::EventTrigger.Type.onOpenDoor, global::EventTrigger.Type.onCloseDoor, global::EventTrigger.Type.onOpenCloseDoor,
+            global::EventTrigger.Type.onTurnOn, global::EventTrigger.Type.onTurnOff, global::EventTrigger.Type.onDisarmed,
+        };
+        /// <summary>Trigger types a player's hit on a character sets off (Character.getHit as byPlayer).</summary>
+        internal static readonly HashSet<global::EventTrigger.Type> HitTypes = new HashSet<global::EventTrigger.Type>
+        {
+            global::EventTrigger.Type.onGetAttackedByPlayer,
+        };
+
+        /// <summary>
+        /// While applying another player's action (or, on a joiner, the host's rollback of a thing): the triggers of
+        /// these types it sets off aren't started here, as the player who did it sends them. Null otherwise.
+        /// </summary>
+        internal static HashSet<global::EventTrigger.Type> LeftToActor;
+        /// <summary>How many triggers (of the type set off, and not switched off) LeftToActor kept from starting.</summary>
+        internal static int LeftCount;
+        /// <summary>
+        /// While our player's own action that the host decided is done here as a replay (a disarm after the host's
+        /// roll, a hit the host applied to its character): the triggers it sets off are our player's, as if it had
+        /// done it here.
+        /// </summary>
+        internal static bool OwnAction;
+
+        /// <summary>Do a, leaving the triggers of these types it sets off to the player who did it (LeftToActor). Returns how many were left.</summary>
+        internal static int LeavingToActor(HashSet<global::EventTrigger.Type> types, Action a)
+        {
+            var was = LeftToActor; int count = LeftCount;
+            LeftToActor = types; LeftCount = 0;
+            try { a(); return LeftCount; }
+            finally { LeftToActor = was; LeftCount = count; }
+        }
+
+        /// <summary>Do a as our own player's action (OwnAction): the triggers it sets off are ours, and shared from here.</summary>
+        internal static void AsOwnAction(Action a)
+        {
+            bool was = OwnAction;
+            OwnAction = true;
+            try { a(); }
+            finally { OwnAction = was; }
+        }
+
+        /// <summary>EventTrigger.fire: whether this trigger, set off now, is left to the player whose action it was (LeftToActor).</summary>
+        internal static bool LeftToActorNow(global::EventTrigger t, global::EventTrigger.Type type)
+        {
+            if (LeftToActor == null || OwnAction || !LeftToActor.Contains(type)) return false;
+            if (t != null && t.type == type && !t.disabled)
+            {
+                LeftCount++;
+                if (Debug) Plugin.Log.LogInfo($"[world] {(t.thisEventTriggers != null ? t.thisEventTriggers.name : "?")} ({type}): left to the player who did it");
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Client: a trigger set off by applying the host's action on a thing that no player did (the world's, an
+        /// event's): only its shared part runs here; the host's game ran the rest.
+        /// </summary>
+        internal static bool SharedReplay(global::EventTrigger.Type type) =>
+            WorldActions.Replaying && LeftToActor == null && !OwnAction && ActionTypes.Contains(type) && S != null && S.IsClient;
+
+        /// <summary>
+        /// Host: whether the shared action being sent now is our player's, so the triggers it set off here are sent
+        /// as our player's (and the joiners leave them to that, LeftToActor).
+        /// </summary>
+        internal static bool OurPlayersAction() => ByOurPlayer(global::EventTrigger.Type.onOpenDoor);
+
         /// <summary>Whether a trigger of this type, set off now, is our own player's doing.</summary>
         internal static bool ByOurPlayer(global::EventTrigger.Type type)
         {
+            if (OwnAction && (ActionTypes.Contains(type) || HitTypes.Contains(type))) return S != null && S.Active && WorldShare.InWorld && !WorldShare.Loading;
             if (WorldActions.Replaying || Current != Part.All || !WorldActions.Sharing || WorldTypes.Contains(type)) return false;
             if (type == global::EventTrigger.Type.area) return PlayerEntered || WorldActions.TestAsPlayer;
             if (type == global::EventTrigger.Type.onInSightOfPlayer || type == global::EventTrigger.Type.onOutOfSightOfPlayer) return true;
@@ -583,6 +661,7 @@ namespace DarkwoodMP.World
         internal static bool SendTrigger(EventTriggers et, int index, bool world, Action accepted)
         {
             // In a dream of our own (or a place the host doesn't run): the host hasn't got it, so it runs here alone.
+            if (et == null) return false; // gone already (a trap taken away by its disarm): nothing to name it by
             if (WorldActions.OursAlone(et.gameObject))
             {
                 if (Debug) Plugin.Log.LogInfo($"[world] event {et.name} #{index}: ours alone, run here");
@@ -1066,6 +1145,13 @@ namespace DarkwoodMP.World
         static bool Prefix(global::EventTrigger __instance, global::EventTrigger.Type TriggerType, string Value, EventTriggers thisEventTriggers, ref IEnumerator __result, out bool __state)
         {
             __state = false;
+            // Set off by applying another player's action: that player sets it off in its game and sends it.
+            if (ScriptedEvents.LeftToActorNow(__instance, TriggerType))
+            {
+                __state = true;
+                __result = ScriptedEvents.Nothing();
+                return false;
+            }
             // A once-only trigger that fired for another player: our player's own part of it (ScriptedEvents.LaterPart).
             if (ScriptedEvents.LaterFor(__instance, thisEventTriggers, TriggerType))
             {
@@ -1099,10 +1185,12 @@ namespace DarkwoodMP.World
             bool sight = __instance.type == global::EventTrigger.Type.onInSightOfPlayer || __instance.type == global::EventTrigger.Type.onOutOfSightOfPlayer;
             bool byPlayer = ScriptedEvents.SettingOff && thisEventTriggers != null
                 && !(sight && (__instance.multipleFire || __instance.type == global::EventTrigger.Type.onOutOfSightOfPlayer));
-            if (!byPlayer && ScriptedEvents.Current == ScriptedEvents.Part.All) return;
+            // The host's action that no player did (the world's, an event's step), applied here: the shared part.
+            bool sharedReplay = !byPlayer && ScriptedEvents.Current == ScriptedEvents.Part.All && ScriptedEvents.SharedReplay(TriggerType);
+            if (!byPlayer && !sharedReplay && ScriptedEvents.Current == ScriptedEvents.Part.All) return;
             ScriptedEvents.Remember(__result, new ScriptedEvents.Started
             {
-                Part = ScriptedEvents.Current,
+                Part = sharedReplay ? ScriptedEvents.Part.SharedOnly : ScriptedEvents.Current,
                 By = ScriptedEvents.By,
                 ByPlayer = byPlayer,
                 Triggers = thisEventTriggers,
