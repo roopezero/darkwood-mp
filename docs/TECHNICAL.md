@@ -1,6 +1,6 @@
 # How DarkwoodMP works
 
-The design and the network protocol, for anyone reading or changing the code. [DEVELOPMENT.md](DEVELOPMENT.md) covers building and testing.
+The design and the network protocol, for anyone reading or changing the code. [DEVELOPMENT.md](DEVELOPMENT.md) covers building and testing, and [ARCHITECTURE.md](ARCHITECTURE.md) how the code is organised.
 
 ## Design
 

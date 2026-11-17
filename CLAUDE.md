@@ -9,6 +9,7 @@ A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1
 - **No master server, ever.** Don't propose or document a Public browser tab.
 - Enemy AI picks targets by **threat**, never "the closest player".
 - It must work on **Windows** and on the **GOG** version (no Steam).
+- **Code architecture (`docs/ARCHITECTURE.md`):** a functional core and a thin shell. Decisions live in `src/DarkwoodMP.Core` (no Unity or game references), as `...Rules` taking a `...Facts` struct and returning a `Verdict` with a named `Refusal`; the plugin's shell reads the game (`FactsOf`) and does what the core decided. Every subsystem is an instance owned by `CoopSession` (no new statics; patches reach it through `Coop.Current`). Thin Harmony patches. Feature folders mirrored in both projects; map test steps in `src/DarkwoodMP.MapTests`, not shipped. Unit tests: xUnit + Shouldly, `<Class>Tests` with a nested class per tested method and verb-first sentence names (`DoorRulesTests+MayOpen.Refuses_a_locked_door`), rules and the network in one process (`LoopbackBackend`). The code is moving there one subsystem at a time; new code follows it now.
 
 ## Layout
 
@@ -65,6 +66,8 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - **Harmony:** give argument types for overloaded methods (an ambiguous match used to stop the whole mod). Patch private methods and coroutine bodies by name. `Plugin.PatchAll` patches class by class and logs failures, so one patch that doesn't fit doesn't stop the rest.
 - **Game quirks:** the game has its own global `RandomNumberGenerator` and `Button` types that shadow .NET's (qualify them). Darkwood counts a new day at dawn, not midnight. `Player` is a 9000-line singleton, so don't instantiate it.
 - **Comments and docs:** plain, concrete sentences that say what happens and why; no hype.
+- **Naming and size (`docs/ARCHITECTURE.md`):** short real words for variables and parameters (single letters only in short scopes); the type carries the unit (`Vec2`, `Seconds`) and the class says whose; say which version of a value it is (`Reported`, `Accepted`, never `Good`); at most three parameters, more become a facts struct; no `bool` that switches behaviour (split the method); a call that needs named arguments means the method should change; `PascalCase` public members, `_camelCase` private fields; files about 600 lines at most, one main type each.
+- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in Core, tests and map tests; warnings in the plugin until its code moves over.
 
 ## Docs
 
@@ -74,6 +77,7 @@ The repo is meant to be public, so write every doc for a stranger reading it on 
 - **`CHANGELOG.md`:** one section per release, newest first, with the protocol version and whether it plays with the previous one, what changed, and **how it was tested** (scripted peers, the map test, or real players only when the user says they played).
 - **`docs/GUIDE.md`:** everything the mod does in detail, for players: menus, hosting, joining, the "What's shared" table, settings, files, troubleshooting, the full known limitations.
 - **`docs/TECHNICAL.md`:** the design (authority, prediction, backends, handshake) and the protocol table.
+- **`docs/ARCHITECTURE.md`:** how the code is organised (projects, core and shell, rules, state, patches, naming, unit tests). Keep its "Status" line true as subsystems move.
 - **`docs/DEVELOPMENT.md`:** building, the tests, the `--dwmp-*` launch arguments, the test world.
 - **`scripts/README-win.txt` and `README-linux.txt`** go into the zips: keep their install and play steps in step with the README.
 - Keep all of them in step with what the code does, and with what was actually tested. `docs/INTERACTIONS.md` and `docs/MULTIPLAYER_*.md` are working notes (gaps, audits, the test guide); keep them true, but they aren't for players.
