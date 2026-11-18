@@ -152,7 +152,7 @@ unit test, its folder builds with style errors on, and its gate passes.
     `PlayerKey`, because `TcpBackend` and the browser need them and they only
     touch Unity through the log;
   - how the map tests are loaded (Phase 2);
-  - how style errors are switched on in the plugin after the formatting pass.
+  - style errors are switched on folder by folder in the plugin.
 
 **Gate:** the baseline results are saved. They are listed under
 [Baseline](#baseline).
