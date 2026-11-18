@@ -29,14 +29,14 @@ dotnet_diagnostic.IDE0011.severity = error
 dotnet_diagnostic.IDE0055.severity = error
 dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = error
 
-# The plugin stays at warnings until each folder has moved.
+# The plugin stays at warnings until the formatting pass has been over its code.
 [src/DarkwoodMP/**.cs]
 dotnet_diagnostic.IDE0011.severity = warning
 dotnet_diagnostic.IDE0055.severity = warning
 dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = warning
 
-# Folders that have moved: uncomment this section and list each folder. It
-# must stay last, because the last matching section wins.
+# Folders the formatting pass has cleaned: uncomment this section and list
+# each folder. It must stay last, because the last matching section wins.
 # [src/DarkwoodMP/{World/Doors,Net}/**.cs]
 # dotnet_diagnostic.IDE0011.severity = error
 # dotnet_diagnostic.IDE0055.severity = error
