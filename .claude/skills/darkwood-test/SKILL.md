@@ -91,7 +91,7 @@ A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then
 
 ## The map test
 
-- Build first: `dotnet build src/DarkwoodMP -c Release` deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to both game folders. Results go to `$WORK/map/` (`host.json`, `client.json`, `client-LogOutput.log`); the host's log is `<game>/BepInEx/LogOutput.log`.
+- Build first: `dotnet build src/DarkwoodMP -c Release -clp:ErrorsOnly` deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to both game folders. Results go to `$WORK/map/` (`host.json`, `client.json`, `client-LogOutput.log`); the host's log is `<game>/BepInEx/LogOutput.log`.
 - A step: `MapScenario.Add("name", (args, r) => Step(args, r), timeout)`; wrap the player's action in `AsPlayer(...)`, `yield return Walk(pos)` first so the host's reach checks pass, `r.Fail(...)` when it didn't happen locally. Then list it in `tools/tests/map_scenario_world.py` or `_issues.py` as `(who, step, args...)`. Run `heal` after anything that hurts the player: a death changes story flags and fails the comparison.
 - **Who:** `host`, `c1`..`c4` (`client` is `c1`, so the two-game scenario runs in `map4` too), or `all-clients` (each in turn). `("all", "compare", WHO, SECTIONS)` (or `"both"`) dumps every game around WHO's player and compares each client with the host.
 - **A subset:** `MAP_SCENARIO=module tools/run-test.sh map` (or `map4`) runs `tools/tests/module.py` instead (`STEPS`, and optionally `PRE_JOIN`, `POST`, `REQUIRE`, `SETTLE`), e.g. `MAP_SCENARIO=map_scenario_world` for the world steps alone (without `REQUIRE`, mapcompare's own required sections apply). A quick custom one: copy `map4_scenario.py` to a new module with only the steps you need.
