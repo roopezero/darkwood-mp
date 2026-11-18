@@ -33,6 +33,7 @@ Use the `darkwood-game-code` skill. Find:
 - **Identity:** `ObjRef.Of(go)` and `ObjRef.Resolve<T>(ref)`. Resolving can fail when the other game doesn't have the object. Log that with `--dwmp-debug-world` and skip it.
 - **Frozen copies on clients:** if the thing can be touched by characters (traps, effects, sounds, hits), make sure the client's frozen copies of the host's enemies (`NetEnemies.Frozen`, `IsPuppet`) don't trigger it. Characters in areas only the client is in (`NetEnemies.LocalOnly`) run normally.
 - **Harmony:** pass argument types for overloads, patch private methods by name, and never reference Steamworks types outside the Steam classes.
+- **Decisions go in the core** (`docs/ARCHITECTURE.md`): what a request may do is decided in `src/DarkwoodMP.Core`, by a `...Rules` class that takes a `...Facts` struct and returns a `Verdict` with a named `Refusal` (its sentence goes in `Refusals.Text`). The plugin's shell reads the game (`FactsOf`) and does what the rule decided, with no decision of its own.
 
 ## 4. Protocol
 
@@ -42,6 +43,7 @@ Use the `darkwood-game-code` skill. Find:
 
 ## 5. Test it
 
+- Unit-test every new rule in `tests/DarkwoodMP.Core.Tests` (a `<Class>Tests` class with a nested class per method, in the folder that mirrors the core's): `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`. A test only counts once you have seen it fail, so break the rule by hand first.
 - Add a step to `World/WorldTest.cs` that does the thing on the host, and decode the message in `tools/tests/worldobs.py`.
 - Run `tools/run-test.sh capture host-world client-world` (the `darkwood-test` skill). The host log should show `[world] sent ...`, and the client log `[world] got ... : <object name>`.
 - Add the requests your feature makes to `tools/tests/authtest.py` (allowed and refused cases), and run `host-authority client-authority`.

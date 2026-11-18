@@ -6,12 +6,21 @@ description: Run DarkwoodMP's in-game tests against the real game with scripted 
 # Testing DarkwoodMP in the real game
 
 The `map` test runs two real games (below). The others pair the real game with a Python script playing the other player (`tools/tests/*.py`). `tools/run-test.sh` runs a whole list of tests in **one game**:
+1. Runs the unit tests first (`tests/DarkwoodMP.Core.Tests`) and stops there if one fails, before the game starts.
 1. Backs up the user's saves, and starts the game once with `--dwmp-test-control 27799` (see `TestControl.cs`).
 1. Before each test, sends it the title (shown along the top of the screen: "Test (X/Y): name - what it checks"), `reset` (leave the session and world, back to the main menu) and the test's `--dwmp-*` arguments (`tools/tests/ctl.py`). Host tests play a **fresh copy** of profile 1 (`--dwmp-sandbox`); client tests join a scripted host, and those saves go to the mod's cache.
 1. Runs the script and prints what it saw.
 1. Reports the new exceptions in `Player.log` (since the test began), and fails if the user's saves changed. The game is started again if it died.
 
 Don't edit `tools/run-test.sh` while it runs: bash reads the script as it goes.
+
+## Unit tests
+
+The rules in `src/DarkwoodMP.Core` have unit tests that need neither the game nor a display. Run them alone after any change to the core:
+
+```
+dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none
+```
 
 ## Running
 
@@ -81,7 +90,7 @@ A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then
 
 ## The map test
 
-- Build first: `dotnet build` deploys to both game folders. Results go to `$WORK/map/` (`host.json`, `client.json`, `client-LogOutput.log`); the host's log is `<game>/BepInEx/LogOutput.log`.
+- Build first: `dotnet build src/DarkwoodMP -c Release` deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to both game folders. Results go to `$WORK/map/` (`host.json`, `client.json`, `client-LogOutput.log`); the host's log is `<game>/BepInEx/LogOutput.log`.
 - A step: `MapScenario.Add("name", (args, r) => Step(args, r), timeout)`; wrap the player's action in `AsPlayer(...)`, `yield return Walk(pos)` first so the host's reach checks pass, `r.Fail(...)` when it didn't happen locally. Then list it in `tools/tests/map_scenario_world.py` or `_issues.py` as `(who, step, args...)`. Run `heal` after anything that hurts the player: a death changes story flags and fails the comparison.
 - **Who:** `host`, `c1`..`c4` (`client` is `c1`, so the two-game scenario runs in `map4` too), or `all-clients` (each in turn). `("all", "compare", WHO, SECTIONS)` (or `"both"`) dumps every game around WHO's player and compares each client with the host.
 - **A subset:** `MAP_SCENARIO=module tools/run-test.sh map` (or `map4`) runs `tools/tests/module.py` instead (`STEPS`, and optionally `PRE_JOIN`, `POST`, `REQUIRE`, `SETTLE`), e.g. `MAP_SCENARIO=map_scenario_world` for the world steps alone (without `REQUIRE`, mapcompare's own required sections apply). A quick custom one: copy `map4_scenario.py` to a new module with only the steps you need.
