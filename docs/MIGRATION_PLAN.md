@@ -375,8 +375,18 @@ Measured on commit `3e9c79c`, the last one before the migration. A later run is
 compared with these results, so a failure that was already here isn't blamed
 on the migration.
 
-- `tools/run-test.sh full`: 27 passes, the `steam` test skipped (no Steam
-  client running), and the full `map` test failing 24 steps.
+- `tools/run-test.sh full`: 27 of the 29 items showed no failure (5 PASS, 22
+  RAN, where RAN means no failure was seen and the printed lines are still to
+  be read), the `steam` test was skipped (no Steam client running) and the
+  full `map` test failed 24 steps:
+  - `host alive` and `client alive`, as a pair at steps 268-269, 480-481,
+    534-535, 697-698, 734-735 and 814-815 (12 steps)
+  - 137 `host fx-hurt`
+  - 203 `host bag-check here` and 205 `host bag-check gone`
+  - 265 `client whistle`, 266 `host porter-came`, 267 `client porter-came`
+  - 348 `both compare client enemies`, 505 `both compare client doors`
+  - 705 `host fe-check-host`, 716 `host fe-hostin`
+  - 768 `host host-copy here`, 769 `client trade`
 - Map batteries: 15 of the 39 were run before the run was stopped. 12 passed,
   and `far`, `gaps` and `issues` failed.
 - A `--dwmp-profile-mod` run recorded the per-frame cost.
