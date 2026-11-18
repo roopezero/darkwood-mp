@@ -1435,7 +1435,7 @@ namespace DarkwoodMP
             catch (Exception e) { Log.LogWarning($"Couldn't show a notice: {e.Message}"); }
         }
 
-        // Not inlined: compiling Awake must not make the JIT look into the core.
+        // Not inlined: compiling Awake must not make the JIT load the core.
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void ProbeCore()
         {
