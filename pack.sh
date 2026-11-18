@@ -10,7 +10,7 @@ trap '[ -z "$stage" ] || safe_rm "$TMPROOT" "$stage"' EXIT
 export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
 export PATH="$DOTNET_ROOT:$PATH" DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-dotnet build "$ROOT/src/DarkwoodMP" -c Release -p:DeployToGame=false
+dotnet build "$ROOT/src/DarkwoodMP" -c Release -p:DeployToGame=false -clp:ErrorsOnly
 DLL="$ROOT/src/DarkwoodMP/bin/Release/DarkwoodMP.dll"
 
 CACHE="$ROOT/.cache"; mkdir -p "$CACHE" "$ROOT/dist"
