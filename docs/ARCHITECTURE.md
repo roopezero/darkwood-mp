@@ -9,7 +9,11 @@ multiplayer design itself (authority, prediction, the protocol);
 **Status:** this is the target layout. The code is moving to it one subsystem
 at a time. New code follows it from the start; existing code is moved when
 it's next changed or in a planned refactor pass. Until a subsystem has moved,
-its old form (static classes, logic inside patches) still applies to it.
+its old form (static classes, logic inside patches) still applies to it. The
+core, analyzer and unit test projects exist, with the core's first small
+types; nothing has moved into the core yet. `src/DarkwoodMP.MapTests`,
+`ModHost`, `CoopSession` and `WorldScope` don't exist yet.
+[MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
 
 ## The idea: a core of rules, and a thin shell around the game
 
@@ -36,15 +40,39 @@ network flow.
 
 | Project | Target | References | What's in it |
 |---|---|---|---|
-| `src/DarkwoodMP.Core` | netstandard2.0 | nothing from Unity or the game | rules, their facts and verdicts, the session and protocol (`Session`, `Packets`, `TcpBackend`), small math types |
+| `src/DarkwoodMP.Core` | netstandard2.0 | nothing from Unity or the game | rules, their facts and verdicts, the session and protocol (`Session`, `Packets`, `TcpBackend`, `PortMapper`, `ServerInfo`, `ServerBrowser`, `PlayerKey`), small math types |
 | `src/DarkwoodMP` | net472 | Core, Unity, the game, BepInEx, Harmony, Steamworks | the plugin: patches, shell classes, `CoopSession`, UI, `SteamBackend` / `Lobby` / `SteamTransport` |
 | `src/DarkwoodMP.MapTests` | net472 | the plugin | the in-game map test steps (`MapScenario*`); deployed to the test game folders only, never in the players' zips |
 | `src/DarkwoodMP.Analyzers` | netstandard2.0 | Roslyn | the build checks for the formatting rules below |
 | `tests/DarkwoodMP.Core.Tests` | net8.0 | Core only | unit tests (xUnit, Shouldly) |
 
 The core can't name a Unity or game type: it doesn't reference them, so that's
-a compile error, not a rule to remember. The plugin ships `DarkwoodMP.Core.dll`
-next to `DarkwoodMP.dll` in its plugin folder, where BepInEx finds it.
+a compile error, not a rule to remember. `PortMapper`, `ServerInfo`,
+`ServerBrowser` and `PlayerKey` go into the core with the network code because
+`TcpBackend` and the server browser need them, and they touch Unity only
+through the log, which comes in as `ILog`. The plugin ships
+`DarkwoodMP.Core.dll` next to `DarkwoodMP.dll` in its plugin folder, where
+BepInEx finds it.
+
+### The startup check
+
+The two DLLs must come from the same build. `CoreCheck` runs first in
+`Plugin.Awake`, before anything loads the core: if `DarkwoodMP.Core.dll` is
+missing or has another version than the plugin, it logs why and the mod turns
+itself off, so the game still plays. For that to work, `Plugin` has no field
+of a core type and `Awake` names none: code that needs one is in a method of
+its own with `[MethodImpl(MethodImplOptions.NoInlining)]`. Otherwise Mono
+fails to load `Plugin`, or to compile `Awake`, before the check can run.
+
+### The map tests
+
+`src/DarkwoodMP.MapTests` is a second BepInEx plugin. It declares the main
+plugin as a dependency, so BepInEx loads it second, and it reaches the
+plugin's internal classes through `InternalsVisibleTo`. It does nothing unless
+the game was started with `--dwmp-test-control`. The main plugin never names a
+map step: the steps reach it through a small `ITestSteps` interface. The DLL
+is deployed to the test game folders only, and `pack.sh` fails if it ends up
+in a zip.
 
 The Steamworks rule from `CLAUDE.md` holds as before: only `SteamBackend`,
 `Lobby` and `SteamTransport` (in the plugin) name Steamworks types. The core
@@ -55,8 +83,9 @@ can't, for the same reason it can't name Unity's.
 The core has its own small `Vec2` and `Vec3` structs instead of Unity's
 `Vector2` and `Vector3`, and a `Seconds` struct for times. The wire format
 carries 3D positions, so `Packets` uses `Vec3`; a rule that works on the
-top-down plane (reach, speed) uses `Vec2`. The shell converts at the edge:
-`pos.ToVec2()`, `pos.ToVec3()`, `v.ToUnity()`.
+top-down plane (reach, speed) uses `Vec2`. The game's ground plane is x-z, not
+x-y, so `Vec2` has the fields `X` and `Z`, and `Vec3.Ground` gives that pair.
+The shell converts at the edge: `pos.ToVec2()`, `pos.ToVec3()`, `v.ToUnity()`.
 
 ## Rules: facts in, a verdict out
 
@@ -122,6 +151,12 @@ public static class DoorRules
   text for each reason is in one table in the core (`Refusals.Text`), which
   the shell logs and sends. Tests compare reasons, so rewording a message
   doesn't break them, and every refusal the host can give is in one list.
+- **A refusal can carry a detail**, for the texts that name a value:
+  `Verdict.Refuse(Refusal.NoKey, detail)`. `Refusals.Text` puts the detail
+  into the sentence (`nobody has the key (...)`,
+  `a hit of 1500 is more than any weapon does`). A rule builds the detail only
+  when it refuses, since formatting a number allocates, and tests still
+  compare the named reason.
 - **Limits are named constants** in the rules class (`Reach`, `ShotReach`,
   `MaxSpeed`), never a bare number in a condition.
 - **Where one decision leads to several things happening** (refuse, send the
@@ -154,7 +189,27 @@ if (verdict.Refused)
 - The shell has no rules of its own: an `if` that decides something belongs
   in the core.
 
-## State: one object per session
+## State: three lifetimes
+
+State lives in one of three homes, by how long it has to last:
+
+| Home | Lives as long as | Holds |
+|---|---|---|
+| `ModHost`, owned by `Plugin` | the process | settings, windows, the `Session` object and its backends: what the main menu needs when no session is running |
+| `CoopSession` | one session | who is connected, requests waiting for an answer, and the subsystems |
+| `WorldScope`, owned by `CoopSession` | one loaded world | what's tied to the loaded scene |
+
+- **The world can change while a session goes on.** A chapter change loads a
+  new world, so `CoopSession` replaces its `WorldScope` at each world load.
+  Hosting from the pause menu does the opposite: the session starts in a world
+  that's already loaded.
+- **An inner lifetime may hold a reference to an outer one, never the
+  reverse.** Session-level code reads the current `WorldScope` each time and
+  doesn't keep it in a field.
+- **Anything gathered before hosting starts** is either process state or is
+  rebuilt by scanning the world when the session starts.
+- **Process state is on `ModHost`, not on `Plugin`,** because `Plugin` has to
+  stay loadable when the core is missing (see "The startup check").
 
 Every subsystem is an instance owned by `CoopSession`, created when a session
 starts and dropped when it ends.
@@ -310,8 +365,12 @@ The build enforces these. `.editorconfig` makes a missing brace and a brace
 at the end of a line errors (with `EnforceCodeStyleInBuild`), and
 `src/DarkwoodMP.Analyzers` fails the build on a one-line block, a line over
 80 columns, `?:`, `??`, `??=` and `?.`. They are errors in the core, the
-tests and the map tests, and warnings in the plugin until its code has moved
-over.
+tests and the map tests. In the plugin they are warnings until one formatting
+pass has been over all of its code. When that pass is finished and no finding
+is left, the plugin's warning section in `.editorconfig` is deleted, so the
+rules are errors everywhere. If only some folders are clean at that point,
+they are listed in the last section of `.editorconfig`, the one that makes
+those folders errors, until the rest follow.
 
 ## Unit tests
 
