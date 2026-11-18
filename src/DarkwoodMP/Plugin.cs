@@ -173,6 +173,16 @@ namespace DarkwoodMP
         {
             Log = Logger;
             Instance = this;
+            var problem = CoreCheck.Problem(Info.Location);
+            if (problem != null)
+            {
+                Logger.LogFatal($"DarkwoodMP can't start: {problem}. "
+                    + "Extract the whole zip over the game folder again.");
+                // Update and OnGUI name core types and would throw each frame.
+                enabled = false;
+                return;
+            }
+            ProbeCore();
             Cfg = new ModConfig
             {
                 PlayerName = Config.Bind("General", "PlayerName", "", "Name shown to other players. Empty = Steam name, or your OS user name."),
@@ -1423,6 +1433,13 @@ namespace DarkwoodMP
             Log.LogInfo($"[notice] {text}");
             try { if (WorldShare.InWorld && Player.Instance != null) Player.Instance.displayMessage(text); }
             catch (Exception e) { Log.LogWarning($"Couldn't show a notice: {e.Message}"); }
+        }
+
+        // Not inlined: compiling Awake must not make the JIT look into the core.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void ProbeCore()
+        {
+            Log.LogInfo($"Core: {Verdict.Allow}");
         }
 
         private void OnDestroy()
