@@ -1,0 +1,36 @@
+=== input
+class Two
+{
+    int F(int a)
+    {
+        { a++; a--; }
+        if (a > 0) { a++; return a; }
+        a += 1; a += 2;
+        lock (this) { a++; a++; }
+        return a;
+    }
+}
+=== layout
+class Two
+{
+    int F(int a)
+    {
+        {
+            a++;
+            a--;
+        }
+        if (a > 0)
+        {
+            a++;
+            return a;
+        }
+        a += 1;
+        a += 2;
+        lock (this)
+        {
+            a++;
+            a++;
+        }
+        return a;
+    }
+}

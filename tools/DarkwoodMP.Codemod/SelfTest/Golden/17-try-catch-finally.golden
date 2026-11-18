@@ -1,0 +1,64 @@
+=== input
+using System;
+
+class Tries
+{
+    int F()
+    {
+        try { return 1; } catch (ArgumentException e) when (e.Message == "") { return 2; } catch { return 3; } finally { G(); }
+    }
+
+    void G()
+    {
+        try
+        {
+            G();
+        } catch (Exception)
+        {
+            throw;
+        } finally {
+            G();
+        }
+    }
+}
+=== layout
+using System;
+
+class Tries
+{
+    int F()
+    {
+        try
+        {
+            return 1;
+        }
+        catch (ArgumentException e) when (e.Message == "")
+        {
+            return 2;
+        }
+        catch
+        {
+            return 3;
+        }
+        finally
+        {
+            G();
+        }
+    }
+
+    void G()
+    {
+        try
+        {
+            G();
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+        finally
+        {
+            G();
+        }
+    }
+}

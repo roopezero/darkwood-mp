@@ -1,0 +1,98 @@
+=== input
+class Switches
+{
+    int F(int a)
+    {
+        switch (a)
+        {
+            case 1: a++; break;
+            case 2: case 3: a--; break;
+            case 4: if (a > 0) a = 9; break;
+            case 5: { a = 5; break; }
+            default: return 0;
+        }
+        return a;
+    }
+
+    int G(int a)
+    {
+        switch (a) { case 1: a = 2; break; default: a = 3; break; }
+        switch (a) { }
+        return a switch { 1 => 2, _ => 3 };
+    }
+}
+=== braces
+class Switches
+{
+    int F(int a)
+    {
+        switch (a)
+        {
+            case 1: a++; break;
+            case 2: case 3: a--; break;
+            case 4: if (a > 0)
+                {
+                    a = 9;
+                }
+                break;
+            case 5: { a = 5; break; }
+            default: return 0;
+        }
+        return a;
+    }
+
+    int G(int a)
+    {
+        switch (a) { case 1: a = 2; break; default: a = 3; break; }
+        switch (a) { }
+        return a switch { 1 => 2, _ => 3 };
+    }
+}
+=== layout
+class Switches
+{
+    int F(int a)
+    {
+        switch (a)
+        {
+            case 1:
+                a++;
+                break;
+            case 2:
+            case 3:
+                a--;
+                break;
+            case 4:
+                if (a > 0)
+                {
+                    a = 9;
+                }
+                break;
+            case 5:
+                {
+                    a = 5;
+                    break;
+                }
+            default:
+                return 0;
+        }
+        return a;
+    }
+
+    int G(int a)
+    {
+        switch (a)
+        {
+            case 1:
+                a = 2;
+                break;
+            default:
+                a = 3;
+                break;
+        }
+        switch (a)
+        {
+        }
+        return a switch { 1 => 2, _ => 3 };
+    }
+}

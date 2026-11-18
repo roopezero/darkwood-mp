@@ -1,0 +1,68 @@
+=== input
+using System;
+
+class Continued
+{
+    int Call(int a, int b, Func<int> done) => a + b;
+
+    int F(int a)
+    {
+        if (a > 0)
+            return Call(1,
+                        2,
+                        () => 3);
+        foreach (var c in "ab")
+          a += Call(1,
+                    2,
+                    () => 3);
+        return a;
+    }
+}
+=== braces
+using System;
+
+class Continued
+{
+    int Call(int a, int b, Func<int> done) => a + b;
+
+    int F(int a)
+    {
+        if (a > 0)
+        {
+            return Call(1,
+                        2,
+                        () => 3);
+        }
+        foreach (var c in "ab")
+        {
+            a += Call(1,
+                      2,
+                      () => 3);
+        }
+        return a;
+    }
+}
+=== layout
+using System;
+
+class Continued
+{
+    int Call(int a, int b, Func<int> done) => a + b;
+
+    int F(int a)
+    {
+        if (a > 0)
+        {
+            return Call(1,
+                        2,
+                        () => 3);
+        }
+        foreach (var c in "ab")
+        {
+            a += Call(1,
+                      2,
+                      () => 3);
+        }
+        return a;
+    }
+}

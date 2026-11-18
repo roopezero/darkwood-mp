@@ -1,0 +1,134 @@
+=== input
+class Strings
+{
+    string Verbatim(bool a)
+    {
+        if (a) return @"{ not a block }";
+        if (!a) return @"moved
+    { two lines } stay";
+        var text = @"first { line
+    second } line
+";
+        if (a)
+            text = @"also
+    { two lines }";
+        return text + @"quote "" and { brace }";
+    }
+
+    string Raw(int n)
+    {
+        if (n > 0) return """{"a": 1}""";
+        var block = """
+            {
+              "key": { "n": 1 }
+            }
+            """;
+        var hole = $$"""
+            {"n": {{n}}}
+            """;
+        var line = $"{n} {{ literal }} {n,3:000}";
+        if (n < 0)
+            return """
+                if (x) { y(); }
+                """;
+        return block + hole + line;
+    }
+}
+=== braces
+class Strings
+{
+    string Verbatim(bool a)
+    {
+        if (a)
+        {
+            return @"{ not a block }";
+        }
+        if (!a)
+        {
+            return @"moved
+    { two lines } stay";
+        }
+        var text = @"first { line
+    second } line
+";
+        if (a)
+        {
+            text = @"also
+    { two lines }";
+        }
+        return text + @"quote "" and { brace }";
+    }
+
+    string Raw(int n)
+    {
+        if (n > 0)
+        {
+            return """{"a": 1}""";
+        }
+        var block = """
+            {
+              "key": { "n": 1 }
+            }
+            """;
+        var hole = $$"""
+            {"n": {{n}}}
+            """;
+        var line = $"{n} {{ literal }} {n,3:000}";
+        if (n < 0)
+        {
+            return """
+                if (x) { y(); }
+                """;
+        }
+        return block + hole + line;
+    }
+}
+=== layout
+class Strings
+{
+    string Verbatim(bool a)
+    {
+        if (a)
+        {
+            return @"{ not a block }";
+        }
+        if (!a)
+        {
+            return @"moved
+    { two lines } stay";
+        }
+        var text = @"first { line
+    second } line
+";
+        if (a)
+        {
+            text = @"also
+    { two lines }";
+        }
+        return text + @"quote "" and { brace }";
+    }
+
+    string Raw(int n)
+    {
+        if (n > 0)
+        {
+            return """{"a": 1}""";
+        }
+        var block = """
+            {
+              "key": { "n": 1 }
+            }
+            """;
+        var hole = $$"""
+            {"n": {{n}}}
+            """;
+        var line = $"{n} {{ literal }} {n,3:000}";
+        if (n < 0)
+        {
+            return """
+                if (x) { y(); }
+                """;
+        }
+        return block + hole + line;
+    }
+}

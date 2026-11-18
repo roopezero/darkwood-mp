@@ -1,0 +1,137 @@
+=== input
+namespace Golden.Bodies { enum Top { A } }
+
+namespace Golden.Types
+{
+    enum Kind { Body, Title }
+    enum Trailing { One, Two, }
+    enum Commented { First /* one */, Second /* two */ } // end
+    enum Empty { }
+    class Nothing { }
+    interface IDoes { void Do(); int Twice(int x); }
+    struct Pair { public int A; public int B; }
+    static class Prefix { static bool Run() => true; }
+    static class WithBody { static int Run() { return 1; } }
+    class Base { public virtual int F() => 1; }
+    sealed class Derived : Base, System.IDisposable { public override int F() => 2; public void Dispose() { } }
+    record Named(int X);
+    record WithMembers(int X) { public int Y => X; }
+    record struct Spot(int X) { public int Z; }
+    class Outer { class Inner { enum Deep { Q, R } } }
+
+    class Normal
+    {
+        enum Nested { A, B }
+        struct Spot { public int X; }
+
+        enum Grouped
+        {
+            A, B,
+            C
+        }
+    }
+}
+=== layout
+namespace Golden.Bodies
+{
+    enum Top
+    {
+        A
+    }
+}
+
+namespace Golden.Types
+{
+    enum Kind
+    {
+        Body,
+        Title
+    }
+    enum Trailing
+    {
+        One,
+        Two,
+    }
+    enum Commented
+    {
+        First /* one */,
+        Second /* two */
+    } // end
+    enum Empty
+    {
+    }
+    class Nothing
+    {
+    }
+    interface IDoes
+    {
+        void Do();
+        int Twice(int x);
+    }
+    struct Pair
+    {
+        public int A;
+        public int B;
+    }
+    static class Prefix
+    {
+        static bool Run() => true;
+    }
+    static class WithBody
+    {
+        static int Run()
+        {
+            return 1;
+        }
+    }
+    class Base
+    {
+        public virtual int F() => 1;
+    }
+    sealed class Derived : Base, System.IDisposable
+    {
+        public override int F() => 2;
+        public void Dispose()
+        {
+        }
+    }
+    record Named(int X);
+    record WithMembers(int X)
+    {
+        public int Y => X;
+    }
+    record struct Spot(int X)
+    {
+        public int Z;
+    }
+    class Outer
+    {
+        class Inner
+        {
+            enum Deep
+            {
+                Q,
+                R
+            }
+        }
+    }
+
+    class Normal
+    {
+        enum Nested
+        {
+            A,
+            B
+        }
+        struct Spot
+        {
+            public int X;
+        }
+
+        enum Grouped
+        {
+            A, B,
+            C
+        }
+    }
+}

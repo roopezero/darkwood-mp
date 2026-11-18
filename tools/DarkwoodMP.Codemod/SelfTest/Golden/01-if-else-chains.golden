@@ -1,0 +1,155 @@
+=== input
+class Chains
+{
+    int One(int a)
+    {
+        if (a > 0) return 1; else if (a < 0) return -1; else return 0;
+    }
+
+    int Multi(int a)
+    {
+        if (a > 10)
+            return 2;
+        else if (a > 5)
+            return 1;
+        else
+            return 0;
+    }
+
+    int BlockFirst(int a)
+    {
+        if (a > 0)
+        {
+            a++;
+        }
+        else
+            a--;
+        return a;
+    }
+
+    void Mixed(int a)
+    {
+        if (a > 1) { a++; } else if (a > 0) a--; else { a = 0; }
+    }
+}
+=== braces
+class Chains
+{
+    int One(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else if (a < 0)
+        {
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    int Multi(int a)
+    {
+        if (a > 10)
+        {
+            return 2;
+        }
+        else if (a > 5)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    int BlockFirst(int a)
+    {
+        if (a > 0)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+        return a;
+    }
+
+    void Mixed(int a)
+    {
+        if (a > 1) { a++; } else if (a > 0)
+        {
+            a--;
+        }
+        else { a = 0; }
+    }
+}
+=== layout
+class Chains
+{
+    int One(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else if (a < 0)
+        {
+            return -1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    int Multi(int a)
+    {
+        if (a > 10)
+        {
+            return 2;
+        }
+        else if (a > 5)
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    int BlockFirst(int a)
+    {
+        if (a > 0)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+        return a;
+    }
+
+    void Mixed(int a)
+    {
+        if (a > 1)
+        {
+            a++;
+        }
+        else if (a > 0)
+        {
+            a--;
+        }
+        else
+        {
+            a = 0;
+        }
+    }
+}

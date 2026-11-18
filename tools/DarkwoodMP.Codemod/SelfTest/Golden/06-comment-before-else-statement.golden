@@ -1,0 +1,141 @@
+=== input
+class Elses
+{
+    int A(int a)
+    {
+        if (a > 0)
+            return 1;
+        else // nothing else fits
+            return 2;
+    }
+
+    int B(int a)
+    {
+        if (a > 0)
+            return 1;
+        else
+            // on its own line
+            return 2;
+    }
+
+    int C(int a)
+    {
+        if (a > 0) return 1;
+        else /* inline */ return 2;
+    }
+
+    int D(int a)
+    {
+        if (a > 0)
+            return 1;
+        // above the else
+        else
+            return 2;
+    }
+}
+=== braces
+class Elses
+{
+    int A(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else // nothing else fits
+        {
+            return 2;
+        }
+    }
+
+    int B(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else
+        {
+            // on its own line
+            return 2;
+        }
+    }
+
+    int C(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else /* inline */
+        {
+            return 2;
+        }
+    }
+
+    int D(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        // above the else
+        else
+        {
+            return 2;
+        }
+    }
+}
+=== layout
+class Elses
+{
+    int A(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else // nothing else fits
+        {
+            return 2;
+        }
+    }
+
+    int B(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else
+        {
+            // on its own line
+            return 2;
+        }
+    }
+
+    int C(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        else /* inline */
+        {
+            return 2;
+        }
+    }
+
+    int D(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        // above the else
+        else
+        {
+            return 2;
+        }
+    }
+}

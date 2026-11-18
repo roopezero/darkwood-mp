@@ -1,0 +1,171 @@
+=== input
+class Spacing
+{
+    int F(int a)
+    {
+        if (a > 0)
+
+            return 1;
+
+        if (a < 0)
+            // comment after a blank line above
+
+            return 2;
+
+        return a;
+    }
+
+    int G(int a)
+    {
+        if (a > 0) return 1;
+        // next thing
+        return 2;
+    }
+
+    void H(int a) { if (a > 0) return; a++; }
+
+    int K(int a) { while (a > 0) a--; return a; }
+
+    void Else(int a)
+    {
+        if (a > 0) a++;
+        else a--;
+        if (a > 1) a++; else a--;
+    }
+}
+=== braces
+class Spacing
+{
+    int F(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+
+        if (a < 0)
+        {
+            // comment after a blank line above
+
+            return 2;
+        }
+
+        return a;
+    }
+
+    int G(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        // next thing
+        return 2;
+    }
+
+    void H(int a)
+    {
+        if (a > 0)
+        {
+            return;
+        }
+        a++;
+    }
+
+    int K(int a)
+    {
+        while (a > 0)
+        {
+            a--;
+        }
+        return a;
+    }
+
+    void Else(int a)
+    {
+        if (a > 0)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+        if (a > 1)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+    }
+}
+=== layout
+class Spacing
+{
+    int F(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+
+        if (a < 0)
+        {
+            // comment after a blank line above
+
+            return 2;
+        }
+
+        return a;
+    }
+
+    int G(int a)
+    {
+        if (a > 0)
+        {
+            return 1;
+        }
+        // next thing
+        return 2;
+    }
+
+    void H(int a)
+    {
+        if (a > 0)
+        {
+            return;
+        }
+        a++;
+    }
+
+    int K(int a)
+    {
+        while (a > 0)
+        {
+            a--;
+        }
+        return a;
+    }
+
+    void Else(int a)
+    {
+        if (a > 0)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+        if (a > 1)
+        {
+            a++;
+        }
+        else
+        {
+            a--;
+        }
+    }
+}

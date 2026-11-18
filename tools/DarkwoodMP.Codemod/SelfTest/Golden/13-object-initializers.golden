@@ -1,0 +1,100 @@
+=== input
+using System;
+using System.Collections.Generic;
+
+class Point { public int X; public int Y; public Action Done; public Point Next; }
+
+class Initializers
+{
+    Point F(int a)
+    {
+        var one = new Point { X = 1, Y = 2 };
+        var nested = new Point { X = 1, Next = new Point { Y = 2 } };
+        var list = new List<int> { 1, 2, 3 };
+        var map = new Dictionary<int, string> { { 1, "a" }, { 2, "b" } };
+        int[] values = { 1, 2, 3 };
+        var numbers = new[] { 1, 2, 3 };
+        var shape = new { Name = "x", Size = 2 };
+        var call = new Point { X = 1, Done = () => { a++; } };
+        var multi = new Point
+        {
+            X = 1,
+            Y = 2,
+        };
+        if (a > 0) return new Point { X = a };
+        return one;
+    }
+}
+=== braces
+using System;
+using System.Collections.Generic;
+
+class Point { public int X; public int Y; public Action Done; public Point Next; }
+
+class Initializers
+{
+    Point F(int a)
+    {
+        var one = new Point { X = 1, Y = 2 };
+        var nested = new Point { X = 1, Next = new Point { Y = 2 } };
+        var list = new List<int> { 1, 2, 3 };
+        var map = new Dictionary<int, string> { { 1, "a" }, { 2, "b" } };
+        int[] values = { 1, 2, 3 };
+        var numbers = new[] { 1, 2, 3 };
+        var shape = new { Name = "x", Size = 2 };
+        var call = new Point { X = 1, Done = () => { a++; } };
+        var multi = new Point
+        {
+            X = 1,
+            Y = 2,
+        };
+        if (a > 0)
+        {
+            return new Point { X = a };
+        }
+        return one;
+    }
+}
+=== layout
+using System;
+using System.Collections.Generic;
+
+class Point
+{
+    public int X;
+    public int Y;
+    public Action Done;
+    public Point Next;
+}
+
+class Initializers
+{
+    Point F(int a)
+    {
+        var one = new Point { X = 1, Y = 2 };
+        var nested = new Point { X = 1, Next = new Point { Y = 2 } };
+        var list = new List<int> { 1, 2, 3 };
+        var map = new Dictionary<int, string> { { 1, "a" }, { 2, "b" } };
+        int[] values = { 1, 2, 3 };
+        var numbers = new[] { 1, 2, 3 };
+        var shape = new { Name = "x", Size = 2 };
+        var call = new Point
+        {
+            X = 1,
+            Done = () =>
+            {
+                a++;
+            }
+        };
+        var multi = new Point
+        {
+            X = 1,
+            Y = 2,
+        };
+        if (a > 0)
+        {
+            return new Point { X = a };
+        }
+        return one;
+    }
+}
