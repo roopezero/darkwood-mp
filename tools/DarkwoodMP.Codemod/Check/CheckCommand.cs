@@ -1,20 +1,28 @@
 using DarkwoodMP.Codemod.Loading;
 using DarkwoodMP.Codemod.Stages;
+using Microsoft.CodeAnalysis;
 
 namespace DarkwoodMP.Codemod.Check;
 
-/// "codemod check dirA dirB": two copies of the plugin's sources compared:
-/// the same code once whitespace is ignored (SyntaxFactory.AreEquivalent) and
-/// the same comment words in the same order. Exits with 1 on any difference.
+/// "codemod check [--braces] dirA dirB": two copies of the plugin's sources
+/// compared file by file. Each file must hold the same comment words in the
+/// same order, and the same code: apart from whitespace, or with --braces apart
+/// from the braces stage's new blocks. Exits with 1 on any difference.
 static class CheckCommand
 {
+    const string BracesOption = "--braces";
     const int Shown = 10;
 
     public static int Run(string[] args)
     {
+        bool braces = args.Length > 0 && args[0] == BracesOption;
+        if (braces)
+        {
+            args = args.Skip(1).ToArray();
+        }
         if (args.Length != 2)
         {
-            throw new Stop("Usage: codemod check <dirA> <dirB>");
+            throw new Stop("Usage: codemod check [--braces] <dirA> <dirB>");
         }
         var paths = RepoPaths.Find();
         var a = PluginLoader.Load(paths, args[0]);
@@ -31,8 +39,9 @@ static class CheckCommand
             Console.WriteLine("  only in one folder: " + name);
         }
 
-        int notEquivalent = 0;
-        int comments = 0;
+        int differentCode = 0;
+        int differentWords = 0;
+        long words = 0;
         foreach (var (name, tree) in left.OrderBy(k => k.Key, StringComparer.Ordinal))
         {
             if (!right.TryGetValue(name, out var other))
@@ -41,42 +50,67 @@ static class CheckCommand
             }
             var rootA = tree.GetRoot();
             var rootB = other.GetRoot();
-            if (!SameCode.Of(rootA, rootB))
+            var code = CodeDifference(rootA, rootB, braces);
+            if (code != null)
             {
-                notEquivalent++;
-                if (notEquivalent <= Shown)
+                differentCode++;
+                if (differentCode <= Shown)
                 {
-                    Console.WriteLine(
-                        $"  not equivalent: {name}: "
-                            + TokenDiff.First(rootA, rootB));
+                    Console.WriteLine($"  code differs in {name}: {code}");
                 }
             }
+            var wordsA = CommentWords.Of(rootA);
+            words += wordsA.Count;
             var difference = CommentWords.FirstDifference(
-                CommentWords.Of(rootA), CommentWords.Of(rootB));
+                wordsA, CommentWords.Of(rootB));
             if (difference != null)
             {
-                comments++;
-                if (comments <= Shown)
+                differentWords++;
+                if (differentWords <= Shown)
                 {
-                    Console.WriteLine($"  comment words differ in {name} at {difference}");
+                    Console.WriteLine(
+                        $"  comment words differ in {name} at {difference}");
                 }
             }
         }
 
         Console.WriteLine(
-            $"{left.Count} files against {right.Count}: "
+            $"{left.Count} files against {right.Count}, compared one by one: "
                 + $"{missing.Count} only on one side, "
-                + $"{notEquivalent} not equivalent (whitespace aside), "
-                + $"{comments} with different comment words");
-        if (missing.Count > 0 || notEquivalent > 0 || comments > 0)
+                + $"{differentCode} with different code ({CodeRule(braces)}), "
+                + $"{differentWords} with different comment words "
+                + $"({words} words compared)");
+        if (missing.Count > 0 || differentCode > 0 || differentWords > 0)
         {
             return 1;
         }
         return 0;
     }
 
-    static Dictionary<string, Microsoft.CodeAnalysis.SyntaxTree> ByRelativePath(
-        PluginProject project)
+    static string CodeRule(bool braces)
+    {
+        if (braces)
+        {
+            return "new braces aside";
+        }
+        return "whitespace aside";
+    }
+
+    /// What differs between the two files' code, or null when nothing does.
+    static string CodeDifference(SyntaxNode a, SyntaxNode b, bool braces)
+    {
+        if (braces)
+        {
+            return BracedCode.Difference(a, b);
+        }
+        if (SameCode.Of(a, b))
+        {
+            return null;
+        }
+        return TokenDiff.First(a, b);
+    }
+
+    static Dictionary<string, SyntaxTree> ByRelativePath(PluginProject project)
     {
         return project.Sources.ToDictionary(
             t => Path.GetRelativePath(project.SourceDir, t.FilePath));

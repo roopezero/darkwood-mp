@@ -27,9 +27,9 @@ not in the default place.
 | Command | What it does |
 |---|---|
 | `census [--samples]` | Counts what the pass has to change, per construct and context: statements without braces, one-line blocks and bodies, lines over 80 columns, `?:`, `??`, `??=` and `?.`. Writes nothing. `--samples` adds example lines. |
-| `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted. |
+| `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted, and they line up with the code around them. |
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, then runs the Roslyn `Formatter` over every file. |
-| `check <dirA> <dirB>` | Compares two copies of the sources: the same code once whitespace is ignored, and the same comment words in the same order. Exits with 1 on any difference. Stage 1 adds tokens, so against it only the comment words are meant to match. |
+| `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, and the same code once whitespace is ignored. Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
 | `selftest [--show NAME]` | Runs the golden cases below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
 `Il/` (the IL diff) and `Prototype/` (the width pass and the first operator
@@ -55,6 +55,9 @@ unless all of these hold:
 - a second run of the stage changes nothing,
 - nothing the stage is responsible for is left (no braceless statement, and
   after `layout` no one-line block or body),
+- after `braces`, every file holds the same code apart from the new blocks: an
+  else-if is still an else-if, each new block holds one statement, and every
+  comment is between the same two tokens of code,
 - after `layout`, every file holds the same code apart from whitespace.
 
 `selftest` compiles its own snippets instead of the plugin. It needs neither the
@@ -77,8 +80,10 @@ Exit code 0 means every DLL is identical to the byte.
 what the stages must make of it, in `=== braces` and `=== layout` sections. A
 case without a `=== braces` section expects `braces` to leave the input alone.
 For every case the self test also checks that a second run changes nothing, the
-comment words stay the same, `layout` changes only whitespace, and the input and
-both outputs compile to the same bytes.
+comment words stay the same, `braces` adds only blocks, `layout` changes only
+whitespace, and the input and both outputs compile to the same bytes. It also
+feeds the check behind `check --braces` a list of wrong rewrites
+(`SelfTest/BracedCodeCases.cs`), which it must refuse.
 
 To add a case, write the `=== input` section, read the output of
 `selftest --show NAME` line by line, and only then save it as the expected text.

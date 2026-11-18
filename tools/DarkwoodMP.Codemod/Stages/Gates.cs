@@ -53,6 +53,14 @@ sealed class Gates
                 $"{file}: layout changed more than whitespace: "
                     + TokenDiff.First(tree.GetRoot(), rootAfter));
         }
+        if (_stage == "braces")
+        {
+            var added = BracedCode.Difference(tree.GetRoot(), rootAfter);
+            if (added != null)
+            {
+                throw new Stop($"{file}: braces changed more than braces: {added}");
+            }
+        }
         if (_pass(after, parse) != after)
         {
             throw new Stop($"{file}: a second {_stage} run changed the output.");

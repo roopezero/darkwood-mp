@@ -15,7 +15,10 @@ static class Program
         codemod braces                 stage 1: every statement gets braces
         codemod layout                 stage 2: one-line blocks and bodies,
                                        then the Formatter over every file
-        codemod check <dirA> <dirB>    same code and same comment words?
+        codemod check [--braces] <dirA> <dirB>
+                                       same code and same comment words, file
+                                       by file? --braces allows the new blocks
+                                       of stage 1
         codemod selftest [--show NAME] the golden cases of both stages
         """;
 

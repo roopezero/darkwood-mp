@@ -44,7 +44,15 @@ static class SelfTestCommand
         }
         Console.WriteLine(
             $"{files.Count - failed} of {files.Count} golden cases passed.");
-        if (failed > 0)
+        var accepted = BracedCodeCases.Failures();
+        foreach (var problem in accepted)
+        {
+            Console.WriteLine("FAIL  braces check\n" + problem);
+        }
+        Console.WriteLine(
+            $"{BracedCodeCases.Count - accepted.Count} of "
+                + $"{BracedCodeCases.Count} wrong rewrites refused.");
+        if (failed > 0 || accepted.Count > 0)
         {
             return 1;
         }
@@ -84,6 +92,13 @@ static class SelfTestCommand
         if (Passes.Layout(layout, parse) != layout)
         {
             problems.Add("  a second layout run changed the output");
+        }
+        var added = BracedCode.Difference(
+            CSharpSyntaxTree.ParseText(golden.Input, parse).GetRoot(),
+            CSharpSyntaxTree.ParseText(braces, parse).GetRoot());
+        if (added != null)
+        {
+            problems.Add("  braces changed more than braces: " + added);
         }
         CompareComments(golden.Input, braces, "braces", problems);
         CompareComments(braces, layout, "layout", problems);

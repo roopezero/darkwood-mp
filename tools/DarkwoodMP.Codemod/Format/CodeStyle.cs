@@ -48,4 +48,12 @@ static class CodeStyle
         // opened by a rewriter first, since this option can't tell them apart.
         .WithChangedOption(
             CSharpFormattingOptions.WrappingPreserveSingleLine, true);
+
+    /// For the braces stage, which formats only its new blocks: they must line
+    /// up with the code around them. A block under a case label has its brace
+    /// at the label's column everywhere in the plugin, and with the Formatter's
+    /// default a new block inside one lands four columns too far right and
+    /// takes the next statement with it.
+    public static readonly OptionSet BraceOptions = Options.WithChangedOption(
+        CSharpFormattingOptions.IndentSwitchCaseSectionWhenBlock, false);
 }

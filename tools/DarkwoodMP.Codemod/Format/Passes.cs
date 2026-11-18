@@ -25,7 +25,7 @@ static class Passes
             rewritten,
             Formatter.Annotation,
             CodeStyle.Workspace,
-            CodeStyle.Options);
+            CodeStyle.BraceOptions);
         return formatted.ToFullString();
     }
 

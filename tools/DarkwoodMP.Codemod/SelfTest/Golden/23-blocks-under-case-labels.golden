@@ -1,0 +1,203 @@
+=== input
+class CaseBlocks
+{
+    int Plain(int a, int b)
+    {
+        switch (a)
+        {
+            case 1:
+            {
+                int c = a + b;
+                if (c > 0)
+                    return 1;
+                return c;
+            }
+            case 2:
+            {
+                if (b > 0) a = 3;
+                else a = 4;
+                break;
+            }
+            default:
+            {
+                if (b > 1) return 2; // the statement after it stays put
+                a = 5;
+                break;
+            }
+        }
+        return a;
+    }
+
+    void Nested(int a, int[] list)
+    {
+        switch (a)
+        {
+            case 1:
+            {
+                foreach (var x in list)
+                    if (x > 0)
+                        a += x;
+                // Above the next statement: it stays there.
+                if (a > 3) // on the header
+                    a--;
+                else if (a > 2)
+                    // inside the new block
+                    a++;
+                break;
+            }
+            case 2:
+                if (a > 0) a = 1;
+                break;
+        }
+    }
+}
+=== braces
+class CaseBlocks
+{
+    int Plain(int a, int b)
+    {
+        switch (a)
+        {
+            case 1:
+            {
+                int c = a + b;
+                if (c > 0)
+                {
+                    return 1;
+                }
+                return c;
+            }
+            case 2:
+            {
+                if (b > 0)
+                {
+                    a = 3;
+                }
+                else
+                {
+                    a = 4;
+                }
+                break;
+            }
+            default:
+            {
+                if (b > 1)
+                {
+                    return 2; // the statement after it stays put
+                }
+                a = 5;
+                break;
+            }
+        }
+        return a;
+    }
+
+    void Nested(int a, int[] list)
+    {
+        switch (a)
+        {
+            case 1:
+            {
+                foreach (var x in list)
+                {
+                    if (x > 0)
+                    {
+                        a += x;
+                    }
+                }
+                // Above the next statement: it stays there.
+                if (a > 3) // on the header
+                {
+                    a--;
+                }
+                else if (a > 2)
+                {
+                    // inside the new block
+                    a++;
+                }
+                break;
+            }
+            case 2:
+                if (a > 0)
+                {
+                    a = 1;
+                }
+                break;
+        }
+    }
+}
+=== layout
+class CaseBlocks
+{
+    int Plain(int a, int b)
+    {
+        switch (a)
+        {
+            case 1:
+                {
+                    int c = a + b;
+                    if (c > 0)
+                    {
+                        return 1;
+                    }
+                    return c;
+                }
+            case 2:
+                {
+                    if (b > 0)
+                    {
+                        a = 3;
+                    }
+                    else
+                    {
+                        a = 4;
+                    }
+                    break;
+                }
+            default:
+                {
+                    if (b > 1)
+                    {
+                        return 2; // the statement after it stays put
+                    }
+                    a = 5;
+                    break;
+                }
+        }
+        return a;
+    }
+
+    void Nested(int a, int[] list)
+    {
+        switch (a)
+        {
+            case 1:
+                {
+                    foreach (var x in list)
+                    {
+                        if (x > 0)
+                        {
+                            a += x;
+                        }
+                    }
+                    // Above the next statement: it stays there.
+                    if (a > 3) // on the header
+                    {
+                        a--;
+                    }
+                    else if (a > 2)
+                    {
+                        // inside the new block
+                        a++;
+                    }
+                    break;
+                }
+            case 2:
+                if (a > 0)
+                {
+                    a = 1;
+                }
+                break;
+        }
+    }
+}
