@@ -1,6 +1,6 @@
 # Developing DarkwoodMP
 
-- **Requirements:** the .NET SDK 8 or newer, and BepInEx installed in the game folder (the build references its DLLs and the game's).
+- **Requirements:** the .NET 8 SDK (a newer SDK also needs the .NET 8 runtime, because the unit tests run on it), and BepInEx installed in the game folder (the build references its DLLs and the game's).
 - **Game version:** the mod is built against Darkwood 1.4 (Unity 2021.3.30f1; Steam build 13092424 on Linux). The game's version is stored in `Darkwood_Data/globalgamemanagers` and shows in the save folder's name (`1_4Save`). After a game update, rebuild and run the tests before releasing.
 - **Projects:** `src/DarkwoodMP` is the plugin. `src/DarkwoodMP.Core` holds the rules and small types that don't touch Unity or the game, and ships as a second DLL beside the plugin. `src/DarkwoodMP.Analyzers` holds the build's formatting rules (DW0001 to DW0006). `tests/DarkwoodMP.Core.Tests` holds the unit tests. [ARCHITECTURE.md](ARCHITECTURE.md) says how the code is organised.
 - **Version:** the mod's version is the `<Version>` in `Directory.Build.props` at the repo's root. Both DLLs get it, and the plugin compiles it into `PluginInfo.Version`.
