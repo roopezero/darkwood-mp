@@ -1,6 +1,6 @@
 # DarkwoodMP
 
-A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1, Mono). One .NET DLL works on Windows, Linux, Steam and GOG. This file covers how to work on it; see "Docs" below for where everything else is written down.
+A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1, Mono). One build (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) works on Windows, Linux, Steam and GOG. This file covers how to work on it; see "Docs" below for where everything else is written down.
 
 ## Decisions the user made (don't re-open them)
 
