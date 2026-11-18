@@ -59,10 +59,12 @@ BepInEx finds it.
 The two DLLs must come from the same build. `CoreCheck` runs first in
 `Plugin.Awake`, before anything loads the core: if `DarkwoodMP.Core.dll` is
 missing or has another version than the plugin, it logs why and the mod turns
-itself off, so the game still plays. For that to work, `Plugin` has no field
-of a core type and `Awake` names none: code that needs one is in a method of
-its own with `[MethodImpl(MethodImplOptions.NoInlining)]`. Otherwise Mono
-fails to load `Plugin`, or to compile `Awake`, before the check can run.
+itself off, so the game still plays. The first call into the core is guarded
+the same way, for a core that passes the check and still can't be used. For
+that to work, `Plugin` has no field of a core type and `Awake` names none: code
+that needs one is in a method of its own with
+`[MethodImpl(MethodImplOptions.NoInlining)]`. Otherwise Mono fails to load
+`Plugin`, or to compile `Awake`, before the check can run.
 
 ### The map tests
 

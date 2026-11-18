@@ -176,14 +176,18 @@ namespace DarkwoodMP
             var problem = CoreCheck.Problem(Info.Location);
             if (problem != null)
             {
-                Logger.LogFatal($"DarkwoodMP can't start: {problem}. "
-                    + "Extract the whole zip over the game folder again.");
-                // Update and OnGUI use what the rest of Awake sets up,
-                // and would throw each frame.
-                enabled = false;
+                TurnOff(problem);
                 return;
             }
-            ProbeCore();
+            try
+            {
+                ProbeCore();
+            }
+            catch (Exception e)
+            {
+                TurnOff(e.Message);
+                return;
+            }
             Cfg = new ModConfig
             {
                 PlayerName = Config.Bind("General", "PlayerName", "", "Name shown to other players. Empty = Steam name, or your OS user name."),
@@ -1441,6 +1445,15 @@ namespace DarkwoodMP
         private void ProbeCore()
         {
             Log.LogInfo($"Core: {Verdict.Allow}");
+        }
+
+        // Update and OnGUI use what the rest of Awake sets up, and would
+        // throw each frame.
+        private void TurnOff(string problem)
+        {
+            Logger.LogFatal($"DarkwoodMP can't start: {problem}. "
+                + "Extract the whole zip over the game folder again.");
+            enabled = false;
         }
 
         private void OnDestroy()
