@@ -1,0 +1,4 @@
+<!-- Stops the search for the repo root's props here: tools under tools/ (the
+     codemod) are not held to the mod's formatting rules or its analyzer. -->
+<Project>
+</Project>

@@ -5,4 +5,5 @@ obj/
 dist/
 .cache/
 __pycache__/
+TestResults/
 .claude/worktrees/
