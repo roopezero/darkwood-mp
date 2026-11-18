@@ -6,8 +6,9 @@ description: Run DarkwoodMP's in-game tests against the real game with scripted 
 # Testing DarkwoodMP in the real game
 
 The `map` test runs two real games (below). The others pair the real game with a Python script playing the other player (`tools/tests/*.py`). `tools/run-test.sh` runs a whole list of tests in **one game**:
-1. Runs the unit tests first (`tests/DarkwoodMP.Core.Tests`) and stops there if one fails, before the game starts.
-1. Backs up the user's saves, and starts the game once with `--dwmp-test-control 27799` (see `TestControl.cs`).
+1. Backs up the user's saves.
+1. Runs the unit tests (`tests/DarkwoodMP.Core.Tests`) and stops there if one fails, before the game starts.
+1. Starts the game once with `--dwmp-test-control 27799` (see `TestControl.cs`).
 1. Before each test, sends it the title (shown along the top of the screen: "Test (X/Y): name - what it checks"), `reset` (leave the session and world, back to the main menu) and the test's `--dwmp-*` arguments (`tools/tests/ctl.py`). Host tests play a **fresh copy** of profile 1 (`--dwmp-sandbox`); client tests join a scripted host, and those saves go to the mod's cache.
 1. Runs the script and prints what it saw.
 1. Reports the new exceptions in `Player.log` (since the test began), and fails if the user's saves changed. The game is started again if it died.
