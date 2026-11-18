@@ -24,6 +24,12 @@ src/DarkwoodMP/
   World/                        WorldShare (save transfer, snapshot, world reload), SaveRedirect, TimeSync, WorldActions
                                 (doors, windows, traps, switches, NPC deaths), Containers (contents, locks, drops, loot),
                                 Characters (per-player characters), FlagsSync (story state), DeathPatches, WorldTest, ObjRef
+src/DarkwoodMP.Core/            rules and small types with no Unity or game references (netstandard2.0); ships as a second DLL
+src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0006
+src/GameReferences.props        the game's paths and DLL references
+tests/DarkwoodMP.Core.Tests/    unit tests of the core (net8.0, xUnit, Shouldly)
+Directory.Build.props           the mod's version (<Version>), language settings, the analyzer reference
+.editorconfig                   style rules: errors in the core and the tests, warnings in the plugin until its code is formatted
 tools/run-test.sh, tools/tests/ in-game tests with scripted Python peers
 scripts/darkwood_mp.sh         Linux launcher (Steam's runtime container safe)
 scripts/README-*.txt           DarkwoodMP-README.txt inside the zips (install and play steps)
@@ -36,13 +42,15 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 ## Build and run
 
 - Tools are in the user's home, not on PATH: `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:~/.dotnet/tools:$PATH`.
-- `dotnet build src/DarkwoodMP -c Release` builds and deploys to `<game>/BepInEx/plugins/DarkwoodMP/`. The game is at `~/.local/share/Steam/steamapps/common/Darkwood`. Restart the game to load a new build.
+- `dotnet build src/DarkwoodMP -c Release` builds and deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to `<game>/BepInEx/plugins/DarkwoodMP/`. The game is at `~/.local/share/Steam/steamapps/common/Darkwood`. Restart the game to load a new build.
+- The mod's version is `<Version>` in `Directory.Build.props`. The plugin prints about 32,000 style warnings until its code has been formatted; that's expected, and `-clp:ErrorsOnly` shows only the errors.
 - The mod's log is `<game>/BepInEx/LogOutput.log`. Unity's is `~/.config/unity3d/Acid Wizard Studio/Darkwood/Player.log`, which also has the game's exceptions. A good start logs `All N patches applied`.
 - To launch it yourself: `cd <game> && setsid timeout 300 ./darkwood_mp.sh --inner <--dwmp-* args> &`. Without `--inner` the script expects Steam's command line. Stop it with `kill $(pgrep -x Darkwood.x86_64)`; never `pkill -f Darkwood`, which matches your own shell.
 - Only **one copy of the game** runs per machine, so "the other player" in tests is always a Python script. Use the `darkwood-test` skill, and run tests after every change to game-facing code.
 
 ## Tests
 
+- Unit tests: `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`. They need neither the game nor a display, and `tools/run-test.sh` runs them first and stops if one fails.
 - One test or battery: `tools/run-test.sh NAME...` (e.g. `tools/run-test.sh host-world`, `tools/run-test.sh map:ui`; `map:NAME` runs `tools/tests/map_scenario_NAME.py` alone in a fresh test world). `tools/run-test.sh --list` lists them all; `--plan NAME` shows what would run.
 - A custom subset of map steps: `MAP_SCENARIO=module tools/run-test.sh map` runs `tools/tests/module.py`.
 - The full suite (`tools/run-test.sh full` = `all` + `map`) takes well over an hour: run it once at the end, in the background, not after each change.
