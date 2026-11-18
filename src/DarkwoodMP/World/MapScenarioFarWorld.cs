@@ -42,7 +42,10 @@ namespace DarkwoodMP.World
         /// <summary>"off:DX,DZ" (from the centre) or "centre".</summary>
         private static Vector3 Spot(string s)
         {
-            if (s == null || s == "centre") return Centre;
+            if (s == null || s == "centre")
+            {
+                return Centre;
+            }
             if (s.StartsWith("off:"))
             {
                 var p = s.Substring(4).Split(',');
@@ -60,7 +63,9 @@ namespace DarkwoodMP.World
             {
                 _locationsLogged = true;
                 foreach (var l in Object.FindObjectsOfType<Location>(true).Where(l => l != null && !l.isSubLocation))
+                {
                     Plugin.Log.LogInfo($"[map] location {Core.getTrueLocationName(l.name)} at {Fmt(l.transform.position)} ({Fmt(l.transform.position - Centre)} from the centre)");
+                }
             }
             var to = Spot(a.Length > 0 ? a[0] : "centre");
             yield return Walk(to, 60f);
@@ -78,10 +83,25 @@ namespace DarkwoodMP.World
             yield return Walk(door.transform.position);
             bool open = a.Length < 2 || a[1] == "open";
             if (open != door.opened)
-                AsPlayer(() => { if (open) door.open(P.transform.position, P.transform, 0f); else door.close(P.transform); });
+            {
+                AsPlayer(() =>
+                {
+                    if (open)
+                    {
+                        door.open(P.transform.position, P.transform, 0f);
+                    }
+                    else
+                    {
+                        door.close(P.transform);
+                    }
+                });
+            }
             yield return new WaitForSeconds(1f);
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
-            if (door.opened != open) r.Fail($"{r.Info}: not {(open ? "open" : "shut")}");
+            if (door.opened != open)
+            {
+                r.Fail($"{r.Info}: not {(open ? "open" : "shut")}");
+            }
         }
 
         /// <summary>
@@ -95,10 +115,15 @@ namespace DarkwoodMP.World
             bool open = a.Length < 2 || a[1] == "open";
             yield return Walk(door.transform.position);
             for (float t = 0f; t < 5f && (!door.gameObject.activeInHierarchy || DoorLeaf.Turned(door) != open); t += 0.25f)
+            {
                 yield return new WaitForSeconds(0.25f);
+            }
             yield return new WaitForSeconds(1f); // let the swing end
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
-            if (door.opened != open || DoorLeaf.Turned(door) != open) r.Fail($"{r.Info}: should be {(open ? "open and drawn open" : "shut")}");
+            if (door.opened != open || DoorLeaf.Turned(door) != open)
+            {
+                r.Fail($"{r.Info}: should be {(open ? "open and drawn open" : "shut")}");
+            }
         }
 
         /// <summary>"far-doors-info SPOT": each door within 1000 of the spot: open, drawn open, its leaf's angle, switched on.</summary>
@@ -133,7 +158,10 @@ namespace DarkwoodMP.World
                 if (P.itemBeingDragged != it) { r.Fail($"{it.name}: our drag was let go of (another player has it)"); yield break; }
                 var at = start + by * (t / secs);
                 it.transform.position = at;
-                if (rb != null) rb.position = at;
+                if (rb != null)
+                {
+                    rb.position = at;
+                }
                 P.transform.position = new Vector3(at.x, P.transform.position.y, at.z) - by.normalized * 70f;
                 yield return null;
             }
@@ -143,7 +171,10 @@ namespace DarkwoodMP.World
             P.itemBeingDragged = null;
             yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
             r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
-            if (StateDump.Flat(it.transform.position - to) > 300f) r.Fail($"{r.Info}: it didn't get to {Fmt(to)}");
+            if (StateDump.Flat(it.transform.position - to) > 300f)
+            {
+                r.Fail($"{r.Info}: it didn't get to {Fmt(to)}");
+            }
         }
 
         /// <summary>"far-obj-shown SPOT": walk to the spot; the draggable object nearest it must be there and switched on.</summary>
@@ -158,8 +189,14 @@ namespace DarkwoodMP.World
             var node = co != null ? co.node : null;
             r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}"
                      + (node != null ? $" node {node.position.x:0},{node.position.y:0} entered={node.entered}" : " no node");
-            if (StateDump.Flat(it.transform.position - at) > 300f) r.Fail($"{r.Info}: not at {Fmt(at)}");
-            else if (!it.gameObject.activeInHierarchy) r.Fail($"{r.Info}: switched off where we stand");
+            if (StateDump.Flat(it.transform.position - at) > 300f)
+            {
+                r.Fail($"{r.Info}: not at {Fmt(at)}");
+            }
+            else if (!it.gameObject.activeInHierarchy)
+            {
+                r.Fail($"{r.Info}: switched off where we stand");
+            }
         }
 
         // ---- the host's enemy whose copy our culling switched off --------------------------------------------------
@@ -177,7 +214,10 @@ namespace DarkwoodMP.World
             {
                 spot.y = _dog.transform.position.y;
                 _dog.transform.position = spot;
-                var body = _dog.GetComponent<Rigidbody>(); if (body != null) body.position = spot;
+                var body = _dog.GetComponent<Rigidbody>(); if (body != null)
+                {
+                    body.position = spot;
+                }
                 yield return new WaitForSeconds(1.5f);
                 r.Info = $"{_dog.name} back at {Fmt(_dog.transform.position)}, save id {_dog.GetComponent<SaveableObject>()?.uniqueId}";
                 yield break;
@@ -193,7 +233,10 @@ namespace DarkwoodMP.World
         private static Character CopyNear(Vector3 at, float within)
         {
             var ne = NetEnemies.Instance;
-            if (ne == null) return null;
+            if (ne == null)
+            {
+                return null;
+            }
             return Object.FindObjectsOfType<Character>(true).Where(c => c != null && c.alive && ne.IsPuppet(c, out _)
                 && StateDump.Flat(c.transform.position - at) < within).OrderBy(c => StateDump.Flat(c.transform.position - at)).FirstOrDefault();
         }
@@ -224,13 +267,19 @@ namespace DarkwoodMP.World
             for (float t = 0f; t < 15f; t += 0.5f)
             {
                 far = Object.FindObjectsOfType<Character>(true).Where(c => c != null && c.alive && ne.IsPuppet(c, out _) && Outside(c)).ToArray();
-                if (far.Length > 0 && far.All(Shown)) break;
+                if (far.Length > 0 && far.All(Shown))
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.5f);
             }
             if (far.Length == 0) { r.Fail("no copy of the host's enemies outside our culling's rect"); yield break; }
             var hidden = far.Where(c => !Shown(c)).ToArray();
             r.Info = $"{far.Length} outside our rect, {hidden.Length} not shown; e.g. {Describe(hidden.FirstOrDefault() ?? far[0])}";
-            if (hidden.Length > 0) r.Fail(r.Info);
+            if (hidden.Length > 0)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"far-dog-to-client" (host): put the dog 250 from the client's player (its proxy here).</summary>
@@ -247,7 +296,10 @@ namespace DarkwoodMP.World
             var to = other.transform.position + new Vector3(250f, 0f, 0f);
             to.y = _dog.transform.position.y;
             _dog.transform.position = to;
-            var rb = _dog.GetComponent<Rigidbody>(); if (rb != null) rb.position = to;
+            var rb = _dog.GetComponent<Rigidbody>(); if (rb != null)
+            {
+                rb.position = to;
+            }
             Plugin.Instance.StartCoroutine(HoldDog(_dog, to));
             yield return new WaitForSeconds(2f);
             r.Info = $"{_dog.name} at {Fmt(_dog.transform.position)}, on={_dog.gameObject.activeInHierarchy}";
@@ -268,11 +320,17 @@ namespace DarkwoodMP.World
         private static IEnumerator FarDogShown(string[] a, Result r)
         {
             Character c = null;
-            for (float t = 0f; t < 10f && !Shown(c = CopyNear(P.transform.position, 500f)); t += 0.5f) yield return new WaitForSeconds(0.5f);
+            for (float t = 0f; t < 10f && !Shown(c = CopyNear(P.transform.position, 500f)); t += 0.5f)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             if (c == null) { r.Fail("no copy of the host's enemy within 500"); yield break; }
             _copy = c;
             r.Info = Describe(c);
-            if (!Shown(c)) r.Fail($"{r.Info}: beside us and not shown");
+            if (!Shown(c))
+            {
+                r.Fail($"{r.Info}: beside us and not shown");
+            }
         }
 
         /// <summary>"far-dog-gone" (host): the dog removed (the client is told to despawn its copy).</summary>
@@ -282,7 +340,10 @@ namespace DarkwoodMP.World
             r.Info = $"{_dog.name} removed";
             var go = _dog.gameObject;
             try { _dog.removeMe(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] removeMe: {e.Message}"); }
-            if (go != null) Object.Destroy(go);
+            if (go != null)
+            {
+                Object.Destroy(go);
+            }
             _dog = null;
             yield return new WaitForSeconds(1.5f);
         }
@@ -297,7 +358,10 @@ namespace DarkwoodMP.World
                 if (_copy == null) { r.Info = "the copy was made from its prefab and is gone"; yield break; }
             }
             r.Info = Describe(_copy);
-            if (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _)) r.Fail($"{r.Info}: still shown");
+            if (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _))
+            {
+                r.Fail($"{r.Info}: still shown");
+            }
         }
     }
 }

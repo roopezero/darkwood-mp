@@ -29,28 +29,49 @@ namespace DarkwoodMP.World
 
         internal static void Opened(Door d, Vector3 opener)
         {
-            if (d == null || d.body == null || !d.opened || d.body.gameObject.activeInHierarchy) return;
+            if (d == null || d.body == null || !d.opened || d.body.gameObject.activeInHierarchy)
+            {
+                return;
+            }
             Pending[d] = opener;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {d.name} opened while switched off here: it swings open when it's on again");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {d.name} opened while switched off here: it swings open when it's on again");
+            }
         }
 
         internal static void Closed(Door d) => Pending.Remove(d);
 
         internal static void Enabled(Door d)
         {
-            if (!Pending.TryGetValue(d, out var opener)) return;
+            if (!Pending.TryGetValue(d, out var opener))
+            {
+                return;
+            }
             Pending.Remove(d);
-            if (d.opened && !d.destroyed && d.body != null && !Turned(d)) d.StartCoroutine(Swing(d, opener));
+            if (d.opened && !d.destroyed && d.body != null && !Turned(d))
+            {
+                d.StartCoroutine(Swing(d, opener));
+            }
         }
 
         private static IEnumerator Swing(Door d, Vector3 opener)
         {
             yield return new WaitForFixedUpdate();
-            if (d == null || !d.opened || d.body == null) yield break;
+            if (d == null || !d.opened || d.body == null)
+            {
+                yield break;
+            }
             var rb = BodyRB(d);
-            if (rb == null || rb.isKinematic) yield break;
+            if (rb == null || rb.isKinematic)
+            {
+                yield break;
+            }
             rb.AddForce(d.body.up * (Side(d, opener) * OpenForce(d)));
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {d.name} switched on here: swung open");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {d.name} switched on here: swung open");
+            }
         }
 
         /// <summary>The way Door.open pushes the leaf (+1 along body.up, or -1), from where the opener stood.</summary>
@@ -59,10 +80,22 @@ namespace DarkwoodMP.World
             var body = d.body;
             float y = body.rotation.eulerAngles.y;
             bool zMore = opener.z > body.position.z, xMore = opener.x > body.position.x;
-            if (y > 179f && y < 181f) return zMore ? -1f : 1f;
-            if (y > -1f && y < 1f) return zMore ? 1f : -1f;
-            if (y > 89f && y < 91f) return xMore ? 1f : -1f;
-            if (y > 269f && y < 271f) return xMore ? -1f : 1f;
+            if (y > 179f && y < 181f)
+            {
+                return zMore ? -1f : 1f;
+            }
+            if (y > -1f && y < 1f)
+            {
+                return zMore ? 1f : -1f;
+            }
+            if (y > 89f && y < 91f)
+            {
+                return xMore ? 1f : -1f;
+            }
+            if (y > 269f && y < 271f)
+            {
+                return xMore ? -1f : 1f;
+            }
             return xMore ? -1f : 1f;
         }
 
@@ -79,7 +112,10 @@ namespace DarkwoodMP.World
         internal static float MaxTurn(Door d)
         {
             var hinge = d != null && d.body != null ? d.body.GetComponent<HingeJoint>() : null;
-            if (hinge == null || !hinge.useLimits) return 180f;
+            if (hinge == null || !hinge.useLimits)
+            {
+                return 180f;
+            }
             return Mathf.Clamp(Mathf.Max(Mathf.Abs(hinge.limits.min), Mathf.Abs(hinge.limits.max)), 0f, 180f);
         }
 
@@ -90,10 +126,16 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void SetLeaf(Door d, float signedAngle)
         {
-            if (d == null || d.body == null) return;
+            if (d == null || d.body == null)
+            {
+                return;
+            }
             var rb = BodyRB(d);
             var hinge = d.body.GetComponent<HingeJoint>();
-            if (rb == null || hinge == null) return;
+            if (rb == null || hinge == null)
+            {
+                return;
+            }
             Pending.Remove(d); // it's where the others have it; the push it missed is no longer wanted
             bool kinematic = rb.isKinematic;
             rb.isKinematic = true;
@@ -106,7 +148,10 @@ namespace DarkwoodMP.World
         internal static void Turn(Door d, float signedAngle)
         {
             var hinge = d != null && d.body != null ? d.body.GetComponent<HingeJoint>() : null;
-            if (hinge == null) return;
+            if (hinge == null)
+            {
+                return;
+            }
             signedAngle = Mathf.Clamp(signedAngle, -MaxTurn(d), MaxTurn(d));
             float by = Mathf.DeltaAngle(d.body.localRotation.eulerAngles.z, 90f - signedAngle);
             d.body.RotateAround(hinge.connectedAnchor, Vector3.up, by);
@@ -177,10 +222,24 @@ namespace DarkwoodMP.World
 
         public static void Update()
         {
-            if (!WorldActions.Sharing) { if (_watched.Count > 0) _watched.Clear(); EndGlides(); return; }
-            if (_glides.Count > 0) Glides();
+            if (!WorldActions.Sharing)
+            {
+                if (_watched.Count > 0)
+                {
+                    _watched.Clear();
+                }
+                EndGlides();
+                return;
+            }
+            if (_glides.Count > 0)
+            {
+                Glides();
+            }
             var player = Player.Instance;
-            if (player == null) return;
+            if (player == null)
+            {
+                return;
+            }
             var at = player.transform.position;
             if (Time.unscaledTime >= _nextLook) { _nextLook = Time.unscaledTime + 1f; Look(at); }
             List<Door> gone = null;
@@ -190,7 +249,10 @@ namespace DarkwoodMP.World
                 if (d == null || !d.opened || d.destroyed || d.body == null || w.Rb == null || !d.body.gameObject.activeInHierarchy
                     || StateDump.Flat(d.body.position - at) > WatchRadius + 100f)
                 { (gone ?? (gone = new List<Door>())).Add(d); continue; }
-                if (w.Rb.isKinematic || _glides.ContainsKey(d)) continue;
+                if (w.Rb.isKinematic || _glides.ContainsKey(d))
+                {
+                    continue;
+                }
                 float now = DoorLeaf.Signed(d);
                 bool swinging = Mathf.Abs(w.Rb.angularVelocity.y) > 0.2f;
                 // Away from where it's shared, however slowly it got there (a body pressed gently against it turns
@@ -198,7 +260,10 @@ namespace DarkwoodMP.World
                 if (swinging || !w.Moving && Mathf.Abs(Mathf.DeltaAngle(now, w.Shared)) > MinChange)
                 {
                     w.Moving = true;
-                    if (!w.Touched && (Dist(d, at) < TouchDist || d == TestTouch)) w.Touched = true;
+                    if (!w.Touched && (Dist(d, at) < TouchDist || d == TestTouch))
+                    {
+                        w.Touched = true;
+                    }
                 }
                 if (swinging)
                 {
@@ -210,25 +275,43 @@ namespace DarkwoodMP.World
                     }
                     continue;
                 }
-                if (!w.Moving) continue;
+                if (!w.Moving)
+                {
+                    continue;
+                }
                 if (w.StillSince < 0f) { w.StillSince = Time.unscaledTime; continue; }
-                if (Time.unscaledTime - w.StillSince < RestTime || Time.unscaledTime < w.NextSend) continue;
+                if (Time.unscaledTime - w.StillSince < RestTime || Time.unscaledTime < w.NextSend)
+                {
+                    continue;
+                }
                 w.Moving = false;
                 if (Mathf.Abs(Mathf.DeltaAngle(now, w.Shared)) > MinChange)
                 {
                     // The host's word on where it rests, whatever turned it; a client's only for its own player's
                     // push. Anything else turned a client's leaf (its copy of an enemy's bump, settling): it swings
                     // back to where it's shared, and the host's angle comes if the host's leaf turned too.
-                    if (_s.IsHost || w.Touched) Send(w, now);
+                    if (_s.IsHost || w.Touched)
+                    {
+                        Send(w, now);
+                    }
                     else
                     {
-                        if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {d.name}'s leaf turned by itself here to {now:0}: back to {w.Shared:0}");
+                        if (WorldActions.Debug)
+                        {
+                            Plugin.Log.LogInfo($"[world] {d.name}'s leaf turned by itself here to {now:0}: back to {w.Shared:0}");
+                        }
                         GlideTo(d, w.Shared);
                     }
                 }
                 w.Touched = false;
             }
-            if (gone != null) foreach (var d in gone) _watched.Remove(d);
+            if (gone != null)
+            {
+                foreach (var d in gone)
+                {
+                    _watched.Remove(d);
+                }
+            }
         }
 
         /// <summary>
@@ -239,9 +322,15 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void Opened(Door d)
         {
-            if (!WorldActions.Sharing || WorldActions.Replaying || d == null || d.body == null || !d.opened || d.destroyed) return;
+            if (!WorldActions.Sharing || WorldActions.Replaying || d == null || d.body == null || !d.opened || d.destroyed)
+            {
+                return;
+            }
             var rb = DoorLeaf.BodyRB(d);
-            if (rb == null) return;
+            if (rb == null)
+            {
+                return;
+            }
             _watched[d] = new Watched { D = d, Rb = rb, Shared = 0f, Moving = true, Touched = true };
         }
 
@@ -251,9 +340,15 @@ namespace DarkwoodMP.World
             for (int i = 0; i < n; i++)
             {
                 var rb = _near[i].attachedRigidbody;
-                if (rb == null) continue;
+                if (rb == null)
+                {
+                    continue;
+                }
                 var d = Door.getDoorScript(rb.transform);
-                if (d == null || _watched.ContainsKey(d) || !d.opened || d.destroyed || d.body == null || DoorLeaf.BodyRB(d) != rb) continue;
+                if (d == null || _watched.ContainsKey(d) || !d.opened || d.destroyed || d.body == null || DoorLeaf.BodyRB(d) != rb)
+                {
+                    continue;
+                }
                 _watched[d] = new Watched { D = d, Rb = rb, Shared = DoorLeaf.Signed(d) };
             }
         }
@@ -263,7 +358,10 @@ namespace DarkwoodMP.World
         {
             var hinge = d.body.GetComponent<HingeJoint>();
             Vector2 c = new Vector2(d.body.position.x, d.body.position.z), q = new Vector2(p.x, p.z);
-            if (hinge == null) return (q - c).magnitude;
+            if (hinge == null)
+            {
+                return (q - c).magnitude;
+            }
             Vector2 h = new Vector2(hinge.connectedAnchor.x, hinge.connectedAnchor.z), e = h + 2f * (c - h);
             var he = e - h;
             float t = he.sqrMagnitude < 1e-3f ? 0f : Mathf.Clamp01(Vector2.Dot(q - h, he) / he.sqrMagnitude);
@@ -273,32 +371,53 @@ namespace DarkwoodMP.World
         private static void Send(Watched w, float angle)
         {
             var r = ObjRef.Of(w.D.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             w.Shared = angle;
             w.NextSend = Time.unscaledTime + MinInterval;
             Post(w.D, angle);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent DoorLeaf {w.D.name} ({r}): pushed to {angle:0}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent DoorLeaf {w.D.name} ({r}): pushed to {angle:0}");
+            }
         }
 
         private static void Post(Door d, float angle)
         {
             var r = ObjRef.Of(d.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             var pw = Write(r, angle);
             if (_s.IsHost) { _s.Broadcast(pw, Channel.Control, reliable: true); return; }
             _s.SendToHost(pw, Channel.Control, reliable: true);
-            if (!_unechoed.TryGetValue(d, out var sent)) _unechoed[d] = sent = new List<float>();
-            if (sent.Count < 64) sent.Add(angle);
+            if (!_unechoed.TryGetValue(d, out var sent))
+            {
+                _unechoed[d] = sent = new List<float>();
+            }
+            if (sent.Count < 64)
+            {
+                sent.Add(angle);
+            }
         }
 
         /// <summary>Client: this angle is the host passing back one we sent (see the class summary).</summary>
         private static bool OurEcho(Door d, float angle)
         {
-            if (!_unechoed.TryGetValue(d, out var sent)) return false;
+            if (!_unechoed.TryGetValue(d, out var sent))
+            {
+                return false;
+            }
             int i = sent.FindIndex(a => Mathf.Abs(a - angle) < 0.01f);
             if (i < 0) { _unechoed.Remove(d); return false; }
             sent.RemoveRange(0, i + 1);
-            if (sent.Count == 0) _unechoed.Remove(d);
+            if (sent.Count == 0)
+            {
+                _unechoed.Remove(d);
+            }
             return true;
         }
 
@@ -306,7 +425,10 @@ namespace DarkwoodMP.World
         private static void GlideTo(Door d, float angle)
         {
             var rb = DoorLeaf.BodyRB(d);
-            if (rb == null) return;
+            if (rb == null)
+            {
+                return;
+            }
             if (!_glides.TryGetValue(d, out var g))
             {
                 _glides[d] = g = new Glide { WasKinematic = rb.isKinematic };
@@ -328,7 +450,10 @@ namespace DarkwoodMP.World
                 if (Mathf.Abs(off) < 0.5f && since > GlideRest || since > 1f)
                 {
                     var rb = DoorLeaf.BodyRB(d);
-                    if (rb != null) rb.isKinematic = g.WasKinematic;
+                    if (rb != null)
+                    {
+                        rb.isKinematic = g.WasKinematic;
+                    }
                     DoorLeaf.SetLeaf(d, g.Target);
                     if (_watched.TryGetValue(d, out var w)) { w.Shared = g.Target; w.Moving = false; w.Touched = false; w.StillSince = -1f; }
                     (done ??= new List<Door>()).Add(d);
@@ -336,7 +461,13 @@ namespace DarkwoodMP.World
                 }
                 DoorLeaf.Turn(d, now + off * k);
             }
-            if (done != null) foreach (var d in done) _glides.Remove(d);
+            if (done != null)
+            {
+                foreach (var d in done)
+                {
+                    _glides.Remove(d);
+                }
+            }
         }
 
         private static void EndGlides()
@@ -344,7 +475,10 @@ namespace DarkwoodMP.World
             foreach (var kv in _glides)
             {
                 var rb = kv.Key != null ? DoorLeaf.BodyRB(kv.Key) : null;
-                if (rb != null && kv.Key.opened && !kv.Key.destroyed) rb.isKinematic = kv.Value.WasKinematic;
+                if (rb != null && kv.Key.opened && !kv.Key.destroyed)
+                {
+                    rb.isKinematic = kv.Value.WasKinematic;
+                }
             }
             _glides.Clear();
         }
@@ -359,18 +493,37 @@ namespace DarkwoodMP.World
 
         private static void OnLeaf(ulong from, PacketReader r)
         {
-            if (!WorldShare.InWorld) return;
-            if (_s.IsClient && from != _s.HostId) return;
+            if (!WorldShare.InWorld)
+            {
+                return;
+            }
+            if (_s.IsClient && from != _s.HostId)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             float angle = r.R.ReadSingle();
-            if (float.IsNaN(angle) || float.IsInfinity(angle)) return;
+            if (float.IsNaN(angle) || float.IsInfinity(angle))
+            {
+                return;
+            }
             var d = ObjRef.Resolve<Door>(obj);
-            if (d == null || d.body == null) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got DoorLeaf {obj}: not found here"); return; }
+            if (d == null || d.body == null)
+            {
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] got DoorLeaf {obj}: not found here");
+                }
+                return;
+            }
             // Open and close are WorldActions on the same ordered channel; a leaf for a door that's shut (or broken,
             // or barricaded) here is late or wrong, and is left alone.
             if (!d.opened || d.destroyed || d.barricaded)
             {
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got DoorLeaf {d.name}: not open here, left as it is");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] got DoorLeaf {d.name}: not open here, left as it is");
+                }
                 return;
             }
             if (_s.IsHost)
@@ -383,7 +536,10 @@ namespace DarkwoodMP.World
                 }
                 _s.Broadcast(Write(obj, angle), Channel.Control, reliable: true); // the pusher too: the host's last word
             }
-            if (_s.IsClient && OurEcho(d, angle)) return;
+            if (_s.IsClient && OurEcho(d, angle))
+            {
+                return;
+            }
             GlideTo(d, angle);
             if (_watched.TryGetValue(d, out var w)) { w.Shared = angle; w.Moving = false; w.Touched = false; w.StillSince = -1f; }
         }
@@ -404,7 +560,9 @@ namespace DarkwoodMP.World
         static void Postfix(Door.SaveState __instance, Door door)
         {
             if (door != null && door.body != null)
+            {
                 __instance.rot = Mathf.Clamp(DoorLeaf.Signed(door), -105f, 105f);
+            }
         }
     }
 

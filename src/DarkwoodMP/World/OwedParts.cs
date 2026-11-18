@@ -42,10 +42,16 @@ namespace DarkwoodMP.World
         internal static string IdOf(global::EventTrigger t)
         {
             var et = t?.thisEventTriggers;
-            if (et == null) return null;
+            if (et == null)
+            {
+                return null;
+            }
             int index = et.eventTriggers.IndexOf(t);
             var save = et.GetComponent<SaveableObject>();
-            if (save != null && save.uniqueId > 0) return $"s{save.uniqueId}#{index}";
+            if (save != null && save.uniqueId > 0)
+            {
+                return $"s{save.uniqueId}#{index}";
+            }
             var p = et.transform.position;
             return FormattableString.Invariant($"{et.gameObject.scene.name}/{et.name}@{p.x:0},{p.z:0}#{index}");
         }
@@ -72,7 +78,10 @@ namespace DarkwoodMP.World
         private static string ProfileDir()
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (sm == null || Core.currentProfile == null) return null;
+            if (sm == null || Core.currentProfile == null)
+            {
+                return null;
+            }
             return Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id);
         }
 
@@ -84,8 +93,14 @@ namespace DarkwoodMP.World
                 if (path != null && File.Exists(path))
                 {
                     var d = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
-                    if (d.Had == null) d.Had = new Dictionary<string, HashSet<string>>();
-                    if (d.HostOwed == null) d.HostOwed = new HashSet<string>();
+                    if (d.Had == null)
+                    {
+                        d.Had = new Dictionary<string, HashSet<string>>();
+                    }
+                    if (d.HostOwed == null)
+                    {
+                        d.HostOwed = new HashSet<string>();
+                    }
                     return d;
                 }
             }
@@ -115,9 +130,15 @@ namespace DarkwoodMP.World
         /// <summary>Host: write the record beside the save (the game saved).</summary>
         internal static void HostSaved()
         {
-            if (WorldShare.Snapshotting || Combat.NetEnemies.ClientMode || _data == null) return;
+            if (WorldShare.Snapshotting || Combat.NetEnemies.ClientMode || _data == null)
+            {
+                return;
+            }
             string dir = ProfileDir();
-            if (dir == null || dir != _dir || (_data.Had.Count == 0 && _data.HostOwed.Count == 0)) return;
+            if (dir == null || dir != _dir || (_data.Had.Count == 0 && _data.HostOwed.Count == 0))
+            {
+                return;
+            }
             try
             {
                 Directory.CreateDirectory(dir);
@@ -132,9 +153,15 @@ namespace DarkwoodMP.World
         internal static bool Owed(global::EventTrigger t)
         {
             var s = S;
-            if (t == null || s == null || !s.Active) return false;
+            if (t == null || s == null || !s.Active)
+            {
+                return false;
+            }
             if (s.IsHost) { string id = IdOf(t); return id != null && Data().HostOwed.Contains(id); }
-            if (t.thisEventTriggers == null || WorldActions.OursAlone(t.thisEventTriggers.gameObject)) return false;
+            if (t.thisEventTriggers == null || WorldActions.OursAlone(t.thisEventTriggers.gameObject))
+            {
+                return false;
+            }
             return !Ours().Contains(t);
         }
 
@@ -150,7 +177,10 @@ namespace DarkwoodMP.World
         internal static bool Had(global::EventTrigger t)
         {
             var s = S;
-            if (t == null || s == null || !s.Active) return false;
+            if (t == null || s == null || !s.Active)
+            {
+                return false;
+            }
             if (s.IsHost) { string id = IdOf(t); return id != null && Data().HostOwed.Remove(id); }
             return Ours().Add(t);
         }
@@ -166,10 +196,16 @@ namespace DarkwoodMP.World
         internal static void Give(ulong peer, global::EventTrigger t)
         {
             string id = IdOf(t);
-            if (id == null) return;
+            if (id == null)
+            {
+                return;
+            }
             var had = Data().Had;
             string key = KeyOf(peer);
-            if (!had.TryGetValue(key, out var set)) had[key] = set = new HashSet<string>();
+            if (!had.TryGetValue(key, out var set))
+            {
+                had[key] = set = new HashSet<string>();
+            }
             set.Add(id);
         }
 
@@ -179,7 +215,10 @@ namespace DarkwoodMP.World
         /// <summary>For the tests: the host's game saves and starts again (the record is written, then read back).</summary>
         internal static void TestReload()
         {
-            if (_data == null) Data();
+            if (_data == null)
+            {
+                Data();
+            }
             HostSaved();
             _data = null;
         }

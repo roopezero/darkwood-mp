@@ -51,7 +51,10 @@ namespace DarkwoodMP.World
             if (args.Contains("--after-reload"))
             {
                 float by = Time.realtimeSinceStartup + 220f;
-                while (Time.realtimeSinceStartup < by && (Scene == _sceneBefore || !WorldShare.WorldReady)) yield return null;
+                while (Time.realtimeSinceStartup < by && (Scene == _sceneBefore || !WorldShare.WorldReady))
+                {
+                    yield return null;
+                }
                 if (Scene == _sceneBefore || !WorldShare.WorldReady) { r.Fail("our world wasn't loaded again"); yield break; }
                 yield return new WaitForSeconds(5f); // the host's contents of the storage (SlotShare.Update asks for them)
             }
@@ -59,17 +62,29 @@ namespace DarkwoodMP.World
             if (wb == null) { r.Fail("no workbench"); yield break; }
             var st = wb.normalInventory;
             float until = Time.realtimeSinceStartup + 10f;
-            while (Time.realtimeSinceStartup < until && (st.slots.Count != WorkbenchStorage.Wanted(wb, Level) || (wantLevel > 0 && Level != wantLevel))) yield return null;
+            while (Time.realtimeSinceStartup < until && (st.slots.Count != WorkbenchStorage.Wanted(wb, Level) || (wantLevel > 0 && Level != wantLevel)))
+            {
+                yield return null;
+            }
             int want = WorkbenchStorage.Wanted(wb, Level);
             r.Info = $"{MapScenarioWorld.Ref(st)} level {Level}: {st.slots.Count} slots (base {WorkbenchStorage.BaseSlots(wb)}, wanted {want}), {st.maxColumns} columns, {st.getAllItems().Count} filled";
             if (wantLevel > 0 && Level != wantLevel) { r.Fail($"level {Level}, not {wantLevel}: {r.Info}"); yield break; }
             if (st.slots.Count != want) { r.Fail($"slot count isn't the level's: {r.Info}"); yield break; }
             if (grown >= 0 && st.slots.Count - _countBefore != grown) { r.Fail($"grew by {st.slots.Count - _countBefore}, not {grown}: {r.Info}"); yield break; }
-            if (grown < 0) _countBefore = st.slots.Count;   // what a later --grown counts from (in this game)
-            if (!args.Contains("--after-reload")) _sceneBefore = Scene;
+            if (grown < 0)
+            {
+                _countBefore = st.slots.Count;   // what a later --grown counts from (in this game)
+            }
+            if (!args.Contains("--after-reload"))
+            {
+                _sceneBefore = Scene;
+            }
             if (Opt("--slot") != null)
             {
-                int i = int.Parse(Opt("--slot")); if (i < 0) i += st.slots.Count;
+                int i = int.Parse(Opt("--slot")); if (i < 0)
+                {
+                    i += st.slots.Count;
+                }
                 string type = Opt("--slot", 2); int amount = int.Parse(Opt("--slot", 3));
                 var s = st.slots[i];
                 bool ok = type == "-" ? InvItemClass.isNull(s.invItem) : !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
@@ -104,24 +119,45 @@ namespace DarkwoodMP.World
             for (int i = 0; i < st.slots.Count; i++)
             {
                 var ui = st.slots[i].UIInvSlot;
-                if (ui == null || !ui.gameObject.activeInHierarchy) return $"slot {i} isn't drawn";
+                if (ui == null || !ui.gameObject.activeInHierarchy)
+                {
+                    return $"slot {i} isn't drawn";
+                }
                 at.Add(ui.transform.position);
             }
             float size = (at.Count > 1 ? Vector3.Distance(at[0], at[1]) : 60f) * 0.9f;
             for (int i = 0; i < at.Count; i++)
+            {
                 for (int j = i + 1; j < at.Count; j++)
-                    if (Vector3.Distance(at[i], at[j]) < size) return $"slots {i} and {j} overlap ({at[i]}, {at[j]})";
+                {
+                    if (Vector3.Distance(at[i], at[j]) < size)
+                    {
+                        return $"slots {i} and {j} overlap ({at[i]}, {at[j]})";
+                    }
+                }
+            }
             int cols = Mathf.Max(1, st.maxColumns);
             for (int i = cols; i < at.Count; i++)
-                if (Mathf.Abs(at[i].x - at[i - cols].x) > 1f || at[i].z >= at[i - cols].z) return $"slot {i} isn't under slot {i - cols}";
+            {
+                if (Mathf.Abs(at[i].x - at[i - cols].x) > 1f || at[i].z >= at[i - cols].z)
+                {
+                    return $"slot {i} isn't under slot {i - cols}";
+                }
+            }
             var button = st.thisUI.transform.Find(SlotShare.ButtonName);
-            if (button != null && button.position.z >= at[at.Count - 1].z) return $"Sort & Stack ({button.position}) isn't under the last row ({at[at.Count - 1]})";
+            if (button != null && button.position.z >= at[at.Count - 1].z)
+            {
+                return $"Sort & Stack ({button.position}) isn't under the last row ({at[at.Count - 1]})";
+            }
             if (cam != null)
             {
                 foreach (var p in new[] { at[0], at[at.Count - 1] }.Concat(button != null ? new[] { button.position } : new Vector3[0]))
                 {
                     var v = cam.WorldToViewportPoint(p);
-                    if (v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f) return $"off the screen at {p} (viewport {v.x:0.00},{v.y:0.00})";
+                    if (v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f)
+                    {
+                        return $"off the screen at {p} (viewport {v.x:0.00},{v.y:0.00})";
+                    }
                 }
             }
             return null;
@@ -153,7 +189,12 @@ namespace DarkwoodMP.World
                 }
                 var recipe = up.recipes[0];
                 foreach (var req in recipe.requirements)
-                    if (req != null && req.item != null && req.durabilityAmount == 0f) AsPlayer(() => P.Inventory.addItemTypeToPlayer(req.item.type, req.amount, dropIfNoRoom: true));
+                {
+                    if (req != null && req.item != null && req.durabilityAmount == 0f)
+                    {
+                        AsPlayer(() => P.Inventory.addItemTypeToPlayer(req.item.type, req.amount, dropIfNoRoom: true));
+                    }
+                }
                 yield return new WaitForSeconds(0.8f);
                 int before = st.slots.Count;
                 if (n == 0) { _countBefore = before; _sceneBefore = Scene; }
@@ -177,7 +218,10 @@ namespace DarkwoodMP.World
             if (wb == null) { r.Fail("no workbench"); yield break; }
             var st = wb.normalInventory;
             int count = st.slots.Count, level = Level;
-            int i = int.Parse(a[0]); if (i < 0) i += count;
+            int i = int.Parse(a[0]); if (i < 0)
+            {
+                i += count;
+            }
             string before = Slot(st.slots[i]);
             try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] wb-rows-reload: closeInventory: {e.Message}"); }
             yield return new WaitForSeconds(0.8f);
@@ -188,7 +232,10 @@ namespace DarkwoodMP.World
             Singleton<UI>.Instance.quickLoadGame();
             yield return new WaitForSecondsRealtime(3f);
             float until = Time.realtimeSinceStartup + 200f;
-            while (Time.realtimeSinceStartup < until && !WorldShare.WorldReady) yield return null;
+            while (Time.realtimeSinceStartup < until && !WorldShare.WorldReady)
+            {
+                yield return null;
+            }
             if (!WorldShare.WorldReady) { r.Fail("the world didn't load again"); yield break; }
             yield return new WaitForSeconds(1f);
             wb = Bench();
@@ -197,7 +244,10 @@ namespace DarkwoodMP.World
             string after = i < st.slots.Count ? Slot(st.slots[i]) : "(no such slot)";
             r.Info = $"before: level {level}, {count} slots, slot {i} {before}; after: level {Level}, {st.slots.Count} slots, slot {i} {after}";
             bool ok = a.Length >= 3 && after == (a[1] == "-" ? "-" : $"{a[1]}x{a[2]}");
-            if (Level != level || st.slots.Count != count || after != before || !ok) r.Fail(r.Info);
+            if (Level != level || st.slots.Count != count || after != before || !ok)
+            {
+                r.Fail(r.Info);
+            }
         }
     }
 }

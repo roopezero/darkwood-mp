@@ -27,18 +27,32 @@ namespace DarkwoodMP.Sync
             try
             {
                 var astar = AstarPath.active;
-                if (astar == null) return true;
+                if (astar == null)
+                {
+                    return true;
+                }
                 Vector3 pos = __instance.transform.position;
                 var g = astar.getNearestGraphFast(pos);
-                if (g == null || g.nodes == null || g.nodes.Length == 0 || g.nodeSize <= 0f) return true; // the game returns at once
+                if (g == null || g.nodes == null || g.nodes.Length == 0 || g.nodeSize <= 0f)
+                {
+                    return true; // the game returns at once
+                }
                 Vector3 d = pos - (Vector3)g.nodes[0].position;
                 int x = Mathf.RoundToInt(d.x / g.nodeSize), z = Mathf.RoundToInt(d.z / g.nodeSize);
                 int r = _nodeLightRadius;
-                if (x >= -r && x < g.Width + r && z >= -r && z < g.Depth + r) return true;
+                if (x >= -r && x < g.Width + r && z >= -r && z < g.Depth + r)
+                {
+                    return true;
+                }
                 var nodes = __instance.affectedNodes;
-                if (nodes != null) Array.Clear(nodes, 0, nodes.Length);
+                if (nodes != null)
+                {
+                    Array.Clear(nodes, 0, nodes.Length);
+                }
                 if (Logged.Add(__instance.GetInstanceID()))
+                {
                     Plugin.Log.LogInfo($"[lights] {Path(__instance.transform)} at {pos} is outside the pathfinding grid: it lights no nodes there");
+                }
                 return false;
             }
             catch { return true; }
@@ -47,7 +61,10 @@ namespace DarkwoodMP.Sync
         private static string Path(Transform t)
         {
             string s = t.name;
-            for (var p = t.parent; p != null; p = p.parent) s = p.name + "/" + s;
+            for (var p = t.parent; p != null; p = p.parent)
+            {
+                s = p.name + "/" + s;
+            }
             return s;
         }
     }

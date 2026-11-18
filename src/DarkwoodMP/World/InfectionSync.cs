@@ -44,7 +44,10 @@ namespace DarkwoodMP.World
         internal static void Cleared(Infection inf)
         {
             var r = ObjRef.Of(inf.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             var p = inf.transform.position;
             _cleared.Add(new Patch { Ref = r, X = p.x, Z = p.z });
         }
@@ -52,15 +55,24 @@ namespace DarkwoodMP.World
         /// <summary>Each frame: send what was cleared this frame, in one message.</summary>
         public static void Update()
         {
-            if (_cleared.Count == 0) return;
+            if (_cleared.Count == 0)
+            {
+                return;
+            }
             if (!WorldActions.Sharing) { _cleared.Clear(); return; }
             var w = S.Begin(MsgType.InfectionCleared);
             Write(w, _cleared);
             string what = $"infection cleared: {_cleared.Count}";
             _cleared.Clear();
             Plugin.Log.LogInfo($"[world] sent {what}");
-            if (S.IsHost) S.Broadcast(w, Channel.Control, reliable: true);
-            else Authority.Request(w, what, inventory: false);
+            if (S.IsHost)
+            {
+                S.Broadcast(w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                Authority.Request(w, what, inventory: false);
+            }
         }
 
         private static void Write(PacketWriter w, List<Patch> patches)
@@ -72,17 +84,29 @@ namespace DarkwoodMP.World
         private static void OnCleared(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             int n = r.R.ReadUInt16();
             var done = new List<Patch>();
             for (int i = 0; i < n; i++)
             {
                 var p = new Patch { Ref = ObjRef.Read(r), X = r.R.ReadSingle(), Z = r.R.ReadSingle() };
                 var inf = Find(p);
-                if (inf == null || inf.disappearing) continue;
+                if (inf == null || inf.disappearing)
+                {
+                    continue;
+                }
                 // A client's player clears only what its burning weapon reached.
-                if (s.IsHost && !Authority.Near(from, inf.transform.position, WorldActions.Reach)) continue;
+                if (s.IsHost && !Authority.Near(from, inf.transform.position, WorldActions.Reach))
+                {
+                    continue;
+                }
                 WorldActions.Replaying = true;
                 try { Clear(inf); }
                 catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't clear infection {p.Ref}: {e.Message}"); }
@@ -102,7 +126,10 @@ namespace DarkwoodMP.World
         /// <summary>Clear it as the game does; one culled (inactive) here can't play its fade, so it's just removed.</summary>
         private static void Clear(Infection inf)
         {
-            if (inf.gameObject.activeInHierarchy) inf.disappear();
+            if (inf.gameObject.activeInHierarchy)
+            {
+                inf.disappear();
+            }
             else { inf.disappearing = true; Object.Destroy(inf.gameObject); }
         }
 
@@ -110,16 +137,25 @@ namespace DarkwoodMP.World
         private static Infection Find(Patch p)
         {
             var inf = ObjRef.Resolve<Infection>(p.Ref);
-            if (inf != null) return inf;
+            if (inf != null)
+            {
+                return inf;
+            }
             Infection best = null; float bestD = 20f * 20f;
             foreach (var i in Resources.FindObjectsOfTypeAll<Infection>())
             {
-                if (i == null || !i.gameObject.scene.IsValid() || i.disappearing) continue;
+                if (i == null || !i.gameObject.scene.IsValid() || i.disappearing)
+                {
+                    continue;
+                }
                 var pos = i.transform.position;
                 float d = (pos.x - p.X) * (pos.x - p.X) + (pos.z - p.Z) * (pos.z - p.Z);
                 if (d <= bestD) { bestD = d; best = i; }
             }
-            if (best == null && WorldActions.Debug) Plugin.Log.LogInfo($"[world] infection {p.Ref} not found here");
+            if (best == null && WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] infection {p.Ref} not found here");
+            }
             return best;
         }
 
@@ -136,29 +172,44 @@ namespace DarkwoodMP.World
             w.W.Write(id);
             w.Write(p);
             parent.Write(w);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent infection spawned Spawned:{id} at {p}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent infection spawned Spawned:{id} at {p}");
+            }
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
         private static void OnSpawned(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             long id = r.R.ReadInt64();
             var pos = r.ReadVector3();
             var parentRef = ObjRef.Read(r);
-            if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null) return;
+            if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null)
+            {
+                return;
+            }
             var parent = parentRef.Valid ? ObjRef.Resolve<Transform>(parentRef) : null;
             WorldActions.Replaying = true;
             try
             {
                 var go = Core.AddPrefab("Traps/infection_splat", pos, Quaternion.Euler(90f, 0f, 0f), parent != null ? parent.gameObject : Core.ItemContainer, worldSpace: true);
                 var inf = go != null ? go.GetComponent<Infection>() : null;
-                if (inf == null) return;
+                if (inf == null)
+                {
+                    return;
+                }
                 ObjRef.RegisterSpawned(id, go);
                 inf.timesToSpread = 0; // the host's spreads; its new patches come as messages
                 inf.init();
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got infection spawned Spawned:{id} at {pos}");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] got infection spawned Spawned:{id} at {pos}");
+                }
             }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't make the host's infection: {e.Message}"); }
             finally { WorldActions.Replaying = false; }
@@ -171,10 +222,16 @@ namespace DarkwoodMP.World
         static void Prefix(Infection __instance, out bool __state) => __state = __instance != null && !__instance.disappearing;
         static void Postfix(Infection __instance, bool __state)
         {
-            if (!__state || __instance == null || !__instance.disappearing || !WorldActions.Sharing) return;
+            if (!__state || __instance == null || !__instance.disappearing || !WorldActions.Sharing)
+            {
+                return;
+            }
             // A client's own player's burning weapon only; its copy of the host's fire clears what the host's does,
             // and the host says so.
-            if (NetEnemies.ClientMode && !LiquidLitPatch.OwnSwing) return;
+            if (NetEnemies.ClientMode && !LiquidLitPatch.OwnSwing)
+            {
+                return;
+            }
             InfectionSync.Cleared(__instance);
         }
     }
@@ -186,12 +243,18 @@ namespace DarkwoodMP.World
         static bool Prefix(out bool __state)
         {
             __state = !NetEnemies.ClientMode;
-            if (__state) InfectionSync.Growing++;
+            if (__state)
+            {
+                InfectionSync.Growing++;
+            }
             return __state;
         }
         static System.Exception Finalizer(System.Exception __exception, bool __state)
         {
-            if (__state && InfectionSync.Growing > 0) InfectionSync.Growing--;
+            if (__state && InfectionSync.Growing > 0)
+            {
+                InfectionSync.Growing--;
+            }
             return __exception;
         }
     }
@@ -203,7 +266,10 @@ namespace DarkwoodMP.World
         static void Prefix() => InfectionSync.Growing++;
         static System.Exception Finalizer(System.Exception __exception)
         {
-            if (InfectionSync.Growing > 0) InfectionSync.Growing--;
+            if (InfectionSync.Growing > 0)
+            {
+                InfectionSync.Growing--;
+            }
             return __exception;
         }
     }
@@ -214,7 +280,10 @@ namespace DarkwoodMP.World
         static void Postfix(Infection __instance)
         {
             var s = Session.Instance;
-            if (InfectionSync.Growing <= 0 || __instance == null || s == null || !s.IsHost || !WorldActions.Sharing) return;
+            if (InfectionSync.Growing <= 0 || __instance == null || s == null || !s.IsHost || !WorldActions.Sharing)
+            {
+                return;
+            }
             InfectionSync.Spawned(__instance);
         }
     }

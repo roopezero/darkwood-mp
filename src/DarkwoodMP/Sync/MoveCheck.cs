@@ -59,20 +59,35 @@ namespace DarkwoodMP.Sync
         /// </summary>
         public void ExpectTrip(ulong from, Vector3 to, float seconds)
         {
-            if (!_trips.TryGetValue(from, out var l)) _trips[from] = l = new List<(Vector3, float)>();
+            if (!_trips.TryGetValue(from, out var l))
+            {
+                _trips[from] = l = new List<(Vector3, float)>();
+            }
             l.Add((to, Time.realtimeSinceStartup + seconds));
         }
 
         /// <summary>Whether pos is where a trip this player was granted lands (and that trip is used up).</summary>
         private bool Landed(ulong from, Vector3 pos, float now)
         {
-            if (!_trips.TryGetValue(from, out var l)) return false;
+            if (!_trips.TryGetValue(from, out var l))
+            {
+                return false;
+            }
             l.RemoveAll(x => x.until < now);
             int i = l.FindIndex(x => Flat(pos - x.to) < TripLanding);
-            if (l.Count == 0) _trips.Remove(from);
-            if (i < 0) return false;
+            if (l.Count == 0)
+            {
+                _trips.Remove(from);
+            }
+            if (i < 0)
+            {
+                return false;
+            }
             l.RemoveAt(i);
-            if (l.Count == 0) _trips.Remove(from);
+            if (l.Count == 0)
+            {
+                _trips.Remove(from);
+            }
             return true;
         }
 
@@ -84,7 +99,9 @@ namespace DarkwoodMP.Sync
                 || (Flat(pos - t.Good) > TripLanding && Landed(from, pos, now)))
             {
                 if (t != null && Flat(pos - t.Good) <= Teleport)
+                {
                     Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)} was taken to {pos} by an event the host agreed to");
+                }
                 _tracks[from] = new Track { Good = pos, WindowStart = pos, WindowAt = now };
                 return pos;
             }
@@ -114,10 +131,16 @@ namespace DarkwoodMP.Sync
         /// <summary>Client: the host put our player back.</summary>
         private void OnCorrection(ulong from, PacketReader r)
         {
-            if (!_session.IsClient || from != _session.HostId) return;
+            if (!_session.IsClient || from != _session.HostId)
+            {
+                return;
+            }
             var pos = r.ReadVector3();
             var p = Player.Instance;
-            if (p == null) return;
+            if (p == null)
+            {
+                return;
+            }
             Corrections++;
             Plugin.Log.LogInfo($"[authority] the host put our player back at {pos}");
             var body = p.GetComponent<Rigidbody>();

@@ -67,13 +67,24 @@ namespace DarkwoodMP.World
                 var ne = NetEnemies.Instance;
                 foreach (var c in StateDump.All<Character>())
                 {
-                    if (!NetEnemies.Eligible(c) || !ctx.Near(c.transform.position)) continue;
-                    if (ne == null || !ne.NetIdOf(c, out _)) continue;
-                    if (NetEnemies.InPlay(c) && !c.gameObject.activeInHierarchy && !NetEnemies.ClientMode) continue; // culled on the host: not shared (see "enemies")
+                    if (!NetEnemies.Eligible(c) || !ctx.Near(c.transform.position))
+                    {
+                        continue;
+                    }
+                    if (ne == null || !ne.NetIdOf(c, out _))
+                    {
+                        continue;
+                    }
+                    if (NetEnemies.InPlay(c) && !c.gameObject.activeInHierarchy && !NetEnemies.ClientMode)
+                    {
+                        continue; // culled on the host: not shared (see "enemies")
+                    }
                     var e = ctx.Add(c.gameObject);
                     e["inPlay"] = NetEnemies.InPlay(c); // a copy is alive while the host's is in play
                     if (NetEnemies.InPlay(c))
+                    {
                         e["health"] = c.maxHealth > 0f ? Mathf.RoundToInt(Mathf.Clamp01(c.health / c.maxHealth) * 100f) : -1;
+                    }
                     else
                     {
                         var sp = c.shadow != null ? c.shadow.GetComponent<tk2dBaseSprite>() : null;
@@ -99,7 +110,10 @@ namespace DarkwoodMP.World
         private static Character Shared(Vector3 at, Func<Character, bool> ok = null, float within = 900f)
         {
             var ne = NetEnemies.Instance;
-            if (ne == null) return null;
+            if (ne == null)
+            {
+                return null;
+            }
             return Object.FindObjectsOfType<Character>().Where(c => c != null && NetEnemies.Eligible(c) && ne.NetIdOf(c, out _) && (ok == null || ok(c))
                 && StateDump.Flat(c.transform.position - at) < within).OrderBy(c => StateDump.Flat(c.transform.position - at)).FirstOrDefault();
         }
@@ -113,18 +127,34 @@ namespace DarkwoodMP.World
             var spot = MapScenarioEnemies.FreeSpot(at);
             // spawnCharacterAround takes a non-zero offset times the distance as the position itself.
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, type, nocturnal: false, attackPlayer: false);
-            if (c != null) c.transform.position = spot;
+            if (c != null)
+            {
+                c.transform.position = spot;
+            }
             return c;
         }
 
         /// <summary>Where the other player is in this game: the host's proxy for them, or their puppet.</summary>
         private static Transform Other()
         {
-            foreach (var p in NetPlayerProxy.All.Values) if (p != null) return p.transform;
+            foreach (var p in NetPlayerProxy.All.Values)
+            {
+                if (p != null)
+                {
+                    return p.transform;
+                }
+            }
             var ps = Sync.PlayerSync.Instance;
             if (ps != null)
+            {
                 foreach (var rp in ps.Remotes.Values)
-                    if (rp.Owner != Sync.PlayerSync.DummyId && rp.Root != null) return rp.Root.transform;
+                {
+                    if (rp.Owner != Sync.PlayerSync.DummyId && rp.Root != null)
+                    {
+                        return rp.Root.transform;
+                    }
+                }
+            }
             return null;
         }
 
@@ -162,7 +192,14 @@ namespace DarkwoodMP.World
             float dmg = a.Length > 0 ? F(a[0]) : 20f;
             Character c = null;
             float until = Time.realtimeSinceStartup + 6f;
-            while (c == null && Time.realtimeSinceStartup < until) { c = Shared(Spot("fx"), x => x.alive && x.name.StartsWith("Dog")); if (c == null) yield return new WaitForSeconds(0.3f); }
+            while (c == null && Time.realtimeSinceStartup < until)
+            {
+                c = Shared(Spot("fx"), x => x.alive && x.name.StartsWith("Dog"));
+                if (c == null)
+                {
+                    yield return new WaitForSeconds(0.3f);
+                }
+            }
             if (c == null) { r.Fail("no copy of the host's dog here"); yield break; }
             _fxId = IdOf(c);
             yield return Walk(c.transform.position, 90f);
@@ -173,18 +210,31 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f); // the host's next states
             float frac = c.maxHealth > 0f ? c.health / c.maxHealth : -1f;
             r.Info = FormattableString.Invariant($"{c.name} #{IdOf(c)}: health {before:0} -> {c.health:0} of {c.maxHealth:0}; bar on it {bar.currentObj == c.gameObject} (at once {shownAtOnce}), bar {BarFraction(bar):0.00}");
-            if (!shownAtOnce) r.Fail($"our hit didn't show its health bar: {r.Info}");
-            else if (!(c.health < before - 0.5f)) r.Fail($"the host's health for it didn't come: {r.Info}");
-            else if (bar.currentObj == c.gameObject && Mathf.Abs(BarFraction(bar) - frac) > 0.03f) r.Fail($"the bar wasn't refreshed with the host's health: {r.Info}");
+            if (!shownAtOnce)
+            {
+                r.Fail($"our hit didn't show its health bar: {r.Info}");
+            }
+            else if (!(c.health < before - 0.5f))
+            {
+                r.Fail($"the host's health for it didn't come: {r.Info}");
+            }
+            else if (bar.currentObj == c.gameObject && Mathf.Abs(BarFraction(bar) - frac) > 0.03f)
+            {
+                r.Fail($"the bar wasn't refreshed with the host's health: {r.Info}");
+            }
             // 45: its shadow, as Character.Update places it.
             if (c.shadow != null && r.Failure == null)
             {
                 var sh = c.shadow;
                 r.Info += FormattableString.Invariant($"; shadow rot {sh.eulerAngles.x:0},{sh.eulerAngles.y:0} (rotateShadow {c.rotateShadow}), dy {sh.position.y - c.transform.position.y:0}, off {StateDump.Flat(sh.position - c.transform.position - new Vector3(c.shadowOffset.x, 0f, c.shadowOffset.z)):0}");
                 if (!c.rotateShadow && (Mathf.Abs(Mathf.DeltaAngle(sh.eulerAngles.x, 90f)) > 1f || Mathf.Abs(Mathf.DeltaAngle(sh.eulerAngles.y, 0f)) > 1f))
+                {
                     r.Fail($"its shadow is turned with the body: {r.Info}");
+                }
                 else if (StateDump.Flat(sh.position - c.transform.position - new Vector3(c.shadowOffset.x, 0f, c.shadowOffset.z)) > 20f)
+                {
                     r.Fail($"its shadow isn't under it: {r.Info}");
+                }
             }
             yield return Walk(Centre, 60f);
         }
@@ -196,8 +246,14 @@ namespace DarkwoodMP.World
             if (_fx == null) { r.Fail("no dog (fx-spawn first)"); yield break; }
             var bar = Singleton<UI>.Instance.enemyHealthBar;
             r.Info = $"{_fx.name}: health {_fxHealth:0} -> {_fx.health:0}, our bar on it {bar.currentObj == _fx.gameObject}";
-            if (!(_fx.health < _fxHealth)) r.Fail($"the client's hit did nothing here: {r.Info}");
-            else if (bar.currentObj == _fx.gameObject && P.selectedObject != _fx.transform) r.Fail($"the client's hit showed our health bar: {r.Info}");
+            if (!(_fx.health < _fxHealth))
+            {
+                r.Fail($"the client's hit did nothing here: {r.Info}");
+            }
+            else if (bar.currentObj == _fx.gameObject && P.selectedObject != _fx.transform)
+            {
+                r.Fail($"the client's hit showed our health bar: {r.Info}");
+            }
         }
 
         /// <summary>"fx-predeath" (host): our player brings the dog down to its pre-death stage (43): not alive, still in play.</summary>
@@ -208,8 +264,14 @@ namespace DarkwoodMP.World
             AsPlayer(() => c.getHit(c.health + 5f, P.transform, false, true, false, true, false, false, false));
             yield return new WaitForSeconds(1f);
             r.Info = $"{c.name}: alive {c.alive}, health {c.health:0}, in play {NetEnemies.InPlay(c)}";
-            if (c.alive) r.Fail($"it's still alive: {r.Info}");
-            else if (!NetEnemies.InPlay(c)) r.Fail($"it didn't go into its pre-death stage: {r.Info}");
+            if (c.alive)
+            {
+                r.Fail($"it's still alive: {r.Info}");
+            }
+            else if (!NetEnemies.InPlay(c))
+            {
+                r.Fail($"it didn't go into its pre-death stage: {r.Info}");
+            }
         }
 
         /// <summary>"fx-crawling" (client): our copy of the crawling dog is still in the fight (not a corpse), and our
@@ -233,7 +295,10 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.6f);
             }
             r.Info = $"{crawl}; then {hits} hit(s): alive {(c != null && c.alive)}";
-            if (c != null && c.alive) r.Fail($"our hits didn't finish it: {r.Info}");
+            if (c != null && c.alive)
+            {
+                r.Fail($"our hits didn't finish it: {r.Info}");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -243,7 +308,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             if (_fx == null) { r.Fail("no dog"); yield break; }
             r.Info = $"{_fx.name}: alive {_fx.alive}, health {_fx.health:0}, in play {NetEnemies.InPlay(_fx)}";
-            if (NetEnemies.InPlay(_fx)) r.Fail($"it's still in play: {r.Info}");
+            if (NetEnemies.InPlay(_fx))
+            {
+                r.Fail($"it's still in play: {r.Info}");
+            }
         }
 
         /// <summary>"fx-corpse" (client): our copy settled into a corpse, its shadow faded and its particles stopped (45).</summary>
@@ -254,7 +322,10 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 c = ById(_fxId);
-                if (c != null && !c.alive && c.GetComponent<Item>() != null) break;
+                if (c != null && !c.alive && c.GetComponent<Item>() != null)
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.5f);
             }
             if (c == null || c.alive) { r.Fail($"the dog #{_fxId} isn't dead here"); yield break; }
@@ -262,9 +333,18 @@ namespace DarkwoodMP.World
             var sp = c.shadow != null ? c.shadow.GetComponent<tk2dBaseSprite>() : null;
             int emitting = c.GetComponentsInChildren<ParticleSystem>().Count(ps => ps != null && ps.isEmitting);
             r.Info = FormattableString.Invariant($"{c.name} #{IdOf(c)}: searchable {c.GetComponent<Item>() != null}, shadow alpha {(sp != null ? sp.color.a : -1f):0.00}, emitting particles {emitting}");
-            if (c.GetComponent<Item>() == null) r.Fail($"its corpse isn't searchable: {r.Info}");
-            else if (sp != null && sp.color.a > 0.1f) r.Fail($"its shadow didn't fade: {r.Info}");
-            else if (emitting > 0) r.Fail($"its particles still play: {r.Info}");
+            if (c.GetComponent<Item>() == null)
+            {
+                r.Fail($"its corpse isn't searchable: {r.Info}");
+            }
+            else if (sp != null && sp.color.a > 0.1f)
+            {
+                r.Fail($"its shadow didn't fade: {r.Info}");
+            }
+            else if (emitting > 0)
+            {
+                r.Fail($"its particles still play: {r.Info}");
+            }
         }
 
         // ---- 28: an InteractiveItem's switch ------------------------------------------------------------------------
@@ -283,7 +363,10 @@ namespace DarkwoodMP.World
             {
                 host = Nearest(Object.FindObjectsOfType<SaveableObject>().Where(i => i.gameObject.name.Replace("(Clone)", "").Trim() == n && ObjRef.Of(i.gameObject).Valid
                     && StateDump.Flat(i.transform.position - Centre) < 1500f), Centre);
-                if (host != null) break;
+                if (host != null)
+                {
+                    break;
+                }
             }
             if (host == null) { r.Fail($"none of {string.Join(", ", SwitchHosts)} here"); yield break; }
             var tex = Resources.LoadAll<Texture2D>("InteractiveItems/Textures");
@@ -314,7 +397,10 @@ namespace DarkwoodMP.World
         private static void HideSwitchWindow()
         {
             var w = Singleton<UI>.Instance.transform.Find("InteractiveItem");
-            if (w != null) w.gameObject.SetActive(false);
+            if (w != null)
+            {
+                w.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>"ii-switch on|off": our player switches it (InteractiveItem.switchMe from its window); its trigger fires here.</summary>
@@ -330,8 +416,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             var mine = on ? _onT : _offT;
             r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired {mine.fired}";
-            if (_ii.isOn != on) r.Fail($"it didn't switch (refused?): {r.Info}");
-            else if (!mine.fired) r.Fail($"its trigger didn't fire here: {r.Info}");
+            if (_ii.isOn != on)
+            {
+                r.Fail($"it didn't switch (refused?): {r.Info}");
+            }
+            else if (!mine.fired)
+            {
+                r.Fail($"its trigger didn't fire here: {r.Info}");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -341,13 +433,25 @@ namespace DarkwoodMP.World
             if (_ii == null) { r.Fail("no switch (ii-setup first)"); yield break; }
             bool on = a.Length == 0 || a[0] == "on";
             float until = Time.realtimeSinceStartup + 4f;
-            while (_ii.isOn != on && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (_ii.isOn != on && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(0.5f);
             var t = on ? _onT : _offT;
             r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired here {t.fired}";
-            if (_ii.isOn != on) r.Fail($"the other's switch didn't reach us: {r.Info}");
-            else if (a.Contains("--fired") && !t.fired) r.Fail($"its events didn't run here: {r.Info}");
-            else if (a.Contains("--not-fired") && t.fired) r.Fail($"its events ran here too: {r.Info}");
+            if (_ii.isOn != on)
+            {
+                r.Fail($"the other's switch didn't reach us: {r.Info}");
+            }
+            else if (a.Contains("--fired") && !t.fired)
+            {
+                r.Fail($"its events didn't run here: {r.Info}");
+            }
+            else if (a.Contains("--not-fired") && t.fired)
+            {
+                r.Fail($"its events ran here too: {r.Info}");
+            }
             _onT.fired = false; _offT.fired = false;
         }
 
@@ -364,29 +468,50 @@ namespace DarkwoodMP.World
             string type = a.Length > 0 ? a[0] : "flare";
             yield return Walk(MapScenarioEnemies.FreeSpot(Spot("drop")), 40f);
             int free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
-            if (free < 0) free = p.Hotbar.slots.Count - 1;
+            if (free < 0)
+            {
+                free = p.Hotbar.slots.Count - 1;
+            }
             var slot = p.Hotbar.slots[free];
             slot.inventory = p.Hotbar;
-            if (!InvItemClass.isNull(slot.invItem)) slot.removeItem();
+            if (!InvItemClass.isNull(slot.invItem))
+            {
+                slot.removeItem();
+            }
             slot.createItem(type, 1);
-            foreach (var s in p.Hotbar.slots) s.deselect();
+            foreach (var s in p.Hotbar.slots)
+            {
+                s.deselect();
+            }
             slot.select(noiseless: true);
             float until = Time.realtimeSinceStartup + 5f;
-            while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type || p.switchingItem) && Time.realtimeSinceStartup < until) yield return null;
+            while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type || p.switchingItem) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) { r.Fail($"couldn't take the {type} out"); yield break; }
             if (!p.currentItem.baseClass.isThrowable) { r.Fail($"a {type} isn't throwable"); yield break; }
             // As Player's aim does for a throwable.
             var held = Core.AddPrefab(p.currentItem.baseClass.item, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), p.gameObject);
             if (held == null) { r.Fail($"couldn't make a held {type}"); yield break; }
-            var ren = held.GetComponent<Renderer>(); if (ren != null) ren.enabled = false;
+            var ren = held.GetComponent<Renderer>(); if (ren != null)
+            {
+                ren.enabled = false;
+            }
             var hc = held.GetComponent<Collider>(); var pc = p.GetComponent<Collider>();
-            if (hc != null && pc != null) Physics.IgnoreCollision(hc, pc);
+            if (hc != null && pc != null)
+            {
+                Physics.IgnoreCollision(hc, pc);
+            }
             HeldItem(p) = held;
             yield return new WaitForSeconds(0.3f);
             AsPlayer(() => DropItemM.Invoke(p, new object[] { true }));
             var ti = held != null ? held.GetComponent<ThrownItem>() : null;
             r.Info = $"{type} ({held?.name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
-            if (HeldItem(p) != null) r.Fail($"still held: {r.Info}");
+            if (HeldItem(p) != null)
+            {
+                r.Fail($"still held: {r.Info}");
+            }
             yield return new WaitForSeconds(1.5f);
             yield return Walk(Centre, 60f);
         }
@@ -404,13 +529,19 @@ namespace DarkwoodMP.World
             {
                 found = ThrownHits.Copies.Where(g => g != null && g.name.StartsWith(prefab, StringComparison.Ordinal)
                     && StateDump.Flat(g.transform.position - Spot("drop")) < 500f).FirstOrDefault();
-                if (found == null) yield return new WaitForSeconds(0.3f);
+                if (found == null)
+                {
+                    yield return new WaitForSeconds(0.3f);
+                }
             }
             if (found == null) { r.Fail($"no copy of a dropped {type} ({prefab}) by the drop spot here"); yield break; }
             var ti = found.GetComponent<ThrownItem>();
             var rb = found.GetComponent<Rigidbody>();
             r.Info = $"{found.name} at {Fmt(found.transform.position)}: on the ground {(ti != null && ti.onGround)}, speed {(rb != null ? rb.velocity.magnitude : 0f):0}";
-            if (ti == null || !ti.onGround) r.Fail($"it wasn't dropped (ThrownItem.dropMe) here: {r.Info}");
+            if (ti == null || !ti.onGround)
+            {
+                r.Fail($"it wasn't dropped (ThrownItem.dropMe) here: {r.Info}");
+            }
         }
 
         // ---- 50: near a joiner -------------------------------------------------------------------------------------
@@ -432,9 +563,18 @@ namespace DarkwoodMP.World
             r.Info = $"near dog: {dn:0} from the client, {hn:0} from us: {nearRes}; far dog: {df:0} / {hf:0}: {farRes}";
             Object.Destroy(near.gameObject);
             Object.Destroy(far.gameObject);
-            if (dn > 1450f || hn < 1600f) r.Fail($"the client isn't where the step needs it: {r.Info}");
-            else if (!nearRes) r.Fail($"a dog by the client isn't near a player: {r.Info}");
-            else if (farRes) r.Fail($"a dog far from both is near a player: {r.Info}");
+            if (dn > 1450f || hn < 1600f)
+            {
+                r.Fail($"the client isn't where the step needs it: {r.Info}");
+            }
+            else if (!nearRes)
+            {
+                r.Fail($"a dog by the client isn't near a player: {r.Info}");
+            }
+            else if (farRes)
+            {
+                r.Fail($"a dog far from both is near a player: {r.Info}");
+            }
         }
 
         // ---- 51: the forest spirit ------------------------------------------------------------------------------------
@@ -447,7 +587,10 @@ namespace DarkwoodMP.World
             yield return Walk(spot.Value, 20f);
             yield return new WaitForSeconds(1f);
             r.Info = $"at {Fmt(P.transform.position)}: inside {P.isInside} (ground there {JoinerAi.InsideAt(P.transform.position)})";
-            if (!JoinerAi.InsideAt(P.transform.position)) r.Fail($"not on inside ground: {r.Info}");
+            if (!JoinerAi.InsideAt(P.transform.position))
+            {
+                r.Fail($"not on inside ground: {r.Info}");
+            }
         }
 
         private static Vector3? Inside()
@@ -455,9 +598,15 @@ namespace DarkwoodMP.World
             Vector3? best = null; float bd = float.MaxValue;
             foreach (var g in Object.FindObjectsOfType<Ground>())
             {
-                if (g == null || !g.isInside) continue;
+                if (g == null || !g.isInside)
+                {
+                    continue;
+                }
                 var col = g.GetComponent<Collider>();
-                if (col == null) continue;
+                if (col == null)
+                {
+                    continue;
+                }
                 var c = col.bounds.center; c.y = P.transform.position.y;
                 float d = StateDump.Flat(c - Centre);
                 if (d < bd && JoinerAi.InsideAt(c)) { bd = d; best = c; }
@@ -482,14 +631,26 @@ namespace DarkwoodMP.World
             c.forestSpirit = true;
             c.target = proxy.transform;
             CheckStuff.Invoke(c, null);
-            if (c != null) c.forestSpirit = false; // its own checks from now on are a dog's
+            if (c != null)
+            {
+                c.forestSpirit = false; // its own checks from now on are a dog's
+            }
             yield return new WaitForSeconds(4f); // removeMe destroys a spirit 3 s later
             bool gone = c == null;
             r.Info = $"{state}: the spirit {(gone ? "left" : "stayed")}";
-            if (!gone) Object.Destroy(c.gameObject);
+            if (!gone)
+            {
+                Object.Destroy(c.gameObject);
+            }
             // leaves: the client inside, we outside (the old check, on our player, would keep it); stays: the other way round.
-            if (clientInside != leaves || P.isInside == leaves) r.Fail($"the players aren't where the step needs them: {r.Info}");
-            else if (gone != leaves) r.Fail(r.Info);
+            if (clientInside != leaves || P.isInside == leaves)
+            {
+                r.Fail($"the players aren't where the step needs them: {r.Info}");
+            }
+            else if (gone != leaves)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         // ---- 58: slow motion -------------------------------------------------------------------------------------------
@@ -515,7 +676,10 @@ namespace DarkwoodMP.World
             if (P.skills != null && P.skills.manuallyActivatedSkills.Count == 0)
             {
                 lent = P.skills.availableSkills.Concat(P.skills.skills).Concat(P.skills.progressionSkills).FirstOrDefault(sk => sk != null);
-                if (lent != null) P.skills.manuallyActivatedSkills.Add(lent);
+                if (lent != null)
+                {
+                    P.skills.manuallyActivatedSkills.Add(lent);
+                }
             }
             if (wheel != null && P.skills != null && P.skills.manuallyActivatedSkills.Count > 0)
             {
@@ -523,13 +687,28 @@ namespace DarkwoodMP.World
                 until = Time.realtimeSinceStartup + 1f;
                 while (Time.realtimeSinceStartup < until) { min = Mathf.Min(min, Time.timeScale); yield return null; }
                 parts.Add(FormattableString.Invariant($"the wheel open {wheel.opened}: {Time.timeScale:0.00}"));
-                if (wheel.opened) wheel.hide();
-                if (lent != null) P.skills.manuallyActivatedSkills.Remove(lent);
+                if (wheel.opened)
+                {
+                    wheel.hide();
+                }
+                if (lent != null)
+                {
+                    P.skills.manuallyActivatedSkills.Remove(lent);
+                }
             }
-            else parts.Add($"no skills to lend ({P.skills?.availableSkills.Count} available, {P.skills?.skills.Count} known): the wheel wasn't opened");
-            if (Time.timeScale != 1f && Time.timeScale > 0f) Core.setTimeScale(1f);
+            else
+            {
+                parts.Add($"no skills to lend ({P.skills?.availableSkills.Count} available, {P.skills?.skills.Count} known): the wheel wasn't opened");
+            }
+            if (Time.timeScale != 1f && Time.timeScale > 0f)
+            {
+                Core.setTimeScale(1f);
+            }
             r.Info = string.Join("; ", parts);
-            if (min < 0.99f) r.Fail($"time slowed in co-op: {r.Info}");
+            if (min < 0.99f)
+            {
+                r.Fail($"time slowed in co-op: {r.Info}");
+            }
         }
 
         // ---- 24: the night trader killed ------------------------------------------------------------------------------
@@ -552,8 +731,14 @@ namespace DarkwoodMP.World
             var dreams = Singleton<Dreams>.Instance;
             bool dream = Core.EnteringDream || (dreams != null && dreams.currentTransition != null);
             r.Info = $"{what}: alive {(t != null && t.alive)} after {hits} hits; our dream {dream}";
-            if (t != null && t.alive) r.Fail($"still alive: {r.Info}");
-            else if (!dream) r.Fail($"the killer's own dream didn't play: {r.Info}");
+            if (t != null && t.alive)
+            {
+                r.Fail($"still alive: {r.Info}");
+            }
+            else if (!dream)
+            {
+                r.Fail($"the killer's own dream didn't play: {r.Info}");
+            }
         }
 
         /// <summary>"trader-dream" (host): the night trader died here too, and our player didn't get the killer's dream.</summary>
@@ -565,9 +750,18 @@ namespace DarkwoodMP.World
             bool dream = Core.EnteringDream || (dreams != null && dreams.currentTransition != null) || P.endingSleep;
             bool logged = MapScenarioIssues.LogLines().Any(l => l.Contains("the night trader was killed in another game"));
             r.Info = $"living night traders here {alive.Count}; our dream {dream}; skipped it {logged}";
-            if (alive.Count > 0) r.Fail($"the night trader is alive here: {r.Info}");
-            else if (dream) r.Fail($"we got the killer's dream: {r.Info}");
-            else if (!logged) r.Fail($"the replayed death didn't go by NightTraderDreamPatch: {r.Info}");
+            if (alive.Count > 0)
+            {
+                r.Fail($"the night trader is alive here: {r.Info}");
+            }
+            else if (dream)
+            {
+                r.Fail($"we got the killer's dream: {r.Info}");
+            }
+            else if (!logged)
+            {
+                r.Fail($"the replayed death didn't go by NightTraderDreamPatch: {r.Info}");
+            }
         }
     }
 }

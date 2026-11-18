@@ -29,37 +29,58 @@ namespace DarkwoodMP.World
         private static bool Shown(Inventory inv)
         {
             var p = Player.Instance;
-            if (inv == null || p == null) return false;
+            if (inv == null || p == null)
+            {
+                return false;
+            }
             return inv.open || p.openedItemInventory == inv || p.openedItemInventory2 == inv;
         }
 
         /// <summary>A remote change to these slots was applied: redraw what of its window the slots don't draw.</summary>
         internal static void Changed(Inventory inv)
         {
-            if (!Enabled || !Shown(inv)) return;
+            if (!Enabled || !Shown(inv))
+            {
+                return;
+            }
             Run(() =>
             {
                 Player.Instance.refreshRecipes();
                 var saw = inv.GetComponent<Saw>();
-                if (saw != null && inv.open) saw.refresh();
+                if (saw != null && inv.open)
+                {
+                    saw.refresh();
+                }
             }, inv.name);
         }
 
         /// <summary>A remote change to a generator's or the saw's fuel was applied.</summary>
         internal static void FuelChanged(Component c)
         {
-            if (c == null || !Enabled) return;
+            if (c == null || !Enabled)
+            {
+                return;
+            }
             var saw = c as Saw;
             var inv = saw != null ? c.GetComponent<Inventory>() : null;
             bool sawOpen = inv != null && inv.open;
             var ui = Singleton<UI>.Instance;
             var bar = ui != null ? ui.enemyHealthBar : null;
             bool barShown = bar != null && bar.currentObj == c.gameObject && bar.gameObject.activeInHierarchy;
-            if (!sawOpen && !barShown) return;
+            if (!sawOpen && !barShown)
+            {
+                return;
+            }
             Run(() =>
             {
-                if (sawOpen) saw.refresh();
-                if (barShown) bar.show(c.gameObject, onlyRefresh: true);
+                if (sawOpen)
+                {
+                    saw.refresh();
+                }
+                if (barShown)
+                {
+                    bar.show(c.gameObject, onlyRefresh: true);
+                }
             }, c.name);
         }
 

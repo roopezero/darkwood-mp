@@ -20,7 +20,10 @@ namespace DarkwoodMP.Combat
         public static void Send(byte kind)
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsClient || !NetEnemies.ClientMode) return;
+            if (s == null || !s.IsClient || !NetEnemies.ClientMode)
+            {
+                return;
+            }
             var w = s.Begin(Net.MsgType.PlayerCue);
             w.W.Write(kind);
             s.SendToHost(w, Net.Channel.Control, reliable: true);
@@ -30,9 +33,15 @@ namespace DarkwoodMP.Combat
         public static void OnCue(ulong from, Net.PacketReader r)
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             byte kind = r.R.ReadByte();
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null || !proxy.alive) return;
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null || !proxy.alive)
+            {
+                return;
+            }
             Vector3 pos = proxy.transform.position;
             int n = 0;
             if (kind == Dodge)
@@ -41,26 +50,43 @@ namespace DarkwoodMP.Combat
                 for (int i = 0; i < hits; i++)
                 {
                     var c = _near[i] != null ? _near[i].GetComponent<Character>() : null;
-                    if (c == null) continue;
+                    if (c == null)
+                    {
+                        continue;
+                    }
                     c.doIWantToDodge(pos);
                     n++;
                 }
             }
             else if (kind == Scare)
             {
-                if (Threat.Debug) n = CountCharacters(pos, 350f);
+                if (Threat.Debug)
+                {
+                    n = CountCharacters(pos, 350f);
+                }
                 Character.scareInArea(pos, 350f);
             }
-            else return;
+            else
+            {
+                return;
+            }
             if (Threat.Debug)
+            {
                 Plugin.Log.LogInfo($"[threat] {proxy.OwnerName} {(kind == Dodge ? "swings" : "aims")}: {n} characters " +
                                    (kind == Dodge ? "within 150 may dodge" : "within 350 told to be scared"));
+            }
         }
 
         private static int CountCharacters(Vector3 pos, float range)
         {
             int hits = Physics.OverlapSphereNonAlloc(pos, range, _near, EnemyLayers), n = 0;
-            for (int i = 0; i < hits; i++) if (_near[i] != null && _near[i].GetComponent<Character>() != null) n++;
+            for (int i = 0; i < hits; i++)
+            {
+                if (_near[i] != null && _near[i].GetComponent<Character>() != null)
+                {
+                    n++;
+                }
+            }
             return n;
         }
     }

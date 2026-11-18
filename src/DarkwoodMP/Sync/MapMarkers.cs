@@ -20,7 +20,10 @@ namespace DarkwoodMP.Sync
 
         private static Map.Type WorldType(Map map)
         {
-            if (map == null || !map.opened) return null;
+            if (map == null || !map.opened)
+            {
+                return null;
+            }
             var t = CurrentType(map);
             return t != null && t.name == "World" ? t : null;
         }
@@ -34,10 +37,16 @@ namespace DarkwoodMP.Sync
             Markers.Clear();
             var type = WorldType(map);
             var sync = PlayerSync.Instance;
-            if (type == null || sync == null || map.iconHolder == null) return;
+            if (type == null || sync == null || map.iconHolder == null)
+            {
+                return;
+            }
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Owner == PlayerSync.DummyId || !OnMap(r)) continue;
+                if (r.Owner == PlayerSync.DummyId || !OnMap(r))
+                {
+                    continue;
+                }
                 try
                 {
                     var go = Core.AddPrefab("UI/UIMapElement", Vector3.zero, Quaternion.Euler(90f, 0f, 0f), map.iconHolder);
@@ -45,13 +54,19 @@ namespace DarkwoodMP.Sync
                     if (spr != null) { spr.SetSprite("generic_marker"); spr.color = Tint; }
                     go.transform.localScale = Vector3.one;
                     var col = go.GetComponent<Collider>();
-                    if (col != null) col.enabled = false; // nothing to show when hovered
+                    if (col != null)
+                    {
+                        col.enabled = false; // nothing to show when hovered
+                    }
                     Markers[r.Owner] = go.transform;
                     Place(type, go.transform, r.Root.transform.position);
                 }
                 catch (System.Exception e) { Plugin.Log.LogWarning($"No map marker for {r.Name}: {e.Message}"); }
             }
-            if (Markers.Count > 0) Plugin.Log.LogInfo($"Map: marked {Markers.Count} other player(s)");
+            if (Markers.Count > 0)
+            {
+                Plugin.Log.LogInfo($"Map: marked {Markers.Count} other player(s)");
+            }
         }
 
         // As Map.open places an icon: local position = world position / scale, raised above the background, then the
@@ -65,16 +80,28 @@ namespace DarkwoodMP.Sync
         /// <summary>Each frame while the map is open: move the markers with their players.</summary>
         public static void Tick()
         {
-            if (Markers.Count == 0) return;
+            if (Markers.Count == 0)
+            {
+                return;
+            }
             var type = WorldType(Singleton<Map>.Instance);
             var sync = PlayerSync.Instance;
             if (type == null || sync == null) { Markers.Clear(); return; }
             foreach (var kv in Markers)
             {
-                if (kv.Value == null) continue;
+                if (kv.Value == null)
+                {
+                    continue;
+                }
                 bool there = sync.Remotes.TryGetValue(kv.Key, out var r) && OnMap(r);
-                if (kv.Value.gameObject.activeSelf != there) kv.Value.gameObject.SetActive(there);
-                if (there) Place(type, kv.Value, r.Root.transform.position);
+                if (kv.Value.gameObject.activeSelf != there)
+                {
+                    kv.Value.gameObject.SetActive(there);
+                }
+                if (there)
+                {
+                    Place(type, kv.Value, r.Root.transform.position);
+                }
             }
         }
 
@@ -84,14 +111,26 @@ namespace DarkwoodMP.Sync
         /// <summary>IMGUI: each marked player's name beside their marker.</summary>
         public static void DrawNames()
         {
-            if (Markers.Count == 0 || Core.CamUI == null || Plugin.NameTagStyle == null) return;
+            if (Markers.Count == 0 || Core.CamUI == null || Plugin.NameTagStyle == null)
+            {
+                return;
+            }
             var cam = Core.CamUI.GetComponent<Camera>();
             var sync = PlayerSync.Instance;
-            if (cam == null || sync == null) return;
+            if (cam == null || sync == null)
+            {
+                return;
+            }
             foreach (var kv in Markers)
             {
-                if (kv.Value == null || !kv.Value.gameObject.activeInHierarchy) continue;
-                if (!sync.Remotes.TryGetValue(kv.Key, out var r)) continue;
+                if (kv.Value == null || !kv.Value.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+                if (!sync.Remotes.TryGetValue(kv.Key, out var r))
+                {
+                    continue;
+                }
                 var sp = cam.WorldToScreenPoint(kv.Value.position);
                 GUI.Label(new Rect(sp.x - 100, Screen.height - sp.y - 34, 200, 22), r.Name, Plugin.NameTagStyle);
             }

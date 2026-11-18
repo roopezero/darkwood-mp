@@ -85,36 +85,56 @@ namespace DarkwoodMP.World
                                  && UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle == _baselineScene;
                 if (!sameWorld || WorldShare.Loading || (Session.Instance.IsHost && Session.Instance.Peers.Count == 0)
                     || !(Session.Instance.IsHost || NetEnemies.ClientMode))
+                {
                     _baseline = null;
+                }
                 return;
             }
-            if (Time.unscaledTime < _next) return;
+            if (Time.unscaledTime < _next)
+            {
+                return;
+            }
             Flush();
         }
 
         /// <summary>Send what changed now, not at the next two-second tick (a dialogue closing: TalkLock).</summary>
         public void FlushNow()
         {
-            if (Sharing) Flush();
+            if (Sharing)
+            {
+                Flush();
+            }
         }
 
         private void Flush()
         {
             _next = Time.unscaledTime + Interval;
             var now = Snapshot(_session.IsHost);
-            if (now == null) return;
+            if (now == null)
+            {
+                return;
+            }
             if (_baseline == null) { _baseline = now; _baselineScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle; return; } // what we start from isn't news
 
             var changed = new List<KeyValuePair<string, string>>();
             foreach (var kv in now)
             {
                 bool had = _baseline.TryGetValue(kv.Key, out var was);
-                if (had && was == kv.Value) continue;
+                if (had && was == kv.Value)
+                {
+                    continue;
+                }
                 if (kv.Key.StartsWith("r:"))
                 {
                     // Reputation: the change, so that changes made in two games add up.
-                    if (had && int.TryParse(was, out int w) && int.TryParse(kv.Value, out int v)) changed.Add(new KeyValuePair<string, string>(kv.Key, "+" + (v - w)));
-                    else changed.Add(new KeyValuePair<string, string>(kv.Key, "=" + kv.Value));
+                    if (had && int.TryParse(was, out int w) && int.TryParse(kv.Value, out int v))
+                    {
+                        changed.Add(new KeyValuePair<string, string>(kv.Key, "+" + (v - w)));
+                    }
+                    else
+                    {
+                        changed.Add(new KeyValuePair<string, string>(kv.Key, "=" + kv.Value));
+                    }
                     continue;
                 }
                 changed.Add(kv);
@@ -123,10 +143,17 @@ namespace DarkwoodMP.World
             // Dream entries dropped as the dream ended aren't sent: every game drops its own.
             bool shared = SharedDream;
             foreach (var kv in _baseline)
+            {
                 if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                {
                     changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+                }
+            }
             _baseline = now;
-            if (changed.Count > 0) Send(changed, except: 0);
+            if (changed.Count > 0)
+            {
+                Send(changed, except: 0);
+            }
         }
 
         /// <summary>The value that says a journal entry was removed.</summary>
@@ -155,12 +182,24 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void SendKey(string type)
         {
-            if (!Sharing || string.IsNullOrEmpty(type)) return;
+            if (!Sharing || string.IsNullOrEmpty(type))
+            {
+                return;
+            }
             var j = Singleton<UI>.Instance?.journal;
-            if (j == null || !j.keysDict.TryGetValue(type, out var k) || k == null) return;
-            if (k.inDream && !SharedDream) return; // a key of a dream of our own: the host can't have it
+            if (j == null || !j.keysDict.TryGetValue(type, out var k) || k == null)
+            {
+                return;
+            }
+            if (k.inDream && !SharedDream)
+            {
+                return; // a key of a dream of our own: the host can't have it
+            }
             string json = JsonConvert.SerializeObject(k);
-            if (_baseline != null) _baseline["jk:" + type] = json;
+            if (_baseline != null)
+            {
+                _baseline["jk:" + type] = json;
+            }
             Send(new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("jk:" + type, json) }, except: 0);
         }
 
@@ -168,7 +207,10 @@ namespace DarkwoodMP.World
         private static string OwnJournal(string key)
         {
             var j = Singleton<UI>.Instance?.journal;
-            if (j == null || key.Length < 4) return null;
+            if (j == null || key.Length < 4)
+            {
+                return null;
+            }
             string name = key.Substring(3);
             object e = key[1] switch
             {
@@ -190,15 +232,24 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Absorb(string npc, int delta)
         {
-            if (_baseline == null || delta == 0 || npc == null) return;
-            if (_baseline.TryGetValue("r:" + npc, out var was) && int.TryParse(was, out int w)) _baseline["r:" + npc] = (w + delta).ToString();
+            if (_baseline == null || delta == 0 || npc == null)
+            {
+                return;
+            }
+            if (_baseline.TryGetValue("r:" + npc, out var was) && int.TryParse(was, out int w))
+            {
+                _baseline["r:" + npc] = (w + delta).ToString();
+            }
         }
 
         /// <summary>Change this NPC's reputation here, without sending the change.</summary>
         internal void AddReputation(string npc, int delta)
         {
             var st = Singleton<Flags>.Instance?.getNPCState(npc);
-            if (st == null || delta == 0) return;
+            if (st == null || delta == 0)
+            {
+                return;
+            }
             st.reputation += delta;
             Absorb(npc, delta);
             RefreshReputation(npc);
@@ -210,7 +261,10 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void LocalReward(string trader, int day, int amount)
         {
-            if (!Sharing || trader == null || amount == 0) return;
+            if (!Sharing || trader == null || amount == 0)
+            {
+                return;
+            }
             if (_rewards.TryGetValue(trader, out var had) && had.Key == day)
             {
                 AddReputation(trader, -amount);
@@ -233,7 +287,10 @@ namespace DarkwoodMP.World
                 if (had) { Plugin.Log.LogInfo($"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given"); return false; }
                 AddReputation(trader, amount);
             }
-            else AddReputation(trader, had ? amount - was.Value : amount); // the host's is the one that counts
+            else
+            {
+                AddReputation(trader, had ? amount - was.Value : amount); // the host's is the one that counts
+            }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo($"[world] {trader}'s after-night reward for day {day}: {amount}");
             return true;
@@ -269,27 +326,81 @@ namespace DarkwoodMP.World
         private static Dictionary<string, string> Snapshot(bool host)
         {
             var f = Singleton<Flags>.Instance;
-            if (f == null) return null;
+            if (f == null)
+            {
+                return null;
+            }
             var d = new Dictionary<string, string>();
-            if (host) d["k"] = f.karmaPoints.ToString();
-            foreach (var kv in FlagsDict(f)) if (kv.Value != null && !PlayersOwn(kv.Key)) d["f:" + kv.Key] = $"{kv.Value.isTrue}|{kv.Value.amount}";
+            if (host)
+            {
+                d["k"] = f.karmaPoints.ToString();
+            }
+            foreach (var kv in FlagsDict(f))
+            {
+                if (kv.Value != null && !PlayersOwn(kv.Key))
+                {
+                    d["f:" + kv.Key] = $"{kv.Value.isTrue}|{kv.Value.amount}";
+                }
+            }
             foreach (var n in f.npcStates)
             {
-                if (n == null || n.name == null) continue;
+                if (n == null || n.name == null)
+                {
+                    continue;
+                }
                 d["n:" + n.name] = NpcJson(n);
                 d["r:" + n.name] = n.reputation.ToString();
             }
-            foreach (var dl in f.dialogues) if (dl != null) d["d:" + dl.name] = JsonConvert.SerializeObject(new CharacterDialogue.SaveState(dl));
+            foreach (var dl in f.dialogues)
+            {
+                if (dl != null)
+                {
+                    d["d:" + dl.name] = JsonConvert.SerializeObject(new CharacterDialogue.SaveState(dl));
+                }
+            }
             var j = Singleton<UI>.Instance?.journal;
             if (j != null)
             {
                 bool dream = SharedDream; // what's found in a dream: only a shared dream's (see the class)
-                foreach (var e in j.journalEntriesDict.Values) if (e != null && (dream || !e.inDream)) d["je:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.notesDict.Values) if (e != null && (dream || !e.inDream)) d["jn:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.keysDict.Values) if (e != null && (dream || !e.inDream)) d["jk:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var e in j.itemsDict.Values) if (e != null && (dream || !e.inDream)) d["ji:" + e.type] = JsonConvert.SerializeObject(e);
-                foreach (var name in j.locationsDict.Keys) d["jl:" + name] = "";
-                foreach (var e in j.locationDirections) if (e != null && e.locationName != null) d["jd:" + e.locationName] = JsonConvert.SerializeObject(e);
+                foreach (var e in j.journalEntriesDict.Values)
+                {
+                    if (e != null && (dream || !e.inDream))
+                    {
+                        d["je:" + e.type] = JsonConvert.SerializeObject(e);
+                    }
+                }
+                foreach (var e in j.notesDict.Values)
+                {
+                    if (e != null && (dream || !e.inDream))
+                    {
+                        d["jn:" + e.type] = JsonConvert.SerializeObject(e);
+                    }
+                }
+                foreach (var e in j.keysDict.Values)
+                {
+                    if (e != null && (dream || !e.inDream))
+                    {
+                        d["jk:" + e.type] = JsonConvert.SerializeObject(e);
+                    }
+                }
+                foreach (var e in j.itemsDict.Values)
+                {
+                    if (e != null && (dream || !e.inDream))
+                    {
+                        d["ji:" + e.type] = JsonConvert.SerializeObject(e);
+                    }
+                }
+                foreach (var name in j.locationsDict.Keys)
+                {
+                    d["jl:" + name] = "";
+                }
+                foreach (var e in j.locationDirections)
+                {
+                    if (e != null && e.locationName != null)
+                    {
+                        d["jd:" + e.locationName] = JsonConvert.SerializeObject(e);
+                    }
+                }
             }
             return d;
         }
@@ -324,20 +435,36 @@ namespace DarkwoodMP.World
         /// </summary>
         public void JoinerInWorld(ulong who)
         {
-            if (!_session.IsHost || _atSnapshot == null) return;
+            if (!_session.IsHost || _atSnapshot == null)
+            {
+                return;
+            }
             var now = Snapshot(true);
-            if (now == null) return;
+            if (now == null)
+            {
+                return;
+            }
             var changed = new List<KeyValuePair<string, string>>();
             foreach (var kv in now)
             {
-                if (_atSnapshot.TryGetValue(kv.Key, out var was) && was == kv.Value) continue;
+                if (_atSnapshot.TryGetValue(kv.Key, out var was) && was == kv.Value)
+                {
+                    continue;
+                }
                 changed.Add(new KeyValuePair<string, string>(kv.Key, kv.Key.StartsWith("r:") ? "=" + kv.Value : kv.Value));
             }
             bool shared = SharedDream; // as Flush: a dream entry the game dropped as the dream ended isn't sent
             foreach (var kv in _atSnapshot)
+            {
                 if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                {
                     changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
-            if (changed.Count == 0) return;
+                }
+            }
+            if (changed.Count == 0)
+            {
+                return;
+            }
             Send(changed, except: 0, to: who);
             Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {changed.Count} story changes since their snapshot sent to them ({string.Join(", ", changed.Take(8).Select(e => e.Key))}{(changed.Count > 8 ? ", ..." : "")})");
         }
@@ -351,60 +478,121 @@ namespace DarkwoodMP.World
                 var w = _session.Begin(MsgType.FlagsDelta);
                 w.W.Write((ushort)n);
                 for (int i = start; i < start + n; i++) { w.WriteStr(entries[i].Key); w.WriteStr(entries[i].Value); }
-                if (_session.IsHost && to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
-                else if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true, except: except);
-                else _session.SendToHost(w, Channel.Control, reliable: true);
+                if (_session.IsHost && to != 0)
+                {
+                    _session.SendTo(to, w, Channel.Control, reliable: true);
+                }
+                else if (_session.IsHost)
+                {
+                    _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+                }
+                else
+                {
+                    _session.SendToHost(w, Channel.Control, reliable: true);
+                }
             }
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");
+            }
         }
 
         private void OnDelta(ulong from, PacketReader r)
         {
-            if (!WorldShare.InWorld) return;
-            if (_session.IsClient && from != _session.HostId) return;
+            if (!WorldShare.InWorld)
+            {
+                return;
+            }
+            if (_session.IsClient && from != _session.HostId)
+            {
+                return;
+            }
             int n = r.R.ReadUInt16();
             var got = new List<KeyValuePair<string, string>>();
-            for (int i = 0; i < n; i++) got.Add(new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
+            for (int i = 0; i < n; i++)
+            {
+                got.Add(new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
+            }
             var relay = new List<KeyValuePair<string, string>>();
             foreach (var kv in got)
             {
                 bool pass = true;
                 try
                 {
-                    if (kv.Key.StartsWith("ra:")) pass = ApplyReward(kv.Key.Substring(3), kv.Value);
-                    else if (kv.Key.StartsWith("r:")) ApplyReputation(kv.Key.Substring(2), kv.Value);
-                    else if (kv.Key == "k" && _session.IsHost) pass = false; // karma is the host's
-                    else if (_session.IsHost && kv.Key.StartsWith("n:") && !DeathOk(from, kv.Key.Substring(2), kv.Value)) pass = false;
+                    if (kv.Key.StartsWith("ra:"))
+                    {
+                        pass = ApplyReward(kv.Key.Substring(3), kv.Value);
+                    }
+                    else if (kv.Key.StartsWith("r:"))
+                    {
+                        ApplyReputation(kv.Key.Substring(2), kv.Value);
+                    }
+                    else if (kv.Key == "k" && _session.IsHost)
+                    {
+                        pass = false; // karma is the host's
+                    }
+                    else if (_session.IsHost && kv.Key.StartsWith("n:") && !DeathOk(from, kv.Key.Substring(2), kv.Value))
+                    {
+                        pass = false;
+                    }
                     else
                     {
                         Apply(kv.Key, kv.Value);
                         if (_baseline != null)
                         {
-                            if (kv.Value == Removed && IsRemovable(kv.Key)) _baseline.Remove(kv.Key);
+                            if (kv.Value == Removed && IsRemovable(kv.Key))
+                            {
+                                _baseline.Remove(kv.Key);
+                            }
                             else if (IsRemovable(kv.Key))
                             {
                                 // A journal entry: what our journal has now, which can differ from theirs (one we
                                 // had already, made by our own game). Taking theirs as the baseline would send ours
                                 // back at every look, and theirs again, for good. One we didn't take isn't ours to send.
                                 string own = OwnJournal(kv.Key);
-                                if (own != null) _baseline[kv.Key] = own; else _baseline.Remove(kv.Key);
+                                if (own != null)
+                                {
+                                    _baseline[kv.Key] = own;
+                                }
+                                else
+                                {
+                                    _baseline.Remove(kv.Key);
+                                }
                             }
-                            else _baseline[kv.Key] = kv.Value; // known now; not ours to send back
+                            else
+                            {
+                                _baseline[kv.Key] = kv.Value; // known now; not ours to send back
+                            }
                         }
                     }
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {kv.Key}: {e.Message}"); }
-                if (pass) relay.Add(kv);
+                if (pass)
+                {
+                    relay.Add(kv);
+                }
             }
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got {got.Count} story changes: {string.Join(", ", got.ConvertAll(e => e.Key[0] == 'r' || e.Value == Removed ? e.Key + " " + e.Value : e.Key))}");
-            if (_session.IsHost && relay.Count > 0) Send(relay, except: from);
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got {got.Count} story changes: {string.Join(", ", got.ConvertAll(e => e.Key[0] == 'r' || e.Value == Removed ? e.Key + " " + e.Value : e.Key))}");
+            }
+            if (_session.IsHost && relay.Count > 0)
+            {
+                Send(relay, except: from);
+            }
         }
 
         /// <summary>Host: NPCs whose death a joiner's NpcDied showed us just now (WorldActions), and when.</summary>
         private readonly Dictionary<string, float> _deathsAllowed = new Dictionary<string, float>();
 
         /// <summary>Host: a joiner killed this NPC and we checked it (their NpcDied request was allowed).</summary>
-        internal void DeathAllowed(string npc) { if (!string.IsNullOrEmpty(npc)) _deathsAllowed[npc] = UnityEngine.Time.unscaledTime; }
+        internal void DeathAllowed(string npc)
+        {
+            if (!string.IsNullOrEmpty(npc))
+            {
+                _deathsAllowed[npc] = UnityEngine.Time.unscaledTime;
+            }
+        }
 
         /// <summary>
         /// Host: checks a joiner's NPC state against our NPC's death. A player's kill reaches us first as an
@@ -421,12 +609,21 @@ namespace DarkwoodMP.World
             catch { return true; } // not ours to judge: Apply reports it
             if (st != null && st.dead)
             {
-                if (dead) return true;
+                if (dead)
+                {
+                    return true;
+                }
                 SendNpcState(from, npc, st);
                 return false;
             }
-            if (!dead) return true;
-            if (_deathsAllowed.TryGetValue(npc, out float t) && UnityEngine.Time.unscaledTime - t < 30f) return true;
+            if (!dead)
+            {
+                return true;
+            }
+            if (_deathsAllowed.TryGetValue(npc, out float t) && UnityEngine.Time.unscaledTime - t < 30f)
+            {
+                return true;
+            }
             Plugin.Log.LogInfo($"[authority] refused {_session.NameOf(from)}'s state of {npc}: dead, but no kill of theirs was allowed here");
             SendNpcState(from, npc, st);
             return false;
@@ -434,7 +631,10 @@ namespace DarkwoodMP.World
 
         private void SendNpcState(ulong to, string npc, Flags.NPCState st)
         {
-            if (st == null || st.name == null) return;
+            if (st == null || st.name == null)
+            {
+                return;
+            }
             var w = _session.Begin(MsgType.FlagsDelta);
             w.W.Write((ushort)1);
             w.WriteStr("n:" + npc); w.WriteStr(NpcJson(st));
@@ -445,11 +645,17 @@ namespace DarkwoodMP.World
         private void ApplyReputation(string npc, string value)
         {
             var st = Singleton<Flags>.Instance.getNPCState(npc);
-            if (st == null) return;
+            if (st == null)
+            {
+                return;
+            }
             int v = int.Parse(value.Substring(1));
             if (value[0] != '=') { AddReputation(npc, v); return; }
             st.reputation = v;
-            if (_baseline != null) _baseline["r:" + npc] = v.ToString();
+            if (_baseline != null)
+            {
+                _baseline["r:" + npc] = v.ToString();
+            }
             RefreshReputation(npc);
         }
 
@@ -462,7 +668,10 @@ namespace DarkwoodMP.World
             switch (key[0])
             {
                 case 'f':
-                    if (PlayersOwn(name)) break;
+                    if (PlayersOwn(name))
+                    {
+                        break;
+                    }
                     var parts = value.Split('|');
                     if (name.StartsWith(ModPrefix)) { SetModFlag(f, name, bool.Parse(parts[0]), int.Parse(parts[1])); break; }
                     f.setFlag(name, bool.Parse(parts[0]));
@@ -471,14 +680,26 @@ namespace DarkwoodMP.World
                 case 'n':
                     var state = f.getNPCState(name);
                     bool wasDead = state != null && state.dead;
-                    if (state == null) f.npcStates.Add(state = JsonConvert.DeserializeObject<Flags.NPCState>(value));
-                    else JsonConvert.PopulateObject(value, state);
-                    if (state.dead && !wasDead) KillNpc(name, state.deadID);
+                    if (state == null)
+                    {
+                        f.npcStates.Add(state = JsonConvert.DeserializeObject<Flags.NPCState>(value));
+                    }
+                    else
+                    {
+                        JsonConvert.PopulateObject(value, state);
+                    }
+                    if (state.dead && !wasDead)
+                    {
+                        KillNpc(name, state.deadID);
+                    }
                     RefreshReputation(name);
                     break;
                 case 'd':
                     var dialogue = f.getDialogue(name);
-                    if (dialogue != null) JsonConvert.DeserializeObject<CharacterDialogue.SaveState>(value).loadValues(dialogue);
+                    if (dialogue != null)
+                    {
+                        JsonConvert.DeserializeObject<CharacterDialogue.SaveState>(value).loadValues(dialogue);
+                    }
                     break;
             }
         }
@@ -486,7 +707,10 @@ namespace DarkwoodMP.World
         /// <summary>Set one of the mod's own flags (ModPrefix) in Flags.flagsDict, which the game's setFlag won't take.</summary>
         internal static void SetModFlag(Flags f, string name, bool on, int amount)
         {
-            if (!f.flagsDict.TryGetValue(name, out var flag) || flag == null) f.flagsDict[name] = flag = new Flags.Flag { name = name };
+            if (!f.flagsDict.TryGetValue(name, out var flag) || flag == null)
+            {
+                f.flagsDict[name] = flag = new Flags.Flag { name = name };
+            }
             flag.isTrue = on;
             flag.amount = amount;
         }
@@ -495,8 +719,14 @@ namespace DarkwoodMP.World
         private static void RefreshReputation(string npc)
         {
             var talked = Player.Instance != null ? Player.Instance.talkedToNPC : null;
-            if (talked == null || talked.name != npc || talked.inventory == null || talked.inventory.reputationText == null) return;
-            if (!talked.inventory.reputationText.gameObject.activeInHierarchy) return;
+            if (talked == null || talked.name != npc || talked.inventory == null || talked.inventory.reputationText == null)
+            {
+                return;
+            }
+            if (!talked.inventory.reputationText.gameObject.activeInHierarchy)
+            {
+                return;
+            }
             try { talked.inventory.refreshReputation(); }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't refresh {npc}'s reputation: {e.Message}"); }
         }
@@ -511,7 +741,10 @@ namespace DarkwoodMP.World
             {
                 var loc = Singleton<WorldGenerator>.Instance?.getLocation(name);
                 var el = loc != null ? loc.GetComponent<MapElement>() : null;
-                if (el == null || el.isOnMap) return;
+                if (el == null || el.isOnMap)
+                {
+                    return;
+                }
                 Singleton<Map>.Instance?.showElement(el);
                 Plugin.Log.LogInfo($"Journal: {name} shown on the map");
             }
@@ -522,7 +755,10 @@ namespace DarkwoodMP.World
         private static void ApplyJournal(char kind, string name, string value)
         {
             var j = Singleton<UI>.Instance?.journal;
-            if (j == null) return;
+            if (j == null)
+            {
+                return;
+            }
             if (value == Removed)
             {
                 bool gone = kind switch
@@ -533,7 +769,10 @@ namespace DarkwoodMP.World
                     'i' => j.itemsDict.Remove(name),
                     _ => false,
                 };
-                if (gone) Plugin.Log.LogInfo($"Journal: another player no longer has {name} (handed over): removed here too");
+                if (gone)
+                {
+                    Plugin.Log.LogInfo($"Journal: another player no longer has {name} (handed over): removed here too");
+                }
                 return;
             }
             if (kind != 'l' && kind != 'd' && DreamEntry(value) && !SharedDream)
@@ -546,31 +785,52 @@ namespace DarkwoodMP.World
             switch (kind)
             {
                 case 'e':
-                    if (j.journalEntriesDict.ContainsKey(name)) return;
+                    if (j.journalEntriesDict.ContainsKey(name))
+                    {
+                        return;
+                    }
                     j.journalEntriesDict[name] = JsonConvert.DeserializeObject<Journal.JournalEntry>(value);
                     popup = "JournalEntry";
                     break;
                 case 'n':
-                    if (j.notesDict.ContainsKey(name)) return;
+                    if (j.notesDict.ContainsKey(name))
+                    {
+                        return;
+                    }
                     j.notesDict[name] = JsonConvert.DeserializeObject<Journal.Note>(value);
                     popup = "Note";
                     break;
                 case 'k':
-                    if (j.keysDict.ContainsKey(name)) return;
+                    if (j.keysDict.ContainsKey(name))
+                    {
+                        return;
+                    }
                     j.keysDict[name] = JsonConvert.DeserializeObject<Journal.Key>(value);
                     break;
                 case 'i':
-                    if (j.itemsDict.ContainsKey(name)) return;
+                    if (j.itemsDict.ContainsKey(name))
+                    {
+                        return;
+                    }
                     j.itemsDict[name] = JsonConvert.DeserializeObject<Journal.Item>(value);
                     break;
                 case 'l':
-                    if (j.locationsDict.ContainsKey(name)) return;
+                    if (j.locationsDict.ContainsKey(name))
+                    {
+                        return;
+                    }
                     j.locationsDict[name] = name;
-                    if (!QuietPlace(name)) popup = "Location";
+                    if (!QuietPlace(name))
+                    {
+                        popup = "Location";
+                    }
                     ShowOnMap(name);
                     break;
                 case 'd':
-                    if (j.getLocationDirection(name) != null) return;
+                    if (j.getLocationDirection(name) != null)
+                    {
+                        return;
+                    }
                     j.locationDirections.Add(JsonConvert.DeserializeObject<Journal.LocationDirection>(value));
                     break;
                 default: return;
@@ -588,8 +848,12 @@ namespace DarkwoodMP.World
         private static bool QuietPlace(string name)
         {
             foreach (var loc in Resources.FindObjectsOfTypeAll<Location>())
+            {
                 if (loc != null && Core.getTrueLocationName(loc.name) == name && (loc.noDiscoverPopup || loc.discoveredOnStart))
+                {
                     return true;
+                }
+            }
             return false;
         }
 
@@ -604,12 +868,28 @@ namespace DarkwoodMP.World
             bool byId = deadId > 0 && deadId < SharedIds.SendLimit;
             foreach (var npc in UnityEngine.Object.FindObjectsOfType<NPC>())
             {
-                if (npc.name != name) continue;
-                if (byId) { var sv = npc.GetComponent<SaveableObject>(); if (sv == null || sv.uniqueId != deadId) continue; }
+                if (npc.name != name)
+                {
+                    continue;
+                }
+                if (byId)
+                {
+                    var sv = npc.GetComponent<SaveableObject>();
+                    if (sv == null || sv.uniqueId != deadId)
+                    {
+                        continue;
+                    }
+                }
                 var c = npc.GetComponent<Character>();
-                if (c == null || !c.alive) continue;
+                if (c == null || !c.alive)
+                {
+                    continue;
+                }
                 // A copy of one the host runs as an enemy dies with the host's state (Combat.NetEnemies).
-                if (Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IsPuppet(c, out _)) continue;
+                if (Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IsPuppet(c, out _))
+                {
+                    continue;
+                }
                 Plugin.Log.LogInfo($"{name} was killed in another player's game");
                 WorldActions.Replaying = true;
                 try { c.die(); }
@@ -645,7 +925,10 @@ namespace DarkwoodMP.World
                 }
             }
             catch (Exception) { return true; } // the language isn't loaded: leave it to the game
-            if (!has) Plugin.Log.LogInfo($"Journal: no popup for {_type} {_desc}, the game has no text for it");
+            if (!has)
+            {
+                Plugin.Log.LogInfo($"Journal: no popup for {_type} {_desc}, the game has no text for it");
+            }
             return has;
         }
 
@@ -665,26 +948,44 @@ namespace DarkwoodMP.World
         static System.Reflection.MethodBase TargetMethod()
         {
             var mn = AccessTools.EnumeratorMoveNext(AccessTools.Method(typeof(GameEvent), nameof(GameEvent.fire)));
-            if (mn != null) _this = AccessTools.Field(mn.DeclaringType, "<>4__this");
+            if (mn != null)
+            {
+                _this = AccessTools.Field(mn.DeclaringType, "<>4__this");
+            }
             return mn;
         }
 
         static void Prefix(object __instance, out int __state)
         {
             __state = int.MinValue;
-            if (_this == null || FlagsSync.Instance == null) return;
+            if (_this == null || FlagsSync.Instance == null)
+            {
+                return;
+            }
             var ev = _this.GetValue(__instance) as GameEvent;
-            if (ev == null || ev.type != GameEvent.Type.modifyCharacter || ev.characterModifyType != GameEvent.CharacterModify.reputation) return;
+            if (ev == null || ev.type != GameEvent.Type.modifyCharacter || ev.characterModifyType != GameEvent.CharacterModify.reputation)
+            {
+                return;
+            }
             var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
-            if (st != null) __state = st.reputation;
+            if (st != null)
+            {
+                __state = st.reputation;
+            }
         }
 
         static void Postfix(object __instance, int __state)
         {
-            if (__state == int.MinValue) return;
+            if (__state == int.MinValue)
+            {
+                return;
+            }
             var ev = (GameEvent)_this.GetValue(__instance);
             var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
-            if (st != null && st.reputation != __state) FlagsSync.Instance.Absorb(ev.Value, st.reputation - __state);
+            if (st != null && st.reputation != __state)
+            {
+                FlagsSync.Instance.Absorb(ev.Value, st.reputation - __state);
+            }
         }
     }
 }

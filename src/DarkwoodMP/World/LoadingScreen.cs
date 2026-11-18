@@ -48,20 +48,39 @@ namespace DarkwoodMP.World
         public static void Show()
         {
             var ui = Singleton<UI>.Instance;
-            if (ui == null || ui.loadingScreen == null) return;
-            if (ui.loadingScreen.activeInHierarchy && ui == _shownUi) return;
+            if (ui == null || ui.loadingScreen == null)
+            {
+                return;
+            }
+            if (ui.loadingScreen.activeInHierarchy && ui == _shownUi)
+            {
+                return;
+            }
             _shownUi = ui;
-            if (!ui.loadingScreen.activeSelf) ui.loadingScreen.SetActive(true);
+            if (!ui.loadingScreen.activeSelf)
+            {
+                ui.loadingScreen.SetActive(true);
+            }
             // A screen the game has shown and hidden before faded every part to clear white (tweenColorInChildren).
             foreach (var s in ui.loadingScreen.GetComponentsInChildren<tk2dBaseSprite>(true))
             {
-                if (s.color.a < 1f) s.color = new Color(s.color.r, s.color.g, s.color.b, 1f);
+                if (s.color.a < 1f)
+                {
+                    s.color = new Color(s.color.r, s.color.g, s.color.b, 1f);
+                }
                 var r = s.GetComponent<Renderer>();
                 if (r != null && r.sharedMaterial != null && s.CollectionInst != null && s.spriteId >= 0 && s.spriteId < s.CollectionInst.spriteDefinitions.Length)
+                {
                     r.sharedMaterial.mainTexture = s.CollectionInst.spriteDefinitions[s.spriteId].materialInst.mainTexture;
+                }
             }
             foreach (var t in ui.loadingScreen.GetComponentsInChildren<tk2dTextMesh>(true))
-                if (t.color.a < 1f) t.color = new Color(t.color.r, t.color.g, t.color.b, 1f);
+            {
+                if (t.color.a < 1f)
+                {
+                    t.color = new Color(t.color.r, t.color.g, t.color.b, 1f);
+                }
+            }
             _barFrame = -1;
             Plugin.Log.LogInfo("[loading] showing the game's loading screen");
         }
@@ -71,7 +90,10 @@ namespace DarkwoodMP.World
         {
             var ui = Singleton<UI>.Instance;
             SetLine(null, null);
-            if (ui != null && ui.loadingScreen != null && WorldGenFinished()) ui.loadingScreen.SetActive(false);
+            if (ui != null && ui.loadingScreen != null && WorldGenFinished())
+            {
+                ui.loadingScreen.SetActive(false);
+            }
             _shownUi = null;
         }
 
@@ -81,23 +103,38 @@ namespace DarkwoodMP.World
         public static void SetBar(float fraction, bool force = false)
         {
             var ui = Singleton<UI>.Instance;
-            if (ui == null || ui.loadingBar == null) return;
+            if (ui == null || ui.loadingBar == null)
+            {
+                return;
+            }
             int pct = Mathf.Clamp(Mathf.FloorToInt(fraction * 100f), 0, 100);
             int frame = pct / 2;
-            if (!force && frame == _barFrame && ui == _barUi) return;
+            if (!force && frame == _barFrame && ui == _barUi)
+            {
+                return;
+            }
             _barFrame = frame;
             _barUi = ui;
             try { ui.loadingBar.SetSprite("loadingBar_" + frame.ToString("00")); } catch { }
-            if (ui.percentLoadedText != null) ui.percentLoadedText.text = pct + "%";
+            if (ui.percentLoadedText != null)
+            {
+                ui.percentLoadedText.text = pct + "%";
+            }
         }
 
         /// <summary>The line under the bar (null: none) and a smaller one under it (Esc: stop joining).</summary>
         public static void SetLine(string text, string hint)
         {
             var ui = Singleton<UI>.Instance;
-            if (ui == null || ui.loadingScreen == null || ui.loadingBar == null) return;
+            if (ui == null || ui.loadingScreen == null || ui.loadingBar == null)
+            {
+                return;
+            }
             if (ui != _ui || _line == null || _hint == null) { _ui = ui; Make(ui); }
-            if (_line == null) return;
+            if (_line == null)
+            {
+                return;
+            }
             Set(_line, text);
             Set(_hint, hint);
             Shot(text);
@@ -105,10 +142,16 @@ namespace DarkwoodMP.World
 
         private static void Shot(string text)
         {
-            if (ShotsDir == null || string.IsNullOrEmpty(text)) return;
+            if (ShotsDir == null || string.IsNullOrEmpty(text))
+            {
+                return;
+            }
             int cut = text.IndexOfAny(new[] { '(', ':' });
             string key = cut > 0 ? text.Substring(0, cut) : text;
-            if (key == _shotKey) return;
+            if (key == _shotKey)
+            {
+                return;
+            }
             _shotKey = key;
             try
             {
@@ -123,9 +166,15 @@ namespace DarkwoodMP.World
 
         private static void Set(tk2dTextMesh t, string text)
         {
-            if (t == null) return;
+            if (t == null)
+            {
+                return;
+            }
             bool on = !string.IsNullOrEmpty(text);
-            if (t.gameObject.activeSelf != on) t.gameObject.SetActive(on);
+            if (t.gameObject.activeSelf != on)
+            {
+                t.gameObject.SetActive(on);
+            }
             if (on && t.text != text) { t.text = text; t.Commit(); }
         }
 
@@ -144,13 +193,19 @@ namespace DarkwoodMP.World
             var screen = ui.loadingScreen.transform;
             var barR = ui.loadingBar.GetComponent<Renderer>();
             var tip = screen.Find("Tip")?.GetComponent<tk2dTextMesh>() ?? ui.percentLoadedText;
-            if (barR == null || tip == null) return;
+            if (barR == null || tip == null)
+            {
+                return;
+            }
 
             var cam = UiCamera(ui.loadingBar.gameObject.layer);
             Vector3 up = cam != null ? cam.transform.up : Vector3.forward;
             var b = barR.bounds;
             float height = Mathf.Abs(Vector3.Dot(b.size, up));
-            if (height < 1f) height = 256f;
+            if (height < 1f)
+            {
+                height = 256f;
+            }
             _line = MakeText(screen, LineName, tip, b.center - up * (height * 0.28f), 1f, new Color(0.85f, 0.82f, 0.74f, 1f));
             _hint = MakeText(screen, HintName, tip, b.center - up * (height * 0.38f), 0.8f, new Color(0.55f, 0.52f, 0.45f, 1f));
             if (cam != null)
@@ -165,14 +220,22 @@ namespace DarkwoodMP.World
         private static Camera UiCamera(int layer)
         {
             foreach (var c in Camera.allCameras)
-                if ((c.cullingMask & (1 << layer)) != 0 && c.orthographic) return c;
+            {
+                if ((c.cullingMask & (1 << layer)) != 0 && c.orthographic)
+                {
+                    return c;
+                }
+            }
             return null;
         }
 
         private static tk2dTextMesh MakeText(Transform screen, string name, tk2dTextMesh like, Vector3 worldPos, float size, Color color)
         {
             var old = screen.Find(name);
-            if (old != null) Object.DestroyImmediate(old.gameObject);
+            if (old != null)
+            {
+                Object.DestroyImmediate(old.gameObject);
+            }
             var go = new GameObject(name);
             go.layer = like.gameObject.layer;
             go.transform.SetParent(screen, false);
@@ -198,7 +261,10 @@ namespace DarkwoodMP.World
 
         private static void LogTree(Transform t, int depth)
         {
-            if (depth > 4) return;
+            if (depth > 4)
+            {
+                return;
+            }
             var tm = t.GetComponent<tk2dTextMesh>();
             var sp = t.GetComponent<tk2dBaseSprite>();
             var r = t.GetComponent<Renderer>();
@@ -206,7 +272,10 @@ namespace DarkwoodMP.World
                 + (tm != null ? $" text=\"{tm.text}\" font={tm.font?.name} tscale={tm.scale}" : "")
                 + (sp != null ? $" sprite={sp.CurrentSprite?.name}" : "")
                 + (r != null ? $" bounds={r.bounds.center}/{r.bounds.size} order={r.sortingOrder}" : ""));
-            foreach (Transform c in t) LogTree(c, depth + 1);
+            foreach (Transform c in t)
+            {
+                LogTree(c, depth + 1);
+            }
         }
 
         // ---- the game's own loading steps -------------------------------------
@@ -215,28 +284,73 @@ namespace DarkwoodMP.World
         public static string GameStage()
         {
             var wg = Singleton<WorldGenerator>.Instance;
-            if (wg == null) return null;
-            if (wg.finished) return null; // done: the screen is fading out (or is up for a location, OutsideLocations)
+            if (wg == null)
+            {
+                return null;
+            }
+            if (wg.finished)
+            {
+                return null; // done: the screen is fading out (or is up for a location, OutsideLocations)
+            }
             float p = wg.percentLoaded;
             if (wg != _stageWg) { _stageWg = wg; _stageLoading = false; }
-            if (Core.loadingGame) _stageLoading = true; // it goes false again just before Load's last step
+            if (Core.loadingGame)
+            {
+                _stageLoading = true; // it goes false again just before Load's last step
+            }
             if (_stageLoading) // SaveManager.Load
             {
-                if (p <= 0f) return "Reading the save...";
-                if (p < 50f) return $"Placing the saved objects ({Mathf.FloorToInt(p * 2f)}%)...";
-                if (p < 70f) return "Fitting the objects together...";
-                if (p < 75f) return "Restoring dreams, the map and events...";
-                if (p < 80f) return "Restoring the state of the world...";
-                if (p < 85f) return "Setting up places and characters...";
+                if (p <= 0f)
+                {
+                    return "Reading the save...";
+                }
+                if (p < 50f)
+                {
+                    return $"Placing the saved objects ({Mathf.FloorToInt(p * 2f)}%)...";
+                }
+                if (p < 70f)
+                {
+                    return "Fitting the objects together...";
+                }
+                if (p < 75f)
+                {
+                    return "Restoring dreams, the map and events...";
+                }
+                if (p < 80f)
+                {
+                    return "Restoring the state of the world...";
+                }
+                if (p < 85f)
+                {
+                    return "Setting up places and characters...";
+                }
                 return "Showing the area around you...";
             }
             // WorldGenerator.generateWorld: a new game, or a chapter made from its chapter save
-            if (p < 20f) return "Laying out the forest...";
-            if (p < 30f) return "Filling the forest with places...";
-            if (p < 40f) return "Building the roads...";
-            if (p < 70f) return "Growing trees and placing objects...";
-            if (p < 72f) return "Placing you in the world...";
-            if (p < 92f) return "Working out paths through the forest...";
+            if (p < 20f)
+            {
+                return "Laying out the forest...";
+            }
+            if (p < 30f)
+            {
+                return "Filling the forest with places...";
+            }
+            if (p < 40f)
+            {
+                return "Building the roads...";
+            }
+            if (p < 70f)
+            {
+                return "Growing trees and placing objects...";
+            }
+            if (p < 72f)
+            {
+                return "Placing you in the world...";
+            }
+            if (p < 92f)
+            {
+                return "Working out paths through the forest...";
+            }
             return "Bringing in characters and items...";
         }
 
@@ -248,18 +362,34 @@ namespace DarkwoodMP.World
         private static void HideTip()
         {
             var ui = Singleton<UI>.Instance;
-            if (ui == null || ui.loadingScreen == null || !ui.loadingScreen.activeInHierarchy) return;
+            if (ui == null || ui.loadingScreen == null || !ui.loadingScreen.activeInHierarchy)
+            {
+                return;
+            }
             if (ui != _tipUi) { _tipUi = ui; _tip = ui.loadingScreen.transform.Find("Tip")?.GetComponent<Renderer>(); }
-            if (_tip != null && _tip.enabled) _tip.enabled = false;
+            if (_tip != null && _tip.enabled)
+            {
+                _tip.enabled = false;
+            }
         }
 
         /// <summary>Every frame: in a load the game runs by itself, write its step under its bar.</summary>
         public static void Update()
         {
             HideTip();
-            if (JoinScreen.Shown) return; // JoinScreen writes its own line
+            if (JoinScreen.Shown)
+            {
+                return; // JoinScreen writes its own line
+            }
             var wg = Singleton<WorldGenerator>.Instance;
-            if (wg == null || !Up) { if (_line != null && _ui == Singleton<UI>.Instance && _line.gameObject.activeSelf) SetLine(null, null); return; }
+            if (wg == null || !Up)
+            {
+                if (_line != null && _ui == Singleton<UI>.Instance && _line.gameObject.activeSelf)
+                {
+                    SetLine(null, null);
+                }
+                return;
+            }
             SetLine(GameStage(), null);
         }
     }

@@ -46,10 +46,16 @@ namespace DarkwoodMP.World
         internal static void Send(Constructible c, int option)
         {
             var r = ObjRef.Of(c.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             var w = Write(r, option);
             string what = $"build {c.name} {r} option {option}";
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent {what}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent {what}");
+            }
             if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
             string sound = option >= 0 && option < c.options.Count ? c.options[option].buildCompleteSound : null;
             Waiting.Add(c);
@@ -57,14 +63,23 @@ namespace DarkwoodMP.World
             {
                 Waiting.Remove(c);
                 if (!ok) { Plugin.Log.LogInfo($"[world] {what} not built here: the host refused it ({reason})"); return; }
-                if (c == null) return;
+                if (c == null)
+                {
+                    return;
+                }
                 Confirming = true;
                 try
                 {
                     c.chosenOption = option;
                     ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerAndShared, replaying: false, () => c.construct(manual: false, option));
-                    if (!string.IsNullOrEmpty(sound)) AudioController.Play(sound);
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {what}: the host agreed, built it here");
+                    if (!string.IsNullOrEmpty(sound))
+                    {
+                        AudioController.Play(sound);
+                    }
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] {what}: the host agreed, built it here");
+                    }
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {what}: {e.Message}"); }
                 finally { Confirming = false; }
@@ -74,13 +89,25 @@ namespace DarkwoodMP.World
         private static void OnConstruct(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             int option = r.R.ReadInt32();
             var c = ObjRef.Resolve<Constructible>(obj);
-            if (s.IsHost && !Allowed(c, option)) return;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got build {obj} option {option}: " + (c != null ? c.name : "not found here (built already?)"));
+            if (s.IsHost && !Allowed(c, option))
+            {
+                return;
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got build {obj} option {option}: " + (c != null ? c.name : "not found here (built already?)"));
+            }
             if (c != null && option >= 0 && option < c.options.Count)
             {
                 try
@@ -91,7 +118,10 @@ namespace DarkwoodMP.World
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {obj}: {e.Message}"); }
             }
-            if (s.IsHost) s.Broadcast(Write(obj, option), Channel.Control, reliable: true, except: from);
+            if (s.IsHost)
+            {
+                s.Broadcast(Write(obj, option), Channel.Control, reliable: true, except: from);
+            }
         }
 
         /// <summary>Host: a joiner's build is one this world can still take, near them.</summary>
@@ -114,24 +144,42 @@ namespace DarkwoodMP.World
         static bool Prefix(Constructible __instance, bool manual, int forceOption, out bool __state)
         {
             __state = false;
-            if (Construction.Confirming || !WorldActions.Sharing || !(manual || WorldActions.TestAsPlayer)) return true;
+            if (Construction.Confirming || !WorldActions.Sharing || !(manual || WorldActions.TestAsPlayer))
+            {
+                return true;
+            }
             if (Session.Instance.IsClient)
             {
                 // A joiner asks first: the ingredients go now (to come back if refused), the build once the host agrees.
-                if (Construction.IsWaiting(__instance)) return false;
+                if (Construction.IsWaiting(__instance))
+                {
+                    return false;
+                }
                 int option = forceOption;
                 if (option == -1)
                 {
-                    if (manual) __instance.getSelectedOption(); // sets chosenOption from the construction menu
+                    if (manual)
+                    {
+                        __instance.getSelectedOption(); // sets chosenOption from the construction menu
+                    }
                     option = __instance.chosenOption;
                 }
                 // Not one we can name to the host, or no such option: built here alone, as the game would.
-                if (option < 0 || option >= __instance.options.Count || !ObjRef.Of(__instance.gameObject).Valid) return true;
+                if (option < 0 || option >= __instance.options.Count || !ObjRef.Of(__instance.gameObject).Valid)
+                {
+                    return true;
+                }
                 if (manual)
                 {
                     var menu = Singleton<ConstructionMenu>.Instance;
                     var icon = menu != null ? menu.selectedIcon : null;
-                    if (icon != null) foreach (var req in icon.requirements) req.removeIngredients();
+                    if (icon != null)
+                    {
+                        foreach (var req in icon.requirements)
+                        {
+                            req.removeIngredients();
+                        }
+                    }
                 }
                 Construction.Send(__instance, option);
                 return false;
@@ -143,7 +191,10 @@ namespace DarkwoodMP.World
 
         static void Postfix(Constructible __instance, int forceOption, bool __state)
         {
-            if (!__state || !WorldActions.Outermost()) return;
+            if (!__state || !WorldActions.Outermost())
+            {
+                return;
+            }
             int option = forceOption != -1 ? forceOption : __instance.chosenOption;
             Construction.Send(__instance, option);
         }

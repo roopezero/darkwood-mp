@@ -48,28 +48,43 @@ namespace DarkwoodMP.World
 
             if (NetEnemies.ClientMode && ctl != null)
             {
-                if (ctl.DoUpdateTime) ctl.DoUpdateTime = false; // the game turns it back on at times; keep it off
+                if (ctl.DoUpdateTime)
+                {
+                    ctl.DoUpdateTime = false; // the game turns it back on at times; keep it off
+                }
                 _clockStopped = true;
             }
             else if (_clockStopped)
             {
                 _clockStopped = false;
-                if (ctl != null) ctl.DoUpdateTime = true;
+                if (ctl != null)
+                {
+                    ctl.DoUpdateTime = true;
+                }
             }
         }
 
         private void OnTime(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !NetEnemies.ClientMode) return;
+            if (from != _session.HostId || !NetEnemies.ClientMode)
+            {
+                return;
+            }
             int day = (int)r.R.ReadUInt32();
             int time = r.R.ReadUInt16();
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null || !WorldShare.InWorld) return;
+            if (ctl == null || !WorldShare.InWorld)
+            {
+                return;
+            }
             var dreams = Singleton<Dreams>.Instance;
             if (dreams != null && (dreams.dreaming || dreams.switchingDream))
             {
                 // The clock shows the dream's time; the world's waits in timeCopy, and catches up after waking.
-                if (WorldActions.Debug && !_dreamLogged) Plugin.Log.LogInfo($"[world] dreaming: the clock waits (host at day {day} {time}, world time kept {dreams.timeCopy:0})");
+                if (WorldActions.Debug && !_dreamLogged)
+                {
+                    Plugin.Log.LogInfo($"[world] dreaming: the clock waits (host at day {day} {time}, world time kept {dreams.timeCopy:0})");
+                }
                 _dreamLogged = true;
                 return;
             }
@@ -78,7 +93,10 @@ namespace DarkwoodMP.World
             // Minutes the client is behind, round the clock. (Darkwood counts a new day at dawn, in startDay, not at
             // midnight, so 1440 * day + minute isn't monotonic; the minute of the day, round the clock, is.)
             int behind = ((time - ctl.CurrentTime) % 1440 + 1440) % 1440;
-            if (behind == 0 && ctl.day == day) return;
+            if (behind == 0 && ctl.day == day)
+            {
+                return;
+            }
             if (behind <= MaxStepsPerUpdate && Mathf.Abs(day - ctl.day) <= 1)
             {
                 for (int i = 0; i < behind; i++)
@@ -86,15 +104,24 @@ namespace DarkwoodMP.World
                     ctl.CurrentTime++;
                     ctl.refreshTime(); // wraps at 1440; at dawn startDay() counts the new day
                 }
-                if (ctl.day != day) ctl.setDay(day);
-                if (WorldActions.Debug && behind > 1) Plugin.Log.LogInfo($"[world] clock stepped {behind} minutes to day {ctl.day} {ctl.CurrentTime}");
+                if (ctl.day != day)
+                {
+                    ctl.setDay(day);
+                }
+                if (WorldActions.Debug && behind > 1)
+                {
+                    Plugin.Log.LogInfo($"[world] clock stepped {behind} minutes to day {ctl.day} {ctl.CurrentTime}");
+                }
                 return;
             }
             // Far off (joining late, the host slept): go straight there.
             ctl.setDay(day);
             ctl.CurrentTime = time;
             ctl.refreshTime(afterGameLoad: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] clock jumped to day {ctl.day} {ctl.CurrentTime}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] clock jumped to day {ctl.day} {ctl.CurrentTime}");
+            }
         }
     }
 }

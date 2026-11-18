@@ -28,30 +28,49 @@ namespace DarkwoodMP.Sync
         {
             float radius = BodyRadius(p);
             var others = new List<Vector3>();
-            if (taken != null) others.AddRange(taken);
+            if (taken != null)
+            {
+                others.AddRange(taken);
+            }
             var sync = PlayerSync.Instance;
             if (sync != null)
+            {
                 foreach (var r in sync.Remotes.Values)
                 {
                     var last = r.Last;
-                    if (last == null || last.Spectating || !World.Locations.SamePlace(last.Away, last.Place)) continue;
+                    if (last == null || last.Spectating || !World.Locations.SamePlace(last.Away, last.Place))
+                    {
+                        continue;
+                    }
                     others.Add(last.Position);
                 }
+            }
 
             var background = new HashSet<Collider>();
             int n = Physics.OverlapSphereNonAlloc(want, radius * 0.5f, Hits, ~0, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < n; i++) background.Add(Hits[i]);
+            for (int i = 0; i < n; i++)
+            {
+                background.Add(Hits[i]);
+            }
             bool gridHere = Walkable(want);
 
-            if (Free(p, want, want, radius, others, background, gridHere)) return want;
+            if (Free(p, want, want, radius, others, background, gridHere))
+            {
+                return want;
+            }
             float start = Random.Range(0f, 360f); // two joiners at once don't both pick the first free angle
             foreach (var ring in Rings)
+            {
                 for (int a = 0; a < Angles; a++)
                 {
                     float ang = (start + a * 360f / Angles) * Mathf.Deg2Rad;
                     var at = want + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (ring * radius);
-                    if (Free(p, want, at, radius, others, background, gridHere)) return at;
+                    if (Free(p, want, at, radius, others, background, gridHere))
+                    {
+                        return at;
+                    }
                 }
+            }
             Plugin.Log.LogInfo($"[spawn] no free spot within {Rings[Rings.Length - 1] * radius:0} of {want}: staying there");
             return want;
         }
@@ -73,13 +92,26 @@ namespace DarkwoodMP.Sync
         {
             float apart = Apart(radius);
             foreach (var o in others)
-                if (new Vector2(o.x - at.x, o.z - at.z).magnitude < apart) return false;
+            {
+                if (new Vector2(o.x - at.x, o.z - at.z).magnitude < apart)
+                {
+                    return false;
+                }
+            }
 
             int n = Physics.OverlapSphereNonAlloc(at, radius * 1.1f, Hits, ~0, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
-                if (Solid(p, Hits[i], background)) return false;
+            {
+                if (Solid(p, Hits[i], background))
+                {
+                    return false;
+                }
+            }
 
-            if (gridHere && !Walkable(at)) return false;
+            if (gridHere && !Walkable(at))
+            {
+                return false;
+            }
 
             var d = at - want;
             float len = d.magnitude;
@@ -87,17 +119,34 @@ namespace DarkwoodMP.Sync
             {
                 var hits = Physics.RaycastAll(want, d / len, len, ~0, QueryTriggerInteraction.Ignore);
                 foreach (var h in hits)
-                    if (h.collider.attachedRigidbody == null && Solid(p, h.collider, background)) return false; // a wall between
+                {
+                    if (h.collider.attachedRigidbody == null && Solid(p, h.collider, background))
+                    {
+                        return false; // a wall between
+                    }
+                }
             }
             return true;
         }
 
         private static bool Solid(Player p, Collider c, HashSet<Collider> background)
         {
-            if (c == null || c.isTrigger || background.Contains(c)) return false;
-            if (c.gameObject.layer == 1) return false; // the ground (Core.canSpawnHere skips it too)
-            if (p != null && c.transform.IsChildOf(p.transform)) return false;
-            if (c.GetComponentInParent<Combat.NetPlayerProxy>() != null) return false; // counted by position instead
+            if (c == null || c.isTrigger || background.Contains(c))
+            {
+                return false;
+            }
+            if (c.gameObject.layer == 1)
+            {
+                return false; // the ground (Core.canSpawnHere skips it too)
+            }
+            if (p != null && c.transform.IsChildOf(p.transform))
+            {
+                return false;
+            }
+            if (c.GetComponentInParent<Combat.NetPlayerProxy>() != null)
+            {
+                return false; // counted by position instead
+            }
             return true;
         }
 

@@ -60,7 +60,10 @@ namespace DarkwoodMP.World
             public void Set(string key, object entry)
             {
                 string k = key; int n = 1;
-                while (Entries.ContainsKey(k)) k = $"{key}#{++n}";
+                while (Entries.ContainsKey(k))
+                {
+                    k = $"{key}#{++n}";
+                }
                 Entries[k] = entry;
             }
         }
@@ -125,7 +128,10 @@ namespace DarkwoodMP.World
             {
                 foreach (var d in All<Door>())
                 {
-                    if (!ctx.Near(d.transform.position)) continue;
+                    if (!ctx.Near(d.transform.position))
+                    {
+                        continue;
+                    }
                     var l = d.GetComponent<Locked>();
                     var e = ctx.Add(d.gameObject);
                     e["open"] = d.opened; e["locked"] = l != null && l.locked; e["health"] = d.health; e["broken"] = d.destroyed; e["blocked"] = d.blocked;
@@ -137,7 +143,10 @@ namespace DarkwoodMP.World
             {
                 foreach (var w in All<Window>())
                 {
-                    if (!ctx.Near(w.transform.position)) continue;
+                    if (!ctx.Near(w.transform.position))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(w.gameObject);
                     e["barricaded"] = w.barricaded; e["barricadeHealth"] = w.barricadeHealth; e["burning"] = w.GetComponent<Burn>() != null;
                 }
@@ -146,11 +155,17 @@ namespace DarkwoodMP.World
             {
                 foreach (var inv in WorldInventories(ctx))
                 {
-                    if (IsDropped(inv)) continue;
+                    if (IsDropped(inv))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(inv.gameObject);
                     e["workbench"] = inv.isWorkbench;
                     var l = inv.GetComponentInParent<Locked>(true); // switched off here too (far from our player)
-                    if (l != null) e["locked"] = l.locked;
+                    if (l != null)
+                    {
+                        e["locked"] = l.locked;
+                    }
                     e["slots"] = Slots(inv);
                 }
             });
@@ -158,7 +173,10 @@ namespace DarkwoodMP.World
             {
                 foreach (var inv in WorldInventories(ctx))
                 {
-                    if (!IsDropped(inv)) continue;
+                    if (!IsDropped(inv))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(inv.gameObject);
                     e["slots"] = Slots(inv);
                 }
@@ -168,20 +186,41 @@ namespace DarkwoodMP.World
                 // Things with a state of their own: health, broken, switched on, searched, dragged to a spot.
                 foreach (var it in All<Item>())
                 {
-                    if (!ctx.Near(it.transform.position) || it.GetComponent<Door>() != null || it.GetComponent<Window>() != null) continue;
-                    if (it.GetComponentInParent<Player>() != null || it.GetComponent<Inventory>() is Inventory inv && IsDropped(inv)) continue;
+                    if (!ctx.Near(it.transform.position) || it.GetComponent<Door>() != null || it.GetComponent<Window>() != null)
+                    {
+                        continue;
+                    }
+                    if (it.GetComponentInParent<Player>() != null || it.GetComponent<Inventory>() is Inventory inv && IsDropped(inv))
+                    {
+                        continue;
+                    }
                     // A client's own copy of a character the host runs (a searchable corpse prop in the shared dream) is
                     // frozen with its renderers and colliders off: nobody sees or searches it; the host's copy is listed.
                     if (it.GetComponent<Character>() is Character ch && NetEnemies.Frozen.Contains(ch) && NetEnemies.Instance != null
-                        && !NetEnemies.Instance.NetIdOf(ch, out _)) continue;
+                        && !NetEnemies.Instance.NetIdOf(ch, out _))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(it.gameObject);
                     e["health"] = it.health; e["broken"] = it.destroyed;
-                    if (it.switchable) e["on"] = it.isOn;
-                    if (it.draggable) e["draggable"] = true;
+                    if (it.switchable)
+                    {
+                        e["on"] = it.isOn;
+                    }
+                    if (it.draggable)
+                    {
+                        e["draggable"] = true;
+                    }
                     e["searched"] = it.searched;
                     var l = it.GetComponent<Locked>();
-                    if (l != null) e["locked"] = l.locked;
-                    if (it.GetComponent<Burn>() != null) e["burning"] = true;
+                    if (l != null)
+                    {
+                        e["locked"] = l.locked;
+                    }
+                    if (it.GetComponent<Burn>() != null)
+                    {
+                        e["burning"] = true;
+                    }
                 }
             });
             AddSection("traps", ctx =>
@@ -189,7 +228,10 @@ namespace DarkwoodMP.World
                 // Traps (a trigger with an Item; one that went off loses its Item, so those are kept by name too).
                 foreach (var t in All<Trigger>())
                 {
-                    if (!ctx.Near(t.transform.position) || (t.GetComponent<Item>() == null && !t.setByPlayer && !TrapNames.Contains(Clean(t.name)))) continue;
+                    if (!ctx.Near(t.transform.position) || (t.GetComponent<Item>() == null && !t.setByPlayer && !TrapNames.Contains(Clean(t.name))))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(t.gameObject);
                     e["armed"] = t.active; e["triggered"] = t.triggered;
                 }
@@ -198,7 +240,10 @@ namespace DarkwoodMP.World
             {
                 foreach (var g in All<Generator>())
                 {
-                    if (!ctx.Near(g.transform.position)) continue;
+                    if (!ctx.Near(g.transform.position))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(g.gameObject);
                     e["on"] = g.isOn; e["fuel"] = R(g.fuel, 1f); e["saw"] = g.isSaw;
                 }
@@ -207,7 +252,10 @@ namespace DarkwoodMP.World
             {
                 foreach (var w in All<Saw>())
                 {
-                    if (!ctx.Near(w.transform.position)) continue;
+                    if (!ctx.Near(w.transform.position))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(w.gameObject);
                     e["fuel"] = R(w.fuel, 1f);
                 }
@@ -218,13 +266,19 @@ namespace DarkwoodMP.World
                 // switches shown in their own window.
                 foreach (var c in All<Constructible>())
                 {
-                    if (!ctx.Near(c.transform.position)) continue;
+                    if (!ctx.Near(c.transform.position))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(c.gameObject);
                     e["constructed"] = c.constructed; e["option"] = c.chosenOption;
                 }
                 foreach (var ii in All<InteractiveItem>())
                 {
-                    if (!ctx.Near(ii.transform.position)) continue;
+                    if (!ctx.Near(ii.transform.position))
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(ii.gameObject);
                     e["switchOn"] = ii.isOn;
                 }
@@ -257,15 +311,24 @@ namespace DarkwoodMP.World
                 {
                     var ch = n != null ? n.GetComponent<Character>() : null;
                     var save = n != null ? n.GetComponent<SaveableObject>() : null;
-                    if (ch == null || !ch.alive || save == null || save.uniqueId <= 0 || save.uniqueId >= SharedIds.ResolveLimit) continue;
-                    if (!ctx.Near(ch.transform.position) || (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(ch, out _))) continue;
+                    if (ch == null || !ch.alive || save == null || save.uniqueId <= 0 || save.uniqueId >= SharedIds.ResolveLimit)
+                    {
+                        continue;
+                    }
+                    if (!ctx.Near(ch.transform.position) || (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(ch, out _)))
+                    {
+                        continue;
+                    }
                     ctx.Add(n.gameObject);
                 }
             });
             AddSection("journal", ctx =>
             {
                 var j = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.journal : null;
-                if (j == null) return;
+                if (j == null)
+                {
+                    return;
+                }
                 void Keys(string what, IEnumerable<string> keys)
                 {
                     var list = keys.Where(k => k != null).OrderBy(k => k, StringComparer.Ordinal).ToList();
@@ -282,16 +345,28 @@ namespace DarkwoodMP.World
                 var ne = NetEnemies.Instance;
                 foreach (var c in All<Character>())
                 {
-                    if (!NetEnemies.Eligible(c) || !ctx.Near(c.transform.position)) continue;
-                    if (ne == null || !ne.NetIdOf(c, out uint id)) continue; // not one of the host's shared enemies
+                    if (!NetEnemies.Eligible(c) || !ctx.Near(c.transform.position))
+                    {
+                        continue;
+                    }
+                    if (ne == null || !ne.NetIdOf(c, out uint id))
+                    {
+                        continue; // not one of the host's shared enemies
+                    }
                     // A living one switched off by the host's culling isn't sent (NetEnemies sends the active ones), so
                     // no client has it; a client's copy of one is hidden and forgotten.
-                    if (NetEnemies.InPlay(c) && !c.gameObject.activeInHierarchy && !NetEnemies.ClientMode) continue;
+                    if (NetEnemies.InPlay(c) && !c.gameObject.activeInHierarchy && !NetEnemies.ClientMode)
+                    {
+                        continue;
+                    }
                     // A client's copy switched off by its own culling (far from its player, near another player) is still the host's, kept up to date.
                     var e = ctx.Add(c.gameObject);
                     e["alive"] = c.alive;
                     // A hostile NPC's health is the host's (Combat.HostileNpcs): every player's hits add up.
-                    if (c.npc != null && c.alive) e["health"] = Mathf.Round(c.health);
+                    if (c.npc != null && c.alive)
+                    {
+                        e["health"] = Mathf.Round(c.health);
+                    }
                     var snd = c.GetComponent<CharacterSounds>();
                     var loop = snd != null ? snd.idleAudioObject : null;
                     e["loopSound"] = loop != null && loop.IsPlaying() ? loop.audioID : "";
@@ -305,14 +380,20 @@ namespace DarkwoodMP.World
                         // colliders switched on that the host's corpse has off or destroyed (a black screen beside it).
                         e["viewBlockers"] = string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()));
                         var inv = c.GetComponent<Inventory>();
-                        if (inv != null) e["loot"] = Slots(inv);
+                        if (inv != null)
+                        {
+                            e["loot"] = Slots(inv);
+                        }
                     }
                 }
             });
             AddSection("story", ctx =>
             {
                 var flags = Singleton<Flags>.Instance;
-                if (flags == null) return;
+                if (flags == null)
+                {
+                    return;
+                }
                 var dict = FlagsDict(flags);
                 // Not the flags about this game's own player (FlagsSync.PlayersOwn: where it is, the help popups it
                 // has seen): those are under "local", since each game keeps its own.
@@ -320,7 +401,10 @@ namespace DarkwoodMP.World
                 var lines = shared.Select(f => f.name + "=" + f.isTrue).OrderBy(s => s, StringComparer.Ordinal).ToList();
                 var section = new Dictionary<string, object> { ["count"] = lines.Count, ["true"] = shared.Count(f => f.isTrue), ["hash"] = Hash(lines) };
                 // A short list is given whole, so a difference names the flag.
-                if (lines.Count <= 40) section["list"] = string.Join(" ", lines);
+                if (lines.Count <= 40)
+                {
+                    section["list"] = string.Join(" ", lines);
+                }
                 ctx.Set("flags", section);
                 var npcs = flags.npcStates.Where(n => n != null).Select(n => $"{n.name}:{n.reputation}:{n.dead}").OrderBy(s => s, StringComparer.Ordinal).ToList();
                 ctx.Set("npcs", new Dictionary<string, object> { ["count"] = npcs.Count, ["hash"] = Hash(npcs) });
@@ -328,31 +412,53 @@ namespace DarkwoodMP.World
             AddSection("time", ctx =>
             {
                 var ctl = Singleton<Controller>.Instance;
-                if (ctl == null) return;
+                if (ctl == null)
+                {
+                    return;
+                }
                 ctx.Set("clock", new Dictionary<string, object> { ["day"] = ctl.day, ["hour"] = R(ctl.CurrentTime / 60f, 0.25f) });
             });
 
             AddLocal("where", ctx =>
             {
                 var flags = Singleton<Flags>.Instance;
-                if (flags == null) return;
+                if (flags == null)
+                {
+                    return;
+                }
                 var dict = FlagsDict(flags);
                 foreach (var f in dict.Values)
-                    if (f != null && FlagsSync.PlayersPlace(f.name)) ctx.Set(f.name, f.isTrue);
+                {
+                    if (f != null && FlagsSync.PlayersPlace(f.name))
+                    {
+                        ctx.Set(f.name, f.isTrue);
+                    }
+                }
                 ctx.Set("place", Locations.Current());
             });
             AddLocal("popups", ctx =>
             {
                 // The one-time help popups this game's player has seen (FlagsSync.PlayersPopup): each game's own.
                 var flags = Singleton<Flags>.Instance;
-                if (flags == null) return;
+                if (flags == null)
+                {
+                    return;
+                }
                 foreach (var f in FlagsDict(flags).Values)
-                    if (f != null && FlagsSync.PlayersPopup(f.name)) ctx.Set(f.name, f.isTrue);
+                {
+                    if (f != null && FlagsSync.PlayersPopup(f.name))
+                    {
+                        ctx.Set(f.name, f.isTrue);
+                    }
+                }
             });
             AddLocal("player", ctx =>
             {
                 var p = Player.Instance;
-                if (p == null) return;
+                if (p == null)
+                {
+                    return;
+                }
                 ctx.Set("player", new Dictionary<string, object>
                 {
                     ["pos"] = Pos(p.transform.position),
@@ -370,8 +476,14 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             foreach (var inv in All<Inventory>())
             {
-                if (inv.invType != Inventory.InvType.itemInv || !ctx.Near(inv.transform.position)) continue;
-                if (p != null && (inv == p.Inventory || inv == p.Hotbar || inv.transform.IsChildOf(p.transform))) continue;
+                if (inv.invType != Inventory.InvType.itemInv || !ctx.Near(inv.transform.position))
+                {
+                    continue;
+                }
+                if (p != null && (inv == p.Inventory || inv == p.Hotbar || inv.transform.IsChildOf(p.transform)))
+                {
+                    continue;
+                }
                 yield return inv;
             }
         }
@@ -398,7 +510,10 @@ namespace DarkwoodMP.World
                 list.Add(new Dictionary<string, object> { ["type"] = it.type, ["amount"] = amount, ["durability"] = R(it.durability, 0.05f) });
             }
             // Trailing empty slots don't matter (a workbench's level adds some).
-            while (list.Count > 0 && list[list.Count - 1] == null) list.RemoveAt(list.Count - 1);
+            while (list.Count > 0 && list[list.Count - 1] == null)
+            {
+                list.RemoveAt(list.Count - 1);
+            }
             return list;
         }
 
@@ -409,7 +524,9 @@ namespace DarkwoodMP.World
         private static string Hash(List<string> lines)
         {
             using (var sha = System.Security.Cryptography.SHA256.Create())
+            {
                 return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(string.Join("\n", lines)))).Replace("-", "").Substring(0, 16).ToLowerInvariant();
+            }
         }
 
         // ---- a small JSON writer (sorted keys, so the dumps diff cleanly) ------------------------------------------
@@ -434,12 +551,22 @@ namespace DarkwoodMP.World
                     sb.Append('{');
                     for (int k = 0; k < keys.Count; k++)
                     {
-                        if (k > 0) sb.Append(',');
-                        if (flat) sb.Append(k > 0 ? " " : ""); else { sb.Append('\n').Append(' ', 2 * (indent + 1)); }
+                        if (k > 0)
+                        {
+                            sb.Append(',');
+                        }
+                        if (flat)
+                        {
+                            sb.Append(k > 0 ? " " : "");
+                        }
+                        else { sb.Append('\n').Append(' ', 2 * (indent + 1)); }
                         Str(sb, keys[k]); sb.Append(": ");
                         Json(sb, dict[keys[k]], indent + 1);
                     }
-                    if (!flat) sb.Append('\n').Append(' ', 2 * indent);
+                    if (!flat)
+                    {
+                        sb.Append('\n').Append(' ', 2 * indent);
+                    }
                     sb.Append('}');
                     break;
                 }
@@ -447,7 +574,15 @@ namespace DarkwoodMP.World
                 {
                     sb.Append('[');
                     bool first = true;
-                    foreach (var x in list) { if (!first) sb.Append(", "); first = false; Json(sb, x, Math.Max(indent + 1, 3)); }
+                    foreach (var x in list)
+                    {
+                        if (!first)
+                        {
+                            sb.Append(", ");
+                        }
+                        first = false;
+                        Json(sb, x, Math.Max(indent + 1, 3));
+                    }
                     sb.Append(']');
                     break;
                 }
@@ -460,9 +595,18 @@ namespace DarkwoodMP.World
             sb.Append('"');
             foreach (char ch in s)
             {
-                if (ch == '"' || ch == '\\') sb.Append('\\').Append(ch);
-                else if (ch < 0x20) sb.Append($"\\u{(int)ch:x4}");
-                else sb.Append(ch);
+                if (ch == '"' || ch == '\\')
+                {
+                    sb.Append('\\').Append(ch);
+                }
+                else if (ch < 0x20)
+                {
+                    sb.Append($"\\u{(int)ch:x4}");
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
             }
             sb.Append('"');
         }

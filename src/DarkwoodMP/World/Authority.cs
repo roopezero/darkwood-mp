@@ -92,9 +92,14 @@ namespace DarkwoodMP.World
         /// <summary>Host (Session.Dispatch): whether a client's message may be handled as it came.</summary>
         private static bool AllowBare(ulong from, MsgType type)
         {
-            if (Handling || !RequestOnly.Contains(type)) return true;
+            if (Handling || !RequestOnly.Contains(type))
+            {
+                return true;
+            }
             if (_bareWarned.Add((from, type)))
+            {
                 Plugin.Log.LogWarning($"[authority] dropped {type} from {S?.NameOf(from) ?? "#" + from}: it's only taken as a request");
+            }
             return false;
         }
 
@@ -106,7 +111,10 @@ namespace DarkwoodMP.World
         public static void Request(PacketWriter message, string what, Action<bool, string, string> done = null, bool inventory = true)
         {
             var s = S;
-            if (s == null || !s.IsClient) return;
+            if (s == null || !s.IsClient)
+            {
+                return;
+            }
             int n = message.Length;
             if (n > _copy.Length) { Plugin.Log.LogWarning($"Request too long: {what}"); return; }
             Buffer.BlockCopy(message.Buffer, 0, _copy, 0, n);
@@ -116,18 +124,27 @@ namespace DarkwoodMP.World
             w.W.Write(seq);
             w.W.Write(_copy, 0, n);
             s.SendToHost(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[authority] request {seq}: {what}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[authority] request {seq}: {what}");
+            }
         }
 
         private static void OnVerdict(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsClient || from != s.HostId) return;
+            if (s == null || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             uint seq = r.R.ReadUInt32();
             bool ok = r.R.ReadByte() != 0;
             string reason = r.ReadStr();
             string result = r.ReadStr();
-            if (!_pending.TryGetValue(seq, out var p)) return;
+            if (!_pending.TryGetValue(seq, out var p))
+            {
+                return;
+            }
             _pending.Remove(seq);
             if (!ok)
             {
@@ -135,7 +152,10 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[authority] the host refused {p.What}: {reason}; rolled back");
                 InventoryWatch.Undo(p.Inventory);
             }
-            else if (WorldActions.Debug) Plugin.Log.LogInfo($"[authority] {p.What}: ok{(result.Length > 0 ? " (" + result + ")" : "")} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
+            else if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[authority] {p.What}: ok{(result.Length > 0 ? " (" + result + ")" : "")} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
+            }
             try { p.Done?.Invoke(ok, reason, result); }
             catch (Exception e) { Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}"); }
         }
@@ -149,22 +169,43 @@ namespace DarkwoodMP.World
         private static string _refusal, _result;
 
         /// <summary>Host, in a request's handler: refuse it. Send the client the state it should roll back to first.</summary>
-        public static void Refuse(string reason) { if (Handling && _refusal == null) _refusal = reason; }
+        public static void Refuse(string reason)
+        {
+            if (Handling && _refusal == null)
+            {
+                _refusal = reason;
+            }
+        }
         public static bool Refused => _refusal != null;
         /// <summary>Host, in a request's handler: what came of it, for the client (decided here: damage, a roll).</summary>
-        public static void Result(string result) { if (Handling) _result = result ?? ""; }
+        public static void Result(string result)
+        {
+            if (Handling)
+            {
+                _result = result ?? "";
+            }
+        }
 
         private static void OnRequest(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             uint seq = r.R.ReadUInt32();
             byte[] inner = r.R.ReadBytes(1 << 16);
             Handling = true; From = from; _refusal = null; _result = "";
             try
             {
-                if (inner.Length == 0 || (MsgType)inner[0] == MsgType.Request) Refuse("empty request");
-                else s.Handle(from, inner, inner.Length);
+                if (inner.Length == 0 || (MsgType)inner[0] == MsgType.Request)
+                {
+                    Refuse("empty request");
+                }
+                else
+                {
+                    s.Handle(from, inner, inner.Length);
+                }
             }
             catch (Exception e) { Refuse("error: " + e.Message); }
             finally { Handling = false; }
@@ -174,7 +215,10 @@ namespace DarkwoodMP.World
             w.WriteStr(_refusal ?? "");
             w.WriteStr(_result ?? "");
             s.SendTo(from, w, Channel.Control, reliable: true);
-            if (_refusal != null) Plugin.Log.LogInfo($"[authority] refused {(inner.Length > 0 ? ((MsgType)inner[0]).ToString() : "nothing")} from {s.NameOf(from)}: {_refusal}");
+            if (_refusal != null)
+            {
+                Plugin.Log.LogInfo($"[authority] refused {(inner.Length > 0 ? ((MsgType)inner[0]).ToString() : "nothing")} from {s.NameOf(from)}: {_refusal}");
+            }
         }
 
         /// <summary>Host: the proxy (the host's stand-in) of the player whose request is being handled.</summary>
@@ -195,7 +239,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void AcceptAway(string what, string result = "")
         {
-            if (!Handling) return;
+            if (!Handling)
+            {
+                return;
+            }
             Plugin.Log.LogInfo($"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({_refusal ?? "not here"}), so it's theirs alone: accepted, not applied here");
             _refusal = null;
             _result = result ?? "";
@@ -204,7 +251,10 @@ namespace DarkwoodMP.World
         /// <summary>Host: whether this player's stand-in is within reach of pos (true if it isn't known yet).</summary>
         public static bool Near(ulong player, Vector3 pos, float reach)
         {
-            if (!NetPlayerProxy.All.TryGetValue(player, out var p) || p == null) return true;
+            if (!NetPlayerProxy.All.TryGetValue(player, out var p) || p == null)
+            {
+                return true;
+            }
             return Flat(p, pos) <= reach;
         }
 
@@ -212,14 +262,22 @@ namespace DarkwoodMP.World
         public static bool InReach(Vector3 pos, float reach, string what)
         {
             var p = Requester;
-            if (p == null) return true; // not known yet (just joined): nothing to check against
+            if (p == null)
+            {
+                return true; // not known yet (just joined): nothing to check against
+            }
             float d = Flat(p, pos);
             // The stand-in follows the puppet, which moves on the next frame; the player's newest position (a
             // PlayerState flushed just before this request, Sync.PlayerSync.FlushNow) has already been through
             // MoveCheck, so it's as trustworthy as the stand-in and newer. Either will do.
             if (d > reach && Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.TryChecked(From, out var at))
+            {
                 d = Mathf.Min(d, new Vector2(at.x - pos.x, at.z - pos.z).magnitude);
-            if (d <= reach) return true;
+            }
+            if (d <= reach)
+            {
+                return true;
+            }
             Refuse($"{what} is {d:0} away from them (reach {reach:0})");
             return false;
         }
@@ -254,8 +312,21 @@ namespace DarkwoodMP.World
             var now = Count();
             if (now == null || _base == null) { _base = now; return null; }
             var change = new Dictionary<string, int>();
-            foreach (var kv in now) { _base.TryGetValue(kv.Key, out int was); if (kv.Value != was) change[kv.Key] = kv.Value - was; }
-            foreach (var kv in _base) if (!now.ContainsKey(kv.Key)) change[kv.Key] = -kv.Value;
+            foreach (var kv in now)
+            {
+                _base.TryGetValue(kv.Key, out int was);
+                if (kv.Value != was)
+                {
+                    change[kv.Key] = kv.Value - was;
+                }
+            }
+            foreach (var kv in _base)
+            {
+                if (!now.ContainsKey(kv.Key))
+                {
+                    change[kv.Key] = -kv.Value;
+                }
+            }
             _base = now;
             return change.Count > 0 ? change : null;
         }
@@ -264,13 +335,22 @@ namespace DarkwoodMP.World
         public static void Undo(Dictionary<string, int> change)
         {
             var p = Player.Instance;
-            if (change == null || p == null) return;
+            if (change == null || p == null)
+            {
+                return;
+            }
             foreach (var kv in change)
             {
                 try
                 {
-                    if (kv.Value < 0) p.Inventory.addItemTypeToPlayer(kv.Key, -kv.Value, dropIfNoRoom: true);
-                    else if (kv.Value > 0) p.Inventory.removeItemAmountFromPlayer(kv.Key, kv.Value);
+                    if (kv.Value < 0)
+                    {
+                        p.Inventory.addItemTypeToPlayer(kv.Key, -kv.Value, dropIfNoRoom: true);
+                    }
+                    else if (kv.Value > 0)
+                    {
+                        p.Inventory.removeItemAmountFromPlayer(kv.Key, kv.Value);
+                    }
                     Plugin.Log.LogInfo($"[authority] {(kv.Value < 0 ? "gave back" : "took back")} {Math.Abs(kv.Value)} {kv.Key}");
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"[authority] couldn't undo {kv.Value} {kv.Key}: {e.Message}"); }
@@ -281,15 +361,24 @@ namespace DarkwoodMP.World
         private static Dictionary<string, int> Count()
         {
             var p = Player.Instance;
-            if (p == null || p.Inventory == null) return null;
+            if (p == null || p.Inventory == null)
+            {
+                return null;
+            }
             var d = new Dictionary<string, int>();
             void Add(Inventory inv)
             {
-                if (inv?.slots == null) return;
+                if (inv?.slots == null)
+                {
+                    return;
+                }
                 foreach (var slot in inv.slots)
                 {
                     var it = slot?.invItem;
-                    if (InvItemClass.isNull(it)) continue;
+                    if (InvItemClass.isNull(it))
+                    {
+                        continue;
+                    }
                     d.TryGetValue(it.type, out int n);
                     d[it.type] = n + Math.Max(1, it.amount);
                 }

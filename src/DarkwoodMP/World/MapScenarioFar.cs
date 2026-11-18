@@ -66,7 +66,12 @@ namespace DarkwoodMP.World
                 .ToList();
             var spots = new List<Door>();
             foreach (var d in doors)
-                if (spots.All(s => StateDump.Flat(s.transform.position - d.transform.position) >= Cluster)) spots.Add(d);
+            {
+                if (spots.All(s => StateDump.Flat(s.transform.position - d.transform.position) >= Cluster))
+                {
+                    spots.Add(d);
+                }
+            }
             if (index >= spots.Count) { r.Fail($"only {spots.Count} spots {min:0} or more from {Fmt(from)}"); yield break; }
             var door = spots[index];
             var at = door.transform.position;

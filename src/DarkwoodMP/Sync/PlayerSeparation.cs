@@ -29,29 +29,53 @@ namespace DarkwoodMP.Sync
 
         public static void Update(PlayerSync sync, ulong localId)
         {
-            if (Plugin.Cfg?.SoftPlayerCollision != null && !Plugin.Cfg.SoftPlayerCollision.Value) return;
-            if (!World.WorldShare.InWorld || sync.Remotes.Count == 0) return;
+            if (Plugin.Cfg?.SoftPlayerCollision != null && !Plugin.Cfg.SoftPlayerCollision.Value)
+            {
+                return;
+            }
+            if (!World.WorldShare.InWorld || sync.Remotes.Count == 0)
+            {
+                return;
+            }
             var p = Player.Instance;
-            if (p == null || !p.alive || p.dying || Core.forbidInputs) return;
+            if (p == null || !p.alive || p.dying || Core.forbidInputs)
+            {
+                return;
+            }
             var rb = p.GetComponent<Rigidbody>();
-            if (rb == null || rb.isKinematic) return;
-            if (_measured != p) Measure(p);
+            if (rb == null || rb.isKinematic)
+            {
+                return;
+            }
+            if (_measured != p)
+            {
+                Measure(p);
+            }
 
             float min = Distance;
             var me = rb.position;
             Vector3 push = Vector3.zero;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Root == null || !r.Root.activeSelf || !r.Alive || r.Spectating) continue;
+                if (r.Root == null || !r.Root.activeSelf || !r.Alive || r.Spectating)
+                {
+                    continue;
+                }
                 var other = r.Root.transform.position;
                 var d = new Vector3(me.x - other.x, 0f, me.z - other.z);
                 float dist = d.magnitude;
-                if (dist >= min) continue;
+                if (dist >= min)
+                {
+                    continue;
+                }
                 // Right on top of each other: each game goes its own way, by who has the lower id.
                 var away = dist > 0.01f ? d / dist : (localId < r.Owner ? Vector3.right : Vector3.left);
                 push += away * ((min - dist) / min);
             }
-            if (push == Vector3.zero) return;
+            if (push == Vector3.zero)
+            {
+                return;
+            }
             float frac = Mathf.Min(1f, push.magnitude);
             var step = push.normalized * (MaxSpeed * frac * Mathf.Min(Time.deltaTime, 0.05f));
             rb.MovePosition(rb.position + step);
@@ -63,8 +87,16 @@ namespace DarkwoodMP.Sync
             _measured = p;
             _radius = 0f;
             foreach (var c in p.GetComponents<Collider>())
-                if (c != null && !c.isTrigger && c.enabled) _radius = Mathf.Max(_radius, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
-            if (_radius <= 1f || _radius > 60f) _radius = DefaultRadius;
+            {
+                if (c != null && !c.isTrigger && c.enabled)
+                {
+                    _radius = Mathf.Max(_radius, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
+                }
+            }
+            if (_radius <= 1f || _radius > 60f)
+            {
+                _radius = DefaultRadius;
+            }
             Plugin.Log.LogInfo($"Soft player collision: players are eased apart within {Distance:0} units");
         }
     }

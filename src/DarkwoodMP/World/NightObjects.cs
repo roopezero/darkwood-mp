@@ -63,7 +63,10 @@ namespace DarkwoodMP.World
         /// <summary>Core.AddPrefab made <paramref name="go"/> from <paramref name="prefab"/>, under <paramref name="parent"/>.</summary>
         internal static void Added(Object prefab, GameObject go, GameObject parent)
         {
-            if (go == null || prefab == null || !Hosting) return;
+            if (go == null || prefab == null || !Hosting)
+            {
+                return;
+            }
             // RandomEvent.fire's copy of one of the firing night event's GameEvents: tag its steps.
             var re = Firing != null ? Firing.theEvent : null;
             if (re != null && re.type == RandomEvent.Type.locationEvent)
@@ -75,23 +78,44 @@ namespace DarkwoodMP.World
                     var ns = Singleton<NightScenarios>.Instance;
                     string sc = ns != null && ns.currentScenario != null ? ns.currentScenario.name : "";
                     for (int s = 0; s < ge.events.Count; s++)
-                        if (ge.events[s] != null) { _tags.Remove(ge.events[s]); _tags.Add(ge.events[s], new Tag { Scenario = sc, Event = Firing.gameObject.name, Group = g, Step = s }); }
+                    {
+                        if (ge.events[s] != null)
+                        { _tags.Remove(ge.events[s]); _tags.Add(ge.events[s], new Tag { Scenario = sc, Event = Firing.gameObject.name, Group = g, Step = s }); }
+                    }
                     return;
                 }
             }
-            if (Steps.Count == 0) return;
+            if (Steps.Count == 0)
+            {
+                return;
+            }
             var step = Steps.Peek();
-            if (step == null || step.type != GameEvent.Type.gameObject || step.gameObjectModifyType != GameEvent.GameObjectModify.spawn) return;
-            if (step.targetTransform == null || (Object)step.targetTransform.gameObject != prefab || !_tags.TryGetValue(step, out var tag)) return;
+            if (step == null || step.type != GameEvent.Type.gameObject || step.gameObjectModifyType != GameEvent.GameObjectModify.spawn)
+            {
+                return;
+            }
+            if (step.targetTransform == null || (Object)step.targetTransform.gameObject != prefab || !_tags.TryGetValue(step, out var tag))
+            {
+                return;
+            }
             var c = go.GetComponent<Character>();
-            if (c != null && c.npc == null) return; // an enemy: NetEnemies
+            if (c != null && c.npc == null)
+            {
+                return; // an enemy: NetEnemies
+            }
             long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
             ObjRef.RegisterSpawned(id, go);
             var live = new Live { Id = id, Go = go, Name = go.name, Tag = tag, Pos = go.transform.position, Rot = go.transform.rotation, Parent = parent != null ? ObjRef.Of(parent) : default };
             _live.Add(live);
-            if (HostSharing) Send(Made, live, 0);
+            if (HostSharing)
+            {
+                Send(Made, live, 0);
+            }
             SentCount++;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent night object {go.name} #{id} ({tag.Event} step {tag.Group}/{tag.Step}) at {live.Pos}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent night object {go.name} #{id} ({tag.Event} step {tag.Group}/{tag.Step}) at {live.Pos}");
+            }
         }
 
         private static void Send(byte kind, Live l, ulong to)
@@ -109,25 +133,46 @@ namespace DarkwoodMP.World
                 l.Armed = ArmedOf(l.Go);
                 w.W.Write(l.Armed);
             }
-            if (to == 0) _session.Broadcast(w, Channel.Control, reliable: true);
-            else _session.SendTo(to, w, Channel.Control, reliable: true);
+            if (to == 0)
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                _session.SendTo(to, w, Channel.Control, reliable: true);
+            }
         }
 
         /// <summary>Host: a player came in; it gets the night's objects that are still there.</summary>
         private static void SendLiveTo(ulong peer)
         {
-            if (!Hosting) return;
+            if (!Hosting)
+            {
+                return;
+            }
             _live.RemoveAll(l => l.Go == null);
-            foreach (var l in _live) Send(MadeBefore, l, peer);
-            if (WorldActions.Debug && _live.Count > 0) Plugin.Log.LogInfo($"[world] sent {_live.Count} night objects to #{peer} (made before it came)");
+            foreach (var l in _live)
+            {
+                Send(MadeBefore, l, peer);
+            }
+            if (WorldActions.Debug && _live.Count > 0)
+            {
+                Plugin.Log.LogInfo($"[world] sent {_live.Count} night objects to #{peer} (made before it came)");
+            }
         }
 
         public static void Update()
         {
-            if (_session == null) return;
+            if (_session == null)
+            {
+                return;
+            }
             if (_session.IsHost)
             {
-                if (_live.Count == 0 || Time.unscaledTime < _nextCheck) return;
+                if (_live.Count == 0 || Time.unscaledTime < _nextCheck)
+                {
+                    return;
+                }
                 _nextCheck = Time.unscaledTime + 1f;
                 for (int i = _live.Count - 1; i >= 0; i--)
                 {
@@ -137,22 +182,37 @@ namespace DarkwoodMP.World
                         if (HostSharing && _live[i].Armed != 255 && ArmedOf(_live[i].Go) != _live[i].Armed)
                         {
                             Send(Made, _live[i], 0);
-                            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] night object {_live[i].Name} #{_live[i].Id}: its trap armed {_live[i].Armed == 1} now, sent");
+                            if (WorldActions.Debug)
+                            {
+                                Plugin.Log.LogInfo($"[world] night object {_live[i].Name} #{_live[i].Id}: its trap armed {_live[i].Armed == 1} now, sent");
+                            }
                         }
                         continue;
                     }
-                    if (HostSharing) Send(Gone, _live[i], 0);
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] night object {_live[i].Name} #{_live[i].Id} is gone");
+                    if (HostSharing)
+                    {
+                        Send(Gone, _live[i], 0);
+                    }
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] night object {_live[i].Name} #{_live[i].Id} is gone");
+                    }
                     _live.RemoveAt(i);
                 }
             }
             for (int i = _rearm.Count - 1; i >= 0; i--)
             {
-                if (Time.unscaledTime < _rearm[i].at) continue;
+                if (Time.unscaledTime < _rearm[i].at)
+                {
+                    continue;
+                }
                 var trap = _rearm[i].go != null ? _rearm[i].go.GetComponent<Trigger>() : null;
                 if (trap != null && trap.active != (_rearm[i].armed == 1))
                 {
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] night object {trap.name}: its trap armed {_rearm[i].armed == 1} again, as the host's");
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] night object {trap.name}: its trap armed {_rearm[i].armed == 1} again, as the host's");
+                    }
                     trap.active = _rearm[i].armed == 1;
                 }
                 _rearm.RemoveAt(i);
@@ -161,7 +221,10 @@ namespace DarkwoodMP.World
             {
                 var list = _incoming.ToList();
                 _incoming.Clear();
-                foreach (var m in list) Apply(m.kind, m.id, m.tag, m.pos, m.rot, m.parent);
+                foreach (var m in list)
+                {
+                    Apply(m.kind, m.id, m.tag, m.pos, m.rot, m.parent);
+                }
             }
         }
 
@@ -169,7 +232,10 @@ namespace DarkwoodMP.World
 
         private static void OnMessage(ulong from, PacketReader r)
         {
-            if (_session.IsHost || from != _session.HostId) return;
+            if (_session.IsHost || from != _session.HostId)
+            {
+                return;
+            }
             byte kind = r.R.ReadByte();
             long id = r.R.ReadInt64();
             Tag tag = null; Vector3 pos = default; Quaternion rot = Quaternion.identity; ObjRef parent = default;
@@ -182,8 +248,14 @@ namespace DarkwoodMP.World
                 tag.Armed = r.R.ReadByte();
             }
             // While our world loads (a player let in), they wait for it.
-            if (WorldShare.WorldReady && NetEnemies.ClientMode) Apply(kind, id, tag, pos, rot, parent);
-            else _incoming.Add((kind, id, tag, pos, rot, parent));
+            if (WorldShare.WorldReady && NetEnemies.ClientMode)
+            {
+                Apply(kind, id, tag, pos, rot, parent);
+            }
+            else
+            {
+                _incoming.Add((kind, id, tag, pos, rot, parent));
+            }
         }
 
         private static void Apply(byte kind, long id, Tag tag, Vector3 pos, Quaternion rot, ObjRef parent)
@@ -197,7 +269,10 @@ namespace DarkwoodMP.World
                     try { Object.Destroy(have); }
                     finally { WorldActions.Replaying = false; }
                 }
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] night object #{id} gone (the host's)");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] night object #{id} gone (the host's)");
+                }
                 return;
             }
             if (have != null) { Arm(have, tag.Armed); return; } // made already: only its trap's state
@@ -209,17 +284,26 @@ namespace DarkwoodMP.World
                 var sm = Singleton<SaveManager>.Instance;
                 GameObject best = null; float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
                 if (sm != null)
+                {
                     foreach (var t in sm.dynamicObjects)
                     {
-                        if (t == null || t.name != prefab.name || ObjRef.Of(t.gameObject).K == ObjRef.Kind.Spawned) continue;
+                        if (t == null || t.name != prefab.name || ObjRef.Of(t.gameObject).K == ObjRef.Kind.Spawned)
+                        {
+                            continue;
+                        }
                         float d = (t.position - pos).sqrMagnitude;
-                        if (d < bestD) { bestD = d; best = t.gameObject; }
+                        if (d < bestD)
+                        { bestD = d; best = t.gameObject; }
                     }
+                }
                 if (best != null)
                 {
                     ObjRef.RegisterSpawned(id, best);
                     Arm(best, tag.Armed);
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] night object {best.name} #{id}: ours from the save");
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] night object {best.name} #{id}: ours from the save");
+                    }
                     return;
                 }
             }
@@ -234,13 +318,25 @@ namespace DarkwoodMP.World
                     ObjRef.RegisterSpawned(id, go);
                     Arm(go, tag.Armed);
                     var loc = under != null ? go.transform.GetLocation() : null;
-                    if (loc != null) loc.addToObjects(go); // as GameEvent.fire does
-                    else Singleton<WorldGrid>.Instance?.registerToNode(go);
+                    if (loc != null)
+                    {
+                        loc.addToObjects(go); // as GameEvent.fire does
+                    }
+                    else
+                    {
+                        Singleton<WorldGrid>.Instance?.registerToNode(go);
+                    }
                 }
             }
             finally { WorldActions.Replaying = false; }
-            if (go == null) return;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{(kind == MadeBefore ? " (made before we came)" : "")}");
+            if (go == null)
+            {
+                return;
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{(kind == MadeBefore ? " (made before we came)" : "")}");
+            }
         }
 
         /// <summary>Whether its Trigger (a mushroom is one) is armed: 1 yes, 0 no, 255 it has none.</summary>
@@ -253,7 +349,10 @@ namespace DarkwoodMP.World
         private static void Arm(GameObject go, byte armed)
         {
             var trap = armed != 255 ? go.GetComponent<Trigger>() : null;
-            if (trap == null) return;
+            if (trap == null)
+            {
+                return;
+            }
             trap.active = armed == 1;
             // And again once its own Start has run. Only the newest state is kept: a "made before" (not armed yet)
             // and the host's "armed now" can come within the same second, and the older one must not win.
@@ -267,11 +366,26 @@ namespace DarkwoodMP.World
             var sc = ns != null ? ns.getScenario(tag.Scenario) : null;
             var ev = sc != null ? WorldEvents.FindEvent(sc, tag.Event) : null;
             if (ev == null && ns != null)
-                foreach (var other in ns.scenarios) { ev = other != null ? WorldEvents.FindEvent(other, tag.Event) : null; if (ev != null) break; }
+            {
+                foreach (var other in ns.scenarios)
+                {
+                    ev = other != null ? WorldEvents.FindEvent(other, tag.Event) : null;
+                    if (ev != null)
+                    {
+                        break;
+                    }
+                }
+            }
             var re = ev != null ? ev.theEvent : null;
-            if (re == null || tag.Group >= re.gameEvents.Count || re.gameEvents[tag.Group] == null) return null;
+            if (re == null || tag.Group >= re.gameEvents.Count || re.gameEvents[tag.Group] == null)
+            {
+                return null;
+            }
             var steps = re.gameEvents[tag.Group].events;
-            if (tag.Step >= steps.Count || steps[tag.Step] == null || steps[tag.Step].targetTransform == null) return null;
+            if (tag.Step >= steps.Count || steps[tag.Step] == null || steps[tag.Step].targetTransform == null)
+            {
+                return null;
+            }
             return steps[tag.Step].targetTransform.gameObject;
         }
     }
@@ -293,23 +407,32 @@ namespace DarkwoodMP.World
         static IEnumerable<MethodBase> TargetMethods()
         {
             foreach (var t in typeof(GameEvent).GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public))
+            {
                 if (t.Name.StartsWith("<fire>") && typeof(System.Collections.IEnumerator).IsAssignableFrom(t))
                 {
                     var m = AccessTools.Method(t, "MoveNext");
                     var f = AccessTools.Field(t, "<>4__this");
-                    if (m != null && f != null) { _this[t] = f; yield return m; }
+                    if (m != null && f != null)
+                    { _this[t] = f; yield return m; }
                 }
+            }
         }
 
         static void Prefix(object __instance, out bool __state)
         {
             __state = _this.TryGetValue(__instance.GetType(), out var f);
-            if (__state) NightObjects.Steps.Push(f.GetValue(__instance) as GameEvent);
+            if (__state)
+            {
+                NightObjects.Steps.Push(f.GetValue(__instance) as GameEvent);
+            }
         }
 
         static System.Exception Finalizer(bool __state, System.Exception __exception)
         {
-            if (__state && NightObjects.Steps.Count > 0) NightObjects.Steps.Pop();
+            if (__state && NightObjects.Steps.Count > 0)
+            {
+                NightObjects.Steps.Pop();
+            }
             return __exception;
         }
     }

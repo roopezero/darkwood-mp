@@ -24,7 +24,12 @@ namespace DarkwoodMP.World
         {
             int n = 0;
             foreach (var c in Object.FindObjectsOfType<Character>())
-                if (NetEnemies.Eligible(c) && c.alive && c.gameObject.activeInHierarchy && (c.transform.position - at).sqrMagnitude < 1500f * 1500f) n++;
+            {
+                if (NetEnemies.Eligible(c) && c.alive && c.gameObject.activeInHierarchy && (c.transform.position - at).sqrMagnitude < 1500f * 1500f)
+                {
+                    n++;
+                }
+            }
             return n;
         }
 
@@ -34,9 +39,15 @@ namespace DarkwoodMP.World
             Item best = null; float bestD = 500f * 500f;
             foreach (var it in Object.FindObjectsOfType<Item>())
             {
-                if (!it.draggable || it.isDroppedItem || !it.gameObject.activeInHierarchy) continue;
+                if (!it.draggable || it.isDroppedItem || !it.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
                 var b = it.GetComponent<Rigidbody>();
-                if (b == null || b.isKinematic) continue;
+                if (b == null || b.isKinematic)
+                {
+                    continue;
+                }
                 float d = (it.transform.position - me).sqrMagnitude;
                 if (d < bestD) { bestD = d; best = it; }
             }
@@ -55,10 +66,16 @@ namespace DarkwoodMP.World
 
         public static IEnumerator Run()
         {
-            while (!WorldShare.InWorld || PlayerSync.Instance == null || !PlayerSync.Instance.HasDummy) yield return null;
+            while (!WorldShare.InWorld || PlayerSync.Instance == null || !PlayerSync.Instance.HasDummy)
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(6f);
             float wait = Time.realtimeSinceStartup + 30f;
-            while (!WorldActions.Sharing && Time.realtimeSinceStartup < wait) yield return null;
+            while (!WorldActions.Sharing && Time.realtimeSinceStartup < wait)
+            {
+                yield return null;
+            }
             yield return Push();
             var dummy = PlayerSync.Instance.Remotes[PlayerSync.DummyId];
             var o = Singleton<OutsideLocations>.Instance;
@@ -90,7 +107,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             // The observer (worldobs.py --ask-location) asked where a location stands: it's loaded here too, without going there.
             wait = Time.realtimeSinceStartup + 60f;
-            while ((Locations.Busy || Locations.LoadedForOthers == 0) && Time.realtimeSinceStartup < wait) yield return null;
+            while ((Locations.Busy || Locations.LoadedForOthers == 0) && Time.realtimeSinceStartup < wait)
+            {
+                yield return null;
+            }
             Plugin.Log.LogInfo($"--dwmp-test-away: locations loaded for the others: {Locations.LoadedForOthers}; our player is in {(PlayerCapture.LocalAway() ? Locations.Current() : "the world")}");
             Plugin.Log.LogInfo($"--dwmp-test-away: back in {grid.currentGrid?.name} (away {PlayerCapture.LocalAway()}); {ActiveNear(at)} enemies active near the dummy; " +
                                $"its puppet shown: {dummy.Root != null && dummy.Root.activeSelf}; done");

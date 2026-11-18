@@ -75,7 +75,10 @@ namespace DarkwoodMP
 
         public void Close()
         {
-            if (!Open) return;
+            if (!Open)
+            {
+                return;
+            }
             Open = false;
             OnClose?.Invoke();
         }
@@ -85,11 +88,16 @@ namespace DarkwoodMP
 
         public void OnGUI()
         {
-            if (!Open) return;
+            if (!Open)
+            {
+                return;
+            }
             var screen = new Vector2Int(Screen.width, Screen.height);
             if (_placedFor != screen) { Rect = DefaultRect(); _placedFor = screen; _scroll = Vector2.zero; _userSized = false; _fitHeight = 0; }
             if (FitContent && !_userSized && _fitHeight > 0 && Event.current.type == EventType.Layout)
+            {
                 Rect.height = Mathf.Min(_fitHeight, Screen.height - 16 * S);
+            }
             HandleResize();
             HandleDrag();
             Rect = Modal ? GUI.ModalWindow(Id, Rect, Draw, GUIContent.none, MenuSkin.Window) : GUI.Window(Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
@@ -120,12 +128,26 @@ namespace DarkwoodMP
                 e.Use();
                 return;
             }
-            if (!_resizing) return;
-            if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp || Released()) { _resizing = false; if (e.isMouse) e.Use(); return; }
+            if (!_resizing)
+            {
+                return;
+            }
+            if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp || Released())
+            {
+                _resizing = false;
+                if (e.isMouse)
+                {
+                    e.Use();
+                }
+                return;
+            }
             var size = _sizeFrom + (MouseNow() - _resizeFrom);
             Rect.width = Mathf.Clamp(size.x, MinSize.x * S, Screen.width - Rect.x);
             Rect.height = Mathf.Clamp(size.y, MinSize.y * S, Screen.height - Rect.y);
-            if (e.type == EventType.MouseDrag) e.Use();
+            if (e.type == EventType.MouseDrag)
+            {
+                e.Use();
+            }
         }
 
         /// <summary>
@@ -139,10 +161,24 @@ namespace DarkwoodMP
         private void HandleDrag()
         {
             var e = Event.current;
-            if (!_dragging) return;
-            if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp || Released()) { _dragging = false; if (e.isMouse) e.Use(); return; }
+            if (!_dragging)
+            {
+                return;
+            }
+            if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp || Released())
+            {
+                _dragging = false;
+                if (e.isMouse)
+                {
+                    e.Use();
+                }
+                return;
+            }
             Rect.position = _placeFrom + (MouseNow() - _dragFrom);
-            if (e.type == EventType.MouseDrag) e.Use();
+            if (e.type == EventType.MouseDrag)
+            {
+                e.Use();
+            }
         }
 
         private void Clamp()
@@ -156,14 +192,23 @@ namespace DarkwoodMP
         private void Draw(int id)
         {
             float w = Rect.width, h = Rect.height;
-            if (Overlay != null && Event.current.type != EventType.Repaint) Overlay();
+            if (Overlay != null && Event.current.type != EventType.Repaint)
+            {
+                Overlay();
+            }
             // Title bar, with the close box at its right end.
             var bar = new Rect(2, 2, w - 4, TitleH);
             GUI.Box(bar, GUIContent.none, MenuSkin.TitleBar);
             PixelFont.Draw(new Rect(bar.x + Pad, bar.y, bar.width - 2 * Pad, bar.height), Title.ToUpperInvariant(), MenuSkin.Bright, TextAnchor.MiddleLeft, PixelFont.Kind.Title);
             float cb = TitleH - 8 * S;
-            if (Ui.Button(new Rect(bar.xMax - cb - 4 * S, bar.y + 4 * S, cb, cb), "x")) Close();
-            if (!Open) return;
+            if (Ui.Button(new Rect(bar.xMax - cb - 4 * S, bar.y + 4 * S, cb, cb), "x"))
+            {
+                Close();
+            }
+            if (!Open)
+            {
+                return;
+            }
             // A press on the title bar (the close box has taken its own) starts a move, followed in HandleDrag.
             var ev = Event.current;
             if (ev.type == EventType.MouseDown && ev.button == 0 && new Rect(0, 0, w, TitleH + 2).Contains(ev.mousePosition))
@@ -176,7 +221,10 @@ namespace DarkwoodMP
             var body = new Rect(Pad, bar.yMax + Pad, w - 2 * Pad, h - bar.yMax - 2 * Pad - (footer > 0 ? footer + Pad : 0));
             // Whether it scrolls is decided once a frame, on Layout, so the Repaint after it can't differ: a scrollbar
             // that came and went within a frame narrowed the body, re-wrapped its text and pushed everything aside.
-            if (Event.current.type == EventType.Layout) _scrolls = _contentHeight > body.height + 1;
+            if (Event.current.type == EventType.Layout)
+            {
+                _scrolls = _contentHeight > body.height + 1;
+            }
             bool scrolls = _scrolls;
             float inner = body.width - (scrolls ? 12 * S : 0);
             _scroll = GUI.BeginScrollView(body, _scroll, new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)), false, false, GUIStyle.none, scrolls ? GUI.skin.verticalScrollbar : GUIStyle.none);
@@ -188,7 +236,10 @@ namespace DarkwoodMP
                 _fitHeight = bar.yMax + 2 * Pad + flow.Y + (footer > 0 ? footer + Pad : 0) + 2;
             }
             GUI.EndScrollView();
-            if (footer > 0) Footer(new Rect(Pad, h - Pad - footer, w - 2 * Pad - Grip * 0.5f, footer));
+            if (footer > 0)
+            {
+                Footer(new Rect(Pad, h - Pad - footer, w - 2 * Pad - Grip * 0.5f, footer));
+            }
 
             // The grip: three short diagonal lines.
             if (Event.current.type == EventType.Repaint)
@@ -197,10 +248,15 @@ namespace DarkwoodMP
                 {
                     float o = i * 3 * S;
                     for (int j = 0; j < (int)o; j += (int)S)
+                    {
                         GUI.DrawTexture(new Rect(w - 3 * S - o + j, h - 3 * S - j - S, S, S), MenuSkin.Line.normal.background);
+                    }
                 }
             }
-            if (Overlay != null && Event.current.type == EventType.Repaint) Overlay();
+            if (Overlay != null && Event.current.type == EventType.Repaint)
+            {
+                Overlay();
+            }
         }
     }
 
@@ -240,7 +296,17 @@ namespace DarkwoodMP
         public static Rect[] Split(Rect r, params float[] widths)
         {
             float gap = 4 * S, fixedW = 0; int flex = 0;
-            foreach (var w in widths) { if (w > 0) fixedW += w * S; else flex++; }
+            foreach (var w in widths)
+            {
+                if (w > 0)
+                {
+                    fixedW += w * S;
+                }
+                else
+                {
+                    flex++;
+                }
+            }
             float flexW = flex > 0 ? Mathf.Max(0, (r.width - fixedW - gap * (widths.Length - 1)) / flex) : 0;
             var rects = new Rect[widths.Length];
             float x = r.x;
@@ -284,7 +350,10 @@ namespace DarkwoodMP
         {
             bool hover = enabled && r.Contains(Event.current.mousePosition);
             bool clicked;
-            if (enabled) clicked = GUI.Button(r, GUIContent.none, MenuSkin.Button);
+            if (enabled)
+            {
+                clicked = GUI.Button(r, GUIContent.none, MenuSkin.Button);
+            }
             else { GUI.Box(r, GUIContent.none, MenuSkin.Button); clicked = false; }
             bool down = enabled && GUIUtility.hotControl != 0 && hover && Input.GetMouseButton(0);
             var tr = down ? new Rect(r.x + S, r.y + S, r.width, r.height) : r;
@@ -306,7 +375,10 @@ namespace DarkwoodMP
 
         public static string Field(Rect r, string value, int max, bool password = false, string name = null)
         {
-            if (name != null) GUI.SetNextControlName(name);
+            if (name != null)
+            {
+                GUI.SetNextControlName(name);
+            }
             return password ? GUI.PasswordField(r, value ?? "", '*', max, MenuSkin.Field) : GUI.TextField(r, value ?? "", max, MenuSkin.Field);
         }
 
@@ -324,9 +396,15 @@ namespace DarkwoodMP
             float box = PixelFont.Line - 2 * S;
             var b = new Rect(r.x, r.y + (r.height - box) / 2, box, box);
             bool hover = enabled && r.Contains(Event.current.mousePosition);
-            if (enabled && GUI.Button(r, GUIContent.none, MenuSkin.Plain)) on = !on;
+            if (enabled && GUI.Button(r, GUIContent.none, MenuSkin.Plain))
+            {
+                on = !on;
+            }
             GUI.Box(b, GUIContent.none, MenuSkin.Sunken);
-            if (on) GUI.Box(new Rect(b.x + 3 * S, b.y + 3 * S, b.width - 6 * S, b.height - 6 * S), GUIContent.none, MenuSkin.Line);
+            if (on)
+            {
+                GUI.Box(new Rect(b.x + 3 * S, b.y + 3 * S, b.width - 6 * S, b.height - 6 * S), GUIContent.none, MenuSkin.Line);
+            }
             Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text);
             return on;
         }

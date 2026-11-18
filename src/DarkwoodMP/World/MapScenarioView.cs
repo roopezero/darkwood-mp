@@ -63,19 +63,32 @@ namespace DarkwoodMP.World
             int n = 0;
             foreach (var ets in Object.FindObjectsOfType<EventTriggers>(true))
             {
-                if (ets == null || !ets.gameObject.scene.IsValid()) continue;
+                if (ets == null || !ets.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
                 foreach (var et in ets.eventTriggers)
                 {
-                    if (et == null || et.type != global::EventTrigger.Type.area || !et.multipleFire) continue;
+                    if (et == null || et.type != global::EventTrigger.Type.area || !et.multipleFire)
+                    {
+                        continue;
+                    }
                     n++;
                     foreach (var (label, ge) in new[] { ("enter", et.gameEvents), ("exit", et.gameEventsExit) })
+                    {
                         if (ge != null)
+                        {
                             foreach (var e in ge.events)
                             {
-                                if (e == null || e.disabled) continue;
+                                if (e == null || e.disabled)
+                                {
+                                    continue;
+                                }
                                 string k = $"{label} {e.type}{(e.type == GameEvent.Type.runFunction || e.type == GameEvent.Type.fireEvent ? " " + e.Value : "")}";
                                 count[k] = count.TryGetValue(k, out int c) ? c + 1 : 1;
                             }
+                        }
+                    }
                 }
             }
             yield return null;
@@ -111,11 +124,18 @@ namespace DarkwoodMP.World
         /// <summary>The colours (alpha last) of the sprites named so near the mark: "spot_black a0.00 ...".</summary>
         internal static string ColorsNow(string[] names)
         {
-            if (_mark == null) return "no mark";
+            if (_mark == null)
+            {
+                return "no mark";
+            }
             var parts = new List<string>();
             foreach (var s in Object.FindObjectsOfType<tk2dBaseSprite>(true))
+            {
                 if (s != null && names.Contains(s.name) && StateDump.Flat(s.transform.position - _mark.Value) < 1500f)
+                {
                     parts.Add($"{s.name} rgb {s.color.r:0.00},{s.color.g:0.00},{s.color.b:0.00} a{s.color.a:0.00}{(s.gameObject.activeInHierarchy ? "" : " (off)")}");
+                }
+            }
             return parts.Count == 0 ? "none" : string.Join(", ", parts);
         }
 
@@ -123,12 +143,19 @@ namespace DarkwoodMP.World
         private static string AreasNow()
         {
             var p = Player.Instance;
-            if (_mark == null || p == null) return "no mark";
+            if (_mark == null || p == null)
+            {
+                return "no mark";
+            }
             var parts = new List<string>();
             foreach (var et in Object.FindObjectsOfType<EventTriggers>())
+            {
                 if (et != null && et.reactsToPlayer && StateDump.Flat(et.transform.position - _mark.Value) < 700f
                     && et.eventTriggers.Exists(t => t != null && t.type == global::EventTrigger.Type.area))
+                {
                     parts.Add($"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
+                }
+            }
             return parts.Count == 0 ? "none" : string.Join("; ", parts);
         }
 
@@ -145,9 +172,15 @@ namespace DarkwoodMP.World
                 .Select(s => s.gameObject.activeInHierarchy ? s.color.a : 0f).DefaultIfEmpty(0f).Max();
             bool Ok() => want == null || (want == "dark" ? Alpha() > 0.5f : Alpha() < 0.1f);
             float until = Time.realtimeSinceStartup + (want == null ? 0f : 16f);
-            while (!Ok() && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.25f);
+            while (!Ok() && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
             r.Info = $"{Me()} {StateDump.Flat(Player.Instance.transform.position - (_mark ?? Vector3.zero)):0} from the mark: {ColorsNow(names)}";
-            if (!Ok()) r.Fail($"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
+            if (!Ok())
+            {
+                r.Fail($"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
+            }
         }
 
         private static IEnumerator Tree(string[] a, Result r)
@@ -157,7 +190,12 @@ namespace DarkwoodMP.World
             if (i >= list.Count) { r.Fail("not found"); yield break; }
             var root = list[i].transform;
             if (a.Length < 3 || a[2] != "self")
-                while (root.parent != null && root.parent.name != "WorldChunks" && root.parent.name != "WorldChunk") root = root.parent;
+            {
+                while (root.parent != null && root.parent.name != "WorldChunks" && root.parent.name != "WorldChunk")
+                {
+                    root = root.parent;
+                }
+            }
             var sb = new System.Text.StringBuilder();
             void Walk(Transform t, int depth)
             {
@@ -165,18 +203,34 @@ namespace DarkwoodMP.World
                 var so = t.GetComponent<SaveableObject>();
                 sb.Append($"\n{new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} layer={t.gameObject.layer} at {Fmt(t.position)} y {t.position.y:0}{(so != null ? $" saved={so.Active}" : "")} [{comps}]");
                 foreach (var c in t.GetComponents<Collider>())
+                {
                     sb.Append($" col:{c.GetType().Name}{(c.isTrigger ? "/trigger" : "")}{(c.enabled ? "" : "/off")} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
+                }
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
+                {
                     foreach (var et in ets.eventTriggers)
                     {
                         sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{(et.disabled ? " disabled" : "")}");
                         foreach (var (label, ge) in new[] { ("do", et.gameEvents), ("exit", et.gameEventsExit), ("else", et.gameEventsElse) })
+                        {
                             if (ge != null)
+                            {
                                 foreach (var e in ge.events)
-                                    if (e != null) sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{string.Join(",", (e.targetGameObjects ?? new List<GameObject>()).Select(g => g == null ? "null" : g.name))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}] fromParent={e.getTargetGameObjectsFromParent}{(e.disabled ? " disabled" : "")}");
+                                {
+                                    if (e != null)
+                                    {
+                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{string.Join(",", (e.targetGameObjects ?? new List<GameObject>()).Select(g => g == null ? "null" : g.name))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}] fromParent={e.getTargetGameObjectsFromParent}{(e.disabled ? " disabled" : "")}");
+                                    }
+                                }
+                            }
+                        }
                     }
-                foreach (Transform c in t) Walk(c, depth + 1);
+                }
+                foreach (Transform c in t)
+                {
+                    Walk(c, depth + 1);
+                }
             }
             Walk(root, 0);
             Plugin.Log.LogInfo($"[view] vw-tree {root.name}:{sb}");
@@ -189,7 +243,10 @@ namespace DarkwoodMP.World
         private static string Me()
         {
             var s = Session.Instance;
-            if (s == null || s.IsHost) return "host";
+            if (s == null || s.IsHost)
+            {
+                return "host";
+            }
             string n = s.LocalName ?? "";
             return n.StartsWith("Client") ? "c" + n.Substring(6) : n;
         }
@@ -243,7 +300,10 @@ namespace DarkwoodMP.World
         private static Vector3 Back()
         {
             var d = Centre - _mark.Value; d.y = 0f;
-            if (d.sqrMagnitude < 1f) d = Vector3.right;
+            if (d.sqrMagnitude < 1f)
+            {
+                d = Vector3.right;
+            }
             return d.normalized;
         }
 
@@ -257,10 +317,16 @@ namespace DarkwoodMP.World
             foreach (var kv in parts.Skip(1).SelectMany(x => x.Split(',')))
             {
                 var p = kv.Split('=');
-                if (p.Length != 2 || p[0] != me) continue;
+                if (p.Length != 2 || p[0] != me)
+                {
+                    continue;
+                }
                 var gs = p[1].Split('/');
                 gap = F(gs[0]);
-                if (gs.Length > 1) side = F(gs[1]);
+                if (gs.Length > 1)
+                {
+                    side = F(gs[1]);
+                }
             }
             var back = Back();
             var right = new Vector3(back.z, 0f, -back.x);
@@ -275,7 +341,10 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var d = at - p.transform.position; d.y = 0f;
-            if (d.sqrMagnitude > 1f) p.transform.rotation = Quaternion.LookRotation(Vector3.down, d.normalized);
+            if (d.sqrMagnitude > 1f)
+            {
+                p.transform.rotation = Quaternion.LookRotation(Vector3.down, d.normalized);
+            }
         }
 
         /// <summary>What happened to our view on the way.</summary>
@@ -292,7 +361,10 @@ namespace DarkwoodMP.World
             {
                 var p = Player.Instance;
                 var light = p != null ? FovLight(p) : null;
-                if (light == null || Time.timeScale == 0f) return;
+                if (light == null || Time.timeScale == 0f)
+                {
+                    return;
+                }
                 Frames++;
                 var mr = light.GetComponent<MeshRenderer>();
                 if (light.gameObject.activeInHierarchy && mr != null && !mr.enabled)
@@ -300,20 +372,35 @@ namespace DarkwoodMP.World
                     Dark++;
                     foreach (var h in Physics.RaycastAll(light.transform.position + new Vector3(0f, 100f, 0f), Vector3.down, 200f, Sync.ViewWatch.HideMask))
                     {
-                        if (h.collider == null) continue;
+                        if (h.collider == null)
+                        {
+                            continue;
+                        }
                         string k = Sync.ViewWatch.Path(h.collider.transform) + $" [layer {h.collider.gameObject.layer}]";
                         DarkBy[k] = DarkBy.TryGetValue(k, out int n) ? n + 1 : 1;
-                        if (IsOurs(h.collider) || IsGhost(h.collider)) BadDark.Add(k);
+                        if (IsOurs(h.collider) || IsGhost(h.collider))
+                        {
+                            BadDark.Add(k);
+                        }
                     }
                 }
                 // A light switched off isn't redrawn (Light2D.LateUpdate returns first), so its mesh is the one from
                 // before: walking straight through scenery a player can't cross (roots) switches it off, as alone.
-                if (!audit || (mr != null && !mr.enabled)) return;
+                if (!audit || (mr != null && !mr.enabled))
+                {
+                    return;
+                }
                 Audits++;
                 float m = Mismatch(light, out _);
                 if (m > WorstMismatch) { WorstMismatch = m; WorstAt = Fmt(p.transform.position); }
-                if (m > MaxMismatch) BadAudits++;
-                foreach (var g in GhostBlockers(light)) Ghosts.Add(g);
+                if (m > MaxMismatch)
+                {
+                    BadAudits++;
+                }
+                foreach (var g in GhostBlockers(light))
+                {
+                    Ghosts.Add(g);
+                }
             }
 
             public override string ToString() =>
@@ -323,9 +410,18 @@ namespace DarkwoodMP.World
 
             public string Problem()
             {
-                if (BadDark.Count > 0) return $"our view went black over something only co-op put there: {string.Join("; ", BadDark)}";
-                if (BadAudits > 0) return $"our view cone wasn't worked out where we stand ({BadAudits} of {Audits} audits)";
-                if (Ghosts.Count > 0) return $"something switched off cuts our view: {string.Join("; ", Ghosts)}";
+                if (BadDark.Count > 0)
+                {
+                    return $"our view went black over something only co-op put there: {string.Join("; ", BadDark)}";
+                }
+                if (BadAudits > 0)
+                {
+                    return $"our view cone wasn't worked out where we stand ({BadAudits} of {Audits} audits)";
+                }
+                if (Ghosts.Count > 0)
+                {
+                    return $"something switched off cuts our view: {string.Join("; ", Ghosts)}";
+                }
                 return null;
             }
         }
@@ -357,7 +453,10 @@ namespace DarkwoodMP.World
                 Face(p.transform.position + dir * 100f);
                 yield return eof;
                 bool audit = Time.time >= nextAudit;
-                if (audit) nextAudit = Time.time + 0.5f;
+                if (audit)
+                {
+                    nextAudit = Time.time + 0.5f;
+                }
                 w.Frame(audit);
             }
             // A moment at the end, standing still: the view settles where we arrived.
@@ -367,7 +466,10 @@ namespace DarkwoodMP.World
                      $"{StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
             Plugin.Log.LogInfo($"[view] vw-approach: {r.Info}");
             var bad = w.Problem();
-            if (bad != null) r.Fail($"{bad}; {r.Info}");
+            if (bad != null)
+            {
+                r.Fail($"{bad}; {r.Info}");
+            }
         }
 
         private static IEnumerator Check(string[] a, Result r)
@@ -382,7 +484,10 @@ namespace DarkwoodMP.World
             {
                 yield return eof;
                 bool audit = Time.time >= next;
-                if (audit) next = Time.time + 0.5f;
+                if (audit)
+                {
+                    next = Time.time + 0.5f;
+                }
                 w.Frame(audit);
             }
             if (a.Length > 1)
@@ -399,16 +504,31 @@ namespace DarkwoodMP.World
                      $"{MapScenarioLights.ViewSource()}; {w}";
             Plugin.Log.LogInfo($"[view] vw-check: {r.Info}");
             var bad = w.Problem();
-            if (bad == null && w.Dark > 0) bad = $"our view is black here (by {string.Join("; ", w.DarkBy.Keys)})";
-            if (bad == null && !MapScenarioLights.ViewSource().StartsWith("view: ours")) bad = "the view lights aren't our own";
-            if (bad != null) r.Fail($"{bad}; {r.Info}");
+            if (bad == null && w.Dark > 0)
+            {
+                bad = $"our view is black here (by {string.Join("; ", w.DarkBy.Keys)})";
+            }
+            if (bad == null && !MapScenarioLights.ViewSource().StartsWith("view: ours"))
+            {
+                bad = "the view lights aren't our own";
+            }
+            if (bad != null)
+            {
+                r.Fail($"{bad}; {r.Info}");
+            }
         }
 
         // ---- the checks -------------------------------------------------------------------------------------
 
         private static bool IsOurs(Collider c)
         {
-            for (var t = c.transform; t != null; t = t.parent) if (t.name.StartsWith("DarkwoodMP_")) return true;
+            for (var t = c.transform; t != null; t = t.parent)
+            {
+                if (t.name.StartsWith("DarkwoodMP_"))
+                {
+                    return true;
+                }
+            }
             return c.GetComponentInParent<Combat.NetPlayerProxy>() != null;
         }
 
@@ -419,12 +539,24 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool IsGhost(Collider c)
         {
-            if (c == null || !c.enabled || !c.gameObject.activeInHierarchy) return false;
-            for (var t = c.transform; t != null; t = t.parent) if (t.name == "OutsideLocations") return false;
+            if (c == null || !c.enabled || !c.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+            for (var t = c.transform; t != null; t = t.parent)
+            {
+                if (t.name == "OutsideLocations")
+                {
+                    return false;
+                }
+            }
             for (var t = c.transform; t != null; t = t.parent)
             {
                 var so = t.GetComponent<SaveableObject>();
-                if (so != null && !so.Active) return true;
+                if (so != null && !so.Active)
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -433,7 +565,12 @@ namespace DarkwoodMP.World
         {
             var list = new List<string>();
             foreach (var c in Physics.OverlapSphere(light.transform.position, light.LightRadius, light.ShadowLayer))
-                if (c != null && (IsGhost(c) || IsOurs(c))) list.Add($"{Sync.ViewWatch.Path(c.transform)} [layer {c.gameObject.layer}{(IsOurs(c) ? ", the mod's" : ", switched off in the save")}]");
+            {
+                if (c != null && (IsGhost(c) || IsOurs(c)))
+                {
+                    list.Add($"{Sync.ViewWatch.Path(c.transform)} [layer {c.gameObject.layer}{(IsOurs(c) ? ", the mod's" : ", switched off in the save")}]");
+                }
+            }
             return list;
         }
 
@@ -457,15 +594,24 @@ namespace DarkwoodMP.World
                 var wpt = light.transform.TransformPoint(verts[i]);
                 var d = wpt - o;
                 float dist = d.magnitude;
-                if (dist < 5f) continue;
+                if (dist < 5f)
+                {
+                    continue;
+                }
                 n++;
                 bool hit = Physics.Raycast(o, d / dist, out var h, R, light.ShadowLayer);
                 if (dist < R - 3f)
                 {
                     hits++;
-                    if (!hit || Mathf.Abs(h.distance - dist) > Mathf.Max(20f, dist * 0.15f)) bad++;
+                    if (!hit || Mathf.Abs(h.distance - dist) > Mathf.Max(20f, dist * 0.15f))
+                    {
+                        bad++;
+                    }
                 }
-                else if (hit && h.distance < R * 0.8f) bad++;
+                else if (hit && h.distance < R * 0.8f)
+                {
+                    bad++;
+                }
             }
             if (n == 0) { info = "empty"; return 0f; }
             float m = (float)bad / n;
@@ -478,7 +624,10 @@ namespace DarkwoodMP.World
         {
             var o = light.transform.position;
             var f = p.transform.up; f.y = 0f;
-            if (f.sqrMagnitude < 0.01f) return "no facing";
+            if (f.sqrMagnitude < 0.01f)
+            {
+                return "no facing";
+            }
             f.Normalize();
             float cone = Mathf.Clamp(light.LightConeAngle, 0f, 360f), R = light.LightRadius;
             float left = 0f, right = 0f; int nl = 0, nr = 0;

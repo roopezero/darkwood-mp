@@ -52,11 +52,17 @@ namespace DarkwoodMP.World
                 if (_tiers == null)
                 {
                     var menu = Singleton<SkillsMenu>.Instance;
-                    if (menu != null) _tiers = AccessTools.Field(typeof(SkillsMenu), "skillTiers").GetValue(menu) as SkillTiers;
+                    if (menu != null)
+                    {
+                        _tiers = AccessTools.Field(typeof(SkillsMenu), "skillTiers").GetValue(menu) as SkillTiers;
+                    }
                     if (_tiers == null)
                     {
                         var go = Resources.Load("SkillTiers") as GameObject;
-                        if (go != null) _tiers = go.GetComponent<SkillTiers>();
+                        if (go != null)
+                        {
+                            _tiers = go.GetComponent<SkillTiers>();
+                        }
                     }
                 }
                 return _tiers != null ? _tiers.tiers : null;
@@ -69,13 +75,28 @@ namespace DarkwoodMP.World
             tier = null;
             negative = false;
             var tiers = Tiers;
-            if (tiers == null || string.IsNullOrEmpty(name)) return null;
+            if (tiers == null || string.IsNullOrEmpty(name))
+            {
+                return null;
+            }
             foreach (var t in tiers)
             {
                 tier = t;
-                foreach (var sk in t.skills) if (sk != null && sk.name == name) return sk;
+                foreach (var sk in t.skills)
+                {
+                    if (sk != null && sk.name == name)
+                    {
+                        return sk;
+                    }
+                }
                 negative = true;
-                foreach (var sk in t.negativeSkills) if (sk != null && sk.name == name) return sk;
+                foreach (var sk in t.negativeSkills)
+                {
+                    if (sk != null && sk.name == name)
+                    {
+                        return sk;
+                    }
+                }
                 negative = false;
             }
             tier = null;
@@ -101,11 +122,26 @@ namespace DarkwoodMP.World
         {
             var set = new HashSet<string>();
             var tiers = Tiers;
-            if (tiers == null || p == null) return set;
+            if (tiers == null || p == null)
+            {
+                return set;
+            }
             foreach (var t in tiers)
             {
-                foreach (var sk in t.skills) if (sk != null && sk.chosen) set.Add(sk.name);
-                foreach (var sk in t.negativeSkills) if (sk != null && sk.chosen) set.Add(sk.name);
+                foreach (var sk in t.skills)
+                {
+                    if (sk != null && sk.chosen)
+                    {
+                        set.Add(sk.name);
+                    }
+                }
+                foreach (var sk in t.negativeSkills)
+                {
+                    if (sk != null && sk.chosen)
+                    {
+                        set.Add(sk.name);
+                    }
+                }
             }
             return set;
         }
@@ -113,7 +149,13 @@ namespace DarkwoodMP.World
         private static int Good(IEnumerable<string> chosen)
         {
             int n = 0;
-            foreach (var c in chosen) { if (TierOf(c, out bool neg) != null && !neg) n++; }
+            foreach (var c in chosen)
+            {
+                if (TierOf(c, out bool neg) != null && !neg)
+                {
+                    n++;
+                }
+            }
             return n;
         }
 
@@ -142,11 +184,26 @@ namespace DarkwoodMP.World
         public static string CantTake(int level, HashSet<string> chosen, string good)
         {
             var t = TierOf(good, out bool neg);
-            if (t == null || neg) return "there's no such skill";
-            if (chosen.Contains(good)) return "you have this skill already";
-            if (t.level > level) return $"this tier opens at level {t.level}";
-            if (GoodIn(t, chosen) >= 2) return "this tier's two skills are taken";
-            if (Points(level, chosen) <= 0) return "no skill points left: take a level at a stove";
+            if (t == null || neg)
+            {
+                return "there's no such skill";
+            }
+            if (chosen.Contains(good))
+            {
+                return "you have this skill already";
+            }
+            if (t.level > level)
+            {
+                return $"this tier opens at level {t.level}";
+            }
+            if (GoodIn(t, chosen) >= 2)
+            {
+                return "this tier's two skills are taken";
+            }
+            if (Points(level, chosen) <= 0)
+            {
+                return "no skill points left: take a level at a stove";
+            }
             return null;
         }
 
@@ -157,12 +214,30 @@ namespace DarkwoodMP.World
         public static string CantTakeNegative(int level, HashSet<string> chosen, string negative, string good = null)
         {
             var t = TierOf(negative, out bool neg);
-            if (t == null || !neg) return "there's no such negative skill";
-            if (chosen.Contains(negative)) return "you have this negative skill already";
-            if (t.level > level) return $"this tier opens at level {t.level}";
-            if (HasGood(t, chosen)) return "this tier's negative skill was taken with its first skill";
-            if (!TierNeedsNegative(t, chosen)) return "this tier's negative skill is taken";
-            if (good != null && TierOf(good, out _) != t) return "it goes with the first skill of its own tier";
+            if (t == null || !neg)
+            {
+                return "there's no such negative skill";
+            }
+            if (chosen.Contains(negative))
+            {
+                return "you have this negative skill already";
+            }
+            if (t.level > level)
+            {
+                return $"this tier opens at level {t.level}";
+            }
+            if (HasGood(t, chosen))
+            {
+                return "this tier's negative skill was taken with its first skill";
+            }
+            if (!TierNeedsNegative(t, chosen))
+            {
+                return "this tier's negative skill is taken";
+            }
+            if (good != null && TierOf(good, out _) != t)
+            {
+                return "it goes with the first skill of its own tier";
+            }
             return null;
         }
 
@@ -170,10 +245,19 @@ namespace DarkwoodMP.World
         public static string Check(int level, HashSet<string> chosen, string good, string negative)
         {
             string why = CantTake(level, chosen, good);
-            if (why != null) return why;
+            if (why != null)
+            {
+                return why;
+            }
             bool need = NeedsNegative(chosen, good);
-            if (string.IsNullOrEmpty(negative)) return need ? "a negative skill of its tier has to be taken with it" : null;
-            if (!need) return "no negative skill goes with this skill";
+            if (string.IsNullOrEmpty(negative))
+            {
+                return need ? "a negative skill of its tier has to be taken with it" : null;
+            }
+            if (!need)
+            {
+                return "no negative skill goes with this skill";
+            }
             return CantTakeNegative(level, chosen, negative, good);
         }
 
@@ -193,7 +277,10 @@ namespace DarkwoodMP.World
             var chosen = Chosen(p);
             int level = p.currentLevel;
             why = Check(level, chosen, good, negative);
-            if (why != null) return false;
+            if (why != null)
+            {
+                return false;
+            }
             var gs = Find(good);
             var ns = Find(negative);
             Give(gs, ns);
@@ -207,11 +294,17 @@ namespace DarkwoodMP.World
                 w.WriteStr(negative ?? "");
                 var had = chosen.ToList();
                 w.W.Write((byte)Math.Min(had.Count, 255));
-                for (int i = 0; i < had.Count && i < 255; i++) w.WriteStr(had[i]);
+                for (int i = 0; i < had.Count && i < 255; i++)
+                {
+                    w.WriteStr(had[i]);
+                }
                 Authority.Request(w, $"learn {good}", (ok, reason, _) =>
                 {
                     _waiting = false;
-                    if (ok) return;
+                    if (ok)
+                    {
+                        return;
+                    }
                     Take(gs); Take(ns);
                     Plugin.Log.LogInfo($"[skills] the host refused {good}: {reason}; taken back");
                     Player.Instance?.displayMessage(reason);
@@ -223,9 +316,15 @@ namespace DarkwoodMP.World
         private static void Give(PlayerSkill good, PlayerSkill negative)
         {
             var p = Player.Instance;
-            if (negative != null) negative.initialize(destBool: true);
+            if (negative != null)
+            {
+                negative.initialize(destBool: true);
+            }
             good.initialize(destBool: true);
-            if (good.isActivatedManually) Singleton<Flags>.Instance?.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+            if (good.isActivatedManually)
+            {
+                Singleton<Flags>.Instance?.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+            }
             p.skills.refreshAll();
             p.gainExp(0);
             try { AudioController.Play("UI_placeItem"); } catch { }
@@ -234,7 +333,10 @@ namespace DarkwoodMP.World
 
         private static void Take(PlayerSkill sk)
         {
-            if (sk == null || !sk.chosen) return;
+            if (sk == null || !sk.chosen)
+            {
+                return;
+            }
             sk.initialize(destBool: false);
             Player.Instance?.skills?.refreshAll();
         }
@@ -247,8 +349,14 @@ namespace DarkwoodMP.World
             string good = r.ReadStr(), negative = r.ReadStr();
             int n = r.R.ReadByte();
             var chosen = new HashSet<string>();
-            for (int i = 0; i < n; i++) chosen.Add(r.ReadStr());
-            if (!S.IsHost || !Authority.Handling) return;
+            for (int i = 0; i < n; i++)
+            {
+                chosen.Add(r.ReadStr());
+            }
+            if (!S.IsHost || !Authority.Handling)
+            {
+                return;
+            }
             if (Tiers == null) { Authority.Refuse("the host isn't in a world"); return; }
             int most = Progression.MostLevels(Player.Instance);
             if (level > most) { Authority.Refuse($"level {level} is more than the shared essence gives ({most})"); return; }
@@ -263,7 +371,10 @@ namespace DarkwoodMP.World
         internal static string Describe()
         {
             var tiers = Tiers;
-            if (tiers == null) return "no tiers";
+            if (tiers == null)
+            {
+                return "no tiers";
+            }
             var parts = new List<string>();
             for (int i = 0; i < tiers.Count; i++)
             {
@@ -278,7 +389,10 @@ namespace DarkwoodMP.World
         internal static string NegativesWrong(Player p)
         {
             var tiers = Tiers;
-            if (tiers == null || p == null) return null;
+            if (tiers == null || p == null)
+            {
+                return null;
+            }
             var chosen = Chosen(p);
             var wrong = new List<string>();
             for (int i = 0; i < tiers.Count; i++)
@@ -287,7 +401,9 @@ namespace DarkwoodMP.World
                 int negs = t.negativeSkills.Count(sk => sk != null && chosen.Contains(sk.name));
                 bool good = HasGood(t, chosen), owes = t.negativeSkills.Any(sk => sk != null);
                 if (negs > 1 || (good && owes && negs != 1) || (!good && negs > 0))
+                {
                     wrong.Add($"tier {TierName(i)}: {negs} negative skills with {GoodIn(t, chosen)} skills");
+                }
             }
             return wrong.Count > 0 ? string.Join(", ", wrong) : null;
         }
@@ -296,17 +412,33 @@ namespace DarkwoodMP.World
         internal static string[] AnyChoice(Player p)
         {
             var tiers = Tiers;
-            if (tiers == null || p == null) return null;
+            if (tiers == null || p == null)
+            {
+                return null;
+            }
             var chosen = Chosen(p);
             int level = p.currentLevel;
             foreach (var t in tiers)
+            {
                 foreach (var g in t.skills)
                 {
-                    if (g == null || CantTake(level, chosen, g.name) != null) continue;
-                    if (!NeedsNegative(chosen, g.name)) return new[] { g.name, null };
+                    if (g == null || CantTake(level, chosen, g.name) != null)
+                    {
+                        continue;
+                    }
+                    if (!NeedsNegative(chosen, g.name))
+                    {
+                        return new[] { g.name, null };
+                    }
                     foreach (var ng in t.negativeSkills)
-                        if (ng != null && Check(level, chosen, g.name, ng.name) == null) return new[] { g.name, ng.name };
+                    {
+                        if (ng != null && Check(level, chosen, g.name, ng.name) == null)
+                        {
+                            return new[] { g.name, ng.name };
+                        }
+                    }
                 }
+            }
             return null;
         }
     }

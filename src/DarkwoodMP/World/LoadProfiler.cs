@@ -44,18 +44,36 @@ namespace DarkwoodMP.World
             foreach (var name in TypeNames)
             {
                 var type = AccessTools.TypeByName(name);
-                if (type == null) continue;
+                if (type == null)
+                {
+                    continue;
+                }
                 var types = new List<Type> { type };
                 types.AddRange(type.GetNestedTypes(BindingFlags.NonPublic | BindingFlags.Public));
                 foreach (var t in types)
                 {
-                    if (t.IsGenericTypeDefinition) continue;
+                    if (t.IsGenericTypeDefinition)
+                    {
+                        continue;
+                    }
                     foreach (var m in t.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
                     {
-                        if (m.IsAbstract || m.IsGenericMethodDefinition || m.GetMethodBody() == null) continue;
-                        if (m.Name == "Update" || m.Name == "LateUpdate" || m.Name == "FixedUpdate" || m.Name == "OnGUI") continue;
-                        if (m.Name.StartsWith("get_") || m.Name.StartsWith("set_") || Hot.Contains(m.Name)) continue;
-                        if (t != type && t.Name.StartsWith("<>c") && type == typeof(AstarPath)) continue;
+                        if (m.IsAbstract || m.IsGenericMethodDefinition || m.GetMethodBody() == null)
+                        {
+                            continue;
+                        }
+                        if (m.Name == "Update" || m.Name == "LateUpdate" || m.Name == "FixedUpdate" || m.Name == "OnGUI")
+                        {
+                            continue;
+                        }
+                        if (m.Name.StartsWith("get_") || m.Name.StartsWith("set_") || Hot.Contains(m.Name))
+                        {
+                            continue;
+                        }
+                        if (t != type && t.Name.StartsWith("<>c") && type == typeof(AstarPath))
+                        {
+                            continue;
+                        }
                         try { harmony.Patch(m, prefix, postfix); n++; }
                         catch { }
                     }
@@ -66,10 +84,16 @@ namespace DarkwoodMP.World
 
         public static void Frame()
         {
-            if (!_on) return;
+            if (!_on)
+            {
+                return;
+            }
             float now = Time.realtimeSinceStartup;
             float ms = (now - _lastFrame) * 1000f;
-            if (_lastFrame > 0f && ms > 150f) _longFrames.Add((Time.frameCount, ms, now));
+            if (_lastFrame > 0f && ms > 150f)
+            {
+                _longFrames.Add((Time.frameCount, ms, now));
+            }
             _lastFrame = now;
         }
 
@@ -78,18 +102,31 @@ namespace DarkwoodMP.World
         private static void After(MethodBase __originalMethod, long __state)
         {
             double ms = (Stopwatch.GetTimestamp() - __state) * 1000.0 / Stopwatch.Frequency;
-            if (!_stats.TryGetValue(__originalMethod, out var s)) _stats[__originalMethod] = s = new Stat();
-            s.Total += ms; s.Calls++; if (ms > s.Max) s.Max = ms;
+            if (!_stats.TryGetValue(__originalMethod, out var s))
+            {
+                _stats[__originalMethod] = s = new Stat();
+            }
+            s.Total += ms; s.Calls++; if (ms > s.Max)
+            {
+                s.Max = ms;
+            }
         }
 
         public static void Report()
         {
-            if (!_on) return;
+            if (!_on)
+            {
+                return;
+            }
             Plugin.Log.LogInfo("[profile] slowest methods (inclusive: a method's time includes what it calls):");
             foreach (var kv in _stats.OrderByDescending(k => k.Value.Total).Take(60))
+            {
                 Plugin.Log.LogInfo($"[profile] {kv.Value.Total,9:0} ms total, {kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} calls  {kv.Key.DeclaringType?.FullName}.{kv.Key.Name}");
+            }
             foreach (var f in _longFrames.OrderByDescending(f => f.ms).Take(25))
+            {
                 Plugin.Log.LogInfo($"[profile] frame {f.frame} took {f.ms:0} ms (ended at {f.at:0.0} s)");
+            }
             Plugin.Log.LogInfo($"[profile] frames over 150 ms: {_longFrames.Count}, {_longFrames.Sum(f => f.ms) / 1000f:0.0} s in all");
         }
     }

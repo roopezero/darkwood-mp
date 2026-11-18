@@ -64,9 +64,18 @@ namespace DarkwoodMP.World
         /// <summary>Tie this game's object to an id the host gave out. False if either is tied to something else already.</summary>
         public static bool BindShared(long id, GameObject go)
         {
-            if (go == null) return false;
-            if (_shared.TryGetValue(id, out var had) && had != null && had != go) return false;
-            if (_sharedIds.TryGetValue(go, out long hadId) && hadId != id) return false;
+            if (go == null)
+            {
+                return false;
+            }
+            if (_shared.TryGetValue(id, out var had) && had != null && had != go)
+            {
+                return false;
+            }
+            if (_sharedIds.TryGetValue(go, out long hadId) && hadId != id)
+            {
+                return false;
+            }
             _shared[id] = go;
             _sharedIds[go] = id;
             return true;
@@ -80,9 +89,15 @@ namespace DarkwoodMP.World
         /// <summary>Untie this object from the host's id it was tied to.</summary>
         public static void Unbind(GameObject go)
         {
-            if (go == null || !_sharedIds.TryGetValue(go, out long id)) return;
+            if (go == null || !_sharedIds.TryGetValue(go, out long id))
+            {
+                return;
+            }
             _sharedIds.Remove(go);
-            if (_shared.TryGetValue(id, out var had) && had == go) _shared.Remove(id);
+            if (_shared.TryGetValue(id, out var had) && had == go)
+            {
+                _shared.Remove(id);
+            }
         }
 
         /// <summary>This id the host gave out is tied to a live object here.</summary>
@@ -95,18 +110,48 @@ namespace DarkwoodMP.World
         public static void PruneShared()
         {
             List<long> dead = null;
-            foreach (var kv in _shared) if (kv.Value == null) (dead ??= new List<long>()).Add(kv.Key);
-            if (dead == null) return;
-            foreach (var id in dead) _shared.Remove(id);
+            foreach (var kv in _shared)
+            {
+                if (kv.Value == null)
+                {
+                    (dead ??= new List<long>()).Add(kv.Key);
+                }
+            }
+            if (dead == null)
+            {
+                return;
+            }
+            foreach (var id in dead)
+            {
+                _shared.Remove(id);
+            }
             var deadGo = new List<GameObject>();
-            foreach (var kv in _sharedIds) if (kv.Key == null) deadGo.Add(kv.Key);
-            foreach (var go in deadGo) _sharedIds.Remove(go);
+            foreach (var kv in _sharedIds)
+            {
+                if (kv.Key == null)
+                {
+                    deadGo.Add(kv.Key);
+                }
+            }
+            foreach (var go in deadGo)
+            {
+                _sharedIds.Remove(go);
+            }
         }
 
         /// <summary>Host: the live objects it gave ids to, for a joiner who came in after.</summary>
         public static IEnumerable<KeyValuePair<long, GameObject>> SharedObjects
         {
-            get { foreach (var kv in _shared) if (kv.Value != null) yield return kv; }
+            get
+            {
+                foreach (var kv in _shared)
+                {
+                    if (kv.Value != null)
+                    {
+                        yield return kv;
+                    }
+                }
+            }
         }
 
         // A Placed key comes from where the object stands, so one that's moved (dragged) would get a new key in one
@@ -124,14 +169,32 @@ namespace DarkwoodMP.World
 
         public static ObjRef Of(GameObject go)
         {
-            if (go == null) return default;
-            if (_spawnedIds.TryGetValue(go, out long sid)) return new ObjRef { K = Kind.Spawned, Id = sid };
+            if (go == null)
+            {
+                return default;
+            }
+            if (_spawnedIds.TryGetValue(go, out long sid))
+            {
+                return new ObjRef { K = Kind.Spawned, Id = sid };
+            }
             var c = go.GetComponent<Character>();
-            if (c != null && NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint eid)) return new ObjRef { K = Kind.Enemy, Id = eid };
+            if (c != null && NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint eid))
+            {
+                return new ObjRef { K = Kind.Enemy, Id = eid };
+            }
             var save = go.GetComponent<SaveableObject>();
-            if (save != null && save.uniqueId > 0 && save.uniqueId < SharedIds.SendLimit) return new ObjRef { K = Kind.Saved, Id = save.uniqueId };
-            if (_sharedIds.TryGetValue(go, out long hid)) return new ObjRef { K = Kind.Spawned, Id = hid }; // stays as it moves
-            if (_pinnedIds.TryGetValue(go, out long pid)) return new ObjRef { K = Kind.Placed, Id = pid };
+            if (save != null && save.uniqueId > 0 && save.uniqueId < SharedIds.SendLimit)
+            {
+                return new ObjRef { K = Kind.Saved, Id = save.uniqueId };
+            }
+            if (_sharedIds.TryGetValue(go, out long hid))
+            {
+                return new ObjRef { K = Kind.Spawned, Id = hid }; // stays as it moves
+            }
+            if (_pinnedIds.TryGetValue(go, out long pid))
+            {
+                return new ObjRef { K = Kind.Placed, Id = pid };
+            }
             return new ObjRef { K = Kind.Placed, Id = PlacedKey(go) };
         }
 
@@ -165,11 +228,17 @@ namespace DarkwoodMP.World
         {
             exact = false;
             var (name, x, z) = Unpack(id);
-            if (!scan.ByName.TryGetValue(name, out var list)) return null;
+            if (!scan.ByName.TryGetValue(name, out var list))
+            {
+                return null;
+            }
             GameObject best = null; float bestD = PlacedSlack * PlacedSlack;
             foreach (var go in list)
             {
-                if (go == null) continue;
+                if (go == null)
+                {
+                    continue;
+                }
                 var p = go.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
                 if (d <= bestD) { bestD = d; best = go; }
@@ -187,14 +256,23 @@ namespace DarkwoodMP.World
             switch (r.K)
             {
                 case Kind.Spawned:
-                    if (Spawned.TryGetValue(r.Id, out go) && go != null) break;
-                    if (_shared.TryGetValue(r.Id, out go) && go != null) break;
+                    if (Spawned.TryGetValue(r.Id, out go) && go != null)
+                    {
+                        break;
+                    }
+                    if (_shared.TryGetValue(r.Id, out go) && go != null)
+                    {
+                        break;
+                    }
                     // An id the host gave out that this game hasn't tied to its copy yet: find it as Placed, and tie it.
                     if (_announced.TryGetValue(r.Id, out long key))
                     {
                         var found = Resolve<T>(new ObjRef { K = Kind.Placed, Id = key });
                         go = found != null ? found.gameObject : null;
-                        if (go != null && !_sharedIds.ContainsKey(go) && BindShared(r.Id, go)) HostIds.Place(r.Id, go);
+                        if (go != null && !_sharedIds.ContainsKey(go) && BindShared(r.Id, go))
+                        {
+                            HostIds.Place(r.Id, go);
+                        }
                     }
                     break;
                 case Kind.Enemy:
@@ -204,15 +282,27 @@ namespace DarkwoodMP.World
                 case Kind.Saved:
                     if (r.Id >= SharedIds.ResolveLimit)
                     {
-                        if (_unsharedLogged++ < 20) Plugin.Log.LogWarning($"A ref to save id {r.Id} came in, but only ids below {SharedIds.ResolveLimit} are the same in every game: ignored");
+                        if (_unsharedLogged++ < 20)
+                        {
+                            Plugin.Log.LogWarning($"A ref to save id {r.Id} came in, but only ids below {SharedIds.ResolveLimit} are the same in every game: ignored");
+                        }
                         break;
                     }
                     var sm = Singleton<SaveManager>.Instance;
-                    if (sm != null && sm.uniqueIdDict.TryGetValue((int)r.Id, out var t) && t != null) go = t.gameObject;
+                    if (sm != null && sm.uniqueIdDict.TryGetValue((int)r.Id, out var t) && t != null)
+                    {
+                        go = t.gameObject;
+                    }
                     break;
                 case Kind.Placed:
-                    if (_pinned.TryGetValue(r.Id, out go) && go != null) break;
-                    if (!_placed.TryGetValue(typeof(T), out var scan)) _placed[typeof(T)] = scan = new PlacedScan();
+                    if (_pinned.TryGetValue(r.Id, out go) && go != null)
+                    {
+                        break;
+                    }
+                    if (!_placed.TryGetValue(typeof(T), out var scan))
+                    {
+                        _placed[typeof(T)] = scan = new PlacedScan();
+                    }
                     go = NearestPlaced(scan, r.Id, out bool exact);
                     // Scan again when it isn't on its spot too: one made since the last scan (a swamper's splats
                     // and their traps spread over a few seconds) was otherwise taken for its neighbour within
@@ -224,13 +314,18 @@ namespace DarkwoodMP.World
                         foreach (var comp in Object.FindObjectsOfType<T>(true)) // inactive too: a location the host loaded for a joiner but isn't in
                         {
                             int h = NameHash(comp.gameObject.name);
-                            if (!scan.ByName.TryGetValue(h, out var list)) scan.ByName[h] = list = new List<GameObject>();
+                            if (!scan.ByName.TryGetValue(h, out var list))
+                            {
+                                scan.ByName[h] = list = new List<GameObject>();
+                            }
                             list.Add(comp.gameObject);
                         }
                         go = NearestPlaced(scan, r.Id, out exact);
                     }
                     if (go != null && !exact && WorldActions.Debug)
+                    {
                         Plugin.Log.LogInfo($"[world] Placed:{r.Id} ({typeof(T).Name}) taken as {go.name} at {go.transform.position}, off its spot");
+                    }
                     break;
             }
             return go != null ? go.GetComponent<T>() : null;

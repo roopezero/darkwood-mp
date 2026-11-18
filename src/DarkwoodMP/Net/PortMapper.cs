@@ -37,8 +37,22 @@ namespace DarkwoodMP.Net
         /// <summary>The router's external address is private or shared (CGNAT, a second router): forwarding won't reach us.</summary>
         public volatile bool BehindAnotherNat;
         /// <summary>The TCP port the router forwards to us (NAT-PMP may give another than asked), or 0.</summary>
-        public int ExternalPort { get { lock (_lock) return _mapped?.ExternalTcp ?? 0; } }
-        public bool Mapped { get { lock (_lock) return _mapped != null; } }
+        public int ExternalPort { get
+            {
+                lock (_lock)
+                {
+                    return _mapped?.ExternalTcp ?? 0;
+                }
+            }
+        }
+        public bool Mapped { get
+            {
+                lock (_lock)
+                {
+                    return _mapped != null;
+                }
+            }
+        }
 
         private readonly object _lock = new object();
         private int _generation;
@@ -60,7 +74,10 @@ namespace DarkwoodMP.Net
         {
             Stop();
             int gen;
-            lock (_lock) gen = ++_generation;
+            lock (_lock)
+            {
+                gen = ++_generation;
+            }
             Status = "Asking your router to open the port (UPnP)...";
             ExternalIp = null; BehindAnotherNat = false; _refused = null;
             var t = new Thread(() => Run(port, gen)) { IsBackground = true, Name = "DarkwoodMP port mapping" };
@@ -76,13 +93,25 @@ namespace DarkwoodMP.Net
             Mapping m;
             lock (_lock) { _generation++; m = _mapped; _mapped = null; }
             Status = "";
-            if (m == null) return;
+            if (m == null)
+            {
+                return;
+            }
             var t = new Thread(() => Remove(m)) { IsBackground = true, Name = "DarkwoodMP port unmapping" };
             t.Start();
-            if (wait) t.Join(1500);
+            if (wait)
+            {
+                t.Join(1500);
+            }
         }
 
-        private bool Current(int gen) { lock (_lock) return gen == _generation; }
+        private bool Current(int gen)
+        {
+            lock (_lock)
+            {
+                return gen == _generation;
+            }
+        }
 
         private void Run(int port, int gen)
         {
@@ -94,7 +123,14 @@ namespace DarkwoodMP.Net
                     Status = "No UPnP answer; trying NAT-PMP...";
                     m = TryNatPmp(port);
                 }
-                if (!Current(gen)) { if (m != null) Remove(m); return; }
+                if (!Current(gen))
+                {
+                    if (m != null)
+                    {
+                        Remove(m);
+                    }
+                    return;
+                }
                 if (m == null)
                 {
                     Status = _refused ?? "Your router didn't open the port (UPnP and NAT-PMP are off or missing). Forward it by hand, or use a VPN.";
@@ -104,9 +140,15 @@ namespace DarkwoodMP.Net
                 lock (_lock)
                 {
                     if (gen != _generation) { m = null; }
-                    else _mapped = m;
+                    else
+                    {
+                        _mapped = m;
+                    }
                 }
-                if (m == null) return;
+                if (m == null)
+                {
+                    return;
+                }
                 Report(m);
                 // Renew before the lease runs out, for as long as we're hosting.
                 while (!m.Permanent)
@@ -114,19 +156,33 @@ namespace DarkwoodMP.Net
                     for (int waited = 0; waited < RenewMs; waited += 1000)
                     {
                         Thread.Sleep(1000);
-                        if (!Current(gen)) return;
+                        if (!Current(gen))
+                        {
+                            return;
+                        }
                     }
                     bool ok = m.Upnp ? AddUpnp(m, "TCP", LeaseSeconds, out _) : PmpMap(m.Gateway, 2, m.Port, m.ExternalTcp, LeaseSeconds) > 0;
                     if (ok && m.ExternalUdp > 0)
+                    {
                         ok = m.Upnp ? AddUpnp(m, "UDP", LeaseSeconds, out _) : PmpMap(m.Gateway, 1, m.Port, m.ExternalUdp, LeaseSeconds) > 0;
-                    if (!Current(gen)) return;
+                    }
+                    if (!Current(gen))
+                    {
+                        return;
+                    }
                     Plugin.Log.LogInfo(ok ? "[port mapping] renewed" : "[port mapping] the router didn't renew the mapping");
-                    if (!ok) Status = "Your router stopped forwarding the port. Forward it by hand, or use a VPN.";
+                    if (!ok)
+                    {
+                        Status = "Your router stopped forwarding the port. Forward it by hand, or use a VPN.";
+                    }
                 }
             }
             catch (Exception e)
             {
-                if (Current(gen)) Status = "Couldn't open the port on your router: " + e.Message;
+                if (Current(gen))
+                {
+                    Status = "Couldn't open the port on your router: " + e.Message;
+                }
                 Plugin.Log.LogWarning("[port mapping] " + e);
             }
         }
@@ -139,11 +195,17 @@ namespace DarkwoodMP.Net
             string ports = m.ExternalTcp == m.ExternalUdp ? $"port {m.ExternalTcp} (TCP and UDP)"
                 : m.ExternalUdp <= 0 ? $"TCP port {m.ExternalTcp} (not UDP)" : $"TCP {m.ExternalTcp}, UDP {m.ExternalUdp}";
             if (BehindAnotherNat)
+            {
                 Status = $"Your router opened {ports} ({how}), but its internet address {ip} is a shared or private one (your provider's NAT, or a second router): friends over the internet probably still can't reach you. Use Steam or a VPN.";
+            }
             else
+            {
                 Status = $"Your router opened {ports} ({how}).";
+            }
             if (m.ExternalUdp != m.ExternalTcp)
+            {
                 Status += " Friends' server browsers can't see you over the internet: they connect by address.";
+            }
             Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip ?? "unknown"}{(m.Permanent ? ", permanent" : $", lease {LeaseSeconds} s")}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
         }
 
@@ -169,7 +231,10 @@ namespace DarkwoodMP.Net
         /// <summary>100.64/10 (carrier-grade NAT), the RFC 1918 ranges, link-local, loopback and 0.0.0.0.</summary>
         public static bool IsPrivate(IPAddress a)
         {
-            if (a.AddressFamily != AddressFamily.InterNetwork) return false;
+            if (a.AddressFamily != AddressFamily.InterNetwork)
+            {
+                return false;
+            }
             byte[] b = a.GetAddressBytes();
             return b[0] == 10 || b[0] == 127 || b[0] == 0
                 || (b[0] == 100 && (b[1] & 0xC0) == 64)
@@ -193,20 +258,38 @@ namespace DarkwoodMP.Net
             var locations = TestRouter != null ? new List<string> { $"http://{TestRouter}/rootDesc.xml" } : Discover();
             foreach (string loc in locations)
             {
-                if (!Current(gen)) return null;
+                if (!Current(gen))
+                {
+                    return null;
+                }
                 try
                 {
-                    if (!FindService(loc, out string control, out string type)) continue;
+                    if (!FindService(loc, out string control, out string type))
+                    {
+                        continue;
+                    }
                     var uri = new Uri(control);
                     var m = new Mapping { Upnp = true, ControlUrl = control, ServiceType = type, Port = port, ExternalTcp = port, ExternalUdp = port };
                     m.InternalIp = LocalAddressToward(uri.Host, uri.Port);
-                    if (m.InternalIp == null) continue;
-                    try { if (Soap(m, "GetExternalIPAddress", "", out _) is Dictionary<string, string> f && f.TryGetValue("NewExternalIPAddress", out string ext) && ext.Length > 0) ExternalIp = ext; }
+                    if (m.InternalIp == null)
+                    {
+                        continue;
+                    }
+                    try
+                    {
+                        if (Soap(m, "GetExternalIPAddress", "", out _) is Dictionary<string, string> f && f.TryGetValue("NewExternalIPAddress", out string ext) && ext.Length > 0)
+                        {
+                            ExternalIp = ext;
+                        }
+                    }
                     catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] GetExternalIPAddress at {control}: {e.Message}"); }
                     if (!AddUpnp(m, "TCP", LeaseSeconds, out string why))
                     {
                         Plugin.Log.LogInfo($"[port mapping] UPnP router at {loc} refused TCP {port}: {why}");
-                        if (why.StartsWith("718")) _refused = $"Port {port} is already forwarded to another computer on your router. Pick another port, or forward it by hand.";
+                        if (why.StartsWith("718"))
+                        {
+                            _refused = $"Port {port} is already forwarded to another computer on your router. Pick another port, or forward it by hand.";
+                        }
                         continue;
                     }
                     if (!AddUpnp(m, "UDP", m.Permanent ? 0 : LeaseSeconds, out why))
@@ -233,7 +316,10 @@ namespace DarkwoodMP.Net
             var found = new List<string>();
             var socks = new List<UdpClient>();
             var targets = new List<IPEndPoint> { new IPEndPoint(IPAddress.Parse("239.255.255.250"), 1900) };
-            foreach (IPAddress gw in GatewayAddresses()) targets.Add(new IPEndPoint(gw, 1900));
+            foreach (IPAddress gw in GatewayAddresses())
+            {
+                targets.Add(new IPEndPoint(gw, 1900));
+            }
             try
             {
                 foreach (string ip in TcpBackend.LocalAddresses())
@@ -263,7 +349,10 @@ namespace DarkwoodMP.Net
                 while (until - Environment.TickCount > 0 && socks.Count > 0)
                 {
                     var ready = new List<Socket>();
-                    foreach (var u in socks) ready.Add(u.Client);
+                    foreach (var u in socks)
+                    {
+                        ready.Add(u.Client);
+                    }
                     Socket.Select(ready, null, null, Math.Max(1, until - Environment.TickCount) * 1000);
                     foreach (var s in ready)
                     {
@@ -275,16 +364,33 @@ namespace DarkwoodMP.Net
                         foreach (string line in Encoding.ASCII.GetString(buf, 0, n).Split('\n'))
                         {
                             int colon = line.IndexOf(':');
-                            if (colon <= 0 || !line.Substring(0, colon).Trim().Equals("LOCATION", StringComparison.OrdinalIgnoreCase)) continue;
+                            if (colon <= 0 || !line.Substring(0, colon).Trim().Equals("LOCATION", StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
                             string loc = line.Substring(colon + 1).Trim();
-                            if (loc.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !found.Contains(loc)) found.Add(loc);
+                            if (loc.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && !found.Contains(loc))
+                            {
+                                found.Add(loc);
+                            }
                         }
                     }
                     // A router has answered: give others a moment, but don't wait out the whole MX.
-                    if (found.Count > 0 && until - Environment.TickCount > 500) until = Environment.TickCount + 500;
+                    if (found.Count > 0 && until - Environment.TickCount > 500)
+                    {
+                        until = Environment.TickCount + 500;
+                    }
                 }
             }
-            finally { foreach (var u in socks) try { u.Close(); } catch { } }
+            finally
+            {
+                foreach (var u in socks)
+                {
+                    try
+                    { u.Close(); }
+                    catch { }
+                }
+            }
             Plugin.Log.LogInfo($"[port mapping] SSDP: {found.Count} answer(s){(found.Count > 0 ? ": " + string.Join(", ", found) : "")}");
             return found;
         }
@@ -295,26 +401,46 @@ namespace DarkwoodMP.Net
             control = type = null;
             var doc = new XmlDocument { XmlResolver = null };
             string xml = Http("GET", location, null, null, out int status);
-            if (status != 200) return false;
+            if (status != 200)
+            {
+                return false;
+            }
             doc.LoadXml(xml);
             string baseUrl = location;
-            foreach (XmlNode n in doc.GetElementsByTagName("URLBase")) if (!string.IsNullOrWhiteSpace(n.InnerText)) baseUrl = n.InnerText.Trim();
+            foreach (XmlNode n in doc.GetElementsByTagName("URLBase"))
+            {
+                if (!string.IsNullOrWhiteSpace(n.InnerText))
+                {
+                    baseUrl = n.InnerText.Trim();
+                }
+            }
             // WANIPConnection first: a router with both usually forwards through it.
             foreach (string want in new[] { "WANIPConnection", "WANPPPConnection" })
+            {
                 foreach (XmlNode s in doc.GetElementsByTagName("service"))
                 {
                     string st = Child(s, "serviceType"), cu = Child(s, "controlURL");
-                    if (st == null || cu == null || st.IndexOf(want, StringComparison.Ordinal) < 0) continue;
+                    if (st == null || cu == null || st.IndexOf(want, StringComparison.Ordinal) < 0)
+                    {
+                        continue;
+                    }
                     type = st;
                     control = new Uri(new Uri(baseUrl), cu).ToString();
                     return true;
                 }
+            }
             return false;
         }
 
         private static string Child(XmlNode n, string name)
         {
-            foreach (XmlNode c in n.ChildNodes) if (c.LocalName == name) return c.InnerText.Trim();
+            foreach (XmlNode c in n.ChildNodes)
+            {
+                if (c.LocalName == name)
+                {
+                    return c.InnerText.Trim();
+                }
+            }
             return null;
         }
 
@@ -325,7 +451,10 @@ namespace DarkwoodMP.Net
                 $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>" +
                 $"<NewInternalPort>{m.Port}</NewInternalPort><NewInternalClient>{m.InternalIp}</NewInternalClient><NewEnabled>1</NewEnabled>" +
                 $"<NewPortMappingDescription>{Description}</NewPortMappingDescription><NewLeaseDuration>{l}</NewLeaseDuration>";
-            if (Soap(m, "AddPortMapping", args(m.Permanent ? 0 : lease), out why) != null) return true;
+            if (Soap(m, "AddPortMapping", args(m.Permanent ? 0 : lease), out why) != null)
+            {
+                return true;
+            }
             // 725 OnlyPermanentLeasesSupported: some routers take only 0, which never expires (removed when we stop).
             if (why.StartsWith("725") && !m.Permanent && Soap(m, "AddPortMapping", args(0), out why) != null) { m.Permanent = true; return true; }
             return false;
@@ -333,7 +462,10 @@ namespace DarkwoodMP.Net
 
         private static void DeleteUpnp(Mapping m, string proto, int ext)
         {
-            if (ext <= 0) return;
+            if (ext <= 0)
+            {
+                return;
+            }
             Soap(m, "DeletePortMapping", $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>", out _);
         }
 
@@ -350,7 +482,12 @@ namespace DarkwoodMP.Net
                 error = null;
                 var fields = new Dictionary<string, string>();
                 foreach (XmlNode n in doc.GetElementsByTagName("*"))
-                    if (!n.HasChildNodes || (n.ChildNodes.Count == 1 && n.FirstChild is XmlText)) fields[n.LocalName] = n.InnerText.Trim();
+                {
+                    if (!n.HasChildNodes || (n.ChildNodes.Count == 1 && n.FirstChild is XmlText))
+                    {
+                        fields[n.LocalName] = n.InnerText.Trim();
+                    }
+                }
                 return fields;
             }
             string code = null, desc = null;
@@ -358,8 +495,14 @@ namespace DarkwoodMP.Net
             {
                 foreach (XmlNode n in doc.GetElementsByTagName("*"))
                 {
-                    if (n.LocalName == "errorCode") code = n.InnerText.Trim();
-                    else if (n.LocalName == "errorDescription") desc = n.InnerText.Trim();
+                    if (n.LocalName == "errorCode")
+                    {
+                        code = n.InnerText.Trim();
+                    }
+                    else if (n.LocalName == "errorDescription")
+                    {
+                        desc = n.InnerText.Trim();
+                    }
                 }
             }
             error = code != null ? $"{code} {desc}" : $"HTTP {status}";
@@ -379,16 +522,21 @@ namespace DarkwoodMP.Net
                 req.ContentType = "text/xml; charset=\"utf-8\"";
                 req.Headers["SOAPAction"] = soapAction;
                 req.ContentLength = b.Length;
-                using (var s = req.GetRequestStream()) s.Write(b, 0, b.Length);
+                using (var s = req.GetRequestStream())
+                {
+                    s.Write(b, 0, b.Length);
+                }
             }
             HttpWebResponse resp;
             try { resp = (HttpWebResponse)req.GetResponse(); }
             catch (WebException e) when (e.Response is HttpWebResponse r) { resp = r; } // a SOAP fault comes as HTTP 500
             using (resp)
-            using (var rd = new StreamReader(resp.GetResponseStream()))
             {
-                status = (int)resp.StatusCode;
-                return rd.ReadToEnd();
+                using (var rd = new StreamReader(resp.GetResponseStream()))
+                {
+                    status = (int)resp.StatusCode;
+                    return rd.ReadToEnd();
+                }
             }
         }
 
@@ -414,7 +562,10 @@ namespace DarkwoodMP.Net
             {
                 // Opcode 0: the external address; it also tells whether NAT-PMP is there at all.
                 byte[] r = PmpAsk(gw, new byte[] { 0, 0 }, 12, 4);
-                if (r == null || r[1] != 128 || (r[2] << 8 | r[3]) != 0) continue;
+                if (r == null || r[1] != 128 || (r[2] << 8 | r[3]) != 0)
+                {
+                    continue;
+                }
                 ExternalIp = new IPAddress(new[] { r[8], r[9], r[10], r[11] }).ToString();
                 var m = new Mapping { Gateway = gw, Port = port, InternalIp = LocalAddressToward(gw.Address.ToString(), gw.Port) };
                 m.ExternalTcp = PmpMap(gw, 2, port, port, LeaseSeconds);
@@ -434,7 +585,10 @@ namespace DarkwoodMP.Net
             q[6] = (byte)(externalPort >> 8); q[7] = (byte)externalPort;
             q[8] = (byte)(lifetime >> 24); q[9] = (byte)(lifetime >> 16); q[10] = (byte)(lifetime >> 8); q[11] = (byte)lifetime;
             byte[] r = PmpAsk(gw, q, 16, tries);
-            if (r == null || r[1] != 128 + op || (r[2] << 8 | r[3]) != 0) return -1;
+            if (r == null || r[1] != 128 + op || (r[2] << 8 | r[3]) != 0)
+            {
+                return -1;
+            }
             return r[10] << 8 | r[11];
         }
 
@@ -452,7 +606,10 @@ namespace DarkwoodMP.Net
                     {
                         var from = new IPEndPoint(IPAddress.Any, 0);
                         byte[] r = u.Receive(ref from);
-                        if (from.Address.Equals(gw.Address) && r.Length >= min && r[1] == q[1] + 128) return r;
+                        if (from.Address.Equals(gw.Address) && r.Length >= min && r[1] == q[1] + 128)
+                        {
+                            return r;
+                        }
                     }
                     catch (SocketException) { }
                 }
@@ -464,7 +621,9 @@ namespace DarkwoodMP.Net
         private static List<IPEndPoint> Gateways()
         {
             if (TestRouter != null && TcpBackend.TryParseAddress(TestRouter, out string th, out int tp))
+            {
                 return new List<IPEndPoint> { new IPEndPoint(IPAddress.Parse(th), tp) };
+            }
             return GatewayAddresses().ConvertAll(a => new IPEndPoint(a, 5351));
         }
 
@@ -472,13 +631,25 @@ namespace DarkwoodMP.Net
         private static List<IPAddress> GatewayAddresses()
         {
             var list = new List<IPAddress>();
-            void Add(IPAddress a) { if (a != null && a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(IPAddress.Any) && !list.Contains(a)) list.Add(a); }
+            void Add(IPAddress a)
+            {
+                if (a != null && a.AddressFamily == AddressFamily.InterNetwork && !a.Equals(IPAddress.Any) && !list.Contains(a))
+                {
+                    list.Add(a);
+                }
+            }
             try
             {
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                    foreach (var g in nic.GetIPProperties().GatewayAddresses) Add(g.Address);
+                    if (nic.OperationalStatus != OperationalStatus.Up)
+                    {
+                        continue;
+                    }
+                    foreach (var g in nic.GetIPProperties().GatewayAddresses)
+                    {
+                        Add(g.Address);
+                    }
                 }
             }
             catch (Exception e) { Plugin.Log.LogInfo("[port mapping] couldn't list gateways: " + e.Message); }
@@ -490,8 +661,14 @@ namespace DarkwoodMP.Net
                     foreach (string line in File.ReadAllLines("/proc/net/route"))
                     {
                         var f = line.Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (f.Length < 3 || f[1] != "00000000") continue;
-                        if (uint.TryParse(f[2], System.Globalization.NumberStyles.HexNumber, null, out uint g) && g != 0) Add(new IPAddress(g));
+                        if (f.Length < 3 || f[1] != "00000000")
+                        {
+                            continue;
+                        }
+                        if (uint.TryParse(f[2], System.Globalization.NumberStyles.HexNumber, null, out uint g) && g != 0)
+                        {
+                            Add(new IPAddress(g));
+                        }
                     }
                 }
                 catch { }

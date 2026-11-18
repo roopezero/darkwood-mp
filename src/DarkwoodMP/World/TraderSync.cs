@@ -48,19 +48,28 @@ namespace DarkwoodMP.World
         /// <summary>Client: a trader would stock up here. Use the host's stock: what came already, or ask.</summary>
         internal void ClientStocking(NPC npc)
         {
-            if (!_session.Connected || npc == null) return;
+            if (!_session.Connected || npc == null)
+            {
+                return;
+            }
             string key = Key(npc.name, ObjRef.Of(npc.gameObject));
             if (_waiting.TryGetValue(key, out var stock)) { _waiting.Remove(key); Apply(npc, stock); return; }
             var w = _session.Begin(MsgType.TraderAsk);
             WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             _session.SendToHost(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] asked the host what {npc.name} has");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] asked the host what {npc.name} has");
+            }
         }
 
         /// <summary>Host: this trader restocked; everyone gets it.</summary>
         internal void HostStocked(NPC npc)
         {
-            if (!_session.IsHost || _session.Peers.Count == 0 || npc == null || Inv(npc) == null) return;
+            if (!_session.IsHost || _session.Peers.Count == 0 || npc == null || Inv(npc) == null)
+            {
+                return;
+            }
             Send(npc, to: 0, StockOf(npc));
         }
 
@@ -94,24 +103,45 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.TraderStock);
             WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             w.WriteBigStr(stock ?? StockOf(npc));
-            if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
-            else _session.Broadcast(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent what {npc.name} has ({Inv(npc).getAllItems().Count} items)");
+            if (to != 0)
+            {
+                _session.SendTo(to, w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent what {npc.name} has ({Inv(npc).getAllItems().Count} items)");
+            }
         }
 
         private void OnAsk(ulong from, PacketReader r)
         {
-            if (!_session.IsHost) return;
+            if (!_session.IsHost)
+            {
+                return;
+            }
             var (name, who, at) = ReadWho(r);
             var npc = Find(name, who, at);
             if (npc != null) { Send(npc, from); return; }
-            if (who.K == ObjRef.Kind.Saved) return; // one from the shared save that isn't here (yet): no copy of ours
+            if (who.K == ObjRef.Kind.Saved)
+            {
+                return; // one from the shared save that isn't here (yet): no copy of ours
+            }
             // The morning trader in a joiner's hideout, which this game has no copy of (our player wasn't in that
             // hideout at dawn): we put our own there, as the game's morning does (Location.spawnTrader). Its stock is
             // ours to roll (it stocks up when it appears, and HostStocked sends it to everyone), and their trades with
             // him are checked against it.
-            if (SpawnHostCopy(name, at, from)) return;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {_session.NameOf(from)} asked about {name}, who isn't here yet");
+            if (SpawnHostCopy(name, at, from))
+            {
+                return;
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {_session.NameOf(from)} asked about {name}, who isn't here yet");
+            }
         }
 
         // ---- the host's copies of joiners' morning traders -------------------------------------------
@@ -125,26 +155,44 @@ namespace DarkwoodMP.World
         private bool SpawnHostCopy(string name, Vector3 at, ulong from)
         {
             // The wolf comes to a hideout in the morning too (Location.spawnWolf), but he isn't one to trade with.
-            if (name.IndexOf("wolf", System.StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            if (name.IndexOf("wolf", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return false;
+            }
             var st = Singleton<Flags>.Instance?.getNPCState(name);
-            if (st != null && st.dead) return false;
+            if (st != null && st.dead)
+            {
+                return false;
+            }
             Location best = null; float bestD = 300f * 300f;
             foreach (var loc in Object.FindObjectsOfType<Location>(true))
             {
-                if (loc == null || !loc.playerBase || loc.traderPosition == null) continue;
+                if (loc == null || !loc.playerBase || loc.traderPosition == null)
+                {
+                    continue;
+                }
                 float d = WorldActions.FlatSq(loc.traderPosition.transform.position, at);
                 if (d < bestD) { bestD = d; best = loc; }
             }
-            if (best == null) return false;
+            if (best == null)
+            {
+                return false;
+            }
             bool had = best.trader != null;
             NPC npc;
             try { npc = best.spawnTrader(); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't put {name} in {best.name}: {e.Message}"); return false; }
-            if (npc == null) return false;
+            if (npc == null)
+            {
+                return false;
+            }
             if (npc.name != name)
             {
                 Plugin.Log.LogInfo($"[world] {_session.NameOf(from)} asked about {name}, but {best.name}'s morning trader here is {npc.name}");
-                if (!had) best.despawnTrader();
+                if (!had)
+                {
+                    best.despawnTrader();
+                }
                 return false;
             }
             _copies.Add((best, npc, Time.unscaledTime));
@@ -158,13 +206,21 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void HostUpdate()
         {
-            if (_copies.Count == 0 || Time.unscaledTime < _nextCheck) return;
+            if (_copies.Count == 0 || Time.unscaledTime < _nextCheck)
+            {
+                return;
+            }
             _nextCheck = Time.unscaledTime + 1f;
             bool someone = false;
             var sync = Sync.PlayerSync.Instance;
             if (sync != null)
+            {
                 foreach (var kv in sync.Remotes)
-                    if (kv.Key != Sync.PlayerSync.DummyId && kv.Value.Last != null && kv.Value.Last.AfterNight) { someone = true; break; }
+                {
+                    if (kv.Key != Sync.PlayerSync.DummyId && kv.Value.Last != null && kv.Value.Last.AfterNight)
+                    { someone = true; break; }
+                }
+            }
             var c = Singleton<Controller>.Instance;
             var p = Player.Instance;
             for (int i = _copies.Count - 1; i >= 0; i--)
@@ -173,20 +229,36 @@ namespace DarkwoodMP.World
                 if (npc == null || loc == null) { _copies.RemoveAt(i); continue; }
                 var ch = npc.GetComponent<Character>();
                 if (ch != null && !ch.alive) { _copies.RemoveAt(i); continue; }
-                if (someone || Time.unscaledTime - since < CopyGrace) continue;
+                if (someone || Time.unscaledTime - since < CopyGrace)
+                {
+                    continue;
+                }
                 if (c != null && c.isAfterNight && p != null && p.whereAmI != null && p.whereAmI.bigLocation == loc) { _copies.RemoveAt(i); continue; } // ours now
                 Plugin.Log.LogInfo($"[world] no joiner is in a morning: our {npc.name} leaves {loc.name}");
-                if (loc.trader == npc.gameObject) loc.despawnTrader(); else Object.Destroy(npc.gameObject);
+                if (loc.trader == npc.gameObject)
+                {
+                    loc.despawnTrader();
+                }
+                else
+                {
+                    Object.Destroy(npc.gameObject);
+                }
                 _copies.RemoveAt(i);
             }
         }
 
         private void OnStock(ulong from, PacketReader r)
         {
-            if (from != _session.HostId) return;
+            if (from != _session.HostId)
+            {
+                return;
+            }
             var (name, who, at) = ReadWho(r);
             string stock = r.ReadBigStr();
-            if (!ApplyTo(name, who, at, stock)) _waiting[Key(name, who)] = stock;
+            if (!ApplyTo(name, who, at, stock))
+            {
+                _waiting[Key(name, who)] = stock;
+            }
         }
 
         // ---- trades ---------------------------------------------------------------------------------
@@ -200,15 +272,24 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void LocalTrade(NPC npc, Dictionary<string, int> took, Dictionary<string, int> gave, int repChange)
         {
-            if (!_session.Connected || npc == null || npc.inventory == null) return;
-            if (_session.IsHost && _session.Peers.Count == 0) return;
+            if (!_session.Connected || npc == null || npc.inventory == null)
+            {
+                return;
+            }
+            if (_session.IsHost && _session.Peers.Count == 0)
+            {
+                return;
+            }
             string name = npc.name, stock = StockOf(npc);
             FlagsSync.Instance?.Absorb(name, repChange); // it goes with the trade
             // Reputation our player earned just before (in the same dialogue, or since the last two-second FlagsDelta)
             // goes first, on the same reliable Control channel, so the host's copy has it when it checks the trade's
             // (CheckReputation). The trade's own change was absorbed above, so it isn't sent twice. Before WriteTrade:
             // the flush builds its message with Session.Begin, in the same writer the trade's is built in.
-            if (!_session.IsHost) FlagsSync.Instance?.FlushNow();
+            if (!_session.IsHost)
+            {
+                FlagsSync.Instance?.FlushNow();
+            }
             var at = npc.transform.position;
             var who = ObjRef.Of(npc.gameObject);
             var w = WriteTrade(name, who, at, took, gave, stock, repChange);
@@ -217,22 +298,50 @@ namespace DarkwoodMP.World
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             var change = new Dictionary<string, int>(); // for InventoryWatch.Undo: + what the player got, - what they gave
-            foreach (var kv in took) change[kv.Key] = kv.Value;
+            foreach (var kv in took)
+            {
+                change[kv.Key] = kv.Value;
+            }
             foreach (var kv in gave) { change.TryGetValue(kv.Key, out int n); change[kv.Key] = n - kv.Value; }
             Authority.Request(w, $"trade with {name}", (ok, reason, result) =>
             {
-                if (ok) return;
+                if (ok)
+                {
+                    return;
+                }
                 InventoryWatch.Undo(change);
                 var t = npc != null ? npc : Find(name, who, at);
-                if (t == null) return;
-                if (repChange != 0) { if (FlagsSync.Instance != null) FlagsSync.Instance.AddReputation(name, -repChange); else t.reputation -= repChange; }
+                if (t == null)
+                {
+                    return;
+                }
+                if (repChange != 0)
+                {
+                    if (FlagsSync.Instance != null)
+                    {
+                        FlagsSync.Instance.AddReputation(name, -repChange);
+                    }
+                    else
+                    {
+                        t.reputation -= repChange;
+                    }
+                }
                 _applied.TryGetValue(t.GetInstanceID(), out int now);
-                if (now != seen || t.inventory == null) return; // the host's stock came: that's what he has
+                if (now != seen || t.inventory == null)
+                {
+                    return; // the host's stock came: that's what he has
+                }
                 WorldActions.Replaying = true;
                 try
                 {
-                    foreach (var kv in gave) t.inventory.removeItemAmount(kv.Key, kv.Value);
-                    foreach (var kv in took) t.inventory.addItemType(kv.Key, kv.Value);
+                    foreach (var kv in gave)
+                    {
+                        t.inventory.removeItemAmount(kv.Key, kv.Value);
+                    }
+                    foreach (var kv in took)
+                    {
+                        t.inventory.addItemType(kv.Key, kv.Value);
+                    }
                 }
                 catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't undo the trade with {name}: {e.Message}"); }
                 finally { WorldActions.Replaying = false; }
@@ -270,9 +379,15 @@ namespace DarkwoodMP.World
             int repChange = r.R.ReadInt32();
             if (!_session.IsHost)
             {
-                if (from != _session.HostId) return;
+                if (from != _session.HostId)
+                {
+                    return;
+                }
                 FlagsSync.Instance?.AddReputation(name, repChange); // the reputation is in the NPC's state, here whether he is or not
-                if (!ApplyTo(name, who, at, stock)) _waiting[Key(name, who)] = stock;
+                if (!ApplyTo(name, who, at, stock))
+                {
+                    _waiting[Key(name, who)] = stock;
+                }
                 return;
             }
 
@@ -297,9 +412,18 @@ namespace DarkwoodMP.World
         {
             var st = Singleton<Flags>.Instance?.getNPCState(name);
             int rep = st != null ? st.reputation : 0;
-            if (rep + repChange < 0) return $"his reputation is {rep}, which doesn't pay for {-repChange}";
-            if (gave.Count == 0 && repChange > 0) return $"taking only can't raise the reputation ({repChange:+0})";
-            if (took.Count == 0 && repChange < 0) return $"giving only can't lower the reputation ({repChange})";
+            if (rep + repChange < 0)
+            {
+                return $"his reputation is {rep}, which doesn't pay for {-repChange}";
+            }
+            if (gave.Count == 0 && repChange > 0)
+            {
+                return $"taking only can't raise the reputation ({repChange:+0})";
+            }
+            if (took.Count == 0 && repChange < 0)
+            {
+                return $"giving only can't lower the reputation ({repChange})";
+            }
             return null;
         }
 
@@ -311,43 +435,80 @@ namespace DarkwoodMP.World
             Inventory.SaveState state;
             try { state = JsonConvert.DeserializeObject<Inventory.SaveState>(stock); }
             catch (System.Exception e) { return "bad stock: " + e.Message; }
-            if (state?.invItems == null) return "no stock";
+            if (state?.invItems == null)
+            {
+                return "no stock";
+            }
             var after = new Dictionary<string, int>();
             foreach (var it in state.invItems)
             {
-                if (it == null || string.IsNullOrEmpty(it.type)) continue;
+                if (it == null || string.IsNullOrEmpty(it.type))
+                {
+                    continue;
+                }
                 after.TryGetValue(it.type, out int n);
                 after[it.type] = n + System.Math.Max(1, it.amount);
             }
             foreach (var kv in took)
             {
-                if (kv.Value <= 0) return $"took {kv.Value} {kv.Key}";
+                if (kv.Value <= 0)
+                {
+                    return $"took {kv.Value} {kv.Key}";
+                }
                 have.TryGetValue(kv.Key, out int n);
-                if (n < kv.Value) return $"he has {n} {kv.Key}, not {kv.Value}";
+                if (n < kv.Value)
+                {
+                    return $"he has {n} {kv.Key}, not {kv.Value}";
+                }
                 have[kv.Key] = n - kv.Value;
             }
             foreach (var kv in gave)
             {
-                if (kv.Value <= 0) return $"gave {kv.Value} {kv.Key}";
+                if (kv.Value <= 0)
+                {
+                    return $"gave {kv.Value} {kv.Key}";
+                }
                 have.TryGetValue(kv.Key, out int n);
                 have[kv.Key] = n + kv.Value;
             }
-            foreach (var kv in have) { after.TryGetValue(kv.Key, out int n); if (n != kv.Value) return $"his stock would have {kv.Value} {kv.Key}, not {n}"; }
-            foreach (var kv in after) if (!have.ContainsKey(kv.Key)) return $"his stock wouldn't have {kv.Key}";
+            foreach (var kv in have)
+            {
+                after.TryGetValue(kv.Key, out int n);
+                if (n != kv.Value)
+                {
+                    return $"his stock would have {kv.Value} {kv.Key}, not {n}";
+                }
+            }
+            foreach (var kv in after)
+            {
+                if (!have.ContainsKey(kv.Key))
+                {
+                    return $"his stock wouldn't have {kv.Key}";
+                }
+            }
             return null;
         }
 
         private static string Text(Dictionary<string, int> d)
         {
-            if (d.Count == 0) return "nothing";
+            if (d.Count == 0)
+            {
+                return "nothing";
+            }
             var parts = new List<string>();
-            foreach (var kv in d) parts.Add($"{kv.Value} {kv.Key}");
+            foreach (var kv in d)
+            {
+                parts.Add($"{kv.Value} {kv.Key}");
+            }
             return string.Join(", ", parts);
         }
 
         private static void Apply(NPC npc, string stock)
         {
-            if (Inv(npc) == null) return;
+            if (Inv(npc) == null)
+            {
+                return;
+            }
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             _applied[npc.GetInstanceID()] = seen + 1;
             Containers.Instance?.Apply(Inv(npc), stock);
@@ -358,7 +519,10 @@ namespace DarkwoodMP.World
         private static bool ApplyTo(string name, ObjRef who, Vector3 at, string stock)
         {
             var n = Find(name, who, at);
-            if (n == null) return false;
+            if (n == null)
+            {
+                return false;
+            }
             Apply(n, stock);
             return true;
         }
@@ -373,14 +537,26 @@ namespace DarkwoodMP.World
             if (who.Valid)
             {
                 var n = ObjRef.Resolve<NPC>(who);
-                if (n != null && n.trader && n.name == name && Inv(n) != null) return n;
-                if (who.K == ObjRef.Kind.Saved) return null;
+                if (n != null && n.trader && n.name == name && Inv(n) != null)
+                {
+                    return n;
+                }
+                if (who.K == ObjRef.Kind.Saved)
+                {
+                    return null;
+                }
             }
             NPC best = null; float bestD = float.MaxValue;
             foreach (var n in Object.FindObjectsOfType<NPC>())
             {
-                if (n == null || !n.trader || n.name != name || Inv(n) == null) continue;
-                if (ObjRef.Of(n.gameObject).K == ObjRef.Kind.Saved) continue;
+                if (n == null || !n.trader || n.name != name || Inv(n) == null)
+                {
+                    continue;
+                }
+                if (ObjRef.Of(n.gameObject).K == ObjRef.Kind.Saved)
+                {
+                    continue;
+                }
                 float d = WorldActions.FlatSq(n.transform.position, at);
                 if (d < bestD) { bestD = d; best = n; }
             }
@@ -394,12 +570,24 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(NPC __instance)
         {
-            if (!NetEnemies.ClientMode) return true;
-            if (__instance.trader && __instance.inventory != null) TraderSync.Instance?.ClientStocking(__instance);
+            if (!NetEnemies.ClientMode)
+            {
+                return true;
+            }
+            if (__instance.trader && __instance.inventory != null)
+            {
+                TraderSync.Instance?.ClientStocking(__instance);
+            }
             return false;
         }
 
-        static void Postfix(NPC __instance) { if (!NetEnemies.ClientMode) TraderSync.Instance?.HostStocked(__instance); }
+        static void Postfix(NPC __instance)
+        {
+            if (!NetEnemies.ClientMode)
+            {
+                TraderSync.Instance?.HostStocked(__instance);
+            }
+        }
     }
 
     /// <summary>An accepted trade (DialogueWindow.acceptTrade moves what's in the two exchange windows to the trader
@@ -411,10 +599,16 @@ namespace DarkwoodMP.World
         internal static Dictionary<string, int> Count(Inventory inv)
         {
             var d = new Dictionary<string, int>();
-            if (inv == null) return d;
+            if (inv == null)
+            {
+                return d;
+            }
             foreach (var it in inv.getAllItems())
             {
-                if (InvItemClass.isNull(it) || string.IsNullOrEmpty(it.type)) continue;
+                if (InvItemClass.isNull(it) || string.IsNullOrEmpty(it.type))
+                {
+                    continue;
+                }
                 d.TryGetValue(it.type, out int n);
                 d[it.type] = n + System.Math.Max(1, it.amount);
             }
@@ -424,17 +618,29 @@ namespace DarkwoodMP.World
         static void Prefix(DialogueWindow __instance, out (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
             __state = default;
-            if (__instance == null || __instance.npc == null || WorldActions.Replaying) return;
+            if (__instance == null || __instance.npc == null || WorldActions.Replaying)
+            {
+                return;
+            }
             __state = (Count(__instance.exchangeTrader), Count(__instance.exchangePlayer), __instance.npc.reputation);
         }
 
         static void Postfix(DialogueWindow __instance, (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
             var (took, gave, rep) = __state;
-            if (took == null || __instance.npc == null) return;
-            if (took.Count == 0 && gave.Count == 0) return;
+            if (took == null || __instance.npc == null)
+            {
+                return;
+            }
+            if (took.Count == 0 && gave.Count == 0)
+            {
+                return;
+            }
             // Accepted: both windows were emptied. Not accepted (not enough reputation, no room): the things are still in them.
-            if (Count(__instance.exchangeTrader).Count != 0 || Count(__instance.exchangePlayer).Count != 0) return;
+            if (Count(__instance.exchangeTrader).Count != 0 || Count(__instance.exchangePlayer).Count != 0)
+            {
+                return;
+            }
             TraderSync.Instance?.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - rep);
         }
     }

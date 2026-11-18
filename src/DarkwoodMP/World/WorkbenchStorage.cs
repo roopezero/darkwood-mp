@@ -41,7 +41,10 @@ namespace DarkwoodMP.World
         {
             var so = wb.GetComponent<SaveableObject>();
             string name = so != null && !string.IsNullOrEmpty(so.prefabName) ? so.prefabName : DefaultPrefab;
-            if (_base.TryGetValue(name, out int n)) return n;
+            if (_base.TryGetValue(name, out int n))
+            {
+                return n;
+            }
             n = 0;
             foreach (string path in new[] { "Prefabs/" + name, name, "Prefabs/" + DefaultPrefab })
             {
@@ -65,7 +68,10 @@ namespace DarkwoodMP.World
             if (!WorldShare.WorldReady) { _appliedScene = -1; return; }
             int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             int level = Level;
-            if (scene == _appliedScene && level == _appliedLevel) return;
+            if (scene == _appliedScene && level == _appliedLevel)
+            {
+                return;
+            }
             bool loaded = scene != _appliedScene;
             _appliedScene = scene;
             _appliedLevel = level;
@@ -78,12 +84,19 @@ namespace DarkwoodMP.World
             int level = Level;
             foreach (var wb in Object.FindObjectsOfType<Workbench>(true))
             {
-                if (wb == null || wb.normalInventory == null) continue;
+                if (wb == null || wb.normalInventory == null)
+                {
+                    continue;
+                }
                 int before = wb.normalInventory.slots.Count;
                 if (Fit(wb.normalInventory, Wanted(wb, level)))
+                {
                     Plugin.Log.LogInfo($"[workbench] {wb.name} {ObjRef.Of(wb.normalInventory.gameObject)} storage {before} -> {wb.normalInventory.slots.Count} slots (level {level}, {why})");
+                }
                 else if (why == "world loaded")
+                {
                     Plugin.Log.LogInfo($"[workbench] {wb.name} {ObjRef.Of(wb.normalInventory.gameObject)} storage {before} slots (level {level}, base {BaseSlots(wb)}, {wb.normalInventory.maxColumns} columns)");
+                }
             }
         }
 
@@ -94,21 +107,33 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Fit(Inventory inv, int count)
         {
-            if (inv == null || inv.slots.Count >= count) return false;
+            if (inv == null || inv.slots.Count >= count)
+            {
+                return false;
+            }
             bool open = inv.open;
             var player = Player.Instance;
             bool second = open && player != null && player.openedItemInventory2 == inv;
-            if (open) inv.hide();
+            if (open)
+            {
+                inv.hide();
+            }
             while (inv.slots.Count < count)
             {
                 var slot = new InvSlot { inventory = inv, name = "Slot" + (inv.slots.Count + 1) };
                 inv.slots.Add(slot);
             }
-            if (inv.slots.Count >= 30) inv.maxColumns = RowSize; // the game's rule for big containers (Inventory.init)
+            if (inv.slots.Count >= 30)
+            {
+                inv.maxColumns = RowSize; // the game's rule for big containers (Inventory.init)
+            }
             if (open)
             {
                 inv.show("Storage"); // as Workbench.open shows it
-                if (second && player != null) player.openedItemInventory2 = inv;
+                if (second && player != null)
+                {
+                    player.openedItemInventory2 = inv;
+                }
             }
             SlotShare.Instance?.Grew(inv);
             UiRefresh.Changed(inv);
@@ -132,11 +157,20 @@ namespace DarkwoodMP.World
         static void Postfix(Inventory __instance)
         {
             var inv = __instance;
-            if (inv == null || !inv.open || inv.thisUI == null) return;
+            if (inv == null || !inv.open || inv.thisUI == null)
+            {
+                return;
+            }
             var wb = inv.GetComponent<Workbench>();
-            if (wb == null || wb.normalInventory != inv) return;
+            if (wb == null || wb.normalInventory != inv)
+            {
+                return;
+            }
             var cam = Core.CamUI != null ? Core.CamUI.GetComponent<Camera>() : null;
-            if (cam == null) return;
+            if (cam == null)
+            {
+                return;
+            }
             const float slot = 60f; // Inventory.slotSize
             int cols = Mathf.Max(1, inv.maxColumns), rows = (inv.slots.Count + cols - 1) / cols;
             // Measured unscaled now; ScaleToResolution scales the window by this factor next frame, about the same spot.
@@ -145,7 +179,10 @@ namespace DarkwoodMP.World
             float top = cam.WorldToViewportPoint(at + new Vector3(0f, 0f, slot * 0.5f)).y;
             float bottom = cam.WorldToViewportPoint(at - new Vector3(0f, 0f, (rows - 1) * slot + Below)).y;
             float need = (top - bottom) * mod, room = top - 0.01f;
-            if (need <= 0f || need <= room) return;
+            if (need <= 0f || need <= room)
+            {
+                return;
+            }
             float scale = room / need;
             inv.thisUI.transform.localScale = Vector3.one * scale;
             Plugin.Log.LogInfo($"[workbench] storage of {inv.slots.Count} slots ({rows} rows) drawn at {scale:0.00} of its size to fit the screen");
@@ -158,7 +195,10 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Workbench __instance)
         {
-            if (__instance == null || __instance.normalInventory == null || Singleton<Controller>.Instance == null) return;
+            if (__instance == null || __instance.normalInventory == null || Singleton<Controller>.Instance == null)
+            {
+                return;
+            }
             WorkbenchStorage.Fit(__instance.normalInventory, WorkbenchStorage.Wanted(__instance, Singleton<Controller>.Instance.workbenchLevel));
         }
     }

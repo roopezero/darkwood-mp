@@ -19,7 +19,10 @@ namespace DarkwoodMP.World
         private static Flags.NPCState State(string name)
         {
             var c = Copies(name).FirstOrDefault(x => x.npc != null);
-            if (c != null) _story = c.npc.name;
+            if (c != null)
+            {
+                _story = c.npc.name;
+            }
             return Singleton<Flags>.Instance?.getNPCState(_story ?? name);
         }
 
@@ -98,7 +101,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(4f); // a client settles the corpse 2 s after it dies
             r.Info = c != null ? $"{hits} hits: {Props(c)}" : $"{hits} hits: gone";
-            if (c == null || c.alive) r.Fail($"not dead: {r.Info}");
+            if (c == null || c.alive)
+            {
+                r.Fail($"not dead: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -112,17 +118,28 @@ namespace DarkwoodMP.World
             {
                 c = Copies(a[0]).Where(x => !x.alive && x.gameObject.activeInHierarchy)
                     .OrderBy(x => (x.transform.position - P.transform.position).sqrMagnitude).FirstOrDefault();
-                if (c != null && c.GetComponent<Item>() != null) break;
+                if (c != null && c.GetComponent<Item>() != null)
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.25f);
             }
             var st = State(a[0]);
             string all = string.Join("; ", Copies(a[0]).Select(Props));
             if (c == null) { r.Fail($"no corpse shown here (state dead {st?.dead} deadID {st?.deadID}): {all}"); yield break; }
             r.Info = $"state dead {st?.dead} deadID {st?.deadID}; {Props(c)}";
-            if (c.GetComponent<Item>() == null) r.Fail($"not searchable: {r.Info}");
-            else if (Combat.NetEnemies.Hidden.Contains(c)) r.Fail($"hidden (a frozen copy of ours, not shown as the host's): {r.Info}");
+            if (c.GetComponent<Item>() == null)
+            {
+                r.Fail($"not searchable: {r.Info}");
+            }
+            else if (Combat.NetEnemies.Hidden.Contains(c))
+            {
+                r.Fail($"hidden (a frozen copy of ours, not shown as the host's): {r.Info}");
+            }
             else if (Combat.NetEnemies.ClientMode && !(Combat.NetEnemies.Instance?.NetIdOf(c, out _) ?? false))
+            {
                 r.Fail($"not the host's corpse (its loot wouldn't be the host's): {r.Info}");
+            }
         }
 
         /// <summary>"sn-away NAME DIST": our player walks DIST away from the NPC and back (its area switched off and on).</summary>
@@ -147,13 +164,19 @@ namespace DarkwoodMP.World
         private static IEnumerator SnSpawnOwn(string[] a, Result r)
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost && sm != null) sm.currentUniqueID += 5000;
+            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost && sm != null)
+            {
+                sm.currentUniqueID += 5000;
+            }
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Core.AddPrefab("Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
             if (go == null) { r.Fail($"no prefab Characters/NPC/{a[0]}"); yield break; }
             Core.addToSaveable(go, isDynamic: true, assignID: true);
             var c = go.GetComponent<Character>();
-            if (c != null) c.isActive = true;
+            if (c != null)
+            {
+                c.isActive = true;
+            }
             yield return new WaitForSecondsRealtime(1f);
             if (c == null || c.npc == null) { r.Fail($"{a[0]} isn't an NPC"); yield break; }
             _story = c.npc.name;
@@ -187,8 +210,14 @@ namespace DarkwoodMP.World
             P.openedItemInventory = null;
             yield return new WaitForSeconds(1f);
             r.Info = $"took [{string.Join(", ", took)}] from {Props(c)}";
-            if (took.Count == 0) r.Fail($"nothing in it: {r.Info}");
-            else if (Things(inv) > 0) r.Fail($"something is still in it: {r.Info}");
+            if (took.Count == 0)
+            {
+                r.Fail($"nothing in it: {r.Info}");
+            }
+            else if (Things(inv) > 0)
+            {
+                r.Fail($"something is still in it: {r.Info}");
+            }
         }
 
         /// <summary>"sn-looted NAME": the NPC's corpse here is searchable and empty (another player took what it had).</summary>
@@ -198,12 +227,18 @@ namespace DarkwoodMP.World
             for (float t = 0f; t < 6f; t += 0.25f)
             {
                 c = Corpse(a[0]);
-                if (c != null && Things(c.inventory) == 0) break;
+                if (c != null && Things(c.inventory) == 0)
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.25f);
             }
             if (c == null) { r.Fail($"no searchable corpse of {a[0]} here"); yield break; }
             r.Info = Props(c);
-            if (Things(c.inventory) > 0) r.Fail($"it still has things in it: {r.Info}");
+            if (Things(c.inventory) > 0)
+            {
+                r.Fail($"it still has things in it: {r.Info}");
+            }
         }
 
         // ---- R03: a container's window when the container goes while it's open -------------------------------------
@@ -239,7 +274,14 @@ namespace DarkwoodMP.World
         private static IEnumerator CwOpen(string[] a, Result r)
         {
             Character c = null;
-            for (float t = 0f; t < 20f && c == null; t += 0.5f) { c = KeptCorpse(); if (c == null) yield return new WaitForSeconds(0.5f); }
+            for (float t = 0f; t < 20f && c == null; t += 0.5f)
+            {
+                c = KeptCorpse();
+                if (c == null)
+                {
+                    yield return new WaitForSeconds(0.5f);
+                }
+            }
             if (c == null) { r.Fail("no kept corpse of the host's enemies here"); yield break; }
             yield return Walk(c.transform.position, 80f);
             var item = c.GetComponent<Item>();
@@ -249,7 +291,10 @@ namespace DarkwoodMP.World
             _cwInv = inv; _cwWindow = inv.thisUI;
             r.Info = $"{c.name} at {Fmt(c.transform.position)}: open {inv.open}, window {(inv.thisUI != null ? inv.thisUI.name : "none")}, " +
                      $"ours open {ReferenceEquals(P.openedItemInventory, inv)}, windows [{string.Join(", ", Windows())}]";
-            if (!inv.open || inv.thisUI == null || !ReferenceEquals(P.openedItemInventory, inv)) r.Fail($"its window didn't open: {r.Info}");
+            if (!inv.open || inv.thisUI == null || !ReferenceEquals(P.openedItemInventory, inv))
+            {
+                r.Fail($"its window didn't open: {r.Info}");
+            }
         }
 
         /// <summary>"cw-break" (client): the open corpse's Inventory destroyed directly, with no window closed first
@@ -277,9 +322,17 @@ namespace DarkwoodMP.World
         {
             var list = new System.Collections.Generic.List<string>();
             var ui = Singleton<UI>.Instance;
-            if (ui == null) return list;
+            if (ui == null)
+            {
+                return list;
+            }
             foreach (Transform t in ui.transform)
-                if (t != null && (t.name == "ItemInv" || t.name == "DeathDrop")) list.Add(t.name);
+            {
+                if (t != null && (t.name == "ItemInv" || t.name == "DeathDrop"))
+                {
+                    list.Add(t.name);
+                }
+            }
             return list;
         }
 
@@ -293,12 +346,18 @@ namespace DarkwoodMP.World
             {
                 ok = _cwInv == null && _cwWindow == null && Windows().Count == 0
                      && ReferenceEquals(P.openedItemInventory, null) && ReferenceEquals(P.openedItemInventory2, null);
-                if (!ok) yield return new WaitForSeconds(0.25f);
+                if (!ok)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                }
             }
             string opened = ReferenceEquals(P.openedItemInventory, null) ? "null" : P.openedItemInventory == null ? "a destroyed object" : P.openedItemInventory.name;
             r.Info = $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], " +
                      $"openedItemInventory {opened}, openedItemInventory2 {(ReferenceEquals(P.openedItemInventory2, null) ? "null" : "set")}";
-            if (!ok) r.Fail($"a window was left: {r.Info}");
+            if (!ok)
+            {
+                r.Fail($"a window was left: {r.Info}");
+            }
             _cwInv = null; _cwWindow = null;
         }
     }

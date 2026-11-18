@@ -37,17 +37,32 @@ namespace DarkwoodMP.World
         /// <summary>Every couple of seconds in a world: if our player holds a full tank, set the flag.</summary>
         public static void Update()
         {
-            if (Time.unscaledTime < _next) return;
+            if (Time.unscaledTime < _next)
+            {
+                return;
+            }
             _next = Time.unscaledTime + Interval;
-            if (!WorldShare.InWorld || WorldShare.Loading || Core.mainMenu || Filled) return;
+            if (!WorldShare.InWorld || WorldShare.Loading || Core.mainMenu || Filled)
+            {
+                return;
+            }
             var p = Player.Instance;
-            if (p == null || p.Inventory == null) return;
+            if (p == null || p.Inventory == null)
+            {
+                return;
+            }
             // As the requirement looks: in the bags, or among the journal's items.
             bool holds = p.Inventory.getItemInPlayer(Item, 0f, includeAdditionalInventory: true) != null
                          || (Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(Item) ?? false);
-            if (!holds) return;
+            if (!holds)
+            {
+                return;
+            }
             var f = Singleton<Flags>.Instance;
-            if (f == null) return;
+            if (f == null)
+            {
+                return;
+            }
             FlagsSync.SetModFlag(f, Flag, true, 0);
             Plugin.Log.LogInfo($"[world] our player holds a full oxygen tank: every player can dive in the village cellar now ({Flag})");
         }
@@ -57,9 +72,18 @@ namespace DarkwoodMP.World
         /// <summary>Whether this requirement's item is the full tank.</summary>
         internal static bool IsTank(Object itemType)
         {
-            if (itemType == null) return false;
-            if (ReferenceEquals(itemType, _tankPrefab)) return true;
-            if (!(itemType is GameObject go) || go.GetComponent<InvItem>()?.type != Item) return false;
+            if (itemType == null)
+            {
+                return false;
+            }
+            if (ReferenceEquals(itemType, _tankPrefab))
+            {
+                return true;
+            }
+            if (!(itemType is GameObject go) || go.GetComponent<InvItem>()?.type != Item)
+            {
+                return false;
+            }
             _tankPrefab = itemType;
             return true;
         }
@@ -71,8 +95,14 @@ namespace DarkwoodMP.World
     {
         static void Postfix(EventTriggerRequirement __instance, ref bool __result)
         {
-            if (__instance.type != EventTriggerRequirement.Type.playerState || __instance.playerState != Player.State.haveItem) return;
-            if (!SharedTank.IsTank(__instance.itemType) || !SharedTank.Filled) return;
+            if (__instance.type != EventTriggerRequirement.Type.playerState || __instance.playerState != Player.State.haveItem)
+            {
+                return;
+            }
+            if (!SharedTank.IsTank(__instance.itemType) || !SharedTank.Filled)
+            {
+                return;
+            }
             __result = __instance.activeModifier;
         }
     }

@@ -18,9 +18,15 @@ namespace DarkwoodMP.World
     {
         public static bool WorldResetAllowed()
         {
-            if (NetEnemies.ClientMode) return false;
+            if (NetEnemies.ClientMode)
+            {
+                return false;
+            }
             var s = Net.Session.Instance;
-            if (s != null && s.IsHost && s.Peers.Count > 0 && InPlayerDeath()) return false;
+            if (s != null && s.IsHost && s.Peers.Count > 0 && InPlayerDeath())
+            {
+                return false;
+            }
             return true;
         }
 
@@ -31,7 +37,10 @@ namespace DarkwoodMP.World
             for (int i = 0; i < st.FrameCount && i < 16; i++)
             {
                 var t = st.GetFrame(i)?.GetMethod()?.DeclaringType;
-                if (t != null && t.DeclaringType == typeof(Player) && t.Name.Contains("onDeath")) return true;
+                if (t != null && t.DeclaringType == typeof(Player) && t.Name.Contains("onDeath"))
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -43,7 +52,10 @@ namespace DarkwoodMP.World
         static bool Prefix()
         {
             bool ok = DeathRules.WorldResetAllowed();
-            if (!ok) Plugin.Log.LogInfo("A death didn't respawn the world's enemies: others are playing in it");
+            if (!ok)
+            {
+                Plugin.Log.LogInfo("A death didn't respawn the world's enemies: others are playing in it");
+            }
             return ok;
         }
     }
@@ -60,7 +72,10 @@ namespace DarkwoodMP.World
         static bool Prefix()
         {
             bool ok = DeathRules.WorldResetAllowed();
-            if (!ok) Plugin.Log.LogInfo("A death didn't skip the night: others are playing in it");
+            if (!ok)
+            {
+                Plugin.Log.LogInfo("A death didn't skip the night: others are playing in it");
+            }
             return ok;
         }
     }

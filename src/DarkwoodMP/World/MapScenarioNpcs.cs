@@ -75,10 +75,18 @@ namespace DarkwoodMP.World
             });
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until && c.target != proxy.transform)
+            {
                 yield return new WaitForSecondsRealtime(0.5f);
+            }
             r.Info = FollowInfo(c, proxy);
-            if (NpcFollowers.LeaderOf(c) != proxy) r.Fail($"not recorded as {proxy.OwnerName}'s follower: {r.Info}");
-            else if (c.target != proxy.transform) r.Fail(r.Info);
+            if (NpcFollowers.LeaderOf(c) != proxy)
+            {
+                r.Fail($"not recorded as {proxy.OwnerName}'s follower: {r.Info}");
+            }
+            else if (c.target != proxy.transform)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static string FollowInfo(Character c, Combat.NetPlayerProxy proxy) =>
@@ -94,9 +102,14 @@ namespace DarkwoodMP.World
             if (c == null || proxy == null) { r.Fail("no follower or no joiner"); yield break; }
             float until = Time.realtimeSinceStartup + 20f;
             while (Time.realtimeSinceStartup < until && StateDump.Flat(c.transform.position - proxy.transform.position) >= 500f)
+            {
                 yield return new WaitForSecondsRealtime(0.5f);
+            }
             r.Info = FollowInfo(c, proxy);
-            if (StateDump.Flat(c.transform.position - proxy.transform.position) >= 500f || c.target != proxy.transform) r.Fail(r.Info);
+            if (StateDump.Flat(c.transform.position - proxy.transform.position) >= 500f || c.target != proxy.transform)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"follow-near NAME" (client): our copy of that NPC comes to us (within 500), as the host's follows
@@ -109,11 +122,17 @@ namespace DarkwoodMP.World
             {
                 npc = Shared(a[0], Player.Instance.transform.position);
                 d = npc != null ? StateDump.Flat(npc.transform.position - Player.Instance.transform.position) : -1f;
-                if (npc != null && d < 500f) break;
+                if (npc != null && d < 500f)
+                {
+                    break;
+                }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             r.Info = npc != null ? $"{npc.name} at {Fmt(npc.transform.position)}, {d:0} from us at {Fmt(Player.Instance.transform.position)}" : $"no {a[0]} here";
-            if (npc == null || d >= 500f) r.Fail(r.Info);
+            if (npc == null || d >= 500f)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"follow-end" (host): the follower is as it was, where it was.</summary>
@@ -146,7 +165,10 @@ namespace DarkwoodMP.World
             }
             else if (_wolfWas != null)
             {
-                for (int i = 0; i < WolfFlagNames.Length; i++) f.setFlag(WolfFlagNames[i], _wolfWas[i]);
+                for (int i = 0; i < WolfFlagNames.Length; i++)
+                {
+                    f.setFlag(WolfFlagNames[i], _wolfWas[i]);
+                }
                 _wolfWas = null;
             }
             yield return new WaitForSeconds(0.5f);
@@ -181,7 +203,10 @@ namespace DarkwoodMP.World
             else
             {
                 npc = Shared(a[0], Centre);
-                if (npc != null) _moved[a[0]] = (SharedId(npc), npc.transform.position);
+                if (npc != null)
+                {
+                    _moved[a[0]] = (SharedId(npc), npc.transform.position);
+                }
                 to = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             }
             if (npc == null) { r.Fail($"no {a[0]} here that every game has"); yield break; }
@@ -241,9 +266,15 @@ namespace DarkwoodMP.World
             listener.checkFrameTrigger(AnimEvent, 0, 0f, tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent, Vector3.zero, Vector3.zero, null, "", false);
             bool run = a.Length > 0 && a[0] == "run";
             float until = Time.realtimeSinceStartup + (run ? 5f : 1.5f);
-            while (Time.realtimeSinceStartup < until && npc.disabled) yield return new WaitForSecondsRealtime(0.25f);
+            while (Time.realtimeSinceStartup < until && npc.disabled)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+            }
             r.Info = $"{npc.name}: {(npc.disabled ? "switched off" : "can be talked to")}, the event {(ge.fired ? "ran" : "didn't run")} here";
-            if (run ? npc.disabled || !ge.fired : !npc.disabled || ge.fired) r.Fail(r.Info);
+            if (run ? npc.disabled || !ge.fired : !npc.disabled || ge.fired)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"anim-check" (client): the host's run of the event reached us: our NPC can be talked to as the game
@@ -253,9 +284,15 @@ namespace DarkwoodMP.World
             var (npc, ge, _) = _anim;
             if (npc == null || ge == null) { r.Fail("no anim-setup"); yield break; }
             float until = Time.realtimeSinceStartup + 10f;
-            while (Time.realtimeSinceStartup < until && npc.disabled) yield return new WaitForSecondsRealtime(0.25f);
+            while (Time.realtimeSinceStartup < until && npc.disabled)
+            {
+                yield return new WaitForSecondsRealtime(0.25f);
+            }
             r.Info = $"{npc.name}: wantsToTalk {npc.wantsToTalk}, disabled {npc.disabled}, the event {(ge.fired ? "ran" : "didn't run")} here";
-            if (npc.disabled || !npc.wantsToTalk || !ge.fired) r.Fail(r.Info);
+            if (npc.disabled || !npc.wantsToTalk || !ge.fired)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"anim-end": the test's world event and listener are removed, and the NPC can be talked to.</summary>
@@ -263,9 +300,18 @@ namespace DarkwoodMP.World
         {
             var (npc, ge, added) = _anim;
             _anim = default;
-            if (ge != null) UnityEngine.Object.Destroy(ge.gameObject); // GameEvents.OnDestroy takes it out of the world events
-            if (added != null) UnityEngine.Object.Destroy(added);
-            if (npc != null) npc.disabled = false;
+            if (ge != null)
+            {
+                UnityEngine.Object.Destroy(ge.gameObject); // GameEvents.OnDestroy takes it out of the world events
+            }
+            if (added != null)
+            {
+                UnityEngine.Object.Destroy(added);
+            }
+            if (npc != null)
+            {
+                npc.disabled = false;
+            }
         }
 
         /// <summary>"npc-talk NAME DX DZ" (client): our copy of that NPC comes to centre + (DX, DZ), where the host's
@@ -278,7 +324,10 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 npc = Shared(a[0], to);
-                if (npc != null && StateDump.Flat(npc.transform.position - to) < 60f) break;
+                if (npc != null && StateDump.Flat(npc.transform.position - to) < 60f)
+                {
+                    break;
+                }
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             if (npc == null) { r.Fail($"no {a[0]} here"); yield break; }
@@ -292,9 +341,18 @@ namespace DarkwoodMP.World
             var refused = MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).Where(l => !l.Contains("[map]") && l.Contains("refused")).ToList();
             bool open = win.npc == npc;
             r.Info = $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from the host's): dialogue {(open ? "open" : "not open")}";
-            if (open) yield return MapScenarioGaps.Close(win, npc);
-            if (refused.Count > 0) r.Fail($"refused: {refused[0].Trim()}");
-            else if (!open) r.Fail(r.Info);
+            if (open)
+            {
+                yield return MapScenarioGaps.Close(win, npc);
+            }
+            if (refused.Count > 0)
+            {
+                r.Fail($"refused: {refused[0].Trim()}");
+            }
+            else if (!open)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>Where our log stood at the last "host-copy here": npc-died reads only what came after it. The host's
@@ -307,7 +365,10 @@ namespace DarkwoodMP.World
         private static IEnumerator HostCopy(string[] a, Result r)
         {
             bool want = a.Length == 0 || a[0] == "here";
-            if (want) _copyMark = MapScenarioIssues.LogMark();
+            if (want)
+            {
+                _copyMark = MapScenarioIssues.LogMark();
+            }
             var l = MapScenarioGaps.Hideout(Player.Instance);
             if (l == null) { r.Fail("no hideout"); yield break; }
             float until = Time.realtimeSinceStartup + 20f;
@@ -318,13 +379,22 @@ namespace DarkwoodMP.World
                 npc = l.trader != null ? l.trader.GetComponent<NPC>() : null;
                 var ch = npc != null ? npc.GetComponent<Character>() : null;
                 has = ch != null && ch.alive && npc.inventory != null && npc.inventory.getAllItems().Count > 0;
-                if (has == want) break;
+                if (has == want)
+                {
+                    break;
+                }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             var c = Singleton<Controller>.Instance;
             r.Info = $"{l.name}: {(npc != null ? $"{npc.name} with {(npc.inventory != null ? npc.inventory.getAllItems().Count : 0)} things" : "no trader")}, our morning {c.isAfterNight}";
-            if (c.isAfterNight) r.Fail($"we're in a morning ourselves: {r.Info}");
-            else if (has != want) r.Fail(r.Info);
+            if (c.isAfterNight)
+            {
+                r.Fail($"we're in a morning ourselves: {r.Info}");
+            }
+            else if (has != want)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"npc-died" (host): the night trader in the hideout died here too, through the joiner's NpcDied
@@ -342,8 +412,14 @@ namespace DarkwoodMP.World
             var alive = UnityEngine.Object.FindObjectsOfType<Character>().Where(c => c.isNightTrader && c.alive && StateDump.Flat(c.transform.position - spot) < 600f).ToList();
             bool flag = Singleton<Flags>.Instance.isFlagTrue("nightTrader_killedYesterday");
             r.Info = $"NpcDied came {got}, living night traders in {(l != null ? l.name : "the hideout")}: {alive.Count}, nightTrader_killedYesterday {flag}";
-            if (refused.Count > 0) r.Fail($"{r.Info}; {refused[0].Trim()}");
-            else if (!got || alive.Count > 0 || !flag) r.Fail(r.Info);
+            if (refused.Count > 0)
+            {
+                r.Fail($"{r.Info}; {refused[0].Trim()}");
+            }
+            else if (!got || alive.Count > 0 || !flag)
+            {
+                r.Fail(r.Info);
+            }
         }
     }
 }

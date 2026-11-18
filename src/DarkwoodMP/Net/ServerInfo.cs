@@ -54,17 +54,29 @@ namespace DarkwoodMP.Net
             foreach (var kv in Fields)
             {
                 string k = Clean(kv.Key, "=");
-                if (k.Length > 0) f.Add(k + "=" + Clean(kv.Value, ""));
+                if (k.Length > 0)
+                {
+                    f.Add(k + "=" + Clean(kv.Value, ""));
+                }
             }
             return Encode("INFO", f.ToArray());
         }
 
         public static ServerInfo Parse(byte[] b, int n)
         {
-            if (n < 1 || b[n - 1] != End) return null;
+            if (n < 1 || b[n - 1] != End)
+            {
+                return null;
+            }
             var parts = Encoding.UTF8.GetString(b, 0, n - 1).Split((char)Sep);
-            if (parts.Length < 7 || parts[0] != "INFO") return null;
-            if (!int.TryParse(parts[2], out int players) || !int.TryParse(parts[3], out int max)) return null;
+            if (parts.Length < 7 || parts[0] != "INFO")
+            {
+                return null;
+            }
+            if (!int.TryParse(parts[2], out int players) || !int.TryParse(parts[3], out int max))
+            {
+                return null;
+            }
             var info = new ServerInfo
             {
                 Name = parts[1], Players = players, MaxPlayers = max,
@@ -73,7 +85,10 @@ namespace DarkwoodMP.Net
             for (int i = 7; i < parts.Length; i++)
             {
                 int eq = parts[i].IndexOf('=');
-                if (eq > 0) info.Fields[parts[i].Substring(0, eq)] = parts[i].Substring(eq + 1);
+                if (eq > 0)
+                {
+                    info.Fields[parts[i].Substring(0, eq)] = parts[i].Substring(eq + 1);
+                }
             }
             return info;
         }

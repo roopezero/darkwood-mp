@@ -42,7 +42,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private static GameObject Thing(string spec)
         {
-            if (spec == "enemy") return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
+            if (spec == "enemy")
+            {
+                return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
+            }
             if (spec.StartsWith("door:"))
             {
                 // The Nth door that isn't broken in the save (the test world has broken ones, which the host won't open).
@@ -50,13 +53,21 @@ namespace DarkwoodMP.World
                 for (int i = 0, whole = 0; i < 64; i++)
                 {
                     var d = MapScenarioWorld.Nth<Door>(i.ToString());
-                    if (d == null) return null;
-                    if (!d.destroyed && whole++ == want) return d.gameObject;
+                    if (d == null)
+                    {
+                        return null;
+                    }
+                    if (!d.destroyed && whole++ == want)
+                    {
+                        return d.gameObject;
+                    }
                 }
                 return null;
             }
             if (spec.StartsWith("trap:"))
+            {
                 return MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null)?.gameObject;
+            }
             return MapScenarioWorld.Find<Item>(spec, i => i.switchable)?.gameObject;
         }
 
@@ -76,12 +87,18 @@ namespace DarkwoodMP.World
             bool multi = a[3] == "multi";
             // So nothing in the test area breaks it during the steps (the host doesn't open a broken door).
             var door = go.GetComponent<Door>();
-            if (door != null) door.health = 100000;
+            if (door != null)
+            {
+                door.health = 100000;
+            }
             var trap = go.GetComponent<Trigger>();
             if (trap != null) { trap.staysAfterDisarming = true; go.GetComponent<Item>().disarmChance = 2f; }
             var m = new Made { Thing = go };
             var old = GameObject.Find("dwmp_act_" + id);
-            if (old != null) Object.Destroy(old);
+            if (old != null)
+            {
+                Object.Destroy(old);
+            }
             var root = new GameObject("dwmp_act_" + id);
             root.transform.position = go.transform.position;
             var ge = root.AddComponent<GameEvents>();
@@ -120,7 +137,20 @@ namespace DarkwoodMP.World
                 {
                     var door = m.Thing.GetComponent<Door>();
                     bool open = a[1] == "open";
-                    if (door.opened != open) AsPlayer(() => { if (open) door.open(p.transform.position, p.transform, 0f); else door.close(p.transform); });
+                    if (door.opened != open)
+                    {
+                        AsPlayer(() =>
+                        {
+                            if (open)
+                            {
+                                door.open(p.transform.position, p.transform, 0f);
+                            }
+                            else
+                            {
+                                door.close(p.transform);
+                            }
+                        });
+                    }
                     yield return new WaitForSeconds(0.5f);
                     state = $"open={door.opened} broken={door.destroyed} health={door.health}";
                     if (door.opened != open) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
@@ -131,7 +161,20 @@ namespace DarkwoodMP.World
                 {
                     var it = m.Thing.GetComponent<Item>();
                     bool on = a[1] == "on";
-                    if (it.isOn != on) AsPlayer(() => { if (on) it.turnOn(); else it.turnOff(); });
+                    if (it.isOn != on)
+                    {
+                        AsPlayer(() =>
+                        {
+                            if (on)
+                            {
+                                it.turnOn();
+                            }
+                            else
+                            {
+                                it.turnOff();
+                            }
+                        });
+                    }
                     yield return new WaitForSeconds(0.5f);
                     state = $"on={it.isOn}";
                     if (it.isOn != on) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
@@ -151,18 +194,27 @@ namespace DarkwoodMP.World
                     var trap = m.Thing.GetComponent<Trigger>();
                     AsPlayer(() => { p.disarmingTrap = true; TrapBeingDisarmed(p) = it; p.progressBarCompleted(); });
                     float until0 = Time.realtimeSinceStartup + 4f;
-                    while (trap != null && !trap.triggered && Time.realtimeSinceStartup < until0) yield return null;
+                    while (trap != null && !trap.triggered && Time.realtimeSinceStartup < until0)
+                    {
+                        yield return null;
+                    }
                     p.hidingInventory = false;
                     state = $"disarmed={trap != null && trap.triggered}";
                     break;
                 }
             }
             float until = Time.realtimeSinceStartup + 6f;
-            while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want) yield return new WaitForSeconds(0.1f);
+            while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             yield return new WaitForSeconds(1.5f);
             int got = c.Of(a[0]) - had;
             r.Info = $"{m.Thing.name} {state}: {got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
-            if (got != want) r.Fail(r.Info);
+            if (got != want)
+            {
+                r.Fail(r.Info);
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -172,11 +224,17 @@ namespace DarkwoodMP.World
             if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("act-count ID OWN SHARED (act-setup first)"); yield break; }
             int own = int.Parse(a[1]), shared = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 4f;
-            while (m.C.N < shared && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (m.C.N < shared && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
             r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + (m.Thing != null && m.Thing.GetComponent<Door>() is Door d ? $"; door open={d.opened} broken={d.destroyed} health={d.health}" : "");
-            if (got != own || m.C.N != shared) r.Fail(r.Info);
+            if (got != own || m.C.N != shared)
+            {
+                r.Fail(r.Info);
+            }
         }
     }
 }

@@ -47,34 +47,59 @@ namespace DarkwoodMP.World
         private static bool Movable(NPC npc, out Character c)
         {
             c = npc != null ? npc.GetComponent<Character>() : null;
-            if (c == null || !c.alive) return false;
+            if (c == null || !c.alive)
+            {
+                return false;
+            }
             return NetEnemies.Instance == null || !NetEnemies.Instance.NetIdOf(c, out _);
         }
 
         public void Update()
         {
-            if (!_session.Connected || !WorldShare.InWorld) return;
-            if (_session.IsHost) HostUpdate(); else ClientUpdate();
+            if (!_session.Connected || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (_session.IsHost)
+            {
+                HostUpdate();
+            }
+            else
+            {
+                ClientUpdate();
+            }
         }
 
         private void HostUpdate()
         {
-            if (_session.Peers.Count == 0 || Time.unscaledTime < _nextMoved) return;
+            if (_session.Peers.Count == 0 || Time.unscaledTime < _nextMoved)
+            {
+                return;
+            }
             _nextMoved = Time.unscaledTime + MovedEvery;
             bool all = Time.unscaledTime >= _nextAll;
             if (all) { _nextAll = Time.unscaledTime + AllEvery; FindNpcs(); }
             var list = new List<(int id, Vector2 p)>();
             foreach (var (id, npc) in _npcs)
             {
-                if (!Movable(npc, out var c)) continue;
+                if (!Movable(npc, out var c))
+                {
+                    continue;
+                }
                 var pos = c.transform.position;
                 var p = new Vector2(pos.x, pos.z);
                 bool moved = !_sent.TryGetValue(id, out var was) || (p - was).sqrMagnitude > Moved * Moved;
-                if (!moved && !all) continue;
+                if (!moved && !all)
+                {
+                    continue;
+                }
                 _sent[id] = p;
                 list.Add((id, p));
             }
-            if (list.Count == 0) return;
+            if (list.Count == 0)
+            {
+                return;
+            }
             for (int start = 0; start < list.Count; start += 200)
             {
                 int n = Mathf.Min(200, list.Count - start);
@@ -93,18 +118,30 @@ namespace DarkwoodMP.World
         {
             _npcs.Clear();
             var sm = Singleton<SaveManager>.Instance;
-            if (sm == null) return;
+            if (sm == null)
+            {
+                return;
+            }
             foreach (var kv in sm.uniqueIdDict)
             {
-                if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit || kv.Value == null) continue;
+                if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit || kv.Value == null)
+                {
+                    continue;
+                }
                 var npc = kv.Value.GetComponent<NPC>();
-                if (npc != null) _npcs.Add((kv.Key, npc));
+                if (npc != null)
+                {
+                    _npcs.Add((kv.Key, npc));
+                }
             }
         }
 
         private void OnPos(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld) return;
+            if (from != _session.HostId || !WorldShare.InWorld)
+            {
+                return;
+            }
             int n = r.R.ReadUInt16();
             for (int i = 0; i < n; i++)
             {
@@ -126,42 +163,72 @@ namespace DarkwoodMP.World
         {
             var co = go.GetComponent<CullableObject>();
             var grid = Singleton<WorldGrid>.Instance;
-            if (co == null || co.node == null || grid == null) return;
+            if (co == null || co.node == null || grid == null)
+            {
+                return;
+            }
             var node = grid.getNode(at);
-            if (node == null || node == co.node) return;
+            if (node == null || node == co.node)
+            {
+                return;
+            }
             var cullable = co.node.getCullable(go);
             co.node.removeCullable(go);
             co.node = node;
-            if (cullable != null) node.cullables.Add(cullable);
-            if (go.activeSelf != node.entered) go.SetActive(node.entered);
+            if (cullable != null)
+            {
+                node.cullables.Add(cullable);
+            }
+            if (go.activeSelf != node.entered)
+            {
+                go.SetActive(node.entered);
+            }
         }
 
         private void ClientUpdate()
         {
-            if (_target.Count == 0) return;
+            if (_target.Count == 0)
+            {
+                return;
+            }
             var sm = Singleton<SaveManager>.Instance;
-            if (sm == null) return;
+            if (sm == null)
+            {
+                return;
+            }
             float dt = Time.deltaTime;
             foreach (var kv in _target)
             {
-                if (!sm.uniqueIdDict.TryGetValue(kv.Key, out var so) || so == null) continue;
+                if (!sm.uniqueIdDict.TryGetValue(kv.Key, out var so) || so == null)
+                {
+                    continue;
+                }
                 var npc = so.GetComponent<NPC>();
                 if (!Movable(npc, out var c)) { _gone.Add(kv.Key); continue; }
                 var t = c.transform;
                 var pos = t.position;
                 var to = new Vector3(kv.Value.x, pos.y, kv.Value.y);
                 float d = StateDump.Flat(to - pos);
-                if (d <= Close) continue;
+                if (d <= Close)
+                {
+                    continue;
+                }
                 if (d > Snap)
                 {
                     t.position = to;
                     Recull(c.gameObject, to);
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {npc.name} is at the host's {to.x:0},{to.z:0} ({d:0} away)");
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] {npc.name} is at the host's {to.x:0},{to.z:0} ({d:0} away)");
+                    }
                     continue;
                 }
                 t.position = Vector3.MoveTowards(pos, to, Mathf.Max(250f, d * 4f) * dt);
             }
-            foreach (var id in _gone) _target.Remove(id);
+            foreach (var id in _gone)
+            {
+                _target.Remove(id);
+            }
             _gone.Clear();
         }
     }

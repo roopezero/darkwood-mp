@@ -193,7 +193,10 @@ namespace DarkwoodMP.Sync
         public bool Capture(PlayerSnapshot snap)
         {
             var player = Player.Instance;
-            if (player == null) return false;
+            if (player == null)
+            {
+                return false;
+            }
             var root = player.transform;
 
             // Children (held items, effects) come and go; rescan periodically.
@@ -209,9 +212,14 @@ namespace DarkwoodMP.Sync
                     string path = PathOf(s.transform, root);
                     bool ok = IsCharacterArt(path);
                     if (dump)
+                    {
                         Plugin.Log.LogInfo($"[sprite] {(ok ? "SYNC" : "skip")} path={path} layer={LayerMask.LayerToName(s.gameObject.layer)} " +
                                            $"active={s.gameObject.activeInHierarchy} coll={s.Collection?.spriteCollectionName} sprite={s.CurrentSprite?.name}");
-                    if (!ok) continue;
+                    }
+                    if (!ok)
+                    {
+                        continue;
+                    }
                     keep.Add(s);
                     hashes.Add(StableHash.Of(path));
                 }
@@ -253,9 +261,15 @@ namespace DarkwoodMP.Sync
             for (int i = 0; i < _sprites.Length && snap.Sprites.Count < 255; i++)
             {
                 var s = _sprites[i];
-                if (s == null || !s.gameObject.activeInHierarchy || s.Collection == null) continue;
+                if (s == null || !s.gameObject.activeInHierarchy || s.Collection == null)
+                {
+                    continue;
+                }
                 var mr = s.GetComponent<Renderer>();
-                if (mr == null || !mr.enabled) continue;
+                if (mr == null || !mr.enabled)
+                {
+                    continue;
+                }
                 var t = s.transform;
                 snap.Sprites.Add(new PlayerSnapshot.SpriteState
                 {
@@ -284,9 +298,15 @@ namespace DarkwoodMP.Sync
 
         private static string PathOf(Transform t, Transform root)
         {
-            if (t == root) return ".";
+            if (t == root)
+            {
+                return ".";
+            }
             string p = t.name;
-            for (var c = t.parent; c != null && c != root; c = c.parent) p = c.name + "/" + p;
+            for (var c = t.parent; c != null && c != root; c = c.parent)
+            {
+                p = c.name + "/" + p;
+            }
             return p;
         }
     }

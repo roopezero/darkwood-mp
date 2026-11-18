@@ -26,17 +26,33 @@ namespace DarkwoodMP
 
         private static readonly List<Func<bool>> _open = new List<Func<bool>>();
 
-        public static void Register(Func<bool> isOpen) { if (isOpen != null) _open.Add(isOpen); }
+        public static void Register(Func<bool> isOpen)
+        {
+            if (isOpen != null)
+            {
+                _open.Add(isOpen);
+            }
+        }
 
         /// <summary>One of the mod's windows is up over the menus (a registered one, the co-op panel or a ConfirmDialog).</summary>
         public static bool AnyOpen
         {
             get
             {
-                if (ConfirmDialog.Open || (Plugin.Instance != null && Plugin.Instance.PanelOpen)) return true;
+                if (ConfirmDialog.Open || (Plugin.Instance != null && Plugin.Instance.PanelOpen))
+                {
+                    return true;
+                }
                 foreach (var f in _open)
                 {
-                    try { if (f()) return true; } catch { }
+                    try
+                    {
+                        if (f())
+                        {
+                            return true;
+                        }
+                    }
+                    catch { }
                 }
                 return false;
             }
@@ -44,7 +60,10 @@ namespace DarkwoodMP
 
         internal static void DrawAll()
         {
-            if (Draw == null) return;
+            if (Draw == null)
+            {
+                return;
+            }
             foreach (Action d in Draw.GetInvocationList())
             {
                 try { d(); }
@@ -100,12 +119,18 @@ namespace DarkwoodMP
         {
             var mm = Singleton<MainMenu>.Instance;
             _shown = Visible(mm, out _alpha);
-            if (mm != null && mm.Menu0 != null && mm.Menu0.activeInHierarchy) HideGameButtons(mm);
+            if (mm != null && mm.Menu0 != null && mm.Menu0.activeInHierarchy)
+            {
+                HideGameButtons(mm);
+            }
             if (!_shown) { _selected = -1; _pending = null; return; }
             bool pause = InWorldMenu();
             if (pause != _pause || _entries.Count == 0) { _pause = pause; Build(); _selected = -1; }
 
-            if (!MenuWindows.AnyOpen) Keys();
+            if (!MenuWindows.AnyOpen)
+            {
+                Keys();
+            }
             if (_pending != null)
             {
                 var act = _pending;
@@ -143,14 +168,26 @@ namespace DarkwoodMP
 
         private static void StartGame()
         {
-            if (MenuWindows.OpenStartGame != null) MenuWindows.OpenStartGame();
-            else GameButton(Singleton<MainMenu>.Instance.playBtn);
+            if (MenuWindows.OpenStartGame != null)
+            {
+                MenuWindows.OpenStartGame();
+            }
+            else
+            {
+                GameButton(Singleton<MainMenu>.Instance.playBtn);
+            }
         }
 
         private static void Options()
         {
-            if (MenuWindows.OpenOptions != null) MenuWindows.OpenOptions();
-            else GameButton(Singleton<MainMenu>.Instance.optionsBtn);
+            if (MenuWindows.OpenOptions != null)
+            {
+                MenuWindows.OpenOptions();
+            }
+            else
+            {
+                GameButton(Singleton<MainMenu>.Instance.optionsBtn);
+            }
         }
 
         /// <summary>Click one of the game's own (hidden) entries, as a mouse click on it does (Button.getClicked).</summary>
@@ -165,7 +202,10 @@ namespace DarkwoodMP
         private static string LeaveText()
         {
             string s;
-            if (WorldShare.Instance?.PlayingHostCopy == true) s = "This is your copy of the host's world: your own saves are untouched.";
+            if (WorldShare.Instance?.PlayingHostCopy == true)
+            {
+                s = "This is your copy of the host's world: your own saves are untouched.";
+            }
             else
             {
                 try
@@ -177,8 +217,14 @@ namespace DarkwoodMP
                 catch { s = "What you did since the last save will be lost."; }
             }
             var session = Plugin.Instance?.Session;
-            if (session != null && session.IsHost && session.Peers.Count > 0) s += " The players in your game go back to their menus.";
-            else if (session != null && session.IsClient) s += " You leave the host's game.";
+            if (session != null && session.IsHost && session.Peers.Count > 0)
+            {
+                s += " The players in your game go back to their menus.";
+            }
+            else if (session != null && session.IsClient)
+            {
+                s += " You leave the host's game.";
+            }
             return s;
         }
 
@@ -200,26 +246,49 @@ namespace DarkwoodMP
         private static bool Visible(MainMenu mm, out float alpha)
         {
             alpha = 0f;
-            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy || !Core.mainMenu) return false;
-            if (Core.forbidInputs || LoadingScreen.Up) return false; // credits starting, a world loading
+            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy || !Core.mainMenu)
+            {
+                return false;
+            }
+            if (Core.forbidInputs || LoadingScreen.Up)
+            {
+                return false; // credits starting, a world loading
+            }
             foreach (var box in new[] { mm.confirmBox, mm.applySettingsBox, mm.newGameBox, mm.resolutionBox, mm.earlyAccessBox, mm.gammaBox, mm.helpBox,
                                         mm.profilesMenu, mm.gameProfileAdvanced, mm.restartBox, mm.newVerBox, mm.profileErrorBox, mm.profileCorruptedBox, mm.OptionsMenu })
-                if (box != null && box.activeInHierarchy) return false;
+            {
+                if (box != null && box.activeInHierarchy)
+                {
+                    return false;
+                }
+            }
             alpha = 1f;
             var logo = mm.Menu0.transform.Find("Darkwood")?.GetComponent<tk2dBaseSprite>();
-            if (logo != null) alpha = Mathf.Min(alpha, logo.color.a);
+            if (logo != null)
+            {
+                alpha = Mathf.Min(alpha, logo.color.a);
+            }
             var ui = Singleton<UI>.Instance;
             var black = ui != null && ui.blackScreenTop != null && ui.blackScreenTop.activeInHierarchy ? ui.blackScreenTop.GetComponent<tk2dSprite>() : null;
-            if (black != null) alpha = Mathf.Min(alpha, 1f - black.color.a);
+            if (black != null)
+            {
+                alpha = Mathf.Min(alpha, 1f - black.color.a);
+            }
             return alpha > 0.02f;
         }
 
         /// <summary>The game's entries stay (its code places, fades and enables them) but aren't drawn and can't be clicked.</summary>
         private static void HideGameButtons(MainMenu mm)
         {
-            foreach (var go in GameEntries(mm)) Hide(go);
+            foreach (var go in GameEntries(mm))
+            {
+                Hide(go);
+            }
             // With a controller, the game's A would click the hidden entries (MainMenu.controllerButtons).
-            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0 && IsMenu0List(mm)) mm.controllerButtons.Clear();
+            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0 && IsMenu0List(mm))
+            {
+                mm.controllerButtons.Clear();
+            }
         }
 
         /// <summary>The game's own entries in both menus (some are null in one of them).</summary>
@@ -230,7 +299,13 @@ namespace DarkwoodMP
 
         private static bool IsMenu0List(MainMenu mm)
         {
-            foreach (var b in mm.controllerButtons) if (b != null && !b.transform.IsChildOf(mm.Menu0.transform)) return false;
+            foreach (var b in mm.controllerButtons)
+            {
+                if (b != null && !b.transform.IsChildOf(mm.Menu0.transform))
+                {
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -239,13 +314,31 @@ namespace DarkwoodMP
 
         private static void Hide(GameObject go)
         {
-            if (go == null || !go.activeInHierarchy) return;
+            if (go == null || !go.activeInHierarchy)
+            {
+                return;
+            }
             go.GetComponentsInChildren(true, _renderers);
-            foreach (var r in _renderers) if (r.enabled) r.enabled = false;
+            foreach (var r in _renderers)
+            {
+                if (r.enabled)
+                {
+                    r.enabled = false;
+                }
+            }
             go.GetComponentsInChildren(true, _colliders);
-            foreach (var c in _colliders) if (c.enabled) c.enabled = false;
+            foreach (var c in _colliders)
+            {
+                if (c.enabled)
+                {
+                    c.enabled = false;
+                }
+            }
             var b = go.GetComponent<global::Button>();
-            if (b != null && b.rolledOver) b.rollout(force: true);
+            if (b != null && b.rolledOver)
+            {
+                b.rollout(force: true);
+            }
         }
 
         // ---- keys and the controller ---------------------------------------------------------------
@@ -253,8 +346,14 @@ namespace DarkwoodMP
         private static void Keys()
         {
             int dir = 0;
-            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) dir = -1;
-            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) dir = 1;
+            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+            {
+                dir = -1;
+            }
+            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
+            {
+                dir = 1;
+            }
             bool run = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
             try
             {
@@ -263,14 +362,25 @@ namespace DarkwoodMP
                 {
                     float v = pad.GetAxisRaw("Dpad Vertical");
                     if (Mathf.Abs(v) > 0.5f && Time.unscaledTime >= _nextPad) { dir = v > 0 ? -1 : 1; _nextPad = Time.unscaledTime + 0.25f; }
-                    else if (Mathf.Abs(v) <= 0.5f) _nextPad = 0f;
-                    if (pad.GetButtonDown("A")) run = true;
+                    else if (Mathf.Abs(v) <= 0.5f)
+                    {
+                        _nextPad = 0f;
+                    }
+                    if (pad.GetButtonDown("A"))
+                    {
+                        run = true;
+                    }
                 }
             }
             catch { }
             if (dir != 0 && _entries.Count > 0)
+            {
                 _selected = _selected < 0 ? (dir > 0 ? 0 : _entries.Count - 1) : (_selected + dir + _entries.Count) % _entries.Count;
-            if (run && _selected >= 0 && _selected < _entries.Count) Fire(_entries[_selected]);
+            }
+            if (run && _selected >= 0 && _selected < _entries.Count)
+            {
+                Fire(_entries[_selected]);
+            }
         }
 
         private static void Fire(Entry e)
@@ -284,7 +394,10 @@ namespace DarkwoodMP
         /// <summary>Draw the list (Plugin.OnGUI, with MenuSkin's skin, before the windows).</summary>
         public static void OnGUI()
         {
-            if (!_shown || _entries.Count == 0) return;
+            if (!_shown || _entries.Count == 0)
+            {
+                return;
+            }
             int sc = TextScale;
             float line = PixelFont.LineAt(sc), step = Mathf.Round(line * RowLines);
             float x = Mathf.Round(Screen.width * MenuLayout.Left); // the column's left edge is the logo's
@@ -293,7 +406,10 @@ namespace DarkwoodMP
             var e = Event.current;
             if (e.type == EventType.MouseMove || e.type == EventType.MouseDown)
             {
-                if ((e.mousePosition - _lastMouse).sqrMagnitude > 1f) _selected = -1; // the mouse took over from the keys
+                if ((e.mousePosition - _lastMouse).sqrMagnitude > 1f)
+                {
+                    _selected = -1; // the mouse took over from the keys
+                }
                 _lastMouse = e.mousePosition;
             }
             for (int i = 0; i < _entries.Count; i++)
@@ -303,7 +419,10 @@ namespace DarkwoodMP
                 // The word, with a margin round it that takes the mouse too.
                 en.Rect = new Rect(x - 6 * sc, y - (step - line) / 2f, w + 12 * sc, step);
                 bool hover = active && (_selected >= 0 ? _selected == i : en.Rect.Contains(e.mousePosition));
-                if (active && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain)) Fire(en);
+                if (active && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain))
+                {
+                    Fire(en);
+                }
                 var c = hover ? MenuSkin.Bright : active ? MenuSkin.Text : MenuSkin.Dim;
                 c.a *= _alpha;
                 PixelFont.Draw(new Rect(x, y, w + 2 * sc, line), en.Label, c, TextAnchor.MiddleLeft, PixelFont.Kind.Title, sc);
@@ -318,19 +437,40 @@ namespace DarkwoodMP
         {
             var mm = Singleton<MainMenu>.Instance;
             var parts = new List<string>();
-            foreach (var en in _entries) parts.Add($"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
+            foreach (var en in _entries)
+            {
+                parts.Add($"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
+            }
             return $"list shown {_shown} (alpha {_alpha:0.00}), {(_pause ? "pause menu" : "main menu")}: {string.Join("; ", parts)}; takes clicks {!MenuWindows.AnyOpen}; " +
                    $"game entries hidden {GameEntriesHidden(mm)}; screen {Screen.width}x{Screen.height}";
         }
 
         private static bool GameEntriesHidden(MainMenu mm)
         {
-            if (mm == null) return false;
+            if (mm == null)
+            {
+                return false;
+            }
             foreach (var go in GameEntries(mm))
             {
-                if (go == null || !go.activeInHierarchy) continue;
-                foreach (var r in go.GetComponentsInChildren<Renderer>()) if (r.enabled) return false;
-                foreach (var c in go.GetComponentsInChildren<Collider>()) if (c.enabled) return false;
+                if (go == null || !go.activeInHierarchy)
+                {
+                    continue;
+                }
+                foreach (var r in go.GetComponentsInChildren<Renderer>())
+                {
+                    if (r.enabled)
+                    {
+                        return false;
+                    }
+                }
+                foreach (var c in go.GetComponentsInChildren<Collider>())
+                {
+                    if (c.enabled)
+                    {
+                        return false;
+                    }
+                }
             }
             return true;
         }
@@ -338,9 +478,15 @@ namespace DarkwoodMP
         /// <summary>For the tests: click the entry with this word, as the mouse does. False if the list hasn't got it or isn't shown.</summary>
         public static bool Click(string label)
         {
-            if (!_shown || MenuWindows.AnyOpen) return false;
+            if (!_shown || MenuWindows.AnyOpen)
+            {
+                return false;
+            }
             foreach (var en in _entries)
-                if (string.Equals(en.Label, label, StringComparison.OrdinalIgnoreCase)) { Fire(en); return true; }
+            {
+                if (string.Equals(en.Label, label, StringComparison.OrdinalIgnoreCase))
+                { Fire(en); return true; }
+            }
             return false;
         }
     }

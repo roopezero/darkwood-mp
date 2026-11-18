@@ -29,16 +29,30 @@ namespace DarkwoodMP.Combat
             for (int i = 0; i < list.Count; i++)
             {
                 int n = match(list, i);
-                if (n <= 0) continue;
+                if (n <= 0)
+                {
+                    continue;
+                }
                 list[i] = new CodeInstruction(load) { labels = list[i].labels, blocks = list[i].blocks };
                 list[i + 1] = new CodeInstruction(OpCodes.Call, helper) { labels = list[i + 1].labels, blocks = list[i + 1].blocks };
-                for (int k = 2; k < n; k++) list[i + k] = new CodeInstruction(OpCodes.Nop) { labels = list[i + k].labels, blocks = list[i + k].blocks };
+                for (int k = 2; k < n; k++)
+                {
+                    list[i + k] = new CodeInstruction(OpCodes.Nop) { labels = list[i + k].labels, blocks = list[i + k].blocks };
+                }
                 swapped++;
                 i += n - 1;
             }
-            if (none != null) { if (swapped == 0) Plugin.Log.LogWarning(none); }
+            if (none != null)
+            {
+                if (swapped == 0)
+                {
+                    Plugin.Log.LogWarning(none);
+                }
+            }
             else if (swapped != expected)
+            {
                 Plugin.Log.LogWarning($"JoinerAi: {where}: swapped {swapped} reads of the host's player, expected {expected} (game changed?)");
+            }
             return list;
         }
 
@@ -67,7 +81,10 @@ namespace DarkwoodMP.Combat
         /// <summary>Whether a position is on indoor ground, the way CharBase.checkGround decides isInside.</summary>
         public static bool InsideAt(Vector3 pos)
         {
-            if (!Physics.Raycast(pos + new Vector3(0f, 300f, 0f), Vector3.down, out var hit, 1000f, 2)) return false;
+            if (!Physics.Raycast(pos + new Vector3(0f, 300f, 0f), Vector3.down, out var hit, 1000f, 2))
+            {
+                return false;
+            }
             var g = hit.collider != null ? hit.collider.GetComponent<Ground>() : null;
             return g != null && g.isInside;
         }
@@ -84,7 +101,10 @@ namespace DarkwoodMP.Combat
             {
                 foreach (var a in c.activities)
                 {
-                    if (a == null || !(a.getFromLocation || a.playerIsTarget)) continue;
+                    if (a == null || !(a.getFromLocation || a.playerIsTarget))
+                    {
+                        continue;
+                    }
                     a.thisCharacter = c;
                     a.assignTarget();
                     var loc = a.target != null ? NightSpawns.BigLocationAt(a.target.transform.position) : null;
@@ -104,7 +124,10 @@ namespace DarkwoodMP.Combat
 
                 c.stopAttacking(proxy.transform);
                 c.cowardiness = Cowardiness.always;
-                if (c.aggressiveness == Aggressiveness.flee || c.aggressiveness == Aggressiveness.fleeAndDespawn) c.aggressiveness = Aggressiveness.attackOnSight;
+                if (c.aggressiveness == Aggressiveness.flee || c.aggressiveness == Aggressiveness.fleeAndDespawn)
+                {
+                    c.aggressiveness = Aggressiveness.attackOnSight;
+                }
                 AccessTools.Method(typeof(Character), "reactToCharacter").Invoke(c, new object[] { null, proxy.transform, true });
                 Plugin.Log.LogInfo($"[joiner ai test] hit by the joiner (cowardiness always): behaviour {c.behaviour}, target {T(c.target)}");
             }
@@ -117,16 +140,25 @@ namespace DarkwoodMP.Combat
         public static bool TargetIsInside(Character c)
         {
             var proxy = ProxyOf(c != null ? c.target : null);
-            if (proxy != null) return InsideAt(proxy.transform.position);
+            if (proxy != null)
+            {
+                return InsideAt(proxy.transform.position);
+            }
             return Player.Instance.isInside;
         }
 
         /// <summary>reactToCharacter's "is the attacker the player": the host's player, or a joiner's proxy.</summary>
         public static Component PlayerOrProxyOn(Transform t)
         {
-            if (t == null) return null;
+            if (t == null)
+            {
+                return null;
+            }
             var p = t.GetComponent<Player>();
-            if (p != null) return p;
+            if (p != null)
+            {
+                return p;
+            }
             return ProxyOf(t);
         }
 
@@ -137,13 +169,19 @@ namespace DarkwoodMP.Combat
             if (proxy == null) { c.attackPlayer(); return; }
             // An NPC turns on the joiner here, and the host runs it as an enemy from then on (Combat.HostileNpcs).
             GoFor(c, proxy.transform);
-            if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
+            if (Threat.Debug)
+            {
+                Plugin.Log.LogInfo($"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
+            }
         }
 
         /// <summary>Sends a character after a player, as Character.attackPlayer does for the host's (a defensive one stays defensive).</summary>
         public static void GoFor(Character c, Transform player)
         {
-            if (c.aggressiveness != Aggressiveness.defensive) c.aggressiveness = Aggressiveness.attackOnSight;
+            if (c.aggressiveness != Aggressiveness.defensive)
+            {
+                c.aggressiveness = Aggressiveness.attackOnSight;
+            }
             c.attackCharacter(player);
         }
 
@@ -157,7 +195,10 @@ namespace DarkwoodMP.Combat
         public static Location HatchLocation(Character c)
         {
             var hostLoc = HostLocation();
-            if (!Threat.Enabled || c == null) return hostLoc;
+            if (!Threat.Enabled || c == null)
+            {
+                return hostLoc;
+            }
             return Threat.NearestPlayerPos(c) == Player.Instance.transform.position ? hostLoc : null; // null: the game uses transform.GetLocation()
         }
 
@@ -169,10 +210,22 @@ namespace DarkwoodMP.Combat
         {
             var hostLoc = HostLocation();
             var c = a?.thisCharacter;
-            if (!Threat.Enabled || c == null) return hostLoc;
-            if (NightSpawns.SentAt(c, out var proxy, out var loc) && loc != null) return loc;
-            if (proxy == null) proxy = Threat.BestPlayerFor(c) as NetPlayerProxy;
-            if (proxy == null) return hostLoc;
+            if (!Threat.Enabled || c == null)
+            {
+                return hostLoc;
+            }
+            if (NightSpawns.SentAt(c, out var proxy, out var loc) && loc != null)
+            {
+                return loc;
+            }
+            if (proxy == null)
+            {
+                proxy = Threat.BestPlayerFor(c) as NetPlayerProxy;
+            }
+            if (proxy == null)
+            {
+                return hostLoc;
+            }
             return NightSpawns.BigLocationAt(proxy.transform.position) ?? hostLoc;
         }
 
@@ -180,8 +233,14 @@ namespace DarkwoodMP.Combat
         public static GameObject ActivityPlayer(Character.Activity a)
         {
             var c = a?.thisCharacter;
-            if (!Threat.Enabled || c == null) return Player.Instance.gameObject;
-            if (NightSpawns.SentAt(c, out var proxy, out _) && proxy != null && proxy.alive) return proxy.gameObject;
+            if (!Threat.Enabled || c == null)
+            {
+                return Player.Instance.gameObject;
+            }
+            if (NightSpawns.SentAt(c, out var proxy, out _) && proxy != null && proxy.alive)
+            {
+                return proxy.gameObject;
+            }
             var best = Threat.BestPlayerFor(c);
             return best != null ? best.gameObject : Player.Instance.gameObject;
         }
@@ -200,24 +259,42 @@ namespace DarkwoodMP.Combat
 
         static bool Prefix(Character __instance, Collider _collider)
         {
-            if (_collider == null || !Threat.Enabled || NetEnemies.ClientMode || !__instance.isActive) return true;
+            if (_collider == null || !Threat.Enabled || NetEnemies.ClientMode || !__instance.isActive)
+            {
+                return true;
+            }
             var proxy = _collider.GetComponent<NetPlayerProxy>();
-            if (proxy == null || !proxy.alive || proxy.Away) return true;
+            if (proxy == null || !proxy.alive || proxy.Away)
+            {
+                return true;
+            }
             var c = __instance;
-            if (!c.touchingColliders.Contains(_collider)) c.touchingColliders.Add(_collider);
+            if (!c.touchingColliders.Contains(_collider))
+            {
+                c.touchingColliders.Add(_collider);
+            }
             if (c.banshee)
             {
-                if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {c.name} (banshee) touched by {proxy.OwnerName}");
+                if (Threat.Debug)
+                {
+                    Plugin.Log.LogInfo($"[threat] {c.name} (banshee) touched by {proxy.OwnerName}");
+                }
                 c.initiateBansheeAttack();
                 return false;
             }
             if (c.sleeping && !c.wakeUpOnlyManually)
             {
-                if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {c.name} woken by {proxy.OwnerName} bumping into it");
+                if (Threat.Debug)
+                {
+                    Plugin.Log.LogInfo($"[threat] {c.name} woken by {proxy.OwnerName} bumping into it");
+                }
                 c.wakeup();
                 return false;
             }
-            if (!proxy.invisible && !c.dieOnContactWithTarget) React(c, null, proxy.transform, false);
+            if (!proxy.invisible && !c.dieOnContactWithTarget)
+            {
+                React(c, null, proxy.transform, false);
+            }
             return true;
         }
     }
@@ -260,10 +337,16 @@ namespace DarkwoodMP.Combat
     {
         static void Postfix(Character __instance, ref bool __result)
         {
-            if (__result || !Threat.Enabled) return;
+            if (__result || !Threat.Enabled)
+            {
+                return;
+            }
             Vector3 me = __instance.transform.position;
             foreach (var p in NetPlayerProxy.All.Values)
-                if (p != null && p.alive && !p.Away && Core.trueDistance(p.transform.position, me) < 1500f) { __result = true; return; }
+            {
+                if (p != null && p.alive && !p.Away && Core.trueDistance(p.transform.position, me) < 1500f)
+                { __result = true; return; }
+            }
         }
     }
 
@@ -321,9 +404,15 @@ namespace DarkwoodMP.Combat
         static void Prefix(Character __instance)
         {
             Chased = null;
-            if (!Threat.Enabled || __instance.checkingOutLocation) return;
+            if (!Threat.Enabled || __instance.checkingOutLocation)
+            {
+                return;
+            }
             var proxy = JoinerAi.ProxyOf(__instance.superTarget);
-            if (proxy != null && proxy.alive && JoinerAi.InsideAt(proxy.transform.position)) Chased = proxy;
+            if (proxy != null && proxy.alive && JoinerAi.InsideAt(proxy.transform.position))
+            {
+                Chased = proxy;
+            }
         }
 
         static Exception Finalizer(Exception __exception) { Chased = null; return __exception; }
@@ -335,15 +424,24 @@ namespace DarkwoodMP.Combat
         static void Prefix(Character __instance, ref Waypoint _waypoint)
         {
             var proxy = CheckOutLocationJoinerPatch.Chased;
-            if (proxy == null || _waypoint != null) return;
+            if (proxy == null || _waypoint != null)
+            {
+                return;
+            }
             CheckOutLocationJoinerPatch.Chased = null; // only the call checkOutLocation makes
             var loc = __instance.locationCheckingOut;
-            if (loc == null) return;
+            if (loc == null)
+            {
+                return;
+            }
             Waypoint best = null; float bestDist = float.MaxValue;
             Vector3 at = proxy.transform.position;
             foreach (var w in loc.waypointsInside)
             {
-                if (w == null) continue;
+                if (w == null)
+                {
+                    continue;
+                }
                 float d = (w.transform.position - at).sqrMagnitude;
                 if (d < bestDist) { bestDist = d; best = w; }
             }
@@ -358,7 +456,10 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Character __instance)
         {
             var proxy = JoinerAi.ProxyOf(__instance.target);
-            if (proxy == null) return true;
+            if (proxy == null)
+            {
+                return true;
+            }
             float max = Player.Instance != null ? Player.Instance.maxHealth : 100f;
             if (proxy.HealthPercent / 100f * max < 20f && __instance.attacks.Count >= 3)
             {

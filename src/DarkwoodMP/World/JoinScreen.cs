@@ -57,7 +57,10 @@ namespace DarkwoodMP.World
         /// <summary>UI.initLoadGame has been started: the game's loading takes over the rest of the bar.</summary>
         public static void HandOver()
         {
-            if (!_shown) return;
+            if (!_shown)
+            {
+                return;
+            }
             _menuScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             _handOverUntil = Time.realtimeSinceStartup + 30f;
             _buttonsOffOn = null; // initNewGame turns the buttons off itself, and the next scene has its own Controller
@@ -67,8 +70,14 @@ namespace DarkwoodMP.World
         /// <summary>Joining stopped before the world loaded: take the screen down and open the panel, which says why.</summary>
         public static void Fail(string why)
         {
-            if (!_shown) return;
-            if (_buttonsOffOn != null && _buttonsOffOn == Singleton<Controller>.Instance) _buttonsOffOn.buttonsDisabled = false;
+            if (!_shown)
+            {
+                return;
+            }
+            if (_buttonsOffOn != null && _buttonsOffOn == Singleton<Controller>.Instance)
+            {
+                _buttonsOffOn.buttonsDisabled = false;
+            }
             _buttonsOffOn = null;
             Plugin.Log.LogInfo($"[join] loading screen hidden: {why}");
             Clear();
@@ -87,7 +96,10 @@ namespace DarkwoodMP.World
         /// <summary>Every frame (Plugin.Update): work out the stage from the session, the download and the game's loading.</summary>
         public static void Update(Session session, WorldShare world)
         {
-            if (!_shown) return;
+            if (!_shown)
+            {
+                return;
+            }
 
             if (_stage == Stage.Game)
             {
@@ -111,8 +123,14 @@ namespace DarkwoodMP.World
                     LoadingScreen.Hide();
                     return;
                 }
-                if (!_inGame) LoadingScreen.Show(); // the menu's scene, until the chapter's loads
-                if (_inGame) RaiseByGame(wg);
+                if (!_inGame)
+                {
+                    LoadingScreen.Show(); // the menu's scene, until the chapter's loads
+                }
+                if (_inGame)
+                {
+                    RaiseByGame(wg);
+                }
                 _line = _inGame ? (LoadingScreen.GameStage() ?? _line) : (world.LoadStatus ?? _line);
                 Draw();
                 return;
@@ -151,40 +169,70 @@ namespace DarkwoodMP.World
                 SetStage(Stage.Loading, world.LoadStatus ?? "Loading the host's world...");
             }
             else if (world.LoadStatus != null)
+            {
                 SetStage(Stage.Waiting, world.LoadStatus); // JoinWait: the host can't let us in yet, and says why
+            }
             else if (_fraction > 0f)
+            {
                 SetStage(Stage.Waiting, "Waiting for the host to let you in..."); // downloaded; Hello sent again with its hash
+            }
             else
+            {
                 SetStage(Stage.Connecting, "Connecting to the host...");
+            }
             Draw();
         }
 
         /// <summary>After the game's code each frame: keep its black fades from covering the screen while we're joining.</summary>
         public static void LateUpdate()
         {
-            if (!_shown) return;
+            if (!_shown)
+            {
+                return;
+            }
             var wg = Singleton<WorldGenerator>.Instance;
-            if (wg != null && wg.finished) return;
+            if (wg != null && wg.finished)
+            {
+                return;
+            }
             var ui = Singleton<UI>.Instance;
-            if (ui == null || ui.blackScreenTop == null || !ui.blackScreenTop.activeInHierarchy) return;
+            if (ui == null || ui.blackScreenTop == null || !ui.blackScreenTop.activeInHierarchy)
+            {
+                return;
+            }
             var s = ui.blackScreenTop.GetComponent<tk2dSprite>();
-            if (s != null && s.color.a > 0f) s.color = new Color(s.color.r, s.color.g, s.color.b, 0f);
+            if (s != null && s.color.a > 0f)
+            {
+                s.color = new Color(s.color.r, s.color.g, s.color.b, 0f);
+            }
         }
 
         /// <summary>WorldGenerator.percentLoaded was set (it sets the bar's sprite): put the join's bar back.</summary>
         public static void OnGameBar()
         {
-            if (!_shown || !_inGame) return;
+            if (!_shown || !_inGame)
+            {
+                return;
+            }
             RaiseByGame(Singleton<WorldGenerator>.Instance);
             LoadingScreen.SetBar(_fraction, force: true);
         }
 
-        private static void Raise(float f) { if (f > _fraction) _fraction = Mathf.Clamp01(f); }
+        private static void Raise(float f)
+        {
+            if (f > _fraction)
+            {
+                _fraction = Mathf.Clamp01(f);
+            }
+        }
 
         /// <summary>The game's loading fills the part of the bar after the download.</summary>
         private static void RaiseByGame(WorldGenerator wg)
         {
-            if (wg != null) Raise(DownloadShare + (1f - DownloadShare) * Mathf.Clamp01(wg.percentLoaded / 100f));
+            if (wg != null)
+            {
+                Raise(DownloadShare + (1f - DownloadShare) * Mathf.Clamp01(wg.percentLoaded / 100f));
+            }
         }
 
         private static void Draw()
@@ -196,7 +244,10 @@ namespace DarkwoodMP.World
         private static void SetStage(Stage s, string line)
         {
             _line = line;
-            if (s == _stage) return;
+            if (s == _stage)
+            {
+                return;
+            }
             _stage = s;
             Plugin.Log.LogInfo($"[join] loading screen: {s.ToString().ToLowerInvariant()} {Mathf.RoundToInt(_fraction * 100f)}%" + At);
         }

@@ -52,10 +52,22 @@ namespace DarkwoodMP
         }
 
         /// <summary>Close it as if No was chosen (between tests, or when what it asked about went away).</summary>
-        public static void Cancel() { if (Open) _win.Close(); }
+        public static void Cancel()
+        {
+            if (Open)
+            {
+                _win.Close();
+            }
+        }
 
         /// <summary>Choose an answer, as the buttons do (for the tests).</summary>
-        public static void Choose(bool yes) { if (Open) Answer(yes); }
+        public static void Choose(bool yes)
+        {
+            if (Open)
+            {
+                Answer(yes);
+            }
+        }
 
         // The close box answers No.
         private static void Closed() => Answer(false);
@@ -74,7 +86,10 @@ namespace DarkwoodMP
         public static void Update()
         {
             if (Open && _deadline > 0f && Time.realtimeSinceStartup >= _deadline) { _deadline = 0f; Answer(false); }
-            if (_pending == null) return;
+            if (_pending == null)
+            {
+                return;
+            }
             var act = _pending;
             _pending = null;
             try { act(); }
@@ -84,7 +99,10 @@ namespace DarkwoodMP
         /// <summary>Draw it (Plugin.OnGUI, with MenuSkin's skin, after every other window).</summary>
         public static void OnGUI()
         {
-            if (!Open) return;
+            if (!Open)
+            {
+                return;
+            }
             var e = Event.current;
             if (e.type == EventType.KeyDown)
             {
@@ -105,7 +123,10 @@ namespace DarkwoodMP
         private static void DrawBody(Flow f)
         {
             f.Space(4);
-            if (!string.IsNullOrEmpty(_text)) Ui.Text(f, _text);
+            if (!string.IsNullOrEmpty(_text))
+            {
+                Ui.Text(f, _text);
+            }
             if (_deadline > 0f)
             {
                 int left = Mathf.Max(0, Mathf.CeilToInt(_deadline - Time.realtimeSinceStartup));
@@ -116,8 +137,14 @@ namespace DarkwoodMP
         private static void DrawButtons(Rect r)
         {
             var b = Ui.Split(r, 0, 80, 80);
-            if (Ui.Button(b[1], _yes)) Answer(true);
-            else if (Ui.Button(b[2], _no)) Answer(false);
+            if (Ui.Button(b[1], _yes))
+            {
+                Answer(true);
+            }
+            else if (Ui.Button(b[2], _no))
+            {
+                Answer(false);
+            }
         }
     }
 }

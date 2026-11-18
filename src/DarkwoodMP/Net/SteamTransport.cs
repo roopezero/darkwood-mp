@@ -77,7 +77,10 @@ namespace DarkwoodMP.Net
         {
             if (length > MaxSteamMessage)
             {
-                if (reliable) return SendPieces(to, data, length, channel);
+                if (reliable)
+                {
+                    return SendPieces(to, data, length, channel);
+                }
                 Plugin.Log.LogWarning($"Send to {to} failed: an unreliable {(MsgType)data[0]} of {length / 1024} KiB is too long for Steam");
                 return false;
             }
@@ -134,7 +137,10 @@ namespace DarkwoodMP.Net
             }
             Buffer.BlockCopy(buf, at, j.Data, j.Got, n);
             j.Got += n;
-            if (j.Got < j.Data.Length) return null;
+            if (j.Got < j.Data.Length)
+            {
+                return null;
+            }
             _joining.Remove(key);
             return j;
         }
@@ -142,11 +148,19 @@ namespace DarkwoodMP.Net
         private bool SendOne(CSteamID to, byte[] data, int length, int channel, bool reliable)
         {
             // Reliable messages keep their order: once one waits, the ones after it wait behind it.
-            if (reliable && _pending.TryGetValue(to, out var q) && q.Count > 0) return Enqueue(to, data, length, channel);
+            if (reliable && _pending.TryGetValue(to, out var q) && q.Count > 0)
+            {
+                return Enqueue(to, data, length, channel);
+            }
             var res = SendNow(to, data, length, channel, reliable);
-            if (res == EResult.k_EResultLimitExceeded && reliable) return Enqueue(to, data, length, channel);
+            if (res == EResult.k_EResultLimitExceeded && reliable)
+            {
+                return Enqueue(to, data, length, channel);
+            }
             if (res != EResult.k_EResultOK && reliable)
+            {
                 Plugin.Log.LogWarning($"Send to {to} failed: {res}");
+            }
             return res == EResult.k_EResultOK;
         }
 
@@ -163,7 +177,10 @@ namespace DarkwoodMP.Net
 
         private bool Enqueue(CSteamID to, byte[] data, int length, int channel)
         {
-            if (!_pending.TryGetValue(to, out var q)) _pending[to] = q = new Queue<Pending>();
+            if (!_pending.TryGetValue(to, out var q))
+            {
+                _pending[to] = q = new Queue<Pending>();
+            }
             _pendingBytes.TryGetValue(to, out long bytes);
             if (bytes + length > MaxPendingBytes)
             {
@@ -189,26 +206,44 @@ namespace DarkwoodMP.Net
         /// <summary>Close the session with this peer once what was sent to it has gone out.</summary>
         public void CloseWhenSent(CSteamID peer)
         {
-            if (!_closing.ContainsKey(peer)) _closing[peer] = -1f;
+            if (!_closing.ContainsKey(peer))
+            {
+                _closing[peer] = -1f;
+            }
         }
 
         private void CloseSent()
         {
-            if (_closing.Count == 0) return;
+            if (_closing.Count == 0)
+            {
+                return;
+            }
             float now = UnityEngine.Time.unscaledTime;
             foreach (var id in new List<CSteamID>(_closing.Keys))
             {
-                if (_pending.ContainsKey(id)) continue;
+                if (_pending.ContainsKey(id))
+                {
+                    continue;
+                }
                 float at = _closing[id];
-                if (at < 0f) _closing[id] = now + CloseDelay;
-                else if (now >= at) CloseSession(id);
+                if (at < 0f)
+                {
+                    _closing[id] = now + CloseDelay;
+                }
+                else if (now >= at)
+                {
+                    CloseSession(id);
+                }
             }
         }
 
         /// <summary>Send what waited for room in Steam's queue, as far as there's room now.</summary>
         private void FlushPending()
         {
-            if (_pending.Count == 0) return;
+            if (_pending.Count == 0)
+            {
+                return;
+            }
             List<CSteamID> done = null;
             foreach (var kv in _pending)
             {
@@ -217,14 +252,27 @@ namespace DarkwoodMP.Net
                 {
                     var m = q.Peek();
                     var res = SendNow(kv.Key, m.Data, m.Data.Length, m.Channel, reliable: true);
-                    if (res == EResult.k_EResultLimitExceeded) break; // still full: next frame
-                    if (res != EResult.k_EResultOK) Plugin.Log.LogWarning($"Send to {kv.Key} failed: {res}");
+                    if (res == EResult.k_EResultLimitExceeded)
+                    {
+                        break; // still full: next frame
+                    }
+                    if (res != EResult.k_EResultOK)
+                    {
+                        Plugin.Log.LogWarning($"Send to {kv.Key} failed: {res}");
+                    }
                     q.Dequeue();
                     _pendingBytes[kv.Key] -= m.Data.Length;
                 }
-                if (q.Count == 0) (done ??= new List<CSteamID>()).Add(kv.Key);
+                if (q.Count == 0)
+                {
+                    (done ??= new List<CSteamID>()).Add(kv.Key);
+                }
             }
-            if (done != null) foreach (var id in done) { _pending.Remove(id); _pendingBytes.Remove(id); }
+            if (done != null)
+            {
+                foreach (var id in done)
+                { _pending.Remove(id); _pendingBytes.Remove(id); }
+            }
         }
 
         /// <summary>Drain incoming messages on all channels. Call once per frame.</summary>
@@ -241,7 +289,10 @@ namespace DarkwoodMP.Net
             while (true)
             {
                 int n = SteamNetworkingMessages.ReceiveMessagesOnChannel(channel, _msgPtrs, _msgPtrs.Length);
-                if (n <= 0) return;
+                if (n <= 0)
+                {
+                    return;
+                }
                 for (int i = 0; i < n; i++)
                 {
                     try
@@ -250,11 +301,20 @@ namespace DarkwoodMP.Net
                         int len = msg.m_cbSize;
                         if (len > 0)
                         {
-                            if (_recvBuf.Length < len) _recvBuf = new byte[Math.Max(len, _recvBuf.Length * 2)];
+                            if (_recvBuf.Length < len)
+                            {
+                                _recvBuf = new byte[Math.Max(len, _recvBuf.Length * 2)];
+                            }
                             Marshal.Copy(msg.m_pData, _recvBuf, 0, len);
                             var from = msg.m_identityPeer.GetSteamID();
-                            if (_recvBuf[0] != (byte)MsgType.SteamPiece) OnMessage?.Invoke(from, _recvBuf, len, channel);
-                            else if (AddPiece(from, channel, _recvBuf, len) is Joining whole) OnMessage?.Invoke(from, whole.Data, whole.Data.Length, channel);
+                            if (_recvBuf[0] != (byte)MsgType.SteamPiece)
+                            {
+                                OnMessage?.Invoke(from, _recvBuf, len, channel);
+                            }
+                            else if (AddPiece(from, channel, _recvBuf, len) is Joining whole)
+                            {
+                                OnMessage?.Invoke(from, whole.Data, whole.Data.Length, channel);
+                            }
                         }
                     }
                     catch (Exception e)
@@ -266,7 +326,10 @@ namespace DarkwoodMP.Net
                         SteamNetworkingMessage_t.Release(_msgPtrs[i]);
                     }
                 }
-                if (n < _msgPtrs.Length) return;
+                if (n < _msgPtrs.Length)
+                {
+                    return;
+                }
             }
         }
 

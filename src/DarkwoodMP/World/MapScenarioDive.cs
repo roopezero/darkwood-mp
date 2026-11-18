@@ -92,13 +92,22 @@ namespace DarkwoodMP.World
             if (!bag.slots.Exists(s => s != null && InvItemClass.isNull(s.invItem)))
             {
                 var last = bag.slots.FindLast(s => s != null && !InvItemClass.isNull(s.invItem));
-                if (last != null) bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount);
+                if (last != null)
+                {
+                    bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount);
+                }
             }
             bag.addItemTypeToPlayer(SharedTank.Item, 1, dropIfNoRoom: true);
             float until = Time.realtimeSinceStartup + 8f;
-            while (!SharedTank.Filled && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (!SharedTank.Filled && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             r.Info = $"carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
-            if (!SharedTank.Filled) r.Fail(r.Info);
+            if (!SharedTank.Filled)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"tank-take": our player's full tanks are taken away (the flag stays).</summary>
@@ -108,7 +117,10 @@ namespace DarkwoodMP.World
             Player.Instance.Inventory.removeItemAmountFromPlayer(SharedTank.Item, n, includeAdditionalInventory: true);
             yield return null;
             r.Info = $"took {n}, carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
-            if (MapScenarioWorld.CarriedOf(SharedTank.Item) != 0) r.Fail(r.Info);
+            if (MapScenarioWorld.CarriedOf(SharedTank.Item) != 0)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"tank-flag 1|0": the flag is set here (it came from the other game), and is in what a save writes.</summary>
@@ -116,10 +128,16 @@ namespace DarkwoodMP.World
         {
             bool want = a.Length > 0 && a[0] == "1";
             float until = Time.realtimeSinceStartup + 8f;
-            while (SharedTank.Filled != want && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (SharedTank.Filled != want && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             var saved = new Flags.SaveState(Singleton<Flags>.Instance).flags.Exists(x => x != null && x.name == SharedTank.Flag && x.isTrue);
             r.Info = $"filled {SharedTank.Filled} (want {want}), in the save {saved}";
-            if (SharedTank.Filled != want || saved != want) r.Fail(r.Info);
+            if (SharedTank.Filled != want || saved != want)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"tank-fire ID YES NO": our player uses ID; its tank trigger must have run YES times for us in all, the no-tank one NO.</summary>
@@ -132,10 +150,16 @@ namespace DarkwoodMP.World
             AsPlayer(() => m.et.fireEventTrigger(global::EventTrigger.Type.onActivate));
             var c = Counter();
             float until = Time.realtimeSinceStartup + 6f;
-            while (Time.realtimeSinceStartup < until && c.Of(a[0]) + c.Of(a[0] + "-no") < yes + no) yield return new WaitForSeconds(0.1f);
+            while (Time.realtimeSinceStartup < until && c.Of(a[0]) + c.Of(a[0] + "-no") < yes + no)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             yield return new WaitForSeconds(1f);
             r.Info = $"with the tank ran {c.Of(a[0])} (want {yes}), without it {c.Of(a[0] + "-no")} (want {no}); carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
-            if (c.Of(a[0]) != yes || c.Of(a[0] + "-no") != no) r.Fail(r.Info);
+            if (c.Of(a[0]) != yes || c.Of(a[0] + "-no") != no)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         // ---- a short scripted trip, which the host's movement check must let through ---------------------------
@@ -181,13 +205,22 @@ namespace DarkwoodMP.World
             AsPlayer(() => m.Et.fireEventTrigger(global::EventTrigger.Type.area));
             m.Et.entered++;
             float until = Time.realtimeSinceStartup + 10f;
-            while (!There() && Time.realtimeSinceStartup < until) yield return null;
+            while (!There() && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             bool arrived = There();
             yield return new WaitForSeconds(3f); // a correction comes within a few State updates
             r.Info = $"arrived {arrived}, now at {Fmt(p.transform.position)} ({StateDump.Flat(p.transform.position - m.To.position):0} from the marker), " +
                      $"put back {Sync.MoveCheck.Corrections - corrections} time(s)";
-            if (!arrived) r.Fail($"the trip didn't take us there: {r.Info}");
-            else if (!There() || Sync.MoveCheck.Corrections != corrections) r.Fail($"the host put us back: {r.Info}");
+            if (!arrived)
+            {
+                r.Fail($"the trip didn't take us there: {r.Info}");
+            }
+            else if (!There() || Sync.MoveCheck.Corrections != corrections)
+            {
+                r.Fail($"the host put us back: {r.Info}");
+            }
             Core.forbidInputs = false;
             yield return Walk(Centre); // a jump back would be a speed hack to the host's movement check
             yield return new WaitForSeconds(1f);
@@ -205,7 +238,10 @@ namespace DarkwoodMP.World
         private static GameObject Root(string name, Vector3 pos)
         {
             var old = GameObject.Find(name);
-            if (old != null) Object.Destroy(old);
+            if (old != null)
+            {
+                Object.Destroy(old);
+            }
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -253,11 +289,17 @@ namespace DarkwoodMP.World
             AsPlayer(() => m.Et.fireEventTrigger(global::EventTrigger.Type.area));
             m.Et.entered++;
             float until = Time.realtimeSinceStartup + 6f;
-            while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want) yield return new WaitForSeconds(0.1f);
+            while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             yield return new WaitForSeconds(1f);
             int got = c.Of(a[0]) - had;
             r.Info = $"{got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
-            if (got != want) r.Fail(r.Info);
+            if (got != want)
+            {
+                r.Fail(r.Info);
+            }
             MapScenario.Place(Centre);
         }
 
@@ -267,11 +309,17 @@ namespace DarkwoodMP.World
             if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("own-count ID OWN SHARED (own-setup first)"); yield break; }
             int own = int.Parse(a[1]), shared = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 4f;
-            while (m.C.N < shared && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (m.C.N < shared && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
             r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})";
-            if (got != own || m.C.N != shared) r.Fail(r.Info);
+            if (got != own || m.C.N != shared)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static string Name(Object o) => o == null ? "null" : o.name;
@@ -296,7 +344,10 @@ namespace DarkwoodMP.World
             int n = 0;
             bool Wanted(Component c)
             {
-                if (c == null) return false;
+                if (c == null)
+                {
+                    return false;
+                }
                 var root = c.transform.root;
                 return c.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0
                     || root.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0
@@ -307,30 +358,62 @@ namespace DarkwoodMP.World
                  || (e.prefabList ?? new List<Object>()).Any(o => o != null && o.name.Contains("oxygen"))));
             foreach (var et in Object.FindObjectsOfType<EventTriggers>(true))
             {
-                if (et == null || et.eventTriggers == null) continue;
+                if (et == null || et.eventTriggers == null)
+                {
+                    continue;
+                }
                 bool any = Wanted(et) || et.eventTriggers.Any(t => t != null && (Mentions(t.gameEvents) || Mentions(t.gameEventsElse)
                     || t.eventRequirements.Any(q => q != null && q.itemType != null && q.itemType.name.Contains("oxygen"))));
-                if (!any) continue;
+                if (!any)
+                {
+                    continue;
+                }
                 sb.Append($"\n{et.transform.root.name}/{et.name} at {Fmt(et.transform.position)} active={et.gameObject.activeInHierarchy}");
                 foreach (var t in et.eventTriggers)
                 {
-                    if (t == null) continue;
+                    if (t == null)
+                    {
+                        continue;
+                    }
                     n++;
                     sb.Append($"\n  > {t.type} '{t.reactsToItemType}' fired={t.fired} multi={t.multipleFire}{(t.disabled ? " disabled" : "")} removeItem={t.removeItemThatTriggeredMe}");
-                    foreach (var q in t.eventRequirements) if (q != null) sb.Append($"\n    req {Req(q)}");
+                    foreach (var q in t.eventRequirements)
+                    {
+                        if (q != null)
+                        {
+                            sb.Append($"\n    req {Req(q)}");
+                        }
+                    }
                     foreach (var (label, ge) in new[] { ("do", t.gameEvents), ("else", t.gameEventsElse), ("exit", t.gameEventsExit) })
+                    {
                         if (ge != null)
                         {
                             sb.Append($"\n    {label}: {ge.name} multi={ge.multipleFire}");
-                            foreach (var e in ge.events) if (e != null) sb.Append($"\n      {Ev(e)}");
+                            foreach (var e in ge.events)
+                            {
+                                if (e != null)
+                                {
+                                    sb.Append($"\n      {Ev(e)}");
+                                }
+                            }
                         }
+                    }
                 }
             }
             foreach (var g in Object.FindObjectsOfType<GameEvents>(true))
             {
-                if (g == null || g.GetComponent<EventTriggers>() != null || !(Wanted(g) || Mentions(g))) continue;
+                if (g == null || g.GetComponent<EventTriggers>() != null || !(Wanted(g) || Mentions(g)))
+                {
+                    continue;
+                }
                 sb.Append($"\n[events] {g.transform.root.name}/{g.name} at {Fmt(g.transform.position)} multi={g.multipleFire}");
-                foreach (var e in g.events) if (e != null) sb.Append($"\n      {Ev(e)}");
+                foreach (var e in g.events)
+                {
+                    if (e != null)
+                    {
+                        sb.Append($"\n      {Ev(e)}");
+                    }
+                }
             }
             foreach (var type in new[] { "oxygenTank_full", "oxygenTank_empty" })
             {
@@ -346,13 +429,20 @@ namespace DarkwoodMP.World
             var onPlayer = new Dictionary<string, int>();
             int mixed = 0;
             foreach (var g in Object.FindObjectsOfType<GameEvents>(true))
+            {
                 foreach (var e in g.events)
+                {
                     if (e != null && ScriptedEvents.TargetsPlayer(e))
                     {
                         string k = e.type + (e.type == GameEvent.Type.runFunction ? " " + e.Value : "") + (ScriptedEvents.IsPlayerStep(e.type) ? " (player step)" : "");
                         onPlayer[k] = (onPlayer.TryGetValue(k, out var c) ? c : 0) + 1;
-                        if ((e.targetGameObjects?.Count ?? 0) + (e.targetUniqueObjects?.Count ?? 0) > 1) mixed++;
+                        if ((e.targetGameObjects?.Count ?? 0) + (e.targetUniqueObjects?.Count ?? 0) > 1)
+                        {
+                            mixed++;
+                        }
                     }
+                }
+            }
             sb.Append($"\n[on player] {string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
             var uo = Singleton<UniqueObjects>.Instance?.getObject("player");
             sb.Append($"\n[unique] player -> {Name(uo)} is Player.Instance: {uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");

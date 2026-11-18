@@ -59,10 +59,16 @@ namespace DarkwoodMP.World
         {
             foreach (var t in Thrown)
             {
-                if (t == null) continue;
+                if (t == null)
+                {
+                    continue;
+                }
                 var w = BeginThrow(MsgType.EnemyProjectile, ThrowingBy, Throwing, t);
                 S.Broadcast(w, Channel.State, reliable: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown at {t.position}");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown at {t.position}");
+                }
             }
             Thrown.Clear();
         }
@@ -86,7 +92,10 @@ namespace DarkwoodMP.World
             Copies.Add(ti);
             Shown++;
             var col = ti.GetComponent<Collider>();
-            if (thrower != null && thrower.collider != null && col != null) Physics.IgnoreCollision(col, thrower.collider);
+            if (thrower != null && thrower.collider != null && col != null)
+            {
+                Physics.IgnoreCollision(col, thrower.collider);
+            }
             ti.objectThatSpawnedMe = thrower != null ? thrower.transform : null;
             ti.damage = 0;
             rb.velocity = vel;
@@ -96,7 +105,10 @@ namespace DarkwoodMP.World
         private static void OnProjectile(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             uint by = r.R.ReadUInt32();
             string type = r.ReadStr();
             var pos = r.ReadVector3();
@@ -105,14 +117,20 @@ namespace DarkwoodMP.World
             Transform t;
             try { t = Core.AddPooledPrefab(type, pos, Quaternion.Euler(90f, yaw, 0f)); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show enemy #{by}'s {type}: {e.Message}"); return; }
-            if (t == null) return;
+            if (t == null)
+            {
+                return;
+            }
             var ti = t.GetComponent<ThrownItem>();
             var rb = t.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { Core.RemovePooledPrefab(t); return; } // only thrown things are shown
             Fly(ti, rb, NetEnemies.Instance?.CharacterOf(by), vel);
             ti.thrown = true;
             Plugin.Instance.StartCoroutine(Expire(ti, t));
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy #{by}'s {type} thrown at {pos}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got enemy #{by}'s {type} thrown at {pos}");
+            }
         }
 
         // ---- a ranged sensor thrown (Character.rangedAttack: the human spider's projectile) -------------
@@ -127,11 +145,17 @@ namespace DarkwoodMP.World
         {
             foreach (var ti in SensorThrown)
             {
-                if (ti == null) continue;
+                if (ti == null)
+                {
+                    continue;
+                }
                 var w = BeginThrow(MsgType.EnemySensorThrown, SensorThrowingBy, SensorThrowing, ti.transform);
                 w.W.Write(ti.landTarget.x); w.W.Write(ti.landTarget.z);
                 S.Broadcast(w, Channel.State, reliable: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{SensorThrowingBy}'s {SensorThrowing} ({ti.name}) thrown at {ti.transform.position}");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] sent enemy #{SensorThrowingBy}'s {SensorThrowing} ({ti.name}) thrown at {ti.transform.position}");
+                }
             }
             SensorThrown.Clear();
         }
@@ -140,7 +164,10 @@ namespace DarkwoodMP.World
         private static void OnSensorThrown(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             uint by = r.R.ReadUInt32();
             string name = r.ReadStr();
             var pos = r.ReadVector3();
@@ -148,15 +175,24 @@ namespace DarkwoodMP.World
             var vel = r.ReadVector3();
             var land = new Vector3(r.R.ReadSingle(), 0f, r.R.ReadSingle());
             var thrower = NetEnemies.Instance?.CharacterOf(by);
-            if (thrower == null) return; // not shown here: nobody would see it
+            if (thrower == null)
+            {
+                return; // not shown here: nobody would see it
+            }
             Character.SensorType st = null;
             foreach (var x in thrower.sensorTypes)
-                if (x != null && x.isRanged && x.name == name && x.sensor != null) { st = x; break; }
+            {
+                if (x != null && x.isRanged && x.name == name && x.sensor != null)
+                { st = x; break; }
+            }
             if (st == null) { Plugin.Log.LogWarning($"Couldn't show enemy #{by}'s {name}: our {thrower.name} has no such ranged sensor"); return; }
             GameObject go;
             try { go = Core.AddPrefab(st.sensor, pos, Quaternion.Euler(90f, yaw, 0f), null, worldSpace: true); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show enemy #{by}'s {name}: {e.Message}"); return; }
-            if (go == null) return;
+            if (go == null)
+            {
+                return;
+            }
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { Object.Destroy(go); return; } // only thrown things are shown
@@ -167,7 +203,10 @@ namespace DarkwoodMP.World
             ti.setFallSpeed(st.throwStrength);
             ti.thrown = true;
             Plugin.Instance.StartCoroutine(Expire(ti, go.transform));
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy #{by}'s {name} ({go.name}) thrown at {pos}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got enemy #{by}'s {name} ({go.name}) thrown at {pos}");
+            }
         }
 
         /// <summary>Client: copies made with Core.AddPrefab (not pooled): destroyed when they go, not put back.</summary>
@@ -177,12 +216,18 @@ namespace DarkwoodMP.World
         private static System.Collections.IEnumerator Expire(ThrownItem ti, Transform t)
         {
             yield return new WaitForSeconds(4f);
-            if (ti != null && Copies.Remove(ti)) Gone(t);
+            if (ti != null && Copies.Remove(ti))
+            {
+                Gone(t);
+            }
         }
 
         internal static void Gone(Transform t)
         {
-            if (t == null) return;
+            if (t == null)
+            {
+                return;
+            }
             var sti = t.GetComponent<ThrownItem>();
             if (sti != null && SensorCopies.Remove(sti))
             {
@@ -192,8 +237,17 @@ namespace DarkwoodMP.World
                 return;
             }
             try { Core.RemovePooledPrefab(t); }
-            catch (System.Exception e) { if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] couldn't put back a projectile copy: {e.Message}"); }
-            if (t != null && t.gameObject.activeSelf) t.gameObject.SetActive(false);
+            catch (System.Exception e)
+            {
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] couldn't put back a projectile copy: {e.Message}");
+                }
+            }
+            if (t != null && t.gameObject.activeSelf)
+            {
+                t.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>Host: whether this landing thrown thing was thrown by one of the host's shared enemies.</summary>
@@ -201,7 +255,10 @@ namespace DarkwoodMP.World
         {
             by = 0;
             var s = S;
-            if (t == null || t.objectThatSpawnedMe == null || s == null || !s.IsHost || s.Peers.Count == 0 || !WorldActions.Sharing) return false;
+            if (t == null || t.objectThatSpawnedMe == null || s == null || !s.IsHost || s.Peers.Count == 0 || !WorldActions.Sharing)
+            {
+                return false;
+            }
             var c = t.objectThatSpawnedMe.GetComponent<Character>();
             return c != null && NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out by);
         }
@@ -211,7 +268,10 @@ namespace DarkwoodMP.World
         {
             foreach (var go in Made)
             {
-                if (go == null) continue;
+                if (go == null)
+                {
+                    continue;
+                }
                 long id = HostIds.NewId();
                 ObjRef.RegisterSpawned(id, go);
                 var p = go.transform.position;
@@ -222,7 +282,10 @@ namespace DarkwoodMP.World
                 w.Write(p);
                 w.W.Write(go.transform.eulerAngles.y);
                 S.Broadcast(w, Channel.Control, reliable: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy #{LandingBy}'s {go.name} landed: Spawned:{id} at {p}");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] sent enemy #{LandingBy}'s {go.name} landed: Spawned:{id} at {p}");
+                }
                 _landed[id] = go;
             }
             Made.Clear();
@@ -245,7 +308,10 @@ namespace DarkwoodMP.World
                 foreach (var kv in _landed)
                 {
                     var go = kv.Value;
-                    if (go == null || !go.activeSelf) gone.Add(kv.Key); // destroyed, or switched off as it ended
+                    if (go == null || !go.activeSelf)
+                    {
+                        gone.Add(kv.Key); // destroyed, or switched off as it ended
+                    }
                 }
                 foreach (long id in gone)
                 {
@@ -253,7 +319,10 @@ namespace DarkwoodMP.World
                     var w = s.Begin(MsgType.EnemyLandedGone);
                     w.W.Write(id);
                     s.Broadcast(w, Channel.Control, reliable: true);
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] sent enemy landed Spawned:{id} gone");
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] sent enemy landed Spawned:{id} gone");
+                    }
                 }
             }
             _watching = false;
@@ -262,10 +331,19 @@ namespace DarkwoodMP.World
         private static void OnLandedGone(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             long id = r.R.ReadInt64();
-            if (!ObjRef.Spawned.TryGetValue(id, out var go) || go == null) return;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy landed Spawned:{id} gone: {go.name} removed");
+            if (!ObjRef.Spawned.TryGetValue(id, out var go) || go == null)
+            {
+                return;
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got enemy landed Spawned:{id} gone: {go.name} removed");
+            }
             Containers.CloseIfOpen(go);
             Object.Destroy(go);
         }
@@ -277,12 +355,22 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void MakeInert(GameObject go)
         {
-            foreach (var w in go.GetComponentsInChildren<WaitAndDie>(true)) w.permanent = true; // its Update returns at once
+            foreach (var w in go.GetComponentsInChildren<WaitAndDie>(true))
+            {
+                w.permanent = true; // its Update returns at once
+            }
             // A thing with a state of its own (an Item: the human spider's Fov_Mob_Spawner) reacts to being seen by
             // the player (its animation's events spawn a mob and end it). That's the host's world: its events are off here.
             if (go.GetComponent<Item>() != null)
+            {
                 foreach (var m in go.GetComponentsInChildren<MonoBehaviour>(true))
-                    if (m is AnimationTriggerListener || m is GameEvents || m is EventTriggers) m.enabled = false;
+                {
+                    if (m is AnimationTriggerListener || m is GameEvents || m is EventTriggers)
+                    {
+                        m.enabled = false;
+                    }
+                }
+            }
         }
 
         // What each name's thrown thing leaves (the prefab), found among the loaded ThrownItems (pooled projectiles).
@@ -290,34 +378,52 @@ namespace DarkwoodMP.World
 
         private static Object PrefabNamed(string name)
         {
-            if (_prefabs.TryGetValue(name, out var o) && o != null) return o;
+            if (_prefabs.TryGetValue(name, out var o) && o != null)
+            {
+                return o;
+            }
             foreach (var t in Resources.FindObjectsOfTypeAll<ThrownItem>())
-                if (t != null && t.prefabToSpawnOnLand != null && t.prefabToSpawnOnLand.name == name) { _prefabs[name] = t.prefabToSpawnOnLand; return t.prefabToSpawnOnLand; }
+            {
+                if (t != null && t.prefabToSpawnOnLand != null && t.prefabToSpawnOnLand.name == name)
+                { _prefabs[name] = t.prefabToSpawnOnLand; return t.prefabToSpawnOnLand; }
+            }
             return null;
         }
 
         private static void OnLanded(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             long id = r.R.ReadInt64();
             uint by = r.R.ReadUInt32();
             string name = r.ReadStr();
             var pos = r.ReadVector3();
             float yaw = r.R.ReadSingle();
-            if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null) return;
+            if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null)
+            {
+                return;
+            }
             var prefab = PrefabNamed(name);
             if (prefab == null) { Plugin.Log.LogWarning($"[world] enemy #{by}'s {name} landed on the host, but no thrown thing here leaves one"); return; }
             WorldActions.Replaying = true;
             try
             {
                 var go = Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, yaw, 0f), null);
-                if (go == null) return;
+                if (go == null)
+                {
+                    return;
+                }
                 go.transform.position = pos;
                 Core.addToSaveable(go, isDynamic: true, assignID: true);
                 ObjRef.RegisterSpawned(id, go);
                 MakeInert(go);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got enemy #{by}'s {name} landed: Spawned:{id} at {pos}");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] got enemy #{by}'s {name} landed: Spawned:{id} at {pos}");
+                }
             }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't make the host's {name}: {e.Message}"); }
             finally { WorldActions.Replaying = false; }
@@ -334,7 +440,10 @@ namespace DarkwoodMP.World
         }
         static void Postfix(bool __state)
         {
-            if (!__state) return;
+            if (!__state)
+            {
+                return;
+            }
             EnemyLandings.Landing = null;
             EnemyLandings.Landed();
         }
@@ -352,7 +461,10 @@ namespace DarkwoodMP.World
         static void Postfix(Object prefab, GameObject __result)
         {
             var t = EnemyLandings.Landing;
-            if (t != null && __result != null && prefab != null && prefab == t.prefabToSpawnOnLand) EnemyLandings.Made.Add(__result);
+            if (t != null && __result != null && prefab != null && prefab == t.prefabToSpawnOnLand)
+            {
+                EnemyLandings.Made.Add(__result);
+            }
         }
     }
 
@@ -363,7 +475,10 @@ namespace DarkwoodMP.World
         [HarmonyPriority(Priority.First)]
         static bool Prefix(Character __instance)
         {
-            if (!NetEnemies.ClientMode || __instance == null) return true;
+            if (!NetEnemies.ClientMode || __instance == null)
+            {
+                return true;
+            }
             return !(NetEnemies.Frozen.Contains(__instance) || (NetEnemies.Instance != null && NetEnemies.Instance.IsPuppet(__instance, out _)));
         }
     }
@@ -381,7 +496,10 @@ namespace DarkwoodMP.World
         }
         static void Postfix(bool __state)
         {
-            if (!__state) return;
+            if (!__state)
+            {
+                return;
+            }
             EnemyLandings.Threw();
             EnemyLandings.Throwing = null;
         }
@@ -400,7 +518,9 @@ namespace DarkwoodMP.World
         static void Postfix(Transform __result)
         {
             if (EnemyLandings.Throwing != null && __result != null && __result.GetComponent<ThrownItem>() != null && !EnemyLandings.Thrown.Contains(__result))
+            {
                 EnemyLandings.Thrown.Add(__result);
+            }
         }
     }
 
@@ -411,7 +531,10 @@ namespace DarkwoodMP.World
         [HarmonyPriority(Priority.First)]
         static bool Prefix(ThrownItem __instance)
         {
-            if (__instance == null || !EnemyLandings.Copies.Remove(__instance)) return true;
+            if (__instance == null || !EnemyLandings.Copies.Remove(__instance))
+            {
+                return true;
+            }
             EnemyLandings.Gone(__instance.transform);
             return false;
         }
@@ -434,7 +557,10 @@ namespace DarkwoodMP.World
         }
         static void Postfix(bool __state)
         {
-            if (!__state) return;
+            if (!__state)
+            {
+                return;
+            }
             EnemyLandings.SensorThrew();
             EnemyLandings.SensorThrowing = null;
         }
@@ -450,9 +576,15 @@ namespace DarkwoodMP.World
     {
         static void Postfix(GameObject __result)
         {
-            if (EnemyLandings.SensorThrowing == null || __result == null) return;
+            if (EnemyLandings.SensorThrowing == null || __result == null)
+            {
+                return;
+            }
             var ti = __result.GetComponent<ThrownItem>();
-            if (ti != null && !EnemyLandings.SensorThrown.Contains(ti)) EnemyLandings.SensorThrown.Add(ti);
+            if (ti != null && !EnemyLandings.SensorThrown.Contains(ti))
+            {
+                EnemyLandings.SensorThrown.Add(ti);
+            }
         }
     }
 }

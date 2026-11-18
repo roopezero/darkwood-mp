@@ -49,7 +49,10 @@ namespace DarkwoodMP.World
         private static GameObject Root(string name, Vector3 pos)
         {
             var old = GameObject.Find(name);
-            if (old != null) Object.Destroy(old);
+            if (old != null)
+            {
+                Object.Destroy(old);
+            }
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -136,13 +139,22 @@ namespace DarkwoodMP.World
             SetOff(m);
             bool wantItem = m.T.gameEvents.events.Exists(e => e.type == GameEvent.Type.addOrRemoveInvItem);
             float until = Time.realtimeSinceStartup + 8f;
-            while (Time.realtimeSinceStartup < until && !(Arrived(m) && (!wantItem || MapScenarioWorld.CarriedOf(Item) > had))) yield return new WaitForSeconds(0.1f);
+            while (Time.realtimeSinceStartup < until && !(Arrived(m) && (!wantItem || MapScenarioWorld.CarriedOf(Item) > had)))
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             yield return new WaitForSeconds(0.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
             r.Info = $"{(wasFired ? "already fired here" : "first")}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, "
                 + $"shared part ran {m.C?.N ?? -1} time(s) here, still owed {ScriptedEvents.IsOwed(m.T)}{made}; bags {MapScenarioWorld.Contents(bag)}";
-            if (wantItem && got != 1) r.Fail($"our player didn't get its {Item} (got {got}): {r.Info}");
-            else if (!Arrived(m)) r.Fail($"our player wasn't taken to the marker: {r.Info}");
+            if (wantItem && got != 1)
+            {
+                r.Fail($"our player didn't get its {Item} (got {got}): {r.Info}");
+            }
+            else if (!Arrived(m))
+            {
+                r.Fail($"our player wasn't taken to the marker: {r.Info}");
+            }
             Core.forbidInputs = false;
             MapScenario.Place(Centre); // back for the next steps (a jump MoveCheck takes as a teleport)
             yield return new WaitForSeconds(1f);
@@ -163,7 +175,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(3f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
             r.Info = $"got {got} {Item}, at the marker {m.Marker != null && Arrived(m)}, shared part ran {(m.C?.N ?? 0) - ran} more time(s)";
-            if (got != 0 || (m.Marker != null && Arrived(m)) || (m.C?.N ?? 0) != ran) r.Fail($"it ran again for us: {r.Info}");
+            if (got != 0 || (m.Marker != null && Arrived(m)) || (m.C?.N ?? 0) != ran)
+            {
+                r.Fail($"it ran again for us: {r.Info}");
+            }
             Core.forbidInputs = false;
             MapScenario.Place(Centre);
         }
@@ -174,10 +189,16 @@ namespace DarkwoodMP.World
             if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("no such trigger with a counter (later-setup first)"); yield break; }
             int want = int.Parse(a[1]);
             float until = Time.realtimeSinceStartup + 5f;
-            while (m.C.N < want && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (m.C.N < want && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(1f);
             r.Info = $"the shared part of {a[0]} ran {m.C.N} time(s) here (want {want}); fired {m.T.fired}, owed to our player {ScriptedEvents.IsOwed(m.T)}";
-            if (m.C.N != want) r.Fail(r.Info);
+            if (m.C.N != want)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>
@@ -195,14 +216,23 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             SetOff(trip);
             float until = Time.realtimeSinceStartup + 10f;
-            while (!Arrived(trip) && Time.realtimeSinceStartup < until) yield return null;
+            while (!Arrived(trip) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (!Arrived(trip)) { r.Fail($"the trip didn't take us to {Fmt(trip.Marker.position)} (at {Fmt(p.transform.position)})"); yield break; }
             float from = StateDump.Flat(trip.Et.transform.position - at.Et.transform.position);
             SetOff(at); // the same frame we arrived
             until = Time.realtimeSinceStartup + 6f;
-            while (at.C.N < 1 && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.1f);
+            while (at.C.N < 1 && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             r.Info = $"arrived {from:0} from where we left, set off {a[1]} at once: its shared part ran {at.C.N} time(s) here, requests refused {Authority.RolledBack - refusedBefore}";
-            if (at.C.N != 1) r.Fail($"the host didn't take the trigger we arrived at: {r.Info}");
+            if (at.C.N != 1)
+            {
+                r.Fail($"the host didn't take the trigger we arrived at: {r.Info}");
+            }
             Core.forbidInputs = false;
             yield return new WaitForSeconds(2.5f); // the trip's own fade-in ends
             Core.forbidInputs = false;

@@ -47,10 +47,22 @@ namespace DarkwoodMP.World
         /// <summary>Host: a joiner was let in with a world whose counter is n.</summary>
         public static void Joined(ulong peer, int n)
         {
-            if (n <= 0) return;
-            if (_hostScene != Scene) ResetHost(); // joiners let in to an earlier world don't count here
-            if (n < _hostMin) _hostMin = n;
-            if (n > _hostMax) _hostMax = n;
+            if (n <= 0)
+            {
+                return;
+            }
+            if (_hostScene != Scene)
+            {
+                ResetHost(); // joiners let in to an earlier world don't count here
+            }
+            if (n < _hostMin)
+            {
+                _hostMin = n;
+            }
+            if (n > _hostMax)
+            {
+                _hostMax = n;
+            }
             Plugin.Log.LogInfo($"#{peer} joined with save ids below {n}; save ids below {_hostMin} are shared with every player");
         }
 
@@ -65,7 +77,14 @@ namespace DarkwoodMP.World
 
         internal static void OnSaved(int n)
         {
-            if (WorldShare.Snapshotting) _snapshot = n; else _saved = n;
+            if (WorldShare.Snapshotting)
+            {
+                _snapshot = n;
+            }
+            else
+            {
+                _saved = n;
+            }
         }
     }
 
@@ -92,7 +111,10 @@ namespace DarkwoodMP.World
         static void Prefix(bool onlyState)
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (!onlyState && Core.loadingGame && sm != null) SharedIds.OnLoaded(sm.currentUniqueID);
+            if (!onlyState && Core.loadingGame && sm != null)
+            {
+                SharedIds.OnLoaded(sm.currentUniqueID);
+            }
         }
     }
 }

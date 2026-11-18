@@ -65,25 +65,43 @@ namespace DarkwoodMP.World
         /// <summary>A saveable object started (SaveableObject.init ran for it).</summary>
         internal static void Started(GameObject go)
         {
-            if (go == null || WorldActions.Replaying || Core.loadingGame) return;
-            if (Hosting || Joined) _started.Add((go, Time.unscaledTime));
+            if (go == null || WorldActions.Replaying || Core.loadingGame)
+            {
+                return;
+            }
+            if (Hosting || Joined)
+            {
+                _started.Add((go, Time.unscaledTime));
+            }
         }
 
         public static void Update()
         {
-            if (_session == null) return;
+            if (_session == null)
+            {
+                return;
+            }
             float now = Time.unscaledTime;
             if (now >= _nextPrune) { _nextPrune = now + 10f; ObjRef.PruneShared(); }
-            if (_started.Count == 0 && _pending.Count == 0) return;
+            if (_started.Count == 0 && _pending.Count == 0)
+            {
+                return;
+            }
 
             if (Hosting)
             {
                 for (int i = 0; i < _started.Count; i++)
                 {
                     var (go, at) = _started[i];
-                    if (now - at < Settle) continue;
+                    if (now - at < Settle)
+                    {
+                        continue;
+                    }
                     _started.RemoveAt(i--);
-                    if (go == null || !ObjRef.Unnamed(go)) continue;
+                    if (go == null || !ObjRef.Unnamed(go))
+                    {
+                        continue;
+                    }
                     long id = NewId();
                     ObjRef.BindShared(id, go);
                     DragSync.Instance?.Watch(go); // where it settles from here on is sent (as announced: it may not have yet)
@@ -99,13 +117,23 @@ namespace DarkwoodMP.World
             for (int i = 0; i < _pending.Count; i++)
             {
                 var p = _pending[i];
-                if (TryBind(p.id, p.name, p.pos, p.place)) _pending.RemoveAt(i--);
+                if (TryBind(p.id, p.name, p.pos, p.place))
+                {
+                    _pending.RemoveAt(i--);
+                }
                 else if (now > p.until) { AddLate(p.id, p.name, p.pos, p.place); _pending.RemoveAt(i--); }
             }
             // What started a while ago and is still unnamed: maybe the copy of an id the host gave out long before.
             if (_late.Count > 0)
+            {
                 foreach (var (go, at) in _started)
-                    if (go != null && now - at >= Settle && _lateChecked.Add(go)) TryBindLate(go);
+                {
+                    if (go != null && now - at >= Settle && _lateChecked.Add(go))
+                    {
+                        TryBindLate(go);
+                    }
+                }
+            }
             // Forget what started too long ago to be anyone's copy.
             _started.RemoveAll(s => s.go == null || now - s.at > Window);
             if (_started.Count == 0) { _lateChecked.Clear(); _lateTied.Clear(); }
@@ -113,7 +141,10 @@ namespace DarkwoodMP.World
 
         private static void AddLate(long id, string name, Vector3 pos, int place)
         {
-            if (!_late.TryGetValue(name, out var list)) _late[name] = list = new List<(long, Vector3, int)>();
+            if (!_late.TryGetValue(name, out var list))
+            {
+                _late[name] = list = new List<(long, Vector3, int)>();
+            }
             list.Add((id, pos, place));
         }
 
@@ -127,7 +158,15 @@ namespace DarkwoodMP.World
         {
             var sb = new System.Text.StringBuilder();
             // The root's own index is left out: it is its place among the scene's roots, which differs between games.
-            for (var t = go.transform; t != null; t = t.parent) { sb.Append(t.name); if (t.parent != null) sb.Append(':').Append(t.GetSiblingIndex()); sb.Append('/'); }
+            for (var t = go.transform; t != null; t = t.parent)
+            {
+                sb.Append(t.name);
+                if (t.parent != null)
+                {
+                    sb.Append(':').Append(t.GetSiblingIndex());
+                }
+                sb.Append('/');
+            }
             return StableHash.Of(sb.ToString());
         }
 
@@ -137,7 +176,10 @@ namespace DarkwoodMP.World
 
         private static void TryBindLate(GameObject go)
         {
-            if (!_late.TryGetValue(go.name, out var list) || !ObjRef.Unnamed(go)) return;
+            if (!_late.TryGetValue(go.name, out var list) || !ObjRef.Unnamed(go))
+            {
+                return;
+            }
             var q = go.transform.position;
             float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack + 2f;
             bool bestSame = false;
@@ -145,16 +187,28 @@ namespace DarkwoodMP.World
             for (int i = 0; i < list.Count; i++)
             {
                 var (id, pos, p) = list[i];
-                if (ObjRef.IsBound(id)) continue;
+                if (ObjRef.IsBound(id))
+                {
+                    continue;
+                }
                 float d = (q.x - pos.x) * (q.x - pos.x) + (q.z - pos.z) * (q.z - pos.z);
-                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack) continue;
+                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack)
+                {
+                    continue;
+                }
                 if (best < 0 || Better(d, p == place, bestD, bestSame)) { bestD = d; best = i; bestSame = p == place; }
             }
-            if (best < 0 || !ObjRef.BindShared(list[best].id, go)) return;
+            if (best < 0 || !ObjRef.BindShared(list[best].id, go))
+            {
+                return;
+            }
             _lateTied.Add(go);
             Tied++;
             Place(list[best].id, go);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] tied {go.name} at {go.transform.position} to the host's #{list[best].id} (given out a while ago)");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[ids] tied {go.name} at {go.transform.position} to the host's #{list[best].id} (given out a while ago)");
+            }
         }
 
         private static bool TryBind(long id, string name, Vector3 pos, int place)
@@ -164,21 +218,42 @@ namespace DarkwoodMP.World
             float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack, now = Time.unscaledTime;
             foreach (var (go, at) in _started)
             {
-                if (go == null || now - at > Window || go.name != name || now - at < Settle / 2) continue; // a moment for our own replays to be named
-                if (!ObjRef.Unnamed(go) && !_lateTied.Contains(go)) continue;
+                if (go == null || now - at > Window || go.name != name || now - at < Settle / 2)
+                {
+                    continue; // a moment for our own replays to be named
+                }
+                if (!ObjRef.Unnamed(go) && !_lateTied.Contains(go))
+                {
+                    continue;
+                }
                 var q = go.transform.position;
                 float d = (q.x - pos.x) * (q.x - pos.x) + (q.z - pos.z) * (q.z - pos.z);
-                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack) continue;
+                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack)
+                {
+                    continue;
+                }
                 bool same = PlaceOf(go) == place;
                 if (best == null || Better(d, same, bestD, bestSame)) { bestD = d; best = go; bestSame = same; }
             }
-            if (best == null) return false;
+            if (best == null)
+            {
+                return false;
+            }
             // Tied a moment ago to an id from long before: the id the host gives out now is the one for it.
-            if (_lateTied.Remove(best)) ObjRef.Unbind(best);
-            if (!ObjRef.BindShared(id, best)) return false;
+            if (_lateTied.Remove(best))
+            {
+                ObjRef.Unbind(best);
+            }
+            if (!ObjRef.BindShared(id, best))
+            {
+                return false;
+            }
             Tied++;
             Place(id, best);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] tied {name} at {best.transform.position} to the host's #{id}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[ids] tied {name} at {best.transform.position} to the host's #{id}");
+            }
             return true;
         }
 
@@ -190,14 +265,20 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void Place(long id, GameObject go)
         {
-            if (go == null || _session == null || _session.IsHost || !_hostAt.TryGetValue(id, out var pos)) return;
+            if (go == null || _session == null || _session.IsHost || !_hostAt.TryGetValue(id, out var pos))
+            {
+                return;
+            }
             DragSync.Instance?.PutAtHost(go, pos);
         }
 
         /// <summary>Client: the host sent where an object we haven't tied yet came to rest (ObjMove, last).</summary>
         internal static void HostMoved(long id, Vector3 pos)
         {
-            if (_hostAt.ContainsKey(id)) _hostAt[id] = pos;
+            if (_hostAt.ContainsKey(id))
+            {
+                _hostAt[id] = pos;
+            }
         }
 
         private static void Send(List<(long id, string name, Vector3 pos, int place)> list, byte flags, ulong to)
@@ -215,24 +296,45 @@ namespace DarkwoodMP.World
                     w.Write(list[i].pos);
                     w.W.Write(list[i].place);
                 }
-                if (to == 0) _session.Broadcast(w, Channel.Control, reliable: true);
-                else _session.SendTo(to, w, Channel.Control, reliable: true);
+                if (to == 0)
+                {
+                    _session.Broadcast(w, Channel.Control, reliable: true);
+                }
+                else
+                {
+                    _session.SendTo(to, w, Channel.Control, reliable: true);
+                }
             }
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[ids] gave out {list.Count} ids{(to == 0 ? "" : $" to #{to} (made before it joined)")}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[ids] gave out {list.Count} ids{(to == 0 ? "" : $" to #{to} (made before it joined)")}");
+            }
         }
 
         /// <summary>Host: a joiner came in; its world has what was made before, so it gets every id given out.</summary>
         private static void SendAllTo(ulong peer)
         {
-            if (_session == null || !_session.IsHost) return;
+            if (_session == null || !_session.IsHost)
+            {
+                return;
+            }
             var all = new List<(long, string, Vector3, int)>();
-            foreach (var kv in ObjRef.SharedObjects) all.Add((kv.Key, kv.Value.name, kv.Value.transform.position, PlaceOf(kv.Value)));
-            if (all.Count > 0) Send(all, MadeBefore, peer);
+            foreach (var kv in ObjRef.SharedObjects)
+            {
+                all.Add((kv.Key, kv.Value.name, kv.Value.transform.position, PlaceOf(kv.Value)));
+            }
+            if (all.Count > 0)
+            {
+                Send(all, MadeBefore, peer);
+            }
         }
 
         private static void OnHostIds(ulong from, PacketReader r)
         {
-            if (_session.IsHost || from != _session.HostId) return;
+            if (_session.IsHost || from != _session.HostId)
+            {
+                return;
+            }
             byte flags = r.R.ReadByte();
             int n = r.R.ReadUInt16();
             float until = Time.unscaledTime + Window;
@@ -246,7 +348,10 @@ namespace DarkwoodMP.World
                 _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it loaded, found by name and position when named.
                 if ((flags & MadeBefore) != 0) { AddLate(id, name, pos, place); continue; }
-                if (!Joined || !TryBind(id, name, pos, place)) _pending.Add((id, name, pos, place, until));
+                if (!Joined || !TryBind(id, name, pos, place))
+                {
+                    _pending.Add((id, name, pos, place, until));
+                }
             }
         }
     }
@@ -256,7 +361,13 @@ namespace DarkwoodMP.World
     static class SaveableStartedPatch
     {
         static void Prefix(SaveableObject __instance, ref bool __state) => __state = !Initialized(__instance);
-        static void Postfix(SaveableObject __instance, bool __state) { if (__state && Initialized(__instance)) HostIds.Started(__instance.gameObject); }
+        static void Postfix(SaveableObject __instance, bool __state)
+        {
+            if (__state && Initialized(__instance))
+            {
+                HostIds.Started(__instance.gameObject);
+            }
+        }
 
         private static readonly AccessTools.FieldRef<SaveableObject, bool> InitializedRef = AccessTools.FieldRefAccess<SaveableObject, bool>("initialized");
         private static bool Initialized(SaveableObject s) => InitializedRef(s);

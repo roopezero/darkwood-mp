@@ -48,7 +48,10 @@ namespace DarkwoodMP.World
 
         internal static void Note(List<Entry> list, Location l, string kind, ScriptedEvents.Part part)
         {
-            if (list.Count > 2000) list.RemoveRange(0, 1000);
+            if (list.Count > 2000)
+            {
+                list.RemoveRange(0, 1000);
+            }
             list.Add(new Entry { At = Time.realtimeSinceStartup, Location = Core.getTrueLocationName(l.name), Kind = kind, Part = part, Pos = l.transform.position });
         }
 
@@ -56,7 +59,10 @@ namespace DarkwoodMP.World
         private static bool HostNear(Location l, bool was)
         {
             var p = Player.Instance;
-            if (p == null || SharedCullingPatch.HostAway) return false;
+            if (p == null || SharedCullingPatch.HostAway)
+            {
+                return false;
+            }
             SharedCullingPatch.Distances(out int dx, out int dy);
             float m = was ? 600f : 0f;
             var a = p.transform.position; var b = l.transform.position;
@@ -67,14 +73,23 @@ namespace DarkwoodMP.World
         private static bool OtherNear(Location l)
         {
             var sync = Sync.PlayerSync.Instance;
-            if (sync == null) return false;
+            if (sync == null)
+            {
+                return false;
+            }
             SharedCullingPatch.Distances(out int dx, out int dy); // theirs isn't known here: about ours
             var b = l.transform.position;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r == null || r.Root == null || r.Away || r.Owner == Sync.PlayerSync.DummyId) continue;
+                if (r == null || r.Root == null || r.Away || r.Owner == Sync.PlayerSync.DummyId)
+                {
+                    continue;
+                }
                 var a = r.Root.transform.position;
-                if (Mathf.Abs(a.x - b.x) <= dx && Mathf.Abs(a.z - b.z) <= dy) return true;
+                if (Mathf.Abs(a.x - b.x) <= dx && Mathf.Abs(a.z - b.z) <= dy)
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -82,11 +97,27 @@ namespace DarkwoodMP.World
         /// <summary>The part a location's enter (or exit) events run in now; null: as the game runs them.</summary>
         internal static ScriptedEvents.Part? PartFor(Location l, bool enter)
         {
-            if (!Together || !WorldLocation(l) || ScriptedEvents.Current != ScriptedEvents.Part.All || WorldActions.Replaying) return null;
-            if (S.IsClient) return ScriptedEvents.Part.PlayerAndShared;
+            if (!Together || !WorldLocation(l) || ScriptedEvents.Current != ScriptedEvents.Part.All || WorldActions.Replaying)
+            {
+                return null;
+            }
+            if (S.IsClient)
+            {
+                return ScriptedEvents.Part.PlayerAndShared;
+            }
             bool hostIn;
-            if (enter) HostIn[l] = hostIn = !Proxies.Any || HostNear(l, true); // with the margin: the location's node is up to 300 nearer than it
-            else { if (!HostIn.TryGetValue(l, out hostIn)) hostIn = true; HostIn.Remove(l); }
+            if (enter)
+            {
+                HostIn[l] = hostIn = !Proxies.Any || HostNear(l, true); // with the margin: the location's node is up to 300 nearer than it
+            }
+            else
+            {
+                if (!HostIn.TryGetValue(l, out hostIn))
+                {
+                    hostIn = true;
+                }
+                HostIn.Remove(l);
+            }
             return hostIn ? (ScriptedEvents.Part?)null : ScriptedEvents.Part.HostAndShared;
         }
 
@@ -100,9 +131,15 @@ namespace DarkwoodMP.World
             {
                 var ran = part ?? ScriptedEvents.Part.All;
                 Note(Log, l, enter ? "enter" : "exit", ran);
-                if (Debug) Plugin.Log.LogInfo($"[farevents] {l.name} {(enter ? "entered: its enter" : "left: its exit")} events run as {ran}{more}");
+                if (Debug)
+                {
+                    Plugin.Log.LogInfo($"[farevents] {l.name} {(enter ? "entered: its enter" : "left: its exit")} events run as {ran}{more}");
+                }
             }
-            if (part == null) return false;
+            if (part == null)
+            {
+                return false;
+            }
             ScriptedEvents.Current = part.Value;
             return true;
         }
@@ -117,9 +154,15 @@ namespace DarkwoodMP.World
         internal static void Tick()
         {
             var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld || Core.loadingGame) return;
+            if (s == null || !s.IsHost || !WorldShare.InWorld || Core.loadingGame)
+            {
+                return;
+            }
             var d = Singleton<Dreams>.Instance;
-            if (d != null && (d.dreaming || d.wantToDream)) return;
+            if (d != null && (d.dreaming || d.wantToDream))
+            {
+                return;
+            }
             if (_all == null || Time.realtimeSinceStartup - _allAt > 10f)
             {
                 _all = Object.FindObjectsOfType<Location>(true).Where(WorldLocation).ToArray();
@@ -127,23 +170,40 @@ namespace DarkwoodMP.World
             }
             foreach (var l in _all)
             {
-                if (l == null) continue;
+                if (l == null)
+                {
+                    continue;
+                }
                 if (!l.entered) { HostIn.Remove(l); continue; }
-                if (!l.finishedLoading || l.activatingOverTime) continue; // its enter events haven't run yet
+                if (!l.finishedLoading || l.activatingOverTime)
+                {
+                    continue; // its enter events haven't run yet
+                }
                 bool was;
                 if (!HostIn.TryGetValue(l, out was)) { HostIn[l] = HostNear(l, false); continue; }
                 bool now = HostNear(l, was);
-                if (now == was) continue;
+                if (now == was)
+                {
+                    continue;
+                }
                 HostIn[l] = now;
                 var type = now ? global::EventTrigger.Type.onEnterLocation : global::EventTrigger.Type.onExitLocation;
                 Note(Log, l, now ? "enter" : "exit", ScriptedEvents.Part.PlayerOnly);
-                if (Debug) Plugin.Log.LogInfo($"[farevents] our player {(now ? "came into" : "went out of")} {l.name}, kept entered for the others: its {(now ? "enter" : "exit")} events, our player's part only");
+                if (Debug)
+                {
+                    Plugin.Log.LogInfo($"[farevents] our player {(now ? "came into" : "went out of")} {l.name}, kept entered for the others: its {(now ? "enter" : "exit")} events, our player's part only");
+                }
                 ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly, replaying: false, () =>
                 {
                     foreach (var et in l.events)
+                    {
                         if (et != null)
-                            try { Core.sendTriggerInfo(et.gameObject, type); }
+                        {
+                            try
+                            { Core.sendTriggerInfo(et.gameObject, type); }
                             catch (Exception e) { Plugin.Log.LogWarning($"[farevents] {l.name}'s {type} on {et.name}: {e.Message}"); }
+                        }
+                    }
                 });
             }
         }
@@ -157,13 +217,19 @@ namespace DarkwoodMP.World
         static void Prefix(Location __instance, out (bool, ScriptedEvents.Part) __state)
         {
             __state = (false, ScriptedEvents.Current);
-            if (Core.loadingGame) return;
+            if (Core.loadingGame)
+            {
+                return;
+            }
             __state.Item1 = FarEvents.Begin(__instance, enter: true, FarEvents.PartFor(__instance, enter: true));
         }
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part) __state)
         {
-            if (__state.Item1) ScriptedEvents.Current = __state.Item2;
+            if (__state.Item1)
+            {
+                ScriptedEvents.Current = __state.Item2;
+            }
             return __exception;
         }
     }
@@ -184,7 +250,10 @@ namespace DarkwoodMP.World
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part, bool) __state)
         {
-            if (__state.Item1) ScriptedEvents.Current = __state.Item2;
+            if (__state.Item1)
+            {
+                ScriptedEvents.Current = __state.Item2;
+            }
             KeepCharacters = __state.Item3;
             return __exception;
         }
@@ -207,14 +276,18 @@ namespace DarkwoodMP.World
         static void Enter(Location __instance, bool force)
         {
             if (FarEvents.Together && FarEvents.WorldLocation(__instance) && (force || !__instance.entered))
+            {
                 FarEvents.Note(FarEvents.Switches, __instance, "enter", ScriptedEvents.Current);
+            }
         }
 
         [HarmonyPrefix, HarmonyPatch(nameof(Location.leave))]
         static void Leave(Location __instance, bool force)
         {
             if (FarEvents.Together && FarEvents.WorldLocation(__instance) && __instance.entered && __instance.gameObject.activeInHierarchy)
+            {
                 FarEvents.Note(FarEvents.Switches, __instance, "leave", ScriptedEvents.Current);
+            }
         }
     }
 }

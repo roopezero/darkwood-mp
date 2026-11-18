@@ -66,12 +66,21 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void IgnoreWith(GameObject thing)
         {
-            if (thing == null || All.Count == 0) return;
+            if (thing == null || All.Count == 0)
+            {
+                return;
+            }
             var theirs = thing.GetComponentsInChildren<Collider>(true);
             foreach (var p in All.Values)
             {
-                if (p == null) continue;
-                foreach (var c in theirs) p.Ignore(c);
+                if (p == null)
+                {
+                    continue;
+                }
+                foreach (var c in theirs)
+                {
+                    p.Ignore(c);
+                }
             }
         }
 
@@ -85,7 +94,10 @@ namespace DarkwoodMP.Combat
 
         private void Ignore(Collider c)
         {
-            if (c == null || c.isTrigger || Body == null || !_ignored.Add(c.GetInstanceID())) return;
+            if (c == null || c.isTrigger || Body == null || !_ignored.Add(c.GetInstanceID()))
+            {
+                return;
+            }
             Physics.IgnoreCollision(Body, c, true);
         }
 
@@ -101,10 +113,19 @@ namespace DarkwoodMP.Combat
             for (int i = 0; i < n; i++)
             {
                 var c = Near[i];
-                if (c == null || _ignored.Contains(c.GetInstanceID())) continue;
+                if (c == null || _ignored.Contains(c.GetInstanceID()))
+                {
+                    continue;
+                }
                 var b = c.attachedRigidbody;
-                if (b == null || b.gameObject == gameObject) continue;
-                if (b.GetComponent<Item>() == null || b.GetComponent<CharBase>() != null) continue;
+                if (b == null || b.gameObject == gameObject)
+                {
+                    continue;
+                }
+                if (b.GetComponent<Item>() == null || b.GetComponent<CharBase>() != null)
+                {
+                    continue;
+                }
                 Ignore(c);
             }
         }
@@ -129,9 +150,17 @@ namespace DarkwoodMP.Combat
         {
             var player = Player.Instance;
             var body = Body;
-            if (player == null || player == _ignoredPlayer || body == null) return;
+            if (player == null || player == _ignoredPlayer || body == null)
+            {
+                return;
+            }
             foreach (var c in player.GetComponentsInChildren<Collider>(true))
-                if (c != null && !c.isTrigger) Physics.IgnoreCollision(body, c, true);
+            {
+                if (c != null && !c.isTrigger)
+                {
+                    Physics.IgnoreCollision(body, c, true);
+                }
+            }
             _ignoredPlayer = player;
         }
 
@@ -159,7 +188,10 @@ namespace DarkwoodMP.Combat
 
         public override void OnDestroy()
         {
-            if (All.TryGetValue(Owner, out var p) && p == this) All.Remove(Owner);
+            if (All.TryGetValue(Owner, out var p) && p == this)
+            {
+                All.Remove(Owner);
+            }
         }
 
         /// <summary>Hits on a proxy go to its player (CombatPatches routes enemies' sensors here).</summary>
@@ -167,7 +199,10 @@ namespace DarkwoodMP.Combat
         public override void getHit(float damage, Transform attackerTransform, bool CanCutInHalf, bool byPlayer, bool canInterrupt,
             bool normalHit = true, bool showRedScreen = false, bool force = false, bool dontShowHealthBar = false)
         {
-            if (byPlayer) return; // no friendly fire
+            if (byPlayer)
+            {
+                return; // no friendly fire
+            }
             PlayerDamage.Send(Owner, damage, attackerTransform, shadow: false, effects: null);
         }
 
@@ -187,20 +222,39 @@ namespace DarkwoodMP.Combat
             // Remove proxies whose player is gone (or everything, when not hosting).
             var gone = new List<ulong>();
             foreach (var kv in NetPlayerProxy.All)
-                if (kv.Value == null || !wanted || !sync.Remotes.ContainsKey(kv.Key) || (!hosting && kv.Key != PlayerSync.DummyId)) gone.Add(kv.Key);
+            {
+                if (kv.Value == null || !wanted || !sync.Remotes.ContainsKey(kv.Key) || (!hosting && kv.Key != PlayerSync.DummyId))
+                {
+                    gone.Add(kv.Key);
+                }
+            }
             foreach (var id in gone)
             {
-                if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null) Object.Destroy(p.gameObject);
+                if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
+                {
+                    Object.Destroy(p.gameObject);
+                }
                 NetPlayerProxy.All.Remove(id);
             }
-            if (!wanted || Player.Instance == null) return;
+            if (!wanted || Player.Instance == null)
+            {
+                return;
+            }
 
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Root == null) continue;
-                if (!hosting && r.Owner != PlayerSync.DummyId) continue;
+                if (r.Root == null)
+                {
+                    continue;
+                }
+                if (!hosting && r.Owner != PlayerSync.DummyId)
+                {
+                    continue;
+                }
                 if (!NetPlayerProxy.All.TryGetValue(r.Owner, out var proxy) || proxy == null)
+                {
                     proxy = NetPlayerProxy.Create(r.Owner, r.Name);
+                }
                 var t = proxy.transform;
                 t.SetPositionAndRotation(r.Root.transform.position, r.Root.transform.rotation);
                 proxy.IgnoreLooseNear();
@@ -221,7 +275,10 @@ namespace DarkwoodMP.Combat
                     proxy.InLocation = loc;
                 }
                 proxy.alive = here;
-                if (snap != null) Apply(proxy, snap);
+                if (snap != null)
+                {
+                    Apply(proxy, snap);
+                }
                 var col = proxy.GetComponent<Collider>();
                 if (col != null && col.enabled != here)
                 {
@@ -252,16 +309,21 @@ namespace DarkwoodMP.Combat
                 var t = proxy.transform;
                 foreach (var c in Object.FindObjectsOfType<Character>())
                 {
-                    if (c == null || (c.target != t && c.superTarget != t)) continue;
+                    if (c == null || (c.target != t && c.superTarget != t))
+                    {
+                        continue;
+                    }
                     try { c.stopAttacking(t); stopped++; }
                     catch (System.Exception e) { Plugin.Log.LogWarning($"{c.name} couldn't stop attacking {proxy.OwnerName}: {e.Message}"); }
                 }
             }
             if (changed && Threat.Debug)
+            {
                 Plugin.Log.LogInfo($"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, shadow ward {proxy.ShadowWard}, forest spirit ward {proxy.ForestSpiritWard}, " +
                                    $"friend of the forest {proxy.FriendOfTheForest}, enemy of the forest {proxy.EnemyOfTheForest}" +
                                    (turnedInvisible ? $"; {stopped} enemies stop attacking them" : "") +
                                    $"; night worms sent at them: {NightSpawns.WormWanted(proxy)}; in light here: {Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
+            }
         }
 
         /// <summary>A CharBase that is a player: the host's own, or a remote one's proxy.</summary>

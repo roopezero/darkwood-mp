@@ -128,7 +128,10 @@ namespace DarkwoodMP.World
             session.OnPeerDisconnected += FreeOwnedBy;
             session.OnSessionEnded += () =>
             {
-                foreach (var m in _moving.Values) Release(m);
+                foreach (var m in _moving.Values)
+                {
+                    Release(m);
+                }
                 _moving.Clear(); ForgetLoose(); _dragging = null; _settling = null;
                 _owners.Clear(); _corrected.Clear(); _hostAt.Clear(); _unechoed.Clear(); _claimed = false;
             };
@@ -142,8 +145,14 @@ namespace DarkwoodMP.World
             if (!WorldActions.Sharing)
             {
                 _dragging = null; _claimed = false;
-                if (_loose.Count > 0 || _looseFound) ForgetLoose();
-                if (_owners.Count > 0) _owners.Clear();
+                if (_loose.Count > 0 || _looseFound)
+                {
+                    ForgetLoose();
+                }
+                if (_owners.Count > 0)
+                {
+                    _owners.Clear();
+                }
                 return;
             }
             var player = Player.Instance;
@@ -158,10 +167,15 @@ namespace DarkwoodMP.World
                     LetGo(_dragRef);
                 }
                 _dragging = now; _claimed = false;
-                if (now != null) StartDrag(now);
+                if (now != null)
+                {
+                    StartDrag(now);
+                }
             }
             if (_dragging != null && _session.IsHost && _owners.TryGetValue(_dragRef.ToString(), out var mine) && mine.Id == _session.LocalId)
+            {
                 mine.Heard = Time.unscaledTime; // the host's own drag never goes stale
+            }
             if (Time.unscaledTime >= _nextFree) { _nextFree = Time.unscaledTime + 1f; FreeStale(); }
 
             if (_dragging != null && _dragRef.Valid && (_session.IsHost || _claimed) && Time.unscaledTime >= _nextSend)
@@ -192,7 +206,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private void WatchPushes(Player player)
         {
-            if (player == null) return;
+            if (player == null)
+            {
+                return;
+            }
             var me = player.transform.position;
             if (!_looseFound)
             {
@@ -202,15 +219,25 @@ namespace DarkwoodMP.World
                 // then sent to everyone, so a client whose copy is still switched off has them settled too. Noted
                 // only once seen, they would have settled already and nothing would be sent, leaving that client's
                 // copies a few units from everyone else's.
-                foreach (var b in Object.FindObjectsOfType<Rigidbody>(_session.IsHost)) Note(b, null);
+                foreach (var b in Object.FindObjectsOfType<Rigidbody>(_session.IsHost))
+                {
+                    Note(b, null);
+                }
             }
             if (Time.unscaledTime >= _nextLook)
             {
                 _nextLook = Time.unscaledTime + PushLookInterval;
                 Look(me);
                 if (_session.IsHost)
+                {
                     foreach (var proxy in Combat.NetPlayerProxy.All.Values)
-                        if (proxy != null && proxy.alive && !proxy.Away) Look(proxy.transform.position);
+                    {
+                        if (proxy != null && proxy.alive && !proxy.Away)
+                        {
+                            Look(proxy.transform.position);
+                        }
+                    }
+                }
             }
             // A client away (spectating) has no player of its own to push anything: it takes the host's word on all.
             // Our pushes count wherever the host runs our area too (a separate location it placed, the shared dream):
@@ -230,15 +257,24 @@ namespace DarkwoodMP.World
                 }
                 float moved = (t.position - p.Pos).magnitude;
                 if (moved < PushMinMove && Quaternion.Angle(t.rotation, p.Rot) < PushMinTurn) { p.Since = -1f; p.Touched = false; continue; }
-                if (p.Since < 0f) p.Since = nowT;
+                if (p.Since < 0f)
+                {
+                    p.Since = nowT;
+                }
                 if (_session.IsClient && !clientAway && !p.Touched && (p.Col != null && p.Col.bounds.SqrDistance(me) < PushTouch * PushTouch
-                    || p.HitAt >= 0f && nowT - p.HitAt < PushHitFor)) p.Touched = true;
+                    || p.HitAt >= 0f && nowT - p.HitAt < PushHitFor))
+                {
+                    p.Touched = true;
+                }
                 if (!AtRest(p.Body) && nowT - p.Since < PushGiveUpAfter)
                 {
                     // Still sliding: where it is now goes out too (unreliably, as a drag's moves), so the other games
                     // show it sliding there instead of jumping to where it comes to rest. Only what this game has the
                     // word on: the host's, or a client's own player's push.
-                    if (_session.IsHost || p.Touched) Send(p.Item, p.Ref, last: false);
+                    if (_session.IsHost || p.Touched)
+                    {
+                        Send(p.Item, p.Ref, last: false);
+                    }
                     continue;
                 }
                 if (_session.IsClient && !p.Touched)
@@ -250,14 +286,26 @@ namespace DarkwoodMP.World
                     p.Body.velocity = Vector3.zero; p.Body.angularVelocity = Vector3.zero;
                     p.Body.Sleep();
                     p.Since = -1f;
-                    if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {p.Item.name} ({p.Ref}) moved {moved:0.0} units by itself: put back");
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] {p.Item.name} ({p.Ref}) moved {moved:0.0} units by itself: put back");
+                    }
                     continue;
                 }
                 Send(p.Item, p.Ref, last: true); // which notes it there
                 PushesSent++;
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] pushed {p.Item.name} ({p.Ref}) {moved:0.0} units: sent where it is");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] pushed {p.Item.name} ({p.Ref}) {moved:0.0} units: sent where it is");
+                }
             }
-            if (gone != null) foreach (var b in gone) _loose.Remove(b);
+            if (gone != null)
+            {
+                foreach (var b in gone)
+                {
+                    _loose.Remove(b);
+                }
+            }
         }
 
         /// <summary>
@@ -269,9 +317,18 @@ namespace DarkwoodMP.World
         public void Hit(Item item)
         {
             var b = item != null ? item.GetComponent<Rigidbody>() : null;
-            if (b == null) return;
-            if (!_loose.ContainsKey(b)) Note(b, null);
-            if (_loose.TryGetValue(b, out var p)) p.HitAt = Time.unscaledTime;
+            if (b == null)
+            {
+                return;
+            }
+            if (!_loose.ContainsKey(b))
+            {
+                Note(b, null);
+            }
+            if (_loose.TryGetValue(b, out var p))
+            {
+                p.HitAt = Time.unscaledTime;
+            }
         }
 
         // Host: every loose object where the last snapshot for joiners has it (WorldShare.SaveSnapshot).
@@ -290,7 +347,10 @@ namespace DarkwoodMP.World
             _atSnapshot.Clear();
             foreach (var b in Object.FindObjectsOfType<Rigidbody>(true))
             {
-                if (LooseItem(b) == null) continue;
+                if (LooseItem(b) == null)
+                {
+                    continue;
+                }
                 ObjRef.Pin(b.gameObject); // named by where the snapshot has it, which is where the joiner finds it
                 _atSnapshot[b] = (b.transform.position, b.transform.rotation);
             }
@@ -307,28 +367,49 @@ namespace DarkwoodMP.World
         /// </summary>
         public void JoinerInWorld(ulong who)
         {
-            if (!_session.IsHost || _atSnapshot.Count == 0) return;
+            if (!_session.IsHost || _atSnapshot.Count == 0)
+            {
+                return;
+            }
             int sent = 0, later = 0;
             foreach (var kv in _atSnapshot)
             {
                 var b = kv.Key;
-                if (b == null) continue;
+                if (b == null)
+                {
+                    continue;
+                }
                 var t = b.transform;
-                if ((t.position - kv.Value.pos).magnitude < PushMinMove && Quaternion.Angle(t.rotation, kv.Value.rot) < PushMinTurn) continue;
+                if ((t.position - kv.Value.pos).magnitude < PushMinMove && Quaternion.Angle(t.rotation, kv.Value.rot) < PushMinTurn)
+                {
+                    continue;
+                }
                 var item = LooseItem(b);
-                if (item == null || b.isKinematic || item == _dragging || _moving.ContainsKey(b.gameObject)) continue; // a drag sends its own end
+                if (item == null || b.isKinematic || item == _dragging || _moving.ContainsKey(b.gameObject))
+                {
+                    continue; // a drag sends its own end
+                }
                 if (!AtRest(b))
                 {
                     if (_loose.TryGetValue(b, out var p)) { p.Pos = kv.Value.pos; p.Rot = kv.Value.rot; p.Since = -1f; later++; }
                     continue;
                 }
                 var r = ObjRef.Pin(b.gameObject);
-                if (!r.Valid) continue;
+                if (!r.Valid)
+                {
+                    continue;
+                }
                 _session.SendTo(who, Message(r, t.position, t.rotation, true), Channel.Control, reliable: true);
                 sent++;
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {item.name} ({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {item.name} ({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
+                }
             }
-            if (sent > 0 || later > 0) Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {sent} loose objects that moved since their snapshot sent to them{(later > 0 ? $", {later} still moving (sent once at rest)" : "")}");
+            if (sent > 0 || later > 0)
+            {
+                Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {sent} loose objects that moved since their snapshot sent to them{(later > 0 ? $", {later} still moving (sent once at rest)" : "")}");
+            }
         }
 
         /// <summary>
@@ -339,8 +420,14 @@ namespace DarkwoodMP.World
         /// </summary>
         public void NoteAll(GameObject root)
         {
-            if (root == null || !_session.IsHost) return;
-            foreach (var b in root.GetComponentsInChildren<Rigidbody>(true)) Note(b, null);
+            if (root == null || !_session.IsHost)
+            {
+                return;
+            }
+            foreach (var b in root.GetComponentsInChildren<Rigidbody>(true))
+            {
+                Note(b, null);
+            }
         }
 
         /// <summary>
@@ -350,7 +437,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Watch(GameObject go)
         {
-            if (go == null || !_session.IsHost) return;
+            if (go == null || !_session.IsHost)
+            {
+                return;
+            }
             Note(go.GetComponent<Rigidbody>(), null);
         }
 
@@ -362,22 +452,37 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool PutAtHost(GameObject go, Vector3 pos)
         {
-            if (go == null || !_session.IsClient) return false;
+            if (go == null || !_session.IsClient)
+            {
+                return false;
+            }
             var b = go.GetComponent<Rigidbody>();
             var item = LooseItem(b);
-            if (item == null || b.isKinematic || item == _dragging || item == _settling || _moving.ContainsKey(go)) return false;
+            if (item == null || b.isKinematic || item == _dragging || item == _settling || _moving.ContainsKey(go))
+            {
+                return false;
+            }
             var t = go.transform;
             float d = (t.position - pos).magnitude;
-            if (d < PushMinMove) return false;
+            if (d < PushMinMove)
+            {
+                return false;
+            }
             var r = ObjRef.Of(go);
-            if (r.Valid && OtherOwner(r) != null) return false;
+            if (r.Valid && OtherOwner(r) != null)
+            {
+                return false;
+            }
             t.position = pos;
             b.position = pos;
             b.velocity = Vector3.zero; b.angularVelocity = Vector3.zero;
             b.Sleep(); // where the host has it: not to drift off by itself here
             Rebase(go);
             Recell(go);
-            if (WorldActions.Debug) Plugin.Log.LogInfo(System.FormattableString.Invariant($"[world] {go.name} ({r}) put where the host has it, {d:0.0} units from where it settled here"));
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(System.FormattableString.Invariant($"[world] {go.name} ({r}) put where the host has it, {d:0.0} units from where it settled here"));
+            }
             return true;
         }
 
@@ -388,28 +493,49 @@ namespace DarkwoodMP.World
             for (int i = 0; i < n; i++)
             {
                 var b = _near[i].attachedRigidbody;
-                if (b != null && !_loose.ContainsKey(b)) Note(b, _near[i]);
+                if (b != null && !_loose.ContainsKey(b))
+                {
+                    Note(b, _near[i]);
+                }
             }
         }
 
         /// <summary>An Item with a rigidbody that can move, not a character, door or window.</summary>
         private static Item LooseItem(Rigidbody b)
         {
-            if (b == null || b.constraints == RigidbodyConstraints.FreezeAll) return null;
+            if (b == null || b.constraints == RigidbodyConstraints.FreezeAll)
+            {
+                return null;
+            }
             var item = b.GetComponent<Item>();
-            if (item == null) return null;
-            if (b.GetComponent<CharBase>() != null || b.GetComponentInParent<Door>() != null || b.GetComponentInParent<Window>() != null) return null;
+            if (item == null)
+            {
+                return null;
+            }
+            if (b.GetComponent<CharBase>() != null || b.GetComponentInParent<Door>() != null || b.GetComponentInParent<Window>() != null)
+            {
+                return null;
+            }
             return item;
         }
 
         /// <summary>A loose object (an Item with a rigidbody that can move), noted where it is now.</summary>
         private void Note(Rigidbody b, Collider col)
         {
-            if (b == null || _loose.ContainsKey(b)) return;
+            if (b == null || _loose.ContainsKey(b))
+            {
+                return;
+            }
             var item = LooseItem(b);
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
             var r = ObjRef.Pin(b.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             var p = new Loose { Item = item, Body = b, Ref = r, Col = col != null ? col : b.GetComponentInChildren<Collider>() };
             Rebase(p);
             _loose[b] = p;
@@ -418,8 +544,14 @@ namespace DarkwoodMP.World
         /// <summary>For the tests' log: whether this body is watched for pushes here, and where it's known to be.</summary>
         internal string WatchInfo(Rigidbody b)
         {
-            if (b == null) return "no body";
-            if (!_loose.TryGetValue(b, out var p)) return "not watched";
+            if (b == null)
+            {
+                return "no body";
+            }
+            if (!_loose.TryGetValue(b, out var p))
+            {
+                return "not watched";
+            }
             return System.FormattableString.Invariant($"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{(p.Since >= 0f ? ", away" : "")}{(p.Touched ? ", touched" : "")}");
         }
 
@@ -433,24 +565,39 @@ namespace DarkwoodMP.World
         private void Rebase(GameObject go)
         {
             var b = go != null ? go.GetComponent<Rigidbody>() : null;
-            if (b != null && _loose.TryGetValue(b, out var p) && p.Item != null) Rebase(p);
+            if (b != null && _loose.TryGetValue(b, out var p) && p.Item != null)
+            {
+                Rebase(p);
+            }
         }
 
         private void Send(Item item, ObjRef r, bool last)
         {
-            if (item == null || !r.Valid) return;
+            if (item == null || !r.Valid)
+            {
+                return;
+            }
             var t = item.transform;
             var w = Message(r, t.position, t.rotation, last);
             if (last) { Rebase(item.gameObject); Recell(item.gameObject); } // and into the culling node of where it is now
             int ch = last ? Channel.Control : Channel.State;
-            if (_session.IsHost) _session.Broadcast(w, ch, reliable: last);
+            if (_session.IsHost)
+            {
+                _session.Broadcast(w, ch, reliable: last);
+            }
             else
             {
                 _session.SendToHost(w, ch, reliable: last);
                 if (last)
                 {
-                    if (!_unechoed.TryGetValue(item.gameObject, out var sent)) _unechoed[item.gameObject] = sent = new List<Vector3>();
-                    if (sent.Count < 16) sent.Add(t.position);
+                    if (!_unechoed.TryGetValue(item.gameObject, out var sent))
+                    {
+                        _unechoed[item.gameObject] = sent = new List<Vector3>();
+                    }
+                    if (sent.Count < 16)
+                    {
+                        sent.Add(t.position);
+                    }
                 }
             }
         }
@@ -466,11 +613,17 @@ namespace DarkwoodMP.World
         /// </summary>
         private bool OurEcho(GameObject go, Vector3 pos)
         {
-            if (!_unechoed.TryGetValue(go, out var sent)) return false;
+            if (!_unechoed.TryGetValue(go, out var sent))
+            {
+                return false;
+            }
             int i = sent.FindIndex(p => (p - pos).sqrMagnitude < 0.01f);
             if (i < 0) { _unechoed.Remove(go); return false; }
             sent.RemoveRange(0, i + 1);
-            if (sent.Count == 0) _unechoed.Remove(go);
+            if (sent.Count == 0)
+            {
+                _unechoed.Remove(go);
+            }
             return true;
         }
 
@@ -492,8 +645,14 @@ namespace DarkwoodMP.World
         private bool DragAllowed(ulong from, ObjRef obj, Vector3 pos)
         {
             var item = ObjRef.Resolve<Item>(obj);
-            if (item == null) return false;
-            if (Authority.Near(from, item.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach)) return true;
+            if (item == null)
+            {
+                return false;
+            }
+            if (Authority.Near(from, item.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach))
+            {
+                return true;
+            }
             Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)} dragged {item.name} from too far: put back");
             _session.SendTo(from, Message(obj, item.transform.position, item.transform.rotation, true), Channel.Control, reliable: true);
             return false;
@@ -502,31 +661,55 @@ namespace DarkwoodMP.World
         private void OnMove(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (!WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             var pos = r.ReadVector3();
             var rot = new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
             bool last = (r.R.ReadByte() & 1) != 0;
 
-            if (s.IsHost && !TakeMove(from, obj, pos, last)) return;
+            if (s.IsHost && !TakeMove(from, obj, pos, last))
+            {
+                return;
+            }
             // Pass a client's drag on. Where it ended up goes back to its mover too: if the host's game had sent a push
             // of its own for the same object at the same time, the mover got that one and would keep it.
-            if (s.IsHost) s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
+            if (s.IsHost)
+            {
+                s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
+            }
 
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null)
             {
-                if (s.IsClient && last && obj.K == ObjRef.Kind.Spawned) HostIds.HostMoved(obj.Id, pos); // for when our copy is tied
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here");
+                if (s.IsClient && last && obj.K == ObjRef.Kind.Spawned)
+                {
+                    HostIds.HostMoved(obj.Id, pos); // for when our copy is tied
+                }
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] got ObjMove {obj}: not found here");
+                }
                 return;
             }
             var go = item.gameObject;
-            if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o)) o.Heard = Time.unscaledTime; // its drag goes on
+            if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o))
+            {
+                o.Heard = Time.unscaledTime; // its drag goes on
+            }
             if (item == _dragging) { _hostAt[go] = (pos, rot); return; } // we're holding it: kept for if we have to let go
             if (s.IsClient && last && OurEcho(go, pos))
             {
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {go.name} ({obj}): the host passed back where we left it");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {go.name} ({obj}): the host passed back where we left it");
+                }
                 return;
             }
             if (!_moving.TryGetValue(go, out var m))
@@ -535,9 +718,15 @@ namespace DarkwoodMP.World
                 Combat.NetPlayerProxy.IgnoreWith(go);
                 var body = go.GetComponent<Rigidbody>();
                 m = new Moving { T = go.transform, Body = body, WasKinematic = body != null && body.isKinematic };
-                if (body != null) body.isKinematic = true;
+                if (body != null)
+                {
+                    body.isKinematic = true;
+                }
                 _moving[go] = m;
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {s.NameOf(from)} is moving {go.name} ({obj})");
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {s.NameOf(from)} is moving {go.name} ({obj})");
+                }
             }
             m.Pos = pos; m.Rot = rot; m.Last = last; m.Heard = Time.unscaledTime;
         }
@@ -550,7 +739,10 @@ namespace DarkwoodMP.World
         /// <summary>The name of someone else who is dragging this object now (as the host decided), or null.</summary>
         public string OtherOwner(ObjRef r)
         {
-            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id == _session.LocalId || Stale(o)) return null;
+            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id == _session.LocalId || Stale(o))
+            {
+                return null;
+            }
             return _session.NameOf(o.Id);
         }
 
@@ -563,7 +755,10 @@ namespace DarkwoodMP.World
             if (other != null) { CancelLocal(item, $"{other} is moving it"); return; }
             if (_moving.TryGetValue(item.gameObject, out var m)) { Release(m); _moving.Remove(item.gameObject); } // ours now
             _nextSend = 0f;
-            if (!_dragRef.Valid) return;
+            if (!_dragRef.Valid)
+            {
+                return;
+            }
             if (_session.IsHost)
             {
                 _owners[_dragRef.ToString()] = new Owner { Id = _session.LocalId, Heard = Time.unscaledTime, Ref = _dragRef };
@@ -574,18 +769,30 @@ namespace DarkwoodMP.World
             _dragRef.Write(w);
             Authority.Request(w, $"drag {item.name} ({_dragRef})", (ok, reason, _) =>
             {
-                if (_dragging != item) return; // let go meanwhile, or already cancelled
+                if (_dragging != item)
+                {
+                    return; // let go meanwhile, or already cancelled
+                }
                 if (ok) { _claimed = true; _nextSend = 0f; }
-                else CancelLocal(item, reason.EndsWith("is moving it") ? reason : Language.Get("Playermsg_tooFar", "UI"));
+                else
+                {
+                    CancelLocal(item, reason.EndsWith("is moving it") ? reason : Language.Get("Playermsg_tooFar", "UI"));
+                }
             }, inventory: false);
         }
 
         /// <summary>Our player let go of what they dragged: the host frees the drag (a client's is freed by its last move).</summary>
         private void LetGo(ObjRef r)
         {
-            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id != _session.LocalId) return;
+            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o) || o.Id != _session.LocalId)
+            {
+                return;
+            }
             _owners.Remove(r.ToString());
-            if (_session.IsHost) SendOwner(r, 0, letGo: false);
+            if (_session.IsHost)
+            {
+                SendOwner(r, 0, letGo: false);
+            }
         }
 
         /// <summary>
@@ -594,31 +801,52 @@ namespace DarkwoodMP.World
         /// </summary>
         private void CancelLocal(Item item, string message)
         {
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
             if (_dragging == item) { _dragging = null; _claimed = false; }
             var go = item.gameObject;
             var player = Player.Instance;
-            if (item.beingDragged) item.stopDragging(force: true); // as the game lets go when the night ends
+            if (item.beingDragged)
+            {
+                item.stopDragging(force: true); // as the game lets go when the night ends
+            }
             if (player != null && player.itemBeingDragged == item) // taken hold of by a script (the tests)
             {
                 player.itemBeingDragged = null;
                 var joint = item.GetComponent<HingeJoint>();
-                if (joint != null) Object.Destroy(joint);
+                if (joint != null)
+                {
+                    Object.Destroy(joint);
+                }
             }
             if (!_moving.ContainsKey(go)) // not already shown following the other player's drag
             {
                 var body = go.GetComponent<Rigidbody>();
                 var at = (pos: go.transform.position, rot: go.transform.rotation);
-                if (_hostAt.TryGetValue(go, out var h)) at = h;
-                else if (body != null && _loose.TryGetValue(body, out var p)) at = (p.Pos, p.Rot);
+                if (_hostAt.TryGetValue(go, out var h))
+                {
+                    at = h;
+                }
+                else if (body != null && _loose.TryGetValue(body, out var p))
+                {
+                    at = (p.Pos, p.Rot);
+                }
                 var m = new Moving { T = go.transform, Body = body, WasKinematic = body != null && body.isKinematic, Pos = at.pos, Rot = at.rot, Last = true, Heard = Time.unscaledTime };
-                if (body != null) body.isKinematic = true;
+                if (body != null)
+                {
+                    body.isKinematic = true;
+                }
                 _moving[go] = m;
                 Combat.NetPlayerProxy.IgnoreWith(go);
             }
             _hostAt.Remove(go);
             Cancelled++;
-            if (!string.IsNullOrEmpty(message)) player?.displayMessage(message);
+            if (!string.IsNullOrEmpty(message))
+            {
+                player?.displayMessage(message);
+            }
             Plugin.Log.LogInfo($"[dragging] let go of {item.name} ({ObjRef.Of(go)}): {message}");
         }
 
@@ -628,24 +856,42 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write(owner);
             w.W.Write((byte)(letGo ? 1 : 0));
-            if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
-            else _session.Broadcast(w, Channel.Control, reliable: true);
+            if (to != 0)
+            {
+                _session.SendTo(to, w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+            }
         }
 
         /// <summary>Host: where this object is here, as a drag's end, to one player (0: everyone), for their copy to go there.</summary>
         private void SendHere(ObjRef r, ulong to)
         {
             var item = ObjRef.Resolve<Item>(r);
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
             var w = Message(r, item.transform.position, item.transform.rotation, true);
-            if (to != 0) _session.SendTo(to, w, Channel.Control, reliable: true);
-            else _session.Broadcast(w, Channel.Control, reliable: true);
+            if (to != 0)
+            {
+                _session.SendTo(to, w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+            }
         }
 
         /// <summary>Host, a DragClaim inside a Request: the player took hold of this object. Theirs unless someone else drags it.</summary>
         private void OnClaim(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !Authority.Handling) return;
+            if (!_session.IsHost || !Authority.Handling)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null) { Authority.Refuse("it isn't here"); return; }
@@ -659,7 +905,10 @@ namespace DarkwoodMP.World
             }
             _owners[key] = new Owner { Id = from, Heard = Time.unscaledTime, Ref = obj };
             SendOwner(obj, from, letGo: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} drags {item.name} ({obj})");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} drags {item.name} ({obj})");
+            }
         }
 
         /// <summary>
@@ -689,8 +938,14 @@ namespace DarkwoodMP.World
                 // A push still sliding (nobody drags it): passed on to be shown, if the pusher is at it. Where it comes
                 // to rest is checked and taken as its last move.
                 var it = ObjRef.Resolve<Item>(obj);
-                if (it != null && Authority.Near(from, it.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach)) return true;
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj} from too far without a claim: dropped");
+                if (it != null && Authority.Near(from, it.transform.position, WorldActions.Reach) && Authority.Near(from, pos, WorldActions.Reach))
+                {
+                    return true;
+                }
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[dragging] {_session.NameOf(from)} moved {obj} from too far without a claim: dropped");
+                }
                 return false;
             }
             if (!DragAllowed(from, obj, pos))
@@ -717,52 +972,113 @@ namespace DarkwoodMP.World
 
         private void FreeStale()
         {
-            if (_owners.Count == 0) { if (_corrected.Count > 0) _corrected.Clear(); return; }
+            if (_owners.Count == 0)
+            {
+                if (_corrected.Count > 0)
+                {
+                    _corrected.Clear();
+                }
+                return;
+            }
             List<string> stale = null;
-            foreach (var kv in _owners) if (Stale(kv.Value)) (stale ??= new List<string>()).Add(kv.Key);
-            if (stale == null) return;
+            foreach (var kv in _owners)
+            {
+                if (Stale(kv.Value))
+                {
+                    (stale ??= new List<string>()).Add(kv.Key);
+                }
+            }
+            if (stale == null)
+            {
+                return;
+            }
             foreach (var k in stale)
             {
-                if (_session.IsHost) Free(k, _owners[k], "stopped sending");
-                else _owners.Remove(k);
+                if (_session.IsHost)
+                {
+                    Free(k, _owners[k], "stopped sending");
+                }
+                else
+                {
+                    _owners.Remove(k);
+                }
             }
         }
 
         private void FreeOwnedBy(ulong who)
         {
-            if (!_session.IsHost) return;
+            if (!_session.IsHost)
+            {
+                return;
+            }
             List<string> theirs = null;
-            foreach (var kv in _owners) if (kv.Value.Id == who) (theirs ??= new List<string>()).Add(kv.Key);
-            if (theirs != null) foreach (var k in theirs) Free(k, _owners[k], "they left");
+            foreach (var kv in _owners)
+            {
+                if (kv.Value.Id == who)
+                {
+                    (theirs ??= new List<string>()).Add(kv.Key);
+                }
+            }
+            if (theirs != null)
+            {
+                foreach (var k in theirs)
+                {
+                    Free(k, _owners[k], "they left");
+                }
+            }
         }
 
         /// <summary>Client: who drags this object now, as the host decided; let go of it if the host says so.</summary>
         private void OnDragOwner(ulong from, PacketReader r)
         {
-            if (!_session.IsClient || from != _session.HostId || !WorldShare.InWorld) return;
+            if (!_session.IsClient || from != _session.HostId || !WorldShare.InWorld)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             ulong owner = r.R.ReadUInt64();
             bool letGo = (r.R.ReadByte() & 1) != 0;
             string key = obj.ToString();
-            if (owner == 0) _owners.Remove(key);
-            else _owners[key] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = obj };
-            if (_dragging == null || _dragRef.ToString() != key) return;
+            if (owner == 0)
+            {
+                _owners.Remove(key);
+            }
+            else
+            {
+                _owners[key] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = obj };
+            }
+            if (_dragging == null || _dragRef.ToString() != key)
+            {
+                return;
+            }
             if (owner == _session.LocalId) { _claimed = true; return; }
-            if (letGo) CancelLocal(_dragging, owner != 0 ? $"{_session.NameOf(owner)} is moving it" : Language.Get("Playermsg_tooFar", "UI"));
+            if (letGo)
+            {
+                CancelLocal(_dragging, owner != 0 ? $"{_session.NameOf(owner)} is moving it" : Language.Get("Playermsg_tooFar", "UI"));
+            }
         }
 
         /// <summary>For the tests (WorldTest): another player (owner; 0: nobody) drags this object, as if the host had agreed.</summary>
         internal void TestOwner(GameObject go, ulong owner)
         {
             var r = ObjRef.Pin(go);
-            if (owner == 0) _owners.Remove(r.ToString());
-            else _owners[r.ToString()] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = r };
+            if (owner == 0)
+            {
+                _owners.Remove(r.ToString());
+            }
+            else
+            {
+                _owners[r.ToString()] = new Owner { Id = owner, Heard = Time.unscaledTime, Ref = r };
+            }
         }
 
         /// <summary>Slide each object others are moving towards where they said it is; let go of it when they're done.</summary>
         private void ShowOthers()
         {
-            if (_moving.Count == 0) return;
+            if (_moving.Count == 0)
+            {
+                return;
+            }
             List<GameObject> done = null;
             float k = 1f - Mathf.Exp(-15f * Time.unscaledDeltaTime);
             foreach (var kv in _moving)
@@ -787,7 +1103,13 @@ namespace DarkwoodMP.World
                 }
                 m.T.SetPositionAndRotation(Vector3.Lerp(m.T.position, m.Pos, k), Quaternion.Slerp(m.T.rotation, m.Rot, k));
             }
-            if (done != null) foreach (var go in done) _moving.Remove(go);
+            if (done != null)
+            {
+                foreach (var go in done)
+                {
+                    _moving.Remove(go);
+                }
+            }
         }
 
         /// <summary>
@@ -799,30 +1121,57 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void Recell(GameObject go)
         {
-            if (go == null) return;
+            if (go == null)
+            {
+                return;
+            }
             var co = go.GetComponent<CullableObject>();
             var grid = Singleton<WorldGrid>.Instance;
             var old = co != null ? co.node : null;
-            if (old == null || grid == null || grid.currentGrid == null) return;
-            if (grid.inVicinityOfNode(go.transform.position, old)) return;
-            if (!grid.currentGrid.nodes.Contains(old)) return; // in a grid this game isn't playing (a location kept for a joiner)
+            if (old == null || grid == null || grid.currentGrid == null)
+            {
+                return;
+            }
+            if (grid.inVicinityOfNode(go.transform.position, old))
+            {
+                return;
+            }
+            if (!grid.currentGrid.nodes.Contains(old))
+            {
+                return; // in a grid this game isn't playing (a location kept for a joiner)
+            }
             try
             {
                 var type = old.getCullable(go)?.type ?? WorldGrid.Cullable.Type.normal;
                 grid.registerToNode(go, type);
                 var now = co.node;
                 var cul = now?.getCullable(go);
-                if (cul == null) return;
-                if (now.entered && !go.activeSelf) cul.show();
-                else if (!now.entered && go.activeSelf) cul.hide();
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {go.name} moved to another culling node here ({(now.entered ? "shown" : "switched off")})");
+                if (cul == null)
+                {
+                    return;
+                }
+                if (now.entered && !go.activeSelf)
+                {
+                    cul.show();
+                }
+                else if (!now.entered && go.activeSelf)
+                {
+                    cul.hide();
+                }
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {go.name} moved to another culling node here ({(now.entered ? "shown" : "switched off")})");
+                }
             }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't move {go.name} to its new culling node: {e.Message}"); }
         }
 
         private static void Release(Moving m)
         {
-            if (m.Body == null) return;
+            if (m.Body == null)
+            {
+                return;
+            }
             m.Body.isKinematic = m.WasKinematic;
             m.Body.position = m.T.position;
             m.Body.rotation = m.T.rotation;
@@ -847,9 +1196,15 @@ namespace DarkwoodMP.World
         private static bool Prefix(Item __instance)
         {
             var d = DragSync.Instance;
-            if (d == null || !WorldActions.Sharing || __instance == null) return true;
+            if (d == null || !WorldActions.Sharing || __instance == null)
+            {
+                return true;
+            }
             string who = d.OtherOwner(ObjRef.Of(__instance.gameObject));
-            if (who == null) return true;
+            if (who == null)
+            {
+                return true;
+            }
             Player.Instance?.displayMessage($"{who} is moving it");
             Blocked++;
             return false;

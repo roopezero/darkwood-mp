@@ -50,20 +50,29 @@ namespace DarkwoodMP.Net
             _transport.OnSessionLost += who =>
             {
                 var session = Session.Instance;
-                if (!_lobby.InLobby || session == null) return;
+                if (!_lobby.InLobby || session == null)
+                {
+                    return;
+                }
                 if (IsHost && session.Peers.Contains(who.m_SteamID))
                 {
                     Plugin.Log.LogInfo($"Lost the connection to #{who.m_SteamID}");
                     _transport.CloseSession(who);
                     OnPeerLost?.Invoke(who.m_SteamID);
                 }
-                else if (!IsHost && who == _lobby.Owner && session.Connected) _lobby.LoseHost("Lost the connection to the host");
+                else if (!IsHost && who == _lobby.Owner && session.Connected)
+                {
+                    _lobby.LoseHost("Lost the connection to the host");
+                }
             };
             // Every member hears of every departure. A client only acts on the host's: for anyone else the host's
             // PlayerLeft does the cleanup (and shows "X left", which needs the name still known then).
             _lobby.OnMemberLeft += who =>
             {
-                if (!IsHost && who != _lobby.Owner) return;
+                if (!IsHost && who != _lobby.Owner)
+                {
+                    return;
+                }
                 _transport.CloseSession(who);
                 OnPeerLost?.Invoke(who.m_SteamID);
             };
@@ -74,14 +83,26 @@ namespace DarkwoodMP.Net
             if (!InSession)
             {
                 if (session.Active) { Ui.Text(f, "In a direct game.", MenuSkin.Dim); return; }
-                if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)")) _lobby.Host();
+                if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)"))
+                {
+                    _lobby.Host();
+                }
                 Ui.Text(f, "To join: accept a friend's Steam invite, or Join Game in the Steam friends list.", MenuSkin.Dim);
                 return;
             }
             Ui.Text(f, Status, MenuSkin.Bright);
-            if (Ui.Button(f, "Invite Steam friends")) _lobby.OpenInviteDialog();
-            if (!IsHost && session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)")) Rejoin();
-            if (Ui.Button(f, "Leave")) Leave();
+            if (Ui.Button(f, "Invite Steam friends"))
+            {
+                _lobby.OpenInviteDialog();
+            }
+            if (!IsHost && session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
+            {
+                Rejoin();
+            }
+            if (Ui.Button(f, "Leave"))
+            {
+                Leave();
+            }
         }
 
         public bool Send(ulong to, byte[] data, int length, int channel, bool reliable) =>
@@ -90,7 +111,10 @@ namespace DarkwoodMP.Net
         public void Poll() => _transport.Poll();
         public void Rejoin()
         {
-            if (IsHost || !InSession) return;
+            if (IsHost || !InSession)
+            {
+                return;
+            }
             var lobby = _lobby.Id;
             Leave();
             _lobby.Join(lobby);

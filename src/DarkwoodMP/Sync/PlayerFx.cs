@@ -75,7 +75,10 @@ namespace DarkwoodMP.Sync
                     w.WriteStr(burn.noParticle ? "" : p.burnPrefab != null ? p.burnPrefab.name : "fire_flamesV2_burningEnemy_01");
                     w.WriteStr(burn.noSound ? "" : string.IsNullOrEmpty(burn.burnSoundOverride) ? "fire_loop_01" : burn.burnSoundOverride);
                 }
-                else w.W.Write((byte)3);
+                else
+                {
+                    w.W.Write((byte)3);
+                }
                 Send(w, reliable: true);
                 Plugin.Log.LogInfo($"[fx] sent: our player {(burn != null ? "started" : "stopped")} burning");
             }
@@ -85,7 +88,10 @@ namespace DarkwoodMP.Sync
 
         public void OurSound(string audioId, float volume)
         {
-            if (_sounds.Count < MaxSounds) _sounds.Add(new KeyValuePair<string, float>(audioId, volume));
+            if (_sounds.Count < MaxSounds)
+            {
+                _sounds.Add(new KeyValuePair<string, float>(audioId, volume));
+            }
         }
 
         public void OurShot(InvItem gun)
@@ -123,8 +129,14 @@ namespace DarkwoodMP.Sync
 
         private void Send(PacketWriter w, bool reliable)
         {
-            if (_s.IsHost) _s.Broadcast(w, Channel.State, reliable);
-            else _s.SendToHost(w, Channel.State, reliable);
+            if (_s.IsHost)
+            {
+                _s.Broadcast(w, Channel.State, reliable);
+            }
+            else
+            {
+                _s.SendToHost(w, Channel.State, reliable);
+            }
         }
 
         // ---- what the others do -------------------------------------------------------------------------
@@ -136,7 +148,10 @@ namespace DarkwoodMP.Sync
         private ulong Owner(ulong from, PacketReader r)
         {
             ulong said = r.R.ReadUInt64();
-            if (_s.IsHost) return from;
+            if (_s.IsHost)
+            {
+                return from;
+            }
             return from == _s.HostId && said != _s.LocalId ? said : 0;
         }
 
@@ -145,13 +160,19 @@ namespace DarkwoodMP.Sync
 
         private void Relayed(PacketWriter w, ulong except, bool reliable)
         {
-            if (w != null) _s.Broadcast(w, Channel.State, reliable, except: except);
+            if (w != null)
+            {
+                _s.Broadcast(w, Channel.State, reliable, except: except);
+            }
         }
 
         private static Transform Puppet(ulong owner)
         {
             var ps = PlayerSync.Instance;
-            if (ps == null || !ps.Remotes.TryGetValue(owner, out var rp) || rp.Root == null || !rp.Root.activeInHierarchy) return null;
+            if (ps == null || !ps.Remotes.TryGetValue(owner, out var rp) || rp.Root == null || !rp.Root.activeInHierarchy)
+            {
+                return null;
+            }
             return rp.Root.transform;
         }
 
@@ -159,20 +180,32 @@ namespace DarkwoodMP.Sync
         {
             ulong owner = Owner(from, r);
             int n = r.R.ReadByte();
-            if (owner == 0 || n > MaxSounds) return;
+            if (owner == 0 || n > MaxSounds)
+            {
+                return;
+            }
             var relay = Relay(MsgType.PlayerSounds, owner);
             relay?.W.Write((byte)n);
             var puppet = Puppet(owner);
             bool near = puppet != null && WorldShare.InWorld && Player.Instance != null
                 && (Player.Instance.transform.position - puppet.position).sqrMagnitude < HearingRange * HearingRange;
-            if (puppet != null && !near) LogOnce($"far {owner}", $"[fx] {_s.NameOf(owner)}'s sounds: too far away to hear (puppet at {puppet.position}, we're at {(Player.Instance != null ? Player.Instance.transform.position.ToString() : "nowhere")})");
+            if (puppet != null && !near)
+            {
+                LogOnce($"far {owner}", $"[fx] {_s.NameOf(owner)}'s sounds: too far away to hear (puppet at {puppet.position}, we're at {(Player.Instance != null ? Player.Instance.transform.position.ToString() : "nowhere")})");
+            }
             for (int i = 0; i < n; i++)
             {
                 string id = r.ReadStr();
                 float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 2f);
                 if (relay != null) { relay.WriteStr(id); relay.W.Write(volume); }
-                if (near) AudioController.Play(id, puppet, volume);
-                if (near && i == 0) LogOnce($"sounds {owner}", $"[fx] {_s.NameOf(owner)}'s sounds play on their puppet ({id})");
+                if (near)
+                {
+                    AudioController.Play(id, puppet, volume);
+                }
+                if (near && i == 0)
+                {
+                    LogOnce($"sounds {owner}", $"[fx] {_s.NameOf(owner)}'s sounds play on their puppet ({id})");
+                }
             }
             Relayed(relay, from, reliable: false);
         }
@@ -183,22 +216,43 @@ namespace DarkwoodMP.Sync
             string muzzle = r.ReadStr(), particles = r.ReadStr();
             byte flash = r.R.ReadByte();
             Vector3 offset = r.ReadVector3();
-            if (owner == 0) return;
+            if (owner == 0)
+            {
+                return;
+            }
             var relay = Relay(MsgType.PlayerShot, owner);
             if (relay != null) { relay.WriteStr(muzzle); relay.WriteStr(particles); relay.W.Write(flash); relay.Write(offset); }
             Relayed(relay, from, reliable: false);
 
             var t = Puppet(owner);
-            if (t == null) return;
+            if (t == null)
+            {
+                return;
+            }
             ShotsSeen++;
             // As Player.fireWeapon places them on our own player.
             Vector3 at = t.position + t.up * offset.y + t.right * offset.x;
             var rot = Quaternion.Euler(90f, t.eulerAngles.y, 0f);
-            if (muzzle != "") Pooled(muzzle, at, rot);
-            if (particles != "") Pooled(particles, at, rot);
-            if (flash != 0) Core.AddPrefab("FX/Muzzle/PistolFlash", t.position + t.up, rot, null, worldSpace: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[fx] {_s.NameOf(owner)} fired ({muzzle})");
-            else LogOnce($"shot {owner}", $"[fx] {_s.NameOf(owner)}'s shots flash on their puppet");
+            if (muzzle != "")
+            {
+                Pooled(muzzle, at, rot);
+            }
+            if (particles != "")
+            {
+                Pooled(particles, at, rot);
+            }
+            if (flash != 0)
+            {
+                Core.AddPrefab("FX/Muzzle/PistolFlash", t.position + t.up, rot, null, worldSpace: true);
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[fx] {_s.NameOf(owner)} fired ({muzzle})");
+            }
+            else
+            {
+                LogOnce($"shot {owner}", $"[fx] {_s.NameOf(owner)}'s shots flash on their puppet");
+            }
         }
 
         private void OnHurt(ulong from, PacketReader r)
@@ -208,8 +262,14 @@ namespace DarkwoodMP.Sync
             string a = "", b = ""; float dy = 0f, yaw = 0f;
             if (what == 1) { a = r.ReadStr(); dy = r.R.ReadSingle(); yaw = r.R.ReadSingle(); }
             else if (what == 2) { a = r.ReadStr(); b = r.ReadStr(); }
-            else if (what != 3) return;
-            if (owner == 0) return;
+            else if (what != 3)
+            {
+                return;
+            }
+            if (owner == 0)
+            {
+                return;
+            }
             var relay = Relay(MsgType.PlayerHurt, owner);
             if (relay != null)
             {
@@ -222,12 +282,18 @@ namespace DarkwoodMP.Sync
             string who = _s.NameOf(owner);
             var ps = PlayerSync.Instance;
             RemotePlayer rp = null;
-            if (ps == null || !ps.Remotes.TryGetValue(owner, out rp)) return;
+            if (ps == null || !ps.Remotes.TryGetValue(owner, out rp))
+            {
+                return;
+            }
             if (what == 1)
             {
                 var t = Puppet(owner);
                 // Only the game's blood splats: a peer doesn't get to spawn any prefab it names.
-                if (t == null || !a.StartsWith("FX/Bloodsplats/")) return;
+                if (t == null || !a.StartsWith("FX/Bloodsplats/"))
+                {
+                    return;
+                }
                 Core.AddPrefab(a, t.position + Vector3.up * Mathf.Clamp(dy, -50f, 50f), Quaternion.Euler(90f, yaw, 0f), null);
                 Plugin.Log.LogInfo($"[fx] {who} bled ({a}): shown on their puppet");
             }
@@ -243,7 +309,10 @@ namespace DarkwoodMP.Sync
 
         private void LogOnce(string key, string line)
         {
-            if (_logged.Add(key)) Plugin.Log.LogInfo(line);
+            if (_logged.Add(key))
+            {
+                Plugin.Log.LogInfo(line);
+            }
         }
 
         // ---- telling which sounds are our player's -------------------------------------------------------
@@ -256,8 +325,14 @@ namespace DarkwoodMP.Sync
         internal static bool IsOurs(Transform parent)
         {
             var p = Player.Instance;
-            if (p == null || WorldActions.Replaying) return false;
-            if (parent != null) return parent == p.transform || parent.IsChildOf(p.transform);
+            if (p == null || WorldActions.Replaying)
+            {
+                return false;
+            }
+            if (parent != null)
+            {
+                return parent == p.transform || parent.IsChildOf(p.transform);
+            }
             // A sound without a place, played by our player's own code (a gunshot, a reload, a swing, pain). Not
             // while a shared world action runs inside it: that thing's own sounds come from its replay elsewhere.
             return InPlayerCode > 0 && WorldActions.Depth == 0;
@@ -271,10 +346,16 @@ namespace DarkwoodMP.Sync
         private static void Postfix(string audioID, float volume, Transform parentObj, AudioObject __result)
         {
             var fx = PlayerFx.Instance;
-            if (__result == null || fx == null || !fx.Sharing || !PlayerFx.IsOurs(parentObj)) return;
+            if (__result == null || fx == null || !fx.Sharing || !PlayerFx.IsOurs(parentObj))
+            {
+                return;
+            }
             // A loop (tiredness, low health, fire) is stopped by our game later; a copy would never stop.
             var item = __result.audioItem;
-            if (item == null || item.Loop != AudioItem.LoopMode.DoNotLoop) return;
+            if (item == null || item.Loop != AudioItem.LoopMode.DoNotLoop)
+            {
+                return;
+            }
             fx.OurSound(audioID, volume);
         }
     }
@@ -294,19 +375,40 @@ namespace DarkwoodMP.Sync
             foreach (var n in Names)
             {
                 var m = AccessTools.DeclaredMethod(typeof(Player), n);
-                if (m != null) yield return m;
-                else Plugin.Log.LogWarning($"[fx] Player.{n} isn't in this build: its sounds won't be heard by the others");
+                if (m != null)
+                {
+                    yield return m;
+                }
+                else
+                {
+                    Plugin.Log.LogWarning($"[fx] Player.{n} isn't in this build: its sounds won't be heard by the others");
+                }
             }
             // getHit has two: the one that does it.
             yield return AccessTools.DeclaredMethod(typeof(Player), nameof(Player.getHit),
                 new[] { typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) });
             // The coroutine that fires a gun again (bursts, and the click of an empty one).
             foreach (var t in typeof(Player).GetNestedTypes(BindingFlags.NonPublic))
-                if (t.Name.Contains("waitToFireWeapon")) { var m = AccessTools.Method(t, "MoveNext"); if (m != null) yield return m; }
+            {
+                if (t.Name.Contains("waitToFireWeapon"))
+                {
+                    var m = AccessTools.Method(t, "MoveNext");
+                    if (m != null)
+                    {
+                        yield return m;
+                    }
+                }
+            }
         }
 
         private static void Prefix() => PlayerFx.InPlayerCode++;
-        private static void Finalizer() { if (PlayerFx.InPlayerCode > 0) PlayerFx.InPlayerCode--; }
+        private static void Finalizer()
+        {
+            if (PlayerFx.InPlayerCode > 0)
+            {
+                PlayerFx.InPlayerCode--;
+            }
+        }
     }
 
     /// <summary>Our player fired a gun: the others see the muzzle flash on our puppet.</summary>
@@ -316,9 +418,15 @@ namespace DarkwoodMP.Sync
         private static void Postfix(Player __instance)
         {
             var fx = PlayerFx.Instance;
-            if (fx == null || !fx.Sharing || __instance != Player.Instance) return;
+            if (fx == null || !fx.Sharing || __instance != Player.Instance)
+            {
+                return;
+            }
             var gun = __instance.currentItem?.baseClass;
-            if (gun != null) fx.OurShot(gun);
+            if (gun != null)
+            {
+                fx.OurShot(gun);
+            }
         }
     }
 
@@ -328,7 +436,13 @@ namespace DarkwoodMP.Sync
     public static class PlayerGetHitFxPatch
     {
         private static void Prefix() => PlayerFx.InGetHit++;
-        private static void Finalizer() { if (PlayerFx.InGetHit > 0) PlayerFx.InGetHit--; }
+        private static void Finalizer()
+        {
+            if (PlayerFx.InGetHit > 0)
+            {
+                PlayerFx.InGetHit--;
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
@@ -336,9 +450,15 @@ namespace DarkwoodMP.Sync
     {
         private static void Postfix(string prefab, GameObject __result)
         {
-            if (PlayerFx.InGetHit == 0 || __result == null || prefab == null || !prefab.StartsWith("FX/Bloodsplats/")) return;
+            if (PlayerFx.InGetHit == 0 || __result == null || prefab == null || !prefab.StartsWith("FX/Bloodsplats/"))
+            {
+                return;
+            }
             var fx = PlayerFx.Instance;
-            if (fx != null && fx.Sharing && !WorldActions.Replaying) fx.OurBlood(prefab, __result);
+            if (fx != null && fx.Sharing && !WorldActions.Replaying)
+            {
+                fx.OurBlood(prefab, __result);
+            }
         }
     }
 }

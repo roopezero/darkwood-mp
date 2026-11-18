@@ -32,7 +32,10 @@ namespace DarkwoodMP
 
         private static void Check(bool ok, string what)
         {
-            if (!ok) _fails++;
+            if (!ok)
+            {
+                _fails++;
+            }
             Log($"{(ok ? "PASS" : "FAIL")} {what}");
         }
 
@@ -44,12 +47,18 @@ namespace DarkwoodMP
             if (!File.Exists(PrefsPath)) { Log($"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run"); Log("done"); yield break; }
             if (!inWorld)
             {
-                while (!WorldShare.MainMenuReady()) yield return null;
+                while (!WorldShare.MainMenuReady())
+                {
+                    yield return null;
+                }
                 yield return new WaitForSecondsRealtime(3f);
             }
             else
             {
-                while (!WorldShare.WorldReady) yield return null;
+                while (!WorldShare.WorldReady)
+                {
+                    yield return null;
+                }
                 yield return new WaitForSecondsRealtime(4f);
                 Core.showHidePauseMenu();
                 yield return new WaitForSecondsRealtime(2f);
@@ -66,7 +75,10 @@ namespace DarkwoodMP
             bool took = MenuList.Click("Options");
             yield return null; yield return null;
             Check(took && OptionsWindow.IsOpen, $"the menu's Options opens the window (entry taken {took}, open {OptionsWindow.IsOpen})");
-            if (!OptionsWindow.IsOpen) OptionsWindow.Open();
+            if (!OptionsWindow.IsOpen)
+            {
+                OptionsWindow.Open();
+            }
 
             // A volume: changed, applied, and stored where the game keeps it.
             OptionsWindow.TestTab(1);
@@ -93,18 +105,37 @@ namespace DarkwoodMP
             yield return null; yield return null;
             var rows = OptionsWindow.TestRows();
             string label = null;
-            foreach (var r in rows) if (r.label == "Run" && r.key != null) label = r.label;
-            if (label == null) foreach (var r in rows) if (r.key != null) { label = r.label; break; }
+            foreach (var r in rows)
+            {
+                if (r.label == "Run" && r.key != null)
+                {
+                    label = r.label;
+                }
+            }
+            if (label == null)
+            {
+                foreach (var r in rows)
+                {
+                    if (r.key != null)
+                    { label = r.label; break; }
+                }
+            }
             KeyCode free = KeyCode.None;
             foreach (var k in new[] { KeyCode.F9, KeyCode.F10, KeyCode.F11, KeyCode.F8, KeyCode.Insert, KeyCode.Home })
-                if (!OptionsWindow.TestKeyUsed(k)) { free = k; break; }
+            {
+                if (!OptionsWindow.TestKeyUsed(k))
+                { free = k; break; }
+            }
             Log($"{rows.Count} keyboard rows; trying {label} with {free}");
             if (label != null && free != KeyCode.None)
             {
                 KeyCode orig = OptionsWindow.TestKeyOf(label);
                 OptionsWindow.TestBeginMapping(label);
                 float until = Time.realtimeSinceStartup + 3f;
-                while (OptionsWindow.TestMapperStatus != "Listening" && Time.realtimeSinceStartup < until) yield return null;
+                while (OptionsWindow.TestMapperStatus != "Listening" && Time.realtimeSinceStartup < until)
+                {
+                    yield return null;
+                }
                 bool listened = OptionsWindow.TestMapperStatus == "Listening";
                 bool gameHeld = Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
                 OptionsWindow.TestEscape();
@@ -116,7 +147,12 @@ namespace DarkwoodMP
                 var afterKey = ReadPrefs();
                 bool keyStored = false;
                 foreach (var kv in afterKey)
-                    if (kv.Key.Contains("dataType=ControllerMap|") && kv.Key.Contains("KeyboardMap") && (!before.TryGetValue(kv.Key, out var old) || old.value != kv.Value.value)) keyStored = true;
+                {
+                    if (kv.Key.Contains("dataType=ControllerMap|") && kv.Key.Contains("KeyboardMap") && (!before.TryGetValue(kv.Key, out var old) || old.value != kv.Value.value))
+                    {
+                        keyStored = true;
+                    }
+                }
                 OptionsWindow.TestReloadControls();
                 KeyCode loaded = OptionsWindow.TestKeyOf(label);
                 Check(set && keyStored && loaded == free, $"{label} put on {free}: the keyboard map in the prefs file changed {keyStored}, read back from the store as {loaded}");
@@ -125,7 +161,10 @@ namespace DarkwoodMP
                 OptionsWindow.TestAssign(label, orig);
                 Check(OptionsWindow.TestKeyOf(label) == orig, $"{label} back on {orig}");
             }
-            else Check(false, "no keyboard row with a key, or no free key to try");
+            else
+            {
+                Check(false, "no keyboard row with a key, or no free key to try");
+            }
 
             // Screenshots of every tab at both sizes.
             foreach (var (w, h) in new[] { (1920, 1080), (1280, 720) })
@@ -179,7 +218,10 @@ namespace DarkwoodMP
             _before = null;
             var diffs = Compare(before, ReadPrefs());
             Check(diffs.Count == 0, diffs.Count == 0 ? "the prefs file has every setting as before the test" : $"the prefs file differs from before: {string.Join("; ", diffs)}");
-            if (inWorld) Core.showHidePauseMenu();
+            if (inWorld)
+            {
+                Core.showHidePauseMenu();
+            }
             Log($"done: {(_fails == 0 ? "all passed" : _fails + " failed")}");
         }
 
@@ -192,7 +234,10 @@ namespace DarkwoodMP
         internal static void RestoreIfCutShort()
         {
             var before = _before;
-            if (before == null) return;
+            if (before == null)
+            {
+                return;
+            }
             _before = null;
             Log("cut short: putting the settings back");
             try { Screen.SetResolution(_sizeBefore.w, _sizeBefore.h, _sizeBefore.mode); } catch (Exception e) { Log($"couldn't put the screen size back: {e.Message}"); }
@@ -220,7 +265,9 @@ namespace DarkwoodMP
             PlayerPrefs.Save();
             var d = new Dictionary<string, (string, string)>();
             foreach (Match m in PrefRx.Matches(File.ReadAllText(PrefsPath)))
+            {
                 d[System.Net.WebUtility.HtmlDecode(m.Groups[1].Value)] = (m.Groups[2].Value, m.Groups[3].Value);
+            }
             return d;
         }
 
@@ -229,7 +276,10 @@ namespace DarkwoodMP
             var now = ReadPrefs();
             foreach (var kv in before)
             {
-                if (Unity(kv.Key) || (now.TryGetValue(kv.Key, out var cur) && cur == kv.Value)) continue;
+                if (Unity(kv.Key) || (now.TryGetValue(kv.Key, out var cur) && cur == kv.Value))
+                {
+                    continue;
+                }
                 try
                 {
                     switch (kv.Value.type)
@@ -243,7 +293,10 @@ namespace DarkwoodMP
                 catch (Exception e) { Log($"couldn't put back {Short(kv.Key)}: {e.Message}"); }
             }
             foreach (var kv in now)
-                if (!Unity(kv.Key) && !before.ContainsKey(kv.Key)) { PlayerPrefs.DeleteKey(kv.Key); Log($"deleted the test's {Short(kv.Key)}"); }
+            {
+                if (!Unity(kv.Key) && !before.ContainsKey(kv.Key))
+                { PlayerPrefs.DeleteKey(kv.Key); Log($"deleted the test's {Short(kv.Key)}"); }
+            }
             PlayerPrefs.Save();
         }
 
@@ -251,9 +304,19 @@ namespace DarkwoodMP
         {
             var diffs = new List<string>();
             foreach (var kv in a)
-                if (!Unity(kv.Key) && (!b.TryGetValue(kv.Key, out var v) || v != kv.Value)) diffs.Add($"{Short(kv.Key)} {kv.Value.value} -> {(b.ContainsKey(kv.Key) ? v.value : "gone")}");
+            {
+                if (!Unity(kv.Key) && (!b.TryGetValue(kv.Key, out var v) || v != kv.Value))
+                {
+                    diffs.Add($"{Short(kv.Key)} {kv.Value.value} -> {(b.ContainsKey(kv.Key) ? v.value : "gone")}");
+                }
+            }
             foreach (var kv in b)
-                if (!Unity(kv.Key) && !a.ContainsKey(kv.Key)) diffs.Add($"{Short(kv.Key)} added");
+            {
+                if (!Unity(kv.Key) && !a.ContainsKey(kv.Key))
+                {
+                    diffs.Add($"{Short(kv.Key)} added");
+                }
+            }
             return diffs;
         }
 

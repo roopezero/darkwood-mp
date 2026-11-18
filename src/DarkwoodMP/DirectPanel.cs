@@ -100,7 +100,10 @@ namespace DarkwoodMP
             // A row to show, kept out of the saved list (nothing answers on it).
             if (_browser.Favorites.Count == 0) { _shotRow = "127.0.0.1:27799"; _browser.Favorites.Add(_shotRow); _browser.Query(_shotRow); }
             OpenServerBrowser();
-            if (address) OpenAddress();
+            if (address)
+            {
+                OpenAddress();
+            }
         }
 
         // ---- the Multiplayer window's Direct section ---------------------------------------------------
@@ -110,28 +113,49 @@ namespace DarkwoodMP
             if (_session.Active && _session.Backend != _tcp)
             {
                 Ui.Text(f, _session.IsHost ? "In a Steam game." : "In a Steam game. Joining a server here leaves it.", MenuSkin.Dim);
-                if (!_session.IsHost) JoinButtons(f);
+                if (!_session.IsHost)
+                {
+                    JoinButtons(f);
+                }
                 return;
             }
             if (_tcp.InSession) { DrawInSession(f); return; }
 
-            if (_session.LastRefusal != null) Ui.Text(f, $"Refused: {_session.LastRefusal}", MenuSkin.Warn);
-            else if (_tcp.Status != "Not connected") Ui.Text(f, _tcp.Status);
+            if (_session.LastRefusal != null)
+            {
+                Ui.Text(f, $"Refused: {_session.LastRefusal}", MenuSkin.Warn);
+            }
+            else if (_tcp.Status != "Not connected")
+            {
+                Ui.Text(f, _tcp.Status);
+            }
 
             JoinButtons(f);
 
             f.Space(4);
-            if (Plugin.CantHostReason != null) return; // said once, at the top of the window
+            if (Plugin.CantHostReason != null)
+            {
+                return; // said once, at the top of the window
+            }
             var cfg = Plugin.Cfg;
             cfg.ServerName.Value = Ui.Field(f, "Server name", cfg.ServerName.Value, 48);
             string port = Ui.Field(f, "Port", cfg.DirectPort.Value.ToString(), 5);
-            if (int.TryParse(port, out int p) && p > 0 && p <= 65535) cfg.DirectPort.Value = p;
+            if (int.TryParse(port, out int p) && p > 0 && p <= 65535)
+            {
+                cfg.DirectPort.Value = p;
+            }
             cfg.Password.Value = Ui.Field(f, "Password", cfg.Password.Value, 32, password: true);
             var m = f.Row(Ui.RowH, 90, 24, 30, 24, 0);
             Ui.Label(m[0], "Max players");
-            if (Ui.Button(m[1], "-", cfg.MaxPlayers.Value > 2)) cfg.MaxPlayers.Value--;
+            if (Ui.Button(m[1], "-", cfg.MaxPlayers.Value > 2))
+            {
+                cfg.MaxPlayers.Value--;
+            }
             Ui.Label(m[2], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright, TextAnchor.MiddleCenter);
-            if (Ui.Button(m[3], "+", cfg.MaxPlayers.Value < Protocol.MaxPlayers)) cfg.MaxPlayers.Value++;
+            if (Ui.Button(m[3], "+", cfg.MaxPlayers.Value < Protocol.MaxPlayers))
+            {
+                cfg.MaxPlayers.Value++;
+            }
             cfg.OpenPort.Value = Ui.Check(f.Next(Ui.RowH), cfg.OpenPort.Value, "Open the port on my router (UPnP)");
             Ui.Text(f, PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value), MenuSkin.Dim);
             if (Ui.Button(f, "Start hosting"))
@@ -147,32 +171,64 @@ namespace DarkwoodMP
             if (_tcp.IsHost)
             {
                 Ui.Text(f, "Friends find you in their LAN tab, or add one of these:", MenuSkin.Dim);
-                foreach (var ip in TcpBackend.LocalAddresses()) AddressRow(f, $"{ip}:{_tcp.Port}", "LAN / VPN");
+                foreach (var ip in TcpBackend.LocalAddresses())
+                {
+                    AddressRow(f, $"{ip}:{_tcp.Port}", "LAN / VPN");
+                }
                 var map = _tcp.Mapper;
-                if (map.Mapped && map.ExternalIp != null && !map.BehindAnotherNat) AddressRow(f, $"{map.ExternalIp}:{map.ExternalPort}", "internet");
-                else if (_publicIp != null) AddressRow(f, $"{_publicIp}:{_tcp.Port}", map.Mapped ? "internet" : "internet: forward the port");
-                else if (Ui.Button(f, _lookingUp ? "Looking up..." : "Show my public IP (asks api.ipify.org)") && !_lookingUp) LookUpPublicIp();
-                if (map.Status.Length > 0) Ui.Text(f, map.Status, map.Mapped && !map.BehindAnotherNat ? (Color?)null : MenuSkin.Warn);
+                if (map.Mapped && map.ExternalIp != null && !map.BehindAnotherNat)
+                {
+                    AddressRow(f, $"{map.ExternalIp}:{map.ExternalPort}", "internet");
+                }
+                else if (_publicIp != null)
+                {
+                    AddressRow(f, $"{_publicIp}:{_tcp.Port}", map.Mapped ? "internet" : "internet: forward the port");
+                }
+                else if (Ui.Button(f, _lookingUp ? "Looking up..." : "Show my public IP (asks api.ipify.org)") && !_lookingUp)
+                {
+                    LookUpPublicIp();
+                }
+                if (map.Status.Length > 0)
+                {
+                    Ui.Text(f, map.Status, map.Mapped && !map.BehindAnotherNat ? (Color?)null : MenuSkin.Warn);
+                }
             }
             if (!_tcp.IsHost && _session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
+            {
                 _tcp.Rejoin(); // sends your character first
-            if (Ui.Button(f, _tcp.IsHost ? "Stop hosting" : "Leave")) _tcp.Leave();
+            }
+            if (Ui.Button(f, _tcp.IsHost ? "Stop hosting" : "Leave"))
+            {
+                _tcp.Leave();
+            }
             // A joiner can go straight to another server (or this one again): Connect leaves this game first.
-            if (!_tcp.IsHost) JoinButtons(f);
+            if (!_tcp.IsHost)
+            {
+                JoinButtons(f);
+            }
         }
 
         private void JoinButtons(Flow f)
         {
             var row = f.Row(Ui.RowH, 0, 0);
-            if (Ui.Button(row[0], "Find servers...")) OpenServerBrowser();
-            if (Ui.Button(row[1], "Connect to address...")) OpenAddress();
+            if (Ui.Button(row[0], "Find servers..."))
+            {
+                OpenServerBrowser();
+            }
+            if (Ui.Button(row[1], "Connect to address..."))
+            {
+                OpenAddress();
+            }
         }
 
         private static void AddressRow(Flow f, string addr, string note)
         {
             var c = f.Row(Ui.RowH, 0, 60);
             Ui.Label(c[0], PixelFont.Fit($"{addr}  ({note})", c[0].width));
-            if (Ui.Button(c[1], "Copy")) GUIUtility.systemCopyBuffer = addr;
+            if (Ui.Button(c[1], "Copy"))
+            {
+                GUIUtility.systemCopyBuffer = addr;
+            }
         }
 
         /// <summary>What the host's friends connect on, and what the host has to do for internet play.</summary>
@@ -190,7 +246,10 @@ namespace DarkwoodMP
                     using (var wc = new WebClient())
                     {
                         string ip = wc.DownloadString("https://api.ipify.org").Trim();
-                        if (IPAddress.TryParse(ip, out IPAddress _)) _publicIp = ip;
+                        if (IPAddress.TryParse(ip, out IPAddress _))
+                        {
+                            _publicIp = ip;
+                        }
                     }
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Public IP lookup failed: {e.Message}"); }
@@ -215,7 +274,10 @@ namespace DarkwoodMP
 
         private void SwitchTab(ServerBrowser.Tab t)
         {
-            if (t == _tab) return;
+            if (t == _tab)
+            {
+                return;
+            }
             _tab = t;
             _selected = null;
             _scroll = Vector2.zero;
@@ -227,7 +289,12 @@ namespace DarkwoodMP
             float s = PixelFont.Scale;
             var tabs = Ui.Split(new Rect(f.Area.x, f.Y, 80 * 3 * s + 8 * s, Ui.RowH), 80, 80, 80);
             for (int i = 0; i < Tabs.Length; i++)
-                if (Ui.Tab(tabs[i], Tabs[i], (int)_tab == i)) SwitchTab((ServerBrowser.Tab)i);
+            {
+                if (Ui.Tab(tabs[i], Tabs[i], (int)_tab == i))
+                {
+                    SwitchTab((ServerBrowser.Tab)i);
+                }
+            }
             f.Y += Ui.RowH;
 
             // The list fills the window above the status line.
@@ -243,7 +310,15 @@ namespace DarkwoodMP
             for (int c = 0; c < Columns.Length; c++)
             {
                 var r = new Rect(cols[c].x, cols[c].y, cols[c].width + 4 * s, cols[c].height);
-                if (GUI.Button(r, GUIContent.none, MenuSkin.Button)) { if (_sortColumn == c) _sortDown = !_sortDown; else { _sortColumn = c; _sortDown = false; } }
+                if (GUI.Button(r, GUIContent.none, MenuSkin.Button))
+                {
+                    if (_sortColumn == c)
+                    {
+                        _sortDown = !_sortDown;
+                    }
+                    else
+                    { _sortColumn = c; _sortDown = false; }
+                }
                 string name = Columns[c] + (_sortColumn == c && c > 0 ? (_sortDown ? "  v" : "  ^") : "");
                 Ui.Label(new Rect(r.x + 4 * s, r.y, r.width - 6 * s, r.height), name, r.Contains(Event.current.mousePosition) ? MenuSkin.Bright : MenuSkin.Text);
             }
@@ -266,21 +341,30 @@ namespace DarkwoodMP
                 var e = _browser.Get(addr);
                 var row = new Rect(0, i * rowH, view.width, rowH);
                 bool sel = _selected == addr;
-                if (sel) GUI.Box(row, GUIContent.none, MenuSkin.Selected);
+                if (sel)
+                {
+                    GUI.Box(row, GUIContent.none, MenuSkin.Selected);
+                }
                 var ev = Event.current;
                 if (ev.type == EventType.MouseDown && ev.button == 0 && row.Contains(ev.mousePosition))
                 {
                     bool twice = _lastClicked == addr && Time.unscaledTime - _lastClick < 0.4f;
                     _selected = addr; _lastClicked = addr; _lastClick = Time.unscaledTime;
                     ev.Use();
-                    if (twice) Connect(addr);
+                    if (twice)
+                    {
+                        Connect(addr);
+                    }
                 }
                 var info = e.Info;
                 bool ok = CanJoin(addr);
                 Color col = !ok || (info == null && !e.Querying) ? MenuSkin.Dim : sel ? MenuSkin.Bright : MenuSkin.Text;
                 float y = row.y;
                 Rect C(int c) => new Rect(rc[c].x + 4 * s, y, rc[c].width - 4 * s, rowH);
-                if (info?.Password == true) DrawLock(C(0), col);
+                if (info?.Password == true)
+                {
+                    DrawLock(C(0), col);
+                }
                 string name = info != null ? info.Name : addr;
                 Ui.Label(C(1), PixelFont.Fit(name, C(1).width), col);
                 Ui.Label(C(2), info != null ? $"{info.Players}/{info.MaxPlayers}" : "", col);
@@ -298,19 +382,28 @@ namespace DarkwoodMP
                 var info = _browser.Get(_selected).Info;
                 status = _selected + (info?.Incompatibility is string why ? $"  -  {why}" : info != null ? $"  -  DarkwoodMP {info.Version}" : "");
             }
-            else status = _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching the LAN..." : $"{rows.Count} server{(rows.Count == 1 ? "" : "s")}";
+            else
+            {
+                status = _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching the LAN..." : $"{rows.Count} server{(rows.Count == 1 ? "" : "s")}";
+            }
             // Beside it, while no name is set (the Steam or OS user name is used), where to set one.
             string hint = _session.Active || !string.IsNullOrWhiteSpace(Plugin.Cfg.PlayerName.Value) ? null : $"You're {_session.LocalName}: set a name in Options";
             float hintW = hint != null ? Mathf.Min(PixelFont.Width(hint) + 8 * s, f.Width * 0.6f) : 0f, statusW = f.Width - hintW - (hint != null ? 8 * s : 0f);
             Ui.Label(new Rect(f.Area.x + 2 * s, f.Y, statusW, statusH), PixelFont.Fit(status, statusW), MenuSkin.Dim);
-            if (hint != null) Ui.Label(new Rect(f.Area.xMax - hintW, f.Y, hintW, statusH), PixelFont.Fit(hint, hintW), MenuSkin.Dim, TextAnchor.MiddleRight);
+            if (hint != null)
+            {
+                Ui.Label(new Rect(f.Area.xMax - hintW, f.Y, hintW, statusH), PixelFont.Fit(hint, hintW), MenuSkin.Dim, TextAnchor.MiddleRight);
+            }
             f.Y += statusH;
         }
 
         /// <summary>A small padlock: shackle and body, in the row's colour.</summary>
         private static void DrawLock(Rect r, Color c)
         {
-            if (Event.current.type != EventType.Repaint) return;
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
             float s = PixelFont.Scale;
             float x = Mathf.Round(r.x + 1 * s), y = Mathf.Round(r.y + (r.height - 9 * s) / 2f);
             var old = GUI.color; GUI.color = c * old;
@@ -324,7 +417,10 @@ namespace DarkwoodMP
 
         private List<string> Sorted(List<string> list)
         {
-            if (_sortColumn == 0 && !_sortDown && _tab != ServerBrowser.Tab.Lan) return list;
+            if (_sortColumn == 0 && !_sortDown && _tab != ServerBrowser.Tab.Lan)
+            {
+                return list;
+            }
             IComparable Key(string a)
             {
                 var e = _browser.Get(a); var i = e.Info;
@@ -345,19 +441,38 @@ namespace DarkwoodMP
         {
             var b = Ui.Split(r, 100, 80, 120, 0, 80, 80);
             int slot = 0;
-            if (Ui.Button(b[slot++], "Add server...")) OpenAddress();
+            if (Ui.Button(b[slot++], "Add server..."))
+            {
+                OpenAddress();
+            }
             if (_tab != ServerBrowser.Tab.Lan && Ui.Button(b[slot++], "Remove", _selected != null))
             {
-                if (_tab == ServerBrowser.Tab.Favorites) _browser.RemoveFavorite(_selected); else _browser.RemoveHistory(_selected);
+                if (_tab == ServerBrowser.Tab.Favorites)
+                {
+                    _browser.RemoveFavorite(_selected);
+                }
+                else
+                {
+                    _browser.RemoveHistory(_selected);
+                }
                 _selected = null;
             }
             if (_tab != ServerBrowser.Tab.Favorites)
             {
                 var fav = new Rect(b[slot].x, r.y, 120 * PixelFont.Scale, r.height);
-                if (Ui.Button(fav, "Add to favorites", _selected != null && !_browser.Favorites.Contains(_selected))) _browser.AddFavorite(_selected);
+                if (Ui.Button(fav, "Add to favorites", _selected != null && !_browser.Favorites.Contains(_selected)))
+                {
+                    _browser.AddFavorite(_selected);
+                }
             }
-            if (Ui.Button(b[4], _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching" : "Refresh")) _browser.Refresh(_tab);
-            if (Ui.Button(b[5], "Connect", _selected != null && CanJoin(_selected))) Connect(_selected);
+            if (Ui.Button(b[4], _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching" : "Refresh"))
+            {
+                _browser.Refresh(_tab);
+            }
+            if (Ui.Button(b[5], "Connect", _selected != null && CanJoin(_selected)))
+            {
+                Connect(_selected);
+            }
         }
 
         // ---- connecting -------------------------------------------------------------------------------
@@ -374,7 +489,10 @@ namespace DarkwoodMP
         /// <summary>Joins the server, asking for its password first if it has one.</summary>
         private void Connect(string addr, string password = null)
         {
-            if (addr == null || !CanJoin(addr)) return;
+            if (addr == null || !CanJoin(addr))
+            {
+                return;
+            }
             if (password == null && _browser.Get(addr).Info?.Password == true)
             {
                 _passwordFor = addr; _password = ""; _focusField = true;
@@ -382,9 +500,15 @@ namespace DarkwoodMP
                 return;
             }
             // Joining leaves the game we're in (a joiner's, Steam or direct; hosts get no join buttons while hosting).
-            if (_session.Active && _session.IsHost) return;
+            if (_session.Active && _session.IsHost)
+            {
+                return;
+            }
             if (_session.Active) { Plugin.Log.LogInfo($"Joining {addr}: leaving the game we're in first"); _session.Backend.Leave(); }
-            if (_tcp.InSession) _tcp.Leave(); // still connecting, not in yet
+            if (_tcp.InSession)
+            {
+                _tcp.Leave(); // still connecting, not in yet
+            }
             _session.LastRefusal = null;
             _browser.Joined(addr);
             Plugin.Cfg.LastAddress.Value = addr;
@@ -395,7 +519,10 @@ namespace DarkwoodMP
 
         private void OpenAddress()
         {
-            if (string.IsNullOrEmpty(_address)) _address = Plugin.Cfg.LastAddress.Value ?? "";
+            if (string.IsNullOrEmpty(_address))
+            {
+                _address = Plugin.Cfg.LastAddress.Value ?? "";
+            }
             _focusField = true;
             _addressWin.Show();
         }
@@ -406,7 +533,10 @@ namespace DarkwoodMP
             Ui.Text(f, $"host or host:port (port {TcpBackend.DefaultPort} if you leave it out)", MenuSkin.Dim);
             _addressPassword = Ui.Field(f, "Password", _addressPassword, 32, password: true);
             if (_focusField) { _focusField = false; GUI.FocusControl("dwmp-address"); }
-            if (Ui.EnterPressed()) ConnectToAddress();
+            if (Ui.EnterPressed())
+            {
+                ConnectToAddress();
+            }
         }
 
         private void AddressButtons(Rect r)
@@ -421,14 +551,23 @@ namespace DarkwoodMP
                 _addressWin.Close();
                 OpenServerBrowser();
             }
-            if (Ui.Button(b[2], "Connect", valid)) ConnectToAddress();
-            if (Ui.Button(b[3], "Cancel")) _addressWin.Close();
+            if (Ui.Button(b[2], "Connect", valid))
+            {
+                ConnectToAddress();
+            }
+            if (Ui.Button(b[3], "Cancel"))
+            {
+                _addressWin.Close();
+            }
         }
 
         private void ConnectToAddress()
         {
             string addr = TcpBackend.Normalize(_address);
-            if (addr == null) return;
+            if (addr == null)
+            {
+                return;
+            }
             Connect(addr, _addressPassword ?? "");
         }
 
@@ -438,14 +577,23 @@ namespace DarkwoodMP
             var c = f.Row(Ui.RowH, 0);
             _password = Ui.Field(c[0], _password, 32, password: true, name: "dwmp-password");
             if (_focusField) { _focusField = false; GUI.FocusControl("dwmp-password"); }
-            if (Ui.EnterPressed()) Connect(_passwordFor, _password ?? "");
+            if (Ui.EnterPressed())
+            {
+                Connect(_passwordFor, _password ?? "");
+            }
         }
 
         private void PasswordButtons(Rect r)
         {
             var b = Ui.Split(r, 0, 80, 80);
-            if (Ui.Button(b[1], "Join")) Connect(_passwordFor, _password ?? "");
-            if (Ui.Button(b[2], "Cancel")) _passwordWin.Close();
+            if (Ui.Button(b[1], "Join"))
+            {
+                Connect(_passwordFor, _password ?? "");
+            }
+            if (Ui.Button(b[2], "Cancel"))
+            {
+                _passwordWin.Close();
+            }
         }
 
         private string Name(string addr) => addr == null ? "" : _browser.Get(addr).Info?.Name is string n && n.Length > 0 ? n : addr;

@@ -101,7 +101,10 @@ namespace DarkwoodMP.Net
 
         public bool Host(string serverName, int port, string password, int maxPlayers)
         {
-            if (InSession) return false;
+            if (InSession)
+            {
+                return false;
+            }
             HostLost = false;
             try
             {
@@ -110,7 +113,9 @@ namespace DarkwoodMP.Net
                 // connections close (TIME_WAIT) unless this is set. Not on Windows, where it would let another
                 // program take the same port.
                 if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+                {
                     _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                }
                 _listener.Start();
             }
             catch (Exception e)
@@ -143,7 +148,10 @@ namespace DarkwoodMP.Net
             StartThread("DarkwoodMP accept", () => AcceptLoop(listener, gen));
             if (_info != null) { var udp = _info; StartThread("DarkwoodMP info", () => InfoLoop(udp, gen)); }
             Plugin.Log.LogInfo(Status);
-            if (MapPort()) Mapper.Start(port);
+            if (MapPort())
+            {
+                Mapper.Start(port);
+            }
             OnEntered?.Invoke();
             return true;
         }
@@ -164,7 +172,10 @@ namespace DarkwoodMP.Net
                 }
                 c.NoDelay = true;
                 var conn = new Conn { Client = c, Stream = c.GetStream(), Remote = c.Client.RemoteEndPoint?.ToString(), Inbound = true, Pending = 1 };
-                lock (_conns) conn.Id = _nextId++;
+                lock (_conns)
+                {
+                    conn.Id = _nextId++;
+                }
                 _events.Enqueue(new Ev { Kind = EvKind.Connected, Conn = conn, Gen = gen });
                 StartThread($"DarkwoodMP write #{conn.Id}", () => WriteLoop(conn, gen));
                 StartThread($"DarkwoodMP read #{conn.Id}", () => ReadLoop(conn, gen));
@@ -180,7 +191,10 @@ namespace DarkwoodMP.Net
                 {
                     var from = new IPEndPoint(IPAddress.Any, 0);
                     byte[] q = udp.Receive(ref from);
-                    if (!ServerInfo.IsQuery(q, q.Length)) continue;
+                    if (!ServerInfo.IsQuery(q, q.Length))
+                    {
+                        continue;
+                    }
                     var info = new ServerInfo
                     {
                         Name = ServerName,
@@ -192,12 +206,21 @@ namespace DarkwoodMP.Net
                     };
                     info.Fields["game"] = Protocol.Game;
                     info.Fields["proto"] = Protocol.Version.ToString();
-                    if (!string.IsNullOrEmpty(WorldLabel)) info.Fields["world"] = WorldLabel;
+                    if (!string.IsNullOrEmpty(WorldLabel))
+                    {
+                        info.Fields["world"] = WorldLabel;
+                    }
                     byte[] a = info.EncodeAnswer();
                     udp.Send(a, a.Length, from);
                 }
                 catch (ObjectDisposedException) { return; }
-                catch (SocketException) { if (gen != _generation) return; }
+                catch (SocketException)
+                {
+                    if (gen != _generation)
+                    {
+                        return;
+                    }
+                }
             }
         }
 
@@ -207,7 +230,10 @@ namespace DarkwoodMP.Net
 
         public void Rejoin()
         {
-            if (IsHost || _lastAddress == null) return;
+            if (IsHost || _lastAddress == null)
+            {
+                return;
+            }
             string a = _lastAddress, p = _lastPassword;
             Leave();
             Join(a, p);
@@ -215,7 +241,10 @@ namespace DarkwoodMP.Net
 
         public void Join(string address, string password)
         {
-            if (InSession) return;
+            if (InSession)
+            {
+                return;
+            }
             _lastAddress = address; _lastPassword = password;
             if (!TryParseAddress(address, out string host, out int port))
             {
@@ -248,7 +277,10 @@ namespace DarkwoodMP.Net
                 }
                 catch (Exception e)
                 {
-                    if (gen == _generation) _events.Enqueue(new Ev { Kind = EvKind.ConnectFailed, Error = e.InnerException?.Message ?? e.Message });
+                    if (gen == _generation)
+                    {
+                        _events.Enqueue(new Ev { Kind = EvKind.ConnectFailed, Error = e.InnerException?.Message ?? e.Message });
+                    }
                 }
             });
         }
@@ -256,12 +288,18 @@ namespace DarkwoodMP.Net
         public static bool TryParseAddress(string s, out string host, out int port)
         {
             host = null; port = DefaultPort;
-            if (string.IsNullOrWhiteSpace(s)) return false;
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                return false;
+            }
             s = s.Trim();
             int colon = s.LastIndexOf(':');
             if (colon > 0 && s.IndexOf(':') == colon)
             {
-                if (!int.TryParse(s.Substring(colon + 1), out port) || port <= 0 || port > 65535) return false;
+                if (!int.TryParse(s.Substring(colon + 1), out port) || port <= 0 || port > 65535)
+                {
+                    return false;
+                }
                 s = s.Substring(0, colon);
             }
             host = s;
@@ -284,7 +322,10 @@ namespace DarkwoodMP.Net
                     ReadFull(conn.Stream, head, 4);
                     int len = (int)BitConverter.ToUInt32(head, 0); // little-endian on every platform Darkwood runs on
                     int max = conn.Inbound && !conn.SaidHello ? PreHelloMax : Protocol.MaxMessage;
-                    if (len < 1 || len > max) throw new IOException($"bad message length {len}");
+                    if (len < 1 || len > max)
+                    {
+                        throw new IOException($"bad message length {len}");
+                    }
                     var buf = new byte[len];
                     ReadFull(conn.Stream, buf, len);
                     conn.LastHeard = Environment.TickCount;
@@ -296,14 +337,19 @@ namespace DarkwoodMP.Net
             catch (Exception e)
             {
                 if (gen == _generation && !conn.Closed)
+                {
                     _events.Enqueue(new Ev { Kind = EvKind.Lost, Conn = conn, Error = e.Message });
+                }
             }
             finally { Unpend(conn); }
         }
 
         private void Unpend(Conn c)
         {
-            if (Interlocked.Exchange(ref c.Pending, 0) == 1) Interlocked.Decrement(ref _pending);
+            if (Interlocked.Exchange(ref c.Pending, 0) == 1)
+            {
+                Interlocked.Decrement(ref _pending);
+            }
         }
 
         /// <summary>
@@ -321,19 +367,31 @@ namespace DarkwoodMP.Net
                     byte[] f = null;
                     lock (c.Out)
                     {
-                        if (c.Out.Count == 0 && !c.Closed) Monitor.Wait(c.Out, KeepaliveMs);
+                        if (c.Out.Count == 0 && !c.Closed)
+                        {
+                            Monitor.Wait(c.Out, KeepaliveMs);
+                        }
                         if (c.Out.Count > 0 && (!c.Closed || c.FlushThenClose)) { f = c.Out.Dequeue(); c.OutBytes -= f.Length; }
-                        else if (c.Closed) break;
+                        else if (c.Closed)
+                        {
+                            break;
+                        }
                     }
                     f = f ?? PingFrame; // nothing to send for a while
                     c.Stream.Write(f, 0, f.Length);
                 }
                 // Let what was written (e.g. Refused, or a leaving client's character) go out, then close.
-                if (c.FlushThenClose) c.Client.Client.Shutdown(SocketShutdown.Send);
+                if (c.FlushThenClose)
+                {
+                    c.Client.Client.Shutdown(SocketShutdown.Send);
+                }
             }
             catch (Exception e)
             {
-                if (gen == _generation && !c.Closed) _events.Enqueue(new Ev { Kind = EvKind.Lost, Conn = c, Error = e.Message });
+                if (gen == _generation && !c.Closed)
+                {
+                    _events.Enqueue(new Ev { Kind = EvKind.Lost, Conn = c, Error = e.Message });
+                }
             }
             finally { try { c.Client.Close(); } catch { } c.WriterDone = true; }
         }
@@ -344,7 +402,10 @@ namespace DarkwoodMP.Net
             while (got < n)
             {
                 int k = s.Read(buf, got, n - got);
-                if (k <= 0) throw new EndOfStreamException("connection closed");
+                if (k <= 0)
+                {
+                    throw new EndOfStreamException("connection closed");
+                }
                 got += k;
             }
         }
@@ -352,19 +413,31 @@ namespace DarkwoodMP.Net
         public bool Send(ulong to, byte[] data, int length, int channel, bool reliable)
         {
             Conn c;
-            lock (_conns) if (!_conns.TryGetValue(to, out c)) return false;
+            lock (_conns)
+            {
+                if (!_conns.TryGetValue(to, out c))
+                {
+                    return false;
+                }
+            }
             return Write(c, data, length);
         }
 
         private bool Write(Conn c, byte[] data, int length)
         {
-            if (c.Closed) return false;
+            if (c.Closed)
+            {
+                return false;
+            }
             var f = new byte[4 + length];
             BitConverter.GetBytes((uint)length).CopyTo(f, 0);
             Buffer.BlockCopy(data, 0, f, 4, length);
             lock (c.Out)
             {
-                if (c.Closed) return false;
+                if (c.Closed)
+                {
+                    return false;
+                }
                 if (c.OutBytes + f.Length <= MaxQueued)
                 {
                     c.Out.Enqueue(f);
@@ -380,7 +453,13 @@ namespace DarkwoodMP.Net
         public void Kick(ulong peer)
         {
             Conn c;
-            lock (_conns) if (!_conns.TryGetValue(peer, out c)) return;
+            lock (_conns)
+            {
+                if (!_conns.TryGetValue(peer, out c))
+                {
+                    return;
+                }
+            }
             Drop(c, notify: false, flush: true); // Refused, if sent, goes out first
         }
 
@@ -396,8 +475,14 @@ namespace DarkwoodMP.Net
                     case EvKind.Connected:
                         // From a session we already left (Shutdown ran between its thread's check and its enqueue).
                         if (ev.Gen != _generation) { Close(ev.Conn, flush: false); break; }
-                        lock (_conns) _conns[ev.Conn.Id] = ev.Conn;
-                        if (IsHost) Plugin.Log.LogInfo($"Connection from {ev.Conn.Remote} as #{ev.Conn.Id}");
+                        lock (_conns)
+                        {
+                            _conns[ev.Conn.Id] = ev.Conn;
+                        }
+                        if (IsHost)
+                        {
+                            Plugin.Log.LogInfo($"Connection from {ev.Conn.Remote} as #{ev.Conn.Id}");
+                        }
                         else
                         {
                             Status = $"Connected to {ev.Conn.Remote}";
@@ -405,10 +490,16 @@ namespace DarkwoodMP.Net
                         }
                         break;
                     case EvKind.Message:
-                        if (!ev.Conn.Closed) OnMessage?.Invoke(ev.Conn.Id, ev.Data, ev.Data.Length);
+                        if (!ev.Conn.Closed)
+                        {
+                            OnMessage?.Invoke(ev.Conn.Id, ev.Data, ev.Data.Length);
+                        }
                         break;
                     case EvKind.Lost:
-                        if (ev.Conn.Closed) break;
+                        if (ev.Conn.Closed)
+                        {
+                            break;
+                        }
                         if (IsHost)
                         {
                             Plugin.Log.LogInfo($"#{ev.Conn.Id} disconnected: {ev.Error}");
@@ -427,13 +518,21 @@ namespace DarkwoodMP.Net
         private void CheckAlive()
         {
             List<Conn> all;
-            lock (_conns) all = new List<Conn>(_conns.Values);
+            lock (_conns)
+            {
+                all = new List<Conn>(_conns.Values);
+            }
             int now = Environment.TickCount;
             foreach (var c in all)
             {
-                if (c.Closed) continue;
+                if (c.Closed)
+                {
+                    continue;
+                }
                 if (c.KeepsAlive && now - c.LastHeard > TimeoutMs)
+                {
                     _events.Enqueue(new Ev { Kind = EvKind.Lost, Conn = c, Error = $"nothing from it for {TimeoutMs / 1000} s" });
+                }
                 else if (c.Inbound && !c.SaidHello && now - c.ConnectedAt > HelloTimeoutMs)
                 {
                     Plugin.Log.LogInfo($"#{c.Id} ({c.Remote}) didn't say Hello in {HelloTimeoutMs / 1000} s: closed");
@@ -445,10 +544,19 @@ namespace DarkwoodMP.Net
         // flush: let what's queued go out before closing; otherwise close at once (which also ends a stuck write).
         private void Drop(Conn c, bool notify, bool flush)
         {
-            if (c.Closed) return;
+            if (c.Closed)
+            {
+                return;
+            }
             Close(c, flush);
-            lock (_conns) _conns.Remove(c.Id);
-            if (notify) OnPeerLost?.Invoke(c.Id);
+            lock (_conns)
+            {
+                _conns.Remove(c.Id);
+            }
+            if (notify)
+            {
+                OnPeerLost?.Invoke(c.Id);
+            }
         }
 
         private static void Close(Conn c, bool flush)
@@ -459,7 +567,12 @@ namespace DarkwoodMP.Net
                 c.FlushThenClose = flush;
                 Monitor.Pulse(c.Out);
             }
-            if (!flush) try { c.Client.Close(); } catch { }
+            if (!flush)
+            {
+                try
+                { c.Client.Close(); }
+                catch { }
+            }
         }
 
         /// <summary>Client: show why the host turned us down, and end the session.</summary>
@@ -479,7 +592,10 @@ namespace DarkwoodMP.Net
             IsHost = false;
             List<Conn> all;
             lock (_conns) { all = new List<Conn>(_conns.Values); _conns.Clear(); }
-            foreach (var c in all) Close(c, flush: true); // a leaving client's character, the host's HostAway
+            foreach (var c in all)
+            {
+                Close(c, flush: true); // a leaving client's character, the host's HostAway
+            }
             Mapper.Stop(wait: _quitting); // nothing to do unless we hosted with the port opened
             try { _listener?.Stop(); } catch { }
             try { _info?.Close(); } catch { }
@@ -487,9 +603,17 @@ namespace DarkwoodMP.Net
             // A connection whose Connected event is still queued isn't in _conns yet: close it too, or its
             // threads and socket stay open (and keep pinging) for as long as the game runs.
             while (_events.TryDequeue(out var ev))
-                if (ev.Kind == EvKind.Connected) Close(ev.Conn, flush: false);
+            {
+                if (ev.Kind == EvKind.Connected)
+                {
+                    Close(ev.Conn, flush: false);
+                }
+            }
             Status = status;
-            if (was) OnLeft?.Invoke();
+            if (was)
+            {
+                OnLeft?.Invoke();
+            }
         }
 
         private static void StartThread(string name, ThreadStart body) =>
@@ -503,10 +627,17 @@ namespace DarkwoodMP.Net
             {
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    if (nic.OperationalStatus != OperationalStatus.Up || nic.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                    {
+                        continue;
+                    }
                     foreach (var a in nic.GetIPProperties().UnicastAddresses)
+                    {
                         if (a.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(a.Address))
+                        {
                             list.Add(a.Address.ToString());
+                        }
+                    }
                 }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't list network interfaces: {e.Message}"); }
@@ -520,12 +651,20 @@ namespace DarkwoodMP.Net
         public void Dispose()
         {
             List<Conn> all;
-            lock (_conns) all = new List<Conn>(_conns.Values);
+            lock (_conns)
+            {
+                all = new List<Conn>(_conns.Values);
+            }
             _quitting = true; // the router's mappings are removed before the process ends
             Leave();
             int until = Environment.TickCount + 1000;
             foreach (var c in all)
-                while (!c.WriterDone && until - Environment.TickCount > 0) Thread.Sleep(10);
+            {
+                while (!c.WriterDone && until - Environment.TickCount > 0)
+                {
+                    Thread.Sleep(10);
+                }
+            }
         }
     }
 }

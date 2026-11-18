@@ -25,21 +25,42 @@ namespace DarkwoodMP
             if (windowsOpen && cursor != null)
             {
                 foreach (var r in cursor.GetComponentsInChildren<Renderer>())
-                    if (r.enabled) { r.enabled = false; if (!_hidden.Contains(r)) _hidden.Add(r); }
+                {
+                    if (r.enabled)
+                    {
+                        r.enabled = false;
+                        if (!_hidden.Contains(r))
+                        {
+                            _hidden.Add(r);
+                        }
+                    }
+                }
                 if (!_active)
                 {
                     _active = true;
-                    if (cursor.idle != null) UnityEngine.Cursor.SetCursor(cursor.idle, new Vector2(32f, 32f), CursorMode.Auto);
+                    if (cursor.idle != null)
+                    {
+                        UnityEngine.Cursor.SetCursor(cursor.idle, new Vector2(32f, 32f), CursorMode.Auto);
+                    }
                     Plugin.Log.LogInfo($"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({(cursor.idle != null ? cursor.idle.width + "x" + cursor.idle.height : "none")}); hardware cursor setting {HardwareCursor}");
                 }
             }
             else if (_active)
             {
                 _active = false;
-                foreach (var r in _hidden) if (r != null) r.enabled = true;
+                foreach (var r in _hidden)
+                {
+                    if (r != null)
+                    {
+                        r.enabled = true;
+                    }
+                }
                 _hidden.Clear();
                 // With the hardware cursor setting on, the game's picture is the system cursor's anyway; otherwise the default again.
-                if (!HardwareCursor) UnityEngine.Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                if (!HardwareCursor)
+                {
+                    UnityEngine.Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                }
                 Plugin.Log.LogInfo("[cursor] the windows closed: the game's cursor sprite is back");
             }
         }

@@ -40,7 +40,10 @@ namespace DarkwoodMP.Sync
             foreach (var h in hits.OrderBy(x => x.distance))
             {
                 var c = h.collider;
-                if (c == null) continue;
+                if (c == null)
+                {
+                    continue;
+                }
                 var b = c.bounds;
                 list.Add($"{Path(c.transform)} [layer {c.gameObject.layer}, {c.GetType().Name}{(c.isTrigger ? ", trigger" : "")}, " +
                          $"{b.size.x:0}x{b.size.z:0} at ({b.center.x:0}, {b.center.z:0})]");
@@ -54,22 +57,37 @@ namespace DarkwoodMP.Sync
         public static string Path(Transform t)
         {
             string p = t.name;
-            for (var x = t.parent; x != null; x = x.parent) p = x.name + "/" + p;
+            for (var x = t.parent; x != null; x = x.parent)
+            {
+                p = x.name + "/" + p;
+            }
             return p;
         }
 
         public static void LateUpdate(bool inSession)
         {
-            if (!inSession || Time.unscaledTime < _next) return;
+            if (!inSession || Time.unscaledTime < _next)
+            {
+                return;
+            }
             _next = Time.unscaledTime + 0.25f;
             var p = Player.Instance;
-            if (p == null || !p.gameObject.activeInHierarchy || Core.mainMenu) return;
+            if (p == null || !p.gameObject.activeInHierarchy || Core.mainMenu)
+            {
+                return;
+            }
             var light = FovLight(p);
-            if (light == null) return;
+            if (light == null)
+            {
+                return;
+            }
             var pos = light.transform.position;
             if (!Hidden(pos)) { _logged = ""; return; }
             string set = string.Join("; ", Hiders(pos));
-            if (set == _logged && Time.unscaledTime - _loggedAt < 30f) return;
+            if (set == _logged && Time.unscaledTime - _loggedAt < 30f)
+            {
+                return;
+            }
             _logged = set; _loggedAt = Time.unscaledTime;
             var r = light.GetComponent<Renderer>();
             Plugin.Log.LogInfo($"[view] our player's view is switched off at ({pos.x:0}, {pos.z:0}) (a black screen): " +

@@ -20,7 +20,10 @@ namespace DarkwoodMP.Combat
         /// <summary>The joiner whose proxy the enemy is after, or null (then the host's player counts, as in the game).</summary>
         private static NetPlayerProxy TargetProxy(Character c)
         {
-            if (NetPlayerProxy.All.Count == 0 || c == null || c.target == null) return null;
+            if (NetPlayerProxy.All.Count == 0 || c == null || c.target == null)
+            {
+                return null;
+            }
             return c.target.GetComponent<NetPlayerProxy>();
         }
 
@@ -28,7 +31,10 @@ namespace DarkwoodMP.Combat
         public static bool HasEffect(Character c, CharacterEffectType type)
         {
             var p = TargetProxy(c);
-            if (p != null) return type == CharacterEffectType.shadowWard ? p.ShadowWard : type == CharacterEffectType.forestSpiritWard && p.ForestSpiritWard;
+            if (p != null)
+            {
+                return type == CharacterEffectType.shadowWard ? p.ShadowWard : type == CharacterEffectType.forestSpiritWard && p.ForestSpiritWard;
+            }
             var host = Player.Instance;
             return host != null && host.effects != null && host.effects.hasEffectType(type);
         }
@@ -64,7 +70,10 @@ namespace DarkwoodMP.Combat
             int swapped = 0;
             for (int i = 0; i < list.Count - 3; i++)
             {
-                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(effects) || !list[i + 3].Calls(has)) continue;
+                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(effects) || !list[i + 3].Calls(has))
+                {
+                    continue;
+                }
                 list[i].opcode = OpCodes.Ldarg_0; list[i].operand = null; // keeps the instruction's labels
                 list[i + 1].opcode = OpCodes.Nop; list[i + 1].operand = null;
                 list[i + 3].opcode = OpCodes.Call; list[i + 3].operand = mine;
@@ -90,16 +99,25 @@ namespace DarkwoodMP.Combat
             int swapped = 0, targets = 0;
             for (int i = 0; i < list.Count - 2; i++)
             {
-                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(skills)) continue;
+                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(skills))
+                {
+                    continue;
+                }
                 bool isFriend = list[i + 2].LoadsField(friend);
-                if (!isFriend && !list[i + 2].LoadsField(enemy)) continue;
+                if (!isFriend && !list[i + 2].LoadsField(enemy))
+                {
+                    continue;
+                }
                 list[i].opcode = OpCodes.Ldarg_0; list[i].operand = null;
                 list[i + 1].opcode = OpCodes.Call; list[i + 1].operand = AccessTools.Method(typeof(Wards), isFriend ? nameof(FriendOfTheForest) : nameof(EnemyOfTheForest));
                 list[i + 2].opcode = OpCodes.Nop; list[i + 2].operand = null;
                 swapped++;
                 for (int j = i - 1; j >= 0 && j >= i - 16; j--)
                 {
-                    if (!list[j].Calls(GetInstance) || !list[j + 1].LoadsField(playerTransform)) continue;
+                    if (!list[j].Calls(GetInstance) || !list[j + 1].LoadsField(playerTransform))
+                    {
+                        continue;
+                    }
                     list[j].opcode = OpCodes.Ldarg_0; list[j].operand = null;
                     list[j + 1].opcode = OpCodes.Call; list[j + 1].operand = AccessTools.Method(typeof(Wards), nameof(PlayerTarget));
                     targets++;
@@ -155,9 +173,15 @@ namespace DarkwoodMP.Combat
         static void Prefix(Light2D __instance, ref Bounds _bounds)
         {
             var parent = __instance.transform.parent;
-            if (parent == null || !parent.name.StartsWith("DarkwoodMP_Remote_")) return;
+            if (parent == null || !parent.name.StartsWith("DarkwoodMP_Remote_"))
+            {
+                return;
+            }
             Vector3 fwd = parent.TransformDirection(Vector3.up); fwd.y = 0f; // players are rotated Euler(90, yaw, 0): local up is ahead
-            if (fwd.sqrMagnitude < 0.01f) return;
+            if (fwd.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
             float side = Side * 1.42f; // covers the box turned any way
             _bounds = new Bounds(parent.position + fwd.normalized * Ahead, new Vector3(side, 10000f, side));
         }

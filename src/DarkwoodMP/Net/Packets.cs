@@ -535,7 +535,10 @@ namespace DarkwoodMP.Net
         {
             var b = Encoding.UTF8.GetBytes(s ?? "");
             int n = Math.Min(b.Length, ushort.MaxValue);
-            if (n < b.Length) Plugin.Log.LogError($"A {b.Length}-byte string was cut to {n} bytes in a message: use WriteBigStr for it\n{Environment.StackTrace}");
+            if (n < b.Length)
+            {
+                Plugin.Log.LogError($"A {b.Length}-byte string was cut to {n} bytes in a message: use WriteBigStr for it\n{Environment.StackTrace}");
+            }
             _w.Write((ushort)n);
             _w.Write(b, 0, n);
         }
@@ -574,9 +577,15 @@ namespace DarkwoodMP.Net
         public string ReadBigStr()
         {
             uint n = _r.ReadUInt32();
-            if (n > Protocol.MaxMessage) throw new InvalidDataException($"bigstr of {n} bytes");
+            if (n > Protocol.MaxMessage)
+            {
+                throw new InvalidDataException($"bigstr of {n} bytes");
+            }
             var b = _r.ReadBytes((int)n);
-            if (b.Length != n) throw new EndOfStreamException();
+            if (b.Length != n)
+            {
+                throw new EndOfStreamException();
+            }
             return Encoding.UTF8.GetString(b);
         }
     }
@@ -586,7 +595,10 @@ namespace DarkwoodMP.Net
     {
         public static int Of(string s)
         {
-            if (s == null) return 0;
+            if (s == null)
+            {
+                return 0;
+            }
             unchecked
             {
                 uint h = 2166136261;

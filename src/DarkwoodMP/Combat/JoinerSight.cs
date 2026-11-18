@@ -17,20 +17,35 @@ namespace DarkwoodMP.Combat
 
         public static bool Sees(NetPlayerProxy p, Transform t)
         {
-            if (p == null || !p.alive || t == null) return false;
+            if (p == null || !p.alive || t == null)
+            {
+                return false;
+            }
             var host = Player.Instance;
             float d = Core.trueDistance(p.transform.position, t.position);
-            if (d >= 800f) return false;
+            if (d >= 800f)
+            {
+                return false;
+            }
             float fov = host != null ? Fov(host) : 90f;
             float light = host != null && host.FOVDot != null ? host.FOVDot.LightRadius : 0f;
-            if (Vector3.Angle(t.position - p.transform.position, p.transform.up) >= fov / 2f && d >= light) return false;
+            if (Vector3.Angle(t.position - p.transform.position, p.transform.up) >= fov / 2f && d >= light)
+            {
+                return false;
+            }
             return Core.canSee(p.transform, t);
         }
 
         /// <summary>A living joiner who sees this, or null.</summary>
         public static NetPlayerProxy AnySees(Transform t)
         {
-            foreach (var p in NetPlayerProxy.All.Values) if (Sees(p, t)) return p;
+            foreach (var p in NetPlayerProxy.All.Values)
+            {
+                if (Sees(p, t))
+                {
+                    return p;
+                }
+            }
             return null;
         }
 
@@ -41,7 +56,12 @@ namespace DarkwoodMP.Combat
         {
             float best = Player.Instance != null ? Core.trueDistance(Player.Instance._transform.position, t.position) : float.MaxValue;
             foreach (var p in NetPlayerProxy.All.Values)
-                if (p != null && p.alive) best = Mathf.Min(best, Core.trueDistance(p.transform.position, t.position));
+            {
+                if (p != null && p.alive)
+                {
+                    best = Mathf.Min(best, Core.trueDistance(p.transform.position, t.position));
+                }
+            }
             return best;
         }
     }
@@ -56,11 +76,16 @@ namespace DarkwoodMP.Combat
     {
         static bool Prefix(Character __instance)
         {
-            if (!Threat.Enabled || NetEnemies.ClientMode) return true;
+            if (!Threat.Enabled || NetEnemies.ClientMode)
+            {
+                return true;
+            }
             var c = __instance;
             if (c.target != null && !JoinerSight.AnyPlayerSees(c.transform) && JoinerSight.NearestPlayer(c.transform) > 200f)
+            {
                 c.teleportWithEffect(c.target.position + c.target.up * 500f + new Vector3(UnityEngine.Random.Range(-100, 100), 0f, UnityEngine.Random.Range(-100, 100)),
                     "ForestSpirit_fastSpawnEff", 4f);
+            }
             return false;
         }
     }
@@ -82,18 +107,42 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Character __instance)
         {
             var c = __instance;
-            if (!Threat.Enabled || NetEnemies.ClientMode || !c.banshee || !c.alive) return true;
-            if (Player.Instance != null && Player.Instance.isInSight(c.transform)) return true; // the game's own
+            if (!Threat.Enabled || NetEnemies.ClientMode || !c.banshee || !c.alive)
+            {
+                return true;
+            }
+            if (Player.Instance != null && Player.Instance.isInSight(c.transform))
+            {
+                return true; // the game's own
+            }
             var proxy = JoinerSight.AnySees(c.transform);
-            if (proxy == null) return true; // nobody sees it: the game does nothing either
+            if (proxy == null)
+            {
+                return true; // nobody sees it: the game does nothing either
+            }
             c.target = proxy.transform;
-            if (LostEnemy != null) c.stopRoutine((Action)Delegate.CreateDelegate(typeof(Action), c, LostEnemy), all: true);
-            if (Check != null) c.startRoutine((Action)Delegate.CreateDelegate(typeof(Action), c, Check), 0.5f);
+            if (LostEnemy != null)
+            {
+                c.stopRoutine((Action)Delegate.CreateDelegate(typeof(Action), c, LostEnemy), all: true);
+            }
+            if (Check != null)
+            {
+                c.startRoutine((Action)Delegate.CreateDelegate(typeof(Action), c, Check), 0.5f);
+            }
             var light = c.transform.Find("SightLight");
-            if (light != null) light.gameObject.SetActive(true);
+            if (light != null)
+            {
+                light.gameObject.SetActive(true);
+            }
             c.canSeeEnemyFar = Core.trueDistance(proxy.transform, c.transform) < c.farViewDistance;
-            if (c.behaviour != Character.Behaviour.defensive) c.goToPos(proxy.transform);
-            if (Threat.Debug) Plugin.Log.LogInfo($"[threat] banshee {c.name} seen by {proxy.OwnerName}: going for them");
+            if (c.behaviour != Character.Behaviour.defensive)
+            {
+                c.goToPos(proxy.transform);
+            }
+            if (Threat.Debug)
+            {
+                Plugin.Log.LogInfo($"[threat] banshee {c.name} seen by {proxy.OwnerName}: going for them");
+            }
             return false;
         }
     }
@@ -104,9 +153,15 @@ namespace DarkwoodMP.Combat
         static void Postfix(Character __instance)
         {
             var c = __instance;
-            if (!Threat.Enabled || NetEnemies.ClientMode || c.target == null) return;
+            if (!Threat.Enabled || NetEnemies.ClientMode || c.target == null)
+            {
+                return;
+            }
             var proxy = c.target.GetComponent<NetPlayerProxy>();
-            if (proxy != null && proxy.alive) c.goToPos(proxy.transform);
+            if (proxy != null && proxy.alive)
+            {
+                c.goToPos(proxy.transform);
+            }
         }
     }
 }

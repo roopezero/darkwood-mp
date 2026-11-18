@@ -26,22 +26,36 @@ namespace DarkwoodMP
 
         internal static void Apply(Controller c)
         {
-            if (!c.zoomCamera || !IsWide(Screen.width, Screen.height) || Screen.width <= 1920) return;
+            if (!c.zoomCamera || !IsWide(Screen.width, Screen.height) || Screen.width <= 1920)
+            {
+                return;
+            }
             float zoom = ZoomFor(Screen.height);
-            if (Mathf.Approximately(zoom, c.cameraZoom)) return;
+            if (Mathf.Approximately(zoom, c.cameraZoom))
+            {
+                return;
+            }
             c.cameraZoom = zoom;
             var cam = Singleton<CamMain>.Instance;
-            if (cam == null) return;
+            if (cam == null)
+            {
+                return;
+            }
             SetZoom(cam.transform, zoom);
             foreach (var name in new[] { "CamLights", "CamFOV", "CamAmbient", "CamLightning", "CamTopMask" })
+            {
                 SetZoom(cam.transform.Find(name), zoom);
+            }
             c.worldScreenSize = new Vector2(Screen.width * zoom, Screen.height * zoom);
         }
 
         private static void SetZoom(Transform t, float zoom)
         {
             var tk = t != null ? t.GetComponent<tk2dCamera>() : null;
-            if (tk != null) tk.ZoomFactor = zoom;
+            if (tk != null)
+            {
+                tk.ZoomFactor = zoom;
+            }
         }
     }
 
@@ -53,8 +67,14 @@ namespace DarkwoodMP
         {
             var mm = Singleton<MainMenu>.Instance;
             var native = Screen.currentResolution;
-            if (mm == null || !mm.firstStart || !WideScreen.IsWide(native.width, native.height)) return;
-            if (GameSettings.GetInt("ScreenWidth") == native.width && GameSettings.GetInt("ScreenHeight") == native.height) return;
+            if (mm == null || !mm.firstStart || !WideScreen.IsWide(native.width, native.height))
+            {
+                return;
+            }
+            if (GameSettings.GetInt("ScreenWidth") == native.width && GameSettings.GetInt("ScreenHeight") == native.height)
+            {
+                return;
+            }
             GameSettings.SetInt("ScreenWidth", native.width);
             GameSettings.SetInt("ScreenHeight", native.height);
             GameSettings.SetInt("Fullscreen", 1);

@@ -15,22 +15,40 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(MeleeSensor __instance, Collider _collider)
         {
-            if (_collider == null) return true;
+            if (_collider == null)
+            {
+                return true;
+            }
             var proxy = _collider.GetComponent<NetPlayerProxy>();
-            if (proxy == null) return true;
+            if (proxy == null)
+            {
+                return true;
+            }
 
             var s = __instance;
-            if (s.type != MeleeSensor.MeleeSensorType.character || s.attackerTransform == null) return false; // players don't hit players
+            if (s.type != MeleeSensor.MeleeSensorType.character || s.attackerTransform == null)
+            {
+                return false; // players don't hit players
+            }
             // Only the colliders: the game clears them as the pooled sensor is spawned again (MeleeSensor.OnSpawned),
             // but never its gameObjectsToIgnore, so a pooled sensor would never hit the same stand-in twice.
-            if (s.collidersToIgnore.Contains(_collider)) return false;
+            if (s.collidersToIgnore.Contains(_collider))
+            {
+                return false;
+            }
             s.collidersToIgnore.Add(_collider);
             if (!s.doesNotNeedLineOfSight && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
             {
-                if (World.MapScenarioDogWatch.On) Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
+                if (World.MapScenarioDogWatch.On)
+                {
+                    Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
+                }
                 return false;
             }
-            if (World.MapScenarioDogWatch.On) Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name} hit {proxy.OwnerName}'s stand-in for {s.damage:0}");
+            if (World.MapScenarioDogWatch.On)
+            {
+                Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name} hit {proxy.OwnerName}'s stand-in for {s.damage:0}");
+            }
 
             var attacker = s.attackerTransform.GetComponent<CharBase>();
             float damage = s.damage * (attacker != null ? attacker.strengthModifier : 1f);
@@ -56,8 +74,14 @@ namespace DarkwoodMP.Combat
                 float y = attackerTransform != null ? (attackerTransform.rotation * Quaternion.Euler(90f, 180f, 0f)).eulerAngles.y : __instance.transform.eulerAngles.y;
                 NetEnemies.Instance?.HostBlood(__instance, y);
             }
-            if (!Threat.Enabled || attackerTransform == null) return;
-            if (dealt > 0f) Threat.OnDamaged(__instance, attackerTransform.GetComponent<CharBase>(), dealt);
+            if (!Threat.Enabled || attackerTransform == null)
+            {
+                return;
+            }
+            if (dealt > 0f)
+            {
+                Threat.OnDamaged(__instance, attackerTransform.GetComponent<CharBase>(), dealt);
+            }
         }
     }
 
@@ -75,7 +99,10 @@ namespace DarkwoodMP.Combat
     {
         private static void Prefix(Character __instance, Vector3 Position, float volume)
         {
-            if (Threat.Enabled && !__instance.deaf && __instance.alive) Threat.OnHeard(__instance, Position, volume);
+            if (Threat.Enabled && !__instance.deaf && __instance.alive)
+            {
+                Threat.OnHeard(__instance, Position, volume);
+            }
         }
     }
 
@@ -111,13 +138,19 @@ namespace DarkwoodMP.Combat
 
         private static bool Prefix(WorldGrid __instance, Vector3 pos, bool instant, bool force)
         {
-            if (__instance.currentGrid == null) return true;
+            if (__instance.currentGrid == null)
+            {
+                return true;
+            }
             if (!Proxies.Any)
             {
                 // Alone (or a joiner): the game's own refresh, except that its passes don't overlap either. A jump (a
                 // respawn, a trip back from a place) otherwise has an older pass leave what the newer one entered.
                 var s = Net.Session.Instance;
-                if (instant || s == null || !s.Active) return true;
+                if (instant || s == null || !s.Active)
+                {
+                    return true;
+                }
                 Distances(out int dx, out int dy);
                 Run(__instance, __instance.currentGrid, new List<Centre> { new Centre { Pos = pos, Dx = dx, Dy = dy } }, false, force);
                 return false;
@@ -136,35 +169,62 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void RefreshWhileLoading()
         {
-            if (!Proxies.Any) return;
+            if (!Proxies.Any)
+            {
+                return;
+            }
             var o = Singleton<OutsideLocations>.Instance;
             var wg = Singleton<WorldGrid>.Instance;
-            if (o == null || !o.loading || wg == null || wg.disableRefresh || Player.Instance == null || Core.loadingGame || !Core.worldGenFinished()) return;
-            if (Time.realtimeSinceStartup < _loadingRefreshAt) return;
+            if (o == null || !o.loading || wg == null || wg.disableRefresh || Player.Instance == null || Core.loadingGame || !Core.worldGenFinished())
+            {
+                return;
+            }
+            if (Time.realtimeSinceStartup < _loadingRefreshAt)
+            {
+                return;
+            }
             _loadingRefreshAt = Time.realtimeSinceStartup + 0.5f;
             var world = wg.getGrid("World");
             var grids = new Dictionary<WorldGrid.Grid, List<Centre>>();
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p == null) continue;
+                if (p == null)
+                {
+                    continue;
+                }
                 var g = GridOf(wg, world, p);
-                if (g == null) continue;
-                if (!grids.TryGetValue(g, out var list)) grids[g] = list = new List<Centre>();
+                if (g == null)
+                {
+                    continue;
+                }
+                if (!grids.TryGetValue(g, out var list))
+                {
+                    grids[g] = list = new List<Centre>();
+                }
                 list.Add(Of(p));
             }
             foreach (var kv in grids)
             {
-                if (_running.TryGetValue(kv.Key, out var old) && old != null) wg.StopCoroutine(old);
+                if (_running.TryGetValue(kv.Key, out var old) && old != null)
+                {
+                    wg.StopCoroutine(old);
+                }
                 _running[kv.Key] = wg.StartCoroutine(EnterSpread(kv.Key, kv.Value));
             }
-            if (grids.Count > 0) LoadingRefreshes++;
+            if (grids.Count > 0)
+            {
+                LoadingRefreshes++;
+            }
         }
 
         private static IEnumerator EnterSpread(WorldGrid.Grid g, List<Centre> centres)
         {
             var nodes = g.nodes;
             for (int i = 0; i < nodes.Count; i++)
-                if (!nodes[i].entered && Near(nodes[i].position, centres)) { nodes[i].enter(); yield return null; }
+            {
+                if (!nodes[i].entered && Near(nodes[i].position, centres))
+                { nodes[i].enter(); yield return null; }
+            }
         }
 
         /// <summary>For the tests: refreshes done while our player was being taken to a place.</summary>
@@ -174,19 +234,37 @@ namespace DarkwoodMP.Combat
         {
             Distances(out int hx, out int hy);
             var centres = new List<Centre> { new Centre { Pos = pos, Dx = hx, Dy = hy } };
-            foreach (var p in NetPlayerProxy.All.Values) if (p != null) centres.Add(Of(p));
+            foreach (var p in NetPlayerProxy.All.Values)
+            {
+                if (p != null)
+                {
+                    centres.Add(Of(p));
+                }
+            }
             var world = wg.getGrid("World");
             bool away = world != null && world != current;
             // The other grids, each with the players in it: the world's (only while we're away), and the locations
             // run for joiners.
             var others = new Dictionary<WorldGrid.Grid, List<Centre>>();
-            if (away) others[world] = new List<Centre>();
+            if (away)
+            {
+                others[world] = new List<Centre>();
+            }
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p == null) continue;
+                if (p == null)
+                {
+                    continue;
+                }
                 var g = GridOf(wg, world, p);
-                if (g == null || g == current) continue;
-                if (!others.TryGetValue(g, out var list)) others[g] = list = new List<Centre>();
+                if (g == null || g == current)
+                {
+                    continue;
+                }
+                if (!others.TryGetValue(g, out var list))
+                {
+                    others[g] = list = new List<Centre>();
+                }
                 list.Add(Of(p));
             }
             if (away != _wasAway)
@@ -197,7 +275,9 @@ namespace DarkwoodMP.Combat
             }
             Run(wg, current, centres, instant, force);
             foreach (var kv in others)
+            {
                 Run(wg, kv.Key, kv.Value, instant, force);
+            }
         }
 
         /// <summary>Refresh a grid, stopping the pass still running on it first.</summary>
@@ -205,11 +285,20 @@ namespace DarkwoodMP.Combat
         {
             if (_running.TryGetValue(g, out var old))
             {
-                if (old != null) wg.StopCoroutine(old);
+                if (old != null)
+                {
+                    wg.StopCoroutine(old);
+                }
                 _running.Remove(g);
             }
-            if (instant) Refresh(g, centres, force);
-            else _running[g] = wg.StartCoroutine(RefreshSpread(g, centres, force));
+            if (instant)
+            {
+                Refresh(g, centres, force);
+            }
+            else
+            {
+                _running[g] = wg.StartCoroutine(RefreshSpread(g, centres, force));
+            }
         }
 
         internal static void Distances(out int dx, out int dy)
@@ -234,16 +323,31 @@ namespace DarkwoodMP.Combat
         private static bool Near(Vector2 node, List<Centre> centres)
         {
             foreach (var c in centres)
-                if (Mathf.Abs(c.Pos.x - node.x) <= c.Dx && Mathf.Abs(c.Pos.z - node.y) <= c.Dy) return true;
+            {
+                if (Mathf.Abs(c.Pos.x - node.x) <= c.Dx && Mathf.Abs(c.Pos.z - node.y) <= c.Dy)
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
         private static void Refresh(WorldGrid.Grid g, List<Centre> centres, bool force)
         {
             foreach (var n in g.nodes)
-                if (Near(n.position, centres)) n.enter(force);
+            {
+                if (Near(n.position, centres))
+                {
+                    n.enter(force);
+                }
+            }
             foreach (var n in g.nodes)
-                if (!Near(n.position, centres)) n.leave(force); // after the enters (see RefreshSpread)
+            {
+                if (!Near(n.position, centres))
+                {
+                    n.leave(force); // after the enters (see RefreshSpread)
+                }
+            }
         }
 
         // As the game's refreshNodes: enter one node a frame, so showing a region doesn't stall a frame. The nodes to
@@ -260,9 +364,15 @@ namespace DarkwoodMP.Combat
                 {
                     if (force || !nodes[i].entered) { nodes[i].enter(force); yield return null; }
                 }
-                else leave.Add(nodes[i]);
+                else
+                {
+                    leave.Add(nodes[i]);
+                }
             }
-            foreach (var n in leave) n.leave(force);
+            foreach (var n in leave)
+            {
+                n.leave(force);
+            }
         }
     }
 }
@@ -278,7 +388,10 @@ namespace DarkwoodMP.Combat
 
         private static bool Prefix(Character __instance)
         {
-            if (Starting || !NetEnemies.ClientMode || !NetEnemies.Eligible(__instance) || NetEnemies.LocalOnly(__instance)) return true;
+            if (Starting || !NetEnemies.ClientMode || !NetEnemies.Eligible(__instance) || NetEnemies.LocalOnly(__instance))
+            {
+                return true;
+            }
             bool puppet = NetEnemies.Instance != null && NetEnemies.Instance.IsPuppet(__instance, out _);
             NetEnemies.Freeze(__instance, hide: !puppet);
             return false;
@@ -295,13 +408,19 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(Character __instance, bool enable)
         {
-            if (!enable || !NetEnemies.ClientMode || !NetEnemies.Frozen.Contains(__instance)) return true;
+            if (!enable || !NetEnemies.ClientMode || !NetEnemies.Frozen.Contains(__instance))
+            {
+                return true;
+            }
             // A copy of the host's enemy plays the host's clips on its sprite animator, which enableComponents(false)
             // (Location.activateCharacters as its area was left) switched off: that one is switched back on.
             if (NetEnemies.Instance != null && NetEnemies.Instance.IsPuppet(__instance, out _))
             {
                 var a = __instance.animator;
-                if (a != null) a.enabled = true;
+                if (a != null)
+                {
+                    a.enabled = true;
+                }
             }
             return false;
         }
@@ -317,7 +436,10 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
-            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0 || !NetEnemies.ClientMode) return true;
+            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0 || !NetEnemies.ClientMode)
+            {
+                return true;
+            }
             var c = __instance.GetComponent<Character>();
             return c == null || !NetEnemies.Hidden.Contains(c);
         }
@@ -334,7 +456,10 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
-            if (!NetEnemies.ClientMode || NetEnemies.LocalOnly(__instance.gameObject)) return true;
+            if (!NetEnemies.ClientMode || NetEnemies.LocalOnly(__instance.gameObject))
+            {
+                return true;
+            }
             Plugin.Log.LogInfo($"[enemy] {__instance.type} at {__instance.transform.position}: not spawned here, the host's comes from the host");
             return false;
         }
@@ -354,12 +479,18 @@ namespace DarkwoodMP.Combat
         private static void Prefix(Location __instance, bool active)
         {
             var s = Net.Session.Instance;
-            if (active || s == null || !s.IsHost || !s.Active || __instance.isOutsideLocation || SharedCullingPatch.HostAway) return;
+            if (active || s == null || !s.IsHost || !s.Active || __instance.isOutsideLocation || SharedCullingPatch.HostAway)
+            {
+                return;
+            }
             var list = __instance.charactersList;
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 var c = list[i];
-                if (c == null || c.alive || c.dummy || c.npc != null || Core.withinLocation(c.transform.position, 0f, __instance)) continue;
+                if (c == null || c.alive || c.dummy || c.npc != null || Core.withinLocation(c.transform.position, 0f, __instance))
+                {
+                    continue;
+                }
                 try
                 {
                     list.RemoveAt(i);
@@ -380,7 +511,10 @@ namespace DarkwoodMP.Combat
     {
         private static void Postfix(Location __instance, bool active)
         {
-            if (NetEnemies.ClientMode) NetEnemies.Instance?.LocationCharacters(__instance, active);
+            if (NetEnemies.ClientMode)
+            {
+                NetEnemies.Instance?.LocationCharacters(__instance, active);
+            }
         }
     }
 
@@ -393,24 +527,42 @@ namespace DarkwoodMP.Combat
         private static bool Prefix(Character __instance, float Damage, Transform attackerTransform, bool canCutInHalf, bool byPlayer, bool canInterrupt, bool normalHit)
         {
             var ne = NetEnemies.Instance;
-            if (ne == null || !NetEnemies.ClientMode) return true;
+            if (ne == null || !NetEnemies.ClientMode)
+            {
+                return true;
+            }
             if (!ne.IsPuppet(__instance, out uint id))
             {
-                if (NetEnemies.Frozen.Contains(__instance)) return false; // a frozen one isn't really there
+                if (NetEnemies.Frozen.Contains(__instance))
+                {
+                    return false; // a frozen one isn't really there
+                }
                 // A friendly NPC our player hits: the host's copy takes it, and turns on us there.
                 return !HostileNpcs.ClientHit(__instance, Damage, attackerTransform, canCutInHalf, byPlayer, canInterrupt, normalHit);
             }
             // A flame of no damage can still set it alight (its burn goes with the hit).
-            if (Damage <= 0f && (NetEnemies.HitEffects == null || NetEnemies.HitEffects.Count == 0)) return false;
+            if (Damage <= 0f && (NetEnemies.HitEffects == null || NetEnemies.HitEffects.Count == 0))
+            {
+                return false;
+            }
             // Something thrown (its impact, explosion or the fire it left) hits the enemy in the host's copy of the throw.
-            if (World.ThrownHits.Now()) return false;
+            if (World.ThrownHits.Now())
+            {
+                return false;
+            }
             // Of flames, only our own weapon's are ours to send (Flame calls every hit byPlayer); any other fire burns on the host.
             var flame = World.ThrownHits.CurrentFlame;
-            if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame)) return false;
+            if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame))
+            {
+                return false;
+            }
             // Only what our own player does to it is ours to send. Anything else here (a trap, fire, an explosion)
             // happened on the host too, where it hurt the enemy already.
             bool fromPlayer = byPlayer || (attackerTransform != null && attackerTransform.GetComponent<Player>() != null);
-            if (!fromPlayer) return false;
+            if (!fromPlayer)
+            {
+                return false;
+            }
             ne.ClientHit(id, Damage, canCutInHalf, fromPlayer, canInterrupt, normalHit, NetEnemies.HitEffects);
             return false;
         }
@@ -423,7 +575,10 @@ namespace DarkwoodMP.Combat
         private static void Postfix(string audioID, float volume, Transform parentObj)
         {
             var s = Net.Session.Instance;
-            if (parentObj == null || s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null) return;
+            if (parentObj == null || s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null)
+            {
+                return;
+            }
             NetEnemies.Instance.HostSound(parentObj, audioID, volume);
         }
     }
@@ -440,9 +595,15 @@ namespace DarkwoodMP.Combat
 
         private static void Postfix(CharacterSounds __instance, string loopName, bool __state)
         {
-            if (!__state || !string.IsNullOrEmpty(loopName) || __instance.idleAudioObject != null) return;
+            if (!__state || !string.IsNullOrEmpty(loopName) || __instance.idleAudioObject != null)
+            {
+                return;
+            }
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null) return;
+            if (s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null)
+            {
+                return;
+            }
             NetEnemies.Instance.HostSound(__instance.transform, "", 0f);
         }
     }
@@ -461,8 +622,14 @@ namespace DarkwoodMP.Combat
         private static void Prefix(Vector3 _pos, float range, bool dangerousSound, float volume, bool gunshot, out CharBase __state)
         {
             __state = Threat.NoiseSource;
-            if (Threat.NoiseSource != null) return; // set by whoever raised it (a remote player's noise)
-            if (OwnNoise <= 0 && !CalledFromPlayer()) return;
+            if (Threat.NoiseSource != null)
+            {
+                return; // set by whoever raised it (a remote player's noise)
+            }
+            if (OwnNoise <= 0 && !CalledFromPlayer())
+            {
+                return;
+            }
             var s = Net.Session.Instance;
             if (s != null && s.IsClient && NetEnemies.ClientMode)
             {
@@ -489,7 +656,10 @@ namespace DarkwoodMP.Combat
             for (int i = 0; i < st.FrameCount && i < 6; i++)
             {
                 var t = st.GetFrame(i)?.GetMethod()?.DeclaringType;
-                if (t == null || t == typeof(PlayerNoisePatch) || t == typeof(Character)) continue;
+                if (t == null || t == typeof(PlayerNoisePatch) || t == typeof(Character))
+                {
+                    continue;
+                }
                 return t == typeof(Player) || (t.DeclaringType == typeof(Player)); // Player's methods, or its lambdas/iterators
             }
             return false;
@@ -505,13 +675,22 @@ namespace DarkwoodMP.Combat
         public static void OnRemoteNoise(ulong from, Net.PacketReader r)
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             Vector3 pos = r.ReadVector3();
             float range = Mathf.Clamp(r.R.ReadSingle(), 0f, 2000f);
             float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 5f);
             byte f = r.R.ReadByte();
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null) return;
-            if ((proxy.transform.position - pos).sqrMagnitude > 500f * 500f) return; // it's meant to be where they are
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null)
+            {
+                return;
+            }
+            if ((proxy.transform.position - pos).sqrMagnitude > 500f * 500f)
+            {
+                return; // it's meant to be where they are
+            }
             var before = Threat.NoiseSource;
             Threat.NoiseSource = proxy;
             try { Character.alertInArea(pos, range, (f & 1) != 0, volume, (f & 2) != 0); }
@@ -540,19 +719,28 @@ namespace DarkwoodMP.Combat
         {
             __state = false;
             var player = Player.Instance;
-            if (player == null) return;
+            if (player == null)
+            {
+                return;
+            }
             switch (__instance)
             {
                 case Door _: __state = __args.Length > 0 && __args[__args.Length > 1 ? 1 : 0] is Transform t && t != null && t.GetComponent<Player>() != null; break;
                 case MeleeSensor m: __state = m.type == MeleeSensor.MeleeSensorType.player; break;
                 case ItemSounds _: __state = true; break; // it checks our player itself
             }
-            if (__state) PlayerNoisePatch.OwnNoise++;
+            if (__state)
+            {
+                PlayerNoisePatch.OwnNoise++;
+            }
         }
 
         static System.Exception Finalizer(System.Exception __exception, bool __state)
         {
-            if (__state) PlayerNoisePatch.OwnNoise--;
+            if (__state)
+            {
+                PlayerNoisePatch.OwnNoise--;
+            }
             return __exception;
         }
     }
@@ -574,7 +762,10 @@ namespace DarkwoodMP.Combat
     {
         static void Prefix(MeleeSensor __instance)
         {
-            if (NetEnemies.ClientMode && __instance.type == MeleeSensor.MeleeSensorType.player) NetEnemies.HitEffects = __instance.effects;
+            if (NetEnemies.ClientMode && __instance.type == MeleeSensor.MeleeSensorType.player)
+            {
+                NetEnemies.HitEffects = __instance.effects;
+            }
         }
         static void Postfix() { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); }
         static System.Exception Finalizer(System.Exception __exception) { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); return __exception; }
@@ -593,7 +784,10 @@ namespace DarkwoodMP.Combat
 
         static bool Prefix(CharacterEffects __instance)
         {
-            if (!NetEnemies.ClientMode || NetEnemies.Instance == null) return true;
+            if (!NetEnemies.ClientMode || NetEnemies.Instance == null)
+            {
+                return true;
+            }
             var c = __instance.GetComponent<Character>();
             return c == null || (!NetEnemies.Instance.IsPuppet(c, out _) && !NetEnemies.Frozen.Contains(c) && !HostileNpcs.EffectsForwarded(c));
         }
@@ -608,14 +802,23 @@ namespace DarkwoodMP.Combat
     {
         static bool Prefix(Character __instance)
         {
-            if (!Threat.Enabled || __instance.dummy) return true;
+            if (!Threat.Enabled || __instance.dummy)
+            {
+                return true;
+            }
             // An NPC a joiner's event sends after "the player" (a dialogue's outcome, run here for them) goes for them.
             var requester = __instance.npc != null ? World.Authority.Requester : null;
             if (requester != null) { HostileNpcs.SendAfter(__instance, requester); return false; }
             var best = Threat.BestPlayerFor(__instance);
-            if (best == null || best is Player) return true; // the host's player: as the game does it
+            if (best == null || best is Player)
+            {
+                return true; // the host's player: as the game does it
+            }
             JoinerAi.GoFor(__instance, best.transform);
-            if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
+            if (Threat.Debug)
+            {
+                Plugin.Log.LogInfo($"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
+            }
             return false;
         }
     }
@@ -712,22 +915,37 @@ namespace DarkwoodMP.Combat
 
         static bool Prefix(Character __instance)
         {
-            if (!Threat.Enabled) return true;
+            if (!Threat.Enabled)
+            {
+                return true;
+            }
             var c = __instance;
-            if (c.summonsAfterEscaping) return false;
+            if (c.summonsAfterEscaping)
+            {
+                return false;
+            }
             if (c.wantToDespawn) { c.runAway(Threat.FleeFrom(c)); return false; }
-            if (c.behaviour != Character.Behaviour.escaping) return false;
+            if (c.behaviour != Character.Behaviour.escaping)
+            {
+                return false;
+            }
             Vector3 me = c.transform.position;
             int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200); // the game's radius and layers
             CharBase nearest = null; float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
                 var cb = _near[i] != null ? _near[i].GetComponent<CharBase>() : null;
-                if (!Proxies.IsPlayer(cb) || (cb is NetPlayerProxy && !cb.alive)) continue;
+                if (!Proxies.IsPlayer(cb) || (cb is NetPlayerProxy && !cb.alive))
+                {
+                    continue;
+                }
                 float d = Core.trueDistance(cb.transform.position, me);
                 if (d < best) { best = d; nearest = cb; }
             }
-            if (nearest != null) c.runAway(nearest.transform.position);
+            if (nearest != null)
+            {
+                c.runAway(nearest.transform.position);
+            }
             return false;
         }
     }
@@ -742,7 +960,10 @@ namespace DarkwoodMP.Combat
     {
         static System.Exception Finalizer(Character __instance, System.Exception __exception)
         {
-            if (__exception is System.NullReferenceException && __instance != null && __instance.cuttingInHalf && __instance.GetComponent<Rigidbody>() == null) return null;
+            if (__exception is System.NullReferenceException && __instance != null && __instance.cuttingInHalf && __instance.GetComponent<Rigidbody>() == null)
+            {
+                return null;
+            }
             return __exception;
         }
     }

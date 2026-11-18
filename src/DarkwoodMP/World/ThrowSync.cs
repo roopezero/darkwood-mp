@@ -47,29 +47,59 @@ namespace DarkwoodMP.World
         /// <summary>The local player threw it (called after Player.throwItem).</summary>
         internal void Thrown(string type, GameObject go, Vector3 from, bool dropped = false)
         {
-            if (!WorldActions.Sharing || go == null || string.IsNullOrEmpty(type)) return;
+            if (!WorldActions.Sharing || go == null || string.IsNullOrEmpty(type))
+            {
+                return;
+            }
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
-            if (ti == null || rb == null) return;
+            if (ti == null || rb == null)
+            {
+                return;
+            }
             var w = _session.Begin(MsgType.ItemThrown);
             Write(w, _session.LocalId, type, go.transform.position, go.transform.rotation, dropped ? Vector3.zero : rb.velocity, dropped ? go.transform.position : ti.landTarget, dropped ? Dropped : Vector3.Distance(ti.landTarget, from));
-            if (_session.IsHost) _session.Broadcast(w, Channel.Control, reliable: true);
-            else _session.SendToHost(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {(dropped ? "dropped" : "threw")} {type}");
+            if (_session.IsHost)
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                _session.SendToHost(w, Channel.Control, reliable: true);
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {(dropped ? "dropped" : "threw")} {type}");
+            }
         }
 
         /// <summary>The copy of a throw doesn't collide with its thrower's stand-in (the host's proxy) or puppet.</summary>
         private static void IgnoreThrower(GameObject go, ulong by)
         {
             var mine = go.GetComponentsInChildren<Collider>(true);
-            if (mine.Length == 0) return;
+            if (mine.Length == 0)
+            {
+                return;
+            }
             var theirs = new List<Collider>();
-            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null) theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
+            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null)
+            {
+                theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
+            }
             if (PlayerSync.Instance != null && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp) && rp.Root != null)
+            {
                 theirs.AddRange(rp.Root.GetComponentsInChildren<Collider>(true));
+            }
             foreach (var a in mine)
+            {
                 foreach (var b in theirs)
-                    if (a != null && b != null) Physics.IgnoreCollision(a, b);
+                {
+                    if (a != null && b != null)
+                    {
+                        Physics.IgnoreCollision(a, b);
+                    }
+                }
+            }
         }
 
         /// <summary>The distance sent for something dropped at the player's feet (Player.dropItem), not thrown.</summary>
@@ -89,8 +119,14 @@ namespace DarkwoodMP.World
         private void OnThrown(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (!WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             ulong by = r.R.ReadUInt64();
             string type = r.ReadStr();
             var pos = r.ReadVector3();
@@ -110,7 +146,10 @@ namespace DarkwoodMP.World
                 Write(w, by, type, pos, rot, vel, target, distance);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
-            if (by == s.LocalId) return;
+            if (by == s.LocalId)
+            {
+                return;
+            }
 
             var item = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
             if (item == null || item.item == null) { Plugin.Log.LogWarning($"Someone threw a {type}, which this game doesn't know"); return; }
@@ -118,20 +157,32 @@ namespace DarkwoodMP.World
             // Who threw it, as the game's code sees them: the host's proxy for them (the AI's view of that player,
             // so the host's enemies blame the right player), else their puppet.
             Transform thrower = null;
-            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null) thrower = proxy.transform;
-            else if (PlayerSync.Instance != null && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp) && rp.Root != null) thrower = rp.Root.transform;
+            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null)
+            {
+                thrower = proxy.transform;
+            }
+            else if (PlayerSync.Instance != null && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp) && rp.Root != null)
+            {
+                thrower = rp.Root.transform;
+            }
 
             GameObject go;
             WorldActions.Replaying = true;
             try { go = Core.AddPrefab(item.item, pos, rot, null); }
             finally { WorldActions.Replaying = false; }
-            if (go == null) return;
+            if (go == null)
+            {
+                return;
+            }
 
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { Object.Destroy(go); return; }
             var ren = go.GetComponent<Renderer>();
-            if (ren != null) ren.enabled = true;
+            if (ren != null)
+            {
+                ren.enabled = true;
+            }
             // The thrower's game makes it inside their player and keeps it from hitting them (Player's aim:
             // Physics.IgnoreCollision with the player). The copy starts inside their stand-in here: without the same,
             // a molotov or gas bomb broke on the thrower at once and set them alight.
@@ -142,27 +193,54 @@ namespace DarkwoodMP.World
                 rb.velocity = Vector3.zero;
                 ti.objectThatSpawnedMe = thrower;
                 var dex = go.GetComponent<Explodes>();
-                if (dex != null) dex.objectThatSpawnedMe = thrower;
+                if (dex != null)
+                {
+                    dex.objectThatSpawnedMe = thrower;
+                }
                 ThrownHits.Copies.Add(go);
                 ti.dropMe();
-                if (s.IsHost) Core.addToSaveable(go, isDynamic: true);
-                if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {s.NameOf(by)} dropped {type}");
+                if (s.IsHost)
+                {
+                    Core.addToSaveable(go, isDynamic: true);
+                }
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {s.NameOf(by)} dropped {type}");
+                }
                 return;
             }
             rb.drag = 2f;
             rb.velocity = vel;
-            if (ti.initialRotationForce == 0f) rb.angularVelocity = Vector3.zero;
-            else rb.AddTorque(0f, ti.initialRotationForce * 1000f, 0f);
+            if (ti.initialRotationForce == 0f)
+            {
+                rb.angularVelocity = Vector3.zero;
+            }
+            else
+            {
+                rb.AddTorque(0f, ti.initialRotationForce * 1000f, 0f);
+            }
             ti.landTarget = target;
             ti.thrown = true;
             ti.objectThatSpawnedMe = thrower;
             ti.setFallSpeed(distance);
             var ex = go.GetComponent<Explodes>();
-            if (ex != null) ex.objectThatSpawnedMe = thrower;
+            if (ex != null)
+            {
+                ex.objectThatSpawnedMe = thrower;
+            }
             ThrownHits.Copies.Add(go);
-            if (item.recoverableAfterThrown) Object.Destroy(go, ti.flyTime + 2f); // the thrower's lands; this one goes
-            else if (s.IsHost) Core.addToSaveable(go, isDynamic: true); // a flare left burning, a spent molotov: the host's world keeps it
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {s.NameOf(by)} threw {type}");
+            if (item.recoverableAfterThrown)
+            {
+                Object.Destroy(go, ti.flyTime + 2f); // the thrower's lands; this one goes
+            }
+            else if (s.IsHost)
+            {
+                Core.addToSaveable(go, isDynamic: true); // a flare left burning, a spent molotov: the host's world keeps it
+            }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {s.NameOf(by)} threw {type}");
+            }
         }
     }
 
@@ -178,7 +256,9 @@ namespace DarkwoodMP.World
         static void Postfix(Player __instance, (GameObject go, string type) __state)
         {
             if (__state.go != null && ThrowSync.Held(__instance) == null)
+            {
                 ThrowSync.Instance?.Thrown(__state.type, __state.go, __instance.transform.position, dropped: true);
+            }
         }
     }
 
@@ -189,7 +269,10 @@ namespace DarkwoodMP.World
 
         static void Postfix(Player __instance, (GameObject go, string type) __state)
         {
-            if (__state.go != null) ThrowSync.Instance?.Thrown(__state.type, __state.go, __instance.transform.position);
+            if (__state.go != null)
+            {
+                ThrowSync.Instance?.Thrown(__state.type, __state.go, __instance.transform.position);
+            }
         }
     }
 
@@ -214,10 +297,21 @@ namespace DarkwoodMP.World
         /// <summary>Whether a hit happening now comes from something thrown.</summary>
         public static bool Now()
         {
-            if (Depth > 0) return true;
-            if (CurrentFlame == null) return false;
+            if (Depth > 0)
+            {
+                return true;
+            }
+            if (CurrentFlame == null)
+            {
+                return false;
+            }
             for (var t = CurrentFlame.transform; t != null; t = t.parent)
-                if (Spawned.Contains(t.gameObject)) return true;
+            {
+                if (Spawned.Contains(t.gameObject))
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -229,7 +323,14 @@ namespace DarkwoodMP.World
     {
         static void Prefix() => ThrownHits.Depth++;
         static void Postfix() => ThrownHits.Depth--;
-        static System.Exception Finalizer(System.Exception __exception) { if (__exception != null) ThrownHits.Depth = 0; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            if (__exception != null)
+            {
+                ThrownHits.Depth = 0;
+            }
+            return __exception;
+        }
     }
 
     [HarmonyPatch]
@@ -243,7 +344,14 @@ namespace DarkwoodMP.World
         }
         static void Prefix() => ThrownHits.Depth++;
         static void Postfix() => ThrownHits.Depth--;
-        static System.Exception Finalizer(System.Exception __exception) { if (__exception != null) ThrownHits.Depth = 0; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            if (__exception != null)
+            {
+                ThrownHits.Depth = 0;
+            }
+            return __exception;
+        }
     }
 
     /// <summary>
@@ -261,17 +369,29 @@ namespace DarkwoodMP.World
             ThrownHits.CurrentFlame = __instance;
             __state = null;
             EnemyAreaHits.FlameTouch(__instance, _transform, _collider);
-            if (!NetEnemies.ClientMode || __instance == null || !__instance.isActive || !EnemyAreaHits.ByLocalPlayer(__instance)) return;
-            if (__instance.effect != null) NetEnemies.HitEffects = new List<InvItemEffect> { __instance.effect };
+            if (!NetEnemies.ClientMode || __instance == null || !__instance.isActive || !EnemyAreaHits.ByLocalPlayer(__instance))
+            {
+                return;
+            }
+            if (__instance.effect != null)
+            {
+                NetEnemies.HitEffects = new List<InvItemEffect> { __instance.effect };
+            }
             var target = FireSync.Flammable(_transform, _collider);
-            if (target != null && target.GetComponent<Burn>() == null) __state = target;
+            if (target != null && target.GetComponent<Burn>() == null)
+            {
+                __state = target;
+            }
         }
 
         static void Postfix(GameObject __state)
         {
             ThrownHits.CurrentFlame = null;
             NetEnemies.HitEffects = null;
-            if (__state != null && __state.GetComponent<Burn>() != null) FireSync.Instance?.ClientIgnited(__state);
+            if (__state != null && __state.GetComponent<Burn>() != null)
+            {
+                FireSync.Instance?.ClientIgnited(__state);
+            }
         }
 
         static System.Exception Finalizer(System.Exception __exception)
@@ -292,7 +412,13 @@ namespace DarkwoodMP.World
             yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
         }
 
-        static void Postfix(GameObject __result) { if (ThrownHits.Depth > 0 && __result != null) ThrownHits.Spawned.Add(__result); }
+        static void Postfix(GameObject __result)
+        {
+            if (ThrownHits.Depth > 0 && __result != null)
+            {
+                ThrownHits.Spawned.Add(__result);
+            }
+        }
     }
 
     /// <summary>Client: an explosion that catches our own player is the host's to report (through our proxy there), effects included.</summary>
@@ -314,7 +440,12 @@ namespace DarkwoodMP.World
         {
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 12; i++)
-                if (st.GetFrame(i)?.GetMethod()?.DeclaringType == typeof(Explodes)) return true;
+            {
+                if (st.GetFrame(i)?.GetMethod()?.DeclaringType == typeof(Explodes))
+                {
+                    return true;
+                }
+            }
             return false;
         }
     }

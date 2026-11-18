@@ -36,11 +36,20 @@ namespace DarkwoodMP.World
                 var slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? p.Hotbar.slots.FirstOrDefault(s => !s.selected);
                 if (slot == null) { r.Fail("no hotbar slot"); yield break; }
                 slot.inventory = p.Hotbar;
-                if (!InvItemClass.isNull(slot.invItem)) slot.removeItem();
-                foreach (var s in p.Hotbar.slots) s.deselect();
+                if (!InvItemClass.isNull(slot.invItem))
+                {
+                    slot.removeItem();
+                }
+                foreach (var s in p.Hotbar.slots)
+                {
+                    s.deselect();
+                }
                 slot.select(noiseless: true);
                 float until = Time.realtimeSinceStartup + 4f;
-                while ((!InvItemClass.isNull(p.currentItem) && p.currentItem != p.fists || p.switchingItem) && Time.realtimeSinceStartup < until) yield return null;
+                while ((!InvItemClass.isNull(p.currentItem) && p.currentItem != p.fists || p.switchingItem) && Time.realtimeSinceStartup < until)
+                {
+                    yield return null;
+                }
             }
             yield return new WaitForSeconds(0.5f);
             var beam = OwnBeam(p);
@@ -79,20 +88,35 @@ namespace DarkwoodMP.World
                     default: ok = !any(x => Drawn(x.HeldLightShown) || x.LanternLight != null || (x.Beam != null && x.Beam.activeSelf)); break;
                 }
                 shared = SharedMeshes();
-                if ((ok && shared == "") || Time.realtimeSinceStartup > until) break;
+                if ((ok && shared == "") || Time.realtimeSinceStartup > until)
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.3f);
             }
             var view = ViewSource();
             r.Info = $"{what}: puppets {(seen == "" ? "none" : seen)}; {view}";
-            if (!ok) r.Fail($"no puppet shows {what} as wanted: {r.Info}");
-            else if (shared != "") r.Fail($"lights share a mesh: {shared}; {r.Info}");
-            else if (!view.StartsWith("view: ours")) r.Fail(r.Info);
+            if (!ok)
+            {
+                r.Fail($"no puppet shows {what} as wanted: {r.Info}");
+            }
+            else if (shared != "")
+            {
+                r.Fail($"lights share a mesh: {shared}; {r.Info}");
+            }
+            else if (!view.StartsWith("view: ours"))
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>A light that is on and has drawn something (its mesh has triangles).</summary>
         private static bool Drawn(Light2D l)
         {
-            if (l == null || !l.gameObject.activeInHierarchy || l._mesh == null) return false;
+            if (l == null || !l.gameObject.activeInHierarchy || l._mesh == null)
+            {
+                return false;
+            }
             var f = l.GetComponent<MeshFilter>();
             return f != null && f.sharedMesh == l._mesh && l._mesh.vertexCount > 2;
         }
@@ -101,8 +125,14 @@ namespace DarkwoodMP.World
         {
             var parts = new List<string>();
             var held = x.HeldLightShown;
-            if (held != null) parts.Add($"{x.Last?.HeldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
-            if (x.LanternLight != null) parts.Add($"lantern r{x.LanternLight.LightRadius:0} drawn {Drawn(x.LanternLight)}");
+            if (held != null)
+            {
+                parts.Add($"{x.Last?.HeldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
+            }
+            if (x.LanternLight != null)
+            {
+                parts.Add($"lantern r{x.LanternLight.LightRadius:0} drawn {Drawn(x.LanternLight)}");
+            }
             if (x.Beam != null && x.Beam.activeSelf)
             {
                 var l = x.Beam.GetComponent<Light2D>();
@@ -121,9 +151,18 @@ namespace DarkwoodMP.World
             {
                 foreach (var m in new[] { l._mesh, l.GetComponent<MeshFilter>()?.sharedMesh })
                 {
-                    if (m == null) continue;
-                    if (!byMesh.TryGetValue(m, out var list)) byMesh[m] = list = new List<Light2D>();
-                    if (!list.Contains(l)) list.Add(l);
+                    if (m == null)
+                    {
+                        continue;
+                    }
+                    if (!byMesh.TryGetValue(m, out var list))
+                    {
+                        byMesh[m] = list = new List<Light2D>();
+                    }
+                    if (!list.Contains(l))
+                    {
+                        list.Add(l);
+                    }
                 }
             }
             bool mine(Light2D l) => (p != null && l.transform.IsChildOf(p.transform)) || HasPuppetParent(l.transform);
@@ -134,7 +173,13 @@ namespace DarkwoodMP.World
 
         private static bool HasPuppetParent(Transform t)
         {
-            for (var x = t; x != null; x = x.parent) if (x.name.StartsWith("DarkwoodMP_Remote_")) return true;
+            for (var x = t; x != null; x = x.parent)
+            {
+                if (x.name.StartsWith("DarkwoodMP_Remote_"))
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -142,7 +187,10 @@ namespace DarkwoodMP.World
         internal static string ViewSource()
         {
             var p = Player.Instance;
-            if (p == null) return "view: no player";
+            if (p == null)
+            {
+                return "view: no player";
+            }
             var parts = new List<string>();
             bool ours = true;
             foreach (var (name, l) in new[] { ("cone", FovLight(p)), ("dot", FovDot(p)), ("light dot", p.lightDot) })

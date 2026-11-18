@@ -59,7 +59,10 @@ namespace DarkwoodMP.World
             bool set = dict.TryGetValue(name, out var fl) && fl.isTrue;
             r.Info = $"{name} set {set} while sharing was paused";
             // Not set here: the compare that follows would agree on "not set in either" and test nothing.
-            if (!set) r.Fail(r.Info);
+            if (!set)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static string LoopOf(Character c)
@@ -86,7 +89,10 @@ namespace DarkwoodMP.World
             {
                 string now = LoopOf(c);
                 if (now == "") { since = -1f; if (Time.unscaledTime >= next) { next = Time.unscaledTime + 2f; snd.playIdleLoop(play, forceReplace: true); } }
-                else if (since < 0f || now != seen) since = Time.unscaledTime;
+                else if (since < 0f || now != seen)
+                {
+                    since = Time.unscaledTime;
+                }
                 else if (Time.unscaledTime - since >= 1f) { was = now; break; }
                 seen = now;
                 yield return new WaitForSecondsRealtime(0.25f);
@@ -97,7 +103,10 @@ namespace DarkwoodMP.World
             string after = LoopOf(c);
             r.Info = $"{c.name} {ObjRef.Of(c.gameObject)}: loop '{was}' stopped, now '{after}'";
             // A loop playing here again (not stopped, or the AI started one): the enemies compare wouldn't test the stop.
-            if (after != "") r.Fail(r.Info);
+            if (after != "")
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static Door DoorAtCentre() =>
@@ -117,9 +126,15 @@ namespace DarkwoodMP.World
             var d = DoorAtCentre();
             if (d == null) { r.Fail("no door"); yield break; }
             yield return Walk(d.transform.position);
-            if (!d.opened) AsPlayer(() => d.open(P.transform.position, P.transform, 0f));
+            if (!d.opened)
+            {
+                AsPlayer(() => d.open(P.transform.position, P.transform, 0f));
+            }
             float until = Time.unscaledTime + 4f;
-            while (Time.unscaledTime < until && !DoorLeaf.Turned(d)) yield return null;
+            while (Time.unscaledTime < until && !DoorLeaf.Turned(d))
+            {
+                yield return null;
+            }
             yield return new WaitForSecondsRealtime(1f);
             if (!d.opened || !DoorLeaf.Turned(d)) { r.Fail($"{d.name} didn't swing open (open={d.opened}, leaf at {DoorLeaf.Angle(d):0})"); yield break; }
             yield return new WaitForSecondsRealtime(0.5f);
@@ -131,7 +146,10 @@ namespace DarkwoodMP.World
             // Behind the hinge, away from where the leaf points: the leaf is fastened there and doesn't swing there,
             // so our player doesn't stop the turn.
             var u = d.body.position - hinge.connectedAnchor; u.y = 0f;
-            if (u.sqrMagnitude < 1f) u = Vector3.right;
+            if (u.sqrMagnitude < 1f)
+            {
+                u = Vector3.right;
+            }
             yield return Walk(hinge.connectedAnchor - u.normalized * 60f, 40f);
             DoorPush.TestTouch = d;
             try
@@ -142,10 +160,19 @@ namespace DarkwoodMP.World
                 while (d.opened && Time.unscaledTime < until)
                 {
                     yield return new WaitForFixedUpdate();
-                    if (rb == null || rb.isKinematic) break;
+                    if (rb == null || rb.isKinematic)
+                    {
+                        break;
+                    }
                     float now = DoorLeaf.Angle(d);
-                    if (Mathf.Abs(now - target) < 1.5f) break;
-                    if (Mathf.Abs(now - last) > 0.3f && (now > last) != (target > now)) sign = -sign; // going the wrong way
+                    if (Mathf.Abs(now - target) < 1.5f)
+                    {
+                        break;
+                    }
+                    if (Mathf.Abs(now - last) > 0.3f && (now > last) != (target > now))
+                    {
+                        sign = -sign; // going the wrong way
+                    }
                     last = now;
                     rb.angularVelocity = new Vector3(0f, sign * Mathf.Clamp(Mathf.Abs(now - target) * 0.05f, 0.4f, 2f), 0f);
                 }
@@ -154,7 +181,10 @@ namespace DarkwoodMP.World
             }
             finally { DoorPush.TestTouch = null; }
             r.Info = $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
-            if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - target) > 4f) r.Fail($"{r.Info}: not turned to {target:0}");
+            if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - target) > 4f)
+            {
+                r.Fail($"{r.Info}: not turned to {target:0}");
+            }
         }
 
         /// <summary>"sweep-door-leaf ANGLE": the leaf of the door nearest the centre is ANGLE degrees (within 5) from shut here, within the timeout.</summary>
@@ -164,9 +194,15 @@ namespace DarkwoodMP.World
             var d = DoorAtCentre();
             if (d == null) { r.Fail("no door"); yield break; }
             float until = Time.unscaledTime + 10f;
-            while (Time.unscaledTime < until && !(d.opened && Mathf.Abs(DoorLeaf.Angle(d) - want) <= 5f)) yield return null;
+            while (Time.unscaledTime < until && !(d.opened && Mathf.Abs(DoorLeaf.Angle(d) - want) <= 5f))
+            {
+                yield return null;
+            }
             r.Info = $"{d.name} {ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";
-            if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - want) > 5f) r.Fail($"{r.Info}: not at {want:0}");
+            if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - want) > 5f)
+            {
+                r.Fail($"{r.Info}: not at {want:0}");
+            }
         }
     }
 }

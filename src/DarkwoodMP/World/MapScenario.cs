@@ -27,7 +27,13 @@ namespace DarkwoodMP.World
         public sealed class Result
         {
             public string Failure, Info;
-            public void Fail(string why) { if (Failure == null) Failure = why; }
+            public void Fail(string why)
+            {
+                if (Failure == null)
+                {
+                    Failure = why;
+                }
+            }
         }
 
         public delegate IEnumerator Step(string[] args, Result r);
@@ -74,11 +80,17 @@ namespace DarkwoodMP.World
                     bool more;
                     try { more = top.MoveNext(); }
                     catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: {ex}"); r.Fail($"{ex.GetType().Name}: {ex.Message}"); break; }
-                    if (r.Failure != null) break;
+                    if (r.Failure != null)
+                    {
+                        break;
+                    }
                     if (!more)
                     {
                         DisposeLevel(stack.Pop(), name);
-                        if (stack.Count == 0) break;
+                        if (stack.Count == 0)
+                        {
+                            break;
+                        }
                         continue;
                     }
                     if (Time.realtimeSinceStartup > until) { r.Fail("timeout"); break; }
@@ -88,7 +100,10 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                while (stack.Count > 0) DisposeLevel(stack.Pop(), name);
+                while (stack.Count > 0)
+                {
+                    DisposeLevel(stack.Pop(), name);
+                }
                 if (_running == stack) { _running = null; _runningResult = null; }
             }
             WorldActions.TestAsPlayer = false;
@@ -110,9 +125,15 @@ namespace DarkwoodMP.World
         internal static void Stop()
         {
             var stack = _running;
-            if (stack == null) return;
+            if (stack == null)
+            {
+                return;
+            }
             _runningResult?.Fail("stopped");
-            while (stack.Count > 0) DisposeLevel(stack.Pop(), "stop");
+            while (stack.Count > 0)
+            {
+                DisposeLevel(stack.Pop(), "stop");
+            }
             _running = null; _runningResult = null;
         }
 
@@ -142,16 +163,25 @@ namespace DarkwoodMP.World
         public static IEnumerator Walk(Vector3 to, float within = 120f, int detours = 2)
         {
             var p = Player.Instance;
-            if (p == null) yield break;
+            if (p == null)
+            {
+                yield break;
+            }
             // Round the armed traps on the way (not one by where we're going): walking through the station's chain
             // trap caught the host, which then couldn't get anywhere, and sprang a trap a later step was to use.
             var detour = detours > 0 ? Detour(p.transform.position, to, within) : null;
-            if (detour.HasValue) yield return Walk(detour.Value, 20f, detours - 1);
+            if (detour.HasValue)
+            {
+                yield return Walk(detour.Value, 20f, detours - 1);
+            }
             while (true)
             {
                 var at = p.transform.position;
                 var d = new Vector3(to.x - at.x, 0f, to.z - at.z);
-                if (d.magnitude <= within) yield break;
+                if (d.magnitude <= within)
+                {
+                    yield break;
+                }
                 Place(at + Vector3.ClampMagnitude(d, Mathf.Min(WalkSpeed * FrameTime, d.magnitude - within * 0.5f)));
                 yield return null;
             }
@@ -164,7 +194,10 @@ namespace DarkwoodMP.World
             to.y = p.transform.position.y;
             p.transform.position = to;
             var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = to;
+            if (rb != null)
+            {
+                rb.position = to;
+            }
         }
 
         private const float TrapClearance = 110f;
@@ -175,23 +208,41 @@ namespace DarkwoodMP.World
         {
             var seg = new Vector3(to.x - from.x, 0f, to.z - from.z);
             float len = seg.magnitude;
-            if (len < 1f) return null;
+            if (len < 1f)
+            {
+                return null;
+            }
             var dir = seg / len;
             Trigger worst = null; float worstT = float.MaxValue; Vector3 side = Vector3.zero;
             foreach (var t in Object.FindObjectsOfType<Trigger>())
             {
-                if (t == null || !t.active || t.triggered) continue;
+                if (t == null || !t.active || t.triggered)
+                {
+                    continue;
+                }
                 var tp = t.transform.position;
-                if (StateDump.Flat(tp - to) < within + TrapClearance || StateDump.Flat(tp - from) < TrapClearance) continue;
+                if (StateDump.Flat(tp - to) < within + TrapClearance || StateDump.Flat(tp - from) < TrapClearance)
+                {
+                    continue;
+                }
                 var rel = new Vector3(tp.x - from.x, 0f, tp.z - from.z);
                 float along = Vector3.Dot(rel, dir);
-                if (along <= 0f || along >= len) continue;
+                if (along <= 0f || along >= len)
+                {
+                    continue;
+                }
                 var perp = rel - dir * along;
-                if (perp.magnitude >= TrapClearance || along >= worstT) continue;
+                if (perp.magnitude >= TrapClearance || along >= worstT)
+                {
+                    continue;
+                }
                 worst = t; worstT = along;
                 side = perp.sqrMagnitude < 1f ? new Vector3(-dir.z, 0f, dir.x) : -perp.normalized; // to the side away from it
             }
-            if (worst == null) return null;
+            if (worst == null)
+            {
+                return null;
+            }
             var w = worst.transform.position + side * (TrapClearance * 1.6f);
             w.y = from.y;
             return w;
@@ -211,11 +262,26 @@ namespace DarkwoodMP.World
         internal static void HealNow()
         {
             var p = Player.Instance;
-            if (p == null || !p.alive) return;
-            foreach (var b in p.GetComponentsInChildren<Burn>()) if (b != null) b.stop();
-            if (p.effects != null) p.effects.removeAllEffects();
+            if (p == null || !p.alive)
+            {
+                return;
+            }
+            foreach (var b in p.GetComponentsInChildren<Burn>())
+            {
+                if (b != null)
+                {
+                    b.stop();
+                }
+            }
+            if (p.effects != null)
+            {
+                p.effects.removeAllEffects();
+            }
             p.bleeding = false;
-            if (p.inBearTrap) p.stopAllPerformingActionAnims();
+            if (p.inBearTrap)
+            {
+                p.stopAllPerformingActionAnims();
+            }
             p.setHealth(p.maxHealth);
         }
 
@@ -230,7 +296,10 @@ namespace DarkwoodMP.World
             {
                 if (a.Length < 2) { r.Fail("usage: centre X Z"); return None(); }
                 _centre = new Vector3(F(a[0]), 0f, F(a[1]));
-                if (Home == null) Home = _centre;
+                if (Home == null)
+                {
+                    Home = _centre;
+                }
                 return Info(r, Fmt(_centre.Value));
             });
             // "wait SECS": just wait.
@@ -298,10 +367,25 @@ namespace DarkwoodMP.World
             yield return Walk(door.transform.position);
             bool open = a.Length > 0 ? a[0] == "open" : !door.opened;
             if (open != door.opened)
-                AsPlayer(() => { if (open) door.open(p.transform.position, p.transform, 0f); else door.close(p.transform); });
+            {
+                AsPlayer(() =>
+                {
+                    if (open)
+                    {
+                        door.open(p.transform.position, p.transform, 0f);
+                    }
+                    else
+                    {
+                        door.close(p.transform);
+                    }
+                });
+            }
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened}";
-            if (door.opened != open) r.Fail($"{door.name} is still open={door.opened}");
+            if (door.opened != open)
+            {
+                r.Fail($"{door.name} is still open={door.opened}");
+            }
         }
 
         /// <summary>"take-item [TYPE] [--locked]": the first item (of TYPE) from the unlocked container nearest the centre
@@ -324,7 +408,10 @@ namespace DarkwoodMP.World
             int Count() => Carried(p).Where(i => i.type == item.type).Sum(i => i.amount);
             int before = Count();
             AsPlayer(() => { slot.removeItem(); p.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true); });
-            if (Count() <= before) r.Fail($"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
+            if (Count() <= before)
+            {
+                r.Fail($"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
+            }
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
@@ -373,23 +460,40 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var parts = new List<string> { $"we: health {(p != null ? p.health : 0f):0}" };
-            if (p == null || !p.alive || p.health <= 0f) r.Fail($"our player is dead (health {(p != null ? p.health : 0f):0})");
+            if (p == null || !p.alive || p.health <= 0f)
+            {
+                r.Fail($"our player is dead (health {(p != null ? p.health : 0f):0})");
+            }
             var ps = Sync.PlayerSync.Instance;
             if (ps != null)
+            {
                 foreach (var rp in ps.Remotes.Values)
                 {
-                    if (rp.Owner == Sync.PlayerSync.DummyId) continue;
+                    if (rp.Owner == Sync.PlayerSync.DummyId)
+                    {
+                        continue;
+                    }
                     var last = rp.Last;
                     parts.Add($"{rp.Name}: alive {rp.Alive}, health {(last != null ? last.Health.ToString() : "?")}%");
-                    if (!rp.Alive || (last != null && last.Health <= 0)) r.Fail($"{rp.Name} is dead");
+                    if (!rp.Alive || (last != null && last.Health <= 0))
+                    {
+                        r.Fail($"{rp.Name} is dead");
+                    }
                 }
+            }
             var lines = MapScenarioIssues.LogLines();
             int from = lines.FindLastIndex(l => l.Contains("World ready"));
             // (Not our own earlier "[map] alive" failures, which quote those lines.)
             var deaths = lines.Skip(Math.Max(0, from)).Where(l => !l.Contains("[map]") && ((l.Contains("[notice]") && l.TrimEnd().EndsWith(" died")) || l.Contains("A death didn't"))).ToList();
-            if (deaths.Count > 0) r.Fail($"deaths in the log: {string.Join(" | ", deaths.Select(l => l.Trim()))}");
+            if (deaths.Count > 0)
+            {
+                r.Fail($"deaths in the log: {string.Join(" | ", deaths.Select(l => l.Trim()))}");
+            }
             r.Info = string.Join("; ", parts);
-            if (r.Failure != null) r.Failure += "; " + r.Info;
+            if (r.Failure != null)
+            {
+                r.Failure += "; " + r.Info;
+            }
             yield break;
         }
 

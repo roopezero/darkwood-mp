@@ -20,7 +20,10 @@ namespace DarkwoodMP
         public static void Update()
         {
             var mm = Singleton<MainMenu>.Instance;
-            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy) return;
+            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy)
+            {
+                return;
+            }
             MenuWords.Update(mm);
             // The mod's version under the game's, both in the bottom right corner (MenuLayout).
             var v = mm.CurrentVersion;
@@ -35,10 +38,16 @@ namespace DarkwoodMP
 
         internal static void PauseMenuOpened(MainMenu mm)
         {
-            if (!World.WorldShare.PauseMenuInWorld) return;
+            if (!World.WorldShare.PauseMenuInWorld)
+            {
+                return;
+            }
             // The world stays drawn behind the menu, playing alone too (the game turns its camera off).
             var cam = Singleton<CamMain>.Instance;
-            if (cam != null && !cam.gameObject.activeSelf) cam.gameObject.SetActive(true);
+            if (cam != null && !cam.gameObject.activeSelf)
+            {
+                cam.gameObject.SetActive(true);
+            }
             var backdrop = mm.transform.Find("Background");
             if (backdrop != null && backdrop.gameObject.activeSelf) { backdrop.gameObject.SetActive(false); _hiddenBackdrop = backdrop.gameObject; }
             if (mm.blackScreen != null && !mm.blackScreen.activeSelf) { mm.blackScreen.SetActive(true); _dimmed = true; }
@@ -51,7 +60,10 @@ namespace DarkwoodMP
         {
             PauseHud.Restore();
             if (_hiddenBackdrop != null) { _hiddenBackdrop.SetActive(true); _hiddenBackdrop = null; }
-            if (_dimmed && mm.blackScreen != null) mm.blackScreen.SetActive(false);
+            if (_dimmed && mm.blackScreen != null)
+            {
+                mm.blackScreen.SetActive(false);
+            }
             _dimmed = false;
         }
     }
@@ -88,7 +100,10 @@ namespace DarkwoodMP
             {
                 var w = _words[i];
                 if (w.Button == null || w.Text == null) { _words.RemoveAt(i); continue; }
-                if (w.PictureRenderer != null && w.PictureRenderer.enabled) w.PictureRenderer.enabled = false;
+                if (w.PictureRenderer != null && w.PictureRenderer.enabled)
+                {
+                    w.PictureRenderer.enabled = false;
+                }
                 var c = w.Button.rolledOver ? Color.white : Grey;
                 c.a = w.Picture != null ? w.Picture.color.a : 1f;
                 if (w.Text.color != c) { w.Text.color = c; w.Text.Commit(); }
@@ -98,10 +113,16 @@ namespace DarkwoodMP
         private static void Scan(MainMenu mm)
         {
             var font = mm.CurrentVersion != null ? mm.CurrentVersion.font : null;
-            if (font == null) return;
+            if (font == null)
+            {
+                return;
+            }
             foreach (var b in mm.GetComponentsInChildren<global::Button>(true))
             {
-                if (b == null || !_seen.Add(b.GetInstanceID())) continue;
+                if (b == null || !_seen.Add(b.GetInstanceID()))
+                {
+                    continue;
+                }
                 try { Redraw(b, font); }
                 catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't redraw the menu's {b.name}: {e.Message}"); }
             }
@@ -110,14 +131,26 @@ namespace DarkwoodMP
         private static void Redraw(global::Button b, tk2dFontData font)
         {
             var pic = b.GetComponent<tk2dBaseSprite>();
-            if (pic == null || pic.Collection == null || !pic.Collection.spriteCollectionName.StartsWith("MainMenuButtons")) return;
+            if (pic == null || pic.Collection == null || !pic.Collection.spriteCollectionName.StartsWith("MainMenuButtons"))
+            {
+                return;
+            }
             string sprite = pic.CurrentSprite?.name ?? "";
             int cut = sprite.IndexOf('_');
-            if (cut <= 0 || !Keys.TryGetValue(sprite.Substring(0, cut), out var key)) return;
+            if (cut <= 0 || !Keys.TryGetValue(sprite.Substring(0, cut), out var key))
+            {
+                return;
+            }
             string word = global::Language.Get(key, "UI");
-            if (string.IsNullOrEmpty(word)) return;
+            if (string.IsNullOrEmpty(word))
+            {
+                return;
+            }
             word = word.ToUpper();
-            if (!HasLetters(font, word)) return;
+            if (!HasLetters(font, word))
+            {
+                return;
+            }
 
             var label = new GameObject(LabelName);
             label.layer = b.gameObject.layer;
@@ -139,8 +172,14 @@ namespace DarkwoodMP
         {
             foreach (char ch in word)
             {
-                if (ch == ' ') continue;
-                if (font.useDictionary ? font.charDict == null || !font.charDict.ContainsKey(ch) : font.chars == null || ch >= font.chars.Length || font.chars[ch] == null || font.chars[ch].advance <= 0f) return false;
+                if (ch == ' ')
+                {
+                    continue;
+                }
+                if (font.useDictionary ? font.charDict == null || !font.charDict.ContainsKey(ch) : font.chars == null || ch >= font.chars.Length || font.chars[ch] == null || font.chars[ch].advance <= 0f)
+                {
+                    return false;
+                }
             }
             return true;
         }
@@ -159,7 +198,10 @@ namespace DarkwoodMP
         static void Postfix(PositionMe __instance)
         {
             var mm = Singleton<MainMenu>.Instance;
-            if (mm == null || mm.Menu0 == null || !__instance.transform.IsChildOf(mm.Menu0.transform)) return;
+            if (mm == null || mm.Menu0 == null || !__instance.transform.IsChildOf(mm.Menu0.transform))
+            {
+                return;
+            }
             MenuLayout.Apply(mm);
         }
     }
@@ -180,9 +222,15 @@ namespace DarkwoodMP
 
         public static void Apply(MainMenu mm)
         {
-            if (_busy || mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy) return;
+            if (_busy || mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy)
+            {
+                return;
+            }
             var cam = Core.CamUI != null ? Core.CamUI.GetComponent<Camera>() : null;
-            if (cam == null) return;
+            if (cam == null)
+            {
+                return;
+            }
             _busy = true;
             try { Lay(mm, cam); }
             catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't lay out the menu: {e.Message}"); }
@@ -213,12 +261,21 @@ namespace DarkwoodMP
             float margin = H * Corner, bottom = margin;
             foreach (var t in new[] { mm.CurrentVersion, mm.Menu0.transform.Find("playerID")?.GetComponent<tk2dTextMesh>() })
             {
-                if (t == null || !t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text)) continue;
+                if (t == null || !t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text))
+                {
+                    continue;
+                }
                 if (t.anchor != TextAnchor.LowerRight) { t.anchor = TextAnchor.LowerRight; t.Commit(); }
                 var r = t.GetComponent<Renderer>();
-                if (r == null) continue;
+                if (r == null)
+                {
+                    continue;
+                }
                 var rect = ScreenRect(cam, r.bounds);
-                if (rect.height < 1f) continue;
+                if (rect.height < 1f)
+                {
+                    continue;
+                }
                 MoveBy(cam, t.transform, (W - margin) - rect.xMax, bottom - rect.yMin);
                 bottom += rect.height + margin * 0.5f;
             }
@@ -226,7 +283,10 @@ namespace DarkwoodMP
 
         private static void ToFront(Transform t, float? y)
         {
-            if (y == null || Mathf.Abs(t.position.y - y.Value) < 0.01f) return;
+            if (y == null || Mathf.Abs(t.position.y - y.Value) < 0.01f)
+            {
+                return;
+            }
             var p = t.position;
             t.position = new Vector3(p.x, y.Value, p.z);
         }
@@ -234,7 +294,10 @@ namespace DarkwoodMP
         /// <summary>Move a thing by this many screen pixels (whole pixels, so the bitmap font stays sharp).</summary>
         private static void MoveBy(Camera cam, Transform t, float dx, float dy)
         {
-            if (Mathf.Abs(dx) < 0.5f && Mathf.Abs(dy) < 0.5f) return;
+            if (Mathf.Abs(dx) < 0.5f && Mathf.Abs(dy) < 0.5f)
+            {
+                return;
+            }
             var at = cam.WorldToScreenPoint(t.position);
             t.position = cam.ScreenToWorldPoint(new Vector3(at.x + Mathf.Round(dx), at.y + Mathf.Round(dy), at.z));
         }
@@ -279,10 +342,16 @@ namespace DarkwoodMP
 
         public static void Hide()
         {
-            if (_hidden) return;
+            if (_hidden)
+            {
+                return;
+            }
             var p = Player.Instance;
             var ui = Singleton<UI>.Instance;
-            if (p == null || ui == null) return;
+            if (p == null || ui == null)
+            {
+                return;
+            }
             _hidden = true;
             Window(p.Inventory, null);
             Window(p.Hotbar, null);
@@ -291,27 +360,54 @@ namespace DarkwoodMP
             Window(c1, () => p.openedItemInventory == c1 || p.openedItemInventory2 == c1);
             Window(c2, () => p.openedItemInventory == c2 || p.openedItemInventory2 == c2);
             var up = ui.upgradeItemMenu;
-            if (up != null && up.opened) Deactivate(up.gameObject, () => up.opened);
+            if (up != null && up.opened)
+            {
+                Deactivate(up.gameObject, () => up.opened);
+            }
             Deactivate(ui.bars, null);
-            if (ui.clock != null) Renderers(ui.clock.gameObject, self: true);
-            if (p.progressBar != null) Renderers(p.progressBar.gameObject, self: false);
-            foreach (var go in p.attachedGameObjects) if (go != null) Renderers(go, self: false);
+            if (ui.clock != null)
+            {
+                Renderers(ui.clock.gameObject, self: true);
+            }
+            if (p.progressBar != null)
+            {
+                Renderers(p.progressBar.gameObject, self: false);
+            }
+            foreach (var go in p.attachedGameObjects)
+            {
+                if (go != null)
+                {
+                    Renderers(go, self: false);
+                }
+            }
             Plugin.Log.LogInfo($"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} renderers");
         }
 
         public static void Restore()
         {
-            if (!_hidden) return;
+            if (!_hidden)
+            {
+                return;
+            }
             _hidden = false;
             int back = 0;
             foreach (var o in _off)
             {
-                if (o.Go == null || o.Go.activeSelf) continue;
+                if (o.Go == null || o.Go.activeSelf)
+                {
+                    continue;
+                }
                 bool still;
                 try { still = o.Still == null || o.Still(); } catch { still = false; }
                 if (still) { o.Go.SetActive(true); back++; }
             }
-            foreach (var r in _renderers) if (r != null) r.enabled = true;
+            foreach (var r in _renderers)
+            {
+                if (r != null)
+                {
+                    r.enabled = true;
+                }
+            }
             Plugin.Log.LogInfo($"[pause hud] restored: {back} of {_off.Count} windows, {_renderers.Count} renderers");
             _off.Clear();
             _renderers.Clear();
@@ -319,12 +415,18 @@ namespace DarkwoodMP
 
         private static void Window(Inventory inv, Func<bool> still)
         {
-            if (inv != null) Deactivate(inv.thisUI, still);
+            if (inv != null)
+            {
+                Deactivate(inv.thisUI, still);
+            }
         }
 
         private static void Deactivate(GameObject go, Func<bool> still)
         {
-            if (go == null || !go.activeSelf || _off.Exists(o => o.Go == go)) return;
+            if (go == null || !go.activeSelf || _off.Exists(o => o.Go == go))
+            {
+                return;
+            }
             go.SetActive(false);
             _off.Add(new Off { Go = go, Still = still });
         }
@@ -333,7 +435,10 @@ namespace DarkwoodMP
         {
             var rs = self ? new[] { go.GetComponent<Renderer>() } : go.GetComponentsInChildren<Renderer>(false);
             foreach (var r in rs)
-                if (r != null && r.enabled) { r.enabled = false; _renderers.Add(r); }
+            {
+                if (r != null && r.enabled)
+                { r.enabled = false; _renderers.Add(r); }
+            }
         }
 
         /// <summary>For the tests: the parts of the HUD shown now, by name ("none" if none).</summary>
@@ -341,18 +446,33 @@ namespace DarkwoodMP
         {
             var p = Player.Instance;
             var ui = Singleton<UI>.Instance;
-            if (p == null || ui == null) return "no player";
+            if (p == null || ui == null)
+            {
+                return "no player";
+            }
             var on = new List<string>();
-            void Go(string name, GameObject go) { if (go != null && go.activeInHierarchy) on.Add(name); }
+            void Go(string name, GameObject go)
+            {
+                if (go != null && go.activeInHierarchy)
+                {
+                    on.Add(name);
+                }
+            }
             Go("backpack", p.Inventory != null ? p.Inventory.thisUI : null);
             Go("hotbar", p.Hotbar != null ? p.Hotbar.thisUI : null);
             Go("crafting", p.Crafting != null ? p.Crafting.thisUI : null);
             Go("container", p.openedItemInventory != null ? p.openedItemInventory.thisUI : null);
             Go("container2", p.openedItemInventory2 != null ? p.openedItemInventory2.thisUI : null);
-            if (ui.upgradeItemMenu != null && ui.upgradeItemMenu.opened) Go("upgrade", ui.upgradeItemMenu.gameObject);
+            if (ui.upgradeItemMenu != null && ui.upgradeItemMenu.opened)
+            {
+                Go("upgrade", ui.upgradeItemMenu.gameObject);
+            }
             Go("bars", ui.bars);
             var cr = ui.clock != null ? ui.clock.GetComponent<Renderer>() : null;
-            if (cr != null && cr.enabled && cr.gameObject.activeInHierarchy) on.Add("clock");
+            if (cr != null && cr.enabled && cr.gameObject.activeInHierarchy)
+            {
+                on.Add("clock");
+            }
             return on.Count == 0 ? "none" : string.Join(" ", on);
         }
     }

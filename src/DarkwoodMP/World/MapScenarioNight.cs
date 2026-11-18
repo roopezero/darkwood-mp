@@ -39,10 +39,22 @@ namespace DarkwoodMP.World
                 var names = NightObjectNames();
                 var listed = new HashSet<GameObject>();
                 foreach (var ch in StateDump.All<WorldChunk>())
+                {
                     foreach (var go in ch.nightSpawnedObjects)
-                        if (go != null && listed.Add(go)) Entry(ctx, go, true);
+                    {
+                        if (go != null && listed.Add(go))
+                        {
+                            Entry(ctx, go, true);
+                        }
+                    }
+                }
                 foreach (var t in StateDump.All<Transform>())
-                    if (t != null && names.Contains(Name(t.gameObject)) && !listed.Contains(t.gameObject)) Entry(ctx, t.gameObject, false);
+                {
+                    if (t != null && names.Contains(Name(t.gameObject)) && !listed.Contains(t.gameObject))
+                    {
+                        Entry(ctx, t.gameObject, false);
+                    }
+                }
             });
         }
 
@@ -66,16 +78,32 @@ namespace DarkwoodMP.World
         /// <summary>The prefabs the night events' spawn steps make.</summary>
         private static HashSet<string> NightObjectNames()
         {
-            if (_names != null) return _names;
+            if (_names != null)
+            {
+                return _names;
+            }
             var names = new HashSet<string>();
             var ns = Singleton<NightScenarios>.Instance;
-            if (ns == null) return names;
+            if (ns == null)
+            {
+                return names;
+            }
             foreach (var sc in ns.scenarios.Where(x => x != null))
+            {
                 foreach (var ce in NightEvents(sc).Where(e => e.theEvent != null))
+                {
                     foreach (var ge in ce.theEvent.gameEvents.Where(g => g != null))
+                    {
                         foreach (var e in ge.events)
+                        {
                             if (e != null && e.type == GameEvent.Type.gameObject && e.gameObjectModifyType == GameEvent.GameObjectModify.spawn && e.targetTransform != null)
+                            {
                                 names.Add(e.targetTransform.name);
+                            }
+                        }
+                    }
+                }
+            }
             return _names = names;
         }
         private static HashSet<string> _names;
@@ -92,35 +120,58 @@ namespace DarkwoodMP.World
             int events = 0;
             foreach (var sc in ns.scenarios)
             {
-                if (sc == null) continue;
+                if (sc == null)
+                {
+                    continue;
+                }
                 foreach (var ce in NightEvents(sc))
                 {
-                    if (!seen.Add(ce)) continue;
+                    if (!seen.Add(ce))
+                    {
+                        continue;
+                    }
                     events++;
                     var re = ce.theEvent;
                     if (re == null) { Plugin.Log.LogInfo($"[night] {sc.name} / {ce.name}: no RandomEvent"); continue; }
                     var steps = new List<string>();
                     if (re.type == RandomEvent.Type.locationEvent)
+                    {
                         foreach (var ge in re.gameEvents)
                         {
-                            if (ge == null) continue;
+                            if (ge == null)
+                            {
+                                continue;
+                            }
                             foreach (var e in ge.events)
                             {
-                                if (e == null || e.disabled) continue;
+                                if (e == null || e.disabled)
+                                {
+                                    continue;
+                                }
                                 string k = Kind(e);
                                 steps.Add(k);
                                 if (!WorldEvents.PresentationOnly(e))
                                 {
-                                    if (!kinds.TryGetValue(k, out var set)) kinds[k] = set = new SortedSet<string>(StringComparer.Ordinal);
+                                    if (!kinds.TryGetValue(k, out var set))
+                                    {
+                                        kinds[k] = set = new SortedSet<string>(StringComparer.Ordinal);
+                                    }
                                     set.Add(ce.name);
                                 }
                             }
                         }
-                    else steps.Add("(" + re.type + (string.IsNullOrEmpty(re.Value) ? "" : " " + re.Value) + ")");
+                    }
+                    else
+                    {
+                        steps.Add("(" + re.type + (string.IsNullOrEmpty(re.Value) ? "" : " " + re.Value) + ")");
+                    }
                     Plugin.Log.LogInfo($"[night] {sc.name} (difficulty {sc.difficulty}) / {ce.name}: {re.type}: {string.Join("; ", steps)}");
                 }
             }
-            foreach (var kv in kinds) Plugin.Log.LogInfo($"[night] world step {kv.Key}: in {string.Join(", ", kv.Value)}");
+            foreach (var kv in kinds)
+            {
+                Plugin.Log.LogInfo($"[night] world step {kv.Key}: in {string.Join(", ", kv.Value)}");
+            }
             r.Info = $"{events} night events; world steps: {string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
             return None();
         }
@@ -146,7 +197,10 @@ namespace DarkwoodMP.World
             }
             var targets = e.locationObjects.Where(o => o != null).Select(o => o.type.ToString())
                 .Concat(e.targetGameObjects.Where(g => g != null).Select(g => g.name)).Distinct().Take(4).ToList();
-            if (e.getTargetFromLocation || targets.Count > 0) k += " [" + (e.getTargetFromLocation ? "location " : "") + string.Join(",", targets) + "]";
+            if (e.getTargetFromLocation || targets.Count > 0)
+            {
+                k += " [" + (e.getTargetFromLocation ? "location " : "") + string.Join(",", targets) + "]";
+            }
             return k;
         }
 
@@ -163,7 +217,14 @@ namespace DarkwoodMP.World
             var ns = Singleton<NightScenarios>.Instance;
             if (p == null || ns == null || a.Length < 1) { r.Fail("usage: nl-event NAME (host, in a world)"); yield break; }
             CustomEvent ev = null;
-            foreach (var sc in ns.scenarios) { ev = sc != null ? WorldEvents.FindEvent(sc, a[0]) : null; if (ev != null) break; }
+            foreach (var sc in ns.scenarios)
+            {
+                ev = sc != null ? WorldEvents.FindEvent(sc, a[0]) : null;
+                if (ev != null)
+                {
+                    break;
+                }
+            }
             if (ev == null) { r.Fail($"no night event {a[0]}"); yield break; }
             var loc = StateDump.All<Location>().Where(l => l.playerBase && !l.isSubLocation)
                 .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
@@ -174,11 +235,17 @@ namespace DarkwoodMP.World
             try { ev.fire(force: true); }
             finally { p.whereAmI.location = was; }
             float until = Time.realtimeSinceStartup + 8f;
-            while (Time.realtimeSinceStartup < until && NightObjects.SentCount == sent) yield return null;
+            while (Time.realtimeSinceStartup < until && NightObjects.SentCount == sent)
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(2f);
             var names = NightObjectNames();
             var made = ObjRef.Spawned.Values.Where(g => g != null && names.Contains(Name(g))).GroupBy(Name).Select(gr => $"{gr.Key} x{gr.Count()}");
-            if (NightObjects.SentCount == sent) r.Fail($"{ev.name} at {loc.name} made nothing");
+            if (NightObjects.SentCount == sent)
+            {
+                r.Fail($"{ev.name} at {loc.name} made nothing");
+            }
             r.Info = $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} objects; night objects now: {string.Join(", ", made)}";
         }
 
@@ -199,7 +266,10 @@ namespace DarkwoodMP.World
                 float ang = i * Mathf.PI * 2f / n;
                 var spot = MapScenarioEnemies.FreeSpot(proxy.transform.position + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 500f);
                 var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true);
-                if (c == null) continue;
+                if (c == null)
+                {
+                    continue;
+                }
                 c.transform.position = spot;
                 _herd.Add(c);
             }
@@ -211,7 +281,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Clear(string[] a, Result r)
         {
             int n = 0;
-            foreach (var c in _herd) if (c != null) { Object.Destroy(c.gameObject); n++; }
+            foreach (var c in _herd)
+            {
+                if (c != null)
+                { Object.Destroy(c.gameObject); n++; }
+            }
             _herd.Clear();
             yield return new WaitForSeconds(1.5f);
             r.Info = $"removed {n}";
@@ -236,16 +310,28 @@ namespace DarkwoodMP.World
                     var to = centre + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 250f;
                     var walk = Walk(to, 60f, detours: 0);
                     float legUntil = Time.realtimeSinceStartup + 6f;
-                    while (Time.realtimeSinceStartup < until && Time.realtimeSinceStartup < legUntil && walk.MoveNext()) yield return walk.Current;
-                    if (p.health < p.maxHealth * 0.5f) p.health = p.maxHealth;
+                    while (Time.realtimeSinceStartup < until && Time.realtimeSinceStartup < legUntil && walk.MoveNext())
+                    {
+                        yield return walk.Current;
+                    }
+                    if (p.health < p.maxHealth * 0.5f)
+                    {
+                        p.health = p.maxHealth;
+                    }
                 }
             }
             finally { EnemyMotion.Stats.On = false; }
             p.health = p.maxHealth;
             string s = EnemyMotion.Stats.Summary();
             Plugin.Log.LogInfo($"[enemy motion] {s}");
-            if (EnemyMotion.Stats.Moving == 0) r.Fail("no enemy of the host's moved by us: " + s);
-            else if (EnemyMotion.Stats.Stalls * 10 > EnemyMotion.Stats.Moving) r.Fail("enemies stood still in over 10% of the frames they moved: " + s);
+            if (EnemyMotion.Stats.Moving == 0)
+            {
+                r.Fail("no enemy of the host's moved by us: " + s);
+            }
+            else if (EnemyMotion.Stats.Stalls * 10 > EnemyMotion.Stats.Moving)
+            {
+                r.Fail("enemies stood still in over 10% of the frames they moved: " + s);
+            }
             r.Info = s;
         }
     }

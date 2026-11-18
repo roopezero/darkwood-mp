@@ -41,9 +41,15 @@ namespace DarkwoodMP.World
         /// <summary>The local player pressed Sort &amp; Stack at this storage.</summary>
         public void SortPressed(Inventory inv)
         {
-            if (inv == null) return;
+            if (inv == null)
+            {
+                return;
+            }
             var ctl = Singleton<Controller>.Instance;
-            if (ctl != null && !InvItemClass.isNull(ctl.pickedUpItem)) return; // an item on the cursor still belongs to a slot
+            if (ctl != null && !InvItemClass.isNull(ctl.pickedUpItem))
+            {
+                return; // an item on the cursor still belongs to a slot
+            }
             var s = _session;
             if (s.IsClient && WorldShare.InWorld)
             {
@@ -51,7 +57,10 @@ namespace DarkwoodMP.World
                 if (!r.Valid) { Plugin.Log.LogWarning($"[slots] can't sort {inv.name}: no name for it in the host's world"); return; }
                 // The host's contents must be our starting point, and what we changed before pressing goes first.
                 if (_awaiting.ContainsKey(inv)) { Plugin.Log.LogInfo($"[slots] sort of {inv.name}: still waiting for the host's contents"); return; }
-                if (_watched.ContainsKey(inv)) Check(inv);
+                if (_watched.ContainsKey(inv))
+                {
+                    Check(inv);
+                }
                 var changed = Sort(inv);
                 var w = s.Begin(MsgType.StorageSort);
                 r.Write(w);
@@ -64,7 +73,10 @@ namespace DarkwoodMP.World
             if (s.IsHost && done.Count > 0)
             {
                 var r = ObjRef.Of(inv.gameObject);
-                if (r.Valid) SendChanges(r, done);
+                if (r.Valid)
+                {
+                    SendChanges(r, done);
+                }
             }
         }
 
@@ -72,7 +84,10 @@ namespace DarkwoodMP.World
         private void OnSort(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!s.IsHost || !WorldShare.InWorld) return;
+            if (!s.IsHost || !WorldShare.InWorld)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv == null || !Is(inv)) { Authority.Refuse("no such workbench storage here"); return; }
@@ -80,11 +95,16 @@ namespace DarkwoodMP.World
             string why = Containers.Refusal(from, inv);
             var ctl = Singleton<Controller>.Instance;
             if (why == null && ctl != null && !InvItemClass.isNull(ctl.pickedUpItem) && ctl.pickedUpItem.slot != null && ctl.pickedUpItem.slot.inventory == inv)
+            {
                 why = "the host is moving an item in it";
+            }
             List<Change> done = why == null ? Sort(inv) : new List<Change>();
             // The requester gets every slot: what to keep if its prediction was right, what to take if not.
             var all = new List<Change>(before.Length);
-            for (int i = 0; i < before.Length && i < inv.slots.Count; i++) all.Add(new Change { Slot = i, Old = before[i], New = Json(inv, i) });
+            for (int i = 0; i < before.Length && i < inv.slots.Count; i++)
+            {
+                all.Add(new Change { Slot = i, Old = before[i], New = Json(inv, i) });
+            }
             SendChanges(obj, all, from, toOnly: true);
             if (why != null)
             {
@@ -92,7 +112,10 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} sorted {inv.name}: refused ({why})");
                 return;
             }
-            if (done.Count > 0) SendChanges(obj, done, from);
+            if (done.Count > 0)
+            {
+                SendChanges(obj, done, from);
+            }
             Plugin.Log.LogInfo($"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} slot(s) changed here");
         }
 
@@ -110,9 +133,18 @@ namespace DarkwoodMP.World
                 obj.Write(w);
                 w.W.Write((byte)n);
                 for (int k = at; k < at + n; k++) { w.W.Write((ushort)changes[k].Slot); w.WriteStr(changes[k].Old); w.WriteStr(changes[k].New); }
-                if (toOnly) s.SendTo(peer, w, Channel.Control, reliable: true);
-                else if (s.IsHost) s.Broadcast(w, Channel.Control, reliable: true, except: peer);
-                else s.SendToHost(w, Channel.Control, reliable: true);
+                if (toOnly)
+                {
+                    s.SendTo(peer, w, Channel.Control, reliable: true);
+                }
+                else if (s.IsHost)
+                {
+                    s.Broadcast(w, Channel.Control, reliable: true, except: peer);
+                }
+                else
+                {
+                    s.SendToHost(w, Channel.Control, reliable: true);
+                }
             }
         }
 
@@ -144,7 +176,10 @@ namespace DarkwoodMP.World
             for (int i = 0; i < inv.slots.Count; i++)
             {
                 var it = inv.slots[i].invItem;
-                if (InvItemClass.isNull(it)) continue;
+                if (InvItemClass.isNull(it))
+                {
+                    continue;
+                }
                 stacks.Add(new Stack { State = new InvItemClass.SaveState(it, i), Base = it.baseClass });
             }
 
@@ -152,11 +187,17 @@ namespace DarkwoodMP.World
             for (int b = 0; b < stacks.Count; b++)
             {
                 var src = stacks[b];
-                if (!src.Mergeable) continue;
+                if (!src.Mergeable)
+                {
+                    continue;
+                }
                 for (int a = 0; a < b && src.State.amount > 0; a++)
                 {
                     var dst = stacks[a];
-                    if (!dst.Mergeable || !dst.SameItem(src) || dst.State.amount <= 0 || dst.State.amount >= dst.Base.maxAmount) continue;
+                    if (!dst.Mergeable || !dst.SameItem(src) || dst.State.amount <= 0 || dst.State.amount >= dst.Base.maxAmount)
+                    {
+                        continue;
+                    }
                     int n = Mathf.Min(src.State.amount, dst.Base.maxAmount - dst.State.amount);
                     dst.State.durability = (dst.State.amount * dst.State.durability + src.State.durability * n) / (dst.State.amount + n);
                     dst.State.amount += n;
@@ -168,12 +209,18 @@ namespace DarkwoodMP.World
             for (int b = 0; b < stacks.Count; b++)
             {
                 var src = stacks[b];
-                if (!src.Pours) continue;
+                if (!src.Pours)
+                {
+                    continue;
+                }
                 for (int a = 0; a < b && src.State.durability > 0.001f; a++)
                 {
                     var dst = stacks[a];
                     float max = dst.Base.maxDurability;
-                    if (!dst.Pours || dst.State.type != src.State.type || dst.State.durability >= max) continue;
+                    if (!dst.Pours || dst.State.type != src.State.type || dst.State.durability >= max)
+                    {
+                        continue;
+                    }
                     float n = Mathf.Min(src.State.durability, max - dst.State.durability);
                     dst.State.durability += n;
                     src.State.durability -= n;
@@ -184,10 +231,22 @@ namespace DarkwoodMP.World
             stacks.Sort((x, y) =>
             {
                 int c = Category(x).CompareTo(Category(y));
-                if (c == 0) c = string.CompareOrdinal(x.State.isRecipe ? "~" + x.State.recipeFor : x.State.type, y.State.isRecipe ? "~" + y.State.recipeFor : y.State.type);
-                if (c == 0) c = y.State.amount.CompareTo(x.State.amount);
-                if (c == 0) c = y.State.durability.CompareTo(x.State.durability);
-                if (c == 0) c = x.State.slotId.CompareTo(y.State.slotId); // stable: equal items keep their order
+                if (c == 0)
+                {
+                    c = string.CompareOrdinal(x.State.isRecipe ? "~" + x.State.recipeFor : x.State.type, y.State.isRecipe ? "~" + y.State.recipeFor : y.State.type);
+                }
+                if (c == 0)
+                {
+                    c = y.State.amount.CompareTo(x.State.amount);
+                }
+                if (c == 0)
+                {
+                    c = y.State.durability.CompareTo(x.State.durability);
+                }
+                if (c == 0)
+                {
+                    c = x.State.slotId.CompareTo(y.State.slotId); // stable: equal items keep their order
+                }
                 return c;
             });
 
@@ -197,7 +256,10 @@ namespace DarkwoodMP.World
             {
                 string json = "";
                 if (i < stacks.Count) { stacks[i].State.slotId = i; json = JsonConvert.SerializeObject(stacks[i].State); }
-                if (json == Json(inv, i)) continue;
+                if (json == Json(inv, i))
+                {
+                    continue;
+                }
                 Set(inv, i, json);
                 changes.Add(new Change { Slot = i, Old = before[i], New = json });
             }
@@ -216,7 +278,10 @@ namespace DarkwoodMP.World
         internal static void AddButton(Inventory inv)
         {
             var ui = inv.thisUI;
-            if (ui == null || ui.transform.Find(ButtonName) != null) return;
+            if (ui == null || ui.transform.Find(ButtonName) != null)
+            {
+                return;
+            }
             try
             {
                 int cols = Mathf.Max(1, inv.maxColumns);
@@ -224,9 +289,15 @@ namespace DarkwoodMP.World
                 const float slot = 60f; // Inventory.slotSize
                 var at = ui.transform.position + new Vector3((cols - 1) * slot * 0.5f, 5f, -rows * slot + 8f); // as far under the slots as Repair Item is under the workbench's
                 var go = Core.AddPrefab("UI/Inventory/RepairBtn", at, Quaternion.Euler(90f, 0f, 0f), ui, worldSpace: true);
-                if (go == null) return;
+                if (go == null)
+                {
+                    return;
+                }
                 go.name = ButtonName;
-                foreach (var loc in go.GetComponentsInChildren<LocalizedText>(true)) Object.DestroyImmediate(loc);
+                foreach (var loc in go.GetComponentsInChildren<LocalizedText>(true))
+                {
+                    Object.DestroyImmediate(loc);
+                }
                 var button = go.GetComponent<global::Button>();
                 var text = button != null && button.textMesh != null ? button.textMesh : go.GetComponentInChildren<tk2dTextMesh>(true);
                 if (text != null) { text.text = "SORT & STACK"; text.Commit(); }
@@ -234,12 +305,21 @@ namespace DarkwoodMP.World
                 {
                     button.function = "";
                     button.localized = false;
-                    if (button.background != null) button.background.SetActive(true);
-                    if (button.disabledBackground != null) button.disabledBackground.SetActive(false);
+                    if (button.background != null)
+                    {
+                        button.background.SetActive(true);
+                    }
+                    if (button.disabledBackground != null)
+                    {
+                        button.disabledBackground.SetActive(false);
+                    }
                     button.OnFire = () =>
                     {
                         AudioController.Play("UI_placeItem");
-                        if (Instance != null) Instance.SortPressed(inv);
+                        if (Instance != null)
+                        {
+                            Instance.SortPressed(inv);
+                        }
                     };
                 }
                 Plugin.Log.LogInfo($"[slots] Sort & Stack button added to {inv.name} at {at}");
@@ -254,9 +334,15 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Inventory __instance)
         {
-            if (__instance == null || !__instance.open) return;
+            if (__instance == null || !__instance.open)
+            {
+                return;
+            }
             var wb = __instance.GetComponent<Workbench>();
-            if (wb != null && wb.normalInventory == __instance) SlotShare.AddButton(__instance);
+            if (wb != null && wb.normalInventory == __instance)
+            {
+                SlotShare.AddButton(__instance);
+            }
         }
     }
 }

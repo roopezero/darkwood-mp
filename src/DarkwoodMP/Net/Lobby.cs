@@ -60,7 +60,10 @@ namespace DarkwoodMP.Net
 
         public void Host()
         {
-            if (InLobby) return;
+            if (InLobby)
+            {
+                return;
+            }
             HostLost = false;
             Status = "Creating lobby...";
             _createResult.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, Protocol.MaxPlayers));
@@ -68,7 +71,10 @@ namespace DarkwoodMP.Net
 
         public void Join(CSteamID lobby)
         {
-            if (InLobby) Leave();
+            if (InLobby)
+            {
+                Leave();
+            }
             HostLost = false;
             _refused = CSteamID.Nil;
             Status = "Joining lobby...";
@@ -77,19 +83,28 @@ namespace DarkwoodMP.Net
 
         public void Leave()
         {
-            if (!InLobby) return;
+            if (!InLobby)
+            {
+                return;
+            }
             SteamMatchmaking.LeaveLobby(Id);
             Id = CSteamID.Nil;
             _hostId = CSteamID.Nil;
             _iAmHost = false;
-            if (!HostLost) Status = "Not connected"; // else keep why, for the notice
+            if (!HostLost)
+            {
+                Status = "Not connected"; // else keep why, for the notice
+            }
             OnLeft?.Invoke();
         }
 
         /// <summary>Client: the host is gone (its connection failed); leave as if it had left the lobby.</summary>
         public void LoseHost(string why)
         {
-            if (!InLobby || _iAmHost) return;
+            if (!InLobby || _iAmHost)
+            {
+                return;
+            }
             HostLost = true;
             Status = why;
             Leave();
@@ -97,15 +112,24 @@ namespace DarkwoodMP.Net
 
         public void OpenInviteDialog()
         {
-            if (InLobby) SteamFriends.ActivateGameOverlayInviteDialog(Id);
+            if (InLobby)
+            {
+                SteamFriends.ActivateGameOverlayInviteDialog(Id);
+            }
         }
 
         public List<CSteamID> Members()
         {
             var list = new List<CSteamID>();
-            if (!InLobby) return list;
+            if (!InLobby)
+            {
+                return list;
+            }
             int n = SteamMatchmaking.GetNumLobbyMembers(Id);
-            for (int i = 0; i < n; i++) list.Add(SteamMatchmaking.GetLobbyMemberByIndex(Id, i));
+            for (int i = 0; i < n; i++)
+            {
+                list.Add(SteamMatchmaking.GetLobbyMemberByIndex(Id, i));
+            }
             return list;
         }
 
@@ -137,7 +161,10 @@ namespace DarkwoodMP.Net
             var id = new CSteamID(r.m_ulSteamIDLobby);
             // Told twice: as JoinLobby's result and as the callback. After a refusal (below) the second one must not
             // let us in: we've left, so the lobby's data reads empty then and the version check would pass.
-            if (id == Id || id == _refused) return;
+            if (id == Id || id == _refused)
+            {
+                return;
+            }
             string proto = SteamMatchmaking.GetLobbyData(id, KeyProto);
             if (!string.IsNullOrEmpty(proto) && proto != Protocol.Version.ToString())
             {
@@ -157,11 +184,16 @@ namespace DarkwoodMP.Net
 
         private void OnChatUpdate(LobbyChatUpdate_t u)
         {
-            if (new CSteamID(u.m_ulSteamIDLobby) != Id) return;
+            if (new CSteamID(u.m_ulSteamIDLobby) != Id)
+            {
+                return;
+            }
             var who = new CSteamID(u.m_ulSteamIDUserChanged);
             var change = (EChatMemberStateChange)u.m_rgfChatMemberStateChange;
             if ((change & EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
+            {
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} joined the lobby");
+            }
             else
             {
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} left the lobby");

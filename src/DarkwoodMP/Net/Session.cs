@@ -87,26 +87,48 @@ namespace DarkwoodMP.Net
             Register(MsgType.Refused, HandleRefused);
             Register(MsgType.PlayerInfo, (from, r) =>
             {
-                if (from != HostId) return;
+                if (from != HostId)
+                {
+                    return;
+                }
                 ulong id = r.R.ReadUInt64();
                 string name = r.ReadStr();
                 bool isNew = !Names.ContainsKey(id);
                 Names[id] = name;
                 // Not the host, nor whoever was already in when we joined (they're listed right after Welcome).
-                if (isNew && Connected && id != LocalId && id != HostId && Now - _welcomedAt > 3f) OnPlayerJoined?.Invoke(name);
+                if (isNew && Connected && id != LocalId && id != HostId && Now - _welcomedAt > 3f)
+                {
+                    OnPlayerJoined?.Invoke(name);
+                }
             });
             Register(MsgType.JoinNotice, (from, r) =>
             {
-                if (from != HostId || IsHost) return;
+                if (from != HostId || IsHost)
+                {
+                    return;
+                }
                 string name = r.ReadStr();
                 byte what = r.R.ReadByte();
-                if (what == 0) OnPlayerJoining?.Invoke(name); else OnPlayerStoppedJoining?.Invoke(name);
+                if (what == 0)
+                {
+                    OnPlayerJoining?.Invoke(name);
+                }
+                else
+                {
+                    OnPlayerStoppedJoining?.Invoke(name);
+                }
             });
             Register(MsgType.PlayerLeft, (from, r) =>
             {
-                if (from != HostId) return;
+                if (from != HostId)
+                {
+                    return;
+                }
                 ulong who = r.R.ReadUInt64();
-                if (Names.TryGetValue(who, out var gone)) OnPlayerLeft?.Invoke(gone);
+                if (Names.TryGetValue(who, out var gone))
+                {
+                    OnPlayerLeft?.Invoke(gone);
+                }
                 Names.Remove(who);
                 OnPeerDisconnected?.Invoke(who);
             });
@@ -125,18 +147,39 @@ namespace DarkwoodMP.Net
                 {
                     var old = Backend;
                     Backend = b;
-                    if (old != null && old.InSession) old.Leave();
+                    if (old != null && old.InSession)
+                    {
+                        old.Leave();
+                    }
                 }
                 OnEntered();
             };
             b.OnLeft += () =>
             {
-                if (Backend != b) return;
+                if (Backend != b)
+                {
+                    return;
+                }
                 EndSession();
-                if (b.HostLost) OnHostLost?.Invoke(b.Status);
+                if (b.HostLost)
+                {
+                    OnHostLost?.Invoke(b.Status);
+                }
             };
-            b.OnPeerLost += id => { if (Backend == b) OnPeerLost(id); };
-            b.OnMessage += (from, data, len) => { if (Backend == b) Received(from, data, len); };
+            b.OnPeerLost += id =>
+            {
+                if (Backend == b)
+                {
+                    OnPeerLost(id);
+                }
+            };
+            b.OnMessage += (from, data, len) =>
+            {
+                if (Backend == b)
+                {
+                    Received(from, data, len);
+                }
+            };
         }
 
         // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
@@ -181,7 +224,10 @@ namespace DarkwoodMP.Net
 
         public void SendToHost(PacketWriter pw, int channel, bool reliable)
         {
-            if (IsClient) Backend.Send(HostId, pw.Buffer, pw.Length, channel, reliable);
+            if (IsClient)
+            {
+                Backend.Send(HostId, pw.Buffer, pw.Length, channel, reliable);
+            }
         }
 
         public void SendTo(ulong peer, PacketWriter pw, int channel, bool reliable) =>
@@ -190,9 +236,17 @@ namespace DarkwoodMP.Net
         /// <summary>Host: send to every connected client, optionally skipping one (e.g. the originator).</summary>
         public void Broadcast(PacketWriter pw, int channel, bool reliable, ulong except = 0)
         {
-            if (!IsHost) return;
+            if (!IsHost)
+            {
+                return;
+            }
             foreach (var p in Peers)
-                if (p != except) Backend.Send(p, pw.Buffer, pw.Length, channel, reliable);
+            {
+                if (p != except)
+                {
+                    Backend.Send(p, pw.Buffer, pw.Length, channel, reliable);
+                }
+            }
         }
 
         // ---- handshake -----------------------------------------------------
@@ -218,7 +272,10 @@ namespace DarkwoodMP.Net
         /// <summary>Client: (re)send Hello, e.g. after downloading the host's world.</summary>
         public void SendHello()
         {
-            if (!IsClient) return;
+            if (!IsClient)
+            {
+                return;
+            }
             var w = Begin(MsgType.Hello);
             w.W.Write(Protocol.Version);
             w.WriteStr(Protocol.Game);
@@ -230,13 +287,19 @@ namespace DarkwoodMP.Net
             w.WriteBytes(hash != null && hash.Length == 32 ? hash : new byte[32]); // the world we have; zeros: none
             SendToHost(w, Channel.Control, reliable: true);
             _helloAt = Now;
-            if (_heardHostAt < 0f) _heardHostAt = _helloAt; // the silence counts from the first Hello
+            if (_heardHostAt < 0f)
+            {
+                _heardHostAt = _helloAt; // the silence counts from the first Hello
+            }
             Plugin.Log.LogInfo("Sent Hello to host");
         }
 
         private void HandleHello(ulong from, PacketReader r)
         {
-            if (!IsHost) return;
+            if (!IsHost)
+            {
+                return;
+            }
             // Hello from someone already playing: over Steam a peer's id stays the same when it leaves and joins
             // again (Rejoin), and its new Hello can come before the lobby says it left. Treat it as a new join.
             if (Peers.Contains(from))
@@ -272,7 +335,11 @@ namespace DarkwoodMP.Net
             // The same player on a new connection: their old one broke without closing (Wi-Fi dropped, a crash).
             // The new one wins, so they don't wait for the old one to time out.
             ulong old = 0;
-            foreach (var kv in Keys) if (kv.Value == key && kv.Key != from) { old = kv.Key; break; }
+            foreach (var kv in Keys)
+            {
+                if (kv.Value == key && kv.Key != from)
+                { old = kv.Key; break; }
+            }
             if (old != 0)
             {
                 Plugin.Log.LogInfo($"{NameOf(old)} (#{old}) joined again as #{from}: dropping the old connection");
@@ -288,7 +355,10 @@ namespace DarkwoodMP.Net
                 OnPlayerJoining?.Invoke(name);
                 BroadcastJoinNotice(name, 0, except: from);
             }
-            if (BeforeWelcome != null && !BeforeWelcome(from, worldHash)) return;
+            if (BeforeWelcome != null && !BeforeWelcome(from, worldHash))
+            {
+                return;
+            }
             _joining.Remove(from);
 
             var w = Begin(MsgType.Welcome);
@@ -296,7 +366,10 @@ namespace DarkwoodMP.Net
             SendTo(from, w, Channel.Control, reliable: true);
 
             // Tell the newcomer about everyone, then everyone about the newcomer.
-            foreach (var kv in Names) SendTo(from, WritePlayerInfo(kv.Key, kv.Value), Channel.Control, reliable: true);
+            foreach (var kv in Names)
+            {
+                SendTo(from, WritePlayerInfo(kv.Key, kv.Value), Channel.Control, reliable: true);
+            }
             Names[from] = name;
             Keys[from] = key;
             Broadcast(WritePlayerInfo(from, name), Channel.Control, reliable: true, except: from);
@@ -315,7 +388,10 @@ namespace DarkwoodMP.Net
             SendTo(peer, w, Channel.Control, reliable: true);
             Backend.Kick(peer);
             // Refused while joining (BeforeWelcome): the kick raises no peer-lost, so tell everyone they stopped joining.
-            if (IsHost && _joining.ContainsKey(peer)) OnPeerLost(peer);
+            if (IsHost && _joining.ContainsKey(peer))
+            {
+                OnPeerLost(peer);
+            }
         }
 
         /// <summary>Host: tell the clients someone is joining (what 0) or stopped joining (what 1).</summary>
@@ -337,7 +413,10 @@ namespace DarkwoodMP.Net
 
         private void HandleWelcome(ulong from, PacketReader r)
         {
-            if (from != HostId || Connected) return;
+            if (from != HostId || Connected)
+            {
+                return;
+            }
             LocalId = r.R.ReadUInt64();
             Names[LocalId] = LocalName;
             Connected = true;
@@ -349,13 +428,22 @@ namespace DarkwoodMP.Net
 
         private void HandleRefused(ulong from, PacketReader r)
         {
-            if (from != HostId) return;
+            if (from != HostId)
+            {
+                return;
+            }
             string reason = r.ReadStr();
             LastRefusal = reason;
             Plugin.Log.LogWarning($"Host refused us: {reason}");
             OnRefused?.Invoke(reason);
-            if (Backend is TcpBackend tcp) tcp.Refused(reason);
-            else Backend.Leave();
+            if (Backend is TcpBackend tcp)
+            {
+                tcp.Refused(reason);
+            }
+            else
+            {
+                Backend.Leave();
+            }
         }
 
         // ---- lifecycle -----------------------------------------------------
@@ -404,28 +492,46 @@ namespace DarkwoodMP.Net
             try { r = new PacketReader(data, length); }
             catch { return; }
             // Only the handshake (and fetching the world it offers) may come from someone not yet admitted.
-            if (IsHost && r.Type != MsgType.Hello && r.Type != MsgType.NeedSave && !Peers.Contains(from)) return;
-            if (IsHost && AllowBare != null && !AllowBare(from, r.Type)) return;
+            if (IsHost && r.Type != MsgType.Hello && r.Type != MsgType.NeedSave && !Peers.Contains(from))
+            {
+                return;
+            }
+            if (IsHost && AllowBare != null && !AllowBare(from, r.Type))
+            {
+                return;
+            }
             if (!IsHost && from == HostId) { _helloAt = -1f; _heardHostAt = Now; } // anything from the host answers our Hello
             if (_handlers.TryGetValue(r.Type, out var h))
             {
                 try { h(from, r); }
                 catch (Exception e) { Plugin.Log.LogError($"Error handling {r.Type} from #{from}: {e}"); }
             }
-            else Plugin.Log.LogWarning($"Unhandled message {r.Type} from #{from}");
+            else
+            {
+                Plugin.Log.LogWarning($"Unhandled message {r.Type} from #{from}");
+            }
         }
 
         private static string Sanitize(string name)
         {
             name = (name ?? "").Trim();
-            if (name.Length > 32) name = name.Substring(0, 32);
+            if (name.Length > 32)
+            {
+                name = name.Substring(0, 32);
+            }
             return name.Length == 0 ? "Player" : name;
         }
 
         public void Update()
         {
-            foreach (var b in _backends) b.Poll();
-            if (_late.Count > 0) DeliverLate();
+            foreach (var b in _backends)
+            {
+                b.Poll();
+            }
+            if (_late.Count > 0)
+            {
+                DeliverLate();
+            }
             // A Hello the host never answered (lost, or turned away by a race over Steam): send it again.
             if (IsClient && !Connected && _helloAt >= 0f && Now - _helloAt > HelloRetry)
             {
@@ -444,7 +550,10 @@ namespace DarkwoodMP.Net
 
         public void Dispose()
         {
-            foreach (var b in _backends) b.Dispose();
+            foreach (var b in _backends)
+            {
+                b.Dispose();
+            }
             _backends.Clear();
             Instance = null;
         }

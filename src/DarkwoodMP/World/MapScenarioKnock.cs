@@ -58,7 +58,10 @@ namespace DarkwoodMP.World
             int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
             if (k < 0 || k >= _order.Count) { r.Fail($"no item {k} (kn-info found {_order.Count})"); return null; }
             var it = Dropped(1000f).FirstOrDefault(i => Ref(i) == _order[k]);
-            if (it == null) r.Fail($"item {k} ({_order[k]}) not here");
+            if (it == null)
+            {
+                r.Fail($"item {k} ({_order[k]}) not here");
+            }
             return it;
         }
 
@@ -69,13 +72,26 @@ namespace DarkwoodMP.World
             string type = inv != null && inv.slots.Count > 0 && !InvItemClass.isNull(inv.slots[0].invItem) ? inv.slots[0].invItem.type : "?";
             var b = i.GetComponent<Rigidbody>();
             sb.Append(FormattableString.Invariant($"{Ref(i)} {type} at {i.transform.position.x:0.0} {i.transform.position.y:0.0} {i.transform.position.z:0.0} active={i.gameObject.activeInHierarchy}"));
-            if (b == null) sb.Append(" no body");
-            else sb.Append(FormattableString.Invariant($" body kin={b.isKinematic} cons={b.constraints} sleep={b.IsSleeping()} v={b.velocity.magnitude:0.0} mass={b.mass:0.##} drag={b.drag:0.##}"));
+            if (b == null)
+            {
+                sb.Append(" no body");
+            }
+            else
+            {
+                sb.Append(FormattableString.Invariant($" body kin={b.isKinematic} cons={b.constraints} sleep={b.IsSleeping()} v={b.velocity.magnitude:0.0} mass={b.mass:0.##} drag={b.drag:0.##}"));
+            }
             foreach (var c in i.GetComponentsInChildren<Collider>(true))
+            {
                 sb.Append($" col[{c.GetType().Name} {c.gameObject.name} on={c.enabled} trig={c.isTrigger} layer={c.gameObject.layer}]");
+            }
             for (var t = i.transform.parent; t != null; t = t.parent)
+            {
                 sb.Append(FormattableString.Invariant($" in {t.name}@{t.position.x:0.0},{t.position.z:0.0}"));
-            if (b != null) sb.Append(FormattableString.Invariant($" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
+            }
+            if (b != null)
+            {
+                sb.Append(FormattableString.Invariant($" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
+            }
             sb.Append(" ").Append(DragSync.Instance != null ? DragSync.Instance.WatchInfo(b) : "no DragSync");
             return sb.ToString();
         }
@@ -84,17 +100,29 @@ namespace DarkwoodMP.World
         {
             float radius = a.Length > 0 ? float.Parse(a[0], CultureInfo.InvariantCulture) : 250f;
             var list = Dropped(radius).OrderBy(i => StateDump.Flat(i.transform.position - Centre)).ToList();
-            if (_order.Count == 0) _order.AddRange(list.Select(Ref));
-            foreach (var i in list) Plugin.Log.LogInfo($"[knock] {Describe(i)}");
+            if (_order.Count == 0)
+            {
+                _order.AddRange(list.Select(Ref));
+            }
+            foreach (var i in list)
+            {
+                Plugin.Log.LogInfo($"[knock] {Describe(i)}");
+            }
             r.Info = string.Join("; ", list.Select(i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt1(i.transform.position)}"));
-            if (list.Count == 0) r.Fail("no dropped items by the centre");
+            if (list.Count == 0)
+            {
+                r.Fail("no dropped items by the centre");
+            }
             yield break;
         }
 
         private static IEnumerator PlayerPush(string[] a, Result r)
         {
             var it = ByIndex(a, r);
-            if (it == null) yield break;
+            if (it == null)
+            {
+                yield break;
+            }
             var start = it.transform.position;
             var dir = start - P.transform.position; dir.y = 0f;
             dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.forward;
@@ -127,19 +155,28 @@ namespace DarkwoodMP.World
                 side = -side;
                 yield return new WaitForSeconds(0.4f);
             }
-            if (b == null) yield break;
+            if (b == null)
+            {
+                yield break;
+            }
             var at = b.position;
             b.WakeUp();
             b.velocity = new Vector3(0f, 0f, 250f);
             Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
-            if (b != null) Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
+            if (b != null)
+            {
+                Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
+            }
         }
 
         private static IEnumerator EnemyPush(string[] a, Result r)
         {
             var it = ByIndex(a, r);
-            if (it == null) yield break;
+            if (it == null)
+            {
+                yield break;
+            }
             string kind = a.Length > 1 ? a[1] : "Dog";
             var start = it.transform.position;
             var dir = start - P.transform.position; dir.y = 0f;
@@ -157,7 +194,14 @@ namespace DarkwoodMP.World
             {
                 var at = Vector3.Lerp(from, to, t / 2f);
                 at.y = c.transform.position.y;
-                if (rb != null) rb.MovePosition(at); else c.transform.position = at;
+                if (rb != null)
+                {
+                    rb.MovePosition(at);
+                }
+                else
+                {
+                    c.transform.position = at;
+                }
                 yield return null;
             }
             yield return new WaitForSeconds(1f);

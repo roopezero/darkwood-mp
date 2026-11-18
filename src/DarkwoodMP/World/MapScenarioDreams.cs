@@ -43,10 +43,16 @@ namespace DarkwoodMP.World
             if (DreamSync.Shared != null) { r.Fail($"already in the shared dream {DreamSync.Shared}"); yield break; }
             DreamSync.TestOwnDream(name);
             float giveUp = Time.realtimeSinceStartup + 60f;
-            while (!D.dreaming && Time.realtimeSinceStartup < giveUp) yield return new WaitForSeconds(0.5f);
+            while (!D.dreaming && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(3f); // the host's stand-in for us goes Away with our next snapshots
             r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
-            if (!D.dreaming || DreamSync.Shared != null || Locations.HostRunsHere()) r.Fail($"not in a dream of our own: {r.Info}");
+            if (!D.dreaming || DreamSync.Shared != null || Locations.HostRunsHere())
+            {
+                r.Fail($"not in a dream of our own: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -72,7 +78,10 @@ namespace DarkwoodMP.World
                 catch (System.Exception e) { opened = "couldn't open: " + e.Message; }
                 yield return new WaitForSeconds(1f); // Containers.Poll looks at it
                 var inv = item.GetComponent<Inventory>();
-                if (inv != null && inv.open) AsPlayer(() => inv.hide());
+                if (inv != null && inv.open)
+                {
+                    AsPlayer(() => inv.hide());
+                }
                 yield return new WaitForSeconds(0.5f);
             }
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.onCloseContainer));
@@ -105,18 +114,36 @@ namespace DarkwoodMP.World
                 WorldActions.WriteAction(w, WorldActions.Action.ItemSearched, ObjRef.Of(item.gameObject), 0f, 0f, false, false, "");
                 Authority.Request(w, $"forged ItemSearched {item.name} in our own dream", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
                 float giveUp = Time.realtimeSinceStartup + 8f;
-                while (ok == null && Time.realtimeSinceStartup < giveUp) yield return null;
+                while (ok == null && Time.realtimeSinceStartup < giveUp)
+                {
+                    yield return null;
+                }
                 yield return new WaitForSeconds(1f); // an ObjState after it, if any
             }
 
             int refused = Authority.RolledBack - rolledBefore;
             r.Info = $"in {loc?.name}: wardrobe {opened}, {(et != null && item != null ? "still there" : "gone")}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
                      $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
-            if (refused > 0) r.Fail($"the host refused what we did in our own dream: {r.Info}");
-            else if (et == null || (item == null && opened != "no container")) r.Fail($"our wardrobe was destroyed: {r.Info}");
-            else if (ours == null || Combat.NetEnemies.Frozen.Contains(ours)) r.Fail($"the wardrobe's event didn't run here: {r.Info}");
-            else if (door != null && !door.opened) r.Fail($"the door didn't stay open: {r.Info}");
-            else if (item != null && ok != true) r.Fail($"the host didn't take a request from our own dream: {r.Info}");
+            if (refused > 0)
+            {
+                r.Fail($"the host refused what we did in our own dream: {r.Info}");
+            }
+            else if (et == null || (item == null && opened != "no container"))
+            {
+                r.Fail($"our wardrobe was destroyed: {r.Info}");
+            }
+            else if (ours == null || Combat.NetEnemies.Frozen.Contains(ours))
+            {
+                r.Fail($"the wardrobe's event didn't run here: {r.Info}");
+            }
+            else if (door != null && !door.opened)
+            {
+                r.Fail($"the door didn't stay open: {r.Info}");
+            }
+            else if (item != null && ok != true)
+            {
+                r.Fail($"the host didn't take a request from our own dream: {r.Info}");
+            }
         }
 
         /// <summary>Our player next to t, on a spot with no loose thing our player would land on and push.</summary>
@@ -130,13 +157,19 @@ namespace DarkwoodMP.World
             {
                 var spot = t.position + Quaternion.Euler(0f, 22.5f * i, 0f) * dir * 250f;
                 spot.y = p.transform.position.y;
-                if (Physics.OverlapSphere(spot, 100f).Any(col => col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic && col.GetComponentInParent<Player>() == null)) continue;
+                if (Physics.OverlapSphere(spot, 100f).Any(col => col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic && col.GetComponentInParent<Player>() == null))
+                {
+                    continue;
+                }
                 at = spot;
                 break;
             }
             p.transform.position = new Vector3(at.x, p.transform.position.y, at.z);
             var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = p.transform.position;
+            if (rb != null)
+            {
+                rb.position = p.transform.position;
+            }
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -148,16 +181,25 @@ namespace DarkwoodMP.World
             var reqs = p.levelRequirements;
             int want = Mathf.Min(Progression.SharedExp, reqs[Mathf.Clamp(p.currentLevel, 0, reqs.Count - 1)]);
             r.Info = $"shared essence {Progression.SharedExp} level {Progression.SharedLevel}; ours {p.experience} at level {p.currentLevel}";
-            if (p.experience != want) r.Fail($"our essence isn't the shared one up to our next level ({want}): {r.Info}");
+            if (p.experience != want)
+            {
+                r.Fail($"our essence isn't the shared one up to our next level ({want}): {r.Info}");
+            }
         }
 
         /// <summary>"dream-clear" (either): out of any dream of our own (the night trader's, earlier), ending it if need be.</summary>
         private static IEnumerator DreamClear(string[] a, Result r)
         {
             float giveUp = Time.realtimeSinceStartup + 20f;
-            while (InDream && Time.realtimeSinceStartup < giveUp) yield return new WaitForSeconds(0.5f);
+            while (InDream && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             if (D.dreaming) { D.outcome = ""; D.initiateEndDreaming(); r.Info = "ended our own dream"; }
-            while (InDream) yield return new WaitForSeconds(0.5f);
+            while (InDream)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(2f);
             r.Info = (r.Info ?? "not dreaming") + $"; at {Fmt(P.transform.position)}";
         }
@@ -168,23 +210,44 @@ namespace DarkwoodMP.World
             string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
             if (!D.allPresets.Any(x => x != null && x.name == name)) { r.Fail($"no dream {name}"); yield break; }
             DreamSync.TestLevelDream(name);
-            while (!D.dreaming) yield return new WaitForSeconds(0.5f);
+            while (!D.dreaming)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(2f);
             r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}";
-            if (DreamSync.Shared != name) r.Fail($"the dream isn't shared: {r.Info}");
+            if (DreamSync.Shared != name)
+            {
+                r.Fail($"the dream isn't shared: {r.Info}");
+            }
         }
 
         /// <summary>"in-host-dream NAME" (client): we went into the host's dream by ourselves, and see the host there.</summary>
         private static IEnumerator InHostDream(string[] a, Result r)
         {
             string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
-            while (!D.dreaming) yield return new WaitForSeconds(0.5f);
+            while (!D.dreaming)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(3f);
             bool seen = false;
             var ps = Sync.PlayerSync.Instance;
-            if (ps != null) foreach (var rp in ps.Remotes.Values) if (rp.Root != null && rp.Root.activeInHierarchy) seen = true;
+            if (ps != null)
+            {
+                foreach (var rp in ps.Remotes.Values)
+                {
+                    if (rp.Root != null && rp.Root.activeInHierarchy)
+                    {
+                        seen = true;
+                    }
+                }
+            }
             r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
-            if (D.preset == null || D.preset.name != name || DreamSync.Shared != name) r.Fail($"not in the host's dream {name}: {r.Info}");
+            if (D.preset == null || D.preset.name != name || DreamSync.Shared != name)
+            {
+                r.Fail($"not in the host's dream {name}: {r.Info}");
+            }
         }
 
         /// <summary>"end-level-dream" (host): our dream ends (its default outcome); wait until we're back.</summary>
@@ -193,7 +256,10 @@ namespace DarkwoodMP.World
             if (!D.dreaming) { r.Fail("not dreaming"); yield break; }
             D.outcome = "";
             AsPlayer(() => D.initiateEndDreaming());
-            while (D.dreaming || D.switchingDream) yield return new WaitForSeconds(0.5f);
+            while (D.dreaming || D.switchingDream)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(2f);
             r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
         }
@@ -209,13 +275,19 @@ namespace DarkwoodMP.World
             sb.Append($"dream {loc.name} at {Fmt(loc.transform.position)}, us at {Fmt(P.transform.position)}, hostRunsHere {Locations.HostRunsHere()}; ");
             foreach (var c in Object.FindObjectsOfType<Character>(true))
             {
-                if (StateDump.Flat(c.transform.position - loc.transform.position) > 15000f) continue;
+                if (StateDump.Flat(c.transform.position - loc.transform.position) > 15000f)
+                {
+                    continue;
+                }
                 uint id = 0; bool net = ne != null && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
                 sb.Append($"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig {Combat.NetEnemies.Eligible(c)} act {c.gameObject.activeInHierarchy} en {c.enabled} alive {c.alive} " +
                           $"at {Fmt(c.transform.position)} tgt {(c.target != null ? c.target.name : "-")} net {net}#{id} aggr {c.aggressive} sleep {c.sleeping} " +
                           $"comps {string.Join(",", c.GetComponents<MonoBehaviour>().Select(m => m == null ? "?" : m.GetType().Name))}");
             }
-            foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true)) sb.Append($"\n  events {ge.name} act {ge.gameObject.activeInHierarchy}");
+            foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true))
+            {
+                sb.Append($"\n  events {ge.name} act {ge.gameObject.activeInHierarchy}");
+            }
             r.Info = sb.ToString();
             Plugin.Log.LogInfo("[dream-mob] " + r.Info);
         }
@@ -244,13 +316,19 @@ namespace DarkwoodMP.World
             {
                 var spot = et.transform.position + Quaternion.Euler(0f, 22.5f * i, 0f) * dir * 250f;
                 spot.y = p.transform.position.y;
-                if (Physics.OverlapSphere(spot, 100f).Any(col => col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic && col.GetComponentInParent<Player>() == null)) continue;
+                if (Physics.OverlapSphere(spot, 100f).Any(col => col.attachedRigidbody != null && !col.attachedRigidbody.isKinematic && col.GetComponentInParent<Player>() == null))
+                {
+                    continue;
+                }
                 at = spot;
                 break;
             }
             p.transform.position = new Vector3(at.x, p.transform.position.y, at.z);
             var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = p.transform.position;
+            if (rb != null)
+            {
+                rb.position = p.transform.position;
+            }
             yield return new WaitForSeconds(0.5f);
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.onCloseContainer));
             var ne = Combat.NetEnemies.Instance;
@@ -262,7 +340,10 @@ namespace DarkwoodMP.World
                 shown = DreamCharacters().FirstOrDefault(c => c.name.StartsWith("ChomperBlack") && c.gameObject.activeInHierarchy && ne.IsPuppet(c, out _));
             }
             r.Info = $"closed {et.name} at {Fmt(et.transform.position)} from {Fmt(p.transform.position)}; the host's chomper shown: {(shown != null ? Fmt(shown.transform.position) : "no")}";
-            if (shown == null) r.Fail($"the host's chomper isn't shown here: {r.Info}");
+            if (shown == null)
+            {
+                r.Fail($"the host's chomper isn't shown here: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -277,18 +358,33 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 c = DreamCharacters().FirstOrDefault(x => x.name.StartsWith("ChomperBlack") && x.alive && x.gameObject.activeInHierarchy && ne.NetIdOf(x, out _));
-                if (c != null && c.target != null) break;
+                if (c != null && c.target != null)
+                {
+                    break;
+                }
                 yield return new WaitForSeconds(0.25f);
             }
             if (c == null) { r.Fail("no chomper of the dream running here"); yield break; }
-            foreach (var s in c.sensorTypes) if (s != null) s.damage = 1;
+            foreach (var s in c.sensorTypes)
+            {
+                if (s != null)
+                {
+                    s.damage = 1;
+                }
+            }
             var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
             ne.NetIdOf(c, out uint id);
             r.Info = $"{c.name} #{id} at {Fmt(c.transform.position)}, target {(c.target != null ? c.target.name : "none")}; " +
                      $"the client's stand-in: away {proxy?.Away}, in {(proxy?.InLocation != null ? proxy.InLocation.name : "-")}" +
                      (proxy != null ? $", threat {Combat.Threat.Of(c).Get(proxy):0.#}" : "");
-            if (proxy == null || proxy.Away || proxy.InLocation != D.dreamLocation) r.Fail($"the client isn't in the dream we run: {r.Info}");
-            else if (c.target == null) r.Fail($"the chomper goes for nobody: {r.Info}");
+            if (proxy == null || proxy.Away || proxy.InLocation != D.dreamLocation)
+            {
+                r.Fail($"the client isn't in the dream we run: {r.Info}");
+            }
+            else if (c.target == null)
+            {
+                r.Fail($"the chomper goes for nobody: {r.Info}");
+            }
         }
 
         /// <summary>"dream-mob-copies" (client): none of our own dream characters runs; the host's are the ones shown.</summary>
@@ -301,7 +397,10 @@ namespace DarkwoodMP.World
             var running = all.Where(c => !ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy && !Combat.NetEnemies.Frozen.Contains(c)).ToList();
             r.Info = $"host runs it here {Locations.HostRunsHere()}; the host's shown {puppets}; ours running {running.Count}" +
                      (running.Count > 0 ? $" ({string.Join(", ", running.Select(c => c.name))})" : "");
-            if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0) r.Fail($"the dream's characters aren't the host's: {r.Info}");
+            if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0)
+            {
+                r.Fail($"the dream's characters aren't the host's: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -310,7 +409,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator DreamEntered(string[] a, Result r)
         {
-            while (!D.dreaming) yield return new WaitForSeconds(0.25f);
+            while (!D.dreaming)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
             r.Info = System.FormattableString.Invariant($"entered {DreamSync.EnteredAt:0.000}");
         }
 
@@ -344,7 +446,9 @@ namespace DarkwoodMP.World
             r.Info = DoorInfo(door);
             string want = a.Length > 0 ? a[0] : "";
             if ((want == "locked" && !locked) || (want == "unlocked" && (locked || door.blocked)) || (want == "open" && !door.opened))
+            {
                 r.Fail($"the door isn't {want}: {r.Info}");
+            }
         }
 
         /// <summary>"home-knock" (either): our player walks into the knocking area, which unlocks the bedroom door.</summary>
@@ -355,7 +459,10 @@ namespace DarkwoodMP.World
             var p = P;
             p.transform.position = new Vector3(et.transform.position.x, p.transform.position.y, et.transform.position.z);
             var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = p.transform.position;
+            if (rb != null)
+            {
+                rb.position = p.transform.position;
+            }
             yield return new WaitForSeconds(0.3f);
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.area));
             yield return new WaitForSeconds(3f);
@@ -372,23 +479,38 @@ namespace DarkwoodMP.World
             var to = door.transform.position + (p.transform.position - door.transform.position).normalized * 150f;
             p.transform.position = new Vector3(to.x, p.transform.position.y, to.z);
             var rb = p.GetComponent<Rigidbody>();
-            if (rb != null) rb.position = p.transform.position;
+            if (rb != null)
+            {
+                rb.position = p.transform.position;
+            }
             yield return new WaitForSeconds(0.5f);
             var l = door.GetComponent<Locked>();
             if ((l != null && l.locked) || door.blocked) { r.Fail($"we're locked in: {DoorInfo(door)}"); yield break; }
-            if (!door.opened) AsPlayer(() => door.open(p.transform.position, p.transform, 0f));
+            if (!door.opened)
+            {
+                AsPlayer(() => door.open(p.transform.position, p.transform, 0f));
+            }
             yield return new WaitForSeconds(2f); // a refusal by the host closes it again
             r.Info = DoorInfo(door);
-            if (!door.opened) r.Fail($"the door didn't stay open: {r.Info}");
+            if (!door.opened)
+            {
+                r.Fail($"the door didn't stay open: {r.Info}");
+            }
         }
 
         /// <summary>"back-from-dream" (client): the host's end ended ours.</summary>
         private static IEnumerator BackFromDream(string[] a, Result r)
         {
-            while (D.dreaming || D.switchingDream) yield return new WaitForSeconds(0.5f);
+            while (D.dreaming || D.switchingDream)
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
             yield return new WaitForSeconds(2f);
             r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
-            if (DreamSync.Shared != null) r.Fail($"still in a shared dream: {r.Info}");
+            if (DreamSync.Shared != null)
+            {
+                r.Fail($"still in a shared dream: {r.Info}");
+            }
         }
     }
 }

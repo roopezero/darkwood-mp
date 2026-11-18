@@ -39,17 +39,29 @@ namespace DarkwoodMP.World
         {
             _session = s;
             s.Register(MsgType.StackSize, OnStackSize);
-            s.OnPeerConnected += id => { if (s.IsHost) SendTo(id); };
+            s.OnPeerConnected += id =>
+            {
+                if (s.IsHost)
+                {
+                    SendTo(id);
+                }
+            };
             s.OnSessionEnded += () =>
             {
-                if (_hostSize < 0) return;
+                if (_hostSize < 0)
+                {
+                    return;
+                }
                 _hostSize = -1;
                 Plugin.Log.LogInfo($"[stacks] session over: our own setting again ({Current})");
                 Apply(Current);
             };
             Plugin.Cfg.StackSize.SettingChanged += (_, __) =>
             {
-                if (_hostSize >= 0) return; // a client keeps the host's until it leaves
+                if (_hostSize >= 0)
+                {
+                    return; // a client keeps the host's until it leaves
+                }
                 Apply(Current);
                 if (s.IsHost) { s.Broadcast(Write(Current), Channel.Control, reliable: true); Plugin.Log.LogInfo($"[stacks] sent {Current} to everyone"); }
             };
@@ -67,7 +79,10 @@ namespace DarkwoodMP.World
 
         private static void OnStackSize(ulong from, PacketReader r)
         {
-            if (!_session.IsClient || from != _session.HostId) return;
+            if (!_session.IsClient || from != _session.HostId)
+            {
+                return;
+            }
             int size = r.R.ReadUInt16();
             _hostSize = size;
             Plugin.Log.LogInfo($"[stacks] the host's stack size: {size}");
@@ -77,9 +92,15 @@ namespace DarkwoodMP.World
         /// <summary>Whether this item may stand in one slot: no more than its stack size (always, for an item that doesn't stack by amount).</summary>
         public static bool Fits(InvItemClass it)
         {
-            if (InvItemClass.isNull(it) || it.baseClass == null) return true;
+            if (InvItemClass.isNull(it) || it.baseClass == null)
+            {
+                return true;
+            }
             var b = it.baseClass;
-            if (!Eligible(b, b.maxAmount)) return true;
+            if (!Eligible(b, b.maxAmount))
+            {
+                return true;
+            }
             return it.amount <= b.maxAmount;
         }
 
@@ -89,21 +110,39 @@ namespace DarkwoodMP.World
         public static void Apply(int size)
         {
             var db = Singleton<ItemsDatabase>.Instance;
-            if (db == null || db.itemsDict == null) return;
+            if (db == null || db.itemsDict == null)
+            {
+                return;
+            }
             int changed = 0, eligible = 0;
             foreach (var k in new List<string>(db.itemsDict.Keys))
             {
                 InvItem it = null;
                 try { it = db.getItem(k, instantiate: false); } catch { }
-                if (it == null) continue;
+                if (it == null)
+                {
+                    continue;
+                }
                 if (!Original.TryGetValue(it, out int orig)) { orig = it.maxAmount; Original[it] = orig; }
-                if (!Eligible(it, orig)) continue;
+                if (!Eligible(it, orig))
+                {
+                    continue;
+                }
                 eligible++;
                 int max = size > 0 ? Mathf.Max(orig, size) : orig;
-                if (max != orig) changed++;
-                if (it.maxAmount == max) continue;
+                if (max != orig)
+                {
+                    changed++;
+                }
+                if (it.maxAmount == max)
+                {
+                    continue;
+                }
                 it.maxAmount = max;
-                if (!Kept.Contains(it)) Kept.Add(it);
+                if (!Kept.Contains(it))
+                {
+                    Kept.Add(it);
+                }
             }
             Plugin.Log.LogInfo(size > 0
                 ? $"[stacks] {eligible} stackable items stack to {size} ({changed} raised)"

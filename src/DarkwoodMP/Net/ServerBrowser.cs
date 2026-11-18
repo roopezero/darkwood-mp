@@ -65,14 +65,20 @@ namespace DarkwoodMP.Net
 
         public Entry Get(string addr)
         {
-            if (!Entries.TryGetValue(addr, out var e)) Entries[addr] = e = new Entry { Addr = addr };
+            if (!Entries.TryGetValue(addr, out var e))
+            {
+                Entries[addr] = e = new Entry { Addr = addr };
+            }
             return e;
         }
 
         /// <summary>Call every frame: applies answers that came in on background threads.</summary>
         public void Update()
         {
-            while (_done.TryDequeue(out var a)) a();
+            while (_done.TryDequeue(out var a))
+            {
+                a();
+            }
         }
 
         // ---- lists ---------------------------------------------------------
@@ -80,40 +86,70 @@ namespace DarkwoodMP.Net
         public void AddFavorite(string addr)
         {
             addr = TcpBackend.Normalize(addr);
-            if (addr == null || Favorites.Contains(addr)) return;
+            if (addr == null || Favorites.Contains(addr))
+            {
+                return;
+            }
             Favorites.Add(addr);
             Save();
             Query(addr);
         }
 
-        public void RemoveFavorite(string addr) { if (Favorites.Remove(addr)) Save(); }
+        public void RemoveFavorite(string addr)
+        {
+            if (Favorites.Remove(addr))
+            {
+                Save();
+            }
+        }
 
         public void Joined(string addr)
         {
             addr = TcpBackend.Normalize(addr);
-            if (addr == null) return;
+            if (addr == null)
+            {
+                return;
+            }
             History[addr] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             Save();
         }
 
-        public void RemoveHistory(string addr) { if (History.Remove(addr)) Save(); }
+        public void RemoveHistory(string addr)
+        {
+            if (History.Remove(addr))
+            {
+                Save();
+            }
+        }
 
         private void Load()
         {
             try
             {
-                if (!File.Exists(_path)) return;
+                if (!File.Exists(_path))
+                {
+                    return;
+                }
                 string section = "";
                 foreach (var raw in File.ReadAllLines(_path))
                 {
                     string line = raw.Trim();
-                    if (line.Length == 0 || line.StartsWith(";")) continue;
+                    if (line.Length == 0 || line.StartsWith(";"))
+                    {
+                        continue;
+                    }
                     if (line.StartsWith("[") && line.EndsWith("]")) { section = line.Substring(1, line.Length - 2).ToUpperInvariant(); continue; }
                     int eq = line.IndexOf('=');
                     string key = (eq >= 0 ? line.Substring(0, eq) : line).Trim();
                     string val = eq >= 0 ? line.Substring(eq + 1).Trim() : "";
-                    if (key.Length == 0) continue;
-                    if (section == "FAVORITES" && !Favorites.Contains(key)) Favorites.Add(key);
+                    if (key.Length == 0)
+                    {
+                        continue;
+                    }
+                    if (section == "FAVORITES" && !Favorites.Contains(key))
+                    {
+                        Favorites.Add(key);
+                    }
                     else if (section == "HISTORY") { long.TryParse(val, out long t); History[key] = t; }
                 }
             }
@@ -126,9 +162,15 @@ namespace DarkwoodMP.Net
             {
                 var b = new StringBuilder();
                 b.Append("[FAVORITES]\r\n");
-                foreach (var a in Favorites) b.Append(a).Append("=\r\n");
+                foreach (var a in Favorites)
+                {
+                    b.Append(a).Append("=\r\n");
+                }
                 b.Append("[HISTORY]\r\n");
-                foreach (var kv in History) b.Append(kv.Key).Append('=').Append(kv.Value).Append("\r\n");
+                foreach (var kv in History)
+                {
+                    b.Append(kv.Key).Append('=').Append(kv.Value).Append("\r\n");
+                }
                 File.WriteAllText(_path, b.ToString());
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't write {_path}: {e.Message}"); }
@@ -139,14 +181,20 @@ namespace DarkwoodMP.Net
         public void Refresh(Tab tab)
         {
             if (tab == Tab.Lan) { SearchLan(); return; }
-            foreach (var a in List(tab)) Query(a);
+            foreach (var a in List(tab))
+            {
+                Query(a);
+            }
         }
 
         /// <summary>Ask one server about itself (UDP info query to the same port number as its game).</summary>
         public void Query(string addr)
         {
             var e = Get(addr);
-            if (e.Querying) return;
+            if (e.Querying)
+            {
+                return;
+            }
             e.Querying = true;
             ThreadPool.QueueUserWorkItem(_ =>
             {
@@ -192,28 +240,49 @@ namespace DarkwoodMP.Net
         {
             var list = new List<IPEndPoint>();
             var sweep = new List<IPEndPoint>(); // after every broadcast: it's the slow part
-            void Ports(IPAddress a) { for (int p = TcpBackend.DefaultPort; p < TcpBackend.DefaultPort + TcpBackend.LanPorts; p++) list.Add(new IPEndPoint(a, p)); }
+            void Ports(IPAddress a)
+            {
+                for (int p = TcpBackend.DefaultPort; p < TcpBackend.DefaultPort + TcpBackend.LanPorts; p++)
+                {
+                    list.Add(new IPEndPoint(a, p));
+                }
+            }
             Ports(IPAddress.Broadcast);
             try
             {
                 foreach (var nic in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    if (nic.OperationalStatus != OperationalStatus.Up) continue;
-                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+                    if (nic.OperationalStatus != OperationalStatus.Up)
+                    {
+                        continue;
+                    }
+                    if (nic.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                    {
+                        continue;
+                    }
                     foreach (var u in nic.GetIPProperties().UnicastAddresses)
                     {
-                        if (u.Address.AddressFamily != AddressFamily.InterNetwork) continue;
+                        if (u.Address.AddressFamily != AddressFamily.InterNetwork)
+                        {
+                            continue;
+                        }
                         byte[] ip = u.Address.GetAddressBytes();
                         byte[] mask = u.IPv4Mask?.GetAddressBytes();
                         if (mask != null && mask.Length == 4)
                         {
                             var bc = new byte[4];
-                            for (int i = 0; i < 4; i++) bc[i] = (byte)(ip[i] | ~mask[i]);
+                            for (int i = 0; i < 4; i++)
+                            {
+                                bc[i] = (byte)(ip[i] | ~mask[i]);
+                            }
                             Ports(new IPAddress(bc));
                         }
                         for (int last = 1; last < 255; last++)
                         {
-                            if (last == ip[3]) continue;
+                            if (last == ip[3])
+                            {
+                                continue;
+                            }
                             sweep.Add(new IPEndPoint(new IPAddress(new[] { ip[0], ip[1], ip[2], (byte)last }), TcpBackend.DefaultPort));
                         }
                     }
@@ -227,7 +296,10 @@ namespace DarkwoodMP.Net
         /// <summary>Ask the LAN who's hosting (see LanTargets), and list who answers.</summary>
         public void SearchLan()
         {
-            if (SearchingLan) return;
+            if (SearchingLan)
+            {
+                return;
+            }
             SearchingLan = true;
             Lan.Clear();
             ThreadPool.QueueUserWorkItem(_ =>
@@ -258,8 +330,14 @@ namespace DarkwoodMP.Net
                         while (true)
                         {
                             long done = Interlocked.Read(ref sentAt);
-                            if (done >= 0 && sw.ElapsedMilliseconds >= done + QueryTimeoutMs) break;
-                            if (sw.ElapsedMilliseconds > 30000) break; // the sends never finished
+                            if (done >= 0 && sw.ElapsedMilliseconds >= done + QueryTimeoutMs)
+                            {
+                                break;
+                            }
+                            if (sw.ElapsedMilliseconds > 30000)
+                            {
+                                break; // the sends never finished
+                            }
                             udp.Client.ReceiveTimeout = done >= 0 ? (int)Math.Max(1, done + QueryTimeoutMs - sw.ElapsedMilliseconds) : 200;
                             var from = new IPEndPoint(IPAddress.Any, 0);
                             byte[] a;
@@ -270,14 +348,20 @@ namespace DarkwoodMP.Net
                             catch (SocketException) { continue; }
 
                             var info = ServerInfo.Parse(a, a.Length);
-                            if (info == null) continue;
+                            if (info == null)
+                            {
+                                continue;
+                            }
                             string addr = $"{from.Address}:{from.Port}";
                             int ping = (int)sw.ElapsedMilliseconds;
                             _done.Enqueue(() =>
                             {
                                 var e = Get(addr);
                                 e.Info = info; e.Failed = false; e.PingMs = ping;
-                                if (!Lan.Contains(addr)) Lan.Add(addr);
+                                if (!Lan.Contains(addr))
+                                {
+                                    Lan.Add(addr);
+                                }
                             });
                         }
                         Plugin.Log.LogInfo($"LAN search: asked {targets.Count} addresses ({failed} couldn't be sent), the last at {Interlocked.Read(ref sentAt)} ms");

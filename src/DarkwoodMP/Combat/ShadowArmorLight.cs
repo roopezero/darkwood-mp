@@ -22,11 +22,20 @@ namespace DarkwoodMP.Combat
         static void Postfix(ShadowArmor __instance)
         {
             var a = __instance;
-            if (a == null || !(a.health > 0f) || NetPlayerProxy.All.Count == 0) return;
+            if (a == null || !(a.health > 0f) || NetPlayerProxy.All.Count == 0)
+            {
+                return;
+            }
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             var proxy = BeamOn(a.transform.position);
-            if (proxy == null) return;
+            if (proxy == null)
+            {
+                return;
+            }
             // The game's own check already hurt it if the spot is lit (the puppet's beam lights the graph too); a beam
             // the graph doesn't show as lit still counts, as the host's flashlight's box does.
             bool hurtAlready = Core.isInLight(a.transform.position, mustBeWalkable: false) || a.GetComponent<Burn>() != null;
@@ -38,9 +47,18 @@ namespace DarkwoodMP.Combat
             var c = a.GetComponent<Character>();
             if (c != null && c.alive && !c.dummy)
             {
-                if (c.aggressiveness != Aggressiveness.defensive) c.aggressiveness = Aggressiveness.attackOnSight;
-                if (c.target != proxy.transform) c.attackCharacter(proxy.transform);
-                if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {c.name}'s shadow armour is in {proxy.OwnerName}'s flashlight: goes for them");
+                if (c.aggressiveness != Aggressiveness.defensive)
+                {
+                    c.aggressiveness = Aggressiveness.attackOnSight;
+                }
+                if (c.target != proxy.transform)
+                {
+                    c.attackCharacter(proxy.transform);
+                }
+                if (Threat.Debug)
+                {
+                    Plugin.Log.LogInfo($"[threat] {c.name}'s shadow armour is in {proxy.OwnerName}'s flashlight: goes for them");
+                }
             }
         }
 
@@ -54,14 +72,29 @@ namespace DarkwoodMP.Combat
         internal static NetPlayerProxy BeamOn(Vector3 pos)
         {
             var ps = PlayerSync.Instance;
-            if (ps == null) return null;
+            if (ps == null)
+            {
+                return null;
+            }
             foreach (var proxy in NetPlayerProxy.All.Values)
             {
-                if (proxy == null || !proxy.alive) continue;
-                if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp) || rp.Root == null) continue;
+                if (proxy == null || !proxy.alive)
+                {
+                    continue;
+                }
+                if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp) || rp.Root == null)
+                {
+                    continue;
+                }
                 var last = rp.Last;
-                if (last == null || !last.Flashlight || !last.Alive || last.Spectating) continue;
-                if (InBeam(rp.Root.transform, pos, out _, out _)) return proxy;
+                if (last == null || !last.Flashlight || !last.Alive || last.Spectating)
+                {
+                    continue;
+                }
+                if (InBeam(rp.Root.transform, pos, out _, out _))
+                {
+                    return proxy;
+                }
             }
             return null;
         }
@@ -75,7 +108,10 @@ namespace DarkwoodMP.Combat
             Vector3 fwd = root.TransformDirection(Vector3.up); fwd.y = 0f;
             Vector3 rel = pos - root.position; rel.y = 0f;
             ahead = aside = 0f;
-            if (fwd.sqrMagnitude < 0.01f) return false;
+            if (fwd.sqrMagnitude < 0.01f)
+            {
+                return false;
+            }
             fwd.Normalize();
             ahead = Vector3.Dot(rel, fwd);
             aside = Vector3.Cross(fwd, rel).magnitude;

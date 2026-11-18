@@ -33,7 +33,10 @@ namespace DarkwoodMP.World
             sm.saveGameProfiles(); // also sets the profile's day, chapter and time saved, which go to the joiner
             sm.lastTimeSaved = DateTime.Now;
             sm.haveSaved = true;
-            if (File.Exists(file)) File.Delete(file);
+            if (File.Exists(file))
+            {
+                File.Delete(file);
+            }
             sm.assignUniqueIds(sm.dynamicObjects);
 
             var d = new SaveManager.DynamicSave
@@ -70,7 +73,12 @@ namespace DarkwoodMP.World
             d.chDC = new CharacterDifficultyController.SaveState(Singleton<CharacterDifficultyController>.Instance);
             var objs = sm.dynamicObjects;
             for (int i = 0; i < objs.Count; i++)
-                if (objs[i] != null) d.savedObjs.Add(new SaveManager.SavedObj(objs[i].gameObject));
+            {
+                if (objs[i] != null)
+                {
+                    d.savedObjs.Add(new SaveManager.SavedObj(objs[i].gameObject));
+                }
+            }
 
             // Private in the game; it sets it to None on start (SaveManager.Awake).
             var formatting = HarmonyLib.Traverse.Create(sm).Field("formatting").GetValue() is Formatting f ? f : Formatting.None;
@@ -96,26 +104,34 @@ namespace DarkwoodMP.World
             try
             {
                 using (var text = new StreamWriter(part))
-                using (var w = new JsonTextWriter(text))
                 {
-                    w.Formatting = formatting;
-                    w.WriteStartObject();
-                    foreach (var (name, value) in parts)
+                    using (var w = new JsonTextWriter(text))
                     {
-                        w.WritePropertyName(name);
-                        serializer.Serialize(w, value);
+                        w.Formatting = formatting;
+                        w.WriteStartObject();
+                        foreach (var (name, value) in parts)
+                        {
+                            w.WritePropertyName(name);
+                            serializer.Serialize(w, value);
+                        }
+                        w.WritePropertyName("savedObjs");
+                        w.WriteStartArray();
+                        foreach (var o in d.savedObjs)
+                        {
+                            o.save(serializer, w);
+                        }
+                        w.WriteEndArray();
+                        w.WriteEndObject();
                     }
-                    w.WritePropertyName("savedObjs");
-                    w.WriteStartArray();
-                    foreach (var o in d.savedObjs) o.save(serializer, w);
-                    w.WriteEndArray();
-                    w.WriteEndObject();
                 }
                 File.Move(part, file);
             }
             finally
             {
-                if (File.Exists(part)) File.Delete(part);
+                if (File.Exists(part))
+                {
+                    File.Delete(part);
+                }
             }
             return sw.ElapsedMilliseconds;
         }

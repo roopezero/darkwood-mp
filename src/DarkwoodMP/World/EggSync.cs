@@ -33,24 +33,45 @@ namespace DarkwoodMP.World
         /// <summary>This game broke the egg; the caller checked it's ours to send (BreakSync.OurPlayers).</summary>
         public static void Send(Item egg)
         {
-            if (WorldActions.OursAlone(egg.gameObject)) return; // in a dream of our own: nobody else has it
+            if (WorldActions.OursAlone(egg.gameObject))
+            {
+                return; // in a dream of our own: nobody else has it
+            }
             var r = ObjRef.Of(egg.gameObject);
-            if (!r.Valid) return;
+            if (!r.Valid)
+            {
+                return;
+            }
             // The hit that broke it can leave its health below 0; the others' copies are broken at 0 (Break), and
             // so is ours, so its state is the same in every game.
-            if (egg.health < 0) egg.health = 0;
+            if (egg.health < 0)
+            {
+                egg.health = 0;
+            }
             var p = egg.transform.position;
             var w = Write(r, p.x, p.z, egg.gameObject.name);
             Plugin.Log.LogInfo($"[world] sent egg {r} destroyed ({egg.gameObject.name})");
-            if (S.IsHost) S.Broadcast(w, Channel.Control, reliable: true);
-            else Authority.Request(w, $"egg {r} destroyed ({egg.gameObject.name})");
+            if (S.IsHost)
+            {
+                S.Broadcast(w, Channel.Control, reliable: true);
+            }
+            else
+            {
+                Authority.Request(w, $"egg {r} destroyed ({egg.gameObject.name})");
+            }
         }
 
         private static void OnDestroyed(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             float x = r.R.ReadSingle(), z = r.R.ReadSingle();
             string name = r.ReadStr();
@@ -60,17 +81,26 @@ namespace DarkwoodMP.World
             {
                 if (egg == null) { Authority.Refuse("there's no such egg here"); WorldActions.SendState(from, obj); return; }
                 if (!IsEgg(egg)) { WorldActions.SendState(from, obj); Authority.Refuse($"{egg.gameObject.name} isn't an egg"); return; }
-                if (egg.destroyed) return; // broken here already (by the host, or another player): nothing to do or pass on
+                if (egg.destroyed)
+                {
+                    return; // broken here already (by the host, or another player): nothing to do or pass on
+                }
                 if (!Authority.InReach(egg.transform.position, WorldActions.ShotReach, egg.gameObject.name)) { WorldActions.SendState(from, obj); return; }
             }
             Plugin.Log.LogInfo($"[world] egg {obj} destroyed (from {s.NameOf(from)})" + (egg == null ? ": not found here" : egg.destroyed ? ": already broken here" : ""));
-            if (egg == null || egg.destroyed) return;
+            if (egg == null || egg.destroyed)
+            {
+                return;
+            }
 
             WorldActions.Replaying = true;
             try { Break(egg); }
             finally { WorldActions.Replaying = false; }
 
-            if (s.IsHost) s.Broadcast(Write(obj, x, z, name), Channel.Control, reliable: true, except: from);
+            if (s.IsHost)
+            {
+                s.Broadcast(Write(obj, x, z, name), Channel.Control, reliable: true, except: from);
+            }
         }
 
         private static PacketWriter Write(ObjRef obj, float x, float z, string name)
@@ -97,16 +127,25 @@ namespace DarkwoodMP.World
         private static Item Find(ObjRef obj, float x, float z, string name)
         {
             var egg = ObjRef.Resolve<Item>(obj);
-            if (egg != null) return egg;
+            if (egg != null)
+            {
+                return egg;
+            }
             Item best = null; float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
             foreach (var i in Resources.FindObjectsOfTypeAll<Item>())
             {
-                if (i == null || !i.gameObject.scene.IsValid() || i.gameObject.name != name) continue;
+                if (i == null || !i.gameObject.scene.IsValid() || i.gameObject.name != name)
+                {
+                    continue;
+                }
                 var p = i.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
                 if (d <= bestD) { bestD = d; best = i; }
             }
-            if (best == null && WorldActions.Debug) Plugin.Log.LogInfo($"[world] egg {obj} ({name}) not found here");
+            if (best == null && WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] egg {obj} ({name}) not found here");
+            }
             return best;
         }
     }

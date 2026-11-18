@@ -57,7 +57,13 @@ namespace DarkwoodMP.Combat
         private static readonly HashSet<Character> _dead = new HashSet<Character>();
 
         /// <summary>An NPC died in this game (WorldActions' NpcDiedPatch): its corpse is still our copy of that NPC.</summary>
-        internal static void Died(Character c) { if (c != null) _dead.Add(c); }
+        internal static void Died(Character c)
+        {
+            if (c != null)
+            {
+                _dead.Add(c);
+            }
+        }
 
         /// <summary>
         /// Whether the host runs this NPC as an enemy: on the host, one it runs or one that just turned on a player;
@@ -69,8 +75,14 @@ namespace DarkwoodMP.Combat
         /// <summary>The NPC is after a player, or will attack one on sight.</summary>
         public static bool TurnedHostile(Character c)
         {
-            if (c == null || c.npc == null || !NetEnemies.InPlay(c)) return false;
-            if (c.behaviour == Character.Behaviour.chasingTarget && IsPlayer(c.target)) return true;
+            if (c == null || c.npc == null || !NetEnemies.InPlay(c))
+            {
+                return false;
+            }
+            if (c.behaviour == Character.Behaviour.chasingTarget && IsPlayer(c.target))
+            {
+                return true;
+            }
             return c.aggressiveness == Aggressiveness.attackOnSight && c.attacksFaction(Faction.player);
         }
 
@@ -102,7 +114,10 @@ namespace DarkwoodMP.Combat
         internal static bool ClientStopped(Character c, uint id, bool ours)
         {
             _running.Remove(c);
-            if (ours) return false; // made from its prefab: it goes
+            if (ours)
+            {
+                return false; // made from its prefab: it goes
+            }
             NetEnemies.Thaw(c);
             Plugin.Log.LogInfo($"[npc] the host stopped sending {c.name} (#{id}): it's ours to run again");
             return true;
@@ -110,7 +125,10 @@ namespace DarkwoodMP.Combat
 
         private static string Who(Transform t)
         {
-            if (t == null) return "nobody";
+            if (t == null)
+            {
+                return "nobody";
+            }
             var proxy = t.GetComponent<NetPlayerProxy>();
             return proxy != null ? proxy.OwnerName : t.GetComponent<Player>() != null ? "the host's player" : t.name;
         }
@@ -128,11 +146,17 @@ namespace DarkwoodMP.Combat
             Character best = null; float bestD = 3000f * 3000f;
             foreach (var c in Object.FindObjectsOfType<Character>())
             {
-                if (c == null || (c.npc == null && !_dead.Contains(c)) || driven(c) || kindOf(c) != kind) continue;
+                if (c == null || (c.npc == null && !_dead.Contains(c)) || driven(c) || kindOf(c) != kind)
+                {
+                    continue;
+                }
                 float d = (c.transform.position - pos).sqrMagnitude;
                 if (d < bestD) { best = c; bestD = d; }
             }
-            if (best != null) Plugin.Log.LogInfo($"[npc] the host's {kind} is our {best.name} near it");
+            if (best != null)
+            {
+                Plugin.Log.LogInfo($"[npc] the host's {kind} is our {best.name} near it");
+            }
             return best;
         }
 
@@ -144,20 +168,35 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static bool ClientHit(Character c, float damage, Transform attacker, bool cut, bool byPlayer, bool interrupt, bool normal)
         {
-            if (_ours || c == null || c.npc == null) return false;
+            if (_ours || c == null || c.npc == null)
+            {
+                return false;
+            }
             if (!c.alive || c.isNightTrader || NetEnemies.LocalOnly(c))
             {
                 Plugin.Log.LogInfo($"[npc] our hit on {c.name} is ours (alive {c.alive}, night trader {c.isNightTrader}, local {NetEnemies.LocalOnly(c)})");
                 return false;
             }
             // Something thrown hits the NPC in the host's copy of the throw.
-            if (ThrownHits.Now()) return Forwarded(c);
+            if (ThrownHits.Now())
+            {
+                return Forwarded(c);
+            }
             var flame = ThrownHits.CurrentFlame;
-            if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame)) return false;
+            if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame))
+            {
+                return false;
+            }
             bool fromPlayer = byPlayer || (attacker != null && attacker.GetComponent<Player>() != null);
-            if (!fromPlayer) return false; // what the world does to it happens in each game
+            if (!fromPlayer)
+            {
+                return false; // what the world does to it happens in each game
+            }
             var effects = NetEnemies.HitEffects;
-            if (damage <= 0f && (effects == null || effects.Count == 0)) return false;
+            if (damage <= 0f && (effects == null || effects.Count == 0))
+            {
+                return false;
+            }
             var s = Session.Instance;
             var w = s.Begin(MsgType.NpcHit);
             ObjRef.Of(c.gameObject).Write(w);
@@ -171,13 +210,22 @@ namespace DarkwoodMP.Combat
             Authority.Request(w, $"hit on {c.name} for {damage:0}", (ok, reason, result) =>
             {
                 if (ok) { ScriptedEvents.HitApplied(c, result); return; }
-                if (reason != NotHere || c == null || !c.alive || Player.Instance == null) return;
+                if (reason != NotHere || c == null || !c.alive || Player.Instance == null)
+                {
+                    return;
+                }
                 // Only our game has it: our hit, here.
                 _ours = true;
                 try
                 {
                     c.getHit(damage, Player.Instance.transform, cut, true, interrupt, normal, false, false, false);
-                    if (mine != null && c.effects != null) foreach (var e in mine) c.effects.activate(e);
+                    if (mine != null && c.effects != null)
+                    {
+                        foreach (var e in mine)
+                        {
+                            c.effects.activate(e);
+                        }
+                    }
                 }
                 finally { _ours = false; }
             }, inventory: false);
@@ -188,18 +236,33 @@ namespace DarkwoodMP.Combat
         /// <summary>Client: a scripted "attack the player" on an NPC of ours. True if it isn't to be done here.</summary>
         internal static bool ClientAttack(Character c)
         {
-            if (_ours || c == null || c.npc == null || c.dummy || !NetEnemies.ClientMode || NetEnemies.LocalOnly(c)) return false;
+            if (_ours || c == null || c.npc == null || c.dummy || !NetEnemies.ClientMode || NetEnemies.LocalOnly(c))
+            {
+                return false;
+            }
             var ne = NetEnemies.Instance;
-            if (ne != null && ne.IsPuppet(c, out _)) return true; // the host's: it's already hostile there
-            if (NetEnemies.Frozen.Contains(c)) return true;
+            if (ne != null && ne.IsPuppet(c, out _))
+            {
+                return true; // the host's: it's already hostile there
+            }
+            if (NetEnemies.Frozen.Contains(c))
+            {
+                return true;
+            }
             // Another player's event, run here too: the host sent its copy after them already.
-            if (WorldActions.Replaying || ScriptedEvents.Current == ScriptedEvents.Part.SharedOnly) return true;
+            if (WorldActions.Replaying || ScriptedEvents.Current == ScriptedEvents.Part.SharedOnly)
+            {
+                return true;
+            }
             var s = Session.Instance;
             var w = s.Begin(MsgType.NpcAttack);
             ObjRef.Of(c.gameObject).Write(w);
             Authority.Request(w, $"{c.name} attacks us", (ok, reason, result) =>
             {
-                if (ok || reason != NotHere || c == null || !c.alive) return;
+                if (ok || reason != NotHere || c == null || !c.alive)
+                {
+                    return;
+                }
                 _ours = true;
                 try { c.attackPlayer(); }
                 finally { _ours = false; }
@@ -223,14 +286,20 @@ namespace DarkwoodMP.Combat
         internal static void OnNpcHit(ulong from, PacketReader r)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             float damage = r.R.ReadSingle();
             byte f = r.R.ReadByte();
             var effects = PlayerDamage.ReadEffects(r);
             string weapon = r.ReadStr();
             var c = Resolve(from, obj, out var proxy);
-            if (c == null) return;
+            if (c == null)
+            {
+                return;
+            }
             Plugin.Log.LogInfo($"[npc] {s.NameOf(from)} hit {c.name} for {damage:0}");
             NetEnemies.Instance?.ApplyHit(from, proxy, c, damage, f, effects, weapon);
         }
@@ -238,11 +307,20 @@ namespace DarkwoodMP.Combat
         internal static void OnNpcAttack(ulong from, PacketReader r)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             var c = Resolve(from, obj, out var proxy);
-            if (c == null) return;
-            if (!Authority.InReach(c.transform.position, NetEnemies.RelevantRange, c.name)) return;
+            if (c == null)
+            {
+                return;
+            }
+            if (!Authority.InReach(c.transform.position, NetEnemies.RelevantRange, c.name))
+            {
+                return;
+            }
             SendAfter(c, proxy);
         }
 

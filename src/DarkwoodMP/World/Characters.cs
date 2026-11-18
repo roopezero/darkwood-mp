@@ -73,13 +73,18 @@ namespace DarkwoodMP.World
         internal static string KeyHash(string key)
         {
             using (var sha = SHA256.Create())
+            {
                 return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key ?? ""))).Substring(0, 32);
+            }
         }
 
         private string RecordsDir()
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (sm == null || Core.currentProfile == null) return null;
+            if (sm == null || Core.currentProfile == null)
+            {
+                return null;
+            }
             return Path.Combine(Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id), "darkwoodmp_players");
         }
 
@@ -90,8 +95,14 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Forget(string why)
         {
-            if (_recordsDir == null && _records.Count == 0) return;
-            if (_records.Count > 0) Plugin.Log.LogInfo($"Players' characters of the last world in this folder forgotten ({why})");
+            if (_recordsDir == null && _records.Count == 0)
+            {
+                return;
+            }
+            if (_records.Count > 0)
+            {
+                Plugin.Log.LogInfo($"Players' characters of the last world in this folder forgotten ({why})");
+            }
             _records.Clear();
             _recordsDir = null;
         }
@@ -100,18 +111,29 @@ namespace DarkwoodMP.World
         private Dictionary<string, Record> Records()
         {
             string dir = RecordsDir();
-            if (dir == null || dir == _recordsDir) return _records;
+            if (dir == null || dir == _recordsDir)
+            {
+                return _records;
+            }
             _records.Clear();
             _recordsDir = dir;
             try
             {
                 if (Directory.Exists(dir))
+                {
                     foreach (var f in Directory.GetFiles(dir, "*.json"))
                     {
                         var rec = JsonConvert.DeserializeObject<Record>(File.ReadAllText(f));
-                        if (rec != null) _records[Path.GetFileNameWithoutExtension(f)] = rec;
+                        if (rec != null)
+                        {
+                            _records[Path.GetFileNameWithoutExtension(f)] = rec;
+                        }
                     }
-                if (_records.Count > 0) Plugin.Log.LogInfo($"This world keeps {_records.Count} other players' characters");
+                }
+                if (_records.Count > 0)
+                {
+                    Plugin.Log.LogInfo($"This world keeps {_records.Count} other players' characters");
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read players' characters in {dir}: {e.Message}"); }
             return _records;
@@ -120,20 +142,32 @@ namespace DarkwoodMP.World
         /// <summary>Host: the game saved; write the characters beside it.</summary>
         public void HostSaved()
         {
-            if (WorldShare.Snapshotting || NetEnemies.ClientMode) return; // a snapshot for a joiner, or a client's copy
+            if (WorldShare.Snapshotting || NetEnemies.ClientMode)
+            {
+                return; // a snapshot for a joiner, or a client's copy
+            }
             var recs = Records();
-            if (recs.Count == 0 || _recordsDir == null) return;
+            if (recs.Count == 0 || _recordsDir == null)
+            {
+                return;
+            }
             try
             {
                 Directory.CreateDirectory(_recordsDir);
-                foreach (var kv in recs) File.WriteAllText(Path.Combine(_recordsDir, kv.Key + ".json"), JsonConvert.SerializeObject(kv.Value));
+                foreach (var kv in recs)
+                {
+                    File.WriteAllText(Path.Combine(_recordsDir, kv.Key + ".json"), JsonConvert.SerializeObject(kv.Value));
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't write players' characters: {e.Message}"); }
         }
 
         private void OnRequest(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
+            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key))
+            {
+                return;
+            }
             Records().TryGetValue(KeyHash(key), out var rec);
             var host = Player.Instance;
             var w = _session.Begin(MsgType.CharacterLoad);
@@ -158,18 +192,27 @@ namespace DarkwoodMP.World
 
         private void OnSave(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
+            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key))
+            {
+                return;
+            }
             var rec = new Record { Name = _session.NameOf(from), Player = r.ReadBigStr(), Inv = r.ReadBigStr(), Hotbar = r.ReadBigStr(), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds() };
             // The chapter of the world the joiner's game is in: what it sends from the last chapter's map, while it
             // waits for the next one or reloads, is stamped with that chapter, whenever it arrives.
             int chapter = r.R.ReadInt32();
             rec.Chapter = chapter > 0 ? chapter : Chapters.HostChapter;
-            if (rec.Player.Length == 0 || rec.Inv.Length == 0) return;
+            if (rec.Player.Length == 0 || rec.Inv.Length == 0)
+            {
+                return;
+            }
             _carried[from] = new Carried { Inv = rec.Inv, Hotbar = rec.Hotbar };
             // A character that died for good stays dead, whatever its game sends after (it goes on sending while it watches).
             var recs = Records();
             string id = KeyHash(key);
-            if (recs.TryGetValue(id, out var old) && old.Dead) rec.Dead = true;
+            if (recs.TryGetValue(id, out var old) && old.Dead)
+            {
+                rec.Dead = true;
+            }
             recs[id] = rec; // written with the world, next time the host's game saves
         }
 
@@ -184,32 +227,57 @@ namespace DarkwoodMP.World
         /// </summary>
         public int? Carries(ulong peer, ICollection<string> types)
         {
-            if (!_session.IsHost || types == null || !_carried.TryGetValue(peer, out var c)) return null;
+            if (!_session.IsHost || types == null || !_carried.TryGetValue(peer, out var c))
+            {
+                return null;
+            }
             try { return Count(c.Inv, types) + Count(c.Hotbar, types) - c.Placed; }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read what {_session.NameOf(peer)} carries: {e.Message}"); return null; }
         }
 
         /// <summary>Host: this client's player has placed one more thing since its last character.</summary>
-        public void Placed(ulong peer) { if (_carried.TryGetValue(peer, out var c)) c.Placed++; }
+        public void Placed(ulong peer)
+        {
+            if (_carried.TryGetValue(peer, out var c))
+            {
+                c.Placed++;
+            }
+        }
 
         private static int Count(string inv, ICollection<string> types)
         {
-            if (string.IsNullOrEmpty(inv)) return 0;
+            if (string.IsNullOrEmpty(inv))
+            {
+                return 0;
+            }
             var state = JsonConvert.DeserializeObject<Inventory.SaveState>(inv);
             int n = 0;
             if (state?.invItems != null)
+            {
                 foreach (var it in state.invItems)
-                    if (it != null && it.type != null && types.Contains(it.type)) n += Math.Max(1, it.amount);
+                {
+                    if (it != null && it.type != null && types.Contains(it.type))
+                    {
+                        n += Math.Max(1, it.amount);
+                    }
+                }
+            }
             return n;
         }
 
         /// <summary>Host: a joiner's character died for good. Kept with it, so it doesn't come back alive when they rejoin.</summary>
         private void OnDead(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key)) return;
+            if (!_session.IsHost || !_session.Keys.TryGetValue(from, out var key))
+            {
+                return;
+            }
             var recs = Records();
             string id = KeyHash(key);
-            if (!recs.TryGetValue(id, out var rec)) recs[id] = rec = new Record { Name = _session.NameOf(from), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = Chapters.HostChapter };
+            if (!recs.TryGetValue(id, out var rec))
+            {
+                recs[id] = rec = new Record { Name = _session.NameOf(from), Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), Chapter = Chapters.HostChapter };
+            }
             rec.Dead = true;
             Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good: kept dead in this world");
         }
@@ -217,7 +285,10 @@ namespace DarkwoodMP.World
         /// <summary>Client: tell the host our character died for good (World.Spectator).</summary>
         public void SendDead()
         {
-            if (!NetEnemies.ClientMode || !_session.Connected) return;
+            if (!NetEnemies.ClientMode || !_session.Connected)
+            {
+                return;
+            }
             _session.SendToHost(_session.Begin(MsgType.CharacterDead), Channel.Control, reliable: true);
         }
 
@@ -227,14 +298,26 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool? Electrician(ulong peer)
         {
-            if (!_session.IsHost || !_session.Keys.TryGetValue(peer, out var key)) return null;
-            if (!Records().TryGetValue(KeyHash(key), out var rec) || string.IsNullOrEmpty(rec.Player)) return null;
-            if (_electrician.TryGetValue(peer, out var known) && ReferenceEquals(known.Item1, rec.Player)) return known.Item2;
+            if (!_session.IsHost || !_session.Keys.TryGetValue(peer, out var key))
+            {
+                return null;
+            }
+            if (!Records().TryGetValue(KeyHash(key), out var rec) || string.IsNullOrEmpty(rec.Player))
+            {
+                return null;
+            }
+            if (_electrician.TryGetValue(peer, out var known) && ReferenceEquals(known.Item1, rec.Player))
+            {
+                return known.Item2;
+            }
             bool? has = null;
             try
             {
                 var skills = JsonConvert.DeserializeObject<Player.SaveState>(rec.Player)?.skillS?.skillsStates;
-                if (skills != null) has = skills.Exists(k => k != null && k.type == "electrician");
+                if (skills != null)
+                {
+                    has = skills.Exists(k => k != null && k.type == "electrician");
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read {rec.Name}'s skills: {e.Message}"); }
             _electrician[peer] = (rec.Player, has);
@@ -283,24 +366,42 @@ namespace DarkwoodMP.World
                 // Another world loaded in this session: what we had or asked for was the last one's.
                 _asked = false; _have = false; _readyAt = -1f;
             }
-            if (!WorldShare.WorldReady) return;
-            if (_readyAt < 0f) _readyAt = Time.unscaledTime; // the wait starts once the world has loaded
+            if (!WorldShare.WorldReady)
+            {
+                return;
+            }
+            if (_readyAt < 0f)
+            {
+                _readyAt = Time.unscaledTime; // the wait starts once the world has loaded
+            }
             if (!_asked)
             {
-                if (Core.mainMenu) return; // the menu over a world: we may be leaving it (returnToMainMenu sets it at once)
+                if (Core.mainMenu)
+                {
+                    return; // the menu over a world: we may be leaving it (returnToMainMenu sets it at once)
+                }
                 _asked = true;
                 _askedScene = ActiveScene;
                 _session.SendToHost(_session.Begin(MsgType.CharacterRequest), Channel.Control, reliable: true);
                 return;
             }
-            if (_have && Time.unscaledTime >= _nextSave) SaveNow();
+            if (_have && Time.unscaledTime >= _nextSave)
+            {
+                SaveNow();
+            }
         }
 
         /// <summary>Client: send our character to the host now (also as we leave, and as the game quits).</summary>
         public void SaveNow()
         {
-            if (_quitSent || !_have || !NetEnemies.ClientMode || !WorldShare.InWorld) return;
-            if (Prologue.Active) return; // the prologue's character isn't kept: the host keeps ours from its end on
+            if (_quitSent || !_have || !NetEnemies.ClientMode || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (Prologue.Active)
+            {
+                return; // the prologue's character isn't kept: the host keeps ours from its end on
+            }
             _nextSave = Time.unscaledTime + CharacterInterval;
             var p = Player.Instance;
             try
@@ -328,7 +429,10 @@ namespace DarkwoodMP.World
 
         private void OnLoad(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !NetEnemies.ClientMode) return;
+            if (from != _session.HostId || !NetEnemies.ClientMode)
+            {
+                return;
+            }
             if (!_asked || ActiveScene != _askedScene || !WorldShare.InWorld)
             {
                 Plugin.Log.LogInfo("Our character came for a world we've left: asking again in this one");
@@ -339,7 +443,10 @@ namespace DarkwoodMP.World
             string ps = r.ReadBigStr(), inv = r.ReadBigStr(), hot = r.ReadBigStr();
             Vector3 spawn = r.ReadVector3();
             var p = Player.Instance;
-            if (p == null) return;
+            if (p == null)
+            {
+                return;
+            }
             if (kind == 4)
             {
                 // Our character died for good here: as the game doesn't bring it back, we watch the others again.
@@ -353,17 +460,38 @@ namespace DarkwoodMP.World
             {
                 // In the prologue, a new character is what the stage made it (its own items): only put beside the host.
                 bool prologue = Prologue.Active && (kind == 0 || kind == 2);
-                if (kind == 1 || kind == 3) ApplyRecord(p, ps, inv, hot);
+                if (kind == 1 || kind == 3)
+                {
+                    ApplyRecord(p, ps, inv, hot);
+                }
                 // Our own kept place, but not on this world's map (a character kept with the wrong chapter, or one that
                 // was away in a separate location): beside the host, as from the last chapter.
                 bool offMap = !prologue && kind == 1 && spawn != Vector3.zero && !OnMap(p.transform.position);
-                if (offMap) Plugin.Log.LogInfo($"[spawn] your kept place {p.transform.position} isn't on this map: your character is back, beside the host");
-                if (prologue) { if (spawn != Vector3.zero) p.transform.position = spawn; }
-                else if ((kind == 3 || offMap) && spawn != Vector3.zero) p.transform.position = spawn; // the last chapter's place isn't on this map
-                else if (kind == 0) Fresh(p, spawn);
+                if (offMap)
+                {
+                    Plugin.Log.LogInfo($"[spawn] your kept place {p.transform.position} isn't on this map: your character is back, beside the host");
+                }
+                if (prologue)
+                {
+                    if (spawn != Vector3.zero)
+                    {
+                        p.transform.position = spawn;
+                    }
+                }
+                else if ((kind == 3 || offMap) && spawn != Vector3.zero)
+                {
+                    p.transform.position = spawn; // the last chapter's place isn't on this map
+                }
+                else if (kind == 0)
+                {
+                    Fresh(p, spawn);
+                }
                 // A copy of the host's: keep it, beside them. Our own (kind 1) stays where it was saved, not on the
                 // host (or at 0,0 when no position was given).
-                else if (kind == 2 && spawn != Vector3.zero) p.transform.position = spawn;
+                else if (kind == 2 && spawn != Vector3.zero)
+                {
+                    p.transform.position = spawn;
+                }
                 PlaceFree(p, spawn == Vector3.zero ? (Vector3?)null : spawn);
                 p.refreshRecipes();
                 Reequip(p);
@@ -386,11 +514,17 @@ namespace DarkwoodMP.World
         internal static float NearestChunk(Vector3 at)
         {
             var wg = Singleton<WorldGenerator>.Instance;
-            if (wg == null || wg.worldChunks == null || wg.worldChunks.Count == 0 || wg.chunkSize <= 0f) return 0f;
+            if (wg == null || wg.worldChunks == null || wg.worldChunks.Count == 0 || wg.chunkSize <= 0f)
+            {
+                return 0f;
+            }
             float best = float.MaxValue;
             foreach (var c in wg.worldChunks)
             {
-                if (c == null) continue;
+                if (c == null)
+                {
+                    continue;
+                }
                 var d = c.transform.position - at;
                 best = Mathf.Min(best, Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.z)));
             }
@@ -443,14 +577,26 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void SetSlots(Inventory bag, int count)
         {
-            if (bag == null || bag.slots == null || count <= 0) return;
-            while (bag.slots.Count < count) bag.addSlot();
-            while (bag.slots.Count > count) bag.removeSlot();
+            if (bag == null || bag.slots == null || count <= 0)
+            {
+                return;
+            }
+            while (bag.slots.Count < count)
+            {
+                bag.addSlot();
+            }
+            while (bag.slots.Count > count)
+            {
+                bag.removeSlot();
+            }
         }
 
         private static int Delta(int wanted, int have, Action takeOne)
         {
-            for (int i = wanted; i < have; i++) takeOne();
+            for (int i = wanted; i < have; i++)
+            {
+                takeOne();
+            }
             return Math.Max(0, wanted - have);
         }
 
@@ -464,13 +610,22 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void Reequip(Player p)
         {
-            if (p.Hotbar == null) return;
+            if (p.Hotbar == null)
+            {
+                return;
+            }
             var slot = p.getCurrentlySelectedHotbarSlot();
             InvItemClass item = slot != null ? slot.invItem : null;
             try
             {
-                if (slot != null) p.selectCurrentHotbarSlot();
-                else p.switchToItem(p.fists); // no slot selected: bare hands rather than an item that isn't there
+                if (slot != null)
+                {
+                    p.selectCurrentHotbarSlot();
+                }
+                else
+                {
+                    p.switchToItem(p.fists); // no slot selected: bare hands rather than an item that isn't there
+                }
                 // An item that can't be held (food in the selected slot) leaves the hands as they were, with no
                 // switch under way; if what's held then is the stale item, it becomes bare hands at once.
                 if (!p.switchingItem && !InvItemClass.isNull(p.currentItem) && p.currentItem != p.fists && !InBags(p, p.currentItem))
@@ -486,8 +641,18 @@ namespace DarkwoodMP.World
         private static bool InBags(Player p, InvItemClass item)
         {
             foreach (var bag in new[] { p.Inventory, p.Hotbar })
+            {
                 if (bag != null && bag.slots != null)
-                    foreach (var slot in bag.slots) if (slot != null && slot.invItem == item) return true;
+                {
+                    foreach (var slot in bag.slots)
+                    {
+                        if (slot != null && slot.invItem == item)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
             return false;
         }
 
@@ -503,7 +668,10 @@ namespace DarkwoodMP.World
             p.setHealth(p.maxHealth);
             // The host's skills are the host's: a new player takes the shared levels at a stove and picks their own.
             Progression.ClearSkills(p);
-            if (spawn != Vector3.zero) p.transform.position = spawn;
+            if (spawn != Vector3.zero)
+            {
+                p.transform.position = spawn;
+            }
         }
     }
 

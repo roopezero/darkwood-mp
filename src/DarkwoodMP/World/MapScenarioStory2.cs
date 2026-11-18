@@ -37,7 +37,10 @@ namespace DarkwoodMP.World
             if (et == null || et.eventTriggers.Count == 0) { r.Fail("no such trigger (later-setup first)"); yield break; }
             var t = et.eventTriggers[0];
             t.fired = true;
-            if (t.gameEvents != null) t.gameEvents.fired = true;
+            if (t.gameEvents != null)
+            {
+                t.gameEvents.fired = true;
+            }
             yield return null;
             r.Info = $"{et.name} marked fired as loaded; owed to our player {ScriptedEvents.IsOwed(t)}";
         }
@@ -56,7 +59,10 @@ namespace DarkwoodMP.World
         private static GameObject Root(string name, Vector3 pos)
         {
             var old = GameObject.Find(name);
-            if (old != null) Object.Destroy(old);
+            if (old != null)
+            {
+                Object.Destroy(old);
+            }
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -66,9 +72,15 @@ namespace DarkwoodMP.World
         private static void MakeRoom()
         {
             var bag = Player.Instance.Inventory;
-            if (bag.slots.Exists(s => s != null && InvItemClass.isNull(s.invItem))) return;
+            if (bag.slots.Exists(s => s != null && InvItemClass.isNull(s.invItem)))
+            {
+                return;
+            }
             var last = bag.slots.FindLast(s => s != null && !InvItemClass.isNull(s.invItem) && s.invItem.type != Item);
-            if (last != null) bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount);
+            if (last != null)
+            {
+                bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount);
+            }
         }
 
         /// <summary>A GameEvents on go: a shared runFunction on a counter, and one Item given to the player.</summary>
@@ -95,11 +107,17 @@ namespace DarkwoodMP.World
             if (a.Length < 4) { r.Fail("caused-setup ID LAMP DX DZ"); yield break; }
             var lamp = MapScenarioWorld.Find<Item>(a[1], i => i.switchable);
             if (lamp == null) { r.Fail($"nothing switchable called {a[1]}"); yield break; }
-            if (lamp.isOn) lamp.turnOff();
+            if (lamp.isOn)
+            {
+                lamp.turnOff();
+            }
             var m = new Made();
             var go = Root("dwmp_caused_" + a[0], At(a[2], a[3]));
             var ge = Events(go, m, r);
-            if (ge == null) yield break;
+            if (ge == null)
+            {
+                yield break;
+            }
             m.Et = go.AddComponent<EventTriggers>();
             m.T = new global::EventTrigger { type = global::EventTrigger.Type.refreshWhenTurnedOn, multipleFire = false, gameEvents = ge };
             m.Et.eventTriggers.Add(m.T);
@@ -123,11 +141,17 @@ namespace DarkwoodMP.World
             if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("caused-check ID N GOT (caused-setup first)"); yield break; }
             int want = int.Parse(a[1]), wantGot = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 8f;
-            while ((m.C.N < want || MapScenarioWorld.CarriedOf(Item) - m.Had < wantGot) && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while ((m.C.N < want || MapScenarioWorld.CarriedOf(Item) - m.Had < wantGot) && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(1.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - m.Had;
             r.Info = $"the shared part of {a[0]} ran {m.C.N} time(s) here (want {want}), our player got {got} {Item} (want {wantGot}); fired {m.T.fired}";
-            if (m.C.N != want || got != wantGot) r.Fail(r.Info);
+            if (m.C.N != want || got != wantGot)
+            {
+                r.Fail(r.Info);
+            }
         }
     }
 }

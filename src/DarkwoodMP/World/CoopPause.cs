@@ -33,7 +33,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update()
         {
-            if (!InCoop || !Core.Paused) return;
+            if (!InCoop || !Core.Paused)
+            {
+                return;
+            }
             if (Time.timeScale == 0f)
             {
                 Plugin.Log.LogInfo("Co-op: the game was paused; it runs on while others play");
@@ -44,7 +47,10 @@ namespace DarkwoodMP.World
             if (p != null && p.alive)
             {
                 var rb = p.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic) rb.velocity = Vector3.zero;
+                if (rb != null && !rb.isKinematic)
+                {
+                    rb.velocity = Vector3.zero;
+                }
             }
         }
     }
@@ -54,7 +60,10 @@ namespace DarkwoodMP.World
     {
         static bool Prefix()
         {
-            if (!CoopPause.InCoop) return true;
+            if (!CoopPause.InCoop)
+            {
+                return true;
+            }
             Core.Paused = true; // menus and input behave as paused; time and sound go on
             return false;
         }
@@ -66,7 +75,10 @@ namespace DarkwoodMP.World
     {
         static void Prefix(ref float _timeScale)
         {
-            if (_timeScale > 0f && _timeScale != 1f && CoopPause.InCoop) _timeScale = 1f;
+            if (_timeScale > 0f && _timeScale != 1f && CoopPause.InCoop)
+            {
+                _timeScale = 1f;
+            }
         }
     }
 
@@ -76,7 +88,10 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(ref System.Collections.IEnumerator __result)
         {
-            if (!CoopPause.InCoop) return true;
+            if (!CoopPause.InCoop)
+            {
+                return true;
+            }
             __result = Nothing();
             return false;
         }

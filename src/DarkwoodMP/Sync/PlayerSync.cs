@@ -38,7 +38,10 @@ namespace DarkwoodMP.Sync
         public void SpawnDummy(Vector3 offset)
         {
             var snap = new PlayerSnapshot();
-            if (!_capture.Capture(snap)) return;
+            if (!_capture.Capture(snap))
+            {
+                return;
+            }
             snap.Position += offset;
             RemoveRemote(DummyId);
             var d = GetOrCreate(DummyId, "Dummy");
@@ -63,7 +66,10 @@ namespace DarkwoodMP.Sync
             session.OnSessionEnded += () =>
             {
                 _left.Clear();
-                foreach (var r in Remotes.Values) r.Destroy();
+                foreach (var r in Remotes.Values)
+                {
+                    r.Destroy();
+                }
                 Remotes.Clear();
             };
         }
@@ -77,7 +83,10 @@ namespace DarkwoodMP.Sync
                 Send(reliable: false);
             }
 
-            foreach (var r in Remotes.Values) r.Tick();
+            foreach (var r in Remotes.Values)
+            {
+                r.Tick();
+            }
             PlayerSeparation.Update(this, _session.LocalId);
             MapMarkers.Tick();
         }
@@ -91,20 +100,35 @@ namespace DarkwoodMP.Sync
         /// </summary>
         public void FlushNow()
         {
-            if (_session.IsClient) Send(reliable: true);
+            if (_session.IsClient)
+            {
+                Send(reliable: true);
+            }
         }
 
         private void Send(bool reliable)
         {
-            if (!_capture.Capture(_snap)) return;
+            if (!_capture.Capture(_snap))
+            {
+                return;
+            }
             _snap.Owner = _session.LocalId;
             // A joiner isn't shown until its character is placed (World.Characters.Placing), off the others.
-            if (!_session.Active || !_session.Connected || (World.Characters.Instance?.Placing ?? false)) return;
+            if (!_session.Active || !_session.Connected || (World.Characters.Instance?.Placing ?? false))
+            {
+                return;
+            }
             var w = _session.Begin(MsgType.PlayerState);
             _snap.Write(w);
             var ch = reliable ? Channel.Control : Channel.State;
-            if (_session.IsHost) _session.Broadcast(w, ch, reliable);
-            else _session.SendToHost(w, ch, reliable);
+            if (_session.IsHost)
+            {
+                _session.Broadcast(w, ch, reliable);
+            }
+            else
+            {
+                _session.SendToHost(w, ch, reliable);
+            }
         }
 
         /// <summary>Host: where this client's player last said it was, as MoveCheck let it be (false if not known).</summary>
@@ -116,30 +140,51 @@ namespace DarkwoodMP.Sync
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
-            if (LeftJustNow(_session.IsHost ? from : _incoming.Owner)) return;
+            if (LeftJustNow(_session.IsHost ? from : _incoming.Owner))
+            {
+                return;
+            }
             if (_session.IsHost)
             {
                 // Never trust the owner field from a client, nor a place it couldn't have got to.
                 _incoming.Owner = from;
                 // A spectator (dead for good, World.Spectator) goes along with whoever it watches and can't touch
                 // anything: it's not checked, and starts afresh if it ever plays again.
-                if (_incoming.Spectating) _moves.Forget(from);
-                else _incoming.Position = _moves.Check(from, _incoming.Position);
+                if (_incoming.Spectating)
+                {
+                    _moves.Forget(from);
+                }
+                else
+                {
+                    _incoming.Position = _moves.Check(from, _incoming.Position);
+                }
                 var w = _session.Begin(MsgType.PlayerState);
                 _incoming.Write(w);
                 _session.Broadcast(w, Channel.State, reliable: false, except: from);
             }
-            else if (from != _session.HostId) return;
+            else if (from != _session.HostId)
+            {
+                return;
+            }
 
-            if (_incoming.Owner == _session.LocalId) return;
+            if (_incoming.Owner == _session.LocalId)
+            {
+                return;
+            }
             var remote = GetOrCreate(_incoming.Owner, _session.NameOf(_incoming.Owner));
             remote.Push(_incoming);
         }
 
         private bool LeftJustNow(ulong id)
         {
-            if (!_left.TryGetValue(id, out float at)) return false;
-            if (Time.unscaledTime - at < LeftIgnore) return true;
+            if (!_left.TryGetValue(id, out float at))
+            {
+                return false;
+            }
+            if (Time.unscaledTime - at < LeftIgnore)
+            {
+                return true;
+            }
             _left.Remove(id);
             return false;
         }
@@ -149,7 +194,10 @@ namespace DarkwoodMP.Sync
             if (!Remotes.TryGetValue(id, out var r))
             {
                 r = new RemotePlayer(id, name);
-                if (id != DummyId) r.OnDied += rp => OnRemoteDied?.Invoke(_session.NameOf(rp.Owner));
+                if (id != DummyId)
+                {
+                    r.OnDied += rp => OnRemoteDied?.Invoke(_session.NameOf(rp.Owner));
+                }
                 Remotes[id] = r;
             }
             return r;
@@ -165,23 +213,50 @@ namespace DarkwoodMP.Sync
         {
             // Not over the pause menu or the mod's windows; on the map, beside the players' markers; not over a
             // cutscene, a game menu or anything else that isn't the world in play (UiState).
-            if (World.UiState.MenuOver) return;
+            if (World.UiState.MenuOver)
+            {
+                return;
+            }
             if (MapMarkers.MapOpen) { MapMarkers.DrawNames(); return; }
-            if (World.UiState.WorldOverlaysHidden) return;
+            if (World.UiState.WorldOverlaysHidden)
+            {
+                return;
+            }
             var cam = Camera.main;
-            if (cam == null) return;
+            if (cam == null)
+            {
+                return;
+            }
             foreach (var r in Remotes.Values)
             {
-                if (r.Root == null || !r.Root.activeSelf) continue;
+                if (r.Root == null || !r.Root.activeSelf)
+                {
+                    continue;
+                }
                 var sp = cam.WorldToScreenPoint(r.Root.transform.position);
-                if (sp.z < 0) continue;
+                if (sp.z < 0)
+                {
+                    continue;
+                }
                 var rect = new Rect(sp.x - 100, Screen.height - sp.y - 60, 200, 22);
-                if (r.Owner != DummyId) r.Name = _session.NameOf(r.Owner); // names can arrive after the first snapshot
+                if (r.Owner != DummyId)
+                {
+                    r.Name = _session.NameOf(r.Owner); // names can arrive after the first snapshot
+                }
                 string label = r.Name;
                 var last = r.Last;
-                if (last != null && r.Alive) label += $"  {last.Health}%";
-                if (r.Owner == DummyId && Time.time < _dummyFlashUntil) label += $"  -{_dummyDamage:0}";
-                else if (r.Owner == DummyId) _dummyDamage = 0f;
+                if (last != null && r.Alive)
+                {
+                    label += $"  {last.Health}%";
+                }
+                if (r.Owner == DummyId && Time.time < _dummyFlashUntil)
+                {
+                    label += $"  -{_dummyDamage:0}";
+                }
+                else if (r.Owner == DummyId)
+                {
+                    _dummyDamage = 0f;
+                }
                 GUI.Label(rect, label, Plugin.NameTagStyle);
             }
         }

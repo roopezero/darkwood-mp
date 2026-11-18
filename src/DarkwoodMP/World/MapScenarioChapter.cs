@@ -65,11 +65,20 @@ namespace DarkwoodMP.World
             var p = P;
             // A second argument: that many hotbar slots, taken as the game's hotbar upgrade item gives one.
             int want = a.Length > 1 ? int.Parse(a[1]) : 0;
-            while (want > 0 && p.Hotbar.slots.Count < want) p.upgradeHotbar();
+            while (want > 0 && p.Hotbar.slots.Count < want)
+            {
+                p.upgradeHotbar();
+            }
             if (a.Length > 0 && a[0] == "keep") { _mark = Hotbar(p); r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}"; yield break; }
             int n = a.Length > 0 ? int.Parse(a[0]) : 0;
             var slots = p.Hotbar.slots;
-            foreach (var s in slots) if (!InvItemClass.isNull(s.invItem)) s.removeItem();
+            foreach (var s in slots)
+            {
+                if (!InvItemClass.isNull(s.invItem))
+                {
+                    s.removeItem();
+                }
+            }
             p.switchToItem(p.fists);
             int at = n % slots.Count;
             slots[at].inventory = p.Hotbar; slots[at].createItem("bandages", n + 2);
@@ -92,7 +101,9 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(2f);
             }
             while (Chapter != 2 || SceneManager.GetActiveScene().name != "chapter2" || !WorldShare.WorldReady || Chapters.Generating)
+            {
                 yield return new WaitForSecondsRealtime(0.5f);
+            }
             r.Info = $"in chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(P)}, hotbar {Hotbar(P)}";
         }
 
@@ -102,7 +113,10 @@ namespace DarkwoodMP.World
             EventTriggers et = null; global::EventTrigger t = null;
             foreach (var e in Object.FindObjectsOfType<EventTriggers>(true))
             {
-                if (e == null || !e.gameObject.scene.IsValid()) continue;
+                if (e == null || !e.gameObject.scene.IsValid())
+                {
+                    continue;
+                }
                 t = e.eventTriggers.FirstOrDefault(x => x?.gameEvents != null && x.gameEvents.name == a[0]);
                 if (t != null) { et = e; break; }
             }
@@ -111,14 +125,23 @@ namespace DarkwoodMP.World
             // reach of where it last saw us, and the area set off in the frame we landed sent it before our new
             // place (refused: "5995 away", at the spot loc-go left us).
             var cols = et.GetComponents<Collider>().Where(c => c.enabled).ToList();
-            foreach (var c in cols) c.enabled = false;
+            foreach (var c in cols)
+            {
+                c.enabled = false;
+            }
             Place(et.transform.position + new Vector3(40f, 0f, 0f));
             yield return new WaitForSeconds(2f);
             r.Info = $"set off {et.name} ({t.type}) for {a[0]} at {Pos(et.transform)} in {Locations.Current() ?? "the world"}, chapter {Chapter}";
             var type = t.type;
             AsPlayer(() => et.fireEventTrigger(type));
             yield return new WaitForSeconds(1f);
-            foreach (var c in cols) if (c != null) c.enabled = true;
+            foreach (var c in cols)
+            {
+                if (c != null)
+                {
+                    c.enabled = true;
+                }
+            }
         }
 
         /// <summary>
@@ -130,7 +153,10 @@ namespace DarkwoodMP.World
             Place(new Vector3(-90000f, P.transform.position.y, -90000f));
             yield return new WaitForSeconds(1f);
             Net.Session.Instance.Backend.Rejoin(); // sends our character (from off the map) first
-            while (Characters.Instance.HasCharacter) yield return new WaitForSecondsRealtime(0.2f);
+            while (Characters.Instance.HasCharacter)
+            {
+                yield return new WaitForSecondsRealtime(0.2f);
+            }
             yield return In(a, r);
         }
 
@@ -157,12 +183,30 @@ namespace DarkwoodMP.World
             string ui = HotbarUi(p);
             int told = Count("[notice] The host is starting chapter 2");
             r.Info = $"told {told}x; chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(p)}, host {(host.HasValue ? $"{d:0} away" : "not seen")}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
-            if (told != 1) r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
-            else if (_mark != null && hot != _mark) r.Fail($"our hotbar isn't ours: {hot}, had {_mark}; {r.Info}");
-            else if (!ui.StartsWith("ui ok")) r.Fail($"the hotbar shown isn't ours: {r.Info}");
-            else if (!OnGround(p)) r.Fail($"no ground under our player: {r.Info}");
-            else if (!host.HasValue) r.Fail($"the host isn't shown: {r.Info}");
-            else if (d > 800f) r.Fail($"not beside the host: {r.Info}");
+            if (told != 1)
+            {
+                r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
+            }
+            else if (_mark != null && hot != _mark)
+            {
+                r.Fail($"our hotbar isn't ours: {hot}, had {_mark}; {r.Info}");
+            }
+            else if (!ui.StartsWith("ui ok"))
+            {
+                r.Fail($"the hotbar shown isn't ours: {r.Info}");
+            }
+            else if (!OnGround(p))
+            {
+                r.Fail($"no ground under our player: {r.Info}");
+            }
+            else if (!host.HasValue)
+            {
+                r.Fail($"the host isn't shown: {r.Info}");
+            }
+            else if (d > 800f)
+            {
+                r.Fail($"not beside the host: {r.Info}");
+            }
         }
 
         private static Dreams D => Singleton<Dreams>.Instance;
@@ -177,11 +221,20 @@ namespace DarkwoodMP.World
             D.wantToDream = true;
             D.StartCoroutine(D.prepareDream(name));
             float giveUp = Time.realtimeSinceStartup + 40f;
-            while (!(D != null && D.dreaming) && Time.realtimeSinceStartup < giveUp) yield return new WaitForSecondsRealtime(0.5f);
+            while (!(D != null && D.dreaming) && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+            }
             yield return new WaitForSecondsRealtime(1f);
             r.Info = $"dreaming {D?.dreaming} ({D?.preset?.name}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
-            if (!(D != null && D.dreaming)) r.Fail($"not in a dream: {r.Info}");
-            else if (DreamSync.Shared != null) r.Fail($"the dream is shared, not ours: {r.Info}");
+            if (!(D != null && D.dreaming))
+            {
+                r.Fail($"not in a dream: {r.Info}");
+            }
+            else if (DreamSync.Shared != null)
+            {
+                r.Fail($"the dream is shared, not ours: {r.Info}");
+            }
         }
 
         private static IEnumerator Pending(string[] a, Result r)
@@ -193,12 +246,21 @@ namespace DarkwoodMP.World
                 var lines = Lines();
                 line = lines.LastOrDefault(l => l.Contains("[notice] The host will start chapter"));
                 refused = lines.LastOrDefault(l => l.Contains("[notice] The host didn't start chapter"));
-                if (line != null || refused != null) break;
+                if (line != null || refused != null)
+                {
+                    break;
+                }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             r.Info = (line ?? refused ?? "no answer from the host").Trim();
-            if (refused != null) r.Fail($"refused: {r.Info}");
-            else if (line == null) r.Fail(r.Info);
+            if (refused != null)
+            {
+                r.Fail($"refused: {r.Info}");
+            }
+            else if (line == null)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static IEnumerator HeldStep(string[] a, Result r)
@@ -207,9 +269,18 @@ namespace DarkwoodMP.World
             var lines = Lines();
             string held = lines.LastOrDefault(l => l.Contains("which can't run here yet"));
             r.Info = $"{(held ?? "nothing held").Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
-            if (held == null) r.Fail($"no chapter held: {r.Info}");
-            else if (Chapter != 1 || Chapters.Generating) r.Fail($"the chapter started in our dream: {r.Info}");
-            else if (!Dreaming) r.Fail($"our dream ended too soon for the test: {r.Info}");
+            if (held == null)
+            {
+                r.Fail($"no chapter held: {r.Info}");
+            }
+            else if (Chapter != 1 || Chapters.Generating)
+            {
+                r.Fail($"the chapter started in our dream: {r.Info}");
+            }
+            else if (!Dreaming)
+            {
+                r.Fail($"our dream ended too soon for the test: {r.Info}");
+            }
         }
 
         /// <summary>How many lines of our log since "chapter-mark" have this text.</summary>
@@ -226,17 +297,32 @@ namespace DarkwoodMP.World
                 seen = ps == null ? new System.Collections.Generic.List<string>() :
                     ps.Remotes.Values.Where(rp => rp.Root != null && rp.Root.activeInHierarchy && StateDump.Flat(rp.Root.transform.position - P.transform.position) < 800f)
                         .Select(rp => Pos(rp.Root.transform)).ToList();
-                if (seen.Count >= want) break;
+                if (seen.Count >= want)
+                {
+                    break;
+                }
                 yield return new WaitForSecondsRealtime(1f);
             }
             int starts = Count("Starting chapter 2:"), runs = Count("set off chapter 2") - Count("can't run here yet");
             r.Info = $"chapter {Chapter}, hotbar {Hotbar(P)}, players beside us: {string.Join(" ", seen)}; started {starts}x, a joiner's run {runs}x";
-            if (seen.Count < want) r.Fail($"{seen.Count} of {want} players beside us: {r.Info}");
-            else if (starts != 1 || runs > 1) r.Fail($"chapter 2 didn't start once: {r.Info}");
+            if (seen.Count < want)
+            {
+                r.Fail($"{seen.Count} of {want} players beside us: {r.Info}");
+            }
+            else if (starts != 1 || runs > 1)
+            {
+                r.Fail($"chapter 2 didn't start once: {r.Info}");
+            }
             // The host's own hotbar is the game's to carry over; only what's in which slot is checked here (the amounts of a
             // stack can change as the chapter's save is loaded).
-            else if (_mark != null && !Keeps(Hotbar(P), _mark)) r.Fail($"our hotbar changed: {r.Info}, had {_mark}");
-            else if (!HotbarUi(P).StartsWith("ui ok")) r.Fail($"the hotbar shown isn't ours: {HotbarUi(P)}");
+            else if (_mark != null && !Keeps(Hotbar(P), _mark))
+            {
+                r.Fail($"our hotbar changed: {r.Info}, had {_mark}");
+            }
+            else if (!HotbarUi(P).StartsWith("ui ok"))
+            {
+                r.Fail($"the hotbar shown isn't ours: {HotbarUi(P)}");
+            }
         }
 
         /// <summary>
@@ -246,7 +332,10 @@ namespace DarkwoodMP.World
         internal static string HotbarUi(Player p)
         {
             var bar = p.Hotbar;
-            if (bar == null || bar.thisUI == null) return "ui none";
+            if (bar == null || bar.thisUI == null)
+            {
+                return "ui none";
+            }
             int shown = bar.thisUI.GetComponentsInChildren<UIInvSlot>(false).Length;
             int without = bar.slots.Count(s => s.UIInvSlot == null || !s.UIInvSlot.gameObject.activeInHierarchy);
             return shown == bar.slots.Count && without == 0 ? $"ui ok {shown}" : $"ui {shown} shown for {bar.slots.Count} slots, {without} slots not shown";
@@ -257,7 +346,10 @@ namespace DarkwoodMP.World
         {
             var ps = Sync.PlayerSync.Instance;
             var s = Net.Session.Instance;
-            if (ps == null || s == null) return null;
+            if (ps == null || s == null)
+            {
+                return null;
+            }
             return ps.Remotes.TryGetValue(s.HostId, out var rp) && rp.Root != null && rp.Root.activeInHierarchy ? rp.Root.transform.position : (Vector3?)null;
         }
 

@@ -94,7 +94,9 @@ namespace DarkwoodMP
             var state = sm?.loadGameProfiles();
             bool any = state?.profiles != null && state.profiles.Any(p => p != null && p.Active);
             if (!any && sm != null && sm.CheckIfWorldFilesExist())
+            {
                 _problem = "The game's list of saves is missing or damaged, but there are save files. The game's own profiles screen can restore it from a backup.";
+            }
             // Five slots, as the game always has; a slot that isn't active (or whose character died for good) is free.
             _profiles = new List<GameProfile>();
             int count = Math.Max(5, state?.profiles?.Count ?? 0);
@@ -104,10 +106,16 @@ namespace DarkwoodMP
                 bool used = p != null && p.Active && !p.dead;
                 _profiles.Add(used ? p : new GameProfile(i + 1, _Active: false, 0));
                 var slot = new Slot { Id = i + 1, Profile = used ? p : null };
-                if (used) slot.PlayedWith = SaveBook.PlayedWith(slot.Id);
+                if (used)
+                {
+                    slot.PlayedWith = SaveBook.PlayedWith(slot.Id);
+                }
                 _slots.Add(slot);
             }
-            if (_choice != 0 && !_slots.Any(s => s.Id == _choice && !s.Free)) _choice = -1;
+            if (_choice != 0 && !_slots.Any(s => s.Id == _choice && !s.Free))
+            {
+                _choice = -1;
+            }
             if (_choice < 0)
             {
                 // The save played last, or New Game when there's none.
@@ -143,14 +151,20 @@ namespace DarkwoodMP
         /// <summary>A save's new name is written when it's left (another choice, Start, closing the window).</summary>
         private void CommitName()
         {
-            if (_nameFor > 0 && Chosen != null && _nameFor == _choice) SaveBook.SetName(_nameFor, _name);
+            if (_nameFor > 0 && Chosen != null && _nameFor == _choice)
+            {
+                SaveBook.SetName(_nameFor, _name);
+            }
         }
 
         // ---- drawing ------------------------------------------------------------------------------------------
 
         private void OnGUI()
         {
-            if (!_win.Open) return;
+            if (!_win.Open)
+            {
+                return;
+            }
             var e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !ConfirmDialog.Open) { e.Use(); Close(); return; }
             _win.OnGUI();
@@ -164,7 +178,10 @@ namespace DarkwoodMP
         private static string Summary(GameProfile p)
         {
             string s = $"Day {p.day}";
-            if (p.chapter > 0) s += $", chapter {Mathf.Clamp(p.chapter, 1, 10)}";
+            if (p.chapter > 0)
+            {
+                s += $", chapter {Mathf.Clamp(p.chapter, 1, 10)}";
+            }
             return s + ", " + Difficulty(p.difficulty).ToLowerInvariant();
         }
 
@@ -188,8 +205,14 @@ namespace DarkwoodMP
                 if (Ui.Button(f, "Open the game's profiles screen")) { Close(); Singleton<MainMenu>.Instance.displayProfilesMenu(); }
             }
             DrawList(f);
-            if (_choice > 0) DrawSave(f, Chosen);
-            else DrawNewSlot(f);
+            if (_choice > 0)
+            {
+                DrawSave(f, Chosen);
+            }
+            else
+            {
+                DrawNewSlot(f);
+            }
 
             Ui.Heading(f, "New game");
             DrawNewGame(f, _choice == 0);
@@ -198,7 +221,10 @@ namespace DarkwoodMP
             var hr = f.Next(Ui.RowH);
             bool canHost = Plugin.Instance != null && !Plugin.Instance.Session.Active;
             _host = Check(hr, _host && canHost, "Host a multiplayer game", canHost);
-            if (!canHost) Ui.Text(f, "You're in a multiplayer game now. Leave it first (Join Game, Multiplayer).", MenuSkin.Dim);
+            if (!canHost)
+            {
+                Ui.Text(f, "You're in a multiplayer game now. Leave it first (Join Game, Multiplayer).", MenuSkin.Dim);
+            }
             DrawHost(f, _host);
         }
 
@@ -207,12 +233,18 @@ namespace DarkwoodMP
         {
             var r = f.Next(Ui.RowH);
             bool hover = r.Contains(Event.current.mousePosition);
-            if (GUI.Button(r, GUIContent.none, MenuSkin.Sunken)) _listOpen = !_listOpen;
+            if (GUI.Button(r, GUIContent.none, MenuSkin.Sunken))
+            {
+                _listOpen = !_listOpen;
+            }
             string text = _choice > 0 && Chosen != null ? Line(Chosen) : NewGameLine();
             float pad = 6 * S, arrow = 14 * S;
             Ui.Label(new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height), PixelFont.Fit(text, r.width - 2 * pad - arrow), hover ? MenuSkin.Bright : MenuSkin.Text);
             Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), _listOpen ? "^" : "v", MenuSkin.Bright, TextAnchor.MiddleCenter);
-            if (!_listOpen) return;
+            if (!_listOpen)
+            {
+                return;
+            }
 
             var rows = _slots.Where(s => !s.Free).Select(s => (s.Id, Line(s))).ToList();
             rows.Add((0, NewGameLine()));
@@ -224,8 +256,14 @@ namespace DarkwoodMP
                 var row = new Rect(box.x + 2 * S, box.y + 2 * S + i * rowH, box.width - 4 * S, rowH);
                 bool over = row.Contains(Event.current.mousePosition);
                 bool chosen = rows[i].Item1 == _choice;
-                if (Event.current.type == EventType.Repaint && (over || chosen)) MenuSkin.Selected.Draw(row, false, false, false, false);
-                if (GUI.Button(row, GUIContent.none, MenuSkin.Plain)) Choose(rows[i].Item1);
+                if (Event.current.type == EventType.Repaint && (over || chosen))
+                {
+                    MenuSkin.Selected.Draw(row, false, false, false, false);
+                }
+                if (GUI.Button(row, GUIContent.none, MenuSkin.Plain))
+                {
+                    Choose(rows[i].Item1);
+                }
                 Ui.Label(new Rect(row.x + pad - 2 * S, row.y, row.width - 2 * pad, row.height), PixelFont.Fit(rows[i].Item2, row.width - 2 * pad), over || chosen ? MenuSkin.Bright : MenuSkin.Text);
             }
             f.Y = box.yMax + f.Gap;
@@ -233,17 +271,24 @@ namespace DarkwoodMP
 
         private void DrawSave(Flow f, Slot s)
         {
-            if (s == null) return;
+            if (s == null)
+            {
+                return;
+            }
             var p = s.Profile;
             var c = f.Row(Ui.RowH, 90, 0, 110);
             Ui.Label(c[0], "Name");
             _name = Ui.Field(c[1], _name, 40);
             if (Ui.Button(c[2], "Delete save..."))
+            {
                 ConfirmDialog.Ask("Delete save", $"Delete the save in slot {s.Id} ({Summary(p)})? It can't be undone.", "Delete", () => Delete(s.Id));
+            }
             Info(f, "Played", $"{Summary(p)};  last saved {p.timeSaved}");
             Info(f, "Played with", s.PlayedWith.Count == 0 ? "nobody: single-player" : string.Join(", ", s.PlayedWith));
             if (!p.isCompatible)
+            {
                 Ui.Text(f, $"This save is from an older version of the game ({p.versionText()}). Open it from the game's own profiles screen, which explains what can be done with it.", MenuSkin.Warn);
+            }
         }
 
         private static void Info(Flow f, string label, string text)
@@ -252,7 +297,10 @@ namespace DarkwoodMP
             for (int i = 0; i < lines.Count; i++)
             {
                 var c = Ui.Split(new Rect(f.Area.x, f.Y, f.Width, PixelFont.Line), 90, 0);
-                if (i == 0) Ui.Label(c[0], label, MenuSkin.Dim);
+                if (i == 0)
+                {
+                    Ui.Label(c[0], label, MenuSkin.Dim);
+                }
                 Ui.Label(c[1], lines[i], MenuSkin.Bright);
                 f.Y += PixelFont.Line + S;
             }
@@ -264,7 +312,10 @@ namespace DarkwoodMP
             var c = f.Row(Ui.RowH, 90, 0);
             Ui.Label(c[0], "Name");
             _name = Ui.Field(c[1], _name, 40);
-            if (FreeSlot != null) return;
+            if (FreeSlot != null)
+            {
+                return;
+            }
             Ui.Text(f, "Every save slot is in use. Choose a save to overwrite (it's deleted when the new game starts):", MenuSkin.Text);
             var used = _slots.Where(x => !x.Free).ToList();
             var widths = Enumerable.Repeat(0f, used.Count).ToArray();
@@ -279,7 +330,10 @@ namespace DarkwoodMP
                     ConfirmDialog.Ask("Overwrite save", $"Start the new game in slot {id}{(label != "" ? $" ({label})" : "")}? Its save ({Summary(s.Profile)}) is deleted when the game starts.", "Overwrite", () => _overwrite = id);
                 }
             }
-            if (_overwrite > 0) Ui.Text(f, $"The new game goes in slot {_overwrite}; its save is deleted when you press Start.", MenuSkin.Warn);
+            if (_overwrite > 0)
+            {
+                Ui.Text(f, $"The new game goes in slot {_overwrite}; its save is deleted when you press Start.", MenuSkin.Warn);
+            }
         }
 
         private void DrawNewGame(Flow f, bool on)
@@ -294,7 +348,12 @@ namespace DarkwoodMP
                 var c = f.Row(Ui.RowH, 90, 0, 0, 0);
                 Ui.Label(c[0], "Difficulty");
                 foreach (var (i, d) in new[] { (1, GameProfile.Difficulty.normal), (2, GameProfile.Difficulty.hard), (3, GameProfile.Difficulty.nightmare) })
-                    if (Choice(c[i], Difficulty(d), diff == d, on)) _difficulty = d;
+                {
+                    if (Choice(c[i], Difficulty(d), diff == d, on))
+                    {
+                        _difficulty = d;
+                    }
+                }
                 string about = diff == GameProfile.Difficulty.hard ? "A few lives; when they're gone, so is the save."
                     : diff == GameProfile.Difficulty.nightmare ? "One life: dying deletes the save."
                     : "Dying costs you some of what you carried, and the game goes on.";
@@ -316,14 +375,26 @@ namespace DarkwoodMP
             {
                 var c = f.Row(Ui.RowH, 90, 0, 0);
                 Ui.Label(c[0], "Connection");
-                if (Choice(c[1], "Steam", steam, on && steamUp)) cfg.HostWith.Value = "steam";
-                if (Choice(c[2], "Direct", !steam, on)) cfg.HostWith.Value = "direct";
-                if (!steamUp) Ui.Text(f, plugin.SteamMissing ? "Steam isn't running (the GOG version, say): Direct only." : "Waiting for Steam...", MenuSkin.Dim);
+                if (Choice(c[1], "Steam", steam, on && steamUp))
+                {
+                    cfg.HostWith.Value = "steam";
+                }
+                if (Choice(c[2], "Direct", !steam, on))
+                {
+                    cfg.HostWith.Value = "direct";
+                }
+                if (!steamUp)
+                {
+                    Ui.Text(f, plugin.SteamMissing ? "Steam isn't running (the GOG version, say): Direct only." : "Waiting for Steam...", MenuSkin.Dim);
+                }
 
                 var n = f.Row(Ui.RowH, 90, 0);
                 Ui.Label(n[0], "Your name");
                 string name = Ui.Field(n[1], plugin.Session.LocalName, 32);
-                if (on && name != plugin.Session.LocalName) plugin.SetPlayerName(name);
+                if (on && name != plugin.Session.LocalName)
+                {
+                    plugin.SetPlayerName(name);
+                }
 
                 Fade(on && !steam, () =>
                 {
@@ -331,11 +402,20 @@ namespace DarkwoodMP
                     var pm = f.Row(Ui.RowH, 90, 70, 0, 90, 24, 30, 24);
                     Ui.Label(pm[0], "Port");
                     string port = Ui.Field(pm[1], cfg.DirectPort.Value.ToString(), 5);
-                    if (int.TryParse(port, out int pn) && pn > 0 && pn <= 65535) cfg.DirectPort.Value = pn;
+                    if (int.TryParse(port, out int pn) && pn > 0 && pn <= 65535)
+                    {
+                        cfg.DirectPort.Value = pn;
+                    }
                     Ui.Label(pm[3], "Max players", null, TextAnchor.MiddleRight);
-                    if (Ui.Button(pm[4], "-", on && !steam && cfg.MaxPlayers.Value > 2)) cfg.MaxPlayers.Value--;
+                    if (Ui.Button(pm[4], "-", on && !steam && cfg.MaxPlayers.Value > 2))
+                    {
+                        cfg.MaxPlayers.Value--;
+                    }
                     Ui.Label(pm[5], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright, TextAnchor.MiddleCenter);
-                    if (Ui.Button(pm[6], "+", on && !steam && cfg.MaxPlayers.Value < Protocol.MaxPlayers)) cfg.MaxPlayers.Value++;
+                    if (Ui.Button(pm[6], "+", on && !steam && cfg.MaxPlayers.Value < Protocol.MaxPlayers))
+                    {
+                        cfg.MaxPlayers.Value++;
+                    }
                     cfg.Password.Value = Ui.Field(f, "Password", cfg.Password.Value, 32, password: true);
                     cfg.OpenPort.Value = Check(f.Next(Ui.RowH), cfg.OpenPort.Value, "Open the port on my router (UPnP)", on && !steam);
                 });
@@ -343,8 +423,14 @@ namespace DarkwoodMP
                 var ch = f.Row(Ui.RowH, 90, 0, 0);
                 Ui.Label(ch[0], "New players");
                 bool copy = cfg.NewCharacters.Value == "copy";
-                if (Choice(ch[1], "Start fresh", !copy, on)) cfg.NewCharacters.Value = "fresh";
-                if (Choice(ch[2], "Copy of you", copy, on)) cfg.NewCharacters.Value = "copy";
+                if (Choice(ch[1], "Start fresh", !copy, on))
+                {
+                    cfg.NewCharacters.Value = "fresh";
+                }
+                if (Choice(ch[2], "Copy of you", copy, on))
+                {
+                    cfg.NewCharacters.Value = "copy";
+                }
                 Ui.Text(f, steam
                     ? "Friends join by your Steam invite, or Join Game in the Steam friends list. Hosting starts once your world has loaded."
                     : DirectPanel.PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value) + " Hosting starts once your world has loaded.",
@@ -365,7 +451,10 @@ namespace DarkwoodMP
         /// <summary>One of a row of choices: the chosen one pressed in.</summary>
         private static bool Choice(Rect r, string text, bool chosen, bool enabled)
         {
-            if (!chosen) return Ui.Button(r, text, enabled && GUI.enabled);
+            if (!chosen)
+            {
+                return Ui.Button(r, text, enabled && GUI.enabled);
+            }
             GUI.Box(r, GUIContent.none, MenuSkin.Pressed);
             PixelFont.Draw(new Rect(r.x + S, r.y + S, r.width, r.height), text, MenuSkin.Bright, TextAnchor.MiddleCenter);
             return false;
@@ -377,16 +466,31 @@ namespace DarkwoodMP
         {
             var c = Ui.Split(r, 0, 110, 90);
             string why = CantStart();
-            if (why != null) Ui.Label(c[0], PixelFont.Fit(why, c[0].width), MenuSkin.Dim);
-            if (Ui.Button(c[1], _host ? "Start and host" : "Start", why == null)) Start();
-            if (Ui.Button(c[2], "Cancel")) Close();
+            if (why != null)
+            {
+                Ui.Label(c[0], PixelFont.Fit(why, c[0].width), MenuSkin.Dim);
+            }
+            if (Ui.Button(c[1], _host ? "Start and host" : "Start", why == null))
+            {
+                Start();
+            }
+            if (Ui.Button(c[2], "Cancel"))
+            {
+                Close();
+            }
         }
 
         /// <summary>Why Start is off, or null.</summary>
         private string CantStart()
         {
-            if (!WorldShare.MainMenuReady()) return "Wait for the main menu.";
-            if (_choice > 0) return Chosen?.Profile == null ? "No save in that slot." : Chosen.Profile.isCompatible == false ? "This save needs the game's profiles screen." : null;
+            if (!WorldShare.MainMenuReady())
+            {
+                return "Wait for the main menu.";
+            }
+            if (_choice > 0)
+            {
+                return Chosen?.Profile == null ? "No save in that slot." : Chosen.Profile.isCompatible == false ? "This save needs the game's profiles screen." : null;
+            }
             return NewSlot > 0 ? null : "Choose a save to overwrite.";
         }
 
@@ -394,7 +498,10 @@ namespace DarkwoodMP
 
         internal void Start()
         {
-            if (CantStart() != null) return;
+            if (CantStart() != null)
+            {
+                return;
+            }
             CommitName();
             var plugin = Plugin.Instance;
             bool host = _host && !plugin.Session.Active;
@@ -424,9 +531,15 @@ namespace DarkwoodMP
                 Singleton<Controller>.Instance.skipTutorial = _skipPrologue;
                 Close();
                 Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initNewGame());
-                if (!string.IsNullOrWhiteSpace(name)) SaveBook.SetName(id, name);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    SaveBook.SetName(id, name);
+                }
             }
-            if (host) plugin.HostWhenReady(steam);
+            if (host)
+            {
+                plugin.HostWhenReady(steam);
+            }
         }
 
         // ---- the test ------------------------------------------------------------------------------------------
@@ -440,7 +553,10 @@ namespace DarkwoodMP
         /// </summary>
         internal static IEnumerator Test(string sandbox, string screen, string shots, string start, string hostWith, string name)
         {
-            while (!WorldShare.MainMenuReady()) yield return null;
+            while (!WorldShare.MainMenuReady())
+            {
+                yield return null;
+            }
             yield return new WaitForSecondsRealtime(2f);
             if (screen != null)
             {
@@ -458,13 +574,25 @@ namespace DarkwoodMP
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo($"[start window] clicked Start Game, window open: {w.Open}");
             foreach (var s in w._slots)
+            {
                 Plugin.Log.LogInfo($"[start window] slot {s.Id}: " + (s.Free ? "free" : Line(s)));
-            if (!w.Open) { if (sandbox != null) SaveRedirect.End(); yield break; }
+            }
+            if (!w.Open)
+            {
+                if (sandbox != null)
+                {
+                    SaveRedirect.End();
+                }
+                yield break;
+            }
 
             string prefix = $"{Screen.width}x{Screen.height}-";
             IEnumerator Shot(string what)
             {
-                if (shots == null) yield break;
+                if (shots == null)
+                {
+                    yield break;
+                }
                 System.IO.Directory.CreateDirectory(shots);
                 yield return new WaitForSecondsRealtime(0.7f);
                 ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shots, prefix + what + ".png"));
@@ -494,15 +622,24 @@ namespace DarkwoodMP
             if (start == null)
             {
                 w.Close();
-                if (sandbox != null) SaveRedirect.End();
+                if (sandbox != null)
+                {
+                    SaveRedirect.End();
+                }
                 Plugin.Log.LogInfo("[start window] done");
                 yield break;
             }
             int slot = start == "new" ? 0 : int.Parse(start);
             w.Choose(slot);
-            if (name != null) w._name = name;
+            if (name != null)
+            {
+                w._name = name;
+            }
             w._host = hostWith != null;
-            if (hostWith != null) Plugin.Cfg.HostWith.Value = hostWith;
+            if (hostWith != null)
+            {
+                Plugin.Cfg.HostWith.Value = hostWith;
+            }
             yield return Shot("start-go");
             Plugin.Log.LogInfo($"[start window] pressing Start: {(slot == 0 ? $"new game in slot {w.NewSlot}" : $"slot {slot}")}, host {hostWith ?? "no"}; can start: {w.CantStart() ?? "yes"}");
             w.Start();
@@ -511,13 +648,19 @@ namespace DarkwoodMP
         private void Delete(int id)
         {
             var slot = _profiles.FirstOrDefault(p => p.id == id);
-            if (slot == null) return;
+            if (slot == null)
+            {
+                return;
+            }
             Plugin.Log.LogInfo($"[start game] delete slot {id}");
             // As the profiles screen's Delete (MainMenu.confirmBoxYes, deleteProfile).
             Core.profiles = _profiles;
             Core.currentProfile = slot;
             Singleton<SaveManager>.Instance.deleteCurrentProfile();
-            if (_choice == id) _choice = -1;
+            if (_choice == id)
+            {
+                _choice = -1;
+            }
             _nameFor = -1;
             Refresh();
         }

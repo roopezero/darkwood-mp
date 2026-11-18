@@ -140,7 +140,10 @@ namespace DarkwoodMP.World
         private static Vector3 AwayFrom(Vector3 pos, float dist)
         {
             var d = pos - Centre; d.y = 0f;
-            if (d.sqrMagnitude < 1f) d = Vector3.forward;
+            if (d.sqrMagnitude < 1f)
+            {
+                d = Vector3.forward;
+            }
             return pos - d.normalized * dist;
         }
 
@@ -153,7 +156,10 @@ namespace DarkwoodMP.World
         {
             static void Postfix(string message)
             {
-                if (Messages.Count > 50) Messages.RemoveAt(0);
+                if (Messages.Count > 50)
+                {
+                    Messages.RemoveAt(0);
+                }
                 Messages.Add((Time.realtimeSinceStartup, message ?? ""));
             }
         }
@@ -171,13 +177,34 @@ namespace DarkwoodMP.World
                 var comps = t.GetComponentsInChildren<Component>(true).Where(c => c != null && !(c is Transform) && !(c is Renderer) && !(c is MeshFilter))
                     .Select(c => (c.transform == t ? "" : c.name + ".") + c.GetType().Name).Distinct().Take(14);
                 string extra = "";
-                if (t.GetComponent<Generator>() is Generator g) extra += $" fuel {g.fuel:0}/{g.maxFuel:0} powers {g.powerItems.Count}";
-                if (t.GetComponent<Saw>() is Saw s) extra += $" fuel {s.fuel:0}/{s.maxFuel:0}";
-                if (t.GetComponent<Explodes>() is Explodes e) extra += $" radius {e.radius:0} onIgnite {e.explodeOnIgnite}";
-                if (t.GetComponent<NPC>() is NPC n) extra += $" trader {n.trader} stock [{(n.inventory != null ? Contents(n.inventory) : "-")}]";
-                if (t.GetComponentInChildren<Item>() is Item it) extra += $" item {it.name} switchable {it.switchable} on {it.isOn} light {it.isLight} destructible {it.destructible} health {it.health} disarmTime {it.disarmTime} searched {it.searched}";
-                if (t.GetComponentInChildren<Trigger>() is Trigger tr) extra += $" trigger {tr.name} active {tr.active} triggered {tr.triggered} canDisarm {tr.canDisarm}";
-                if (t.GetComponentInChildren<Locked>() is Locked lk) extra += $" locked {lk.locked}";
+                if (t.GetComponent<Generator>() is Generator g)
+                {
+                    extra += $" fuel {g.fuel:0}/{g.maxFuel:0} powers {g.powerItems.Count}";
+                }
+                if (t.GetComponent<Saw>() is Saw s)
+                {
+                    extra += $" fuel {s.fuel:0}/{s.maxFuel:0}";
+                }
+                if (t.GetComponent<Explodes>() is Explodes e)
+                {
+                    extra += $" radius {e.radius:0} onIgnite {e.explodeOnIgnite}";
+                }
+                if (t.GetComponent<NPC>() is NPC n)
+                {
+                    extra += $" trader {n.trader} stock [{(n.inventory != null ? Contents(n.inventory) : "-")}]";
+                }
+                if (t.GetComponentInChildren<Item>() is Item it)
+                {
+                    extra += $" item {it.name} switchable {it.switchable} on {it.isOn} light {it.isLight} destructible {it.destructible} health {it.health} disarmTime {it.disarmTime} searched {it.searched}";
+                }
+                if (t.GetComponentInChildren<Trigger>() is Trigger tr)
+                {
+                    extra += $" trigger {tr.name} active {tr.active} triggered {tr.triggered} canDisarm {tr.canDisarm}";
+                }
+                if (t.GetComponentInChildren<Locked>() is Locked lk)
+                {
+                    extra += $" locked {lk.locked}";
+                }
                 parts.Add($"{name} {ObjRef.Of(t.gameObject)} at {Fmt(t.position)}: {string.Join(" ", comps)};{extra}");
             }
             r.Info = string.Join(" | ", parts);
@@ -191,95 +218,143 @@ namespace DarkwoodMP.World
         private static T NthArg<T>(string[] a, Result r, string what) where T : Component
         {
             var t = a.Length > 0 ? Nth<T>(a[0]) : null;
-            if (t == null) r.Fail($"usage: {what}-... N (no such {what})");
+            if (t == null)
+            {
+                r.Fail($"usage: {what}-... N (no such {what})");
+            }
             return t;
         }
 
         /// <summary>"door-lock N": lock it (as the story does; Door.lockMe).</summary>
         private static IEnumerator DoorLock(string[] a, Result r)
         {
-            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null)
+            {
+                yield break;
+            }
             if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
             d.lockMe("");
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
             r.Info = $"{d.name} {Ref(d)} locked={l != null && l.locked}";
-            if (l == null || !l.locked) r.Fail($"{r.Info}: not locked");
+            if (l == null || !l.locked)
+            {
+                r.Fail($"{r.Info}: not locked");
+            }
         }
 
         /// <summary>"door-pick N": open its lock with a lockpick, as the player does (Locked.tryToLockpick).</summary>
         private static IEnumerator DoorPick(string[] a, Result r)
         {
-            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null)
+            {
+                yield break;
+            }
             var l = d.GetComponent<Locked>();
             if (l == null || !l.locked) { r.Fail($"{d.name} {Ref(d)} isn't locked here"); yield break; }
             yield return Walk(d.transform.position);
-            if (CarriedOf("lockpick") == 0) P.Inventory.addItemTypeToPlayer("lockpick", 1, dropIfNoRoom: true);
+            if (CarriedOf("lockpick") == 0)
+            {
+                P.Inventory.addItemTypeToPlayer("lockpick", 1, dropIfNoRoom: true);
+            }
             yield return null;
             AsPlayer(() => l.tryToLockpick());
             yield return new WaitForSeconds(1.5f); // a refusal would lock it again
             r.Info = $"{d.name} {Ref(d)} locked={l.locked}";
-            if (l.locked) r.Fail($"{r.Info}: still locked");
+            if (l.locked)
+            {
+                r.Fail($"{r.Info}: still locked");
+            }
         }
 
         /// <summary>"door-barricade N": nail planks over it, as the hammer's three strokes do (Door.barricade(byPlayer)).</summary>
         private static IEnumerator DoorBarricade(string[] a, Result r)
         {
-            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null)
+            {
+                yield break;
+            }
             yield return Walk(d.transform.position);
             if (d.opened) { AsPlayer(() => d.close(P.transform)); yield return new WaitForSeconds(0.5f); }
             for (int i = 0; i < 3 && !d.barricaded; i++) { AsPlayer(() => d.barricade(byPlayer: true)); yield return new WaitForSeconds(0.3f); }
             yield return new WaitForSeconds(1f);
             r.Info = $"{d.name} {Ref(d)} barricaded={d.barricaded} health {d.barricadeHealth}";
-            if (!d.barricaded) r.Fail($"{r.Info}: not barricaded");
+            if (!d.barricaded)
+            {
+                r.Fail($"{r.Info}: not barricaded");
+            }
         }
 
         /// <summary>"door-hit N DAMAGE": our player hits it (its barricade first).</summary>
         private static IEnumerator DoorHit(string[] a, Result r)
         {
-            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null)
+            {
+                yield break;
+            }
             int dmg = a.Length > 1 ? int.Parse(a[1]) : 20;
             yield return Walk(d.transform.position);
             var was = WorldActions.DoorState.Of(d);
             AsPlayer(() => d.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info = $"{d.name} {Ref(d)} barricaded={d.barricaded} ({d.barricadeHealth}) health {d.health} broken={d.destroyed}";
-            if (was.Same(WorldActions.DoorState.Of(d))) r.Fail($"{r.Info}: the hit did nothing");
+            if (was.Same(WorldActions.DoorState.Of(d)))
+            {
+                r.Fail($"{r.Info}: the hit did nothing");
+            }
         }
 
         /// <summary>"door-burn N": set it alight. The host's world burns it; a client's lights its copy and asks the
         /// host (FireSync.ClientIgnited, as its flamethrower does).</summary>
         private static IEnumerator DoorBurn(string[] a, Result r)
         {
-            var d = NthArg<Door>(a, r, "door"); if (d == null) yield break;
+            var d = NthArg<Door>(a, r, "door"); if (d == null)
+            {
+                yield break;
+            }
             yield return Walk(d.transform.position, 200f);
             if (d.GetComponent<Burn>() == null)
             {
                 var b = d.gameObject.AddComponent<Burn>();
                 b.burnTime = 5f;
-                if (Net.Session.Instance != null && Net.Session.Instance.IsClient) AsPlayer(() => FireSync.Instance?.ClientIgnited(d.gameObject));
+                if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+                {
+                    AsPlayer(() => FireSync.Instance?.ClientIgnited(d.gameObject));
+                }
             }
             yield return new WaitForSeconds(1f);
             r.Info = $"{d.name} {Ref(d)} burning={d.GetComponent<Burn>() != null} health {d.health}";
-            if (d.GetComponent<Burn>() == null) r.Fail($"{r.Info}: not burning (refused?)");
+            if (d.GetComponent<Burn>() == null)
+            {
+                r.Fail($"{r.Info}: not burning (refused?)");
+            }
             yield return Walk(Centre, 60f); // away from the fire
         }
 
         /// <summary>"window-barricade N": planks over it, the hammer's three strokes (Window.barricade(0, byPlayer)).</summary>
         private static IEnumerator WindowBarricade(string[] a, Result r)
         {
-            var w = NthArg<Window>(a, r, "window"); if (w == null) yield break;
+            var w = NthArg<Window>(a, r, "window"); if (w == null)
+            {
+                yield break;
+            }
             yield return Walk(w.transform.position);
             for (int i = 0; i < 3 && !w.barricaded; i++) { AsPlayer(() => w.barricade(0, byPlayer: true)); yield return new WaitForSeconds(0.3f); }
             yield return new WaitForSeconds(1f);
             r.Info = $"{w.name} {Ref(w)} barricaded={w.barricaded} health {w.barricadeHealth}";
-            if (!w.barricaded) r.Fail($"{r.Info}: not barricaded");
+            if (!w.barricaded)
+            {
+                r.Fail($"{r.Info}: not barricaded");
+            }
         }
 
         /// <summary>"window-hit N DAMAGE": our player hits its barricade.</summary>
         private static IEnumerator WindowHit(string[] a, Result r)
         {
-            var w = NthArg<Window>(a, r, "window"); if (w == null) yield break;
+            var w = NthArg<Window>(a, r, "window"); if (w == null)
+            {
+                yield break;
+            }
             int dmg = a.Length > 1 ? int.Parse(a[1]) : 20;
             if (!w.barricaded) { r.Fail($"{w.name} {Ref(w)} isn't barricaded here"); yield break; }
             yield return Walk(w.transform.position);
@@ -287,7 +362,10 @@ namespace DarkwoodMP.World
             AsPlayer(() => w.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info = $"{w.name} {Ref(w)} barricaded={w.barricaded} health {was} -> {w.barricadeHealth}";
-            if (w.barricaded && w.barricadeHealth == was) r.Fail($"{r.Info}: the hit did nothing");
+            if (w.barricaded && w.barricadeHealth == was)
+            {
+                r.Fail($"{r.Info}: the hit did nothing");
+            }
         }
 
         /// <summary>"expect-burning door N | window N | NAME [SECS]": it catches fire here within SECS (default 4).</summary>
@@ -298,9 +376,15 @@ namespace DarkwoodMP.World
             float secs = a.Length > at ? F(a[at]) : 4f;
             if (c == null) { r.Fail($"no {string.Join(" ", a)}"); yield break; }
             float until = Time.realtimeSinceStartup + secs;
-            while (c != null && c.GetComponent<Burn>() == null && Time.realtimeSinceStartup < until) yield return null;
+            while (c != null && c.GetComponent<Burn>() == null && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             r.Info = c == null ? "gone" : $"{c.name} {Ref(c)} burning={c.GetComponent<Burn>() != null}";
-            if (c != null && c.GetComponent<Burn>() == null) r.Fail($"{r.Info}: didn't catch fire here");
+            if (c != null && c.GetComponent<Burn>() == null)
+            {
+                r.Fail($"{r.Info}: didn't catch fire here");
+            }
         }
 
         // ---- containers -------------------------------------------------------------------------------------------
@@ -327,7 +411,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             int after = inv.getAllItems().Where(i => i.type == type).Sum(i => i.amount);
             r.Info = $"{type} x{amount} into {inv.name} {Ref(inv)}: [{Contents(inv)}]";
-            if (after <= before) r.Fail($"{r.Info}: it isn't in there (refused?)");
+            if (after <= before)
+            {
+                r.Fail($"{r.Info}: it isn't in there (refused?)");
+            }
         }
 
         /// <summary>"take-from CONTAINER [--refused]": take its first item. With --refused, the host should say no and
@@ -351,8 +438,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             int now = CarriedOf(item.type);
             r.Info = $"{item.type} x{item.amount} from {inv.name} {Ref(inv)}: we carry {before} -> {now}; it holds [{Contents(inv)}]";
-            if (refused && now > before) r.Fail($"{r.Info}: the host let us take it");
-            if (!refused && now <= before) r.Fail($"{r.Info}: not in our bags");
+            if (refused && now > before)
+            {
+                r.Fail($"{r.Info}: the host let us take it");
+            }
+            if (!refused && now <= before)
+            {
+                r.Fail($"{r.Info}: not in our bags");
+            }
         }
 
         private static Inventory _held;
@@ -371,7 +464,10 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Release(string[] a, Result r)
         {
-            if (P.openedItemInventory == _held) P.openedItemInventory = null;
+            if (P.openedItemInventory == _held)
+            {
+                P.openedItemInventory = null;
+            }
             r.Info = _held != null ? $"closed {_held.name}" : "nothing held";
             _held = null;
             yield return new WaitForSeconds(0.5f);
@@ -394,7 +490,10 @@ namespace DarkwoodMP.World
             P.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{inv.name} {Ref(inv)}: {msg ?? "no message"}";
-            if (msg == null) r.Fail($"{r.Info}: we weren't told someone is using it");
+            if (msg == null)
+            {
+                r.Fail($"{r.Info}: we weren't told someone is using it");
+            }
         }
 
         /// <summary>"pick-crate NAME": open a locked crate as the player does. One that's picked with the progress bar
@@ -419,16 +518,25 @@ namespace DarkwoodMP.World
                 P.openedItemInventory = null;
                 yield return new WaitForSeconds(1f);
                 r.Info = $"{crate.name} {Ref(crate)} picked: searched={crate.searched} after {tries} tries (chance {crate.disarmChance:0.00})";
-                if (!crate.searched) r.Fail($"{r.Info}: still shut");
+                if (!crate.searched)
+                {
+                    r.Fail($"{r.Info}: still shut");
+                }
             }
             else
             {
-                if (CarriedOf("lockpick") == 0) P.Inventory.addItemTypeToPlayer("lockpick", 1, dropIfNoRoom: true);
+                if (CarriedOf("lockpick") == 0)
+                {
+                    P.Inventory.addItemTypeToPlayer("lockpick", 1, dropIfNoRoom: true);
+                }
                 yield return null;
                 AsPlayer(() => l.tryToLockpick());
                 yield return new WaitForSeconds(1.5f); // a refusal would lock it again
                 r.Info = $"{crate.name} {Ref(crate)} lockpicked: locked={l.locked}";
-                if (l.locked) r.Fail($"{r.Info}: still locked");
+                if (l.locked)
+                {
+                    r.Fail($"{r.Info}: still locked");
+                }
             }
         }
 
@@ -444,7 +552,10 @@ namespace DarkwoodMP.World
             AsPlayer(() => it.getDroppedItem());
             yield return new WaitForSeconds(1.5f);
             r.Info = $"{what}: we carry {before} -> {CarriedOf(a[0])}, it's {(it == null ? "gone" : "still there")}";
-            if (it != null || CarriedOf(a[0]) <= before) r.Fail($"{r.Info}: not picked up");
+            if (it != null || CarriedOf(a[0]) <= before)
+            {
+                r.Fail($"{r.Info}: not picked up");
+            }
         }
 
         // ---- things in the world -----------------------------------------------------------------------------------
@@ -461,8 +572,14 @@ namespace DarkwoodMP.World
             yield return DragFor(it, by, 1f, h => held = h);
             yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
             r.Info = $"{it.name} {Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)}";
-            if (!held) r.Fail($"{r.Info}: our drag was let go of ({DragSync.Instance?.OtherOwner(ObjRef.Of(it.gameObject)) ?? "nobody"} has it)");
-            else if (StateDump.Flat(it.transform.position - start) < StateDump.Flat(by) * 0.5f) r.Fail($"{r.Info}: it didn't move");
+            if (!held)
+            {
+                r.Fail($"{r.Info}: our drag was let go of ({DragSync.Instance?.OtherOwner(ObjRef.Of(it.gameObject)) ?? "nobody"} has it)");
+            }
+            else if (StateDump.Flat(it.transform.position - start) < StateDump.Flat(by) * 0.5f)
+            {
+                r.Fail($"{r.Info}: it didn't move");
+            }
         }
 
         /// <summary>
@@ -480,13 +597,19 @@ namespace DarkwoodMP.World
                 if (P.itemBeingDragged != it) { held(false); yield break; }
                 var to = start + by * Mathf.Min(1f, t / secs);
                 it.transform.position = to;
-                var rb = it.GetComponent<Rigidbody>(); if (rb != null) rb.position = to;
+                var rb = it.GetComponent<Rigidbody>(); if (rb != null)
+                {
+                    rb.position = to;
+                }
                 P.transform.position = new Vector3(to.x, P.transform.position.y, to.z) - by.normalized * 70f;
             }
             it.transform.position = start + by;
             yield return new WaitForSeconds(0.3f);
             bool kept = P.itemBeingDragged == it;
-            if (kept) P.itemBeingDragged = null;
+            if (kept)
+            {
+                P.itemBeingDragged = null;
+            }
             held(kept);
         }
 
@@ -504,13 +627,19 @@ namespace DarkwoodMP.World
             yield return Walk(it.transform.position, 80f);
             double Now() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
             if (Now() > at) { r.Fail($"walked past the moment ({Now() - at:0.0} s late)"); yield break; }
-            while (Now() < at) yield return null;
+            while (Now() < at)
+            {
+                yield return null;
+            }
             int cancelled = DragSync.Cancelled;
             bool held = false;
             yield return DragFor(it, by, 1.5f, h => held = h);
             yield return new WaitForSeconds(3f);
             r.Info = $"{(held ? "got" : "lost")} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} drag(s) of ours let go of), at rest at {Fmt(it.transform.position)}";
-            if (held == (DragSync.Cancelled > cancelled)) r.Fail($"{r.Info}: held to the end and let go of don't agree");
+            if (held == (DragSync.Cancelled > cancelled))
+            {
+                r.Fail($"{r.Info}: held to the end and let go of don't agree");
+            }
         }
 
         /// <summary>"fuel NAME AMOUNT": pour gasoline into a generator or the saw, a unit at a time, as the player does.</summary>
@@ -525,14 +654,27 @@ namespace DarkwoodMP.World
             float before = g != null ? g.fuel : s.fuel;
             for (int i = 0; i < amount; i++)
             {
-                AsPlayer(() => { if (g != null) g.addFuel(1f); else s.addFuel(1f); });
+                AsPlayer(() =>
+                {
+                    if (g != null)
+                    {
+                        g.addFuel(1f);
+                    }
+                    else
+                    {
+                        s.addFuel(1f);
+                    }
+                });
                 yield return new WaitForSeconds(0.05f);
             }
             yield return new WaitForSeconds(1.5f); // a refused pour is set back
             float after = g != null ? g.fuel : s.fuel;
             float max = g != null ? g.maxFuel : s.maxFuel;
             r.Info = $"{c.name} {Ref(c)} fuel {before:0.0} -> {after:0.0} (max {max:0})";
-            if (after <= before + amount * 0.5f && before < max - 1f) r.Fail($"{r.Info}: the fuel didn't go in");
+            if (after <= before + amount * 0.5f && before < max - 1f)
+            {
+                r.Fail($"{r.Info}: the fuel didn't go in");
+            }
         }
 
         /// <summary>"switch NAME on|off": switch a lamp, generator, radio... (Item.turnOn / turnOff). A generator's
@@ -543,12 +685,25 @@ namespace DarkwoodMP.World
             if (it == null) { r.Fail($"nothing switchable called {a[0]}"); yield break; }
             bool on = a.Length < 2 || a[1] == "on";
             yield return Walk(it.transform.position);
-            AsPlayer(() => { if (on) it.turnOn(); else it.turnOff(); });
+            AsPlayer(() =>
+            {
+                if (on)
+                {
+                    it.turnOn();
+                }
+                else
+                {
+                    it.turnOff();
+                }
+            });
             yield return new WaitForSeconds(1.5f);
             var gen = it.GetComponent<Generator>();
             string lamps = gen != null ? " lamps " + string.Join(",", gen.powerItems.Where(l => l != null).Select(l => $"{l.name}={l.isOn}")) : "";
             r.Info = $"{it.name} {Ref(it)} on={it.isOn}{lamps}";
-            if (it.isOn != on) r.Fail($"{r.Info}: didn't switch");
+            if (it.isOn != on)
+            {
+                r.Fail($"{r.Info}: didn't switch");
+            }
         }
 
         /// <summary>"use NAME": what a player does with it: an InteractiveItem's switch, an Item's switch, or building
@@ -567,7 +722,10 @@ namespace DarkwoodMP.World
                 AsPlayer(() => ii.switchMe());
                 yield return new WaitForSeconds(1f);
                 r.Info = $"{t.name} {Ref(ii)} interactive on {was} -> {ii.isOn}";
-                if (ii.isOn == was) r.Fail($"{r.Info}: didn't switch");
+                if (ii.isOn == was)
+                {
+                    r.Fail($"{r.Info}: didn't switch");
+                }
             }
             else if (con != null && !con.constructed)
             {
@@ -575,17 +733,36 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(1f);
                 bool built = con == null || con.constructed; // it removes itself once built, unless it's kept
                 r.Info = $"{t.name} {Ref(t)} built={built}";
-                if (!built) r.Fail($"{r.Info}: not built");
+                if (!built)
+                {
+                    r.Fail($"{r.Info}: not built");
+                }
             }
             else if (it != null && it.switchable)
             {
                 bool was = it.isOn;
-                AsPlayer(() => { if (was) it.turnOff(); else it.turnOn(); });
+                AsPlayer(() =>
+                {
+                    if (was)
+                    {
+                        it.turnOff();
+                    }
+                    else
+                    {
+                        it.turnOn();
+                    }
+                });
                 yield return new WaitForSeconds(1f);
                 r.Info = $"{it.name} {Ref(it)} on {was} -> {it.isOn}";
-                if (it.isOn == was) r.Fail($"{r.Info}: didn't switch");
+                if (it.isOn == was)
+                {
+                    r.Fail($"{r.Info}: didn't switch");
+                }
             }
-            else r.Fail($"{t.name} {Ref(t)}: nothing to do with it (item {it?.name ?? "-"}, constructed {con?.constructed.ToString() ?? "-"})");
+            else
+            {
+                r.Fail($"{t.name} {Ref(t)}: nothing to do with it (item {it?.name ?? "-"}, constructed {con?.constructed.ToString() ?? "-"})");
+            }
         }
 
         /// <summary>"hit NAME DAMAGE": our player hits a piece of furniture (Item.getHit).</summary>
@@ -603,7 +780,10 @@ namespace DarkwoodMP.World
             AsPlayer(() => it.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info = it == null ? $"{a[0]} gone" : $"{it.name} {Ref(it)} health {was} -> {it.health} broken={it.destroyed}";
-            if (it != null && it.health == was && !it.destroyed) r.Fail($"{r.Info}: the hit did nothing");
+            if (it != null && it.health == was && !it.destroyed)
+            {
+                r.Fail($"{r.Info}: the hit did nothing");
+            }
         }
 
         /// <summary>"trap-fire NAME": our player steps into a trap (its trigger with our player's collider).</summary>
@@ -616,7 +796,10 @@ namespace DarkwoodMP.World
             AsPlayer(() => AccessTools.Method(typeof(Trigger), "OnAfterTrigger").Invoke(t, new object[] { col, false }));
             yield return new WaitForSeconds(1f);
             r.Info = t == null ? $"{a[0]} gone" : $"{t.name} {Ref(t)} triggered={t.triggered} active={t.active}";
-            if (t != null && !t.triggered) r.Fail($"{r.Info}: didn't go off");
+            if (t != null && !t.triggered)
+            {
+                r.Fail($"{r.Info}: didn't go off");
+            }
             // Out of it again (a bear trap holds the player that stepped in).
             yield return Walk(Centre, 60f);
         }
@@ -637,17 +820,32 @@ namespace DarkwoodMP.World
             int rolledBack = Authority.RolledBack;
             AsPlayer(() => t.checkCollision(col));
             bool fired = t == null || t.triggered;
-            for (float until = Time.time + 6f; Time.time < until && Authority.Waiting > 0;) yield return null;
+            for (float until = Time.time + 6f; Time.time < until && Authority.Waiting > 0;)
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(1.5f);
             r.Info = $"{name} {at} went off={fired}, health {health:0} -> {P.health:0}, inBearTrap={P.inBearTrap}, rolled back {Authority.RolledBack - rolledBack}";
             if (!fired) { r.Fail($"{r.Info}: didn't go off"); yield break; }
             if (a.Length > 1 && a[1] == "refused")
             {
-                if (Authority.RolledBack == rolledBack) r.Fail($"{r.Info}: the host didn't refuse it");
-                else if (P.inBearTrap) r.Fail($"{r.Info}: still held by a trap the host refused");
-                else if (P.health < health - 0.5f) r.Fail($"{r.Info}: the refused trap's bite wasn't given back");
+                if (Authority.RolledBack == rolledBack)
+                {
+                    r.Fail($"{r.Info}: the host didn't refuse it");
+                }
+                else if (P.inBearTrap)
+                {
+                    r.Fail($"{r.Info}: still held by a trap the host refused");
+                }
+                else if (P.health < health - 0.5f)
+                {
+                    r.Fail($"{r.Info}: the refused trap's bite wasn't given back");
+                }
             }
-            if (P.inBearTrap) P.stopAllPerformingActionAnims();
+            if (P.inBearTrap)
+            {
+                P.stopAllPerformingActionAnims();
+            }
             // Well off the spot: back at the centre (60 from it) our player set off the next trap placed there.
             yield return Walk(Centre + new Vector3(0f, 0f, 250f), 60f);
         }
@@ -671,10 +869,16 @@ namespace DarkwoodMP.World
             yield return Walk(at, 220f);
             GameObject go = null;
             yield return MapScenarioItems1.PlaceReal(a[0], at, r, g => go = g);
-            if (r.Failure != null) yield break;
+            if (r.Failure != null)
+            {
+                yield break;
+            }
             yield return new WaitForSeconds(2f);
             r.Info = go == null ? "none" : $"{go.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}";
-            if (go == null) r.Fail($"{a[0]}: none placed and shared");
+            if (go == null)
+            {
+                r.Fail($"{a[0]}: none placed and shared");
+            }
             yield return Walk(Centre + new Vector3(0f, 0f, 250f), 60f); // off it
         }
 
@@ -694,8 +898,14 @@ namespace DarkwoodMP.World
                 yield return null; yield return null; // its health is set in Start
                 var t = tried != null ? tried.GetComponent<Item>() : null;
                 bool breakable = t != null && t.destructible && !t.destroyed && t.health > 1 && !t.hasInventory;
-                if (tried != null) Object.Destroy(tried);
-                if (!breakable) continue;
+                if (tried != null)
+                {
+                    Object.Destroy(tried);
+                }
+                if (!breakable)
+                {
+                    continue;
+                }
                 yield return null; // the tried one is gone
                 GameObject made;
                 Containers.Placing = true;
@@ -722,7 +932,10 @@ namespace DarkwoodMP.World
             at.y = P.transform.position.y;
             yield return Walk(at, 150f);
             var made = Core.AddPrefab("Furnitures/Cottage/chair_1", at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
-            if (made != null) Core.addToSaveable(made, isDynamic: true);
+            if (made != null)
+            {
+                Core.addToSaveable(made, isDynamic: true);
+            }
             yield return new WaitForSeconds(3f); // its Start, then the host's id and the client's tie
             _worldMade = made != null ? made.GetComponent<Item>() : null;
             if (_worldMade == null) { r.Fail("no chair made"); yield break; }
@@ -738,13 +951,29 @@ namespace DarkwoodMP.World
             bool hit = a.Length > 0 && a[0] == "hit";
             float until = Time.realtimeSinceStartup + 5f;
             while (hit && _worldMade != null && _worldMade.health >= _worldMadeHealth && !_worldMade.destroyed && Time.realtimeSinceStartup < until)
+            {
                 yield return new WaitForSeconds(0.25f);
-            if (_worldMade == null) { r.Info = "gone"; if (!hit) r.Fail("the chair is gone"); yield break; }
+            }
+            if (_worldMade == null)
+            {
+                r.Info = "gone";
+                if (!hit)
+                {
+                    r.Fail("the chair is gone");
+                }
+                yield break;
+            }
             var go = _worldMade.gameObject;
             var at = ObjRef.Of(go);
             r.Info = $"{go.name} {at} tied {ObjRef.IsShared(go)}, health {_worldMadeHealth} -> {_worldMade.health} broken={_worldMade.destroyed}";
-            if (at.K != ObjRef.Kind.Spawned || !ObjRef.IsShared(go) || ObjRef.Resolve<Item>(at) != _worldMade) r.Fail($"{r.Info}: not named by a host id");
-            else if (hit && _worldMade.health >= _worldMadeHealth && !_worldMade.destroyed) r.Fail($"{r.Info}: the host's hit didn't come here");
+            if (at.K != ObjRef.Kind.Spawned || !ObjRef.IsShared(go) || ObjRef.Resolve<Item>(at) != _worldMade)
+            {
+                r.Fail($"{r.Info}: not named by a host id");
+            }
+            else if (hit && _worldMade.health >= _worldMadeHealth && !_worldMade.destroyed)
+            {
+                r.Fail($"{r.Info}: the host's hit didn't come here");
+            }
         }
 
         /// <summary>"ids-hit" (host): our player hits the chair world-furniture made.</summary>
@@ -778,11 +1007,17 @@ namespace DarkwoodMP.World
             yield return Walk(t.transform.position, 90f);
             FinishDisarm(item);
             float until = Time.realtimeSinceStartup + 4f;
-            while (t != null && !t.triggered && Time.realtimeSinceStartup < until) yield return null;
+            while (t != null && !t.triggered && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             P.hidingInventory = false;
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{what}: {(t == null ? "disarmed (gone)" : t.triggered ? "sprung (the roll failed)" : "still armed")}";
-            if (t != null && !t.triggered) r.Fail($"{r.Info}: nothing happened");
+            if (t != null && !t.triggered)
+            {
+                r.Fail($"{r.Info}: nothing happened");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -796,7 +1031,10 @@ namespace DarkwoodMP.World
             AsPlayer(() => e.onActivate());
             yield return new WaitForSeconds(2f);
             r.Info = $"{what}: {(e == null ? "gone" : "activated=" + BreakSync.Activated(e))}";
-            if (e != null && !BreakSync.Activated(e)) r.Fail($"{r.Info}: didn't go off");
+            if (e != null && !BreakSync.Activated(e))
+            {
+                r.Fail($"{r.Info}: didn't go off");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -809,12 +1047,21 @@ namespace DarkwoodMP.World
             bool explosive = e != null;
             yield return Walk(AwayFrom(it.transform.position, explosive ? Mathf.Max(e.radius + 250f, 500f) : 200f), 40f);
             string what = $"{it.name} {Ref(it)} at {Fmt(it.transform.position)}";
-            if (it.GetComponent<Burn>() == null) it.gameObject.AddComponent<Burn>().burnTime = 5f;
+            if (it.GetComponent<Burn>() == null)
+            {
+                it.gameObject.AddComponent<Burn>().burnTime = 5f;
+            }
             yield return new WaitForSeconds(2f);
             bool exploded = explosive && (e == null || BreakSync.Activated(e));
             r.Info = $"{what}: {(it == null ? "gone" : $"burning={it.GetComponent<Burn>() != null}")}{(explosive ? $" exploded={exploded}" : "")}";
-            if (explosive && !exploded) r.Fail($"{r.Info}: lit, but it didn't go off");
-            else if (!explosive && it != null && it.GetComponent<Burn>() == null) r.Fail($"{r.Info}: not burning");
+            if (explosive && !exploded)
+            {
+                r.Fail($"{r.Info}: lit, but it didn't go off");
+            }
+            else if (!explosive && it != null && it.GetComponent<Burn>() == null)
+            {
+                r.Fail($"{r.Info}: not burning");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -841,14 +1088,22 @@ namespace DarkwoodMP.World
             var rb = go.GetComponent<Rigidbody>();
             if (ti == null || rb == null) { r.Fail("a molotov isn't a thrown item"); yield break; }
             foreach (var mc in go.GetComponentsInChildren<Collider>())
-                foreach (var pc in P.GetComponentsInChildren<Collider>()) Physics.IgnoreCollision(mc, pc);
+            {
+                foreach (var pc in P.GetComponentsInChildren<Collider>())
+                {
+                    Physics.IgnoreCollision(mc, pc);
+                }
+            }
             ti.landTarget = new Vector3(tpos.x, from.y, tpos.z);
             rb.drag = 2f;
             rb.velocity = dir * dist * 2.5f;
             ti.thrown = true;
             ti.objectThatSpawnedMe = P.transform;
             ti.setFallSpeed(dist);
-            var ren = go.GetComponent<Renderer>(); if (ren != null) ren.enabled = true;
+            var ren = go.GetComponent<Renderer>(); if (ren != null)
+            {
+                ren.enabled = true;
+            }
             var before = new HashSet<Burn>(Object.FindObjectsOfType<Burn>());
             ThrowSync.Instance.Thrown("molotov", go, from);
             // Something near where it lands catches fire (not what was burning already).
@@ -860,7 +1115,10 @@ namespace DarkwoodMP.World
                 lit = Object.FindObjectsOfType<Burn>().Where(b => b != null && !before.Contains(b) && b.GetComponent<Player>() == null && StateDump.Flat(b.transform.position - tpos) < 350f).FirstOrDefault();
             }
             r.Info = lit != null ? $"{lit.name} {Ref(lit)} caught fire" : $"nothing caught fire near {a[0]}";
-            if (lit == null) r.Fail(r.Info);
+            if (lit == null)
+            {
+                r.Fail(r.Info);
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -875,7 +1133,10 @@ namespace DarkwoodMP.World
             Singleton<Flags>.Instance.setFlag(flag.name, to);
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{flag.name} -> {flag.isTrue}";
-            if (flag.isTrue != to) r.Fail($"{r.Info}: didn't change");
+            if (flag.isTrue != to)
+            {
+                r.Fail($"{r.Info}: didn't change");
+            }
         }
 
         /// <summary>"reputation N DELTA": change the Nth NPC's reputation.</summary>
@@ -894,7 +1155,10 @@ namespace DarkwoodMP.World
         {
             var journal = Singleton<UI>.Instance.journal;
             var jdb = Singleton<JournalDatabase>.Instance;
-            if (jdb != null && jdb.journalEntriesDict.Count == 0) jdb.populateDict();
+            if (jdb != null && jdb.journalEntriesDict.Count == 0)
+            {
+                jdb.populateDict();
+            }
             if (jdb == null) { r.Fail("no journal database"); yield break; }
             if (a.Length > 0 && a[0] == "note")
             {
@@ -902,7 +1166,10 @@ namespace DarkwoodMP.World
                 if (note == null) { r.Fail("every note is in already"); yield break; }
                 journal.addNote(new Journal.Note { type = note });
                 r.Info = $"note {note}";
-                if (!journal.notesDict.ContainsKey(note)) r.Fail($"{r.Info}: not added");
+                if (!journal.notesDict.ContainsKey(note))
+                {
+                    r.Fail($"{r.Info}: not added");
+                }
             }
             else
             {
@@ -910,7 +1177,10 @@ namespace DarkwoodMP.World
                 if (entry == null) { r.Fail("every entry is in already"); yield break; }
                 journal.addJournalEntry(entry);
                 r.Info = $"entry {entry}";
-                if (!journal.journalEntriesDict.ContainsKey(entry)) r.Fail($"{r.Info}: not added");
+                if (!journal.journalEntriesDict.ContainsKey(entry))
+                {
+                    r.Fail($"{r.Info}: not added");
+                }
             }
             yield return new WaitForSeconds(0.5f);
         }
@@ -944,8 +1214,14 @@ namespace DarkwoodMP.World
             string took = lines.LastOrDefault(l => l.Contains(" traded with ") && l.Contains(": took "));
             string refused = lines.LastOrDefault(l => l.Contains("[authority] refused TraderTrade"));
             r.Info = (took ?? refused ?? "no client's trade here").Trim();
-            if (refused != null) r.Fail($"refused: {refused.Trim()}");
-            else if (took == null) r.Fail(r.Info);
+            if (refused != null)
+            {
+                r.Fail($"refused: {refused.Trim()}");
+            }
+            else if (took == null)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         private static IEnumerator Trade(string[] a, Result r)
@@ -967,14 +1243,19 @@ namespace DarkwoodMP.World
             var ours = P.Inventory.getAllItems().Where(i => !InvItemClass.isNull(i) && !string.IsNullOrEmpty(i.type) && i.amount > 0 && i.type != boughtType && i.getSellValue() > 0).ToList();
             // One thing that pays for it, the cheapest such; else several, the most valuable first.
             var one = ours.Where(i => i.getSellValue() >= boughtValue).OrderBy(i => i.getSellValue()).FirstOrDefault();
-            if (earn) ours.Clear(); // nothing given: the reputation pays
+            if (earn)
+            {
+                ours.Clear(); // nothing given: the reputation pays
+            }
             foreach (var it in earn ? new List<InvItemClass>() : one != null ? new List<InvItemClass> { one } : ours.OrderByDescending(i => i.getSellValue()).ToList())
+            {
                 for (int n = 0; n < Math.Max(1, it.amount) && giveValue < boughtValue; n++)
                 {
                     gave.TryGetValue(it.type, out int had);
                     gave[it.type] = had + 1;
                     giveValue += it.getSellValue();
                 }
+            }
             int repChange = giveValue - boughtValue;
             string giveText = string.Join(",", gave.Select(kv => $"{kv.Key}x{kv.Value}"));
             if (earn)
@@ -990,7 +1271,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.8f);
             if (ri >= 0)
             {
-                while (MapScenarioSavage.Now < raceAt) yield return null;
+                while (MapScenarioSavage.Now < raceAt)
+                {
+                    yield return null;
+                }
                 // What's cheapest may have changed meanwhile; the same slot as the others, as it is now.
                 if (InvItemClass.isNull(slot.invItem) || slot.invItem.type != boughtType) { P.inShop = false; P.talkedToNPC = null; r.Fail($"{boughtType} gone from his slot before the race"); yield break; }
             }
@@ -998,9 +1282,19 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             AsPlayer(() =>
             {
-                if (earn) npc.reputation += boughtValue; // earned just now (as a dialogue's reward): only our game has it yet
+                if (earn)
+                {
+                    npc.reputation += boughtValue; // earned just now (as a dialogue's reward): only our game has it yet
+                }
                 // His thing to us, ours to him (exchangeTrader.transferAllItemsToPlayer, exchangePlayer.transferAllItemsTo).
-                if (slot.invItem.amount > 1) slot.invItem.amount -= 1; else slot.removeItem();
+                if (slot.invItem.amount > 1)
+                {
+                    slot.invItem.amount -= 1;
+                }
+                else
+                {
+                    slot.removeItem();
+                }
                 P.Inventory.addItemTypeToPlayer(boughtType, 1, dropIfNoRoom: true);
                 foreach (var kv in gave) { P.Inventory.removeItemAmountFromPlayer(kv.Key, kv.Value); npc.inventory.addItemType(kv.Key, kv.Value); }
                 npc.reputation += repChange;
@@ -1014,8 +1308,14 @@ namespace DarkwoodMP.World
             string refused = MapScenarioIssues.LogLines().Skip(mark).FirstOrDefault(l => l.Contains("refused trade with"));
             r.Info = $"{npc.name}: bought {boughtType} ({boughtValue}), gave {(earn ? $"nothing, earned {boughtValue} reputation first" : giveText)} ({giveValue}): [{was}] -> [{Contents(npc.inventory)}], reputation {npc.reputation}";
             if (ri >= 0) { r.Info = (refused != null ? "refused " : "got ") + r.Info; yield break; }
-            if (refused != null) r.Fail($"{r.Info}: {refused.Trim()}");
-            else if (Contents(npc.inventory) == was) r.Fail($"{r.Info}: his stock didn't change");
+            if (refused != null)
+            {
+                r.Fail($"{r.Info}: {refused.Trim()}");
+            }
+            else if (Contents(npc.inventory) == was)
+            {
+                r.Fail($"{r.Info}: his stock didn't change");
+            }
         }
 
         /// <summary>"spawn TYPE": the host spawns an enemy near its player (CharacterSpawner).</summary>
@@ -1025,7 +1325,10 @@ namespace DarkwoodMP.World
             var c = TestWorld.SpawnEnemy(a.Length > 0 ? a[0] : "Dog");
             yield return new WaitForSeconds(1f);
             r.Info = c != null ? $"{c.name} {Ref(c)} at {Fmt(c.transform.position)}" : "none";
-            if (c == null) r.Fail("nothing spawned");
+            if (c == null)
+            {
+                r.Fail("nothing spawned");
+            }
         }
 
         /// <summary>The host's live enemy nearest to our player, within radius of the centre.</summary>
@@ -1053,7 +1356,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(3f); // a client settles the corpse 2 s after it dies
             r.Info = $"{what}: alive={(c != null && c.alive)} after {hits} hits, searchable={(c != null && c.GetComponent<Item>() != null)} at {(c != null ? Fmt(c.transform.position) : "-")}";
-            if (c != null && c.alive) r.Fail($"{r.Info}: still alive");
+            if (c != null && c.alive)
+            {
+                r.Fail($"{r.Info}: still alive");
+            }
             yield return Walk(Centre, 60f);
         }
     }

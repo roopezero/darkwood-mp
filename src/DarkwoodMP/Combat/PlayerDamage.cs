@@ -24,7 +24,10 @@ namespace DarkwoodMP.Combat
             var npc = attacker != null ? attacker.GetComponentInParent<Character>() : null;
             if (npc != null && npc.npc != null && !NetEnemies.Eligible(npc))
             {
-                if (Threat.Debug) Plugin.Log.LogInfo($"[threat] {from} (an NPC) hit a remote player's stand-in: left to that player's own copy of it");
+                if (Threat.Debug)
+                {
+                    Plugin.Log.LogInfo($"[threat] {from} (an NPC) hit a remote player's stand-in: left to that player's own copy of it");
+                }
                 return;
             }
             if (owner == PlayerSync.DummyId)
@@ -34,7 +37,10 @@ namespace DarkwoodMP.Combat
                 return;
             }
             var session = Session.Instance;
-            if (session == null || !session.IsHost) return;
+            if (session == null || !session.IsHost)
+            {
+                return;
+            }
             var w = session.Begin(MsgType.PlayerDamage);
             w.W.Write(damage);
             w.W.Write((byte)(shadow ? 1 : 0));
@@ -81,18 +87,33 @@ namespace DarkwoodMP.Combat
         private static void OnDamage(ulong from, PacketReader r)
         {
             var session = Session.Instance;
-            if (session == null || !session.IsClient || from != session.HostId) return;
+            if (session == null || !session.IsClient || from != session.HostId)
+            {
+                return;
+            }
             float damage = r.R.ReadSingle();
             bool shadow = (r.R.ReadByte() & 1) != 0;
             string attacker = r.ReadStr();
             var effects = ReadEffects(r);
 
             var player = Player.Instance;
-            if (player == null || !player.alive) return;
+            if (player == null || !player.alive)
+            {
+                return;
+            }
             Plugin.Log.LogInfo($"Hit for {damage:0} by {attacker} on the host");
-            if (shadow) player.getHitByShadow(damage);
-            else player.getHit(damage);
-            foreach (var e in effects) player.effects.activate(e);
+            if (shadow)
+            {
+                player.getHitByShadow(damage);
+            }
+            else
+            {
+                player.getHit(damage);
+            }
+            foreach (var e in effects)
+            {
+                player.effects.activate(e);
+            }
         }
     }
 }

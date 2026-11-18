@@ -52,8 +52,22 @@ namespace DarkwoodMP.World
             float now = Time.unscaledTime;
             bool gone = w.npc == null; // destroyed, or cleared by a close that is on its way
             bool off = !gone && !w.npc.gameObject.activeInHierarchy && Hideouts.Together;
-            if (!gone) _goneSince = -1f; else if (_goneSince < 0f) _goneSince = now;
-            if (!off) _offSince = -1f; else if (_offSince < 0f) _offSince = now;
+            if (!gone)
+            {
+                _goneSince = -1f;
+            }
+            else if (_goneSince < 0f)
+            {
+                _goneSince = now;
+            }
+            if (!off)
+            {
+                _offSince = -1f;
+            }
+            else if (_offSince < 0f)
+            {
+                _offSince = now;
+            }
 
             if (NpcDestroyed(w) && !w.tweening) { ForceClose(w, "destroyed"); return; }
             if (gone && now - _goneSince > StuckAfter) { ForceClose(w, "gone for " + StuckAfter + " s"); return; }
@@ -69,12 +83,21 @@ namespace DarkwoodMP.World
         /// still opening or closing (tweening) and nothing was done.</summary>
         internal static bool Close(DialogueWindow w)
         {
-            if (w == null || w.tweening) return false;
+            if (w == null || w.tweening)
+            {
+                return false;
+            }
             if (NpcDestroyed(w)) { ForceClose(w, "destroyed"); return true; }
-            if (w.npc == null) return false;
+            if (w.npc == null)
+            {
+                return false;
+            }
             try
             {
-                if (Player.Instance != null && Player.Instance.inShop) w.closeTrade();
+                if (Player.Instance != null && Player.Instance.inShop)
+                {
+                    w.closeTrade();
+                }
                 // From the main menu close() shows the goodbye line instead of closing (see TalkLock.CloseWhenReady).
                 w.currentMenu = DialogueWindow.CurrentMenu.gossip;
                 w.close();
@@ -89,7 +112,10 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool RunGame(DialogueWindow w, bool ifTweening)
         {
-            if (!NpcDestroyed(w) || (!ifTweening && w.tweening)) return true;
+            if (!NpcDestroyed(w) || (!ifTweening && w.tweening))
+            {
+                return true;
+            }
             ForceClose(w, "destroyed");
             return false;
         }
@@ -98,7 +124,10 @@ namespace DarkwoodMP.World
         internal static void ForceClose(DialogueWindow w, string why)
         {
             var p = Player.Instance;
-            if (w == null || p == null) return;
+            if (w == null || p == null)
+            {
+                return;
+            }
             Plugin.Log.LogInfo($"[world] the dialogue's NPC is {why}: closing the dialogue without them");
             _goneSince = _offSince = -1f;
             try
@@ -106,13 +135,22 @@ namespace DarkwoodMP.World
                 if (p.inShop || (w.trading != null && w.trading.gameObject.activeSelf))
                 {
                     Singleton<InventoryController>.Instance?.itemPopup?.hide();
-                    if (w.trading != null) w.trading.gameObject.SetActive(false);
-                    if (w.options != null) w.options.gameObject.SetActive(true);
+                    if (w.trading != null)
+                    {
+                        w.trading.gameObject.SetActive(false);
+                    }
+                    if (w.options != null)
+                    {
+                        w.options.gameObject.SetActive(true);
+                    }
                     p.inShop = false;
                     p.talkedToNPC = null;
                     p.Hotbar.refresh();
                     p.Inventory.hide();
-                    if (_shopUI != null) UnityEngine.Object.Destroy(_shopUI);
+                    if (_shopUI != null)
+                    {
+                        UnityEngine.Object.Destroy(_shopUI);
+                    }
                     w.exchangePlayer.transferAllItemsToPlayer(); // what our player put on the table
                     w.exchangePlayer.hide();
                     w.exchangeTrader.clear();                    // his things went with him
@@ -148,7 +186,10 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
                     w.tweening = false;
                     w.gameObject.SetActive(false);
-                    if (Singleton<CamMain>.Instance != null) Singleton<CamMain>.Instance.gameObject.SetActive(true);
+                    if (Singleton<CamMain>.Instance != null)
+                    {
+                        Singleton<CamMain>.Instance.gameObject.SetActive(true);
+                    }
                     p.inDialogue = false;
                     p.performingAction = false;
                     p.talkedToNPC = null;

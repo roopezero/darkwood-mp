@@ -41,28 +41,52 @@ namespace DarkwoodMP.Combat
 
         internal static void Spawned(GameObject go)
         {
-            if (go == null) return;
-            if (EnemyDepth > 0 && Hosting) Add(EnemySpawned, go);
-            if (PlayerDepth > 0) Add(PlayerSpawned, go);
+            if (go == null)
+            {
+                return;
+            }
+            if (EnemyDepth > 0 && Hosting)
+            {
+                Add(EnemySpawned, go);
+            }
+            if (PlayerDepth > 0)
+            {
+                Add(PlayerSpawned, go);
+            }
         }
 
         private static void Add(HashSet<GameObject> set, GameObject go)
         {
-            if (set.Count > 512) set.RemoveWhere(g => g == null);
+            if (set.Count > 512)
+            {
+                set.RemoveWhere(g => g == null);
+            }
             set.Add(go);
         }
 
         private static bool In(HashSet<GameObject> set, Transform t)
         {
-            if (set.Count == 0) return false;
-            for (; t != null; t = t.parent) if (set.Contains(t.gameObject)) return true;
+            if (set.Count == 0)
+            {
+                return false;
+            }
+            for (; t != null; t = t.parent)
+            {
+                if (set.Contains(t.gameObject))
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
         /// <summary>Host: whether one of the host's enemies spawned this (or it is one).</summary>
         public static bool ByEnemy(Transform t, Transform spawnedBy = null)
         {
-            if (spawnedBy != null && IsEnemy(spawnedBy.GetComponent<Character>())) return true;
+            if (spawnedBy != null && IsEnemy(spawnedBy.GetComponent<Character>()))
+            {
+                return true;
+            }
             return In(EnemySpawned, t);
         }
 
@@ -72,7 +96,13 @@ namespace DarkwoodMP.Combat
         public static bool ByLocalPlayer(Flame f) => f != null && In(PlayerSpawned, f.transform);
 
         /// <summary>Test hook: count this as spawned by one of the host's enemies.</summary>
-        internal static void MarkEnemy(GameObject go) { if (go != null) Add(EnemySpawned, go); }
+        internal static void MarkEnemy(GameObject go)
+        {
+            if (go != null)
+            {
+                Add(EnemySpawned, go);
+            }
+        }
 
         /// <summary>
         /// Client: whether the local player is somewhere the host doesn't run (a dream, or a separate location the
@@ -84,9 +114,15 @@ namespace DarkwoodMP.Combat
         {
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p == null || !p.alive) continue;
+                if (p == null || !p.alive)
+                {
+                    continue;
+                }
                 var col = p.GetComponent<Collider>();
-                if (col != null && !col.enabled) continue;
+                if (col != null && !col.enabled)
+                {
+                    continue;
+                }
                 yield return p;
             }
         }
@@ -96,21 +132,33 @@ namespace DarkwoodMP.Combat
         /// <summary>Host, before Explodes.explode: the proxies it catches, as explode does for the host's Player.</summary>
         internal static void Explosion(Explodes ex)
         {
-            if (ex == null || ex.effect == null || !Hosting) return;
+            if (ex == null || ex.effect == null || !Hosting)
+            {
+                return;
+            }
             var at = ex.transform;
             if (ex.affectsPlayer && ex.radius > 0f)
             {
                 foreach (var p in LivingProxies())
                 {
                     float d = Core.trueDistance(p.transform.position, at.position);
-                    if (d >= ex.radius || !Core.canSee(at, p.transform)) continue;
+                    if (d >= ex.radius || !Core.canSee(at, p.transform))
+                    {
+                        continue;
+                    }
                     float damage = ex.damage * ((ex.radius - d) / ex.radius);
-                    if (damage <= 0f) continue;
+                    if (damage <= 0f)
+                    {
+                        continue;
+                    }
                     PlayerDamage.Send(p.Owner, damage, ex.objectThatSpawnedMe != null ? ex.objectThatSpawnedMe : at, shadow: false,
                         effects: ex.hasEffect ? new List<InvItemEffect> { ex.effect } : null);
                 }
             }
-            if (ByEnemy(at, ex.objectThatSpawnedMe)) SendExplosion(ex);
+            if (ByEnemy(at, ex.objectThatSpawnedMe))
+            {
+                SendExplosion(ex);
+            }
         }
 
         /// <summary>
@@ -120,16 +168,25 @@ namespace DarkwoodMP.Combat
         private static void SendExplosion(Explodes ex)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0) return;
+            if (s == null || !s.IsHost || s.Peers.Count == 0)
+            {
+                return;
+            }
             string sound = ex.explodeSound ?? "";
             string fx = ex.explosionPrefab != null ? ex.explosionPrefab.name : "";
-            if (sound.Length == 0 && fx.Length == 0) return;
+            if (sound.Length == 0 && fx.Length == 0)
+            {
+                return;
+            }
             var w = s.Begin(MsgType.EnemyExplosion);
             w.Write(ex.transform.position);
             w.WriteStr(sound);
             w.WriteStr(fx);
             s.Broadcast(w, Channel.Control, reliable: true);
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] enemy explosion ({fx}, {sound}) at {ex.transform.position}");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] enemy explosion ({fx}, {sound}) at {ex.transform.position}");
+            }
         }
 
         private static readonly Dictionary<string, GameObject> FxByName = new Dictionary<string, GameObject>();
@@ -137,15 +194,27 @@ namespace DarkwoodMP.Combat
         private static void OnExplosion(ulong from, PacketReader r)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld) return;
+            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld)
+            {
+                return;
+            }
             var pos = r.ReadVector3();
             string sound = r.ReadStr();
             string fx = r.ReadStr();
             var me = Player.Instance;
-            if (me == null || PlayerAway() || Core.trueDistance(me.transform.position, pos) > 4000f) return;
-            if (sound.Length > 0) AudioController.Play(sound, pos);
+            if (me == null || PlayerAway() || Core.trueDistance(me.transform.position, pos) > 4000f)
+            {
+                return;
+            }
+            if (sound.Length > 0)
+            {
+                AudioController.Play(sound, pos);
+            }
             var prefab = Fx(fx);
-            if (prefab == null) return;
+            if (prefab == null)
+            {
+                return;
+            }
             // Only the look: anything in it that could hurt counts as part of an explosion (the host already dealt it).
             WorldActions.Replaying = true;
             ThrownHits.Depth++;
@@ -156,12 +225,24 @@ namespace DarkwoodMP.Combat
         /// <summary>An explosion prefab by name, among the assets this game has loaded (the enemy that throws it is here too).</summary>
         private static GameObject Fx(string name)
         {
-            if (string.IsNullOrEmpty(name)) return null;
-            if (FxByName.TryGetValue(name, out var go) && go != null) return go;
+            if (string.IsNullOrEmpty(name))
+            {
+                return null;
+            }
+            if (FxByName.TryGetValue(name, out var go) && go != null)
+            {
+                return go;
+            }
             go = null;
             foreach (var g in Resources.FindObjectsOfTypeAll<GameObject>())
-                if (g != null && g.name == name && !g.scene.IsValid() && g.transform.parent == null) { go = g; break; }
-            if (go == null) Plugin.Log.LogInfo($"The host's enemy exploded with {name}, which this game hasn't loaded: sound only");
+            {
+                if (g != null && g.name == name && !g.scene.IsValid() && g.transform.parent == null)
+                { go = g; break; }
+            }
+            if (go == null)
+            {
+                Plugin.Log.LogInfo($"The host's enemy exploded with {name}, which this game hasn't loaded: sound only");
+            }
             FxByName[name] = go;
             return go;
         }
@@ -171,13 +252,22 @@ namespace DarkwoodMP.Combat
         /// <summary>Host, before Character.waitToDamageAroundMe: the proxies in its aura.</summary>
         internal static void Aura(Character c)
         {
-            if (c == null || !c.alive || !Hosting || c.aroundMeDamageRange <= 0f) return;
+            if (c == null || !c.alive || !Hosting || c.aroundMeDamageRange <= 0f)
+            {
+                return;
+            }
             foreach (var p in LivingProxies())
             {
                 float d = Core.trueDistance(p.transform.position, c.transform.position);
-                if (d > c.aroundMeDamageRange) continue;
+                if (d > c.aroundMeDamageRange)
+                {
+                    continue;
+                }
                 float f = (c.aroundMeDamageRange / 2f - d) / c.aroundMeDamageRange;
-                if (f > 0f) PlayerDamage.Send(p.Owner, c.aroundMeDamage * f, c.transform, shadow: false, effects: null);
+                if (f > 0f)
+                {
+                    PlayerDamage.Send(p.Owner, c.aroundMeDamage * f, c.transform, shadow: false, effects: null);
+                }
             }
         }
 
@@ -187,18 +277,33 @@ namespace DarkwoodMP.Combat
             var c = flier != null ? flier.GetComponent<Character>() : null;
             var target = c != null ? c.target : null;
             var proxy = target != null ? target.GetComponent<NetPlayerProxy>() : null;
-            if (proxy != null) PlayerDamage.Send(proxy.Owner, damage, flier.transform, shadow: false, effects: null);
-            else if (Player.Instance != null) Player.Instance.getHit(damage);
+            if (proxy != null)
+            {
+                PlayerDamage.Send(proxy.Owner, damage, flier.transform, shadow: false, effects: null);
+            }
+            else if (Player.Instance != null)
+            {
+                Player.Instance.getHit(damage);
+            }
         }
 
         /// <summary>Host, before Shooter.shoot on one of its enemies: each proxy it can see is hit as the host's player is.</summary>
         internal static void Shot(Shooter sh)
         {
-            if (sh == null || sh.target == null || !Hosting) return;
-            if (!IsEnemy(sh.GetComponentInParent<Character>())) return; // a Shooter of the world's own runs in every game
+            if (sh == null || sh.target == null || !Hosting)
+            {
+                return;
+            }
+            if (!IsEnemy(sh.GetComponentInParent<Character>()))
+            {
+                return; // a Shooter of the world's own runs in every game
+            }
             foreach (var p in LivingProxies())
             {
-                if (!Core.canSee(sh.transform, p.transform)) continue;
+                if (!Core.canSee(sh.transform, p.transform))
+                {
+                    continue;
+                }
                 float d = Mathf.Max(1f, Core.trueDistance(sh.transform, p.transform));
                 PlayerDamage.Send(p.Owner, sh.damage / d, sh.transform, shadow: false, effects: null);
             }
@@ -207,10 +312,19 @@ namespace DarkwoodMP.Combat
         /// <summary>Host, in Flame.onCollideWith: an enemy's flame touching a proxy hurts its player (the proxy drops byPlayer hits).</summary>
         internal static void FlameTouch(Flame f, Transform t, Collider col)
         {
-            if (f == null || !f.isActive || !Hosting) return;
+            if (f == null || !f.isActive || !Hosting)
+            {
+                return;
+            }
             var p = col != null ? col.transform.GetComponent<NetPlayerProxy>() : null;
-            if (p == null && t != null) p = t.GetComponent<NetPlayerProxy>();
-            if (p == null || !p.alive || !ByEnemy(f.transform)) return;
+            if (p == null && t != null)
+            {
+                p = t.GetComponent<NetPlayerProxy>();
+            }
+            if (p == null || !p.alive || !ByEnemy(f.transform))
+            {
+                return;
+            }
             PlayerDamage.Send(p.Owner, f.contactDamage, f.transform, shadow: false,
                 effects: f.effect != null ? new List<InvItemEffect> { f.effect } : null);
         }
@@ -231,7 +345,13 @@ namespace DarkwoodMP.Combat
         internal static NetPlayerProxy Joined()
         {
             NetPlayerProxy p = null;
-            foreach (var x in NetPlayerProxy.All.Values) if (x != null && x.Owner != Sync.PlayerSync.DummyId) p = x;
+            foreach (var x in NetPlayerProxy.All.Values)
+            {
+                if (x != null && x.Owner != Sync.PlayerSync.DummyId)
+                {
+                    p = x;
+                }
+            }
             return p;
         }
 
@@ -240,16 +360,27 @@ namespace DarkwoodMP.Combat
         {
             Character c = null;
             foreach (var x in AllCharacters.Active())
-                if (x != null && x.alive && NetEnemies.Eligible(x) && (c == null || (x.transform.position - at).sqrMagnitude < (c.transform.position - at).sqrMagnitude)) c = x;
+            {
+                if (x != null && x.alive && NetEnemies.Eligible(x) && (c == null || (x.transform.position - at).sqrMagnitude < (c.transform.position - at).sqrMagnitude))
+                {
+                    c = x;
+                }
+            }
             return c;
         }
 
         internal static System.Collections.IEnumerator Run()
         {
             NetPlayerProxy p;
-            while ((p = Joined()) == null) yield return null;
+            while ((p = Joined()) == null)
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(4f);
-            if (p == null) yield break;
+            if (p == null)
+            {
+                yield break;
+            }
             var at = p.transform.position;
 
             // A bomb: a real one's sound and flash, no fire.
@@ -261,7 +392,10 @@ namespace DarkwoodMP.Combat
             {
                 var item = db.getItem(key, instantiate: false);
                 var real = item != null && item.item is GameObject g ? g.GetComponent<Explodes>() : null;
-                if (real == null || real.explosionPrefab == null) continue;
+                if (real == null || real.explosionPrefab == null)
+                {
+                    continue;
+                }
                 ex.explosionPrefab = real.explosionPrefab; ex.explodeSound = real.explodeSound;
                 break;
             }
@@ -284,11 +418,17 @@ namespace DarkwoodMP.Combat
                 try { AuraTick.Invoke(c, null); }
                 finally { c.name = name; c.aroundMeDamage = dmg; c.aroundMeDamageRange = range; }
             }
-            else Plugin.Log.LogInfo("--dwmp-test-blast: no enemy for the damage aura");
+            else
+            {
+                Plugin.Log.LogInfo("--dwmp-test-blast: no enemy for the damage aura");
+            }
             yield return new WaitForSeconds(1f);
 
             // An enemy's flame.
-            if (p == null) yield break;
+            if (p == null)
+            {
+                yield break;
+            }
             var fgo = new GameObject("DarkwoodMP_TestFlame");
             fgo.transform.position = p.transform.position;
             var f = fgo.AddComponent<Flame>();
@@ -323,9 +463,18 @@ namespace DarkwoodMP.Combat
         static void Prefix(Explodes __instance, out bool __state)
         {
             __state = EnemyAreaHits.ByEnemy(__instance.transform, __instance.objectThatSpawnedMe);
-            if (__state) EnemyAreaHits.EnemyDepth++;
+            if (__state)
+            {
+                EnemyAreaHits.EnemyDepth++;
+            }
         }
-        static void Finalizer(bool __state) { if (__state) EnemyAreaHits.EnemyDepth--; }
+        static void Finalizer(bool __state)
+        {
+            if (__state)
+            {
+                EnemyAreaHits.EnemyDepth--;
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Player), "spawnBullet")]
@@ -343,7 +492,13 @@ namespace DarkwoodMP.Combat
             yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
             yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
         }
-        static void Postfix(GameObject __result) { if (EnemyAreaHits.EnemyDepth > 0 || EnemyAreaHits.PlayerDepth > 0) EnemyAreaHits.Spawned(__result); }
+        static void Postfix(GameObject __result)
+        {
+            if (EnemyAreaHits.EnemyDepth > 0 || EnemyAreaHits.PlayerDepth > 0)
+            {
+                EnemyAreaHits.Spawned(__result);
+            }
+        }
     }
 
     [HarmonyPatch]
@@ -351,7 +506,13 @@ namespace DarkwoodMP.Combat
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
             AccessTools.GetDeclaredMethods(typeof(Core)).FindAll(m => m.Name == nameof(Core.AddPooledPrefab) && m.ReturnType == typeof(Transform));
-        static void Postfix(Transform __result) { if (__result != null && (EnemyAreaHits.EnemyDepth > 0 || EnemyAreaHits.PlayerDepth > 0)) EnemyAreaHits.Spawned(__result.gameObject); }
+        static void Postfix(Transform __result)
+        {
+            if (__result != null && (EnemyAreaHits.EnemyDepth > 0 || EnemyAreaHits.PlayerDepth > 0))
+            {
+                EnemyAreaHits.Spawned(__result.gameObject);
+            }
+        }
     }
 
     // ---- the hits ------------------------------------------------------------------------------------
@@ -388,13 +549,22 @@ namespace DarkwoodMP.Combat
             int swapped = 0;
             for (int i = 0; i < list.Count - 2; i++)
             {
-                if (!list[i].Calls(getInstance)) continue;
-                if (!(list[i + 2].Calls(getHit) || list[i + 2].Calls(getHitBase))) continue;
+                if (!list[i].Calls(getInstance))
+                {
+                    continue;
+                }
+                if (!(list[i + 2].Calls(getHit) || list[i + 2].Calls(getHitBase)))
+                {
+                    continue;
+                }
                 list[i] = new CodeInstruction(System.Reflection.Emit.OpCodes.Ldarg_0) { labels = list[i].labels };
                 list[i + 2] = new CodeInstruction(System.Reflection.Emit.OpCodes.Call, flierHit) { labels = list[i + 2].labels };
                 swapped++;
             }
-            if (swapped == 0) Plugin.Log.LogWarning("FlierTargetPatch: no Player.Instance.getHit in Flier.Update (game changed?)");
+            if (swapped == 0)
+            {
+                Plugin.Log.LogWarning("FlierTargetPatch: no Player.Instance.getHit in Flier.Update (game changed?)");
+            }
             return list;
         }
     }
@@ -405,7 +575,10 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Shooter __instance)
         {
             // A client's frozen copy of the host's enemy doesn't shoot.
-            if (NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance.GetComponentInParent<Character>())) return false;
+            if (NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance.GetComponentInParent<Character>()))
+            {
+                return false;
+            }
             EnemyAreaHits.Shot(__instance);
             return true;
         }

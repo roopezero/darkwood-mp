@@ -52,8 +52,14 @@ namespace DarkwoodMP.World
         {
             get
             {
-                if (!SaveRedirect.Active) return Path.Combine(BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
-                if (WorldShare.Instance?.PlayingHostCopy != false) return null;
+                if (!SaveRedirect.Active)
+                {
+                    return Path.Combine(BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
+                }
+                if (WorldShare.Instance?.PlayingHostCopy != false)
+                {
+                    return null;
+                }
                 return Path.Combine(SaveRedirect.Dir, "darkwoodmp-saves.json");
             }
         }
@@ -62,7 +68,10 @@ namespace DarkwoodMP.World
         {
             session.OnPeerConnected += id =>
             {
-                if (!session.IsHost || Core.currentProfile == null) return;
+                if (!session.IsHost || Core.currentProfile == null)
+                {
+                    return;
+                }
                 string name = session.NameOf(id);
                 session.Keys.TryGetValue(id, out string key);
                 AddPlayer(Core.currentProfile.id, name, key ?? "");
@@ -72,17 +81,29 @@ namespace DarkwoodMP.World
         private static FileData Data()
         {
             string path = FilePath;
-            if (path == null) return null;
+            if (path == null)
+            {
+                return null;
+            }
             // Read again when the file changed or went away underneath (a test's fresh copy of the saves).
             DateTime stamp = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
-            if (_data != null && _loadedFrom == path && _stamp == stamp) return _data;
+            if (_data != null && _loadedFrom == path && _stamp == stamp)
+            {
+                return _data;
+            }
             _loadedFrom = path;
             _stamp = stamp;
             _data = new FileData();
             try
             {
-                if (File.Exists(path)) _data = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
-                if (_data.Slots == null) _data.Slots = new Dictionary<string, Record>();
+                if (File.Exists(path))
+                {
+                    _data = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
+                }
+                if (_data.Slots == null)
+                {
+                    _data.Slots = new Dictionary<string, Record>();
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't read {path}: {e.Message}"); }
             return _data;
@@ -91,13 +112,19 @@ namespace DarkwoodMP.World
         private static void Write()
         {
             string path = FilePath;
-            if (path == null || _data == null || _loadedFrom != path) return;
+            if (path == null || _data == null || _loadedFrom != path)
+            {
+                return;
+            }
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 string tmp = path + ".tmp";
                 File.WriteAllText(tmp, JsonConvert.SerializeObject(_data, Formatting.Indented));
-                if (File.Exists(path)) File.Delete(path);
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
                 File.Move(tmp, path);
                 _stamp = File.GetLastWriteTimeUtc(path);
             }
@@ -114,9 +141,14 @@ namespace DarkwoodMP.World
         private static Record GetOrAdd(int slot)
         {
             var d = Data();
-            if (d == null) return null;
+            if (d == null)
+            {
+                return null;
+            }
             if (!d.Slots.TryGetValue(slot.ToString(), out var r))
+            {
                 d.Slots[slot.ToString()] = r = new Record { Started = Now() };
+            }
             return r;
         }
 
@@ -128,9 +160,15 @@ namespace DarkwoodMP.World
         public static void SetName(int slot, string name)
         {
             name = (name ?? "").Trim();
-            if (NameOf(slot) == name) return;
+            if (NameOf(slot) == name)
+            {
+                return;
+            }
             var r = GetOrAdd(slot);
-            if (r == null) return;
+            if (r == null)
+            {
+                return;
+            }
             r.Name = name;
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot} named \"{name}\"");
@@ -144,18 +182,26 @@ namespace DarkwoodMP.World
         public static List<string> PlayedWith(int slot)
         {
             var r = Get(slot);
-            if (r != null) return r.Players.OrderByDescending(p => p.Last, StringComparer.Ordinal).Select(p => p.Name).ToList();
+            if (r != null)
+            {
+                return r.Players.OrderByDescending(p => p.Last, StringComparer.Ordinal).Select(p => p.Name).ToList();
+            }
             var names = new List<string>();
             try
             {
                 var sm = Singleton<SaveManager>.Instance;
                 string dir = sm == null ? null : PlayersDir(sm.baseSaveDirectory, slot);
                 if (FilePath != null && dir != null && Directory.Exists(dir))
+                {
                     foreach (var f in Directory.GetFiles(dir, "*.json").OrderByDescending(File.GetLastWriteTimeUtc))
                     {
                         var c = JsonConvert.DeserializeObject<Characters.Record>(File.ReadAllText(f));
-                        if (c != null && !string.IsNullOrEmpty(c.Name) && !names.Contains(c.Name)) names.Add(c.Name);
+                        if (c != null && !string.IsNullOrEmpty(c.Name) && !names.Contains(c.Name))
+                        {
+                            names.Add(c.Name);
+                        }
                     }
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't read slot {slot}'s players' characters: {e.Message}"); }
             return names;
@@ -164,9 +210,15 @@ namespace DarkwoodMP.World
         public static void AddPlayer(int slot, string name, string key)
         {
             var r = GetOrAdd(slot);
-            if (r == null) return;
+            if (r == null)
+            {
+                return;
+            }
             var p = r.Players.FirstOrDefault(x => key != "" ? x.Key == key : x.Name == name);
-            if (p == null) r.Players.Add(p = new Player { Key = key });
+            if (p == null)
+            {
+                r.Players.Add(p = new Player { Key = key });
+            }
             p.Name = name;
             p.Last = Now();
             Write();
@@ -181,7 +233,10 @@ namespace DarkwoodMP.World
         {
             try
             {
-                if (WorldFiles.DeletePlayersFolder(baseDir, slot)) Plugin.Log.LogInfo($"[saves] slot {slot}'s players' characters deleted {why}");
+                if (WorldFiles.DeletePlayersFolder(baseDir, slot))
+                {
+                    Plugin.Log.LogInfo($"[saves] slot {slot}'s players' characters deleted {why}");
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}"); }
         }
@@ -190,7 +245,10 @@ namespace DarkwoodMP.World
         public static void Forget(int slot, string why)
         {
             var d = Data();
-            if (d == null || !d.Slots.Remove(slot.ToString())) return;
+            if (d == null || !d.Slots.Remove(slot.ToString()))
+            {
+                return;
+            }
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}'s record dropped ({why})");
         }
@@ -203,14 +261,20 @@ namespace DarkwoodMP.World
         static void Prefix()
         {
             var p = Core.currentProfile;
-            if (p == null || p.Active) return;
+            if (p == null || p.Active)
+            {
+                return;
+            }
             SaveBook.Forget(p.id, "a new game");
             // The characters the host kept for the players who joined the slot's last world: the game writes the new
             // world over the old save and leaves them, so a joiner would get their old character (dead, if it died
             // for good). They go with the old world, as when the slot is deleted.
             Characters.Instance?.Forget("a new game");
             var sm = Singleton<SaveManager>.Instance;
-            if (sm != null && WorldShare.Instance?.PlayingHostCopy != true) SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
+            if (sm != null && WorldShare.Instance?.PlayingHostCopy != true)
+            {
+                SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
+            }
         }
     }
 
@@ -225,7 +289,10 @@ namespace DarkwoodMP.World
         static void Prefix(SaveManager __instance)
         {
             var p = Core.currentProfile;
-            if (p == null || WorldShare.Instance?.PlayingHostCopy == true) return;
+            if (p == null || WorldShare.Instance?.PlayingHostCopy == true)
+            {
+                return;
+            }
             SaveBook.Forget(p.id, "deleted");
             Characters.Instance?.Forget("the slot deleted");
             SaveBook.DeletePlayersDir(__instance.baseSaveDirectory, p.id, "with it");

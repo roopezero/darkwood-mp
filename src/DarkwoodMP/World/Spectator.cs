@@ -57,7 +57,10 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void AllAround(Player p)
         {
-            if (p == null || p.FOVLogic == null) return;
+            if (p == null || p.FOVLogic == null)
+            {
+                return;
+            }
             var light = FovLight(p);
             if (float.IsNaN(_coneLight))
             {
@@ -65,19 +68,31 @@ namespace DarkwoodMP.World
                 _coneLogic = p.FOVLogic.LightConeAngle;
                 _currentFov = CurrentFov(p);
             }
-            if (light != null && light.LightConeAngle < 360f) light.LightConeAngle = 360f;
-            if (p.FOVLogic.LightConeAngle < 360f) p.FOVLogic.LightConeAngle = 360f;
+            if (light != null && light.LightConeAngle < 360f)
+            {
+                light.LightConeAngle = 360f;
+            }
+            if (p.FOVLogic.LightConeAngle < 360f)
+            {
+                p.FOVLogic.LightConeAngle = 360f;
+            }
             CurrentFov(p) = 370f;
         }
 
         private static void RestoreCone()
         {
-            if (float.IsNaN(_coneLight)) return;
+            if (float.IsNaN(_coneLight))
+            {
+                return;
+            }
             var p = Player.Instance;
             if (p != null && p.FOVLogic != null)
             {
                 var light = FovLight(p);
-                if (light != null) light.LightConeAngle = _coneLight;
+                if (light != null)
+                {
+                    light.LightConeAngle = _coneLight;
+                }
                 p.FOVLogic.LightConeAngle = _coneLogic;
                 CurrentFov(p) = _currentFov;
             }
@@ -94,7 +109,10 @@ namespace DarkwoodMP.World
         internal static (float light, float logic, float current) ConeAngles()
         {
             var p = Player.Instance;
-            if (p == null || p.FOVLogic == null) return (-1f, -1f, -1f);
+            if (p == null || p.FOVLogic == null)
+            {
+                return (-1f, -1f, -1f);
+            }
             var light = FovLight(p);
             return (light != null ? light.LightConeAngle : -1f, p.FOVLogic.LightConeAngle, CurrentFov(p));
         }
@@ -107,14 +125,29 @@ namespace DarkwoodMP.World
         {
             var list = new List<RemotePlayer>();
             var sync = PlayerSync.Instance;
-            if (sync == null) return list;
+            if (sync == null)
+            {
+                return list;
+            }
             float now = Time.unscaledTime;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Owner == PlayerSync.DummyId) continue;
-                if (r.Alive) _lastAlive[r.Owner] = now;
-                if (r.Spectating) continue;
-                if (r.Alive || (_lastAlive.TryGetValue(r.Owner, out float t) && now - t < 10f)) list.Add(r);
+                if (r.Owner == PlayerSync.DummyId)
+                {
+                    continue;
+                }
+                if (r.Alive)
+                {
+                    _lastAlive[r.Owner] = now;
+                }
+                if (r.Spectating)
+                {
+                    continue;
+                }
+                if (r.Alive || (_lastAlive.TryGetValue(r.Owner, out float t) && now - t < 10f))
+                {
+                    list.Add(r);
+                }
             }
             list.Sort((a, b) => a.Owner.CompareTo(b.Owner));
             return list;
@@ -124,9 +157,15 @@ namespace DarkwoodMP.World
         internal static bool TryBegin()
         {
             var s = Session.Instance;
-            if (AllowPermadeath || s == null || !s.Active || !s.Connected || !WorldShare.InWorld) return false;
+            if (AllowPermadeath || s == null || !s.Active || !s.Connected || !WorldShare.InWorld)
+            {
+                return false;
+            }
             var playing = Playing();
-            if (playing.Count == 0) return false;
+            if (playing.Count == 0)
+            {
+                return false;
+            }
             Begin(playing[0].Owner);
             return true;
         }
@@ -138,18 +177,27 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void BeginDead()
         {
-            if (Active) return;
+            if (Active)
+            {
+                return;
+            }
             Plugin.Instance.StartCoroutine(WaitAndBegin());
         }
 
         private static IEnumerator WaitAndBegin()
         {
             var p = Player.Instance;
-            if (p != null) p.alive = false;
+            if (p != null)
+            {
+                p.alive = false;
+            }
             float until = Time.unscaledTime + 20f;
             while (Time.unscaledTime < until)
             {
-                if (!WorldShare.InWorld || Active) yield break;
+                if (!WorldShare.InWorld || Active)
+                {
+                    yield break;
+                }
                 var playing = Playing();
                 if (playing.Count > 0) { Begin(playing[0].Owner); yield break; }
                 yield return new WaitForSecondsRealtime(0.5f);
@@ -162,16 +210,30 @@ namespace DarkwoodMP.World
         internal static bool BeginWatch()
         {
             var s = Session.Instance;
-            if (Active || s == null || !s.Active) return false;
+            if (Active || s == null || !s.Active)
+            {
+                return false;
+            }
             var playing = Playing();
-            if (playing.Count == 0) return false;
+            if (playing.Count == 0)
+            {
+                return false;
+            }
             Epilogue = true;
             Active = true;
             _watching = playing[0].Owner;
             Plugin.Log.LogInfo($"[epilogue] watching {s.NameOf(_watching)} until the others have crawled too");
             var player = Player.Instance;
             if (player != null)
-                foreach (var c in player.GetComponentsInChildren<Collider>()) if (c != null) c.enabled = false;
+            {
+                foreach (var c in player.GetComponentsInChildren<Collider>())
+                {
+                    if (c != null)
+                    {
+                        c.enabled = false;
+                    }
+                }
+            }
             _body = player != null ? player.GetComponent<Rigidbody>() : null;
             Plugin.Instance.StartCoroutine(Run());
             return true;
@@ -180,7 +242,10 @@ namespace DarkwoodMP.World
         /// <summary>The epilogue's watching ends (the pan): the camera is the caller's again.</summary>
         internal static void EndWatch()
         {
-            if (!Epilogue) return;
+            if (!Epilogue)
+            {
+                return;
+            }
             End();
         }
 
@@ -189,7 +254,10 @@ namespace DarkwoodMP.World
             Epilogue = false;
             Active = true;
             _watching = first;
-            if (Session.Instance.IsClient) Characters.Instance?.SendDead(); // the host keeps it with our character
+            if (Session.Instance.IsClient)
+            {
+                Characters.Instance?.SendDead(); // the host keeps it with our character
+            }
             var player = Player.Instance;
             Plugin.Log.LogInfo($"Dead for good, with others still playing: watching {Session.Instance.NameOf(first)}");
 
@@ -204,12 +272,23 @@ namespace DarkwoodMP.World
             var ui = Singleton<UI>.Instance;
             ui.tweenBlackScreenTop(new Color(0f, 0f, 0f, 0f), 2f);
             Singleton<Controller>.Instance.fadeAudio(fadeOut: false, 3f, musicToo: true);
-            if (Session.Instance.IsHost) Singleton<Controller>.Instance.DoUpdateTime = true;
+            if (Session.Instance.IsHost)
+            {
+                Singleton<Controller>.Instance.DoUpdateTime = true;
+            }
             Core.forbidInputs = true;
 
             // The dead character follows the camera, touching nothing.
             if (player != null)
-                foreach (var c in player.GetComponentsInChildren<Collider>()) if (c != null) c.enabled = false;
+            {
+                foreach (var c in player.GetComponentsInChildren<Collider>())
+                {
+                    if (c != null)
+                    {
+                        c.enabled = false;
+                    }
+                }
+            }
             _body = player != null ? player.GetComponent<Rigidbody>() : null;
             Plugin.Notice("You died. Watching the others: click to switch.");
             Plugin.Instance.StartCoroutine(Run());
@@ -232,7 +311,10 @@ namespace DarkwoodMP.World
                 {
                     if (!WorldShare.InWorld) { End(); yield break; } // the world is being replaced (a reload): it decides again
                     if (!inSession) { Plugin.Log.LogInfo("The session ended while watching: permadeath"); End(); Permadeath(); yield break; }
-                    if (nobodySince < 0f) nobodySince = Time.unscaledTime;
+                    if (nobodySince < 0f)
+                    {
+                        nobodySince = Time.unscaledTime;
+                    }
                     if (Time.unscaledTime - nobodySince > 3f) { Plugin.Log.LogInfo("Nobody is left playing: permadeath"); End(); Permadeath(); yield break; }
                     yield return null;
                     continue;
@@ -240,9 +322,18 @@ namespace DarkwoodMP.World
                 nobodySince = -1f;
 
                 int i = playing.FindIndex(r => r.Owner == _watching);
-                if (i < 0) i = 0;
-                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)) i = (i + 1) % playing.Count;
-                else if (Input.GetMouseButtonDown(1)) i = (i + playing.Count - 1) % playing.Count;
+                if (i < 0)
+                {
+                    i = 0;
+                }
+                if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space))
+                {
+                    i = (i + 1) % playing.Count;
+                }
+                else if (Input.GetMouseButtonDown(1))
+                {
+                    i = (i + playing.Count - 1) % playing.Count;
+                }
                 _watching = playing[i].Owner;
 
                 var target = playing[i].Root;
@@ -253,8 +344,14 @@ namespace DarkwoodMP.World
                     // Out of sight below the ground, as the game puts a dead player; the world loads around it.
                     var at = target.transform.position - new Vector3(0f, 10f, 0f);
                     player._transform.position = at;
-                    if (_body != null) _body.position = at;
-                    if (cam != null) cam.followTarget = target.transform;
+                    if (_body != null)
+                    {
+                        _body.position = at;
+                    }
+                    if (cam != null)
+                    {
+                        cam.followTarget = target.transform;
+                    }
                 }
                 AllAround(player);
                 yield return null;
@@ -266,7 +363,10 @@ namespace DarkwoodMP.World
             Active = false;
             Epilogue = false;
             var cam = Singleton<CamMain>.Instance;
-            if (cam != null) cam.followTarget = null;
+            if (cam != null)
+            {
+                cam.followTarget = null;
+            }
             RestoreCone();
         }
 
@@ -274,7 +374,10 @@ namespace DarkwoodMP.World
         {
             AllowPermadeath = true;
             var ui = Singleton<UI>.Instance;
-            if (ui != null) ui.StartCoroutine(ui.PreparePermadeathVideo());
+            if (ui != null)
+            {
+                ui.StartCoroutine(ui.PreparePermadeathVideo());
+            }
         }
 
         /// <summary>A new world: nothing to watch.</summary>
@@ -291,7 +394,10 @@ namespace DarkwoodMP.World
         /// <summary>The spectating line at the bottom of the screen.</summary>
         public static void DrawGui()
         {
-            if (!Active || UiState.MenuOver) return; // not over the pause menu or the mod's windows
+            if (!Active || UiState.MenuOver)
+            {
+                return; // not over the pause menu or the mod's windows
+            }
             string name = Session.Instance?.NameOf(_watching) ?? "?";
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
             if (Epilogue) { GUI.Label(rect, $"Watching {name}. Click for the next player.", Plugin.NameTagStyle); return; }
@@ -305,7 +411,10 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(ref IEnumerator __result)
         {
-            if (!Spectator.TryBegin()) return true;
+            if (!Spectator.TryBegin())
+            {
+                return true;
+            }
             __result = ScriptedEvents.Nothing();
             return false;
         }

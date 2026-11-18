@@ -42,7 +42,10 @@ namespace DarkwoodMP.World
             if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
             float dist = F(a[1]);
             var away = P.transform.position - c.transform.position; away.y = 0f;
-            if (away.sqrMagnitude < 1f) away = Vector3.right;
+            if (away.sqrMagnitude < 1f)
+            {
+                away = Vector3.right;
+            }
             var to = c.transform.position + away.normalized * dist;
             yield return Walk(to, 60f);
             r.Info = $"at {Fmt(P.transform.position)}, {StateDump.Flat(P.transform.position - c.transform.position):0} from {a[0]}";
@@ -52,7 +55,10 @@ namespace DarkwoodMP.World
         private static string FlagsWith(string part)
         {
             var f = Singleton<Flags>.Instance;
-            if (f == null) return "-";
+            if (f == null)
+            {
+                return "-";
+            }
             var dict = HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(f);
             return string.Join(" ", dict.Values.Where(x => x != null && x.name.IndexOf(part, StringComparison.OrdinalIgnoreCase) >= 0)
                 .Select(x => $"{x.name}={x.isTrue}").OrderBy(x => x, StringComparer.Ordinal));
@@ -79,11 +85,17 @@ namespace DarkwoodMP.World
             if (go == null) { r.Fail($"no prefab Characters/NPC/{a[0]}"); yield break; }
             Core.addToSaveable(go, isDynamic: true, assignID: true);
             var c = go.GetComponent<Character>();
-            if (c != null) c.isActive = true;
+            if (c != null)
+            {
+                c.isActive = true;
+            }
             yield return new WaitForSecondsRealtime(1f);
             if (c == null || c.npc == null) { r.Fail($"{a[0]} isn't an NPC"); yield break; }
             r.Info = Props(c);
-            if (Combat.HostileNpcs.TurnedHostile(c)) r.Fail($"it's hostile from the start: {r.Info}");
+            if (Combat.HostileNpcs.TurnedHostile(c))
+            {
+                r.Fail($"it's hostile from the start: {r.Info}");
+            }
         }
 
         /// <summary>"npc-friendly NAME": this game has the NPC, friendly and run by itself.</summary>
@@ -93,7 +105,10 @@ namespace DarkwoodMP.World
             var c = Npc(a[0]);
             if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
             r.Info = Props(c);
-            if (Combat.NetEnemies.Eligible(c) || Combat.NetEnemies.Frozen.Contains(c)) r.Fail($"it isn't ours and friendly: {r.Info}");
+            if (Combat.NetEnemies.Eligible(c) || Combat.NetEnemies.Frozen.Contains(c))
+            {
+                r.Fail($"it isn't ours and friendly: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -117,12 +132,20 @@ namespace DarkwoodMP.World
             var ne = Combat.NetEnemies.Instance;
             float until = Time.realtimeSinceStartup + 5f;
             while (Time.realtimeSinceStartup < until && !(c != null && ne != null && ne.NetIdOf(c, out _) && Combat.NetEnemies.Eligible(c)))
+            {
                 yield return null;
+            }
             yield return new WaitForSecondsRealtime(1f); // the host's health for it, from its next states
             if (c == null) { r.Fail("it's gone"); yield break; }
             r.Info = $"health {was:0} -> {c.health:0}; {Props(c)}";
-            if (ne == null || !ne.NetIdOf(c, out _)) r.Fail($"it isn't one of the host's enemies: {r.Info}");
-            else if (c.health >= was) r.Fail($"the hit didn't take health: {r.Info}");
+            if (ne == null || !ne.NetIdOf(c, out _))
+            {
+                r.Fail($"it isn't one of the host's enemies: {r.Info}");
+            }
+            else if (c.health >= was)
+            {
+                r.Fail($"the hit didn't take health: {r.Info}");
+            }
         }
 
         /// <summary>"npc-host-runs NAME WHO" (host): we run the NPC as an enemy, and it's after WHO ("client" or "host").</summary>
@@ -138,16 +161,25 @@ namespace DarkwoodMP.World
                 var proxy = c.target != null ? c.target.GetComponent<Combat.NetPlayerProxy>() : null;
                 bool tracked = Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IdOf(c, out _);
                 ok = tracked && (wantClient ? proxy != null : c.target != null && c.target.GetComponent<Player>() != null);
-                if (ok) break;
+                if (ok)
+                {
+                    break;
+                }
                 yield return null;
             }
             if (c == null) { r.Fail("it's gone"); yield break; }
             // One that lost sight of them since (an NPC that doesn't fight on) was still sent after them by us.
             string sent = MapScenarioIssues.LogLines().LastOrDefault(l => l.Contains($"[npc] {c.name} sent after ") || l.Contains($"[npc] {c.name} turned hostile"));
             bool tracked2 = Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IdOf(c, out _);
-            if (!ok && wantClient && tracked2 && sent != null && !sent.Contains("the host's player")) ok = true;
+            if (!ok && wantClient && tracked2 && sent != null && !sent.Contains("the host's player"))
+            {
+                ok = true;
+            }
             r.Info = $"{Props(c)}; {sent?.Trim() ?? "never sent after anyone"}";
-            if (!ok) r.Fail($"not run by us after the {(wantClient ? "client" : "host")}: {r.Info}");
+            if (!ok)
+            {
+                r.Fail($"not run by us after the {(wantClient ? "client" : "host")}: {r.Info}");
+            }
         }
 
         /// <summary>"npc-attacks-us NAME": we stand by the NPC until it hurts us (its hits come from the host's copy).</summary>
@@ -159,11 +191,17 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 35f;
             while (Time.realtimeSinceStartup < until && P.health >= was && c != null && c.alive)
             {
-                if (StateDump.Flat(c.transform.position - P.transform.position) > 150f) yield return Walk(c.transform.position, 100f);
+                if (StateDump.Flat(c.transform.position - P.transform.position) > 150f)
+                {
+                    yield return Walk(c.transform.position, 100f);
+                }
                 yield return null;
             }
             r.Info = $"our health {was:0} -> {P.health:0}; {(c != null ? Props(c) : "gone")}";
-            if (P.health >= was) r.Fail($"it never hurt us: {r.Info}");
+            if (P.health >= was)
+            {
+                r.Fail($"it never hurt us: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -178,10 +216,16 @@ namespace DarkwoodMP.World
             AsPlayer(() => c.attackPlayer());
             var ne = Combat.NetEnemies.Instance;
             float until = Time.realtimeSinceStartup + 5f;
-            while (Time.realtimeSinceStartup < until && !(c != null && ne != null && ne.NetIdOf(c, out _))) yield return null;
+            while (Time.realtimeSinceStartup < until && !(c != null && ne != null && ne.NetIdOf(c, out _)))
+            {
+                yield return null;
+            }
             if (c == null) { r.Fail("it's gone"); yield break; }
             r.Info = Props(c);
-            if (ne == null || !ne.NetIdOf(c, out _)) r.Fail($"it isn't one of the host's enemies: {r.Info}");
+            if (ne == null || !ne.NetIdOf(c, out _))
+            {
+                r.Fail($"it isn't one of the host's enemies: {r.Info}");
+            }
         }
 
         /// <summary>"npc-kill NAME": our player hits the NPC until it's dead (a client's hits go to the host).</summary>
@@ -199,7 +243,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(3f); // a client settles the corpse 2 s after it dies
             r.Info = $"{a[0]}: alive={(c != null && c.alive)} after {hits} hits, searchable={(c != null && c.GetComponent<Item>() != null)}";
-            if (c != null && c.alive) r.Fail($"still alive: {r.Info}");
+            if (c != null && c.alive)
+            {
+                r.Fail($"still alive: {r.Info}");
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -215,12 +262,18 @@ namespace DarkwoodMP.World
                 c = Object.FindObjectsOfType<Character>().Where(x => x != null && Kind(x) == a[0])
                     .OrderBy(x => StateDump.Flat(x.transform.position - Centre)).FirstOrDefault();
                 st = Singleton<Flags>.Instance != null && a.Length > 1 ? Singleton<Flags>.Instance.getNPCState(a[1]) : null;
-                if (c != null && !c.alive && (st == null || st.dead)) break;
+                if (c != null && !c.alive && (st == null || st.dead))
+                {
+                    break;
+                }
                 yield return null;
             }
             if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
             r.Info = $"alive {c.alive}, story dead {(st != null ? st.dead.ToString() : "no state")}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(a.Length > 2 ? a[2] : a.Length > 1 ? a[1] : a[0])}";
-            if (c.alive || (st != null && !st.dead)) r.Fail($"not dead here: {r.Info}");
+            if (c.alive || (st != null && !st.dead))
+            {
+                r.Fail($"not dead here: {r.Info}");
+            }
         }
     }
 }

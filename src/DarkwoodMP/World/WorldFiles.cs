@@ -54,7 +54,10 @@ namespace DarkwoodMP.World
             foreach (var n in Names)
             {
                 string p = Path.Combine(profileDir, n);
-                if (System.IO.File.Exists(p)) list.Add(new File { Name = n, Data = System.IO.File.ReadAllBytes(p) });
+                if (System.IO.File.Exists(p))
+                {
+                    list.Add(new File { Name = n, Data = System.IO.File.ReadAllBytes(p) });
+                }
             }
             return list;
         }
@@ -66,7 +69,10 @@ namespace DarkwoodMP.World
             foreach (var n in Names)
             {
                 var fi = new FileInfo(Path.Combine(profileDir, n));
-                if (fi.Exists) b.Append(n).Append(':').Append(fi.Length).Append(':').Append(fi.LastWriteTimeUtc.Ticks).Append(';');
+                if (fi.Exists)
+                {
+                    b.Append(n).Append(':').Append(fi.Length).Append(':').Append(fi.LastWriteTimeUtc.Ticks).Append(';');
+                }
             }
             return b.ToString();
         }
@@ -76,7 +82,10 @@ namespace DarkwoodMP.World
         {
             using (var ms = new MemoryStream())
             {
-                using (var z = new DeflateStream(ms, CompressionLevel.Optimal, leaveOpen: true)) z.Write(data, 0, data.Length);
+                using (var z = new DeflateStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+                {
+                    z.Write(data, 0, data.Length);
+                }
                 return ms.ToArray();
             }
         }
@@ -88,8 +97,14 @@ namespace DarkwoodMP.World
             using (var z = new DeflateStream(new MemoryStream(packed, false), CompressionMode.Decompress))
             {
                 int at = 0, n;
-                while (at < size && (n = z.Read(raw, at, size - at)) > 0) at += n;
-                if (at != size || z.Read(new byte[1], 0, 1) != 0) throw new InvalidDataException("the packed world unpacks to the wrong size");
+                while (at < size && (n = z.Read(raw, at, size - at)) > 0)
+                {
+                    at += n;
+                }
+                if (at != size || z.Read(new byte[1], 0, 1) != 0)
+                {
+                    throw new InvalidDataException("the packed world unpacks to the wrong size");
+                }
             }
             return raw;
         }
@@ -98,8 +113,17 @@ namespace DarkwoodMP.World
 
         public static bool Equal(byte[] a, byte[] b)
         {
-            if (a == null || b == null || a.Length != b.Length) return false;
-            for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+            if (a == null || b == null || a.Length != b.Length)
+            {
+                return false;
+            }
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i] != b[i])
+                {
+                    return false;
+                }
+            }
             return true;
         }
 
@@ -114,7 +138,10 @@ namespace DarkwoodMP.World
         /// <summary>The same folder, however the two were written (separators, a trailing slash; case on Windows).</summary>
         internal static bool SamePath(string a, string b)
         {
-            if (a == null || b == null) return false;
+            if (a == null || b == null)
+            {
+                return false;
+            }
             try { return string.Equals(Full(a), Full(b), PathCase); }
             catch { return a == b; }
         }
@@ -122,7 +149,10 @@ namespace DarkwoodMP.World
         /// <summary>Whether path is dir or inside it.</summary>
         internal static bool IsUnder(string path, string dir)
         {
-            if (path == null || dir == null) return false;
+            if (path == null || dir == null)
+            {
+                return false;
+            }
             try
             {
                 string p = Full(path), d = Full(dir);
@@ -141,12 +171,26 @@ namespace DarkwoodMP.World
         private static string NeverDelete(string path, out string full)
         {
             full = null;
-            if (string.IsNullOrWhiteSpace(path)) return "the path is empty";
-            if (!Path.IsPathRooted(path)) return "the path isn't absolute";
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return "the path is empty";
+            }
+            if (!Path.IsPathRooted(path))
+            {
+                return "the path isn't absolute";
+            }
             try { full = Full(path); } catch (Exception e) { return $"the path isn't valid ({e.Message})"; }
-            if (full.Length == 0 || Path.GetDirectoryName(full) == null || string.IsNullOrEmpty(Path.GetFileName(full))) return "it's a filesystem root";
+            if (full.Length == 0 || Path.GetDirectoryName(full) == null || string.IsNullOrEmpty(Path.GetFileName(full)))
+            {
+                return "it's a filesystem root";
+            }
             foreach (var home in new[] { Environment.GetEnvironmentVariable("HOME"), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) })
-                if (!string.IsNullOrEmpty(home) && Path.IsPathRooted(home) && IsUnder(home, full)) return "it's your home folder or holds it";
+            {
+                if (!string.IsNullOrEmpty(home) && Path.IsPathRooted(home) && IsUnder(home, full))
+                {
+                    return "it's your home folder or holds it";
+                }
+            }
             return null;
         }
 
@@ -158,7 +202,10 @@ namespace DarkwoodMP.World
         {
             yield return Path.Combine(BepInEx.Paths.CachePath, "DarkwoodMP");
             string redirect = SaveRedirect.Dir;
-            if (redirect != null && NeverDelete(redirect, out _) == null) yield return redirect;
+            if (redirect != null && NeverDelete(redirect, out _) == null)
+            {
+                yield return redirect;
+            }
         }
 
         /// <summary>
@@ -169,7 +216,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool DeleteTree(string path)
         {
-            if (!MayDelete(path, out string full)) return false;
+            if (!MayDelete(path, out string full))
+            {
+                return false;
+            }
             DeleteEntry(full);
             return true;
         }
@@ -181,8 +231,14 @@ namespace DarkwoodMP.World
         {
             string why = NeverDelete(path, out full);
             string f = full;
-            if (why == null && !DeleteRoots().Any(root => StrictlyUnder(f, root))) why = "it isn't inside the mod's cache or save-redirect folder";
-            if (why == null) return true;
+            if (why == null && !DeleteRoots().Any(root => StrictlyUnder(f, root)))
+            {
+                why = "it isn't inside the mod's cache or save-redirect folder";
+            }
+            if (why == null)
+            {
+                return true;
+            }
             Plugin.Log.LogWarning($"Not deleting {path ?? "(null)"}: {why}");
             return false;
         }
@@ -201,10 +257,16 @@ namespace DarkwoodMP.World
                 dir = Path.Combine(Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
                 full = Full(dir);
                 string expected = Full(baseDir) + Path.DirectorySeparatorChar + "prof" + slot + Path.DirectorySeparatorChar + "darkwoodmp_players";
-                if (!string.Equals(full, expected, PathCase)) why = "it isn't prof<N>/darkwoodmp_players in the save folder";
+                if (!string.Equals(full, expected, PathCase))
+                {
+                    why = "it isn't prof<N>/darkwoodmp_players in the save folder";
+                }
             }
             if (why != null) { Plugin.Log.LogWarning($"Not deleting {dir ?? baseDir ?? "(null)"}: {why}"); return false; }
-            if (!Exists(full)) return false;
+            if (!Exists(full))
+            {
+                return false;
+            }
             DeleteEntry(full);
             return true;
         }
@@ -233,7 +295,10 @@ namespace DarkwoodMP.World
                 if (System.IO.File.Exists(p)) { System.IO.File.SetAttributes(p, FileAttributes.Normal); System.IO.File.Delete(p); }
                 return;
             }
-            foreach (var e in Directory.GetFileSystemEntries(p)) DeleteEntry(e);
+            foreach (var e in Directory.GetFileSystemEntries(p))
+            {
+                DeleteEntry(e);
+            }
             Directory.Delete(p, false);
         }
     }

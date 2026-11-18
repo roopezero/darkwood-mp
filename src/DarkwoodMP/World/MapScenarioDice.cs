@@ -31,7 +31,10 @@ namespace DarkwoodMP.World
             Add("dice-sets", (a, r) =>
             {
                 var lines = Picks.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"{p.Key}={p.Value}").ToList();
-                foreach (var l in lines) Plugin.Log.LogInfo($"[dice] set {l}");
+                foreach (var l in lines)
+                {
+                    Plugin.Log.LogInfo($"[dice] set {l}");
+                }
                 uint h = 2166136261;
                 foreach (char c in string.Join("|", lines)) { h ^= c; h *= 16777619; }
                 r.Info = $"{lines.Count} locations with sets, digest {h:x8}";
@@ -43,13 +46,19 @@ namespace DarkwoodMP.World
                 var names = new SortedDictionary<string, int>(StringComparer.Ordinal);
                 foreach (var ge in Resources.FindObjectsOfTypeAll<GameEvents>())
                 {
-                    if (ge == null || !ge.gameObject.scene.IsValid() || ge.events == null) continue;
+                    if (ge == null || !ge.gameObject.scene.IsValid() || ge.events == null)
+                    {
+                        continue;
+                    }
                     Location loc = null;
                     try { loc = ge.transform.GetLocation(); } catch { }
                     for (int i = 0; i < ge.events.Count; i++)
                     {
                         var e = ge.events[i];
-                        if (e == null || ScriptedEvents.IsPlayerStep(e.type) || ScriptedEvents.IsHostStep(e.type)) continue;
+                        if (e == null || ScriptedEvents.IsPlayerStep(e.type) || ScriptedEvents.IsHostStep(e.type))
+                        {
+                            continue;
+                        }
                         steps++;
                         if (e.type == GameEvent.Type.runFunction && !string.IsNullOrEmpty(e.Value))
                         {
@@ -57,30 +66,58 @@ namespace DarkwoodMP.World
                             names.TryGetValue(e.Value, out int n); names[e.Value] = n + 1;
                         }
                         var gets = new List<Location.GetObject>();
-                        if (e.locationObjects != null) gets.AddRange(e.locationObjects.Where(g => g != null));
-                        if (e.getTargetFromLocation && e.targetLocationObject != null) gets.Add(e.targetLocationObject);
+                        if (e.locationObjects != null)
+                        {
+                            gets.AddRange(e.locationObjects.Where(g => g != null));
+                        }
+                        if (e.getTargetFromLocation && e.targetLocationObject != null)
+                        {
+                            gets.Add(e.targetLocationObject);
+                        }
                         foreach (var g in gets)
                         {
-                            if (g.getAll || g.getClosest) continue;
+                            if (g.getAll || g.getClosest)
+                            {
+                                continue;
+                            }
                             int count = -1;
                             if (loc != null) { try { count = loc.getObjects(g)?.Count ?? 0; } catch { } }
-                            if (count >= 0 && count < 2) continue;
-                            if (g.getClosestToPlayer) nearest++; else random++;
+                            if (count >= 0 && count < 2)
+                            {
+                                continue;
+                            }
+                            if (g.getClosestToPlayer)
+                            {
+                                nearest++;
+                            }
+                            else
+                            {
+                                random++;
+                            }
                             Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {(g.getClosestToPlayer ? "nearest-to-own-player" : "random")} {g.type} of {(count < 0 ? "?" : count.ToString())} in {(loc != null ? loc.name : "no location")}");
                         }
                     }
                 }
-                foreach (var n in names) Plugin.Log.LogInfo($"[dice] runFunction {n.Key} x{n.Value}");
+                foreach (var n in names)
+                {
+                    Plugin.Log.LogInfo($"[dice] runFunction {n.Key} x{n.Value}");
+                }
                 // Things that explode in every game (BreakSync's Explode) and spawn objects at random spots round
                 // them: only thrown ones' spawns are the host's (ObjectActions.ThrownLeavesPatch).
                 var blasts = new SortedDictionary<string, int>(StringComparer.Ordinal);
                 foreach (var x in Resources.FindObjectsOfTypeAll<Explodes>())
                 {
-                    if (x == null || x.spawnObject == null || x.objectAmount <= 0 || x.GetComponent<ThrownItem>() != null) continue;
+                    if (x == null || x.spawnObject == null || x.objectAmount <= 0 || x.GetComponent<ThrownItem>() != null)
+                    {
+                        continue;
+                    }
                     string k = $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}{(x.gameObject.scene.IsValid() ? "" : " (prefab)")}";
                     blasts.TryGetValue(k, out int n); blasts[k] = n + 1;
                 }
-                foreach (var b in blasts) Plugin.Log.LogInfo($"[dice] explodes {b.Key}: {b.Value}");
+                foreach (var b in blasts)
+                {
+                    Plugin.Log.LogInfo($"[dice] explodes {b.Key}: {b.Value}");
+                }
                 r.Info = $"{steps} shared steps; {random} pick a random object, {nearest} the one nearest the own player; {functions} runFunction ({string.Join(",", names.Keys)}); {blasts.Count} kinds of unthrown spawning explosions";
                 return None();
             });
@@ -98,7 +135,10 @@ namespace DarkwoodMP.World
 
         private static void Postfix(Location __instance, List<GameObject> __state)
         {
-            if (__state == null || __instance == null) return;
+            if (__state == null || __instance == null)
+            {
+                return;
+            }
             var kept = __state.FirstOrDefault(g => g != null && !__instance.sets.Contains(g));
             var p = __instance.transform.position;
             MapScenarioDice.Picks[FormattableString.Invariant($"{__instance.name}@{p.x:0},{p.z:0}")] = $"{(kept != null ? kept.name : "?")} of {__state.Count}";

@@ -62,11 +62,19 @@ namespace DarkwoodMP.Combat
         {
             float gap = now - sent;
             if (!_hasClock || Mathf.Abs(gap - _offset) > 2f) { _offset = gap; _hasClock = true; _jitter = 0f; }
-            else if (gap < _offset) _offset = gap;
-            else _offset += (gap - _offset) * 0.01f; // so a lasting rise in latency is followed, in a few seconds
+            else if (gap < _offset)
+            {
+                _offset = gap;
+            }
+            else
+            {
+                _offset += (gap - _offset) * 0.01f; // so a lasting rise in latency is followed, in a few seconds
+            }
             _jitter += (Mathf.Abs(gap - _offset) - _jitter) * 0.05f;
             if (_lastSent >= 0f && sent > _lastSent && sent - _lastSent < 0.5f)
+            {
                 _interval += (sent - _lastSent - _interval) * 0.1f;
+            }
             _lastSent = sent;
             Stats.Batch(sent, now);
         }
@@ -92,10 +100,16 @@ namespace DarkwoodMP.Combat
             if (s.Count > 0)
             {
                 var last = s[s.Count - 1];
-                if (sent - last.T > Gap || (pos - last.Pos).sqrMagnitude > Teleport * Teleport) s.Clear();
+                if (sent - last.T > Gap || (pos - last.Pos).sqrMagnitude > Teleport * Teleport)
+                {
+                    s.Clear();
+                }
                 else if (sent <= last.T) { s[s.Count - 1] = new Sample { T = last.T, Pos = pos, Rot = rot }; return; } // the same moment again (a corpse's state)
             }
-            if (s.Count == MaxSamples) s.RemoveAt(0);
+            if (s.Count == MaxSamples)
+            {
+                s.RemoveAt(0);
+            }
             s.Add(new Sample { T = sent, Pos = pos, Rot = rot });
         }
 
@@ -104,9 +118,15 @@ namespace DarkwoodMP.Combat
         {
             var s = t.Samples;
             pos = default; rot = Quaternion.identity;
-            if (s.Count == 0) return false;
+            if (s.Count == 0)
+            {
+                return false;
+            }
             float at = now - _offset - _delay;
-            while (s.Count > 2 && s[1].T <= at) s.RemoveAt(0); // keep the one before the moment drawn
+            while (s.Count > 2 && s[1].T <= at)
+            {
+                s.RemoveAt(0); // keep the one before the moment drawn
+            }
             var a = s[0];
             if (s.Count == 1 || at <= a.T) { pos = a.Pos; rot = a.Rot; t.Speed = 0f; return true; }
             for (int i = 0; i + 1 < s.Count; i++)
@@ -154,19 +174,42 @@ namespace DarkwoodMP.Combat
 
             internal static void Batch(float sent, float now)
             {
-                if (!On) return;
+                if (!On)
+                {
+                    return;
+                }
                 Batches++;
                 if (_lastNow >= 0f)
                 {
                     float g = now - _lastNow; _gaps.Add(g); SumGap += g;
-                    if (g > MaxGap) MaxGap = g;
-                    if (g > 0.15f) LateGaps++;
-                    float hg = sent - _lastSent; if (hg > MaxHostGap) MaxHostGap = hg;
+                    if (g > MaxGap)
+                    {
+                        MaxGap = g;
+                    }
+                    if (g > 0.15f)
+                    {
+                        LateGaps++;
+                    }
+                    float hg = sent - _lastSent; if (hg > MaxHostGap)
+                    {
+                        MaxHostGap = hg;
+                    }
                 }
                 _lastNow = now; _lastSent = sent;
             }
 
-            internal static void Frame(float dt) { if (!On) return; Frames++; if (dt > MaxFrame) MaxFrame = dt; }
+            internal static void Frame(float dt)
+            {
+                if (!On)
+                {
+                    return;
+                }
+                Frames++;
+                if (dt > MaxFrame)
+                {
+                    MaxFrame = dt;
+                }
+            }
 
             /// <summary>An enemy was drawn this frame at pos.</summary>
             internal static void Drawn(Track t, Vector3 pos, float dt)
@@ -179,8 +222,14 @@ namespace DarkwoodMP.Combat
                     {
                         float want = speed * dt, got = Flat(pos - t.Drawn);
                         Moving++;
-                        if (got < want * 0.25f) Stalls++;
-                        else if (got > want * 2.5f) Jumps++;
+                        if (got < want * 0.25f)
+                        {
+                            Stalls++;
+                        }
+                        else if (got > want * 2.5f)
+                        {
+                            Jumps++;
+                        }
                         SumErr += Mathf.Min(3f, Mathf.Abs(got / want - 1f));
                     }
                 }

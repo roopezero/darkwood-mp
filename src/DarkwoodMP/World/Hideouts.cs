@@ -41,7 +41,13 @@ namespace DarkwoodMP.World
             s.Register(MsgType.OvenLit, OnOvenLit);
             s.Register(MsgType.PorterCalled, OnPorterCalled);
             // A joiner loaded the host's save, so its oven is the host's until it lights another.
-            s.OnPeerConnected += id => { if (S != null && S.IsHost && Player.Instance != null) _ovens[id] = Player.Instance.experienceMachine; };
+            s.OnPeerConnected += id =>
+            {
+                if (S != null && S.IsHost && Player.Instance != null)
+                {
+                    _ovens[id] = Player.Instance.experienceMachine;
+                }
+            };
             s.OnPeerDisconnected += id => _ovens.Remove(id);
             s.OnSessionEnded += () => _ovens.Clear();
         }
@@ -58,9 +64,17 @@ namespace DarkwoodMP.World
 
         private static Location HideoutById(int id)
         {
-            if (id <= 0) return null;
+            if (id <= 0)
+            {
+                return null;
+            }
             foreach (var loc in Object.FindObjectsOfType<Location>())
-                if (loc != null && loc.hideoutId == id && !loc.isSubLocation) return loc;
+            {
+                if (loc != null && loc.hideoutId == id && !loc.isSubLocation)
+                {
+                    return loc;
+                }
+            }
             return null;
         }
 
@@ -69,7 +83,10 @@ namespace DarkwoodMP.World
         /// <summary>Location.transportAllItemsToCurrentHideout ran in this game; false: we did (or left) it instead.</summary>
         internal static bool Transport(Location src)
         {
-            if (!Together) return true;
+            if (!Together)
+            {
+                return true;
+            }
             var s = S;
             if (s.IsClient)
             {
@@ -78,13 +95,19 @@ namespace DarkwoodMP.World
                 {
                     var w = s.Begin(MsgType.PorterTransport);
                     w.W.Write((byte)src.hideoutId);
-                    if (Debug) Plugin.Log.LogInfo($"[world] sent porter transport from hideout {src.hideoutId}");
+                    if (Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] sent porter transport from hideout {src.hideoutId}");
+                    }
                     Authority.Request(w, $"porter transport from hideout {src.hideoutId}", inventory: false);
                 }
                 return false;
             }
             // Host: a joiner's event is done when its own PorterTransport comes, for its hideout.
-            if (ScriptedEvents.Current == ScriptedEvents.Part.HostAndShared) return false;
+            if (ScriptedEvents.Current == ScriptedEvents.Part.HostAndShared)
+            {
+                return false;
+            }
             Player.Instance.whereAmI.checkWhereAmI();
             var dest = Player.Instance.whereAmI.bigLocation;
             if (Why(src, dest) is string why) { Plugin.Log.LogInfo($"[world] porter transport from {src.name}: not done ({why})"); return false; }
@@ -94,19 +117,37 @@ namespace DarkwoodMP.World
 
         private static string Why(Location src, Location dest)
         {
-            if (src == null || src.hideoutId <= 0) return "no such hideout to take things from";
-            if (dest == null || !dest.playerBase || dest.hideoutId <= 0) return "not at a hideout";
-            if (dest == src) return "already at that hideout";
-            if (dest.porterDeliveryPosition == null) return $"{dest.name} has no place for the porter's package";
+            if (src == null || src.hideoutId <= 0)
+            {
+                return "no such hideout to take things from";
+            }
+            if (dest == null || !dest.playerBase || dest.hideoutId <= 0)
+            {
+                return "not at a hideout";
+            }
+            if (dest == src)
+            {
+                return "already at that hideout";
+            }
+            if (dest.porterDeliveryPosition == null)
+            {
+                return $"{dest.name} has no place for the porter's package";
+            }
             return null;
         }
 
         private static void OnPorterTransport(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld) return;
+            if (s == null || !s.IsHost || !WorldShare.InWorld)
+            {
+                return;
+            }
             int hid = r.R.ReadByte();
-            if (!Authority.Handling) return;
+            if (!Authority.Handling)
+            {
+                return;
+            }
             var proxy = Authority.Requester;
             if (proxy == null) { Authority.Refuse("where they are isn't known yet"); return; }
             var dest = NightSpawns.BigLocationAt(proxy.transform.position);
@@ -123,7 +164,10 @@ namespace DarkwoodMP.World
             var inv = MakePackage(dest, id);
             Inventory.moveSlots(slots, inv.slots);
             foreach (var item in inv.getAllItems("alcohol"))
-                if (!InvItemClass.isNull(item)) { item.type = "bottle"; item.assignClass(); }
+            {
+                if (!InvItemClass.isNull(item))
+                { item.type = "bottle"; item.assignClass(); }
+            }
             string contents = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
             inv.gameObject.SetActive(false);
             MakeSpawner(dest, inv.gameObject, spawnerId);
@@ -142,12 +186,18 @@ namespace DarkwoodMP.World
         private static void OnPorterDelivered(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld) return;
+            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld)
+            {
+                return;
+            }
             var src = HideoutById(r.R.ReadByte());
             var dest = HideoutById(r.R.ReadByte());
             long id = r.R.ReadInt64(), spawnerId = r.R.ReadInt64();
             string contents = r.ReadBigStr();
-            if (Debug) Plugin.Log.LogInfo($"[world] got porter delivery from {(src != null ? src.name : "?")} to {(dest != null ? dest.name : "?")}");
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got porter delivery from {(src != null ? src.name : "?")} to {(dest != null ? dest.name : "?")}");
+            }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -188,7 +238,10 @@ namespace DarkwoodMP.World
         private static void PorterLeaves()
         {
             var porter = Singleton<UniqueObjects>.Instance.getObject("porter");
-            if (porter != null) porter.GetComponent<Character>()?.removeMe();
+            if (porter != null)
+            {
+                porter.GetComponent<Character>()?.removeMe();
+            }
             Singleton<Flags>.Instance.setFlag("porter_inTransit", activeModifier: true);
         }
 
@@ -200,12 +253,21 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool CallPorter(Location loc)
         {
-            if (!Together || WorldActions.Replaying || loc.porterPosition == null) return true;
+            if (!Together || WorldActions.Replaying || loc.porterPosition == null)
+            {
+                return true;
+            }
             var s = S;
-            if (s.IsHost) return true; // ours (or a joiner's, from OnPorterCalled): PorterCalledHere tells the others
+            if (s.IsHost)
+            {
+                return true; // ours (or a joiner's, from OnPorterCalled): PorterCalledHere tells the others
+            }
             var w = s.Begin(MsgType.PorterCalled);
             w.Write(loc.porterPosition.transform.position);
-            if (Debug) Plugin.Log.LogInfo($"[world] sent porter call at {loc.name}");
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent porter call at {loc.name}");
+            }
             Authority.Request(w, $"porter call at {loc.name}", inventory: false);
             return false;
         }
@@ -213,7 +275,10 @@ namespace DarkwoodMP.World
         /// <summary>Host: the porter was called in our game (its spawner made at loc): call it in the others' too.</summary>
         internal static void PorterCalledHere(Location loc)
         {
-            if (!Together || !S.IsHost || loc.porterPosition == null) return;
+            if (!Together || !S.IsHost || loc.porterPosition == null)
+            {
+                return;
+            }
             var w = S.Begin(MsgType.PorterCalled);
             w.Write(loc.porterPosition.transform.position);
             S.Broadcast(w, Channel.Control, reliable: true);
@@ -226,7 +291,10 @@ namespace DarkwoodMP.World
             Location best = null; float bestD = 50f;
             foreach (var loc in Object.FindObjectsOfType<Location>())
             {
-                if (loc == null || loc.porterPosition == null) continue;
+                if (loc == null || loc.porterPosition == null)
+                {
+                    continue;
+                }
                 float d = Vector3.Distance(loc.porterPosition.transform.position, pos);
                 if (d < bestD) { best = loc; bestD = d; }
             }
@@ -236,12 +304,18 @@ namespace DarkwoodMP.World
         private static void OnPorterCalled(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld) return;
+            if (s == null || !WorldShare.InWorld)
+            {
+                return;
+            }
             var pos = r.ReadVector3();
             var loc = PorterLocationAt(pos);
             if (s.IsHost)
             {
-                if (!Authority.Handling) return;
+                if (!Authority.Handling)
+                {
+                    return;
+                }
                 if (loc == null) { Authority.Refuse("there's no porter's place there"); return; }
                 var proxy = Authority.Requester;
                 if (proxy == null) { Authority.Refuse("where they are isn't known yet"); return; }
@@ -254,9 +328,18 @@ namespace DarkwoodMP.World
                 loc.spawnPorter(); // PorterCallPatch sends it to everyone, the whistler too
                 return;
             }
-            if (from != s.HostId) return;
-            if (Debug) Plugin.Log.LogInfo($"[world] got porter call: " + (loc != null ? loc.name : "no porter's place here"));
-            if (loc == null) return;
+            if (from != s.HostId)
+            {
+                return;
+            }
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got porter call: " + (loc != null ? loc.name : "no porter's place here"));
+            }
+            if (loc == null)
+            {
+                return;
+            }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try { loc.spawnPorter(); }
@@ -281,9 +364,18 @@ namespace DarkwoodMP.World
             // Client: lit here at once; the host says whether the old one goes out.
             Authority.Request(BeginOven(machine, prev), $"light the oven {machine.name}", (ok, reason, result) =>
             {
-                if (ok || machine == null) return;
-                if (!wasOn) machine.disable();
-                if (Player.Instance != null && Player.Instance.experienceMachine == machine) Player.Instance.experienceMachine = prev;
+                if (ok || machine == null)
+                {
+                    return;
+                }
+                if (!wasOn)
+                {
+                    machine.disable();
+                }
+                if (Player.Instance != null && Player.Instance.experienceMachine == machine)
+                {
+                    Player.Instance.experienceMachine = prev;
+                }
             }, inventory: false);
             return false;
         }
@@ -291,10 +383,21 @@ namespace DarkwoodMP.World
         /// <summary>Host: put out prev (one player's old oven) unless it's the new one or someone (except who) still has it as theirs.</summary>
         private static ExperienceMachine PutOut(ExperienceMachine prev, ExperienceMachine lit, ulong except)
         {
-            if (prev == null || prev == lit) return null;
-            if (Player.Instance != null && Player.Instance.experienceMachine == prev) return null;
+            if (prev == null || prev == lit)
+            {
+                return null;
+            }
+            if (Player.Instance != null && Player.Instance.experienceMachine == prev)
+            {
+                return null;
+            }
             foreach (var kv in _ovens)
-                if (kv.Key != except && kv.Value == prev) return null;
+            {
+                if (kv.Key != except && kv.Value == prev)
+                {
+                    return null;
+                }
+            }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try { prev.disable(); }
@@ -314,33 +417,57 @@ namespace DarkwoodMP.World
         private static void SendOven(ExperienceMachine lit, ExperienceMachine putOut)
         {
             var w = BeginOven(lit, putOut);
-            if (Debug) Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + (putOut != null ? $", {putOut.name} out" : ""));
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + (putOut != null ? $", {putOut.name} out" : ""));
+            }
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
         private static void OnOvenLit(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !WorldShare.InWorld) return;
-            if (s.IsClient && from != s.HostId) return;
+            if (s == null || !WorldShare.InWorld)
+            {
+                return;
+            }
+            if (s.IsClient && from != s.HostId)
+            {
+                return;
+            }
             var litRef = ObjRef.Read(r);
             var otherRef = ObjRef.Read(r);
             var lit = ObjRef.Resolve<ExperienceMachine>(litRef);
             var other = ObjRef.Resolve<ExperienceMachine>(otherRef);
             if (s.IsHost)
             {
-                if (!Authority.Handling) return;
+                if (!Authority.Handling)
+                {
+                    return;
+                }
                 if (lit == null) { Authority.Refuse("no such oven here"); return; }
-                if (!Authority.InReach(lit.transform.position, WorldActions.Reach, lit.name)) return;
+                if (!Authority.InReach(lit.transform.position, WorldActions.Reach, lit.name))
+                {
+                    return;
+                }
                 if (lit.transform.GetLocation() == null) { Authority.Refuse("that oven isn't at a hideout"); return; }
                 LightHere(lit);
                 _ovens[from] = lit;
-                if (Debug) Plugin.Log.LogInfo($"[world] {s.NameOf(from)} lit the oven {lit.name}");
+                if (Debug)
+                {
+                    Plugin.Log.LogInfo($"[world] {s.NameOf(from)} lit the oven {lit.name}");
+                }
                 SendOven(lit, PutOut(other, lit, except: from));
                 return;
             }
-            if (Debug) Plugin.Log.LogInfo($"[world] got oven {litRef} lit" + (otherRef.Valid ? $", {otherRef} out" : "") + (lit == null ? ": not found here" : ""));
-            if (lit != null && !lit.isOn) LightHere(lit);
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] got oven {litRef} lit" + (otherRef.Valid ? $", {otherRef} out" : "") + (lit == null ? ": not found here" : ""));
+            }
+            if (lit != null && !lit.isOn)
+            {
+                LightHere(lit);
+            }
             if (other != null && other != lit && Player.Instance != null && Player.Instance.experienceMachine != other)
             {
                 WorldActions.Replaying = true;
@@ -357,7 +484,14 @@ namespace DarkwoodMP.World
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try { lit.enable(); }
-            finally { WorldActions.Replaying = was; if (p != null) p.experienceMachine = mine; }
+            finally
+            {
+                WorldActions.Replaying = was;
+                if (p != null)
+                {
+                    p.experienceMachine = mine;
+                }
+            }
         }
 
         // ---- moveInventory between two world containers -------------------------------------------------
@@ -369,16 +503,31 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool IsWorldMove(GameEvent ge)
         {
-            if (ge.type != GameEvent.Type.moveInventory || ge.sourceTransform == null) return false;
-            if (ge.getTargetGameObjectsFromParent || ge.getTargetFromLocation || (ge.locationObjects != null && ge.locationObjects.Count > 0)) return false;
+            if (ge.type != GameEvent.Type.moveInventory || ge.sourceTransform == null)
+            {
+                return false;
+            }
+            if (ge.getTargetGameObjectsFromParent || ge.getTargetFromLocation || (ge.locationObjects != null && ge.locationObjects.Count > 0))
+            {
+                return false;
+            }
             var src = ge.sourceTransform.GetComponent<Inventory>();
-            if (src == null || IsPlayers(src)) return false;
+            if (src == null || IsPlayers(src))
+            {
+                return false;
+            }
             int n = 0;
             foreach (var go in Targets(ge))
             {
                 var inv = go.GetComponent<Inventory>();
-                if (inv == null) continue;
-                if (IsPlayers(inv)) return false;
+                if (inv == null)
+                {
+                    continue;
+                }
+                if (IsPlayers(inv))
+                {
+                    return false;
+                }
                 n++;
             }
             return n > 0;
@@ -387,13 +536,26 @@ namespace DarkwoodMP.World
         private static IEnumerable<GameObject> Targets(GameEvent ge)
         {
             if (ge.targetGameObjects != null)
-                foreach (var go in ge.targetGameObjects) if (go != null) yield return go;
+            {
+                foreach (var go in ge.targetGameObjects)
+                {
+                    if (go != null)
+                    {
+                        yield return go;
+                    }
+                }
+            }
             if (ge.targetUniqueObjects != null && Singleton<UniqueObjects>.Instance != null)
+            {
                 foreach (var name in ge.targetUniqueObjects)
                 {
                     var go = Singleton<UniqueObjects>.Instance.getObject(name);
-                    if (go != null) yield return go;
+                    if (go != null)
+                    {
+                        yield return go;
+                    }
                 }
+            }
         }
 
         private static bool IsPlayers(Inventory inv) =>
@@ -402,16 +564,31 @@ namespace DarkwoodMP.World
         /// <summary>Host: run a world move's coroutine, then send the source's and the targets' contents.</summary>
         internal static IEnumerator SendAfter(IEnumerator inner, GameEvent ge)
         {
-            while (inner.MoveNext()) yield return inner.Current;
-            if (!Together || !S.IsHost || Containers.Instance == null) yield break;
+            while (inner.MoveNext())
+            {
+                yield return inner.Current;
+            }
+            if (!Together || !S.IsHost || Containers.Instance == null)
+            {
+                yield break;
+            }
             var src = ge.sourceTransform != null ? ge.sourceTransform.GetComponent<Inventory>() : null;
-            if (src != null) Containers.Instance.SendContents(src);
+            if (src != null)
+            {
+                Containers.Instance.SendContents(src);
+            }
             foreach (var go in Targets(ge))
             {
                 var inv = go.GetComponent<Inventory>();
-                if (inv != null) Containers.Instance.SendContents(inv);
+                if (inv != null)
+                {
+                    Containers.Instance.SendContents(inv);
+                }
             }
-            if (Debug) Plugin.Log.LogInfo($"[world] moveInventory from {ge.sourceTransform?.name} done here; sent the containers");
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[world] moveInventory from {ge.sourceTransform?.name} done here; sent the containers");
+            }
         }
     }
 
@@ -429,11 +606,20 @@ namespace DarkwoodMP.World
         {
             // Whether it will make the porter's spawner (its own conditions).
             __state = __instance.porterPosition != null && __instance.porter == null && !Singleton<Flags>.Instance.isFlagTrue("porter_killed");
-            if (Hideouts.CallPorter(__instance)) return true;
+            if (Hideouts.CallPorter(__instance))
+            {
+                return true;
+            }
             __state = false;
             return false;
         }
-        static void Postfix(Location __instance, bool __state) { if (__state) Hideouts.PorterCalledHere(__instance); }
+        static void Postfix(Location __instance, bool __state)
+        {
+            if (__state)
+            {
+                Hideouts.PorterCalledHere(__instance);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Player), nameof(Player.setExperienceMachine), typeof(ExperienceMachine), typeof(bool))]
@@ -441,7 +627,10 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Player __instance, ExperienceMachine machine, bool doEnable)
         {
-            if (machine == null || !doEnable || WorldActions.Replaying || !Hideouts.Together) return true;
+            if (machine == null || !doEnable || WorldActions.Replaying || !Hideouts.Together)
+            {
+                return true;
+            }
             return Hideouts.Light(__instance, machine);
         }
     }

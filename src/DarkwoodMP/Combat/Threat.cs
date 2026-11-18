@@ -45,7 +45,10 @@ namespace DarkwoodMP.Combat
             public void Decay()
             {
                 float dt = Time.time - LastDecay;
-                if (dt <= 0f) return;
+                if (dt <= 0f)
+                {
+                    return;
+                }
                 LastDecay = Time.time;
                 float k = Mathf.Pow(0.5f, dt / HalfLife);
                 var keys = new List<CharBase>(Values.Keys);
@@ -53,13 +56,23 @@ namespace DarkwoodMP.Combat
                 {
                     if (c == null) { Values.Remove(c); continue; }
                     float v = Values[c] * k;
-                    if (v < 0.05f) Values.Remove(c); else Values[c] = v;
+                    if (v < 0.05f)
+                    {
+                        Values.Remove(c);
+                    }
+                    else
+                    {
+                        Values[c] = v;
+                    }
                 }
             }
 
             public void Add(CharBase who, float amount)
             {
-                if (who == null || amount <= 0f) return;
+                if (who == null || amount <= 0f)
+                {
+                    return;
+                }
                 Decay();
                 Values.TryGetValue(who, out float v);
                 Values[who] = v + amount;
@@ -81,15 +94,24 @@ namespace DarkwoodMP.Combat
 
         public static void OnDamaged(Character victim, CharBase attacker, float damage)
         {
-            if (!Enabled || !Proxies.IsPlayer(attacker)) return;
+            if (!Enabled || !Proxies.IsPlayer(attacker))
+            {
+                return;
+            }
             Of(victim).Add(attacker, damage);
         }
 
         public static void OnHeard(Character listener, Vector3 position, float volume)
         {
-            if (!Enabled || NoiseSource == null) return; // only noise a player made is theirs
+            if (!Enabled || NoiseSource == null)
+            {
+                return; // only noise a player made is theirs
+            }
             Of(listener).Add(NoiseSource, Mathf.Max(0.1f, volume) * NoiseWeight);
-            if (Debug) Plugin.Log.LogInfo($"[threat] {listener.name} heard {Name(NoiseSource)} (+{Mathf.Max(0.1f, volume) * NoiseWeight:0.0}) at {position}");
+            if (Debug)
+            {
+                Plugin.Log.LogInfo($"[threat] {listener.name} heard {Name(NoiseSource)} (+{Mathf.Max(0.1f, volume) * NoiseWeight:0.0}) at {position}");
+            }
         }
 
         /// <summary>
@@ -101,20 +123,32 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void BeforeSightCheck(Character c)
         {
-            if (!Enabled || c == null || !c.alive) return;
+            if (!Enabled || c == null || !c.alive)
+            {
+                return;
+            }
             var list = c.charactersInViewRange;
             // A friendly NPC is each player's own: it doesn't see the joiners' stand-ins. One the host runs as an
             // enemy (Combat.HostileNpcs) sees everyone.
             if (c.npc != null && !NetEnemies.Eligible(c))
             {
                 // A follower a joiner recruited follows them, not the host's player (World.NpcFollowers).
-                if (World.NpcFollowers.BeforeSightCheck(c)) return;
+                if (World.NpcFollowers.BeforeSightCheck(c))
+                {
+                    return;
+                }
                 list.RemoveAll(col => col != null && col.GetComponent<NetPlayerProxy>() != null);
                 return;
             }
-            if (list.Count < 2) return;
+            if (list.Count < 2)
+            {
+                return;
+            }
             // Leave it be while it's after something other than a player: a door, a lure, another faction.
-            if (c.target != null && !Proxies.IsPlayer(c.target.GetComponent<CharBase>())) return;
+            if (c.target != null && !Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
+            {
+                return;
+            }
 
             var table = Of(c);
             table.Decay();
@@ -124,10 +158,19 @@ namespace DarkwoodMP.Combat
             foreach (var col in list)
             {
                 var cb = col != null ? col.GetComponent<CharBase>() : null;
-                if (Proxies.IsPlayer(cb) && cb.alive) players.Add((col, cb, Score(table, c, cb, sight)));
-                else others.Add(col);
+                if (Proxies.IsPlayer(cb) && cb.alive)
+                {
+                    players.Add((col, cb, Score(table, c, cb, sight)));
+                }
+                else
+                {
+                    others.Add(col);
+                }
             }
-            if (players.Count < 2) return;
+            if (players.Count < 2)
+            {
+                return;
+            }
 
             players.Sort((a, b) => a.Score.CompareTo(b.Score));
             // Hysteresis: keep the current target on top unless the best beats it by the margin.
@@ -141,12 +184,17 @@ namespace DarkwoodMP.Combat
             }
             var chosen = players[players.Count - 1];
             if (Debug && (c.target == null || c.target != chosen.Who.transform))
+            {
                 Plugin.Log.LogInfo($"[threat] {c.name} prefers {Name(chosen.Who)} ({chosen.Score:0.0}) over " +
                                    string.Join(", ", players.GetRange(0, players.Count - 1).ConvertAll(p => $"{Name(p.Who)} ({p.Score:0.0})")));
+            }
 
             list.Clear();
             list.AddRange(others);
-            foreach (var p in players) list.Add(p.Col);
+            foreach (var p in players)
+            {
+                list.Add(p.Col);
+            }
         }
 
         private static float Score(Table table, Character c, CharBase who, float sight)
@@ -158,12 +206,20 @@ namespace DarkwoodMP.Combat
         /// <summary>After the game's sight check: every player it saw gains a little threat for being seen.</summary>
         public static void AfterSightCheck(Character c)
         {
-            if (!Enabled || c == null || !c.alive) return;
+            if (!Enabled || c == null || !c.alive)
+            {
+                return;
+            }
             var table = Of(c);
             float dt = Mathf.Min(Time.time - table.LastSeenTick, 2f);
             table.LastSeenTick = Time.time;
             foreach (var seen in c.charactersInSight)
-                if (Proxies.IsPlayer(seen) && seen.alive && !seen.invisible) table.Add(seen, SeenPerSecond * dt);
+            {
+                if (Proxies.IsPlayer(seen) && seen.alive && !seen.invisible)
+                {
+                    table.Add(seen, SeenPerSecond * dt);
+                }
+            }
         }
 
         /// <summary>
@@ -174,7 +230,10 @@ namespace DarkwoodMP.Combat
         {
             var host = Player.Instance;
             // A friendly NPC is each player's own; one the host runs as an enemy goes by threat, as enemies do.
-            if (!Enabled || c == null || !NetEnemies.Eligible(c)) return host;
+            if (!Enabled || c == null || !NetEnemies.Eligible(c))
+            {
+                return host;
+            }
             var table = Of(c);
             table.Decay();
             // Closeness counts within three times its sight, and at least MinCloseRange: an enemy that sees little or
@@ -183,8 +242,17 @@ namespace DarkwoodMP.Combat
             float range = Mathf.Max(MinCloseRange, c.farViewDistance * c.aniSightRangeModifier * 3f);
             CharBase best = null; float bestScore = float.MinValue, bestDist = float.MaxValue;
             var candidates = new List<CharBase>();
-            if (host != null && host.alive && !host.dying) candidates.Add(host);
-            foreach (var p in NetPlayerProxy.All.Values) if (p != null && p.alive && !p.invisible) candidates.Add(p); // invisible: as attackCharacter, nobody goes for them
+            if (host != null && host.alive && !host.dying)
+            {
+                candidates.Add(host);
+            }
+            foreach (var p in NetPlayerProxy.All.Values)
+            {
+                if (p != null && p.alive && !p.invisible)
+                {
+                    candidates.Add(p); // invisible: as attackCharacter, nobody goes for them
+                }
+            }
             foreach (var p in candidates)
             {
                 float dist = Vector3.Distance(p.transform.position, c.transform.position);
@@ -209,14 +277,23 @@ namespace DarkwoodMP.Combat
         public static Vector3 NearestPlayerPos(Character c)
         {
             var host = Player.Instance;
-            if (host == null) return c != null ? c.transform.position : Vector3.zero;
+            if (host == null)
+            {
+                return c != null ? c.transform.position : Vector3.zero;
+            }
             Vector3 best = host.transform.position;
-            if (!Enabled || c == null) return best;
+            if (!Enabled || c == null)
+            {
+                return best;
+            }
             Vector3 me = c.transform.position;
             float bestDist = Core.trueDistance(best, me);
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p == null || !p.alive) continue;
+                if (p == null || !p.alive)
+                {
+                    continue;
+                }
                 float d = Core.trueDistance(p.transform.position, me);
                 if (d < bestDist) { bestDist = d; best = p.transform.position; }
             }
@@ -230,7 +307,9 @@ namespace DarkwoodMP.Combat
         public static Vector3 FleeFrom(Character c)
         {
             if (Enabled && c != null && c.target != null && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
+            {
                 return c.target.position;
+            }
             return NearestPlayerPos(c);
         }
 

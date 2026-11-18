@@ -19,11 +19,17 @@ namespace DarkwoodMP.Net
                 if (File.Exists(path))
                 {
                     string k = File.ReadAllText(path).Trim();
-                    if (k.Length >= 32) return k;
+                    if (k.Length >= 32)
+                    {
+                        return k;
+                    }
                 }
                 var bytes = new byte[32];
                 // Qualified: the game has a RandomNumberGenerator of its own in the global namespace.
-                using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create()) rng.GetBytes(bytes);
+                using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(bytes);
+                }
                 string key = BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
                 File.WriteAllText(path, key);
                 Plugin.Log.LogInfo($"Made a new player key in {path}");

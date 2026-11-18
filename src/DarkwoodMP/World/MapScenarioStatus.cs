@@ -32,8 +32,14 @@ namespace DarkwoodMP.World
             Add("join-stop", (a, r) =>
             {
                 r.Info = $"snapshot stopped the game for {WorldShare.LastSnapshotStopMs} ms ({(WorldShare.LastSnapshotOffThread ? "sav.dat written on a worker thread" : "the game's own save")}), longest host frame while joining {WorldShare.LastJoinLongestFrameMs:0} ms";
-                if (WorldShare.LastSnapshotStopMs < 0) r.Fail("no snapshot was made for the joiner");
-                else if (!WorldShare.LastSnapshotOffThread) r.Fail("the snapshot was saved the game's way, not on a worker thread: " + r.Info);
+                if (WorldShare.LastSnapshotStopMs < 0)
+                {
+                    r.Fail("no snapshot was made for the joiner");
+                }
+                else if (!WorldShare.LastSnapshotOffThread)
+                {
+                    r.Fail("the snapshot was saved the game's way, not on a worker thread: " + r.Info);
+                }
                 return Nothing();
             });
             Add("story-at-join", StoryAtJoin);
@@ -65,12 +71,18 @@ namespace DarkwoodMP.World
         private static IEnumerator ChangeStoryAfter(int noted)
         {
             float until = Time.realtimeSinceStartup + 120f;
-            while (FlagsSync.SnapshotNoted == noted && Time.realtimeSinceStartup < until) yield return null;
+            while (FlagsSync.SnapshotNoted == noted && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (FlagsSync.SnapshotNoted == noted) { Plugin.Log.LogWarning("[map] story-at-join: no snapshot was made"); yield break; }
             yield return null; // after the frame the world was read in
             var f = Singleton<Flags>.Instance;
             var npc = f.npcStates.FirstOrDefault(n => n != null);
-            if (npc != null) npc.reputation += 1;
+            if (npc != null)
+            {
+                npc.reputation += 1;
+            }
             f.setFlag("player_firstOvenInteraction", activeModifier: true); // a shared one, not read by the game's code
             Plugin.Log.LogInfo($"[map] story-at-join: after the snapshot, {npc?.name}'s reputation {npc?.reputation}, player_firstOvenInteraction set");
         }
@@ -81,9 +93,18 @@ namespace DarkwoodMP.World
             var lines = MapScenarioIssues.LogLines();
             string changed = lines.LastOrDefault(l => l.Contains("[map] story-at-join: after the snapshot"));
             string sent = lines.LastOrDefault(l => l.Contains("story changes since their snapshot sent to them"));
-            if (changed == null) r.Fail("the story wasn't changed during the join (story-at-join)");
-            else if (sent == null) r.Fail("no 'story changes since their snapshot sent to them' in the log");
-            else r.Info = sent.Substring(sent.IndexOf("] ") + 2);
+            if (changed == null)
+            {
+                r.Fail("the story wasn't changed during the join (story-at-join)");
+            }
+            else if (sent == null)
+            {
+                r.Fail("no 'story changes since their snapshot sent to them' in the log");
+            }
+            else
+            {
+                r.Info = sent.Substring(sent.IndexOf("] ") + 2);
+            }
             yield break;
         }
 
@@ -93,9 +114,18 @@ namespace DarkwoodMP.World
             var lines = MapScenarioIssues.LogLines();
             int wait = lines.FindIndex(l => l.Contains("Waiting to join: The host is watching the prologue"));
             int ready = lines.FindLastIndex(l => l.Contains("World ready"));
-            if (wait < 0) r.Fail("no \"Waiting to join: The host is watching the prologue\" in the log");
-            else if (ready < wait) r.Fail("the world wasn't ready after the wait");
-            else r.Info = $"waited ({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
+            if (wait < 0)
+            {
+                r.Fail("no \"Waiting to join: The host is watching the prologue\" in the log");
+            }
+            else if (ready < wait)
+            {
+                r.Fail("the world wasn't ready after the wait");
+            }
+            else
+            {
+                r.Info = $"waited ({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
+            }
             yield break;
         }
 
@@ -107,13 +137,18 @@ namespace DarkwoodMP.World
             b.Refresh(Net.ServerBrowser.Tab.Lan);
             yield return null;
             float until = Time.realtimeSinceStartup + 25f;
-            while (b.SearchingLan && Time.realtimeSinceStartup < until) yield return null;
+            while (b.SearchingLan && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             yield return null; // the browser's update hands over the last answers
             var found = b.List(Net.ServerBrowser.Tab.Lan).Select(addr => (addr, e: b.Get(addr))).ToList();
             r.Info = found.Count == 0 ? "nothing found"
                 : string.Join(", ", found.Select(f => $"{f.addr} \"{f.e.Info?.Name}\" {f.e.Info?.Players}/{f.e.Info?.MaxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms"));
             if (!found.Any(f => f.e.Info != null && f.e.Info.Proto == Net.Protocol.Version && f.e.Info.Players >= 2))
+            {
                 r.Fail($"the LAN tab didn't find the host (2 players, protocol {Net.Protocol.Version}): {r.Info}");
+            }
         }
 
         private static Trigger FindTrap(string spec) =>
@@ -133,12 +168,24 @@ namespace DarkwoodMP.World
             yield return Walk(t.transform.position, 90f);
             var item = t.GetComponent<Item>();
             AsPlayer(() => P.doDisarm(item));
-            if (P.progressBar != null) P.progressBar.time = 60f; // held until disarm-finish
+            if (P.progressBar != null)
+            {
+                P.progressBar.time = 60f; // held until disarm-finish
+            }
             float until = Time.realtimeSinceStartup + 3f;
-            while (Clip(P) != "InventoryLoop" && Time.realtimeSinceStartup < until) yield return null;
+            while (Clip(P) != "InventoryLoop" && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             r.Info = $"{t.name} at {Fmt(t.transform.position)} (the game's own crouch: {t.bendDownToDisarm}): clip {Clip(P)}, disarming {P.disarmingTrap}";
-            if (!P.disarmingTrap) r.Fail($"{r.Info}: not disarming");
-            else if (Clip(P) != "InventoryLoop") r.Fail($"{r.Info}: not crouching");
+            if (!P.disarmingTrap)
+            {
+                r.Fail($"{r.Info}: not disarming");
+            }
+            else if (Clip(P) != "InventoryLoop")
+            {
+                r.Fail($"{r.Info}: not crouching");
+            }
         }
 
         /// <summary>"puppet-crouch": the other player's puppet here shows the crouch (its sprites are frames of
@@ -158,13 +205,23 @@ namespace DarkwoodMP.World
                               ?? Resources.Load(last.Library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
                     var frames = new HashSet<(int, int)>();
                     if (lib != null)
+                    {
                         foreach (var clip in new[] { "InventoryGet", "InventoryLoop" })
                         {
                             var c = lib.GetClipByName(clip);
-                            if (c?.frames == null) continue;
+                            if (c?.frames == null)
+                            {
+                                continue;
+                            }
                             foreach (var f in c.frames)
-                                if (f.spriteCollection != null) frames.Add((Net.StableHash.Of(f.spriteCollection.spriteCollectionName), f.spriteId));
+                            {
+                                if (f.spriteCollection != null)
+                                {
+                                    frames.Add((Net.StableHash.Of(f.spriteCollection.spriteCollectionName), f.spriteId));
+                                }
+                            }
                         }
+                    }
                     int match = last.Sprites.Count(s => frames.Contains((s.CollectionHash, s.SpriteId)));
                     seen = $"library {last.Library} ({(lib != null ? "found" : "not found here")}), {match} of {last.Sprites.Count} sprites from the crouch, shown {rp.Root != null && rp.Root.activeInHierarchy}";
                     if (match > 0 && rp.Root != null && rp.Root.activeInHierarchy) { r.Info = $"{rp.Name}: {seen}"; yield break; }
@@ -184,14 +241,29 @@ namespace DarkwoodMP.World
             WorldActions.TestAsPlayer = true; // the bar ends in its own Update, as the player's action
             P.progressBar.time = 0.01f;
             float until = Time.realtimeSinceStartup + 4f;
-            while (t != null && !t.triggered && Time.realtimeSinceStartup < until) yield return null;
+            while (t != null && !t.triggered && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             WorldActions.TestAsPlayer = false;
             until = Time.realtimeSinceStartup + 4f;
-            while ((P.gettingInventory || P.performingAction) && Time.realtimeSinceStartup < until) yield return null;
+            while ((P.gettingInventory || P.performingAction) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             r.Info = $"{what}: {(t == null ? "disarmed (gone)" : t.triggered ? "sprung (the roll failed)" : "still armed")}; clip {Clip(P)}, performingAction {P.performingAction}, gettingInventory {P.gettingInventory}";
-            if (t != null && !t.triggered) r.Fail($"{r.Info}: nothing happened");
-            else if (P.gettingInventory || P.performingAction) r.Fail($"{r.Info}: still crouched");
-            if (P.inBearTrap) P.stopAllPerformingActionAnims();
+            if (t != null && !t.triggered)
+            {
+                r.Fail($"{r.Info}: nothing happened");
+            }
+            else if (P.gettingInventory || P.performingAction)
+            {
+                r.Fail($"{r.Info}: still crouched");
+            }
+            if (P.inBearTrap)
+            {
+                P.stopAllPerformingActionAnims();
+            }
             yield return Walk(Centre, 60f);
         }
 
@@ -204,7 +276,10 @@ namespace DarkwoodMP.World
             Core.currentProfile.difficulty = GameProfile.Difficulty.nightmare;
             P.die();
             float until = Time.realtimeSinceStartup + 15f;
-            while (!Spectator.Active && Time.realtimeSinceStartup < until) yield return null;
+            while (!Spectator.Active && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (!Spectator.Active) { Core.currentProfile.difficulty = was; r.Fail($"not spectating (alive {P.alive}, permadeath box {Singleton<UI>.Instance.permadeathBox != null})"); yield break; }
             yield return new WaitForSeconds(2f);
             var cam = Singleton<CamMain>.Instance;
@@ -213,7 +288,10 @@ namespace DarkwoodMP.World
             float dist = host?.Root != null ? StateDump.Flat(P.transform.position - host.Root.transform.position) : -1f;
             bool touching = P.GetComponentsInChildren<Collider>().Any(c => c.enabled);
             r.Info = $"watching {host?.Name}: camera follows {follows}, our body {dist:0} from them, colliders on {touching}, profile dead {Core.currentProfile.dead}, time scale {Time.timeScale}";
-            if (!follows || dist < 0f || dist > 50f || touching || !Core.currentProfile.dead || Time.timeScale == 0f) r.Fail(r.Info);
+            if (!follows || dist < 0f || dist > 50f || touching || !Core.currentProfile.dead || Time.timeScale == 0f)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"spectator-view" [DIR] (client, spectating): the view cone is open all around (both lights at 360
@@ -234,7 +312,10 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[shots] {path}");
             }
             r.Info = $"cone: light {first.light:0}/{later.light:0}, logic {first.logic:0}/{later.logic:0}, currentFOV {first.current:0}/{later.current:0} (2 s apart)";
-            if (first.light < 360f || first.logic < 360f || first.current < 360f || later.light < 360f || later.logic < 360f || later.current < 360f) r.Fail(r.Info);
+            if (first.light < 360f || first.logic < 360f || first.current < 360f || later.light < 360f || later.logic < 360f || later.current < 360f)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"spectate-end" (client, spectating, last): spectating ends as it does when the world is replaced,
@@ -247,7 +328,10 @@ namespace DarkwoodMP.World
             yield return null;
             var now = Spectator.ConeAngles();
             r.Info = $"saved light {saved.light:0}, logic {saved.logic:0}, currentFOV {saved.current:0}; now light {now.light:0}, logic {now.logic:0}, currentFOV {now.current:0}; spectating {Spectator.Active}";
-            if (Spectator.Active || float.IsNaN(saved.light) || now.light != saved.light || now.logic != saved.logic || now.current != saved.current) r.Fail(r.Info);
+            if (Spectator.Active || float.IsNaN(saved.light) || now.light != saved.light || now.logic != saved.logic || now.current != saved.current)
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"sees-spectator" (host): the other player says it's spectating, isn't shown, and its proxy
@@ -262,7 +346,10 @@ namespace DarkwoodMP.World
             var col = proxy != null ? proxy.GetComponent<Collider>() : null;
             int corrections = MapScenarioIssues.LogLines().Skip(from).Count(l => l.Contains("put back"));
             r.Info = $"{rp.Name}: spectating {rp.Spectating}, shown {rp.Root != null && rp.Root.activeSelf}, proxy alive {proxy?.alive}, collider on {col != null && col.enabled}, corrections {corrections}";
-            if (!rp.Spectating || (rp.Root != null && rp.Root.activeSelf) || (col != null && col.enabled) || corrections > 0) r.Fail(r.Info);
+            if (!rp.Spectating || (rp.Root != null && rp.Root.activeSelf) || (col != null && col.enabled) || corrections > 0)
+            {
+                r.Fail(r.Info);
+            }
         }
     }
 }

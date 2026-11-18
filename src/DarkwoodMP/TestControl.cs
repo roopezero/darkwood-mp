@@ -58,17 +58,23 @@ namespace DarkwoodMP
             try
             {
                 using (c)
-                using (var s = c.GetStream())
-                using (var reader = new StreamReader(s, Encoding.UTF8))
-                using (var writer = new StreamWriter(s, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" })
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
+                    using (var s = c.GetStream())
                     {
-                        var done = new ManualResetEventSlim();
-                        var w = new ReplyWriter(writer, done);
-                        _commands.Enqueue((line, w));
-                        done.Wait();
+                        using (var reader = new StreamReader(s, Encoding.UTF8))
+                        {
+                            using (var writer = new StreamWriter(s, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" })
+                            {
+                                string line;
+                                while ((line = reader.ReadLine()) != null)
+                                {
+                                    var done = new ManualResetEventSlim();
+                                    var w = new ReplyWriter(writer, done);
+                                    _commands.Enqueue((line, w));
+                                    done.Wait();
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -88,7 +94,10 @@ namespace DarkwoodMP
         /// <summary>Called every frame (Plugin.Update): runs the commands that came in, one at a time.</summary>
         public static void Update()
         {
-            if (_busy || !_commands.TryDequeue(out var cmd)) return;
+            if (_busy || !_commands.TryDequeue(out var cmd))
+            {
+                return;
+            }
             var words = cmd.line.Split('\t');
             Plugin.Log.LogInfo($"[test control] {cmd.line.Replace('\t', ' ')}");
             try { Run(words, cmd.reply); }
@@ -97,7 +106,10 @@ namespace DarkwoodMP
                 // Without a reply the connection's thread waits for ever, and a set _busy stops every later command.
                 Plugin.Log.LogWarning($"[test control] {words[0]}: {e}");
                 _busy = false;
-                if (!cmd.reply.Sent) cmd.reply.WriteLine($"fail {e.GetType().Name}: {e.Message}".Replace("\r", " ").Replace("\n", " "));
+                if (!cmd.reply.Sent)
+                {
+                    cmd.reply.WriteLine($"fail {e.GetType().Name}: {e.Message}".Replace("\r", " ").Replace("\n", " "));
+                }
             }
         }
 
@@ -126,10 +138,19 @@ namespace DarkwoodMP
                 case "dump":
                     try
                     {
-                        if (words.Length < 2) throw new ArgumentException("usage: dump PATH [X Z R]");
+                        if (words.Length < 2)
+                        {
+                            throw new ArgumentException("usage: dump PATH [X Z R]");
+                        }
                         Vector3? at = null; float radius = StateDump.DefaultRadius;
-                        if (words.Length >= 4) at = new Vector3(MapScenario.F(words[2]), 0f, MapScenario.F(words[3]));
-                        if (words.Length >= 5) radius = MapScenario.F(words[4]);
+                        if (words.Length >= 4)
+                        {
+                            at = new Vector3(MapScenario.F(words[2]), 0f, MapScenario.F(words[3]));
+                        }
+                        if (words.Length >= 5)
+                        {
+                            radius = MapScenario.F(words[4]);
+                        }
                         reply.WriteLine("ok " + StateDump.Write(words[1], at, radius));
                     }
                     catch (Exception e) { Plugin.Log.LogWarning($"[test control] dump: {e}"); reply.WriteLine($"fail {e.GetType().Name}: {e.Message}"); }
@@ -160,7 +181,10 @@ namespace DarkwoodMP
                 default: _busy = false; reply.WriteLine($"fail unknown event {what} (world-ready, player-joined)"); yield break;
             }
             float until = Time.realtimeSinceStartup + secs;
-            while (!done() && Time.realtimeSinceStartup < until) yield return null;
+            while (!done() && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             _busy = false;
             reply.WriteLine(done() ? "ok" : "fail timeout");
         }
@@ -170,16 +194,28 @@ namespace DarkwoodMP
         private static int PlayersIn()
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || !WorldShare.WorldReady) return 0;
+            if (s == null || !s.IsHost || s.Peers.Count == 0 || !WorldShare.WorldReady)
+            {
+                return 0;
+            }
             var ps = Sync.PlayerSync.Instance;
-            if (ps == null) return 0;
+            if (ps == null)
+            {
+                return 0;
+            }
             int n = 0;
             foreach (var kv in ps.Remotes)
             {
-                if (kv.Key == Sync.PlayerSync.DummyId || !s.Peers.Contains(kv.Key)) continue;
+                if (kv.Key == Sync.PlayerSync.DummyId || !s.Peers.Contains(kv.Key))
+                {
+                    continue;
+                }
                 var last = kv.Value.Last;
                 // In the world, or with us in the prologue's stage (a place on the far-off grid, World.Prologue).
-                if (last != null && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away) || World.Prologue.InStage)) n++;
+                if (last != null && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away) || World.Prologue.InStage))
+                {
+                    n++;
+                }
             }
             return n;
         }
@@ -194,19 +230,28 @@ namespace DarkwoodMP
             MapScenario.ResetCentre();
             // A world still loading is let finish first: leaving in the middle of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 90f;
-            while (!WorldShare.InWorld && !WorldShare.MainMenuReady() && Time.realtimeSinceStartup < until) yield return null;
+            while (!WorldShare.InWorld && !WorldShare.MainMenuReady() && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (WorldShare.InWorld)
             {
                 try
                 {
-                    if (Core.mainMenu) Singleton<MainMenu>.Instance.close(); // the pause menu
+                    if (Core.mainMenu)
+                    {
+                        Singleton<MainMenu>.Instance.close(); // the pause menu
+                    }
                     Core.returnToMainMenu();
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
                 yield return null;
             }
             until = Time.realtimeSinceStartup + 90f;
-            while ((!WorldShare.MainMenuReady() || SaveRedirect.Active) && Time.realtimeSinceStartup < until) yield return null;
+            while ((!WorldShare.MainMenuReady() || SaveRedirect.Active) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             Plugin.Instance.SetPanel(false);
             MapScenarioIssues.MarkLogStart(); // the next test's log scans start here
             _busy = false;
@@ -216,7 +261,10 @@ namespace DarkwoodMP
         /// <summary>Called from Plugin.OnGUI: the test's title along the top of the screen.</summary>
         public static void OnGUI()
         {
-            if (string.IsNullOrEmpty(Title)) return;
+            if (string.IsNullOrEmpty(Title))
+            {
+                return;
+            }
             if (_style == null)
             {
                 _style = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter, wordWrap = true };

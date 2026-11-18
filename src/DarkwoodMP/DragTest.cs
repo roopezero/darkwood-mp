@@ -24,11 +24,21 @@ namespace DarkwoodMP
         /// <summary>Called last in Plugin.OnGUI. One made-up event replaces each frame's Repaint, before the window takes it.</summary>
         public static void OnGUI()
         {
-            if (_win == null || !_win.Open) return;
+            if (_win == null || !_win.Open)
+            {
+                return;
+            }
             MenuSkin.Ensure();
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
-            if (_real && Event.current.isMouse) { _lastEv = Event.current.mousePosition; if (Event.current.type == EventType.MouseDrag) _drags++; }
+            if (_real && Event.current.isMouse)
+            {
+                _lastEv = Event.current.mousePosition;
+                if (Event.current.type == EventType.MouseDrag)
+                {
+                    _drags++;
+                }
+            }
             if (_events.Count > 0 && Event.current.type == EventType.Repaint)
             {
                 Event.current = _events.Dequeue();   // the window isn't drawn this frame
@@ -51,7 +61,10 @@ namespace DarkwoodMP
         /// </summary>
         public static IEnumerator RunReal()
         {
-            while (!WorldShare.MainMenuReady()) yield return null;
+            while (!WorldShare.MainMenuReady())
+            {
+                yield return null;
+            }
             yield return new WaitForSecondsRealtime(2f);
             _real = true;
             _win = new UiWindow(0x0D5F, "Drag test") { DefaultRect = () => new Rect(200, 200, 500, 300), Body = f => { } };
@@ -65,7 +78,9 @@ namespace DarkwoodMP
                 bool down = Input.GetMouseButton(0);
                 if (down && !held) { grab = m; start = _win.Rect.position; }
                 if (down || held)
+                {
                     Plugin.Log.LogInfo($"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} mouse {m.x:0.#},{m.y:0.#} ev {_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size {_win.Rect.width:0.#}x{_win.Rect.height:0.#} off {(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
+                }
                 _drags = 0;
                 held = down;
             }
@@ -82,7 +97,10 @@ namespace DarkwoodMP
 
         public static IEnumerator Run()
         {
-            while (!WorldShare.MainMenuReady()) yield return null;
+            while (!WorldShare.MainMenuReady())
+            {
+                yield return null;
+            }
             yield return new WaitForSecondsRealtime(3f);
             _fails = 0;
             UiWindow.TestMouse = () => _mouse;
@@ -105,17 +123,29 @@ namespace DarkwoodMP
                 var before = _win.Rect;
                 var dir = new Vector2(1f, 0.5f);
                 var from = c.resize ? new Vector2(before.xMax - 3, before.yMax - 3) : new Vector2(before.x + 40, before.y + 6);
-                if (c.resize) _events.Enqueue(Mouse(EventType.MouseDown, from, Vector2.zero));
+                if (c.resize)
+                {
+                    _events.Enqueue(Mouse(EventType.MouseDown, from, Vector2.zero));
+                }
                 else { _mouse = from; _win.BeginDrag(); }
-                for (int i = 1; i <= c.steps; i++) _events.Enqueue(Mouse(EventType.MouseDrag, from + dir * (c.step * i), dir * c.step));
+                for (int i = 1; i <= c.steps; i++)
+                {
+                    _events.Enqueue(Mouse(EventType.MouseDrag, from + dir * (c.step * i), dir * c.step));
+                }
                 _events.Enqueue(Mouse(EventType.MouseUp, from + dir * (c.step * c.steps), Vector2.zero));
-                while (_events.Count > 0) yield return null;
+                while (_events.Count > 0)
+                {
+                    yield return null;
+                }
                 yield return null; yield return null;
                 var after = _win.Rect;
                 var want = dir * (c.step * c.steps);
                 var got = c.resize ? after.size - before.size : after.position - before.position;
                 bool ok = Mathf.Abs(got.x - want.x) < 0.01f && Mathf.Abs(got.y - want.y) < 0.01f;
-                if (!ok) _fails++;
+                if (!ok)
+                {
+                    _fails++;
+                }
                 Log($"{(ok ? "PASS" : "FAIL")} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {(c.resize ? "grew" : "moved")} ({got.x:0.##}, {got.y:0.##})");
                 _win.Close();
                 yield return null;

@@ -37,18 +37,32 @@ namespace DarkwoodMP
                 _nextLook = Time.unscaledTime + 1f;
                 foreach (var f in Resources.FindObjectsOfTypeAll<tk2dFontData>())
                 {
-                    if (f == null) continue;
+                    if (f == null)
+                    {
+                        continue;
+                    }
                     var d = f.inst;
                     var tex = d?.material != null ? d.material.mainTexture : null;
-                    if (tex == null) continue;
+                    if (tex == null)
+                    {
+                        continue;
+                    }
                     var face = new Face { Data = d, Texture = tex, LineHeight = d.lineHeight, CapTop = 0f, CapHeight = 8f };
                     var h = Glyph(face, 'H');
                     if (h != null && h.p0.y > h.p1.y) { face.CapTop = h.p0.y; face.CapHeight = h.p0.y - h.p1.y; }
-                    if (_body == null && f.name.StartsWith("tahoma_11px_light_AA") && !f.name.Contains("occluded")) _body = face;
-                    if (_title == null && f.name.StartsWith("tahoma_11px_bevel_white")) _title = face;
+                    if (_body == null && f.name.StartsWith("tahoma_11px_light_AA") && !f.name.Contains("occluded"))
+                    {
+                        _body = face;
+                    }
+                    if (_title == null && f.name.StartsWith("tahoma_11px_bevel_white"))
+                    {
+                        _title = face;
+                    }
                 }
                 if (_body != null && _title != null)
+                {
                     Plugin.Log.LogInfo($"Co-op windows use the game's fonts: line {_body.LineHeight}, H {_body.CapTop}/{_body.CapHeight}");
+                }
             }
             return kind == Kind.Title ? _title ?? _body : _body ?? _title;
         }
@@ -58,7 +72,10 @@ namespace DarkwoodMP
             var d = f.Data;
             if (d.useDictionary)
             {
-                if (d.charDict == null) d.InitDictionary();
+                if (d.charDict == null)
+                {
+                    d.InitDictionary();
+                }
                 return d.charDict != null && d.charDict.TryGetValue(c, out var g) ? g : null;
             }
             return d.chars != null && c < d.chars.Length ? d.chars[c] : null;
@@ -66,19 +83,31 @@ namespace DarkwoodMP
 
         private static bool CanDraw(Face f, string s)
         {
-            if (f == null) return false;
+            if (f == null)
+            {
+                return false;
+            }
             foreach (char c in s)
             {
-                if (c == ' ') continue;
+                if (c == ' ')
+                {
+                    continue;
+                }
                 var g = Glyph(f, c);
-                if (g == null || g.flipped || (g.advance <= 0f && g.p1.x <= g.p0.x)) return false;
+                if (g == null || g.flipped || (g.advance <= 0f && g.p1.x <= g.p0.x))
+                {
+                    return false;
+                }
             }
             return true;
         }
 
         private static GUIStyle Fallback(int scale)
         {
-            if (_fallback == null) _fallback = new GUIStyle(GUI.skin.label) { padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0), wordWrap = false, clipping = TextClipping.Clip };
+            if (_fallback == null)
+            {
+                _fallback = new GUIStyle(GUI.skin.label) { padding = new RectOffset(0, 0, 0, 0), margin = new RectOffset(0, 0, 0, 0), wordWrap = false, clipping = TextClipping.Clip };
+            }
             _fallback.font = MenuSkin.FieldFont;
             _fallback.fontSize = 11 * scale;
             return _fallback;
@@ -90,10 +119,16 @@ namespace DarkwoodMP
         /// <summary>The text's width in screen pixels; <paramref name="scale"/> above 0 draws it bigger than Scale (the main menu's entries).</summary>
         public static float Width(string s, Kind kind = Kind.Body, int scale = 0)
         {
-            if (string.IsNullOrEmpty(s)) return 0f;
+            if (string.IsNullOrEmpty(s))
+            {
+                return 0f;
+            }
             int sc = scale > 0 ? scale : Scale;
             var f = Get(kind);
-            if (!CanDraw(f, s)) return Fallback(sc).CalcSize(new GUIContent(s)).x;
+            if (!CanDraw(f, s))
+            {
+                return Fallback(sc).CalcSize(new GUIContent(s)).x;
+            }
             float w = 0f;
             foreach (char c in s)
             {
@@ -106,13 +141,22 @@ namespace DarkwoodMP
         /// <summary>Draws one line of text in rect r, aligned as given, vertically centred (at Scale, or at <paramref name="scale"/> if above 0).</summary>
         public static void Draw(Rect r, string s, Color color, TextAnchor align = TextAnchor.MiddleLeft, Kind kind = Kind.Body, int scale = 0)
         {
-            if (string.IsNullOrEmpty(s) || Event.current.type != EventType.Repaint) return;
+            if (string.IsNullOrEmpty(s) || Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
             int sc = scale > 0 ? scale : Scale;
             float lineH = LineAt(sc);
             float w = Width(s, kind, sc);
             float x = r.x;
-            if (align == TextAnchor.MiddleCenter || align == TextAnchor.UpperCenter || align == TextAnchor.LowerCenter) x = r.x + (r.width - w) / 2f;
-            else if (align == TextAnchor.MiddleRight || align == TextAnchor.UpperRight || align == TextAnchor.LowerRight) x = r.xMax - w;
+            if (align == TextAnchor.MiddleCenter || align == TextAnchor.UpperCenter || align == TextAnchor.LowerCenter)
+            {
+                x = r.x + (r.width - w) / 2f;
+            }
+            else if (align == TextAnchor.MiddleRight || align == TextAnchor.UpperRight || align == TextAnchor.LowerRight)
+            {
+                x = r.xMax - w;
+            }
             float top = Mathf.Round(r.y + (r.height - lineH) / 2f);
             x = Mathf.Round(x);
             var f = Get(kind);
@@ -138,7 +182,9 @@ namespace DarkwoodMP
                 {
                     var gr = new Rect(x + g.p0.x * sc, baseTop - g.p0.y * sc, gw, gh);
                     if (gr.xMax > r.x - 1 && gr.x < r.xMax + 1)
+                    {
                         GUI.DrawTextureWithTexCoords(gr, f.Texture, new Rect(g.uv0.x, g.uv1.y, g.uv1.x - g.uv0.x, g.uv0.y - g.uv1.y), true);
+                    }
                 }
                 x += g.advance * sc;
             }
@@ -148,11 +194,17 @@ namespace DarkwoodMP
         /// <summary>The text cut short with "..." to fit width.</summary>
         public static string Fit(string s, float width, Kind kind = Kind.Body)
         {
-            if (string.IsNullOrEmpty(s) || Width(s, kind) <= width) return s;
+            if (string.IsNullOrEmpty(s) || Width(s, kind) <= width)
+            {
+                return s;
+            }
             for (int n = s.Length - 1; n > 0; n--)
             {
                 string t = s.Substring(0, n).TrimEnd() + "...";
-                if (Width(t, kind) <= width) return t;
+                if (Width(t, kind) <= width)
+                {
+                    return t;
+                }
             }
             return "";
         }
@@ -168,7 +220,10 @@ namespace DarkwoodMP
                 {
                     string tryLine = line.Length == 0 ? word : line + " " + word;
                     if (line.Length > 0 && Width(tryLine, kind) > width) { lines.Add(line); line = word; }
-                    else line = tryLine;
+                    else
+                    {
+                        line = tryLine;
+                    }
                 }
                 lines.Add(line);
             }

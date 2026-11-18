@@ -27,31 +27,70 @@ namespace DarkwoodMP.World
         {
             get
             {
-                if (WorldShare.PauseMenuInWorld) return "pause menu";
-                if (MenuWindows.AnyOpen) return "mod menu";
-                if (Core.loadingGame) return "loading";
+                if (WorldShare.PauseMenuInWorld)
+                {
+                    return "pause menu";
+                }
+                if (MenuWindows.AnyOpen)
+                {
+                    return "mod menu";
+                }
+                if (Core.loadingGame)
+                {
+                    return "loading";
+                }
                 // Core.HideUI is a static the game never clears on a new world: after the epilogue or the credits
                 // (hideVisibleUI) it stays true into the next save loaded in the same session, with the HUD back on.
                 // So it counts only while hideVisibleUI's bars are actually off.
-                if (Core.HideUI && BarsOff()) return "UI hidden";
-                if (Core.EnteringDream) return "entering a dream";
+                if (Core.HideUI && BarsOff())
+                {
+                    return "UI hidden";
+                }
+                if (Core.EnteringDream)
+                {
+                    return "entering a dream";
+                }
                 var ctl = Singleton<Controller>.Instance;
-                if (ctl != null && ctl.playingCutscene) return "cutscene";
+                if (ctl != null && ctl.playingCutscene)
+                {
+                    return "cutscene";
+                }
                 var wg = Singleton<WorldGenerator>.Instance;
-                if (wg != null && wg.playingIntro) return "intro";
+                if (wg != null && wg.playingIntro)
+                {
+                    return "intro";
+                }
                 var p = Player.Instance;
                 if (p != null)
                 {
-                    if (p.inEpilogue) return "epilogue";
-                    if (InFullMenu(p)) return "game menu";
+                    if (p.inEpilogue)
+                    {
+                        return "epilogue";
+                    }
+                    if (InFullMenu(p))
+                    {
+                        return "game menu";
+                    }
                 }
                 var ui = Singleton<UI>.Instance;
                 if (ui != null)
                 {
-                    if (ui.videoOverlay != null && ui.videoOverlay.activeInHierarchy) return "video";
-                    if (ui.loadingScreen != null && ui.loadingScreen.activeInHierarchy) return "loading screen";
-                    if (ui.chapterText != null && ui.chapterText.gameObject.activeInHierarchy && ui.chapterText.color.a > 0.05f) return "chapter text";
-                    if (Black(ui.blackScreen) || Black(ui.blackScreenTop)) return "black screen";
+                    if (ui.videoOverlay != null && ui.videoOverlay.activeInHierarchy)
+                    {
+                        return "video";
+                    }
+                    if (ui.loadingScreen != null && ui.loadingScreen.activeInHierarchy)
+                    {
+                        return "loading screen";
+                    }
+                    if (ui.chapterText != null && ui.chapterText.gameObject.activeInHierarchy && ui.chapterText.color.a > 0.05f)
+                    {
+                        return "chapter text";
+                    }
+                    if (Black(ui.blackScreen) || Black(ui.blackScreenTop))
+                    {
+                        return "black screen";
+                    }
                 }
                 return null;
             }
@@ -69,7 +108,10 @@ namespace DarkwoodMP.World
             var map = Singleton<Map>.Instance;
             var cm = Singleton<ConstructionMenu>.Instance;
             var ui = Singleton<UI>.Instance;
-            if (map == null || cm == null || ui == null) return false;
+            if (map == null || cm == null || ui == null)
+            {
+                return false;
+            }
             return p.inDialogue || cm.open || p.inLevelingMenu || map.opened
                 || (ui.journal != null && (ui.journal.opened || (ui.journal.note != null && ui.journal.note.gameObject.activeInHierarchy)))
                 || (ui.activeSkillsMenu != null && ui.activeSkillsMenu.opened) || ui.padlockOpened || ui.permadeathBox != null
@@ -79,7 +121,10 @@ namespace DarkwoodMP.World
         /// <summary>A full-screen fade that is mostly faded in.</summary>
         private static bool Black(GameObject screen)
         {
-            if (screen == null || !screen.activeInHierarchy) return false;
+            if (screen == null || !screen.activeInHierarchy)
+            {
+                return false;
+            }
             var s = screen.GetComponent<tk2dBaseSprite>();
             return s != null && s.color.a > 0.5f;
         }

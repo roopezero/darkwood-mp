@@ -59,7 +59,10 @@ namespace DarkwoodMP.World
         internal static void HostDawn()
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             _overDay = -1;
             _told.Clear();
         }
@@ -72,20 +75,32 @@ namespace DarkwoodMP.World
             var s = Session.Instance;
             var c = Singleton<Controller>.Instance;
             var p = Player.Instance;
-            if (s != null) PendingUpdate();
-            if (c == null || p == null || s == null || !s.IsHost) return;
+            if (s != null)
+            {
+                PendingUpdate();
+            }
+            if (c == null || p == null || s == null || !s.IsHost)
+            {
+                return;
+            }
             TellLateMornings(s, c);
             bool frozen = c.isAfterNight && p.effects != null && p.effects.hasEffectType(CharacterEffectType.timeFreeze);
             if (!frozen) { _clockFreed = false; _since = -1f; return; }
-            if (_since < 0f) _since = UnityEngine.Time.unscaledTime;
+            if (_since < 0f)
+            {
+                _since = UnityEngine.Time.unscaledTime;
+            }
             bool someoneOut = false;
             var sync = Sync.PlayerSync.Instance;
             if (CoopPause.InCoop && sync != null && UnityEngine.Time.unscaledTime - _since >= Grace)
+            {
                 foreach (var kv in sync.Remotes)
                 {
                     var last = kv.Value.Last;
-                    if (kv.Key != Sync.PlayerSync.DummyId && last != null && !last.AfterNight) { someoneOut = true; break; }
+                    if (kv.Key != Sync.PlayerSync.DummyId && last != null && !last.AfterNight)
+                    { someoneOut = true; break; }
                 }
+            }
             if (someoneOut && !_clockFreed)
             {
                 _clockFreed = true;
@@ -103,10 +118,19 @@ namespace DarkwoodMP.World
         internal static void HostEnded()
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost || !WorldShare.InWorld || WorldActions.Replaying) return;
+            if (s == null || !s.IsHost || !WorldShare.InWorld || WorldActions.Replaying)
+            {
+                return;
+            }
             var c = Singleton<Controller>.Instance;
-            if (c != null) _overDay = c.day;
-            if (s.Peers.Count == 0) return;
+            if (c != null)
+            {
+                _overDay = c.day;
+            }
+            if (s.Peers.Count == 0)
+            {
+                return;
+            }
             s.Broadcast(s.Begin(MsgType.AfterNightEnded), Channel.Control, reliable: true);
             Plugin.Log.LogInfo("[world] the host's after-night is over: sent to the others");
         }
@@ -116,7 +140,10 @@ namespace DarkwoodMP.World
         internal static void LocalWalkedOut()
         {
             var s = Session.Instance;
-            if (s == null || !s.IsClient || !WorldShare.InWorld || WorldActions.Replaying) return;
+            if (s == null || !s.IsClient || !WorldShare.InWorld || WorldActions.Replaying)
+            {
+                return;
+            }
             s.SendToHost(s.Begin(MsgType.AfterNightLeft), Channel.Control, reliable: true);
             Plugin.Log.LogInfo("[world] we walked out of our hideout: the morning is over, told the host");
         }
@@ -131,7 +158,10 @@ namespace DarkwoodMP.World
         {
             var s = Session.Instance;
             var c = Singleton<Controller>.Instance;
-            if (s == null || !s.IsHost || !s.Peers.Contains(from) || !WorldShare.InWorld || c == null) return;
+            if (s == null || !s.IsHost || !s.Peers.Contains(from) || !WorldShare.InWorld || c == null)
+            {
+                return;
+            }
             _overDay = c.day;
             var d = Singleton<Dreams>.Instance;
             if (c.isAfterNight && !(d != null && d.dreaming))
@@ -156,14 +186,23 @@ namespace DarkwoodMP.World
         private static void TellLateMornings(Session s, Controller c)
         {
             var sync = Sync.PlayerSync.Instance;
-            if (_overDay < 0 || sync == null || !WorldShare.InWorld) return;
+            if (_overDay < 0 || sync == null || !WorldShare.InWorld)
+            {
+                return;
+            }
             if (_overDay != c.day) { _overDay = -1; _told.Clear(); return; }
             float now = UnityEngine.Time.unscaledTime;
             foreach (var kv in sync.Remotes)
             {
                 var last = kv.Value.Last;
-                if (last == null || !last.AfterNight || !s.Peers.Contains(kv.Key)) continue;
-                if (_told.TryGetValue(kv.Key, out float at) && now - at < 3f) continue;
+                if (last == null || !last.AfterNight || !s.Peers.Contains(kv.Key))
+                {
+                    continue;
+                }
+                if (_told.TryGetValue(kv.Key, out float at) && now - at < 3f)
+                {
+                    continue;
+                }
                 _told[kv.Key] = now;
                 s.SendTo(kv.Key, s.Begin(MsgType.AfterNightEnded), Channel.Control, reliable: true);
                 Plugin.Log.LogInfo($"[world] {NameOf(s, kv.Key)} is still in a morning that's over: told them");
@@ -173,7 +212,10 @@ namespace DarkwoodMP.World
         private static void OnEnded(ulong from, PacketReader r)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld || _endPending) return;
+            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld || _endPending)
+            {
+                return;
+            }
             var c = Singleton<Controller>.Instance;
             var d = Singleton<Dreams>.Instance;
             if (c == null || !c.isAfterNight || (d != null && d.dreaming)) { Plugin.Log.LogInfo("[world] the host's after-night is over (ours already was)"); return; }
@@ -195,11 +237,23 @@ namespace DarkwoodMP.World
         private static void End(Controller c)
         {
             _endPending = false;
-            if (c == null || !c.isAfterNight) return;
+            if (c == null || !c.isAfterNight)
+            {
+                return;
+            }
             bool host = Session.Instance != null && Session.Instance.IsHost;
-            if (!host) WorldActions.Replaying = true;
+            if (!host)
+            {
+                WorldActions.Replaying = true;
+            }
             try { c.endAfterNight(); }
-            finally { if (!host) WorldActions.Replaying = false; }
+            finally
+            {
+                if (!host)
+                {
+                    WorldActions.Replaying = false;
+                }
+            }
             Plugin.Log.LogInfo(host ? "[world] a joiner's morning is over: ours ended too (the trader left)"
                                     : "[world] the host's after-night is over: ours ended too (the trader left)");
         }
@@ -214,15 +268,27 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var w = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
-            if (p == null || w == null || w.npc == null || !p.inDialogue) return false;
+            if (p == null || w == null || w.npc == null || !p.inDialogue)
+            {
+                return false;
+            }
             var wg = Singleton<WorldGenerator>.Instance;
-            if (wg == null || wg.locations == null) return false;
+            if (wg == null || wg.locations == null)
+            {
+                return false;
+            }
             foreach (var l in wg.locations)
             {
-                if (l == null || !l.playerBase) continue;
+                if (l == null || !l.playerBase)
+                {
+                    continue;
+                }
                 var go = w.npc.gameObject;
                 if ((l.trader != null && (l.trader == go || go.transform.IsChildOf(l.trader.transform)))
-                    || (l.wolf != null && (l.wolf == go || go.transform.IsChildOf(l.wolf.transform)))) return true;
+                    || (l.wolf != null && (l.wolf == go || go.transform.IsChildOf(l.wolf.transform))))
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -230,7 +296,10 @@ namespace DarkwoodMP.World
         /// <summary>Every frame: close the dialogue with the leaving trader, then end our morning.</summary>
         private static void PendingUpdate()
         {
-            if (!_endPending) return;
+            if (!_endPending)
+            {
+                return;
+            }
             var c = Singleton<Controller>.Instance;
             var w = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
             if (c == null || w == null || Player.Instance == null || !WorldShare.InWorld) { _endPending = false; return; }
@@ -259,18 +328,33 @@ namespace DarkwoodMP.World
             AfterNight.HostDawn(); // a new morning: not over yet
             __state = null;
             var f = Singleton<Flags>.Instance;
-            if (f == null || FlagsSync.Instance == null) return;
+            if (f == null || FlagsSync.Instance == null)
+            {
+                return;
+            }
             __state = new Dictionary<string, int>();
-            foreach (var n in f.npcStates) if (n != null && n.name != null) __state[n.name] = n.reputation;
+            foreach (var n in f.npcStates)
+            {
+                if (n != null && n.name != null)
+                {
+                    __state[n.name] = n.reputation;
+                }
+            }
         }
 
         static void Postfix(Controller __instance, Dictionary<string, int> __state)
         {
             var f = Singleton<Flags>.Instance;
-            if (__state == null || f == null) return;
+            if (__state == null || f == null)
+            {
+                return;
+            }
             foreach (var n in f.npcStates)
             {
-                if (n == null || n.name == null || !__state.TryGetValue(n.name, out int was) || n.reputation == was) continue;
+                if (n == null || n.name == null || !__state.TryGetValue(n.name, out int was) || n.reputation == was)
+                {
+                    continue;
+                }
                 FlagsSync.Instance.Absorb(n.name, n.reputation - was);
                 FlagsSync.Instance.LocalReward(n.name, __instance.day, n.reputation - was);
             }
@@ -286,7 +370,10 @@ namespace DarkwoodMP.World
         static void Postfix(bool __state)
         {
             var c = Singleton<Controller>.Instance;
-            if (__state && c != null && !c.isAfterNight) AfterNight.LocalWalkedOut();
+            if (__state && c != null && !c.isAfterNight)
+            {
+                AfterNight.LocalWalkedOut();
+            }
         }
     }
 
@@ -297,7 +384,10 @@ namespace DarkwoodMP.World
         // Killed traders end it through NpcDied, which ends it in each game (and leaves the body there).
         static void Postfix(Controller __instance, bool __state, bool byKillingTrader)
         {
-            if (__state && !__instance.isAfterNight && !byKillingTrader) AfterNight.HostEnded();
+            if (__state && !__instance.isAfterNight && !byKillingTrader)
+            {
+                AfterNight.HostEnded();
+            }
         }
     }
 }

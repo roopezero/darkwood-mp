@@ -18,7 +18,10 @@ namespace DarkwoodMP.World
 
         internal static void StandUp(Player p)
         {
-            if (!Crouching) return;
+            if (!Crouching)
+            {
+                return;
+            }
             Crouching = false;
             p.hidingInventory = true;
             p.gotInventory = false;
@@ -31,9 +34,15 @@ namespace DarkwoodMP.World
         static void Postfix(Player __instance, Item trapToDisarm)
         {
             DisarmAnimation.Crouching = false;
-            if (!CoopPause.InCoop || trapToDisarm == null || !__instance.disarmingTrap) return;
+            if (!CoopPause.InCoop || trapToDisarm == null || !__instance.disarmingTrap)
+            {
+                return;
+            }
             var trigger = trapToDisarm.GetComponent<Trigger>();
-            if (trigger == null || trigger.bendDownToDisarm) return; // already crouches
+            if (trigger == null || trigger.bendDownToDisarm)
+            {
+                return; // already crouches
+            }
             __instance.performingAction = true;
             __instance.gettingInventory = true;
             __instance.dodging = false;
@@ -45,13 +54,25 @@ namespace DarkwoodMP.World
     static class DisarmDonePatch
     {
         static void Prefix(Player __instance, out bool __state) => __state = __instance.disarmingTrap;
-        static void Postfix(Player __instance, bool __state) { if (__state) DisarmAnimation.StandUp(__instance); }
+        static void Postfix(Player __instance, bool __state)
+        {
+            if (__state)
+            {
+                DisarmAnimation.StandUp(__instance);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Player), nameof(Player.interruptProgressBar))]
     static class DisarmInterruptedPatch
     {
         static void Prefix(Player __instance, out bool __state) => __state = __instance.disarmingTrap;
-        static void Postfix(Player __instance, bool __state) { if (__state) DisarmAnimation.StandUp(__instance); }
+        static void Postfix(Player __instance, bool __state)
+        {
+            if (__state)
+            {
+                DisarmAnimation.StandUp(__instance);
+            }
+        }
     }
 }

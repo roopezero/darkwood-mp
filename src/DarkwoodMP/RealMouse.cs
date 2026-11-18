@@ -20,7 +20,10 @@ namespace DarkwoodMP
             {
                 var psi = new ProcessStartInfo("/usr/bin/ydotool", args) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
                 psi.EnvironmentVariables["YDOTOOL_SOCKET"] = "/tmp/.ydotool_socket";
-                using (var p = Process.Start(psi)) p.WaitForExit(3000);
+                using (var p = Process.Start(psi))
+                {
+                    p.WaitForExit(3000);
+                }
             }
             catch (Exception e) { Plugin.Log.LogWarning($"[mouse] ydotool {args}: {e.Message}"); }
         }
@@ -41,7 +44,10 @@ namespace DarkwoodMP
                 if (dx == 0 && dy == 0) { dx = (int)Mathf.Sign(d.x); dy = (int)Mathf.Sign(d.y); }
                 Run($"mousemove -x {dx} -y {dy}");
                 yield return new WaitForSecondsRealtime(0.12f);
-                if (i < 3 || i % 10 == 9) Plugin.Log.LogInfo($"[mouse] to {target}: moved {dx} {dy}, now at {Now}");
+                if (i < 3 || i % 10 == 9)
+                {
+                    Plugin.Log.LogInfo($"[mouse] to {target}: moved {dx} {dy}, now at {Now}");
+                }
             }
             var left = target - Now;
             Plugin.Log.LogInfo($"[mouse] couldn't reach {target}: at {Now} ({left.magnitude:0.0} px away)");

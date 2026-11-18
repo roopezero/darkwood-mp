@@ -15,7 +15,10 @@ namespace DarkwoodMP
         {
             bool playing = WorldShare.InWorld && !Core.mainMenu && !Core.loadingGame && !panelOpen;
             var want = playing ? CursorLockMode.Confined : CursorLockMode.None;
-            if (UnityEngine.Cursor.lockState != want) UnityEngine.Cursor.lockState = want;
+            if (UnityEngine.Cursor.lockState != want)
+            {
+                UnityEngine.Cursor.lockState = want;
+            }
         }
     }
 }

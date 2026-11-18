@@ -57,7 +57,10 @@ namespace DarkwoodMP.World
         /// may not be entered in this game, so the object itself can be off while the save says it's on).</summary>
         private static bool Shown(GameObject go)
         {
-            if (go == null) return false;
+            if (go == null)
+            {
+                return false;
+            }
             var so = go.GetComponent<SaveableObject>();
             return so != null ? so.Active : go.activeSelf;
         }
@@ -79,11 +82,23 @@ namespace DarkwoodMP.World
         {
             bool want = a.Length == 0 || a[0] == "open";
             float until = Time.realtimeSinceStartup + 15f;
-            while (IsOpen() != want && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.25f);
+            while (IsOpen() != want && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
             var ge = WorldEvent();
-            if (IsOpen() != want) r.Fail($"not {(want ? "open" : "closed")}: {State()}");
-            else if (want && (ge == null || !ge.fired)) r.Fail($"open, but the world event isn't marked fired: {State()}");
-            else r.Info = State();
+            if (IsOpen() != want)
+            {
+                r.Fail($"not {(want ? "open" : "closed")}: {State()}");
+            }
+            else if (want && (ge == null || !ge.fired))
+            {
+                r.Fail($"open, but the world event isn't marked fired: {State()}");
+            }
+            else
+            {
+                r.Info = State();
+            }
         }
 
         /// <summary>The village, a separate location: the hole on its side (holeBig_destFarm2) and teleportPoint_village
@@ -106,7 +121,10 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() => o.prepareLocation(Village));
                 float t0 = Time.realtimeSinceStartup + 60f;
-                while (!InVillage() && Time.realtimeSinceStartup < t0) yield return new WaitForSeconds(0.25f);
+                while (!InVillage() && Time.realtimeSinceStartup < t0)
+                {
+                    yield return new WaitForSeconds(0.25f);
+                }
                 yield return new WaitForSeconds(2f);
                 Core.forbidInputs = false;
                 if (!InVillage()) { r.Fail($"couldn't get into {Village}: {State()}"); yield break; }
@@ -114,7 +132,10 @@ namespace DarkwoodMP.World
             var go = Find(hole);
             var to = Find(dest);
             if (go == null || !go.activeInHierarchy) { r.Fail($"{hole} not here: {State()}"); yield break; }
-            if (StateDump.Flat(p.transform.position - go.transform.position) > 200f) Place(go.transform.position + new Vector3(60f, 0f, 0f));
+            if (StateDump.Flat(p.transform.position - go.transform.position) > 200f)
+            {
+                Place(go.transform.position + new Vector3(60f, 0f, 0f));
+            }
             yield return new WaitForSeconds(1f);
             var et = go.GetComponent<EventTriggers>();
             if (et == null) { r.Fail($"{hole} has no triggers"); yield break; }
@@ -125,11 +146,20 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 60f;
             bool Arrived()
             {
-                if (o.loading || o.playerInOutsideLocation == wasAway) return false;
-                if (to == null) to = Find(dest);
+                if (o.loading || o.playerInOutsideLocation == wasAway)
+                {
+                    return false;
+                }
+                if (to == null)
+                {
+                    to = Find(dest);
+                }
                 return to != null && StateDump.Flat(p.transform.position - to.transform.position) < 300f;
             }
-            while (!Arrived() && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.25f);
+            while (!Arrived() && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
             yield return new WaitForSeconds(2f);
             Core.forbidInputs = false; // the trip's fade gives the inputs back on its own; a test step doesn't wait for it
             float d = to != null ? StateDump.Flat(p.transform.position - to.transform.position) : -1f;
@@ -141,13 +171,25 @@ namespace DarkwoodMP.World
         private static IEnumerator Leave(string[] a, Result r)
         {
             var o = Singleton<OutsideLocations>.Instance;
-            if (o.playerInOutsideLocation) AsPlayer(() => o.returnToWorld());
+            if (o.playerInOutsideLocation)
+            {
+                AsPlayer(() => o.returnToWorld());
+            }
             float until = Time.realtimeSinceStartup + 30f;
-            while ((o.playerInOutsideLocation || o.loading) && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.25f);
+            while ((o.playerInOutsideLocation || o.loading) && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.25f);
+            }
             yield return new WaitForSeconds(2f);
             Core.forbidInputs = false;
-            if (o.playerInOutsideLocation) r.Fail("still in a separate location");
-            else r.Info = $"in the world at {Fmt(Player.Instance.transform.position)}";
+            if (o.playerInOutsideLocation)
+            {
+                r.Fail("still in a separate location");
+            }
+            else
+            {
+                r.Info = $"in the world at {Fmt(Player.Instance.transform.position)}";
+            }
         }
 
         private static IEnumerator Reset(string[] a, Result r)

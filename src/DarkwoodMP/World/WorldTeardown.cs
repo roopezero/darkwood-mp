@@ -24,7 +24,13 @@ namespace DarkwoodMP.World
         public static void Init()
         {
             Application.quitting += () => Active = true;
-            SceneManager.sceneLoaded += (scene, mode) => { if (mode == LoadSceneMode.Single) Active = false; };
+            SceneManager.sceneLoaded += (scene, mode) =>
+            {
+                if (mode == LoadSceneMode.Single)
+                {
+                    Active = false;
+                }
+            };
         }
 
         internal static void Begin() => Active = true;
@@ -50,7 +56,10 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Character __instance)
         {
-            if (!WorldTeardown.Active) return true;
+            if (!WorldTeardown.Active)
+            {
+                return true;
+            }
             if (__instance.forestSpirit)
             {
                 Core.chasedByForestSpirit = false;

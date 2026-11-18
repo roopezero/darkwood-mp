@@ -48,7 +48,10 @@ namespace DarkwoodMP.World
             foreach (var kv in db.itemsDict.OrderBy(k => k.Key, StringComparer.Ordinal))
             {
                 var item = (Resources.Load(kv.Value) as GameObject)?.GetComponent<InvItem>();
-                if (item != null && item.canBePlaced && item.item != null && item.item.name == prefab) return kv.Key;
+                if (item != null && item.canBePlaced && item.item != null && item.item.name == prefab)
+                {
+                    return kv.Key;
+                }
             }
             return null;
         }
@@ -65,13 +68,23 @@ namespace DarkwoodMP.World
                 p.Hotbar.slots[slot].inventory = p.Hotbar;
                 p.Hotbar.slots[slot].createItem(type, 1);
             }
-            if (p.Hotbar.slots[slot].selected) p.selectCurrentHotbarSlot();
-            else p.Hotbar.selectSlot(slot, noiseless: true, force: true);
+            if (p.Hotbar.slots[slot].selected)
+            {
+                p.selectCurrentHotbarSlot();
+            }
+            else
+            {
+                p.Hotbar.selectSlot(slot, noiseless: true, force: true);
+            }
             float giveUp = Time.realtimeSinceStartup + 8f;
             while ((p.switchingItem || InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) && Time.realtimeSinceStartup < giveUp)
+            {
                 yield return null;
+            }
             if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            {
                 r.Fail($"couldn't take {type} in our hands (holding {(InvItemClass.isNull(p.currentItem) ? "nothing" : p.currentItem.type)})");
+            }
         }
 
         /// <summary>
@@ -84,7 +97,10 @@ namespace DarkwoodMP.World
             string type = PlaceableType(prefab);
             if (type == null) { r.Fail($"no item places {prefab}"); yield break; }
             yield return HoldItem(type, r);
-            if (r.Failure != null) yield break;
+            if (r.Failure != null)
+            {
+                yield break;
+            }
             var p = P;
             var before = new HashSet<long>(ObjRef.Spawned.Keys);
             AsPlayer(() =>
@@ -109,22 +125,40 @@ namespace DarkwoodMP.World
             string type = PlaceableType(prefab);
             if (type == null) { r.Fail($"no item places {prefab}"); yield break; }
             yield return HoldItem(type, r);
-            if (r.Failure != null) yield break;
+            if (r.Failure != null)
+            {
+                yield break;
+            }
             int had = MapScenarioWorld.CarriedOf(type), refused = Authority.RolledBack;
             var at = P.transform.position + new Vector3(1500f, 0f, 0f);
             GameObject go = null;
             yield return PlaceReal(prefab, at, r, g => go = g);
-            if (r.Failure != null) yield break;
+            if (r.Failure != null)
+            {
+                yield break;
+            }
             if (go == null) { r.Fail("placed, but it isn't shared (no ObjRef.Spawned entry)"); yield break; }
             int after = MapScenarioWorld.CarriedOf(type);
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(0.5f);
             int back = MapScenarioWorld.CarriedOf(type);
             r.Info = $"{prefab} at {Fmt(at)}: carried {had} -> {after} -> {back}, ours {(go == null ? "removed" : "still there")}";
-            if (Authority.RolledBack == refused) r.Fail($"{r.Info}: the host didn't refuse it");
-            else if (go != null) r.Fail($"{r.Info}: refused, but ours is still there");
-            else if (back != had) r.Fail($"{r.Info}: the item didn't come back");
+            if (Authority.RolledBack == refused)
+            {
+                r.Fail($"{r.Info}: the host didn't refuse it");
+            }
+            else if (go != null)
+            {
+                r.Fail($"{r.Info}: refused, but ours is still there");
+            }
+            else if (back != had)
+            {
+                r.Fail($"{r.Info}: the item didn't come back");
+            }
         }
 
         /// <summary>
@@ -143,9 +177,17 @@ namespace DarkwoodMP.World
                 foreach (var type in types)
                 {
                     int n = MapScenarioWorld.CarriedOf(type);
-                    if (n > 0) P.Inventory.removeItemAmountFromPlayer(type, n);
+                    if (n > 0)
+                    {
+                        P.Inventory.removeItemAmountFromPlayer(type, n);
+                    }
                     for (int i = 0; i < P.Hotbar.slots.Count; i++)
-                        if (!InvItemClass.isNull(P.Hotbar.slots[i].invItem) && P.Hotbar.slots[i].invItem.type == type) P.Hotbar.slots[i].removeItem();
+                    {
+                        if (!InvItemClass.isNull(P.Hotbar.slots[i].invItem) && P.Hotbar.slots[i].invItem.type == type)
+                        {
+                            P.Hotbar.slots[i].removeItem();
+                        }
+                    }
                 }
                 yield return null;
                 int left = types.Sum(t => MapScenarioWorld.CarriedOf(t));
@@ -166,10 +208,19 @@ namespace DarkwoodMP.World
             bool? ok = null; string why = null;
             Authority.Request(w, $"forged {a[0]}", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while (ok == null && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (ok == null && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = $"{a[0]} at {Fmt(at)}: " + (ok == null ? "no answer" : ok.Value ? "allowed" : "refused: " + why);
-            if (ok != false) r.Fail($"{r.Info}: the host didn't refuse it");
-            else if (a.Contains("--none") && (why == null || !why.Contains("carry"))) r.Fail($"{r.Info}: refused, but not for what we carry");
+            if (ok != false)
+            {
+                r.Fail($"{r.Info}: the host didn't refuse it");
+            }
+            else if (a.Contains("--none") && (why == null || !why.Contains("carry")))
+            {
+                r.Fail($"{r.Info}: refused, but not for what we carry");
+            }
         }
 
         // ---- keys ---------------------------------------------------------------------------------------------
@@ -188,7 +239,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked} key {key}";
-            if (l == null || !l.locked) r.Fail($"{r.Info}: not locked");
+            if (l == null || !l.locked)
+            {
+                r.Fail($"{r.Info}: not locked");
+            }
         }
 
         /// <summary>
@@ -209,11 +263,20 @@ namespace DarkwoodMP.World
                 if (j.keysDict.ContainsKey(l.keyType)) { r.Fail($"our journal has {l.keyType} already"); yield break; }
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
-                while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp) yield return null;
+                while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+                {
+                    yield return null;
+                }
                 yield return new WaitForSeconds(0.5f);
                 r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: locked={l.locked}";
-                if (Authority.RolledBack == refused) r.Fail($"{r.Info}: the host didn't refuse it");
-                else if (!l.locked) r.Fail($"{r.Info}: refused, but unlocked here");
+                if (Authority.RolledBack == refused)
+                {
+                    r.Fail($"{r.Info}: the host didn't refuse it");
+                }
+                else if (!l.locked)
+                {
+                    r.Fail($"{r.Info}: refused, but unlocked here");
+                }
                 yield break;
             }
             j.keysDict[l.keyType] = new Journal.Key { type = l.keyType }; // as KeyReference.pickup
@@ -221,8 +284,14 @@ namespace DarkwoodMP.World
             AsPlayer(() => opened = l.tryToOpenWithKey());
             yield return new WaitForSeconds(2f); // a refusal would lock it again
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: opened={opened} locked={l.locked}";
-            if (!opened || l.locked) r.Fail($"{r.Info}: still locked");
-            else if (Authority.RolledBack != refused) r.Fail($"{r.Info}: the host refused it");
+            if (!opened || l.locked)
+            {
+                r.Fail($"{r.Info}: still locked");
+            }
+            else if (Authority.RolledBack != refused)
+            {
+                r.Fail($"{r.Info}: the host refused it");
+            }
         }
 
         /// <summary>"door-locked N yes|no": door N's lock as expected here.</summary>
@@ -232,9 +301,15 @@ namespace DarkwoodMP.World
             var l = d != null ? d.GetComponent<Locked>() : null;
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while ((l != null && l.locked) != want && Time.realtimeSinceStartup < giveUp) yield return null;
+            while ((l != null && l.locked) != want && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
-            if ((l != null && l.locked) != want) r.Fail($"{r.Info}, not {(want ? "locked" : "open")}");
+            if ((l != null && l.locked) != want)
+            {
+                r.Fail($"{r.Info}, not {(want ? "locked" : "open")}");
+            }
         }
 
         // ---- doors the story blocks ----------------------------------------------------------------------------
@@ -252,7 +327,10 @@ namespace DarkwoodMP.World
             if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
             d.blocked = true;
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
-            if (d.opened) r.Fail($"{r.Info}: didn't close");
+            if (d.opened)
+            {
+                r.Fail($"{r.Info}: didn't close");
+            }
         }
 
         /// <summary>
@@ -273,7 +351,10 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(ge.fire(d.gameObject));
             yield return new WaitForSeconds(1f);
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
-            if (d.blocked) r.Fail($"{r.Info}: the event didn't unblock it");
+            if (d.blocked)
+            {
+                r.Fail($"{r.Info}: the event didn't unblock it");
+            }
         }
 
         /// <summary>"door-blocked N yes|no": door N blocked here as expected (waiting up to 5 s).</summary>
@@ -282,9 +363,15 @@ namespace DarkwoodMP.World
             var d = MapScenarioWorld.Nth<Door>(a[0]);
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while (d != null && d.blocked != want && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (d != null && d.blocked != want && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
-            if (d == null || d.blocked != want) r.Fail($"{r.Info}, not {(want ? "blocked" : "clear")}");
+            if (d == null || d.blocked != want)
+            {
+                r.Fail($"{r.Info}, not {(want ? "blocked" : "clear")}");
+            }
         }
 
         /// <summary>
@@ -303,8 +390,14 @@ namespace DarkwoodMP.World
             AsPlayer(() => P.openCloseDoor(d, false));
             yield return new WaitForSeconds(2f); // a refusal would close it again
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
-            if (Authority.RolledBack != refused) r.Fail($"{r.Info}: the host refused it");
-            else if (!d.opened) r.Fail($"{r.Info}: didn't open");
+            if (Authority.RolledBack != refused)
+            {
+                r.Fail($"{r.Info}: the host refused it");
+            }
+            else if (!d.opened)
+            {
+                r.Fail($"{r.Info}: didn't open");
+            }
         }
 
         /// <summary>"door-opened N yes|no": door N open here as expected (waiting up to 5 s).</summary>
@@ -313,9 +406,15 @@ namespace DarkwoodMP.World
             var d = MapScenarioWorld.Nth<Door>(a[0]);
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while (d != null && d.opened != want && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (d != null && d.opened != want && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
-            if (d == null || d.opened != want) r.Fail($"{r.Info}, not {(want ? "open" : "closed")}");
+            if (d == null || d.opened != want)
+            {
+                r.Fail($"{r.Info}, not {(want ? "open" : "closed")}");
+            }
         }
 
         // ---- the porter whistle -------------------------------------------------------------------------------
@@ -337,12 +436,21 @@ namespace DarkwoodMP.World
             var loc = PorterPlace();
             if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
             var flags = Singleton<Flags>.Instance;
-            if (!Core.isDay()) TestWorld.SetTime(12f * 60f);
-            if (flags.isFlagTrue("porter_inTransit")) flags.setFlag("porter_inTransit", activeModifier: false);
+            if (!Core.isDay())
+            {
+                TestWorld.SetTime(12f * 60f);
+            }
+            if (flags.isFlagTrue("porter_inTransit"))
+            {
+                flags.setFlag("porter_inTransit", activeModifier: false);
+            }
             if (loc.porter != null) { Object.Destroy(loc.porter); loc.porter = null; }
             yield return new WaitForSeconds(1f);
             r.Info = $"{loc.name} porter at {Fmt(loc.porterPosition.transform.position)}; day={Core.isDay()} killed={flags.isFlagTrue("porter_killed")}";
-            if (!Core.isDay() || flags.isFlagTrue("porter_killed")) r.Fail($"{r.Info}: the porter can't come");
+            if (!Core.isDay() || flags.isFlagTrue("porter_killed"))
+            {
+                r.Fail($"{r.Info}: the porter can't come");
+            }
         }
 
         /// <summary>"whistle" (client): our player blows the porter whistle at the porter's place; the host calls it, here too.</summary>
@@ -357,10 +465,19 @@ namespace DarkwoodMP.World
             int refused = Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
-            while (!PorterThere(loc) && Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (!PorterThere(loc) && Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = PorterInfo(loc);
-            if (Authority.RolledBack != refused) r.Fail($"{r.Info}: the host refused the call");
-            else if (!PorterThere(loc)) r.Fail(r.Info);
+            if (Authority.RolledBack != refused)
+            {
+                r.Fail($"{r.Info}: the host refused the call");
+            }
+            else if (!PorterThere(loc))
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"porter-came": the porter (or its spawner, which waits until our player looks away) is at the place.</summary>
@@ -369,9 +486,15 @@ namespace DarkwoodMP.World
             var loc = PorterPlace();
             if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
             float giveUp = Time.realtimeSinceStartup + 10f;
-            while (!PorterThere(loc) && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (!PorterThere(loc) && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = PorterInfo(loc);
-            if (!PorterThere(loc)) r.Fail(r.Info);
+            if (!PorterThere(loc))
+            {
+                r.Fail(r.Info);
+            }
         }
 
         /// <summary>"porter-forged" (client): ask for the porter at another place for it, where our player isn't. Refused.</summary>
@@ -386,9 +509,15 @@ namespace DarkwoodMP.World
             bool? ok = null; string why = null;
             Authority.Request(w, $"forged porter call at {far.name}", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while (ok == null && Time.realtimeSinceStartup < giveUp) yield return null;
+            while (ok == null && Time.realtimeSinceStartup < giveUp)
+            {
+                yield return null;
+            }
             r.Info = $"at {far.name}: " + (ok == null ? "no answer" : ok.Value ? "allowed" : "refused: " + why);
-            if (ok != false) r.Fail($"{r.Info}: the host didn't refuse it");
+            if (ok != false)
+            {
+                r.Fail($"{r.Info}: the host didn't refuse it");
+            }
         }
     }
 }

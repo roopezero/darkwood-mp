@@ -90,22 +90,37 @@ namespace DarkwoodMP.World
         /// </summary>
         public static Location HostRunsAt(string place, Vector3 pos)
         {
-            if (string.IsNullOrEmpty(place) || place == "?") return null;
+            if (string.IsNullOrEmpty(place) || place == "?")
+            {
+                return null;
+            }
             Location loc = null;
             if (place.StartsWith("dream:"))
             {
                 // The shared level dream, when our player dreams it too: it is ours to run, as a location is.
                 loc = SharedDream();
-                if (loc == null || place != Current()) return null;
+                if (loc == null || place != Current())
+                {
+                    return null;
+                }
             }
             else
             {
                 var o = Singleton<OutsideLocations>.Instance;
-                if (o == null) return null;
+                if (o == null)
+                {
+                    return null;
+                }
                 foreach (var kv in o.spawnedLocations)
-                    if (kv.Value != null && (kv.Key == place || Core.getTrueLocationName(kv.Key) == place)) { loc = kv.Value; break; }
+                {
+                    if (kv.Value != null && (kv.Key == place || Core.getTrueLocationName(kv.Key) == place))
+                    { loc = kv.Value; break; }
+                }
             }
-            if (loc == null) return null;
+            if (loc == null)
+            {
+                return null;
+            }
             var d = pos - loc.transform.position;
             return d.x * d.x + d.z * d.z < LocationReach * LocationReach ? loc : null;
         }
@@ -120,21 +135,35 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void KeepRunning(OutsideLocations o)
         {
-            if (Time.unscaledTime < _nextKeep) return;
+            if (Time.unscaledTime < _nextKeep)
+            {
+                return;
+            }
             _nextKeep = Time.unscaledTime + 0.5f;
             var want = new HashSet<Location>();
             var dream = Singleton<Dreams>.Instance?.dreamLocation;
             foreach (var p in Combat.NetPlayerProxy.All.Values)
-                if (p != null && p.InLocation != null && p.InLocation != dream) want.Add(p.InLocation); // the shared dream runs with our player in it
+            {
+                if (p != null && p.InLocation != null && p.InLocation != dream)
+                {
+                    want.Add(p.InLocation); // the shared dream runs with our player in it
+                }
+            }
             foreach (var loc in want)
             {
-                if (_kept.Add(loc)) Plugin.Log.LogInfo($"[locations] keeping {Core.getTrueLocationName(loc.name)} running for the joiner(s) in it{(loc.entered ? " (already entered)" : "")}");
+                if (_kept.Add(loc))
+                {
+                    Plugin.Log.LogInfo($"[locations] keeping {Core.getTrueLocationName(loc.name)} running for the joiner(s) in it{(loc.entered ? " (already entered)" : "")}");
+                }
                 if (!loc.entered || !loc.gameObject.activeInHierarchy)
                 {
                     _quietEnter.Add(loc);
                     loc.enter(force: !loc.gameObject.activeInHierarchy);
                 }
-                if (_noted.Add(loc)) DragSync.Instance?.NoteAll(loc.gameObject);
+                if (_noted.Add(loc))
+                {
+                    DragSync.Instance?.NoteAll(loc.gameObject);
+                }
             }
             _kept.RemoveWhere(l => l == null);
             _noted.RemoveWhere(l => l == null || !_kept.Contains(l));
@@ -145,7 +174,10 @@ namespace DarkwoodMP.World
                 string name = Core.getTrueLocationName(loc.name);
                 bool ours = OursNow(loc);
                 Plugin.Log.LogInfo($"[locations] nobody else is in {name} any more{(ours ? "; our player is, so it stays" : ": left")}");
-                if (ours) continue;
+                if (ours)
+                {
+                    continue;
+                }
                 loc.leave(force: true);
                 Singleton<WorldGrid>.Instance?.getGrid(name)?.leave();
             }
@@ -175,7 +207,10 @@ namespace DarkwoodMP.World
         /// <summary>Host: our player going into a location already entered for a joiner gets the enter events it would have had.</summary>
         internal static void BeforeEnter(Location loc, bool force)
         {
-            if (!force && loc.entered && _kept.Contains(loc) && !_quietEnter.Contains(loc)) CheckEnterEvents(loc);
+            if (!force && loc.entered && _kept.Contains(loc) && !_quietEnter.Contains(loc))
+            {
+                CheckEnterEvents(loc);
+            }
         }
 
         /// <summary>Host: Location.checkEnterEvents for a location entered for a joiner is skipped (theirs to run).</summary>
@@ -206,7 +241,10 @@ namespace DarkwoodMP.World
                 var loc = SharedDream();
                 return loc != null && !_gaveUp.Contains(loc.name) && !_gaveUp.Contains(Core.getTrueLocationName(loc.name));
             }
-            if (o == null || !o.playerInOutsideLocation) return true;
+            if (o == null || !o.playerInOutsideLocation)
+            {
+                return true;
+            }
             string name = o.currentLocationName ?? "";
             return !_gaveUp.Contains(name) && !_gaveUp.Contains(Core.getTrueLocationName(name));
         }
@@ -219,7 +257,10 @@ namespace DarkwoodMP.World
         public static Location SharedDream()
         {
             var d = Singleton<Dreams>.Instance;
-            if (d == null || !d.dreaming || d.dreamLocation == null || DreamSync.Shared == null) return null;
+            if (d == null || !d.dreaming || d.dreamLocation == null || DreamSync.Shared == null)
+            {
+                return null;
+            }
             return d.preset != null && d.preset.name == DreamSync.Shared ? d.dreamLocation : null;
         }
 
@@ -234,7 +275,10 @@ namespace DarkwoodMP.World
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
             bool dream = d != null && d.dreaming;
-            if (!dream && !(o != null && o.playerInOutsideLocation)) return "";
+            if (!dream && !(o != null && o.playerInOutsideLocation))
+            {
+                return "";
+            }
             string g = Singleton<WorldGrid>.Instance?.currentGrid?.name ?? "?";
             return dream ? "dream:" + g : g;
         }
@@ -243,9 +287,18 @@ namespace DarkwoodMP.World
         public static bool SamePlace(bool away, string place)
         {
             bool meAway = Sync.PlayerCapture.LocalAway();
-            if (!away || !meAway) return away == meAway;
-            if (string.IsNullOrEmpty(place) || place == "?") return false;
-            if (place.StartsWith("dream:") && DreamSync.Shared == null) return false; // someone else's own dream
+            if (!away || !meAway)
+            {
+                return away == meAway;
+            }
+            if (string.IsNullOrEmpty(place) || place == "?")
+            {
+                return false;
+            }
+            if (place.StartsWith("dream:") && DreamSync.Shared == null)
+            {
+                return false; // someone else's own dream
+            }
             return place == Current();
         }
 
@@ -255,11 +308,17 @@ namespace DarkwoodMP.World
         private static void Extend(OutsideLocations o, int need)
         {
             var list = PositionsOf(o);
-            if (list == null) return;
+            if (list == null)
+            {
+                return;
+            }
             while (list.Count < need)
             {
                 // More rows of seven, 30000 apart, past the game's own rows (z -80000, -50000, 50000).
-                int extra = list.Count - 21; if (extra < 0) extra = 0;
+                int extra = list.Count - 21; if (extra < 0)
+                {
+                    extra = 0;
+                }
                 int row = extra / 7, col = extra % 7;
                 float z = row % 2 == 0 ? 80000f + 30000f * (row / 2) : -110000f - 30000f * (row / 2);
                 list.Add(new Vector3(-75000f + 25000f * col, 0f, z));
@@ -282,7 +341,9 @@ namespace DarkwoodMP.World
                 {
                     string path = UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i);
                     if (path != null && path.Replace('\\', '/').Contains("/Locations/"))
+                    {
                         _real.Add(System.IO.Path.GetFileNameWithoutExtension(path));
+                    }
                 }
                 Plugin.Log.LogInfo($"[locations] the game has {_real.Count} locations");
             }
@@ -292,11 +353,17 @@ namespace DarkwoodMP.World
         private static void OnAsk(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld) return;
+            if (s == null || !s.IsHost || !WorldShare.InWorld)
+            {
+                return;
+            }
             bool dream = (r.R.ReadByte() & 1) != 0;
             string name = r.ReadStr();
             var o = Singleton<OutsideLocations>.Instance;
-            if (o == null || string.IsNullOrEmpty(name)) return;
+            if (o == null || string.IsNullOrEmpty(name))
+            {
+                return;
+            }
             if (!_slots.TryGetValue(name, out var slot))
             {
                 if (o.spawnedLocations.TryGetValue(name, out var loc) && loc != null)
@@ -314,7 +381,10 @@ namespace DarkwoodMP.World
                     Extend(o, o.actualSpawnedLocationsCount + 8);
                     slot = new Slot { Pos = PositionsOf(o)[o.actualSpawnedLocationsCount], Rot = Core.getRandomHalfRotation() };
                     o.actualSpawnedLocationsCount++;
-                    if (!dream) _toSpawn.Enqueue(name);
+                    if (!dream)
+                    {
+                        _toSpawn.Enqueue(name);
+                    }
                     Plugin.Log.LogInfo($"[locations] {s.NameOf(from)} goes to {name}, which we haven't loaded: it gets spot {slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}" +
                                        (dream ? " (a dream: theirs alone)" : "; we load it too"));
                 }
@@ -331,10 +401,16 @@ namespace DarkwoodMP.World
         public static void Update()
         {
             var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld) return;
+            if (s == null || !s.IsHost || !WorldShare.InWorld)
+            {
+                return;
+            }
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
-            if (o == null) return;
+            if (o == null)
+            {
+                return;
+            }
             // The game doesn't refresh its culling while our player is taken to a place: keep the others' areas entered.
             Combat.SharedCullingPatch.RefreshWhileLoading();
             if (_spawning != null)
@@ -354,9 +430,15 @@ namespace DarkwoodMP.World
                 return;
             }
             KeepRunning(o);
-            if (_toSpawn.Count == 0 || o.loading || (d != null && (d.dreaming || d.dreamPrepared || d.switchingDream))) return;
+            if (_toSpawn.Count == 0 || o.loading || (d != null && (d.dreaming || d.dreamPrepared || d.switchingDream)))
+            {
+                return;
+            }
             string name = _toSpawn.Dequeue();
-            if (o.spawnedLocations.ContainsKey(name)) return;
+            if (o.spawnedLocations.ContainsKey(name))
+            {
+                return;
+            }
             _spawning = name; _spawningSince = Time.realtimeSinceStartup;
             _gridBefore = Singleton<WorldGrid>.Instance?.currentGrid?.name;
             Plugin.Log.LogInfo($"[locations] loading {name} for the others (we stay where we are)");
@@ -376,7 +458,10 @@ namespace DarkwoodMP.World
                 var graph = astar != null ? astar.astarData.GetGraph(name) : null;
                 if (graph == null) { Plugin.Log.LogInfo($"[locations] {name} has no pathfinding graph to scan"); return; }
                 int i = System.Array.IndexOf(astar.graphs, graph);
-                if (i >= 0) astar.ScanLoop(null, 1 << i);
+                if (i >= 0)
+                {
+                    astar.ScanLoop(null, 1 << i);
+                }
                 Plugin.Log.LogInfo($"[locations] {name}'s pathfinding graph scanned (graph {i})");
             }
             catch (System.Exception e) { Plugin.Log.LogWarning($"[locations] couldn't scan {name}'s pathfinding: {e.Message}"); }
@@ -388,9 +473,15 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void AfterAddedToGrid(Location loc)
         {
-            if (_spawning == null || loc == null || _gridBefore == null || Core.getTrueLocationName(loc.name) != _spawning) return;
+            if (_spawning == null || loc == null || _gridBefore == null || Core.getTrueLocationName(loc.name) != _spawning)
+            {
+                return;
+            }
             var g = Singleton<WorldGrid>.Instance;
-            if (g == null || g.currentGrid == null || g.currentGrid.name == _gridBefore) return;
+            if (g == null || g.currentGrid == null || g.currentGrid.name == _gridBefore)
+            {
+                return;
+            }
             g.setGrid(_gridBefore);
             Plugin.Log.LogInfo($"[locations] {_spawning} added to its grid; the current grid is {_gridBefore} again");
         }
@@ -401,7 +492,10 @@ namespace DarkwoodMP.World
         internal static void Ask(string name)
         {
             var s = S;
-            if (s == null || !s.IsClient || _slots.ContainsKey(name) || !_asked.Add(name)) return;
+            if (s == null || !s.IsClient || _slots.ContainsKey(name) || !_asked.Add(name))
+            {
+                return;
+            }
             var d = Singleton<Dreams>.Instance;
             var w = s.Begin(MsgType.LocationAsk);
             w.W.Write((byte)(d != null && (d.dreamPrepared || d.dreaming) ? 1 : 0));
@@ -413,7 +507,10 @@ namespace DarkwoodMP.World
         private static void OnSlot(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsClient || from != s.HostId) return;
+            if (s == null || !s.IsClient || from != s.HostId)
+            {
+                return;
+            }
             string name = r.ReadStr();
             var pos = r.ReadVector3();
             int rot = r.R.ReadInt16();
@@ -433,7 +530,10 @@ namespace DarkwoodMP.World
         {
             Ask(name);
             float until = Time.realtimeSinceStartup + AskTimeout;
-            while (MustWait(name) && Time.realtimeSinceStartup < until) yield return null;
+            while (MustWait(name) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             if (MustWait(name))
             {
                 _gaveUp.Add(name);
@@ -446,21 +546,33 @@ namespace DarkwoodMP.World
 
         internal static void BeforeSpawn(OutsideLocations o)
         {
-            if (S != null && S.Active) Extend(o, o.actualSpawnedLocationsCount + 8);
+            if (S != null && S.Active)
+            {
+                Extend(o, o.actualSpawnedLocationsCount + 8);
+            }
         }
 
         /// <summary>In spawnLocation, the spot the game picked (locationPositions[count]): the host's for this location.</summary>
         public static Vector3 PositionFor(Vector3 picked, string name)
         {
             var s = S;
-            if (s == null || !s.Active || name == null) return picked;
+            if (s == null || !s.Active || name == null)
+            {
+                return picked;
+            }
             if (_slots.TryGetValue(name, out var slot))
             {
-                if (slot.Pos != picked) Plugin.Log.LogInfo($"[locations] {name} goes to {slot.Pos.x:0},{slot.Pos.z:0} (the host's spot), not {picked.x:0},{picked.z:0}");
+                if (slot.Pos != picked)
+                {
+                    Plugin.Log.LogInfo($"[locations] {name} goes to {slot.Pos.x:0},{slot.Pos.z:0} (the host's spot), not {picked.x:0},{picked.z:0}");
+                }
                 return slot.Pos;
             }
             // Host: what our own load uses, turn included, so a joiner who asks meanwhile gets the same.
-            if (s.IsHost) _slots[name] = new Slot { Pos = picked, Rot = Core.getRandomHalfRotation() };
+            if (s.IsHost)
+            {
+                _slots[name] = new Slot { Pos = picked, Rot = Core.getRandomHalfRotation() };
+            }
             return picked;
         }
 
@@ -470,8 +582,14 @@ namespace DarkwoodMP.World
             int rolled = Core.getRandomHalfRotation();
             var s = S;
             string name = m != null ? m.locationName : null;
-            if (s == null || !s.Active || name == null) return rolled;
-            if (!_slots.TryGetValue(name, out var slot)) return rolled;
+            if (s == null || !s.Active || name == null)
+            {
+                return rolled;
+            }
+            if (!_slots.TryGetValue(name, out var slot))
+            {
+                return rolled;
+            }
             Plugin.Log.LogInfo($"[locations] {name} turned {slot.Rot} (the host's), not {rolled}");
             return slot.Rot;
         }
@@ -515,7 +633,10 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Location.SaveState __instance, Location location)
         {
-            if (!Locations.KeptForOthers(location) || Locations.OursNow(location)) return;
+            if (!Locations.KeptForOthers(location) || Locations.OursNow(location))
+            {
+                return;
+            }
             __instance.entered = false;
         }
     }
@@ -526,7 +647,10 @@ namespace DarkwoodMP.World
     {
         static void Prefix(OutsideLocations __instance, string locationName)
         {
-            if (Locations.MustWait(locationName) && !__instance.spawnedLocations.ContainsKey(locationName)) Locations.Ask(locationName);
+            if (Locations.MustWait(locationName) && !__instance.spawnedLocations.ContainsKey(locationName))
+            {
+                Locations.Ask(locationName);
+            }
         }
     }
 
@@ -537,7 +661,10 @@ namespace DarkwoodMP.World
         static bool Prefix(OutsideLocations __instance, string locationName, bool transportAfterSpawn, ref IEnumerator __result)
         {
             Locations.BeforeSpawn(__instance);
-            if (!Locations.MustWait(locationName)) return true;
+            if (!Locations.MustWait(locationName))
+            {
+                return true;
+            }
             __result = Locations.WaitThenSpawn(__instance, locationName, transportAfterSpawn);
             return false;
         }
@@ -554,10 +681,16 @@ namespace DarkwoodMP.World
         {
             var getItem = AccessTools.Method(typeof(List<Vector3>), "get_Item");
             var nameField = AccessTools.Field(original.DeclaringType, "locationName");
-            if (nameField == null) throw new System.Exception("no locationName in spawnLocation's body");
+            if (nameField == null)
+            {
+                throw new System.Exception("no locationName in spawnLocation's body");
+            }
             var list = code.ToList();
             int i = list.FindIndex(c => c.Calls(getItem));
-            if (i < 0) throw new System.Exception("locationPositions[...] not found in spawnLocation's body");
+            if (i < 0)
+            {
+                throw new System.Exception("locationPositions[...] not found in spawnLocation's body");
+            }
             list.InsertRange(i + 1, new[]
             {
                 new CodeInstruction(OpCodes.Ldarg_0),
@@ -579,12 +712,18 @@ namespace DarkwoodMP.World
         {
             var roll = AccessTools.Method(typeof(Core), nameof(Core.getRandomHalfRotation));
             var self = AccessTools.Field(original.DeclaringType, "<>4__this");
-            if (self == null) throw new System.Exception("no <>4__this in LocationMarker.spawnLocation's body");
+            if (self == null)
+            {
+                throw new System.Exception("no <>4__this in LocationMarker.spawnLocation's body");
+            }
             var list = code.ToList();
             int done = 0;
             for (int i = 0; i < list.Count; i++)
             {
-                if (!list[i].Calls(roll)) continue;
+                if (!list[i].Calls(roll))
+                {
+                    continue;
+                }
                 var labels = list[i].labels;
                 list[i] = new CodeInstruction(OpCodes.Ldarg_0) { labels = labels, blocks = list[i].blocks };
                 list.InsertRange(i + 1, new[]
@@ -594,7 +733,10 @@ namespace DarkwoodMP.World
                 });
                 done++;
             }
-            if (done == 0) throw new System.Exception("getRandomHalfRotation not found in LocationMarker.spawnLocation's body");
+            if (done == 0)
+            {
+                throw new System.Exception("getRandomHalfRotation not found in LocationMarker.spawnLocation's body");
+            }
             return list;
         }
     }

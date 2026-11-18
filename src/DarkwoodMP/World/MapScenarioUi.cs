@@ -64,7 +64,10 @@ namespace DarkwoodMP.World
             AsPlayer(() =>
             {
                 s.removeItem();
-                if (type != "-") s.createItem(type, amount);
+                if (type != "-")
+                {
+                    s.createItem(type, amount);
+                }
             });
             // Things made or removed from nothing change what the player has to craft with, as a drop or a craft
             // does; the game redraws the recipes after those (Player.refreshRecipes), so this does too.
@@ -80,8 +83,14 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static string Drawn(Inventory inv)
         {
-            if (inv == null) return "no inventory";
-            if (!inv.open || inv.thisUI == null) return $"{inv.name}'s window isn't open";
+            if (inv == null)
+            {
+                return "no inventory";
+            }
+            if (!inv.open || inv.thisUI == null)
+            {
+                return $"{inv.name}'s window isn't open";
+            }
             var bad = new List<string>();
             int filled = 0;
             for (int i = 0; i < inv.slots.Count; i++)
@@ -91,19 +100,34 @@ namespace DarkwoodMP.World
                 if (s.UIInvSlot != null && s.UIInvSlot.sprite != null && s.UIInvSlot.sprite.CurrentSprite != null && !s.inHotbar)
                 {
                     string frame = s.UIInvSlot.sprite.CurrentSprite.name;
-                    if (frame == (full ? "emptyInv" : "fullInv")) bad.Add($"slot {i} ({Slot(s)}): frame {frame}");
+                    if (frame == (full ? "emptyInv" : "fullInv"))
+                    {
+                        bad.Add($"slot {i} ({Slot(s)}): frame {frame}");
+                    }
                 }
-                if (!full) continue;
+                if (!full)
+                {
+                    continue;
+                }
                 filled++;
                 var ui = s.invItem.UIInvItem;
                 if (ui == null || !ui.gameObject.activeInHierarchy) { bad.Add($"slot {i} ({Slot(s)}): no icon drawn"); continue; }
                 string want = s.invItem.baseClass != null ? s.invItem.baseClass.iconType : null;
                 string got = ui.sprite != null && ui.sprite.CurrentSprite != null ? ui.sprite.CurrentSprite.name : null;
-                if (want != null && got != want) bad.Add($"slot {i} ({Slot(s)}): icon {got}, not {want}");
-                if (ui.amount != null && ui.amount.text != s.invItem.amount.ToString()) bad.Add($"slot {i} ({Slot(s)}): amount drawn {ui.amount.text}");
+                if (want != null && got != want)
+                {
+                    bad.Add($"slot {i} ({Slot(s)}): icon {got}, not {want}");
+                }
+                if (ui.amount != null && ui.amount.text != s.invItem.amount.ToString())
+                {
+                    bad.Add($"slot {i} ({Slot(s)}): amount drawn {ui.amount.text}");
+                }
             }
             int icons = inv.thisUI.GetComponentsInChildren<UIInvItem>(false).Length;
-            if (icons != filled) bad.Add($"{icons} icons drawn for {filled} filled slots");
+            if (icons != filled)
+            {
+                bad.Add($"{icons} icons drawn for {filled} filled slots");
+            }
             return bad.Count == 0 ? null : string.Join("; ", bad);
         }
 
@@ -118,29 +142,53 @@ namespace DarkwoodMP.World
         {
             met = 0; total = 0;
             var inv = wb.workbenchInventory;
-            if (inv == null || !inv.open) return "the recipes aren't open";
+            if (inv == null || !inv.open)
+            {
+                return "the recipes aren't open";
+            }
             var bad = new List<string>();
             var have = P.Inventory;
             foreach (var s in inv.slots)
             {
-                if (InvItemClass.isNull(s.invItem) || s.invItem.baseClass == null) continue;
+                if (InvItemClass.isNull(s.invItem) || s.invItem.baseClass == null)
+                {
+                    continue;
+                }
                 var cr = s.invItem.baseClass.GetComponent<CraftingRecipes>();
-                if (cr == null || s.invItem.usedRecipe < 0 || s.invItem.usedRecipe >= cr.recipes.Count) continue;
+                if (cr == null || s.invItem.usedRecipe < 0 || s.invItem.usedRecipe >= cr.recipes.Count)
+                {
+                    continue;
+                }
                 total++;
                 var recipe = cr.recipes[s.invItem.usedRecipe];
                 bool can = !cr.reachedMaxNumberOfTimesCrafted();
                 foreach (var q in recipe.requirements)
                 {
-                    if (q.item == null) continue;
-                    if (q.amount > 0 && have.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true) < q.amount) can = false;
-                    if (q.durabilityAmount > 0f && have.haveItemDurabilityInPlayer(q.item.type, includeAdditionalInventory: true, relativeToMaxDurability: true) < q.durabilityAmount) can = false;
+                    if (q.item == null)
+                    {
+                        continue;
+                    }
+                    if (q.amount > 0 && have.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true) < q.amount)
+                    {
+                        can = false;
+                    }
+                    if (q.durabilityAmount > 0f && have.haveItemDurabilityInPlayer(q.item.type, includeAdditionalInventory: true, relativeToMaxDurability: true) < q.durabilityAmount)
+                    {
+                        can = false;
+                    }
                 }
-                if (can) met++;
+                if (can)
+                {
+                    met++;
+                }
                 var ui = s.invItem.UIInvItem;
                 if (ui == null || ui.sprite == null) { bad.Add($"{s.invItem.type}: not drawn"); continue; }
                 var c = ui.sprite.color; var red = Red(ui);
                 bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f && Mathf.Abs(c.g - red.g) < 0.02f && Mathf.Abs(c.b - red.b) < 0.02f;
-                if (drawnRed == can) bad.Add($"{s.invItem.type} drawn {(drawnRed ? "red" : "makeable")}, is {(can ? "makeable" : "not")} ({Needs(recipe)})");
+                if (drawnRed == can)
+                {
+                    bad.Add($"{s.invItem.type} drawn {(drawnRed ? "red" : "makeable")}, is {(can ? "makeable" : "not")} ({Needs(recipe)})");
+                }
             }
             return bad.Count == 0 ? null : string.Join("; ", bad);
         }
@@ -167,15 +215,33 @@ namespace DarkwoodMP.World
             string under = PauseHud.Shown();
             bool hidden = UiState.WorldOverlaysHidden;
             string why = UiState.Reason;
-            if (Core.mainMenu) Core.showHidePauseMenu();
+            if (Core.mainMenu)
+            {
+                Core.showHidePauseMenu();
+            }
             yield return new WaitForSecondsRealtime(1f);
             string after = PauseHud.Shown();
             r.Info = $"HUD before: {before}; under the menu: {under} (overlays hidden {hidden}, {why}); after: {after}";
-            if (under != "none") r.Fail($"HUD shown under the pause menu: {under}");
-            else if (!hidden) r.Fail("world overlays not hidden under the pause menu");
-            else if (after != before) r.Fail($"HUD after the menu: {after}, before: {before}");
-            else if (UiState.WorldOverlaysHidden) r.Fail($"world overlays still hidden after the menu ({UiState.Reason})");
-            else if (Drawn(st) is string bad) r.Fail($"the storage's window after the menu: {bad}");
+            if (under != "none")
+            {
+                r.Fail($"HUD shown under the pause menu: {under}");
+            }
+            else if (!hidden)
+            {
+                r.Fail("world overlays not hidden under the pause menu");
+            }
+            else if (after != before)
+            {
+                r.Fail($"HUD after the menu: {after}, before: {before}");
+            }
+            else if (UiState.WorldOverlaysHidden)
+            {
+                r.Fail($"world overlays still hidden after the menu ({UiState.Reason})");
+            }
+            else if (Drawn(st) is string bad)
+            {
+                r.Fail($"the storage's window after the menu: {bad}");
+            }
         }
 
         // ---- the workbench ---------------------------------------------------------------------------------------
@@ -186,7 +252,10 @@ namespace DarkwoodMP.World
             var wb = Bench();
             if (wb == null) { r.Fail("no workbench"); yield break; }
             yield return Walk(wb.transform.position);
-            if (P.openedItemInventory2 != wb.normalInventory) AsPlayer(() => wb.open());
+            if (P.openedItemInventory2 != wb.normalInventory)
+            {
+                AsPlayer(() => wb.open());
+            }
             // A client asks the host for the storage as it opens it, and its window takes the answer.
             yield return new WaitForSeconds(Net.Session.Instance != null && Net.Session.Instance.IsClient ? SlotShare.AskTimeout + 0.5f : 1f);
             var st = wb.normalInventory;
@@ -195,8 +264,14 @@ namespace DarkwoodMP.World
             var known = wb.workbenchInventory.slots.Where(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.GetComponent<CraftingRecipes>() != null)
                 .Select(s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
             r.Info = $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
-            if (drawn != null) r.Fail($"drawn wrong as it opened: {drawn}");
-            else if (rec != null) r.Fail($"recipes drawn wrong as it opened: {rec}");
+            if (drawn != null)
+            {
+                r.Fail($"drawn wrong as it opened: {drawn}");
+            }
+            else if (rec != null)
+            {
+                r.Fail($"recipes drawn wrong as it opened: {rec}");
+            }
         }
 
         /// <summary>"ui-wb-close": close it as the player does.</summary>
@@ -205,7 +280,10 @@ namespace DarkwoodMP.World
             try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] ui-wb-close: {e.Message}"); }
             yield return new WaitForSeconds(0.8f);
             var wb = Bench();
-            if (wb != null && P.openedItemInventory2 == wb.normalInventory) r.Fail("still open");
+            if (wb != null && P.openedItemInventory2 == wb.normalInventory)
+            {
+                r.Fail("still open");
+            }
             r.Info = "closed";
         }
 
@@ -220,7 +298,10 @@ namespace DarkwoodMP.World
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
             if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
-            while (epoch > 0 && MapScenarioSavage.Now < epoch) yield return null;
+            while (epoch > 0 && MapScenarioSavage.Now < epoch)
+            {
+                yield return null;
+            }
             var did = new List<string>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
@@ -272,19 +353,37 @@ namespace DarkwoodMP.World
             var st = wb != null ? wb.normalInventory : null;
             if (st == null || P.openedItemInventory2 != st || !st.open) { r.Fail("the workbench isn't open here"); yield break; }
             var want = new List<(int i, string type, int n)>();
-            for (int k = 0; k + 2 < args.Count; k += 3) want.Add((Index(st, args[k]), args[k + 1], int.Parse(args[k + 2], CultureInfo.InvariantCulture)));
+            for (int k = 0; k + 2 < args.Count; k += 3)
+            {
+                want.Add((Index(st, args[k]), args[k + 1], int.Parse(args[k + 2], CultureInfo.InvariantCulture)));
+            }
             int redraws0 = UiRefresh.Redraws;
             float until = Time.realtimeSinceStartup + 4f;
-            while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n)) && Time.realtimeSinceStartup < until) yield return null;
+            while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n)) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             yield return null; yield return null; // icons removed this frame are destroyed at its end
             string slots = string.Join(", ", want.Select(w => $"{w.i}={Slot(st.slots[w.i])}"));
             var wrong = want.Where(w => !Matches(st.slots[w.i], w.type, w.n)).Select(w => $"slot {w.i} is {Slot(st.slots[w.i])}, not {(w.type == "-" ? "empty" : $"{w.type}x{w.n}")}").ToList();
             string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
             r.Info = $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, tint ok={rec == null}; redraws {UiRefresh.Redraws} (total)";
-            if (wrong.Count > 0) r.Fail($"{string.Join("; ", wrong)} (the other player's change didn't arrive)");
-            else if (drawn != null) r.Fail($"the window shows something else: {drawn}");
-            else if (rec != null) r.Fail($"the recipes are drawn stale: {rec}");
-            else if (wantMakeable >= 0 && met < wantMakeable) r.Fail($"{r.Info}: only {met} makeable, wanted {wantMakeable}");
+            if (wrong.Count > 0)
+            {
+                r.Fail($"{string.Join("; ", wrong)} (the other player's change didn't arrive)");
+            }
+            else if (drawn != null)
+            {
+                r.Fail($"the window shows something else: {drawn}");
+            }
+            else if (rec != null)
+            {
+                r.Fail($"the recipes are drawn stale: {rec}");
+            }
+            else if (wantMakeable >= 0 && met < wantMakeable)
+            {
+                r.Fail($"{r.Info}: only {met} makeable, wanted {wantMakeable}");
+            }
         }
 
         // ---- the saw ------------------------------------------------------------------------------------------
@@ -319,14 +418,26 @@ namespace DarkwoodMP.World
             float min = a.Length > 0 ? F(a[0]) : 0f;
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
-            while ((saw.fuel < min || Label(inv) != Want()) && Time.realtimeSinceStartup < until) yield return null;
+            while ((saw.fuel < min || Label(inv) != Want()) && Time.realtimeSinceStartup < until)
+            {
+                yield return null;
+            }
             var btn = saw.convertFuelBtn != null ? saw.convertFuelBtn.GetComponent<global::Button>() : null;
             bool enabled = btn != null && btn.background != null && btn.background.activeSelf;
             bool can = saw.canConvert();
             r.Info = $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert enabled={enabled} can={can}";
-            if (saw.fuel < min) r.Fail($"{r.Info}: the fuel didn't arrive (wanted {min:0})");
-            else if (Label(inv) != Want()) r.Fail($"{r.Info}: the label is stale (should be '{Want()}')");
-            else if (btn != null && enabled != can) r.Fail($"{r.Info}: the Convert button is drawn stale");
+            if (saw.fuel < min)
+            {
+                r.Fail($"{r.Info}: the fuel didn't arrive (wanted {min:0})");
+            }
+            else if (Label(inv) != Want())
+            {
+                r.Fail($"{r.Info}: the label is stale (should be '{Want()}')");
+            }
+            else if (btn != null && enabled != can)
+            {
+                r.Fail($"{r.Info}: the Convert button is drawn stale");
+            }
         }
 
         private static IEnumerator SawClose(string[] a, Result r)
@@ -334,7 +445,10 @@ namespace DarkwoodMP.World
             try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] ui-saw-close: {e.Message}"); }
             yield return new WaitForSeconds(0.8f);
             var inv = _saw != null ? _saw.GetComponent<Inventory>() : null;
-            if (inv != null && inv.open) r.Fail("still open");
+            if (inv != null && inv.open)
+            {
+                r.Fail("still open");
+            }
             r.Info = "closed";
         }
 
@@ -358,7 +472,10 @@ namespace DarkwoodMP.World
             _traderMark = MapScenarioIssues.LogMark();
             string drawn = Drawn(npc.inventory);
             r.Info = $"{npc.name}: {npc.inventory.slots.Count} slots, {npc.inventory.getAllItems().Count} items shown";
-            if (drawn != null) r.Fail($"drawn wrong as shown: {drawn}");
+            if (drawn != null)
+            {
+                r.Fail($"drawn wrong as shown: {drawn}");
+            }
         }
 
         /// <summary>"ui-trader-check": the host's new stock reached the shown window (still open) and it draws it.</summary>
@@ -371,19 +488,34 @@ namespace DarkwoodMP.World
             while (line == null && Time.realtimeSinceStartup < until)
             {
                 line = MapScenarioIssues.LogLines().Skip(_traderMark).FirstOrDefault(l => l.Contains("has the host's stock"));
-                if (line == null) yield return new WaitForSecondsRealtime(0.5f);
+                if (line == null)
+                {
+                    yield return new WaitForSecondsRealtime(0.5f);
+                }
             }
             yield return null; yield return null;
             string drawn = Drawn(npc.inventory);
             r.Info = $"{npc.name}: {npc.inventory.getAllItems().Count} items, open={npc.inventory.open}; {line}";
-            if (line == null) r.Fail("no new stock from the host");
-            else if (!npc.inventory.open) r.Fail($"{r.Info}: the new stock closed his window");
-            else if (drawn != null) r.Fail($"the window shows something else: {drawn}");
+            if (line == null)
+            {
+                r.Fail("no new stock from the host");
+            }
+            else if (!npc.inventory.open)
+            {
+                r.Fail($"{r.Info}: the new stock closed his window");
+            }
+            else if (drawn != null)
+            {
+                r.Fail($"the window shows something else: {drawn}");
+            }
         }
 
         private static IEnumerator TraderHide(string[] a, Result r)
         {
-            if (_trader != null && _trader.inventory != null && _trader.inventory.open) _trader.inventory.hide();
+            if (_trader != null && _trader.inventory != null && _trader.inventory.open)
+            {
+                _trader.inventory.hide();
+            }
             P.inShop = false;
             P.talkedToNPC = null;
             _trader = null;

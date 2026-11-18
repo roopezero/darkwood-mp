@@ -81,7 +81,10 @@ namespace DarkwoodMP.World
         public static IEnumerator Start(WorldShare world, bool reset)
         {
             Status = null;
-            while (!WorldShare.MainMenuReady()) yield return null;
+            while (!WorldShare.MainMenuReady())
+            {
+                yield return null;
+            }
             if (reset || !Exists)
             {
                 string mine = Singleton<SaveManager>.Instance.baseSaveDirectory; // no redirect in the main menu: your own
@@ -107,8 +110,14 @@ namespace DarkwoodMP.World
         private static void Copy(string from, string to)
         {
             Directory.CreateDirectory(to);
-            foreach (var f in Directory.GetFiles(from)) File.Copy(f, Path.Combine(to, Path.GetFileName(f)), overwrite: true);
-            foreach (var d in Directory.GetDirectories(from)) Copy(d, Path.Combine(to, Path.GetFileName(d)));
+            foreach (var f in Directory.GetFiles(from))
+            {
+                File.Copy(f, Path.Combine(to, Path.GetFileName(f)), overwrite: true);
+            }
+            foreach (var d in Directory.GetDirectories(from))
+            {
+                Copy(d, Path.Combine(to, Path.GetFileName(d)));
+            }
         }
 
         // ---- the area (host, in the test world) ----------------------------------------------------------
@@ -129,15 +138,23 @@ namespace DarkwoodMP.World
                 // out a second time on top of the player's things from the last chapter.
                 int built = AreaChapter();
                 if (_labels.Count == 0 && built != 0 && built != Chapters.HostChapter)
+                {
                     Plugin.Log.LogInfo($"Test world: built in chapter {built}, not again in chapter {Chapters.HostChapter}");
-                else if (_labels.Count == 0) Build(Center() ?? Player.Instance.transform.position);
+                }
+                else if (_labels.Count == 0)
+                {
+                    Build(Center() ?? Player.Instance.transform.position);
+                }
             }
             if (Time.unscaledTime >= _nextLabelScan)
             {
                 _nextLabelScan = Time.unscaledTime + 2f;
                 int was = _labels.Count;
                 FindLabels();
-                if (_labels.Count != was) Plugin.Log.LogInfo($"Test world: {_labels.Count} labelled things around {Center()}");
+                if (_labels.Count != was)
+                {
+                    Plugin.Log.LogInfo($"Test world: {_labels.Count} labelled things around {Center()}");
+                }
             }
         }
 
@@ -145,7 +162,10 @@ namespace DarkwoodMP.World
         {
             try
             {
-                if (!File.Exists(AreaFile)) return null;
+                if (!File.Exists(AreaFile))
+                {
+                    return null;
+                }
                 var xz = File.ReadAllText(AreaFile).Split(' ');
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
                 return new Vector3(float.Parse(xz[0], inv), 0f, float.Parse(xz[1], inv));
@@ -179,12 +199,27 @@ namespace DarkwoodMP.World
                     if (go == null) { Plugin.Log.LogWarning($"Test world: no {st.Prefab}"); continue; }
                     Core.addToSaveable(go, isDynamic: true, assignID: true);
                     built++;
-                    if (go.GetComponent<Generator>() is Generator g && !g.isSaw) gen = g;
-                    if (st.Prefab.Contains("Lamps/Lamp_") && go.GetComponent<Item>() is Item lamp) lamps.Add(lamp);
+                    if (go.GetComponent<Generator>() is Generator g && !g.isSaw)
+                    {
+                        gen = g;
+                    }
+                    if (st.Prefab.Contains("Lamps/Lamp_") && go.GetComponent<Item>() is Item lamp)
+                    {
+                        lamps.Add(lamp);
+                    }
                 }
                 catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't place {st.Prefab}: {e.Message}"); }
             }
-            if (gen != null) foreach (var l in lamps) if (!gen.powerItems.Contains(l)) gen.powerItems.Add(l);
+            if (gen != null)
+            {
+                foreach (var l in lamps)
+                {
+                    if (!gen.powerItems.Contains(l))
+                    {
+                        gen.powerItems.Add(l);
+                    }
+                }
+            }
             try { File.WriteAllText(AreaFile, FormattableString.Invariant($"{at.x:0} {at.z:0} {Chapters.HostChapter}")); }
             catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't note where the area is: {e.Message}"); }
             GiveKit();
@@ -201,14 +236,25 @@ namespace DarkwoodMP.World
             {
                 // The ring's square, in the order the saved test worlds were built with (the corners come up twice).
                 for (int i = -ring; i <= ring && spots.Count < count; i++)
+                {
                     foreach (var off in new[] { new Vector3(i, 0, -ring), new Vector3(i, 0, ring), new Vector3(-ring, 0, i), new Vector3(ring, 0, i) })
                     {
-                        if (spots.Count >= count) break;
+                        if (spots.Count >= count)
+                        {
+                            break;
+                        }
                         var p = around + off * step;
-                        if (spots.Contains(p)) continue;
-                        if (Physics.OverlapSphere(p, 70f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player"))) continue;
+                        if (spots.Contains(p))
+                        {
+                            continue;
+                        }
+                        if (Physics.OverlapSphere(p, 70f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player")))
+                        {
+                            continue;
+                        }
                         spots.Add(p);
                     }
+                }
             }
             return spots;
         }
@@ -216,7 +262,10 @@ namespace DarkwoodMP.World
         public static void GiveKit()
         {
             var inv = Player.Instance?.Inventory;
-            if (inv == null) return;
+            if (inv == null)
+            {
+                return;
+            }
             foreach (var (type, amount) in Kit)
             {
                 try { inv.addItemTypeToPlayer(type, amount, dropIfNoRoom: true); }
@@ -230,13 +279,18 @@ namespace DarkwoodMP.World
         public static Character SpawnEnemy(string type)
         {
             var player = Player.Instance;
-            if (player == null) return null;
+            if (player == null)
+            {
+                return null;
+            }
             // The game tries 10 random spots 400 from the player and gives up if none is on outdoor ground
             // (CharacterSpawner.getFreeSpotAround); near buildings that happens now and then, so ask again.
             Character c = null;
             int tries = 0;
             while (c == null && tries++ < 5)
+            {
                 c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(player.gameObject, Vector3.zero, 400f, type, nocturnal: false, attackPlayer: false);
+            }
             Plugin.Log.LogInfo(c != null ? $"Test world: spawned {c.name} at {c.transform.position}{(tries > 1 ? $" (try {tries})" : "")}" : $"Test world: couldn't spawn {type} in {tries - 1} tries");
             return c;
         }
@@ -245,7 +299,10 @@ namespace DarkwoodMP.World
         public static void SetTime(float minute)
         {
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null) return;
+            if (ctl == null)
+            {
+                return;
+            }
             ctl.CurrentTime = (int)minute;
             ctl.refreshTime();
             Plugin.Log.LogInfo($"Test world: the time is now {minute:0} (day {ctl.day})");
@@ -257,33 +314,69 @@ namespace DarkwoodMP.World
         {
             _labels.Clear();
             var c = Center();
-            if (c == null) return;
+            if (c == null)
+            {
+                return;
+            }
             var center = c.Value;
             var names = new Dictionary<string, string>();
-            foreach (var st in Stations) names[st.Prefab.Substring(st.Prefab.LastIndexOf('/') + 1)] = st.Label;
+            foreach (var st in Stations)
+            {
+                names[st.Prefab.Substring(st.Prefab.LastIndexOf('/') + 1)] = st.Label;
+            }
             // Placed at the top of the scene (or in the game's item container, when it has one by then).
             var near = new List<Transform>();
-            foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects()) near.Add(root.transform);
-            if (Core.ItemContainer != null) foreach (Transform t in Core.ItemContainer.transform) near.Add(t);
-            foreach (var npc in UnityEngine.Object.FindObjectsOfType<NPC>()) near.Add(npc.transform);
+            foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                near.Add(root.transform);
+            }
+            if (Core.ItemContainer != null)
+            {
+                foreach (Transform t in Core.ItemContainer.transform)
+                {
+                    near.Add(t);
+                }
+            }
+            foreach (var npc in UnityEngine.Object.FindObjectsOfType<NPC>())
+            {
+                near.Add(npc.transform);
+            }
             foreach (var t in near)
             {
-                if (t == null || (t.position - center).sqrMagnitude > 3000f * 3000f) continue;
+                if (t == null || (t.position - center).sqrMagnitude > 3000f * 3000f)
+                {
+                    continue;
+                }
                 string name = t.name.Replace("(Clone)", "").Trim();
-                if (names.TryGetValue(name, out var label)) _labels.Add((t, label));
+                if (names.TryGetValue(name, out var label))
+                {
+                    _labels.Add((t, label));
+                }
             }
         }
 
         public static void DrawLabels()
         {
-            if (!Active || _labels.Count == 0 || Plugin.NameTagStyle == null) return;
+            if (!Active || _labels.Count == 0 || Plugin.NameTagStyle == null)
+            {
+                return;
+            }
             var cam = Camera.main;
-            if (cam == null) return;
+            if (cam == null)
+            {
+                return;
+            }
             foreach (var (t, label) in _labels)
             {
-                if (t == null) continue;
+                if (t == null)
+                {
+                    continue;
+                }
                 var sp = cam.WorldToScreenPoint(t.position);
-                if (sp.z < 0 || sp.x < 0 || sp.x > Screen.width || sp.y < 0 || sp.y > Screen.height) continue;
+                if (sp.z < 0 || sp.x < 0 || sp.x > Screen.width || sp.y < 0 || sp.y > Screen.height)
+                {
+                    continue;
+                }
                 GUI.Label(new Rect(sp.x - 160, Screen.height - sp.y + 30, 320, 40), label, Plugin.NameTagStyle);
             }
         }

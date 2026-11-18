@@ -28,14 +28,26 @@ namespace DarkwoodMP.World
 
         private static void Hook()
         {
-            if (_hooked || Session.Instance == null) return;
+            if (_hooked || Session.Instance == null)
+            {
+                return;
+            }
             _hooked = true;
             Session.Instance.OnSessionEnded += () => Recruiter.Clear();
             Session.Instance.OnPeerDisconnected += id =>
             {
                 var gone = new List<Character>();
-                foreach (var kv in Recruiter) if (kv.Value == id) gone.Add(kv.Key);
-                foreach (var c in gone) Recruiter.Remove(c);
+                foreach (var kv in Recruiter)
+                {
+                    if (kv.Value == id)
+                    {
+                        gone.Add(kv.Key);
+                    }
+                }
+                foreach (var c in gone)
+                {
+                    Recruiter.Remove(c);
+                }
             };
         }
 
@@ -43,10 +55,16 @@ namespace DarkwoodMP.World
         internal static void Recruited(GameObject go, ulong by)
         {
             var c = go != null ? go.GetComponent<Character>() : null;
-            if (c == null || c.npc == null) return;
+            if (c == null || c.npc == null)
+            {
+                return;
+            }
             Hook();
             Recruiter[c] = by;
-            if (WorldActions.Debug) Plugin.Log.LogInfo($"[world] {c.name} follows {NameOf(by)}, who recruited it");
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] {c.name} follows {NameOf(by)}, who recruited it");
+            }
         }
 
         private static string NameOf(ulong id) =>
@@ -55,8 +73,14 @@ namespace DarkwoodMP.World
         /// <summary>Host: the stand-in of the joiner a follower follows, or null (it follows the host's player).</summary>
         public static NetPlayerProxy LeaderOf(Character c)
         {
-            if (c == null || Recruiter.Count == 0 || !Recruiter.TryGetValue(c, out var id)) return null;
-            if (c.aggressiveness != Aggressiveness.follower && c.behaviour != Character.Behaviour.following) return null;
+            if (c == null || Recruiter.Count == 0 || !Recruiter.TryGetValue(c, out var id))
+            {
+                return null;
+            }
+            if (c.aggressiveness != Aggressiveness.follower && c.behaviour != Character.Behaviour.following)
+            {
+                return null;
+            }
             return NetPlayerProxy.All.TryGetValue(id, out var p) && p != null && p.alive ? p : null;
         }
 
@@ -67,14 +91,19 @@ namespace DarkwoodMP.World
         public static bool BeforeSightCheck(Character c)
         {
             var leader = LeaderOf(c);
-            if (leader == null) return false;
+            if (leader == null)
+            {
+                return false;
+            }
             c.charactersInViewRange.RemoveAll(col =>
             {
                 var cb = col != null ? col.GetComponent<CharBase>() : null;
                 return cb != null && cb != leader && Proxies.IsPlayer(cb);
             });
             if (c.target == null || c.target != leader.transform && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
+            {
                 c.target = leader.transform;
+            }
             return true;
         }
 
@@ -82,20 +111,34 @@ namespace DarkwoodMP.World
         internal static bool MakesFollowers(GameEvent ge)
         {
             if (ge.type == GameEvent.Type.modifyCharacter)
+            {
                 return ge.characterModifyType == GameEvent.CharacterModify.aggressiveness && ge.destAggressiveness == Aggressiveness.follower
                     || ge.characterModifyType == GameEvent.CharacterModify.behaviour && ge.destCharacterBehaviour == Character.Behaviour.following;
+            }
             return ge.type == GameEvent.Type.gameObject;
         }
 
         internal static IEnumerable<GameObject> Targets(GameEvent ge)
         {
-            foreach (var go in ge.targetGameObjects) if (go != null) yield return go;
+            foreach (var go in ge.targetGameObjects)
+            {
+                if (go != null)
+                {
+                    yield return go;
+                }
+            }
             var uo = Singleton<UniqueObjects>.Instance;
-            if (uo == null) yield break;
+            if (uo == null)
+            {
+                yield break;
+            }
             foreach (var name in ge.targetUniqueObjects)
             {
                 var go = uo.getObject(name);
-                if (go != null) yield return go;
+                if (go != null)
+                {
+                    yield return go;
+                }
             }
         }
     }
@@ -107,15 +150,27 @@ namespace DarkwoodMP.World
         static void Prefix(GameEvent __instance)
         {
             var by = ScriptedEvents.By;
-            if (by == 0 || __instance == null || Session.Instance == null || !Session.Instance.IsHost) return;
-            if (!NpcFollowers.MakesFollowers(__instance)) return;
+            if (by == 0 || __instance == null || Session.Instance == null || !Session.Instance.IsHost)
+            {
+                return;
+            }
+            if (!NpcFollowers.MakesFollowers(__instance))
+            {
+                return;
+            }
             bool gameObjectStep = __instance.type == GameEvent.Type.gameObject;
             foreach (var go in NpcFollowers.Targets(__instance))
             {
                 var c = go.GetComponent<Character>();
-                if (c == null || c.npc == null) continue;
+                if (c == null || c.npc == null)
+                {
+                    continue;
+                }
                 // A gameObject step counts only for a character that is a follower already (switched on to follow).
-                if (gameObjectStep && c.aggressiveness != Aggressiveness.follower) continue;
+                if (gameObjectStep && c.aggressiveness != Aggressiveness.follower)
+                {
+                    continue;
+                }
                 NpcFollowers.Recruited(go, by);
             }
         }

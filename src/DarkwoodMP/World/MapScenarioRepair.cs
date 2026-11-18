@@ -52,10 +52,16 @@ namespace DarkwoodMP.World
         {
             if (_door == null) { r.Fail("no door (rp-door first)"); yield break; }
             yield return Walk(_door.transform.position);
-            if (!_door.destroyed) AsPlayer(() => _door.destroyDoor(false));
+            if (!_door.destroyed)
+            {
+                AsPlayer(() => _door.destroyDoor(false));
+            }
             yield return new WaitForSeconds(1f);
             r.Info = DoorInfo;
-            if (_door == null || !_door.destroyed) r.Fail($"{r.Info}: not broken");
+            if (_door == null || !_door.destroyed)
+            {
+                r.Fail($"{r.Info}: not broken");
+            }
         }
 
         private static IEnumerator RpDoorFix(string[] a, Result r)
@@ -66,7 +72,10 @@ namespace DarkwoodMP.World
             for (int i = 0; i < 3 && _door != null && _door.destroyed; i++) { AsPlayer(() => _door.barricade(byPlayer: true)); yield return new WaitForSeconds(0.3f); }
             yield return new WaitForSeconds(1.5f); // the host's answer
             r.Info = DoorInfo;
-            if (_door == null || _door.destroyed) r.Fail($"{r.Info}: not repaired (or broken again)");
+            if (_door == null || _door.destroyed)
+            {
+                r.Fail($"{r.Info}: not repaired (or broken again)");
+            }
         }
 
         private static IEnumerator RpFurniture(string[] a, Result r)
@@ -92,10 +101,16 @@ namespace DarkwoodMP.World
         {
             if (_item == null) { r.Fail("no furniture (rp-furniture first)"); yield break; }
             yield return Walk(_item.transform.position);
-            if (!_item.destroyed) AsPlayer(() => _item.getHit(_item.health + 1, P.transform));
+            if (!_item.destroyed)
+            {
+                AsPlayer(() => _item.getHit(_item.health + 1, P.transform));
+            }
             yield return new WaitForSeconds(1f);
             r.Info = ItemInfo;
-            if (_item == null || !_item.destroyed) r.Fail($"{r.Info}: not broken");
+            if (_item == null || !_item.destroyed)
+            {
+                r.Fail($"{r.Info}: not broken");
+            }
         }
 
         private static IEnumerator RpFurnitureFix(string[] a, Result r)
@@ -107,10 +122,16 @@ namespace DarkwoodMP.World
             if (!_item.destroyed) { r.Fail($"{ItemInfo}: it isn't broken here"); yield break; }
             AsPlayer(() => c.construct(manual: false, 0));
             float until = Time.realtimeSinceStartup + 4f;
-            while (_item != null && _item.destroyed && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.1f);
+            while (_item != null && _item.destroyed && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
             yield return new WaitForSeconds(1f);
             r.Info = ItemInfo;
-            if (_item == null || _item.destroyed) r.Fail($"{r.Info}: not repaired (or broken again)");
+            if (_item == null || _item.destroyed)
+            {
+                r.Fail($"{r.Info}: not repaired (or broken again)");
+            }
         }
 
         private static IEnumerator RpHold(string[] a, Result r)
@@ -120,13 +141,25 @@ namespace DarkwoodMP.World
             string broke = null;
             while (Time.realtimeSinceStartup < until && broke == null)
             {
-                if (_door != null && _door.destroyed) broke = "the door broke again: " + DoorInfo;
-                else if (_item != null && _item.destroyed) broke = "the furniture broke again: " + ItemInfo;
+                if (_door != null && _door.destroyed)
+                {
+                    broke = "the door broke again: " + DoorInfo;
+                }
+                else if (_item != null && _item.destroyed)
+                {
+                    broke = "the furniture broke again: " + ItemInfo;
+                }
                 yield return new WaitForSeconds(0.1f);
             }
             r.Info = $"{DoorInfo}; {ItemInfo}";
-            if (broke != null) r.Fail(broke);
-            else if (_door == null || _item == null) r.Fail($"{r.Info}: not both here");
+            if (broke != null)
+            {
+                r.Fail(broke);
+            }
+            else if (_door == null || _item == null)
+            {
+                r.Fail($"{r.Info}: not both here");
+            }
         }
     }
 }

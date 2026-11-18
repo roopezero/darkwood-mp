@@ -43,8 +43,14 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool HostsHit()
         {
-            if (!NetEnemies.ClientMode) return false;
-            if (ThrownHits.Depth > 0) return true;
+            if (!NetEnemies.ClientMode)
+            {
+                return false;
+            }
+            if (ThrownHits.Depth > 0)
+            {
+                return true;
+            }
             var flame = ThrownHits.CurrentFlame;
             return flame != null && !EnemyAreaHits.ByLocalPlayer(flame);
         }
@@ -59,10 +65,22 @@ namespace DarkwoodMP.World
         /// <summary>Client: whether a change to an item happening now is our own player's (and so ours to send).</summary>
         internal static bool OurPlayers(Transform attacker)
         {
-            if (!NetEnemies.ClientMode) return true;
-            if (ThrownHits.Depth > 0) return false; // inside an explosion: the host's copy of it does the damage
-            if (OwnFlame()) return true;
-            if (attacker != null && Player.Instance != null && attacker == Player.Instance.transform) return true;
+            if (!NetEnemies.ClientMode)
+            {
+                return true;
+            }
+            if (ThrownHits.Depth > 0)
+            {
+                return false; // inside an explosion: the host's copy of it does the damage
+            }
+            if (OwnFlame())
+            {
+                return true;
+            }
+            if (attacker != null && Player.Instance != null && attacker == Player.Instance.transform)
+            {
+                return true;
+            }
             return WorldActions.ByLocalPlayer();
         }
 
@@ -92,11 +110,20 @@ namespace DarkwoodMP.World
         }
         static void Postfix(Item __instance, int damage, Transform attackerTransform, bool normalHit, BreakSync.ItemState __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null) return;
+            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null)
+            {
+                return;
+            }
             // Our player's hit pushes what it hits (a shot's AddForceAtPosition comes right after it): where it comes
             // to rest is our player's doing, however far away they stood.
-            if (BreakSync.OurPlayers(attackerTransform)) DragSync.Instance?.Hit(__instance);
-            if (__state.Same(BreakSync.ItemState.Of(__instance)) || !BreakSync.OurPlayers(attackerTransform)) return;
+            if (BreakSync.OurPlayers(attackerTransform))
+            {
+                DragSync.Instance?.Hit(__instance);
+            }
+            if (__state.Same(BreakSync.ItemState.Of(__instance)) || !BreakSync.OurPlayers(attackerTransform))
+            {
+                return;
+            }
             // An egg this hit broke: EggSync's message breaks it in the other games, wherever it is there.
             if (!__state.Destroyed && __instance.destroyed && EggSync.IsEgg(__instance)) { EggSync.Send(__instance); return; }
             WorldActions.Send(WorldActions.Action.ItemHit, ObjRef.Of(__instance.gameObject), __instance.name, damage, __instance.health, f1: normalHit);
@@ -110,8 +137,14 @@ namespace DarkwoodMP.World
         static void Prefix(Item __instance, out bool __state) { WorldActions.Depth++; __state = __instance.destroyed; }
         static void Postfix(Item __instance, bool __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __state || !__instance.destroyed) return;
-            if (!BreakSync.OurPlayers(null)) return;
+            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __state || !__instance.destroyed)
+            {
+                return;
+            }
+            if (!BreakSync.OurPlayers(null))
+            {
+                return;
+            }
             if (EggSync.IsEgg(__instance)) { EggSync.Send(__instance); return; }
             WorldActions.Send(WorldActions.Action.ItemBroken, ObjRef.Of(__instance.gameObject), __instance.name);
         }
@@ -124,8 +157,14 @@ namespace DarkwoodMP.World
         static void Prefix(Item __instance, out bool __state) { WorldActions.Depth++; __state = __instance.destroyed; }
         static void Postfix(Item __instance, bool __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || !__state || __instance.destroyed) return;
-            if (!BreakSync.OurPlayers(null)) return;
+            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || !__state || __instance.destroyed)
+            {
+                return;
+            }
+            if (!BreakSync.OurPlayers(null))
+            {
+                return;
+            }
             WorldActions.Send(WorldActions.Action.ItemRepaired, ObjRef.Of(__instance.gameObject), __instance.name);
         }
     }
@@ -148,26 +187,47 @@ namespace DarkwoodMP.World
         static void Prefix(Explodes __instance, out State __state)
         {
             __state = default;
-            if (__instance == null || BreakSync.Activated(__instance) || __instance.GetComponent<ProxyItem>() != null) return;
-            if (__instance.GetComponent<ThrownItem>() != null || ThrownHits.Copies.Contains(__instance.gameObject)) return; // ThrowSync's
+            if (__instance == null || BreakSync.Activated(__instance) || __instance.GetComponent<ProxyItem>() != null)
+            {
+                return;
+            }
+            if (__instance.GetComponent<ThrownItem>() != null || ThrownHits.Copies.Contains(__instance.gameObject))
+            {
+                return; // ThrowSync's
+            }
             // An enemy (a kamikaze) or what an enemy threw: those happen only on the host, which sends EnemyExplosion
             // for their sound and flash (EnemyAreaHits); a client's frozen copy must never go off.
-            if (__instance.GetComponent<Character>() != null || EnemyAreaHits.ByEnemy(__instance.transform, __instance.objectThatSpawnedMe)) return;
+            if (__instance.GetComponent<Character>() != null || EnemyAreaHits.ByEnemy(__instance.transform, __instance.objectThatSpawnedMe))
+            {
+                return;
+            }
             __state = new State { Track = true, Ref = ObjRef.Of(__instance.gameObject), Name = __instance.name };
             if (Session.Instance != null && Session.Instance.IsHost)
             {
                 __state.Host = true; __state.Depth = WorldActions.Depth; __state.Replaying = WorldActions.Replaying;
                 WorldActions.Depth = 0; WorldActions.Replaying = false;
             }
-            else WorldActions.Depth++;
+            else
+            {
+                WorldActions.Depth++;
+            }
         }
 
         static void Postfix(Explodes __instance, State __state)
         {
-            if (!__state.Track) return;
+            if (!__state.Track)
+            {
+                return;
+            }
             if (__state.Host) { WorldActions.Depth = __state.Depth + 1; WorldActions.Replaying = __state.Replaying; }
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || !BreakSync.Activated(__instance)) return;
-            if (NetEnemies.ClientMode && !WorldActions.ByLocalPlayer()) return; // our player's shot; fire and chains are the host's
+            if (!WorldActions.Outermost() || !WorldActions.Sharing || !BreakSync.Activated(__instance))
+            {
+                return;
+            }
+            if (NetEnemies.ClientMode && !WorldActions.ByLocalPlayer())
+            {
+                return; // our player's shot; fire and chains are the host's
+            }
             WorldActions.Send(WorldActions.Action.Explode, __state.Ref, __state.Name, f1: BreakSync.Flaming(__instance));
         }
     }

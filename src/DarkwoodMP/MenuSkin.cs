@@ -40,7 +40,10 @@ namespace DarkwoodMP
             if (Skin == null)
             {
                 var s = Object.Instantiate(GUI.skin);
-                if (FieldFont != null) s.font = FieldFont;
+                if (FieldFont != null)
+                {
+                    s.font = FieldFont;
+                }
                 Window = new GUIStyle { border = new RectOffset(2, 2, 2, 2), normal = { background = Bevel(WindowFill, Light, Dark) } };
                 Window.onNormal.background = Window.normal.background;
                 TitleBar = Flat(TitleFill);
@@ -100,13 +103,21 @@ namespace DarkwoodMP
         {
             var t = new Texture2D(5, 5) { hideFlags = HideFlags.HideAndDontSave, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
             for (int x = 0; x < 5; x++)
+            {
                 for (int y = 0; y < 5; y++) // y = 0 is the bottom row
                 {
                     Color c = fill;
-                    if (y == 4 || x == 0) c = topLeft;
-                    if (y == 0 || x == 4) c = bottomRight;
+                    if (y == 4 || x == 0)
+                    {
+                        c = topLeft;
+                    }
+                    if (y == 0 || x == 4)
+                    {
+                        c = bottomRight;
+                    }
                     t.SetPixel(x, y, c);
                 }
+            }
             t.Apply();
             return t;
         }

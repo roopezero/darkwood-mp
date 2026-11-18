@@ -44,7 +44,10 @@ namespace DarkwoodMP.World
             {
                 host = Nearest(Object.FindObjectsOfType<SaveableObject>().Where(i => i.gameObject.name.Replace("(Clone)", "").Trim() == n && ObjRef.Of(i.gameObject).Valid
                     && StateDump.Flat(i.transform.position - Centre) < 1500f), Centre);
-                if (host != null) break;
+                if (host != null)
+                {
+                    break;
+                }
             }
             if (host == null) { r.Fail($"none of {string.Join(", ", Hosts)} here"); yield break; }
             _sound = a.Length > 0 ? a[0] : Fallback;
@@ -79,9 +82,15 @@ namespace DarkwoodMP.World
             AsPlayer(() => _et.fireEventTrigger(global::EventTrigger.Type.area));
             _et.entered++;
             float until = Time.realtimeSinceStartup + 4f;
-            while (!Playing() && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (!Playing() && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             r.Info = $"entered: {_sound} playing {Playing()}, trigger fired {_t.fired}";
-            if (!Playing()) r.Fail($"the whispers don't play here: {r.Info}");
+            if (!Playing())
+            {
+                r.Fail($"the whispers don't play here: {r.Info}");
+            }
         }
 
         /// <summary>"whisper-leave": our player walks out of the area (as EventTriggers.OnTriggerExit does); the whispers stop here.</summary>
@@ -91,9 +100,15 @@ namespace DarkwoodMP.World
             _et.exited++;
             AsPlayer(() => _et.fireEventTriggerExit(global::EventTrigger.Type.area));
             float until = Time.realtimeSinceStartup + 4f;
-            while (Playing() && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (Playing() && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             r.Info = $"left: {_sound} playing {Playing()}, exit ran {_t.firedExit}";
-            if (Playing()) r.Fail($"the whispers go on here: {r.Info}");
+            if (Playing())
+            {
+                r.Fail($"the whispers go on here: {r.Info}");
+            }
         }
 
         /// <summary>"whisper-check playing|stopped": what the other player's entering or leaving did to the whispers here.</summary>
@@ -102,10 +117,16 @@ namespace DarkwoodMP.World
             if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
             bool want = a.Length == 0 || a[0] == "playing";
             float until = Time.realtimeSinceStartup + 5f;
-            while (Playing() != want && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (Playing() != want && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{_sound} playing {Playing()} (want {(want ? "playing" : "stopped")}); entered {_et.entered}, left {_et.exited}, exit ran {_t.firedExit}";
-            if (Playing() != want) r.Fail(want ? $"the whispers don't play here: {r.Info}" : $"stuck hearing the whispers here: {r.Info}");
+            if (Playing() != want)
+            {
+                r.Fail(want ? $"the whispers don't play here: {r.Info}" : $"stuck hearing the whispers here: {r.Info}");
+            }
         }
 
         /// <summary>
@@ -128,10 +149,16 @@ namespace DarkwoodMP.World
             rb.useGravity = false;
             yield return Walk(_et.transform.position, 100f);
             float until = Time.realtimeSinceStartup + 5f;
-            while (!ScriptedEvents.OurPlayerInside(_et) && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while (!ScriptedEvents.OurPlayerInside(_et) && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             yield return new WaitForSeconds(1f);
             r.Info = $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered {_et.entered}, left {_et.exited}); {_sound} playing {Playing()}";
-            if (!ScriptedEvents.OurPlayerInside(_et)) r.Fail($"the game didn't count our player in: {r.Info}");
+            if (!ScriptedEvents.OurPlayerInside(_et))
+            {
+                r.Fail($"the game didn't count our player in: {r.Info}");
+            }
         }
 
         /// <summary>"whisper-out": walk our player out of the real collider (the game's own OnTriggerExit); the whispers stop here.</summary>
@@ -140,12 +167,24 @@ namespace DarkwoodMP.World
             if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
             yield return Walk(_et.transform.position + new Vector3(0f, 0f, -700f), 80f);
             float until = Time.realtimeSinceStartup + 5f;
-            while ((ScriptedEvents.OurPlayerInside(_et) || Playing()) && Time.realtimeSinceStartup < until) yield return new WaitForSeconds(0.2f);
+            while ((ScriptedEvents.OurPlayerInside(_et) || Playing()) && Time.realtimeSinceStartup < until)
+            {
+                yield return new WaitForSeconds(0.2f);
+            }
             r.Info = $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered {_et.entered}, left {_et.exited}); {_sound} playing {Playing()}";
             var box = _et.gameObject.GetComponent<BoxCollider>();
-            if (box != null) Object.Destroy(box);
-            if (ScriptedEvents.OurPlayerInside(_et)) r.Fail($"still in the area: {r.Info}");
-            else if (Playing()) r.Fail($"the whispers go on here: {r.Info}");
+            if (box != null)
+            {
+                Object.Destroy(box);
+            }
+            if (ScriptedEvents.OurPlayerInside(_et))
+            {
+                r.Fail($"still in the area: {r.Info}");
+            }
+            else if (Playing())
+            {
+                r.Fail($"the whispers go on here: {r.Info}");
+            }
             yield return Walk(Centre, 60f);
         }
     }

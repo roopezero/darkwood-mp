@@ -60,7 +60,10 @@ namespace DarkwoodMP.World
                 foreach (var it in StateDump.All<Item>())
                 {
                     var b = it.GetComponent<Rigidbody>();
-                    if (b == null || !it.draggable || it.isDroppedItem || !ctx.Near(it.transform.position) || it.GetComponentInParent<Player>() != null) continue;
+                    if (b == null || !it.draggable || it.isDroppedItem || !ctx.Near(it.transform.position) || it.GetComponentInParent<Player>() != null)
+                    {
+                        continue;
+                    }
                     var e = ctx.Add(it.gameObject);
                     e["yaw"] = StateDump.R(b.transform.rotation.eulerAngles.y, 1f);
                 }
@@ -70,7 +73,10 @@ namespace DarkwoodMP.World
                 // Every open door's leaf, at its angle from shut (the doors section has only whether it's drawn open).
                 foreach (var d in StateDump.All<Door>())
                 {
-                    if (!ctx.Near(d.transform.position) || !d.opened || d.destroyed || d.body == null) continue;
+                    if (!ctx.Near(d.transform.position) || !d.opened || d.destroyed || d.body == null)
+                    {
+                        continue;
+                    }
                     ctx.Add(d.gameObject)["leaf"] = StateDump.R(DoorLeaf.Signed(d), 1f);
                 }
             });
@@ -84,10 +90,19 @@ namespace DarkwoodMP.World
         private static bool Movable(Rigidbody b, out Item it)
         {
             it = null;
-            if (b == null || b.isKinematic || b.constraints == RigidbodyConstraints.FreezeAll) return false;
-            if (b.GetComponent<CharBase>() != null || b.GetComponentInParent<Door>() != null || b.GetComponentInParent<Window>() != null) return false;
+            if (b == null || b.isKinematic || b.constraints == RigidbodyConstraints.FreezeAll)
+            {
+                return false;
+            }
+            if (b.GetComponent<CharBase>() != null || b.GetComponentInParent<Door>() != null || b.GetComponentInParent<Window>() != null)
+            {
+                return false;
+            }
             it = b.GetComponent<Item>();
-            if (it == null || it.GetComponentInParent<Player>() != null || it.isDroppedItem) return false;
+            if (it == null || it.GetComponentInParent<Player>() != null || it.isDroppedItem)
+            {
+                return false;
+            }
             return Solid(b);
         }
 
@@ -96,7 +111,12 @@ namespace DarkwoodMP.World
         {
             int pl = P != null ? P.gameObject.layer : 0;
             foreach (var c in b.GetComponentsInChildren<Collider>(true))
-                if (c.GetComponentInParent<Rigidbody>(true) == b && !c.isTrigger && !Physics.GetIgnoreLayerCollision(pl, c.gameObject.layer)) return true;
+            {
+                if (c.GetComponentInParent<Rigidbody>(true) == b && !c.isTrigger && !Physics.GetIgnoreLayerCollision(pl, c.gameObject.layer))
+                {
+                    return true;
+                }
+            }
             return false;
         }
 
@@ -113,15 +133,27 @@ namespace DarkwoodMP.World
             foreach (var b in Bodies(radius).OrderBy(b => Math.Round(StateDump.Flat(b.position - Centre))).ThenBy(b => ObjRef.Of(b.gameObject).ToString(), StringComparer.Ordinal))
             {
                 string what;
-                if (b.GetComponent<CharBase>() != null) what = "character";
-                else if (b.GetComponentInParent<Door>() is Door d) what = $"door {d.name} leaf, {(DoorPush.Watches(d) ? "watched" : d.opened ? "NOT WATCHED" : "shut")}";
-                else if (b.GetComponentInParent<Window>() != null) what = "window";
+                if (b.GetComponent<CharBase>() != null)
+                {
+                    what = "character";
+                }
+                else if (b.GetComponentInParent<Door>() is Door d)
+                {
+                    what = $"door {d.name} leaf, {(DoorPush.Watches(d) ? "watched" : d.opened ? "NOT WATCHED" : "shut")}";
+                }
+                else if (b.GetComponentInParent<Window>() != null)
+                {
+                    what = "window";
+                }
                 else if (Movable(b, out var it))
                 {
                     string w = DragSync.Instance != null ? DragSync.Instance.WatchInfo(b) : "no DragSync";
                     what = $"{(it.draggable ? "draggable" : "loose")}, {w}";
                     things.Add(it);
-                    if (w == "not watched" || w == "no body") unwatched.Add($"{it.name} {Ref(it)}");
+                    if (w == "not watched" || w == "no body")
+                    {
+                        unwatched.Add($"{it.name} {Ref(it)}");
+                    }
                 }
                 else
                 {
@@ -132,8 +164,14 @@ namespace DarkwoodMP.World
             }
             if (_order.Count == 0 || a.Contains("new")) { _order.Clear(); _order.AddRange(things.Select(Ref)); }
             r.Info = string.Join("; ", things.Select(i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} {Fmt1(i.transform.position)}"));
-            if (things.Count == 0) r.Fail("nothing loose by the centre");
-            else if (unwatched.Count > 0) r.Fail($"not watched for pushes here: {string.Join(", ", unwatched)}");
+            if (things.Count == 0)
+            {
+                r.Fail("nothing loose by the centre");
+            }
+            else if (unwatched.Count > 0)
+            {
+                r.Fail($"not watched for pushes here: {string.Join(", ", unwatched)}");
+            }
             yield break;
         }
 
@@ -142,7 +180,10 @@ namespace DarkwoodMP.World
             int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
             if (k < 0 || k >= _order.Count) { r.Fail($"no thing {k} (ps-list found {_order.Count})"); return null; }
             var it = StateDump.All<Item>().FirstOrDefault(i => i != null && Ref(i) == _order[k]);
-            if (it == null) r.Fail($"thing {k} ({_order[k]}) not here");
+            if (it == null)
+            {
+                r.Fail($"thing {k} ({_order[k]}) not here");
+            }
             return it;
         }
 
@@ -151,7 +192,12 @@ namespace DarkwoodMP.World
         {
             float s = 20f;
             foreach (var c in it.GetComponentsInChildren<Collider>())
-                if (!c.isTrigger) s = Mathf.Max(s, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
+            {
+                if (!c.isTrigger)
+                {
+                    s = Mathf.Max(s, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
+                }
+            }
             return s;
         }
 
@@ -162,17 +208,26 @@ namespace DarkwoodMP.World
         private static IEnumerator BodyWalk(Vector3 dir, float secs, Func<bool> stop)
         {
             var rb = P.GetComponent<Rigidbody>();
-            if (rb == null) yield break;
+            if (rb == null)
+            {
+                yield break;
+            }
             dir.y = 0f; dir = dir.normalized;
             float until = Time.time + secs;
             while (Time.time < until && (stop == null || !stop()))
             {
                 yield return new WaitForFixedUpdate();
-                if (rb == null) yield break;
+                if (rb == null)
+                {
+                    yield break;
+                }
                 rb.WakeUp();
                 rb.velocity = new Vector3(dir.x * PushSpeed, rb.velocity.y, dir.z * PushSpeed);
             }
-            if (rb != null) rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+            if (rb != null)
+            {
+                rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
+            }
         }
 
         /// <summary>
@@ -186,7 +241,10 @@ namespace DarkwoodMP.World
             foreach (int k in new[] { 0, 45, -45, 90, -90, 135, -135, 180 })
             {
                 var d = Dir(deg + k);
-                if (Clear(it, at - d * back, at) && (ahead <= 0f || Clear(it, at, at + d * (Size(it) + ahead)))) return d;
+                if (Clear(it, at - d * back, at) && (ahead <= 0f || Clear(it, at, at + d * (Size(it) + ahead))))
+                {
+                    return d;
+                }
             }
             return Dir(deg);
         }
@@ -200,10 +258,19 @@ namespace DarkwoodMP.World
             foreach (var h in Physics.SphereCastAll(a, 15f, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
             {
                 var c = h.collider;
-                if (c == null || c.transform.IsChildOf(it.transform) || c.GetComponentInParent<Player>() != null) continue;
+                if (c == null || c.transform.IsChildOf(it.transform) || c.GetComponentInParent<Player>() != null)
+                {
+                    continue;
+                }
                 var rb = c.attachedRigidbody;
-                if (rb != null && !rb.isKinematic && rb.constraints != RigidbodyConstraints.FreezeAll && rb.GetComponentInParent<Door>() == null) continue;
-                if (c.GetComponentInParent<CharBase>() != null) continue;
+                if (rb != null && !rb.isKinematic && rb.constraints != RigidbodyConstraints.FreezeAll && rb.GetComponentInParent<Door>() == null)
+                {
+                    continue;
+                }
+                if (c.GetComponentInParent<CharBase>() != null)
+                {
+                    continue;
+                }
                 return false;
             }
             return true;
@@ -212,7 +279,10 @@ namespace DarkwoodMP.World
         private static IEnumerator Bump(string[] a, Result r, bool lean)
         {
             var it = ByIndex(a, r);
-            if (it == null) yield break;
+            if (it == null)
+            {
+                yield break;
+            }
             float dist = !lean && a.Length > 2 ? F(a[2]) : 60f;
             float hold = lean && a.Length > 2 ? F(a[2]) : 5f;
             var start = it.transform.position;
@@ -232,16 +302,25 @@ namespace DarkwoodMP.World
             var rb = it.GetComponent<Rigidbody>();
             yield return BodyWalk(-dir, 0.4f, null); // back off it
             float rest = Time.time + 6f;
-            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f)) yield return null;
+            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(1.5f); // seen at rest (four checks a second) and sent
             r.Info = FormattableString.Invariant($"{it.name} {Ref(it)} pushed towards {Mathf.Atan2(-dir.z, dir.x) * Mathf.Rad2Deg:0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved():0.0} units), we are at {Fmt1(P.transform.position)}");
-            if (moved() < 3f) r.Fail($"{r.Info}: it didn't move");
+            if (moved() < 3f)
+            {
+                r.Fail($"{r.Info}: it didn't move");
+            }
         }
 
         private static IEnumerator Hit(string[] a, Result r)
         {
             var it = ByIndex(a, r);
-            if (it == null) yield break;
+            if (it == null)
+            {
+                yield break;
+            }
             var rb = it.GetComponent<Rigidbody>();
             var start = it.transform.position;
             var from = start - Dir(0f) * (Size(it) + 150f);
@@ -252,15 +331,24 @@ namespace DarkwoodMP.World
             AsPlayer(() =>
             {
                 it.getHit(1, P.transform);
-                if (rb != null) rb.AddForceAtPosition((P.transform.position - point).normalized * -20000f, point);
+                if (rb != null)
+                {
+                    rb.AddForceAtPosition((P.transform.position - point).normalized * -20000f, point);
+                }
             });
             float rest = Time.time + 6f;
             yield return new WaitForSeconds(0.3f);
-            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f)) yield return null;
+            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
+            {
+                yield return null;
+            }
             yield return new WaitForSeconds(1.5f);
             float moved = StateDump.Flat(it.transform.position - start);
             r.Info = $"{it.name} {Ref(it)} hit from {StateDump.Flat(P.transform.position - start):0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved:0.0} units)";
-            if (moved < 3f) r.Fail($"{r.Info}: it didn't move");
+            if (moved < 3f)
+            {
+                r.Fail($"{r.Info}: it didn't move");
+            }
         }
 
         private static IEnumerator DoorWalk(string[] a, Result r)
@@ -279,7 +367,10 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(2.5f); // the leaf at rest (0.4 s still) and sent
             }
             r.Info = $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
-            if (Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f) r.Fail($"{r.Info}: the leaf didn't turn");
+            if (Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f)
+            {
+                r.Fail($"{r.Info}: the leaf didn't turn");
+            }
         }
 
         private static IEnumerator Overlap(string[] a, Result r)
@@ -287,12 +378,18 @@ namespace DarkwoodMP.World
             var sync = Sync.PlayerSync.Instance;
             Sync.RemotePlayer near = null; float best = float.MaxValue;
             if (sync != null)
+            {
                 foreach (var rp in sync.Remotes.Values)
                 {
-                    if (rp.Root == null || !rp.Root.activeSelf || !rp.Alive) continue;
+                    if (rp.Root == null || !rp.Root.activeSelf || !rp.Alive)
+                    {
+                        continue;
+                    }
                     float d = StateDump.Flat(rp.Root.transform.position - P.transform.position);
-                    if (d < best) { best = d; near = rp; }
+                    if (d < best)
+                    { best = d; near = rp; }
                 }
+            }
             if (near == null) { r.Fail("no other player shown here"); yield break; }
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
@@ -300,17 +397,29 @@ namespace DarkwoodMP.World
             float eased = Sync.PlayerSeparation.Eased, want = Sync.PlayerSeparation.Distance * 0.75f;
             float dist() => StateDump.Flat(near.Root.transform.position - P.transform.position);
             float until = Time.unscaledTime + 4f;
-            while (Time.unscaledTime < until && dist() < want) yield return null;
+            while (Time.unscaledTime < until && dist() < want)
+            {
+                yield return null;
+            }
             r.Info = $"put on {near.Name} ({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
-            if (dist() < want) r.Fail($"{r.Info}: not eased apart");
+            if (dist() < want)
+            {
+                r.Fail($"{r.Info}: not eased apart");
+            }
             yield return new WaitForSeconds(1f);
-            if (dist() > Sync.PlayerSeparation.Distance * 3f) r.Fail($"{r.Info}, then {dist():0.0}: pushed too far");
+            if (dist() > Sync.PlayerSeparation.Distance * 3f)
+            {
+                r.Fail($"{r.Info}, then {dist():0.0}: pushed too far");
+            }
         }
 
         private static IEnumerator At(string[] a, Result r)
         {
             var it = ByIndex(a, r);
-            if (it == null) yield break;
+            if (it == null)
+            {
+                yield break;
+            }
             var rb = it.GetComponent<Rigidbody>();
             r.Info = FormattableString.Invariant($"{it.name} {Ref(it)} at {Fmt1(it.transform.position)} yaw {it.transform.rotation.eulerAngles.y:0}, {DragSync.Instance?.WatchInfo(rb)}");
             yield break;

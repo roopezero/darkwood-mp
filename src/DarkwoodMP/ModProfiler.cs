@@ -19,29 +19,50 @@ namespace DarkwoodMP
         private static double _frameMod, _worstMod, _frames;
         private static float _frameTime, _since;
 
-        public static void Begin() { if (Enabled) _sw.Restart(); }
+        public static void Begin()
+        {
+            if (Enabled)
+            {
+                _sw.Restart();
+            }
+        }
 
         /// <summary>The time since Begin or the last Mark goes to this part.</summary>
         public static void Mark(string part)
         {
-            if (!Enabled) return;
+            if (!Enabled)
+            {
+                return;
+            }
             double ms = _sw.Elapsed.TotalMilliseconds;
             _sw.Restart();
             _ms.TryGetValue(part, out double t);
             _ms[part] = t + ms;
             _worst.TryGetValue(part, out double wst);
-            if (ms > wst) _worst[part] = ms;
+            if (ms > wst)
+            {
+                _worst[part] = ms;
+            }
             _frameMod += ms;
         }
 
         public static void EndFrame()
         {
-            if (!Enabled) return;
+            if (!Enabled)
+            {
+                return;
+            }
             _frames++;
             _frameTime += Time.unscaledDeltaTime;
-            if (_frameMod > _worstMod) _worstMod = _frameMod;
+            if (_frameMod > _worstMod)
+            {
+                _worstMod = _frameMod;
+            }
             _frameMod = 0;
-            if (Time.unscaledTime - _since < 10f) return;
+            if (Time.unscaledTime - _since < 10f)
+            {
+                return;
+            }
             _since = Time.unscaledTime;
             double total = _ms.Values.Sum();
             string parts = string.Join(", ", _ms.OrderByDescending(kv => kv.Value).Take(10).Select(kv => $"{kv.Key} {kv.Value / _frames:0.000} (worst {_worst[kv.Key]:0.0})"));

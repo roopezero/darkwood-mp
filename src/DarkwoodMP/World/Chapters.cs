@@ -73,10 +73,22 @@ namespace DarkwoodMP.World
 
         internal static StoryKind KindOf(GameEvent e)
         {
-            if (e == null) return StoryKind.None;
-            if (e.type == GameEvent.Type.transportPlayerToObject && e.activeModifier) return StoryKind.Chapter;
-            if (e.type == GameEvent.Type.startDream && e.Value == EpilogueDream) return StoryKind.Epilogue;
-            if (e.type == GameEvent.Type.endGame) return StoryKind.EndScreen;
+            if (e == null)
+            {
+                return StoryKind.None;
+            }
+            if (e.type == GameEvent.Type.transportPlayerToObject && e.activeModifier)
+            {
+                return StoryKind.Chapter;
+            }
+            if (e.type == GameEvent.Type.startDream && e.Value == EpilogueDream)
+            {
+                return StoryKind.Epilogue;
+            }
+            if (e.type == GameEvent.Type.endGame)
+            {
+                return StoryKind.EndScreen;
+            }
             return StoryKind.None;
         }
 
@@ -98,17 +110,29 @@ namespace DarkwoodMP.World
         public static bool StoryStepRuns(GameEvent e, GameObject thisGO)
         {
             var s = S;
-            if (s == null || !s.Active) return true;
+            if (s == null || !s.Active)
+            {
+                return true;
+            }
             var kind = KindOf(e);
             if (s.IsClient)
             {
                 bool ours = ScriptedEvents.Current == ScriptedEvents.Part.PlayerAndShared;
                 Plugin.Log.LogInfo($"A story step ({kind}{(kind == StoryKind.Chapter ? $" {e.intValue}" : "")}) is the host's: " + (ours ? "asking the host" : "not run here"));
-                if (ours) SendStoryRequest(e, thisGO, kind);
+                if (ours)
+                {
+                    SendStoryRequest(e, thisGO, kind);
+                }
                 return false;
             }
-            if (ScriptedEvents.Current != ScriptedEvents.Part.All) return false;
-            if (kind == StoryKind.Chapter) SendChapterStart(e.intValue);
+            if (ScriptedEvents.Current != ScriptedEvents.Part.All)
+            {
+                return false;
+            }
+            if (kind == StoryKind.Chapter)
+            {
+                SendChapterStart(e.intValue);
+            }
             return true;
         }
 
@@ -119,7 +143,10 @@ namespace DarkwoodMP.World
         /// <summary>Joiner: our player's event reached a story step; the host decides.</summary>
         private static void SendStoryRequest(GameEvent e, GameObject thisGO, StoryKind kind)
         {
-            if (Time.realtimeSinceStartup - _lastRequest < 5f) return; // one event can hold the step more than once
+            if (Time.realtimeSinceStartup - _lastRequest < 5f)
+            {
+                return; // one event can hold the step more than once
+            }
             _lastRequest = Time.realtimeSinceStartup;
             var ge = thisGO != null ? thisGO.GetComponent<GameEvents>() : null;
             var r = ge != null ? ObjRef.Of(thisGO) : default;
@@ -132,8 +159,14 @@ namespace DarkwoodMP.World
             string what = What(kind, e.intValue);
             Authority.Request(w, what, (ok, reason, result) =>
             {
-                if (!ok) Plugin.Notice($"The host didn't start {what}: {reason}");
-                else if (result != null && result.StartsWith("pending: ")) Plugin.Notice($"The host will start {what} as soon as it can ({result.Substring(9)})");
+                if (!ok)
+                {
+                    Plugin.Notice($"The host didn't start {what}: {reason}");
+                }
+                else if (result != null && result.StartsWith("pending: "))
+                {
+                    Plugin.Notice($"The host will start {what} as soon as it can ({result.Substring(9)})");
+                }
             }, inventory: false);
         }
 
@@ -147,12 +180,18 @@ namespace DarkwoodMP.World
         private static void OnStoryRequest(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || !s.IsHost) return;
+            if (s == null || !s.IsHost)
+            {
+                return;
+            }
             var obj = ObjRef.Read(r);
             int index = r.R.ReadByte();
             var kind = (StoryKind)r.R.ReadByte();
             int chapter = r.R.ReadInt32();
-            if (!Authority.Handling) return; // only as a Request
+            if (!Authority.Handling)
+            {
+                return; // only as a Request
+            }
             var rp = Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.Remotes.TryGetValue(from, out var remote) ? remote : null;
             var h = new Held { From = from, Obj = obj, Index = index, Kind = kind, Chapter = chapter, WasAway = rp != null && rp.Away };
             string reason;
@@ -172,7 +211,10 @@ namespace DarkwoodMP.World
                     return;
             }
             Plugin.Log.LogInfo($"{s.NameOf(from)} set off {What(kind, chapter)}: running it here");
-            if (!Run(h)) Authority.Refuse("it couldn't run");
+            if (!Run(h))
+            {
+                Authority.Refuse("it couldn't run");
+            }
         }
 
         /// <summary>Host: a joiner's story step that waits until the host's game can run it.</summary>
@@ -243,15 +285,24 @@ namespace DarkwoodMP.World
         private static void UpdateHeld()
         {
             var h = _held;
-            if (h == null) return;
+            if (h == null)
+            {
+                return;
+            }
             var s = S;
             if (s == null || !s.IsHost || !s.Peers.Contains(h.From)) { Plugin.Log.LogInfo($"Dropped the held {What(h.Kind, h.Chapter)}: its player left"); _held = null; return; }
             var v = Decide(h, out string reason);
             if (v == Verdict.Wait) { _readySince = -1f; return; }
             if (v == Verdict.Run)
             {
-                if (_readySince < 0f) _readySince = Time.realtimeSinceStartup;
-                if (Time.realtimeSinceStartup - _readySince < 3f) return;
+                if (_readySince < 0f)
+                {
+                    _readySince = Time.realtimeSinceStartup;
+                }
+                if (Time.realtimeSinceStartup - _readySince < 3f)
+                {
+                    return;
+                }
             }
             _held = null;
             _readySince = -1f;
@@ -266,7 +317,10 @@ namespace DarkwoodMP.World
         private static void SendChapterStart(int chapter)
         {
             var s = S;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || _chapterSent) return;
+            if (s == null || !s.IsHost || s.Peers.Count == 0 || _chapterSent)
+            {
+                return;
+            }
             _chapterSent = true;
             _ran.Add(KeyOf(StoryKind.Chapter, chapter));
             Plugin.Log.LogInfo($"Starting chapter {chapter}: the players in your world follow once it's ready");
@@ -279,7 +333,10 @@ namespace DarkwoodMP.World
         internal static bool BeforeGenerate(int chapter, bool generateSave)
         {
             var s = S;
-            if (s == null || !s.Active || !generateSave) return true; // loading a chapter's save (also a joiner loading the host's)
+            if (s == null || !s.Active || !generateSave)
+            {
+                return true; // loading a chapter's save (also a joiner loading the host's)
+            }
             if (s.IsClient)
             {
                 Plugin.Log.LogWarning($"Not starting chapter {chapter} here: the host's game starts chapters");
@@ -293,7 +350,10 @@ namespace DarkwoodMP.World
         internal static void HostEnding(EndKind kind)
         {
             var s = S;
-            if (s == null || !s.IsHost || _endSent) return;
+            if (s == null || !s.IsHost || _endSent)
+            {
+                return;
+            }
             _endSent = true;
             _ran.Add(KeyOf(StoryKind.Epilogue, 0));
             if (kind == EndKind.Epilogue) { EpilogueSync.HostStarts(); return; }
@@ -304,7 +364,13 @@ namespace DarkwoodMP.World
             WorldShare.Instance?.StopServer(w);
         }
 
-        internal static void OnPrepareDream(string preset) { if (preset == EpilogueDream) HostEnding(EndKind.Epilogue); }
+        internal static void OnPrepareDream(string preset)
+        {
+            if (preset == EpilogueDream)
+            {
+                HostEnding(EndKind.Epilogue);
+            }
+        }
         internal static void OnShowEndGame() => HostEnding(EndKind.EndScreen);
 
         // ---- joiner ------------------------------------------------------------------------------------
@@ -314,11 +380,17 @@ namespace DarkwoodMP.World
         private static void OnChapterStart(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || s.IsHost || from != s.HostId) return;
+            if (s == null || s.IsHost || from != s.HostId)
+            {
+                return;
+            }
             int chapter = r.R.ReadInt32();
             Characters.Instance?.SaveNow(); // before the host's game saves and moves on
             Plugin.Notice($"The host is starting chapter {chapter}. You'll follow once it's ready.");
-            if (!WorldShare.InWorld) return;
+            if (!WorldShare.InWorld)
+            {
+                return;
+            }
             try
             {
                 Singleton<UI>.Instance.tweenBlackScreen(Color.black, 1f);
@@ -328,7 +400,10 @@ namespace DarkwoodMP.World
             catch (Exception e) { Plugin.Log.LogWarning($"Couldn't fade out for the chapter: {e.Message}"); }
             bool waiting = _chapterWaitUntil > Time.realtimeSinceStartup;
             _chapterWaitUntil = Time.realtimeSinceStartup + 300f;
-            if (!waiting) Plugin.Instance.StartCoroutine(ChapterWait(SceneManager.GetActiveScene().handle));
+            if (!waiting)
+            {
+                Plugin.Instance.StartCoroutine(ChapterWait(SceneManager.GetActiveScene().handle));
+            }
         }
 
         /// <summary>If the host's WorldReload never comes (its chapter failed), let our player go on after a while.</summary>
@@ -347,11 +422,17 @@ namespace DarkwoodMP.World
         private static void OnGameEnd(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || s.IsHost || from != s.HostId) return;
+            if (s == null || s.IsHost || from != s.HostId)
+            {
+                return;
+            }
             var kind = (EndKind)r.R.ReadByte();
             byte phase = r.R.ReadByte();
             Plugin.Log.LogInfo($"The host reached the game's end ({kind}, phase {phase})");
-            if (EpilogueSync.OnGameEnd((byte)kind, phase)) return;
+            if (EpilogueSync.OnGameEnd((byte)kind, phase))
+            {
+                return;
+            }
             SoloEnding(kind);
         }
 
@@ -361,7 +442,10 @@ namespace DarkwoodMP.World
             var s = S;
             s?.Backend?.Leave();
             WorldShare.Instance?.SetLoadStatus("The host reached the end of the game.");
-            if (!WorldShare.InWorld || !SaveRedirect.Active) return;
+            if (!WorldShare.InWorld || !SaveRedirect.Active)
+            {
+                return;
+            }
             Plugin.Notice("The host has reached the end of the game");
             Plugin.Instance.StartCoroutine(ShowEnding(kind));
         }
@@ -381,7 +465,10 @@ namespace DarkwoodMP.World
                 if (started)
                 {
                     float until = Time.realtimeSinceStartup + 45f;
-                    while (Time.realtimeSinceStartup < until && !(Player.Instance != null && Player.Instance.inEpilogue)) yield return null;
+                    while (Time.realtimeSinceStartup < until && !(Player.Instance != null && Player.Instance.inEpilogue))
+                    {
+                        yield return null;
+                    }
                 }
                 if (started && Player.Instance != null && Player.Instance.inEpilogue)
                 {
@@ -396,7 +483,10 @@ namespace DarkwoodMP.World
                     yield return EndScreen();
                 }
             }
-            else yield return EndScreen();
+            else
+            {
+                yield return EndScreen();
+            }
             ToCredits();
             yield return ToMenuAfterEnding();
         }
@@ -406,8 +496,14 @@ namespace DarkwoodMP.World
         {
             var dreams = Singleton<Dreams>.Instance;
             var p = Player.Instance;
-            if (dreams == null || p == null || dreams.dreaming) return false;
-            if (Singleton<OutsideLocations>.Instance != null && Singleton<OutsideLocations>.Instance.playerInOutsideLocation) return false;
+            if (dreams == null || p == null || dreams.dreaming)
+            {
+                return false;
+            }
+            if (Singleton<OutsideLocations>.Instance != null && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
+            {
+                return false;
+            }
             Core.forbidInputs = true;
             p.halt();
             dreams.wantToDream = true;
@@ -464,7 +560,10 @@ namespace DarkwoodMP.World
                 {
                     credits = true;
                     Plugin.Log.LogInfo("The credits are rolling");
-                    if (TestQuick) Plugin.Instance.StartCoroutine(SkipCredits());
+                    if (TestQuick)
+                    {
+                        Plugin.Instance.StartCoroutine(SkipCredits());
+                    }
                 }
                 yield return null;
             }
@@ -476,7 +575,10 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSecondsRealtime(3f);
             var c = UnityEngine.Object.FindObjectOfType<Credits>();
-            if (c != null) AccessTools.Method(typeof(Credits), "exitToMainMenu").Invoke(c, null);
+            if (c != null)
+            {
+                AccessTools.Method(typeof(Credits), "exitToMainMenu").Invoke(c, null);
+            }
         }
     }
 
