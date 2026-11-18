@@ -15,6 +15,7 @@
 #   map                the full two-game scenario (tools/tests/map_scenario.py: every module in one world)
 #   map:NAME           one map battery: tools/tests/map_scenario_NAME.py alone, from a fresh test world and a fresh join
 #   maps               every map battery, one after another (each in its own fresh world)
+# A run starts with the unit tests (tests/DarkwoodMP.Core.Tests): if one fails the game isn't started.
 # A list is run once each, in the order given. A client test whose input is missing from $WORK gets it made first:
 # capture (world.pkl) before any client test, host-world (world_rec.pkl) before client-world.
 #
@@ -647,6 +648,15 @@ FAILRE='(^|[^A-Za-z])FAIL([^A-Za-z]|$)|FAILED|DIFFER|timed out|EXCEPTIONS|Traceb
 declare -a R_NAME R_STATUS R_SECS R_REASON R_LOG
 TOTAL=${#ITEMS[@]}; N=0; START=$(date +%s)
 [ $TOTAL -gt 0 ] || { echo "nothing to run (tools/run-test.sh --list)"; exit 1; }
+# Unit tests first: a failure here stops the run before the game starts. A subshell, so the game's environment
+# stays as it was.
+unit_tests() (
+  export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}" PATH="$HOME/.dotnet:$PATH"
+  dotnet test "$ROOT/tests/DarkwoodMP.Core.Tests" -c Release --nologo -v:q \
+    --blame-hang-timeout 60s --blame-hang-dump-type none
+)
+echo "=== unit tests"
+unit_tests || { echo "FAIL: the unit tests failed, so the game wasn't started"; exit 1; }
 # The games are started with setsid, so they outlive this script if it is killed (a time-out, a stopped task),
 # and a trap doesn't help: bash runs it only after the running test ends, and never on SIGKILL. A watchdog in its
 # own session notes this run's games (host and clients 1-4) every second while the script runs; once the script
