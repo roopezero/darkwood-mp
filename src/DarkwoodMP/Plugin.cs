@@ -178,7 +178,8 @@ namespace DarkwoodMP
             {
                 Logger.LogFatal($"DarkwoodMP can't start: {problem}. "
                     + "Extract the whole zip over the game folder again.");
-                // Update and OnGUI name core types and would throw each frame.
+                // Update and OnGUI use what the rest of Awake sets up,
+                // and would throw each frame.
                 enabled = false;
                 return;
             }
