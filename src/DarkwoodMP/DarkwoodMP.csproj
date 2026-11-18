@@ -6,6 +6,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/DarkwoodMP</PathMap>
     <!-- Copy the built DLLs into the game's plugin folder after build -->
     <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
     <!-- The client game folders for the map tests (tools/setup-client-game.sh makes them: client-game, client-game-2..):
