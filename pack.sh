@@ -24,7 +24,8 @@ for plat in win_x64 win_x86 linux_x64; do
   stage="$(mktemp -d "$TMPROOT/darkwoodmp-pack.XXXXXX")"
   unzip -q "$zip" -d "$stage"
   mkdir -p "$stage/BepInEx/plugins/DarkwoodMP"
-  cp "$DLL" "$stage/BepInEx/plugins/DarkwoodMP/"
+  cp "$DLL" "$(dirname "$DLL")/DarkwoodMP.Core.dll" \
+    "$stage/BepInEx/plugins/DarkwoodMP/"
   if [ "$plat" = linux_x64 ]; then
     sed -i 's/^executable_name=""/executable_name="Darkwood.x86_64"/' "$stage/run_bepinex.sh"
     chmod +x "$stage/run_bepinex.sh"
@@ -41,6 +42,16 @@ for plat in win_x64 win_x86 linux_x64; do
   done
   out="$ROOT/dist/DarkwoodMP-${plat%_x64}.zip"
   rm -f "$out"; (cd "$stage" && zip -qr "$out" .)
+  # Read the list first: pack.sh runs with pipefail, and `unzip -l | grep -q`
+  # fails at random when grep stops reading early.
+  files="$(unzip -Z1 "$out")"
+  for f in DarkwoodMP.dll DarkwoodMP.Core.dll; do
+    grep -qxF "BepInEx/plugins/DarkwoodMP/$f" <<<"$files" \
+      || { echo "$f is missing from $out"; exit 1; }
+  done
+  if grep -q MapTests <<<"$files"; then
+    echo "the map tests are in $out"; exit 1
+  fi
   safe_rm "$TMPROOT" "$stage"; stage=""
   echo "Built $out"
 done
