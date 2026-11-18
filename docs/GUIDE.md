@@ -153,7 +153,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 ## Troubleshooting
 
 - **Linux: the game doesn't start from Steam.** Check the launch options say `./darkwood_mp.sh %command%`.
-- **The main menu has no Join Game (it shows the game's own entries).** Look in `BepInEx/LogOutput.log` for `DarkwoodMP ... loaded`. If it says some patches were skipped, the game build differs from the one the mod was made for (a game update, or the GOG build); what those patches do won't be shared.
+- **The main menu has no Join Game (it shows the game's own entries).** Look in `BepInEx/LogOutput.log` for `DarkwoodMP ... loaded`. If it says some patches were skipped, the game build differs from the one the mod was made for (a game update, or the GOG build); what those patches do won't be shared. If the log says "DarkwoodMP can't start", `DarkwoodMP.Core.dll` is missing or from another version: extract the whole zip over the game folder again.
 - **"No answer" when joining by address.** The host's router must forward the port (TCP and UDP), and its firewall must allow it. On a LAN, check the host's firewall first. Over the internet, read what the host's Multiplayer window says about the router (see *Opening the port on the router*).
 - **Refused: "different DarkwoodMP version".** Everyone needs a mod version with the same protocol (see the release notes).
 - **A Steam join stops partway through the world download.** Fixed in 0.11.1: only the host needs it.
