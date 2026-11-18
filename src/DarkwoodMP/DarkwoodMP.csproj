@@ -3,48 +3,25 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>DarkwoodMP</AssemblyName>
     <RootNamespace>DarkwoodMP</RootNamespace>
-    <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>disable</Nullable>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <!-- Path to the Darkwood install. Override with: dotnet build -p:GameDir=... -->
-    <GameDir Condition="'$(GameDir)' == '' And '$(OS)' == 'Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\Darkwood</GameDir>
-    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Darkwood</GameDir>
-    <Managed>$(GameDir)/Darkwood_Data/Managed</Managed>
-    <BepCore>$(GameDir)/BepInEx/core</BepCore>
-    <!-- Copy the built DLL into the game's plugin folder after build -->
+    <!-- Copy the built DLLs into the game's plugin folder after build -->
     <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
     <!-- The client game folders for the map tests (tools/setup-client-game.sh makes them: client-game, client-game-2..):
          every client-game* folder in here that has a BepInEx/plugins folder is deployed to. -->
     <ClientGamesRoot Condition="'$(ClientGamesRoot)' == ''">$(HOME)/.cache/darkwood-mp</ClientGamesRoot>
   </PropertyGroup>
 
+  <Import Project="../GameReferences.props" />
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <ProjectReference Include="../DarkwoodMP.Core/DarkwoodMP.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- The mod's item and map descriptions (tools/gen_tooltips.py writes it; World/Tooltips.cs reads it). -->
     <EmbeddedResource Include="World/Tooltips.tsv" LogicalName="DarkwoodMP.Tooltips.tsv" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="BepInEx"><HintPath>$(BepCore)/BepInEx.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="0Harmony"><HintPath>$(BepCore)/0Harmony.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Assembly-CSharp-firstpass"><HintPath>$(Managed)/Assembly-CSharp-firstpass.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="com.rlabrecque.steamworks.net"><HintPath>$(Managed)/com.rlabrecque.steamworks.net.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Rewired_Core"><HintPath>$(Managed)/Rewired_Core.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="Newtonsoft.Json"><HintPath>$(Managed)/Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine"><HintPath>$(Managed)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)/UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(Managed)/UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(Managed)/UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Managed)/UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(Managed)/UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Managed)/UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
   <!--
@@ -191,15 +168,32 @@ public class CheckSteamworksRefs : Task
     <CheckSteamworksRefs Assembly="$(TargetPath)" CecilPath="$(BepCore)/Mono.Cecil.dll" SearchDirs="$(Managed);$(BepCore);$(TargetDir)" />
   </Target>
 
+  <!-- PluginInfo.Version must be a constant, so it's generated from <Version>. -->
+  <Target Name="WriteModVersion" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_VersionFile>$(IntermediateOutputPath)ModVersion.g.cs</_VersionFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_VersionFile)" Overwrite="true"
+      WriteOnlyWhenDifferent="true"
+      Lines="namespace DarkwoodMP { internal static class ModVersion { public const string Text = &quot;$(Version)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(_VersionFile)" />
+      <FileWrites Include="$(_VersionFile)" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)/BepInEx')">
+    <ItemGroup>
+      <_ModDll Include="$(TargetPath);$(TargetDir)DarkwoodMP.Core.dll" />
+    </ItemGroup>
     <MakeDir Directories="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
-    <Message Importance="high" Text="Deployed $(TargetFileName) to $(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Copy SourceFiles="@(_ModDll)" DestinationFolder="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Message Importance="high" Text="Deployed @(_ModDll->'%(Filename)%(Extension)') to $(GameDir)/BepInEx/plugins/DarkwoodMP" />
     <ItemGroup>
       <_ClientGame Condition="Exists('$(ClientGamesRoot)')" Include="$([System.IO.Directory]::GetDirectories('$(ClientGamesRoot)', 'client-game*'))" />
       <_ClientPlugins Include="@(_ClientGame->'%(FullPath)/BepInEx/plugins/DarkwoodMP')" Condition="Exists('%(FullPath)/BepInEx/plugins')" />
     </ItemGroup>
-    <Copy Condition="'@(_ClientPlugins)' != ''" SourceFiles="$(TargetPath)" DestinationFolder="%(_ClientPlugins.Identity)" />
-    <Message Condition="'@(_ClientPlugins)' != ''" Importance="high" Text="Deployed $(TargetFileName) to %(_ClientPlugins.Identity)" />
+    <Copy Condition="'@(_ClientPlugins)' != ''" SourceFiles="@(_ModDll)" DestinationFolder="%(_ClientPlugins.Identity)" />
+    <Message Condition="'@(_ClientPlugins)' != ''" Importance="high" Text="Deployed @(_ModDll->'%(Filename)%(Extension)') to %(_ClientPlugins.Identity)" />
   </Target>
 </Project>

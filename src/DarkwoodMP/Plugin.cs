@@ -18,7 +18,7 @@ namespace DarkwoodMP
     {
         public const string Guid = "com.darkwoodmp.coop";
         public const string Name = "DarkwoodMP";
-        public const string Version = "0.28.0";
+        public const string Version = ModVersion.Text;
     }
 
     public sealed class ModConfig
