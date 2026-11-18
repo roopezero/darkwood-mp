@@ -5,8 +5,12 @@ How the code moves from what it is today to the layout in
 going; this one says in what order, how each step is done, and how each step
 is checked.
 
-**Status:** not started. Phase 0 is next. Tick the boxes below as steps are
-merged, and delete this file when Phase 8 is finished.
+**Status:** Phase 0 is done. Phase 1 is done except for its in-game gate, which
+moves to the final run, and the hand tests of a test build on Windows and on
+GOG, which are still to do. The formatting pass over all the code is next, then
+Phase 2. See [Changes made while carrying out the
+plan](#changes-made-while-carrying-out-the-plan). Tick the boxes below as steps
+are merged, and delete this file when Phase 8 is finished.
 
 ## Where the code is today
 
@@ -139,48 +143,55 @@ unit test, its folder builds with style errors on, and its gate passes.
 
 ## Phase 0: baseline
 
-- [ ] Run `tools/run-test.sh full` on the current code and keep the results,
+- [x] Run `tools/run-test.sh full` on the current code and keep the results,
       so an old failure isn't blamed on the migration.
-- [ ] Record a `--dwmp-profile-mod` run, to compare the per-frame cost later.
-- [ ] Update `ARCHITECTURE.md`:
+- [x] Record a `--dwmp-profile-mod` run, to compare the per-frame cost later.
+- [x] Update `ARCHITECTURE.md`:
   - the state lifetimes and refusal details, as decided;
   - the core also takes `PortMapper`, `ServerInfo`, `ServerBrowser` and
     `PlayerKey`, because `TcpBackend` and the browser need them and they only
     touch Unity through the log;
   - how the map tests are loaded (Phase 2);
-  - style errors are switched on folder by folder in the plugin.
+  - how style errors are switched on in the plugin after the formatting pass.
 
-**Gate:** the baseline results are saved.
+**Gate:** the baseline results are saved. They are listed under
+[Baseline](#baseline).
 
 ## Phase 1: projects and build
 
 Nothing moves yet. The aim is to prove that a second DLL loads in the game and
 ships in the zips.
 
-- [ ] Create `src/DarkwoodMP.Core` (netstandard2.0) with `Vec2`, `Vec3`,
+- [x] Create `src/DarkwoodMP.Core` (netstandard2.0) with `Vec2`, `Vec3`,
       `Seconds`, `Verdict`, `Refusal`, `IClock` and `ILog`.
-- [ ] Add the `IsExternalInit` definition netstandard2.0 lacks, which the
+- [x] Add the `IsExternalInit` definition netstandard2.0 lacks, which the
       `init` properties in facts structs need.
-- [ ] Test that `Vec2` takes Unity's `x` and `z`: the game's ground plane is
+- [x] Test that `Vec2` takes Unity's `x` and `z`: the game's ground plane is
       x-z, not x-y.
-- [ ] Create `tests/DarkwoodMP.Core.Tests` (net8.0, xUnit, Shouldly).
-- [ ] Create `src/DarkwoodMP.Analyzers` and `.editorconfig`, with the Roslyn
+- [x] Create `tests/DarkwoodMP.Core.Tests` (net8.0, xUnit, Shouldly).
+- [x] Create `src/DarkwoodMP.Analyzers` and `.editorconfig`, with the Roslyn
       package pinned to a version the installed SDK can load.
-- [ ] Make the plugin reference the core and call one core method at startup.
-- [ ] Deploy `DarkwoodMP.Core.dll` to the game folder and every client game
+- [x] Make the plugin reference the core and call one core method at startup.
+- [x] Deploy `DarkwoodMP.Core.dll` to the game folder and every client game
       folder. The `DeployPlugin` target copies only the plugin today.
-- [ ] Add it to `pack.sh`, which also copies only the plugin today. Without
+- [x] Add it to `pack.sh`, which also copies only the plugin today. Without
       this, the players' zips wouldn't load.
-- [ ] Make `tools/run-test.sh` run the unit tests first and stop on a failure.
-- [ ] Change the release check from "no warnings" to "no warnings except style
+- [x] Make `tools/run-test.sh` run the unit tests first and stop on a failure.
+- [x] Change the release check from "no warnings" to "no warnings except style
       warnings in folders that haven't moved yet". The plugin will show
       thousands of those until Phase 8.
-- [ ] Update `docs/DEVELOPMENT.md`, and the `darkwood-release`,
+- [x] Update `docs/DEVELOPMENT.md`, and the `darkwood-release`,
       `darkwood-review`, `darkwood-sync-feature` and `darkwood-test` skills.
+- [ ] By hand, still to do: a test build starts on Windows.
+- [ ] By hand, still to do: a test build starts on GOG.
 
 **Gate:** `dotnet test`; `tools/run-test.sh handshake host-world map:core`;
 all three zips contain both DLLs; the log shows `All N patches applied`; a test
 build starts on Windows and on GOG.
+
+**Where the gate stands:** the build and `dotnet test` pass. The in-game tests
+and building the real zips move to the final run, and the two hand tests above
+are still to do.
 
 ## Phase 2: map tests into their own project
 
@@ -343,3 +354,40 @@ it with the `darkwood-release` skill.
 | Rules differ from the old code in a small way | The host refuses what it used to allow | Rules are copied with their limits and texts, and the Python peers stay unchanged |
 | The migration runs alongside new features | Merge conflicts in large files | Small branches, and the largest files are split early in their step |
 | Allocation in hot paths | Lower frame rate | Facts and verdicts are structs, and `--dwmp-profile-mod` is compared with the baseline |
+
+## Changes made while carrying out the plan
+
+The plan above is kept as it was decided. Where it differs from this section,
+this section holds.
+
+### In-game tests run once, at the end
+
+The maintainer decided that the in-game tests are not run after each step.
+They run once, when the whole refactor is finished, and every in-game gate in
+this plan moves to that final run. Until then a step is checked by the build,
+the unit tests, proofs for mechanical changes and reading the diff against the
+old code. The hand tests on Windows and GOG (Phases 1 and 3) and the real
+co-op session (Phase 8) are still to do.
+
+### Baseline
+
+Measured on commit `3e9c79c`, the last one before the migration. A later run is
+compared with these results, so a failure that was already here isn't blamed
+on the migration.
+
+- `tools/run-test.sh full`: 27 passes, the `steam` test skipped (no Steam
+  client running), and the full `map` test failing 24 steps.
+- Map batteries: 15 of the 39 were run before the run was stopped. 12 passed,
+  and `far`, `gaps` and `issues` failed.
+- A `--dwmp-profile-mod` run recorded the per-frame cost.
+
+### What differs from the plan
+
+| The plan says | What is done instead | Why |
+|---|---|---|
+| Recipe step 7 formats each folder as it moves | One formatting pass over all the code, after Phase 1 and before Phase 2 | Later moves carry code that is already formatted, and the proof is simpler |
+| Phase 2 splits five map test files over 600 lines | Fifteen files | Formatting makes them longer |
+| Phase 8 turns style errors on for the plugin | They go on as soon as the formatting pass leaves no finding | Nothing is left to wait for |
+| Process state goes on the `Plugin` instance | On `ModHost`, which `Plugin` owns | `Plugin` must stay loadable when the core is missing |
+| The risk "Players update only `DarkwoodMP.dll`" is covered by the zips and the install steps | The startup check (`CoreCheck`) also reports it in the log | It is handled in code |
+| Phase 1's gate | Also starts the game with the core DLL removed and with an older one: both must log the fatal line and leave the game playable | Only the real engine can prove the check. These two runs are part of the final run |
