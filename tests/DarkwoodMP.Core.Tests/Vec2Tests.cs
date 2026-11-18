@@ -29,6 +29,28 @@ namespace DarkwoodMP.Tests
             }
 
             [Fact]
+            public void Matches_a_boxed_copy()
+            {
+                var point = new Vec2(1f, 2f);
+                object boxed = new Vec2(1f, 2f);
+
+                var same = point.Equals(boxed);
+
+                same.ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Tells_apart_a_boxed_different_point()
+            {
+                var point = new Vec2(1f, 2f);
+                object boxed = new Vec2(9f, 2f);
+
+                var same = point.Equals(boxed);
+
+                same.ShouldBeFalse();
+            }
+
+            [Fact]
             public void Tells_apart_a_different_x()
             {
                 var point = new Vec2(1f, 2f);
@@ -59,6 +81,19 @@ namespace DarkwoodMP.Tests
                 var hash = point.GetHashCode();
 
                 hash.ShouldBe(new Vec2(1f, 2f).GetHashCode());
+            }
+        }
+
+        public class AsText
+        {
+            [Fact]
+            public void Shows_x_then_z()
+            {
+                var point = new Vec2(1f, 2f);
+
+                var text = point.ToString();
+
+                text.ShouldBe("(1, 2)");
             }
         }
     }

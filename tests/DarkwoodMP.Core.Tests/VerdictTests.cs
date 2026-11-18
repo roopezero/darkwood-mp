@@ -92,6 +92,28 @@ namespace DarkwoodMP.Tests
             }
 
             [Fact]
+            public void Matches_a_boxed_copy()
+            {
+                var verdict = Verdict.Refuse(Refusal.NoKey, "Bunker");
+                object boxed = Verdict.Refuse(Refusal.NoKey, "Bunker");
+
+                var same = verdict.Equals(boxed);
+
+                same.ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Tells_apart_a_boxed_different_verdict()
+            {
+                var verdict = Verdict.Refuse(Refusal.NoKey, "Bunker");
+                object boxed = Verdict.Refuse(Refusal.NotHere);
+
+                var same = verdict.Equals(boxed);
+
+                same.ShouldBeFalse();
+            }
+
+            [Fact]
             public void Tells_apart_a_different_reason()
             {
                 var verdict = Verdict.Refuse(Refusal.NotHere);
@@ -110,6 +132,21 @@ namespace DarkwoodMP.Tests
                     Verdict.Refuse(Refusal.NoKey, "Cellar"));
 
                 same.ShouldBeFalse();
+            }
+        }
+
+        public class HashCode
+        {
+            [Fact]
+            public void Gives_equal_verdicts_the_same_hash()
+            {
+                // Two separate strings with the same text.
+                var first = Verdict.Refuse(Refusal.NoKey, new string('x', 3));
+                var second = Verdict.Refuse(Refusal.NoKey, new string('x', 3));
+
+                var hash = first.GetHashCode();
+
+                hash.ShouldBe(second.GetHashCode());
             }
         }
 
