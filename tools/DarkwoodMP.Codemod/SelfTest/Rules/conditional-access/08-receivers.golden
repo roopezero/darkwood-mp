@@ -1,6 +1,7 @@
 A receiver that isn't a local, a parameter or this is read once, into a
-temporary: a member of another type, a call and a ref parameter or ref
-local, which another thread can change between two reads. The comment
+temporary: a member of another type, a call, a field of this, also when
+written this._box, and a ref parameter or ref local, which another thread
+can change between two reads. The comment
 behind a rewritten statement goes on a line of its own above the new code,
 at the statement's indentation, also when the line above ends in a comment
 of its own.
@@ -42,6 +43,11 @@ namespace N
             b?.Hit(2);
             ref Box held = ref _box;
             held?.Hit(3);
+        }
+
+        public void Own()
+        {
+            this._box?.Hit(6);
         }
     }
 }
@@ -103,6 +109,15 @@ namespace N
             if (held2 != null)
             {
                 held2.Hit(3);
+            }
+        }
+
+        public void Own()
+        {
+            Box box = this._box;
+            if (box != null)
+            {
+                box.Hit(6);
             }
         }
     }

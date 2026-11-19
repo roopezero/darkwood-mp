@@ -118,6 +118,61 @@ public static object Run(bool has, int n)
     object boxed = a?.Count;
     return (name, count, wide, boxed is int, boxed is long);
 }
+=== a declaration of two variables keeps the second one's initializer
+public class Box
+{
+    public int N;
+
+    public int Count => Log("count", N);
+}
+
+static int Bump(int k)
+{
+    return Log("bump", k);
+}
+
+public static object Run(bool has, int n)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = n };
+    }
+    int? count = a?.Count, extra = Bump(n);
+    return count;
+}
+=== a using declaration still disposes what the ?. opened
+public class Res : System.IDisposable
+{
+    public int N;
+
+    public void Dispose()
+    {
+        Log("dispose", N);
+    }
+}
+
+public class Box
+{
+    public int N;
+
+    public Res Open()
+    {
+        return new Res { N = Log("open", N) };
+    }
+}
+
+public static object Run(bool has, int n)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = n };
+    }
+    using Res r = a?.Open();
+    Log("body", n);
+    return n;
+}
 === a chain tests each value once, in order
 public class Box
 {
@@ -805,6 +860,17 @@ public struct Meter
         return a.HasValue && a.Value > b.V;
     }
 
+    public static bool operator ==(Meter? a, Meter? b)
+    {
+        Log("same", a.HasValue);
+        return a.HasValue && b.HasValue && a.Value.V == b.Value.V;
+    }
+
+    public static bool operator !=(Meter? a, Meter? b)
+    {
+        return !(a == b);
+    }
+
     public override bool Equals(object o)
     {
         return false;
@@ -819,6 +885,7 @@ public struct Meter
 public class Box
 {
     public int Count;
+    public Meter? Gauge;
 }
 
 public static object Run(bool has, int v)
@@ -826,14 +893,70 @@ public static object Run(bool has, int v)
     Box a = null;
     if (has)
     {
-        a = new Box { Count = v };
+        a = new Box { Count = v, Gauge = new Meter { V = v } };
     }
     var m = new Meter { V = 3 };
     bool same = a?.Count == m;
     bool apart = a?.Count != m;
     bool less = a?.Count < m;
     bool plain = a?.Count == 3;
-    return (same, apart, less, plain);
+    bool none = a?.Gauge == null;
+    return (same, apart, less, plain, none);
+}
+=== a compared this keeps its translation under the reference ==
+public class Owner
+{
+    public (bool, bool) Mine(Holder h)
+    {
+        bool mine = h?.It == this;
+        bool other = h?.It != this;
+        return (mine, other);
+    }
+}
+
+public class Item : Owner
+{
+    public static bool operator ==(Item a, Item b)
+    {
+        Log("eq", 0);
+        return true;
+    }
+
+    public static bool operator !=(Item a, Item b)
+    {
+        Log("ne", 0);
+        return false;
+    }
+
+    public override bool Equals(object o)
+    {
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return 0;
+    }
+}
+
+public class Holder
+{
+    public Item It;
+}
+
+public static object Run(bool has, bool mine)
+{
+    var item = new Item();
+    Holder h = null;
+    if (has)
+    {
+        h = new Holder();
+        if (mine)
+        {
+            h.It = item;
+        }
+    }
+    return item.Mine(h);
 }
 === a Nullable tuple's == compares as before for a null receiver
 public class Box

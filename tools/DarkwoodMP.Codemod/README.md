@@ -363,7 +363,9 @@ each inner `?.` of a chain tests a temporary of the step in front of it:
   null;
 - a declaration: `T n = null; if (x != null) { n = x.F; }`, `var` spelled
   out with the natural type (`int?` for `x?.Count`), when the value goes
-  into `T` by an identity or a reference conversion;
+  into `T` by an identity or a reference conversion, for a declaration of
+  one variable that isn't a `using` one (others take the hoist below, so
+  a second initializer still runs and the resource is still disposed);
 - an assignment of one `?.` to a target without an element, a constant or
   a call, whose parts may run after the receiver (hazard 2): `if (x !=
   null) { t = x.F; } else { t = null; }`, so a field or a property is
@@ -402,16 +404,22 @@ runs on either side; and when the operator is built in, lifted, or the
 a null `x` too: Unity's `bool` operator makes `x?.Go == false` true for a
 null `x`. A user-defined operator that isn't lifted gets the null itself:
 with an `==(int? a, Meter b)` of Meter's, `x?.Count == m` is what that
-operator says for a null `x`, not false. Such comparisons move into a
-temporary instead.
-"Not null" means a value type that isn't a Nullable, or a constant that
-isn't null. A member of a type with an `==` of its own goes to the hoist,
-unless that `==` is string's, .NET's or a Unity object's, which all give
-the original's result for a null `x`; so do `== null` on a member of a
-value type and a chain. A receiver that isn't a local goes into a
-temporary in front of the statement first. These edits replace an
-expression, so `RulePlan.ProposeExpression` checks their texts as
-expressions.
+operator says for a null `x`, not false, and so is `x?.M == null` with an
+`==(Meter? a, Meter? b)`. Such comparisons move into a temporary instead.
+The same check sends to the hoist a member whose type's own `==` the
+comparison calls (a reference type's operator is never lifted), unless
+that `==` is .NET's or a Unity object's. Where the reference `==` is
+called instead, as for `h?.It == this` with an `It` of a type that
+derives from this one's, both forms compare references and the
+translation holds.
+"Not null" means a value type that isn't a Nullable, a constant that
+isn't null, `typeof`, or a `this` that isn't a Unity object: Unity's `==`
+counts a destroyed `this` as null, so `h?.Go == this` is true for a null
+`h` and a destroyed `this`, and it moves into a temporary. `== null` on a
+member of a value type that isn't a Nullable and on a chain go to the
+hoist too. A receiver that isn't a local goes into a temporary in front
+of the statement first. These edits replace an expression, so
+`RulePlan.ProposeExpression` checks their texts as expressions.
 
 A chain that tests a Unity object anywhere is left whole for stage 7
 (`unity-null`), not queued; a Unity member in a comparison keeps Unity's
@@ -527,27 +535,33 @@ The conditional-access cases run every form over null and non-null
 receivers: arguments that run only for a receiver that isn't null, a
 receiver property that returns null on its second read (a rewrite that
 reads it twice throws), events and delegates, the natural type of a
-declaration, chains, a setter that logs each set, returns, expression
+declaration, a declaration of two variables and a using declaration,
+chains, a setter that logs each set, returns, expression
 bodies and lambdas, every fixed comparison and its parentheses, a compared
 value with effects or a null (which must still run and compare), a
 compared value that is a property, a loop condition, element reads and
 .NET's `==`, a user-defined conversion of the `?.`'s value or of the
 compared value, an operator of the compared value's own that takes a
-Nullable, receivers that are another type's property or a call, a value
+Nullable and one that a member compared with null calls, a compared
+`this` under the reference `==`, receivers that are another type's
+property or a call, a value
 read or a call earlier in the statement, an assignment of a chain to a
 target that wasn't null, an assignment whose target runs a getter and one
 whose receiver changes a part of its target. Reading the receiver twice (a
 call's or another type's property's too), writing `x?.F != v` as `x != null
 && x.F != v`, translating a compared value with effects (a property too) or
 a comparison that converts by code of its own or whose operator gets the
-null itself, moving a `?.` with effects past an earlier read of a value it
-changes or one without effects past an earlier call, the assignment form
-for a chain and running the receiver before the target's getter or a part
-of the target it changes each fail a case. The golden cases pin what a
-single thread can't show, and the texts: a ref parameter or ref local goes
-into a temporary; a statement in an interpolation hole, with an await or in
-an else-if condition goes to the queue; a compared field or property moves
-into a temporary; and the queue names the call in an earlier operand.
+null itself (with `== null` too), moving a `?.` with effects past an
+earlier read of a value it changes or one without effects past an earlier
+call, the assignment form for a chain, running the receiver before the
+target's getter or a part of the target it changes, and the declaration
+form for a declaration of two variables or a using declaration each fail
+a case. The golden cases pin what a single thread can't show, and the
+texts: a ref parameter or ref local and a field of this, also written
+`this._box`, go into a temporary; a statement in an interpolation hole,
+with an await or in an else-if condition goes to the queue; a compared
+field or property moves into a temporary, and so does a compared `this`
+of a Unity object; and the queue names the call in an earlier operand.
 
 ## Golden cases
 

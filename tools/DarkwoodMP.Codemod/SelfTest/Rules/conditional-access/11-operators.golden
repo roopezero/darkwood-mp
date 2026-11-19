@@ -4,7 +4,12 @@ receiver, and Gauge's "==(int?, Gauge)", "!=" and "<" say what that gives,
 not the fixed translation. A lifted operator, which a null never reaches,
 the == of string, .NET and a Unity object and the == of a Nullable tuple,
 which is false for a null before any element is compared, keep their
-translations.
+translations. Meter's "==(Meter?, Meter?)" gets the null too, so "h?.M ==
+null" moves into a temporary. "h?.It == this" calls the reference ==,
+since an Owner doesn't convert to an Item, so Item's own == doesn't count
+and the translation holds; a this that is a Unity object isn't "not null",
+because Unity's == counts a destroyed one as null, so "h?.Go == this"
+moves into a temporary.
 === input
 using System;
 
@@ -102,6 +107,64 @@ namespace N
         }
     }
 
+    public struct Meter
+    {
+        public int V;
+
+        public static bool operator ==(Meter? a, Meter? b)
+        {
+            return false;
+        }
+
+        public static bool operator !=(Meter? a, Meter? b)
+        {
+            return true;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class Owner
+    {
+        public bool Mine(Holder h)
+        {
+            bool mine = h?.It == this;
+            bool other = h?.It != this;
+            return mine && other;
+        }
+    }
+
+    public class Item : Owner
+    {
+        public static bool operator ==(Item a, Item b)
+        {
+            return true;
+        }
+
+        public static bool operator !=(Item a, Item b)
+        {
+            return false;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
     public class Holder
     {
         public int Count;
@@ -110,6 +173,18 @@ namespace N
         public Type Kind;
         public GameObject Go;
         public (int, int) Pair;
+        public Meter? M;
+        public Item It;
+    }
+
+    public class Mono : GameObject
+    {
+        public bool Mine(Holder h)
+        {
+            bool mine = h?.Go == this;
+            bool other = h?.Go != this;
+            return mine && other;
+        }
     }
 
     public class C
@@ -126,6 +201,12 @@ namespace N
             bool pair = h?.Pair == t;
             return same && apart && less && gap && label && kind && gone
                 && pair;
+        }
+
+        public bool None(Holder h)
+        {
+            bool none = h?.M == null;
+            return none;
         }
     }
 }
@@ -226,6 +307,64 @@ namespace N
         }
     }
 
+    public struct Meter
+    {
+        public int V;
+
+        public static bool operator ==(Meter? a, Meter? b)
+        {
+            return false;
+        }
+
+        public static bool operator !=(Meter? a, Meter? b)
+        {
+            return true;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class Owner
+    {
+        public bool Mine(Holder h)
+        {
+            bool mine = h != null && h.It == this;
+            bool other = h == null || h.It != this;
+            return mine && other;
+        }
+    }
+
+    public class Item : Owner
+    {
+        public static bool operator ==(Item a, Item b)
+        {
+            return true;
+        }
+
+        public static bool operator !=(Item a, Item b)
+        {
+            return false;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
     public class Holder
     {
         public int Count;
@@ -234,6 +373,28 @@ namespace N
         public Type Kind;
         public GameObject Go;
         public (int, int) Pair;
+        public Meter? M;
+        public Item It;
+    }
+
+    public class Mono : GameObject
+    {
+        public bool Mine(Holder h)
+        {
+            GameObject go = null;
+            if (h != null)
+            {
+                go = h.Go;
+            }
+            bool mine = go == this;
+            GameObject go2 = null;
+            if (h != null)
+            {
+                go2 = h.Go;
+            }
+            bool other = go2 != this;
+            return mine && other;
+        }
     }
 
     public class C
@@ -265,6 +426,17 @@ namespace N
             bool pair = h != null && h.Pair == t;
             return same && apart && less && gap && label && kind && gone
                 && pair;
+        }
+
+        public bool None(Holder h)
+        {
+            Meter? m = null;
+            if (h != null)
+            {
+                m = h.M;
+            }
+            bool none = m == null;
+            return none;
         }
     }
 }

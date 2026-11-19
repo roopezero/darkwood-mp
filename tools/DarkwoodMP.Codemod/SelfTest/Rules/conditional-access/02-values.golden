@@ -4,14 +4,34 @@ declared type takes the value by an identity or a reference conversion.
 Any other conversion keeps the natural type in a temporary in front. An
 assignment writes its target once on each path, so a field never holds a
 value between, and a return returns null last. A chain gets an if per ?..
-An element read ?[ works as a member read does.
+An element read ?[ works as a member read does. A declaration of two
+variables and a using or await using declaration keep their form: the
+value moves into a temporary in front, so the second initializer still
+runs and the resource is still disposed.
 === input
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace N
 {
     public interface IShape
     {
+    }
+
+    public class Res : IDisposable
+    {
+        public void Dispose()
+        {
+        }
+    }
+
+    public class Lease : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            return default;
+        }
     }
 
     public class Box : IShape
@@ -22,6 +42,16 @@ namespace N
         public List<int> Items;
 
         public int this[int i] => Count + i;
+
+        public Res Open()
+        {
+            return new Res();
+        }
+
+        public Lease Rent()
+        {
+            return new Lease();
+        }
     }
 
     public class C
@@ -56,15 +86,55 @@ namespace N
         {
             return a?.Count;
         }
+
+        static int Bump()
+        {
+            return 1;
+        }
+
+        public int? Two(Box a)
+        {
+            int? count = a?.Count, extra = Bump();
+            return count + extra;
+        }
+
+        public void Use(Box a)
+        {
+            using Res r = a?.Open();
+            Bump();
+        }
+
+        public async Task UseLater(Box a)
+        {
+            await using Lease l = a?.Rent();
+            Bump();
+        }
     }
 }
 === output
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace N
 {
     public interface IShape
     {
+    }
+
+    public class Res : IDisposable
+    {
+        public void Dispose()
+        {
+        }
+    }
+
+    public class Lease : IAsyncDisposable
+    {
+        public ValueTask DisposeAsync()
+        {
+            return default;
+        }
     }
 
     public class Box : IShape
@@ -75,6 +145,16 @@ namespace N
         public List<int> Items;
 
         public int this[int i] => Count + i;
+
+        public Res Open()
+        {
+            return new Res();
+        }
+
+        public Lease Rent()
+        {
+            return new Lease();
+        }
     }
 
     public class C
@@ -186,6 +266,44 @@ namespace N
                 count = a.Count;
             }
             return count;
+        }
+
+        static int Bump()
+        {
+            return 1;
+        }
+
+        public int? Two(Box a)
+        {
+            int? count2 = null;
+            if (a != null)
+            {
+                count2 = a.Count;
+            }
+            int? count = count2, extra = Bump();
+            return count + extra;
+        }
+
+        public void Use(Box a)
+        {
+            Res open = null;
+            if (a != null)
+            {
+                open = a.Open();
+            }
+            using Res r = open;
+            Bump();
+        }
+
+        public async Task UseLater(Box a)
+        {
+            Lease rent = null;
+            if (a != null)
+            {
+                rent = a.Rent();
+            }
+            await using Lease l = rent;
+            Bump();
         }
     }
 }

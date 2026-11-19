@@ -24,13 +24,14 @@ namespace DarkwoodMP.Codemod.Rules;
 /// They hold only when v has no effects and can't throw, since the
 /// original reads v for a null x too and the translation doesn't: v must
 /// be a constant, typeof, a local, a parameter or this. "v not null" means
-/// a value type that isn't a Nullable, or a constant that isn't null:
-/// "x?.F == v" is true for a null x and a null v. A member of a type with
-/// an == of its own (other than string's and a Unity object's) is left to
-/// the hoist, because the original calls that == for a null x too, and so
-/// is a comparison that converts either side by a user-defined conversion,
-/// which the original runs for a null x as well, or whose operator is a
-/// user-defined one that isn't lifted and takes the null itself.
+/// a value type that isn't a Nullable, a constant that isn't null, typeof
+/// or a this that isn't a Unity object: "x?.F == v" is true for a null x
+/// and a null v, and Unity's == counts a destroyed this as null. A
+/// comparison that converts either side by a user-defined conversion,
+/// which the original runs for a null x as well, is left to the hoist, and
+/// so is one whose operator is a user-defined one that isn't lifted and
+/// takes the null itself, such as the == of a member's type, unless it is
+/// .NET's or a Unity object's.
 sealed class AccessComparison
 {
     /// The expression the translation replaces: the comparison or the ??.
@@ -178,10 +179,6 @@ sealed partial class AccessPlanner
             {
                 return null;
             }
-            if (!OwnEqualityKeeps(member))
-            {
-                return null;
-            }
             form.Present = !equal;
             return form;
         }
@@ -205,7 +202,6 @@ sealed partial class AccessPlanner
         // A user-defined conversion of v runs for a null x too in the
         // original, and not in the translation.
         if ((!equality && !ordering) || !Quiet(other) || !NotNull(other)
-            || !OwnEqualityKeeps(member)
             || _model.GetConversion(form.Other).IsUserDefined)
         {
             return null;
@@ -239,23 +235,18 @@ sealed partial class AccessPlanner
         };
     }
 
-    /// The member's == is a reference check, string's, .NET's or a Unity
-    /// object's, which all give the original's result for a null x.
-    bool OwnEqualityKeeps(ITypeSymbol member)
-    {
-        return !member.IsReferenceType
-            || !CoalesceTypes.HasOwnEquality(member)
-            || AccessTypes.DotNetEquality(member)
-            || _types.Types.IsUnity(member);
-    }
-
     /// The comparison's operator is one the fixed translations are written
-    /// for: a built-in one (string's == is one), a lifted one, or the == of
-    /// .NET or of a Unity object, which give the original's result for a
-    /// null x as OwnEqualityKeeps says. A user-defined operator that isn't
-    /// lifted gets the null of a null x itself. Tuple equality has no
-    /// operator of its own and is lifted for a Nullable tuple: false for a
-    /// null x before any element is compared, as the translation gives.
+    /// for: a built-in one (string's == and the reference == are), a lifted
+    /// one, or the == of .NET or of a Unity object, which give the
+    /// original's result for a null x. A user-defined operator that isn't
+    /// lifted gets the null of a null x itself; a reference type's never is
+    /// lifted, so this is also the check that sends to the hoist a member
+    /// whose type's own == the comparison calls. Where the reference == is
+    /// called instead, as for "h?.It == this" with an It of a type that
+    /// derives from this one's, both forms compare references. Tuple
+    /// equality has no operator of its own and is lifted for a Nullable
+    /// tuple: false for a null x before any element is compared, as the
+    /// translation gives.
     bool OperatorKeeps(BinaryExpressionSyntax binary)
     {
         if (_model.GetOperation(binary) is not IBinaryOperation operation)
@@ -289,7 +280,9 @@ sealed partial class AccessPlanner
     }
 
     /// A value that is never null: of a value type that isn't a Nullable,
-    /// a constant that isn't null, or typeof.
+    /// a constant that isn't null, typeof, or a this that isn't a Unity
+    /// object. Unity's == counts a destroyed object as null, so with a null
+    /// x, "x?.Go == this" is true for a destroyed this.
     bool NotNull(ExpressionSyntax value)
     {
         var constant = _model.GetConstantValue(value);
@@ -297,11 +290,15 @@ sealed partial class AccessPlanner
         {
             return constant.Value != null;
         }
-        if (value is TypeOfExpressionSyntax || value is ThisExpressionSyntax)
+        if (value is TypeOfExpressionSyntax)
         {
             return true;
         }
         var type = _types.TypeOf(value);
+        if (value is ThisExpressionSyntax)
+        {
+            return type != null && !_types.Types.IsUnity(type);
+        }
         return type != null && type.IsValueType
             && !CoalesceTypes.IsNullable(type);
     }
