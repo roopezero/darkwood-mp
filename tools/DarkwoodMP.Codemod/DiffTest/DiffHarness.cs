@@ -122,7 +122,9 @@ static class DiffHarness
         DiffOutcome outcome)
     {
         var parameters = RunMethod(original).GetParameters();
-        var inputs = parameters.Select(p => InputsFor(p.ParameterType)).ToArray();
+        var inputs = parameters
+            .Select(p => InputsFor(p.ParameterType, p.Position))
+            .ToArray();
         var through = parameters.Select(PassesThrough).ToArray();
         foreach (var row in Rows(inputs))
         {
@@ -299,8 +301,9 @@ static class DiffHarness
             throw new Stop($"A differential case logged, returned or left "
                 + $"behind a {unseen}, which the harness can't show, so a "
                 + "difference in it would go unseen. Use values it can show: "
-                + "numbers, bools, strings, enums, collections, tuples and "
-                + "the fake UnityObject.");
+                + "numbers, bools, strings, enums, collections, tuples, the "
+                + "fake UnityObject and structs and classes written in the "
+                + "case.");
         }
         return new RunResult(outcome, entries.Cast<string>().ToList(), objects);
     }
@@ -426,21 +429,37 @@ static class DiffHarness
         return (string)describe.Invoke(null, new[] { value });
     }
 
-    /// The static fields of the case after a run, so that a dropped store to
-    /// one shows.
+    /// The static fields of the case and of the types written inside it
+    /// after a run, so that a dropped store to one shows.
     static string Statics(Assembly assembly)
     {
-        var fields = assembly.GetType("DiffFixture.Case")
-            .GetFields(AnyStatic)
+        var text = new StringBuilder();
+        AddStatics(assembly, assembly.GetType("DiffFixture.Case"), "", text);
+        return text.ToString();
+    }
+
+    static void AddStatics(
+        Assembly assembly, Type type, string prefix, StringBuilder text)
+    {
+        var fields = type
+            .GetFields(AnyStatic | BindingFlags.DeclaredOnly)
             .Where(field => !field.IsLiteral)
             .OrderBy(field => field.Name, StringComparer.Ordinal);
-        var text = new StringBuilder();
         foreach (var field in fields)
         {
             var value = Describe(assembly, field.GetValue(null));
-            text.Append($"; {field.Name}={value}");
+            text.Append($"; {prefix}{field.Name}={value}");
         }
-        return text.ToString();
+        // A generated type holds no state of the case's own: "<>c" caches
+        // its lambdas. An open generic type has no statics to read.
+        var nested = type
+            .GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic)
+            .Where(t => !t.Name.StartsWith('<') && !t.ContainsGenericParameters)
+            .OrderBy(t => t.Name, StringComparer.Ordinal);
+        foreach (var inner in nested)
+        {
+            AddStatics(assembly, inner, prefix + inner.Name + ".", text);
+        }
     }
 
     /// The fields of an object argument after a run (the fake Unity object's
@@ -461,17 +480,17 @@ static class DiffHarness
         return name + "{" + string.Join(", ", parts) + "}";
     }
 
-    /// The inputs for a parameter of this type: bools, integers with their
-    /// type's limits, the values of an enum and one it doesn't name, other
-    /// numbers (with NaN and the infinities for double and float), nulls and
-    /// the fake Unity object (null, alive and destroyed).
-    static List<Input> InputsFor(Type type)
+    /// The inputs for the parameter at this place: bools, integers with
+    /// their type's limits, the values of an enum and one it doesn't name,
+    /// other numbers (with NaN and the infinities for double and float),
+    /// nulls and the fake Unity object (UnityInputs).
+    static List<Input> InputsFor(Type type, int place)
     {
         var inner = Nullable.GetUnderlyingType(type);
         if (inner != null)
         {
             var values = new List<Input> { Value("null", null) };
-            values.AddRange(InputsFor(inner));
+            values.AddRange(InputsFor(inner, place));
             return values;
         }
         if (type == typeof(bool))
@@ -521,14 +540,31 @@ static class DiffHarness
         }
         if (type.FullName == "DiffFixture.UnityObject")
         {
-            return new List<Input>
-            {
-                Value("null", null),
-                new Input("alive", a => NewObject(a, false), false),
-                new Input("destroyed", a => NewObject(a, true), true),
-            };
+            return UnityInputs(place);
         }
         throw new Stop("The harness has no inputs for parameter type " + type);
+    }
+
+    /// Null, and an alive and a destroyed object, each alone and with an
+    /// alive Next. Every object has a Count of its own, in every parameter,
+    /// so a wrong object in the result, the log or a chain shows.
+    static List<Input> UnityInputs(int place)
+    {
+        int count = 10 * (place + 1);
+        return new List<Input>
+        {
+            Value("null", null),
+            new Input("alive", a => NewObject(a, false, count, null), false),
+            new Input(
+                "alive, next", a => NewObject(a, false, count + 1, count + 2),
+                false),
+            new Input(
+                "destroyed", a => NewObject(a, true, count + 3, null), true),
+            new Input(
+                "destroyed, next",
+                a => NewObject(a, true, count + 4, count + 5),
+                true),
+        };
     }
 
     /// Small values and the type's limits, or null for a type that isn't an
@@ -612,11 +648,17 @@ static class DiffHarness
             label, a => Enum.ToObject(a.GetType(type.FullName), raw), false);
     }
 
-    static object NewObject(Assembly assembly, bool dead)
+    static object NewObject(Assembly assembly, bool dead, int count, int? next)
     {
         var type = assembly.GetType("DiffFixture.UnityObject");
         var value = Activator.CreateInstance(type);
         type.GetField("Dead").SetValue(value, dead);
+        type.GetField("Count").SetValue(value, count);
+        if (next != null)
+        {
+            var alive = NewObject(assembly, false, next.Value, null);
+            type.GetField("Next").SetValue(value, alive);
+        }
         return value;
     }
 

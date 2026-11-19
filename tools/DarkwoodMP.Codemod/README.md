@@ -148,10 +148,15 @@ every combination of bools, integers of every size with their type's limits
 at `int.MaxValue`, and so does a lost `checked`), every value of an enum and
 one it doesn't name, other numbers (with NaN and the infinities for `double`
 and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
-object as null. It compares the results (an exception by its type and
-message), the logged order of evaluation and
-what each run left in its object arguments and in the case's static fields. A
-collection, returned or logged, is compared element by element. A returned
+object as null. The fake object comes alive and destroyed, each alone and with
+an alive `Next`, and every object has a `Count` of its own, so a wrong object
+in a result, the log or a `?.` chain shows. It compares the results (an
+exception by its type and message), the logged order of evaluation and what
+each run left in its object arguments and in the static fields of the case and
+of the types written inside it. A collection, returned or logged, is compared
+element by element, a struct or class written in the case field by field
+(nested ones too, up to six levels deep), and an alive `UnityObject` by its
+`Count` and `Next`; a destroyed one shows only as `destroyed`. A returned
 iterator or coroutine is run, for at most 1,000 values, and a returned task is
 waited for (a `ValueTask` too), so their bodies run in the row they belong
 to. A `Run` declared `async void` stops the command: the part after its first
@@ -159,8 +164,9 @@ await would run during later rows, so it must return `Task`. So does a `Run`
 that returns a delegate, whose body would never run (call it inside `Run`),
 and a value logged, returned or left behind that the harness can't show, so
 that a difference in it would go unseen: it shows numbers, bools, chars,
-strings, enums, collections, tuples, the fake `UnityObject` and types with a
-`ToString` of their own, apart from tasks. The only
+strings, enums, collections, tuples, the fake `UnityObject`, structs and
+classes written in the case and types with a `ToString` of their own, apart
+from tasks. The only
 allowed difference is a destroyed object under the rule named `unity-null`, and
 there the rewritten code must behave exactly as the original did for null and
 leave the destroyed object as it was. The log may name the destroyed object

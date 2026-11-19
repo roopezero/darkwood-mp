@@ -9,6 +9,7 @@ static class DiffFixture
         using System;
         using System.Collections.Generic;
         using System.Globalization;
+        using System.Reflection;
 
         namespace DiffFixture
         {
@@ -93,17 +94,35 @@ static class DiffFixture
 
                 public static string Describe(object value)
                 {
+                    return Describe(value, new List<object>());
+                }
+
+                /// How many objects, structs and collections deep Describe
+                /// follows what they hold.
+                const int Deepest = 6;
+
+                /// Path holds what Describe is inside of, so that a cycle
+                /// ends and the limit holds.
+                static string Describe(object value, List<object> path)
+                {
                     if (ReferenceEquals(value, null))
                     {
                         return "null";
                     }
                     if (value is UnityObject unity)
                     {
+                        // Only the word: under unity-null the harness reads a
+                        // destroyed object as null by it.
                         if (unity.Dead)
                         {
                             return "destroyed";
                         }
-                        return "alive";
+                        var fields = new List<KeyValuePair<string, object>>
+                        {
+                            Part("Count", unity.Count),
+                            Part("Next", unity.Next),
+                        };
+                        return "alive" + Inside(value, path, fields);
                     }
                     if (value is bool flag)
                     {
@@ -131,33 +150,134 @@ static class DiffFixture
                     // run here: that would add effects to the Log call.
                     if (value is System.Collections.ICollection items)
                     {
-                        var parts = new List<string>();
+                        var parts = new List<KeyValuePair<string, object>>();
                         foreach (var item in items)
                         {
-                            parts.Add(Describe(item));
+                            parts.Add(Part(null, item));
                         }
-                        return value.GetType().Name
-                            + "{" + string.Join(", ", parts) + "}";
+                        return value.GetType().Name + Inside(value, path, parts);
                     }
                     if (value is System.Runtime.CompilerServices.ITuple tuple)
                     {
-                        var parts = new List<string>();
+                        var parts = new List<KeyValuePair<string, object>>();
                         for (int i = 0; i < tuple.Length; i++)
                         {
-                            parts.Add(Describe(tuple[i]));
+                            parts.Add(Part(null, tuple[i]));
                         }
+                        return value.GetType().Name + Inside(value, path, parts);
+                    }
+                    if (WrittenInTheCase(value.GetType()))
+                    {
                         return value.GetType().Name
-                            + "(" + string.Join(", ", parts) + ")";
+                            + Inside(value, path, FieldsOf(value));
                     }
                     if (SaysWhatItIs(value.GetType()))
                     {
                         return value.GetType().Name + ":" + value.ToString();
                     }
+                    return Refuse(value.GetType().FullName);
+                }
+
+                static KeyValuePair<string, object> Part(string name, object value)
+                {
+                    return new KeyValuePair<string, object>(name, value);
+                }
+
+                /// "{name=value, ...}", or "{value, ...}" for parts without a
+                /// name.
+                static string Inside(
+                    object owner,
+                    List<object> path,
+                    List<KeyValuePair<string, object>> parts)
+                {
+                    foreach (var outer in path)
+                    {
+                        if (ReferenceEquals(outer, owner))
+                        {
+                            return "{cycle}";
+                        }
+                    }
+                    if (path.Count == Deepest)
+                    {
+                        return Refuse(
+                            "value nested more than " + Deepest + " levels deep");
+                    }
+                    path.Add(owner);
+                    var texts = new List<string>();
+                    foreach (var part in parts)
+                    {
+                        var text = Describe(part.Value, path);
+                        if (part.Key != null)
+                        {
+                            text = part.Key + "=" + text;
+                        }
+                        texts.Add(text);
+                    }
+                    path.RemoveAt(path.Count - 1);
+                    return "{" + string.Join(", ", texts) + "}";
+                }
+
+                /// A struct or class written in the case, not generated, and
+                /// so is every type it derives from apart from object. That
+                /// leaves out delegates and enums, whose base types aren't.
+                static bool WrittenInTheCase(Type type)
+                {
+                    if (type.Assembly != typeof(Trace).Assembly
+                        || type.Name.StartsWith("<"))
+                    {
+                        return false;
+                    }
+                    var t = type.BaseType;
+                    while (t != typeof(object) && t != typeof(ValueType))
+                    {
+                        if (t.Assembly != typeof(Trace).Assembly)
+                        {
+                            return false;
+                        }
+                        t = t.BaseType;
+                    }
+                    return true;
+                }
+
+                /// Every instance field, public or not, the base type's first
+                /// and each type's in the order they are declared. An
+                /// auto-property's goes by the property's name.
+                static List<KeyValuePair<string, object>> FieldsOf(object value)
+                {
+                    var types = new List<Type>();
+                    var t = value.GetType();
+                    while (t != typeof(object) && t != typeof(ValueType))
+                    {
+                        types.Insert(0, t);
+                        t = t.BaseType;
+                    }
+                    var flags = BindingFlags.Instance | BindingFlags.Public
+                        | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+                    var fields = new List<KeyValuePair<string, object>>();
+                    foreach (var type in types)
+                    {
+                        var declared = new List<FieldInfo>(type.GetFields(flags));
+                        declared.Sort((a, b) => a.MetadataToken.CompareTo(b.MetadataToken));
+                        foreach (var field in declared)
+                        {
+                            var name = field.Name;
+                            if (name.StartsWith("<") && name.EndsWith(">k__BackingField"))
+                            {
+                                name = name.Substring(1, name.IndexOf('>') - 1);
+                            }
+                            fields.Add(Part(name, field.GetValue(value)));
+                        }
+                    }
+                    return fields;
+                }
+
+                static string Refuse(string what)
+                {
                     if (Undescribable == null)
                     {
-                        Undescribable = value.GetType().FullName;
+                        Undescribable = what;
                     }
-                    return "undescribable " + value.GetType().Name;
+                    return "undescribable " + what;
                 }
 
                 /// A type with a ToString of its own, apart from a task's:

@@ -48,6 +48,15 @@ static class DiffHarnessCases
             """,
             "if (Log(\"f\", f) >= 1)\n{\nreturn Log(\"b\", 2);\n}\n"
                 + "return Log(\"a\", 1);"),
+        // Only an object with a Next shows it.
+        ("a wrong object in a ?. chain", """
+            public static int? Run(UnityObject u)
+            {
+                return Log("u", u)?.Next?.Hit();
+            }
+            """,
+            "var t = Log(\"u\", u);\nif (!(t is null) && !(t.Next is null))\n{\n"
+                + "return t.Hit();\n}\nreturn null;"),
         // Both differ only at int.MaxValue.
         ("a value of the wrong type in an intermediate result", """
             public static long Run(bool c, int n)
@@ -138,7 +147,77 @@ static class DiffHarnessCases
             }
             """, "int v;\nif (Log(\"c\", c))\n{\nv = Log(\"a\", 1);\n}\n"
                 + "else\n{\nv = Log(\"b\", 2);\n}\nreturn new[] { v + 1 };"),
+        ("a dropped store to the returned new object's field", NewObject,
+            "var o = new UnityObject();\nLog(\"c\", c);\nreturn o;"),
+        ("swapped values in the returned new object", NewObject,
+            "var o = new UnityObject();\nif (Log(\"c\", c))\n{\no.Count = 2;\n}\n"
+                + "else\n{\no.Count = 1;\n}\nreturn o;"),
+        ("a dropped store to a static object's field", """
+            static UnityObject _keep;
+
+            public static void Reset()
+            {
+                _keep = new UnityObject();
+            }
+
+            public static int Run(bool c)
+            {
+                _keep.Count = Log("c", c) ? 1 : 2;
+                return 0;
+            }
+            """, "Log(\"c\", c);"),
+        ("a dropped store to a nested class's static", """
+            static class Box
+            {
+                public static int N;
+            }
+
+            public static void Reset()
+            {
+                Box.N = 0;
+            }
+
+            public static int Run(bool c)
+            {
+                Box.N = Log("c", c) ? 1 : 2;
+                return 0;
+            }
+            """, "Log(\"c\", c);"),
+        ("swapped values in a returned struct", Point + """
+            public static Point Run(bool c)
+            {
+                return new Point { X = Log("c", c) ? 1f : 2f, Y = 0f };
+            }
+            """, PointSwapped + "\np.Y = 0f;\nreturn p;"),
+        ("swapped values in a logged struct", Point + """
+            public static int Run(bool c)
+            {
+                Log("p", new Point { X = Log("c", c) ? 1f : 2f });
+                return 0;
+            }
+            """, PointSwapped + "\nLog(\"p\", p);"),
     };
+
+    const string NewObject = """
+        public static UnityObject Run(bool c)
+        {
+            return new UnityObject { Count = Log("c", c) ? 1 : 2 };
+        }
+        """;
+
+    const string Point = """
+        public struct Point
+        {
+            public float X;
+            public float Y;
+        }
+
+
+        """;
+
+    /// Point's X set the wrong way round.
+    const string PointSwapped = "var p = new Point();\nif (Log(\"c\", c))\n{\n"
+        + "p.X = 2f;\n}\nelse\n{\np.X = 1f;\n}";
 
     /// Bodies that run only when the harness enumerates or waits for what
     /// Run returns: (what, case, rewrite).
@@ -267,7 +346,7 @@ static class DiffHarnessCases
         + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
         + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
 
-    public const int Count = 9 + 5 + 5 + 3 + 6 + 1 + 1 + 2 + 1 + 2 + 3;
+    public const int Count = 9 + 5 + 6 + 9 + 6 + 1 + 1 + 2 + 1 + 2 + 3;
 
     public static List<string> Failures()
     {
@@ -295,7 +374,8 @@ static class DiffHarnessCases
 
         var unity = new DiffCase { Name = "unity", Method = Unity };
         var allowed = DiffHarness.Run(new ProbeUnityRule("unity-null"), unity);
-        if (!allowed.Passed || allowed.DestroyedRows != 1)
+        // A destroyed object comes alone and with a Next.
+        if (!allowed.Passed || allowed.DestroyedRows != 2)
         {
             problems.Add("  unity-null: the destroyed row should be asserted "
                 + "and pass: " + string.Join("; ", allowed.Mismatches));
@@ -415,7 +495,16 @@ static class DiffHarnessCases
     static void ExpectCaught(
         List<string> problems, string what, DiffCase diffCase, Rule rule)
     {
-        var outcome = DiffHarness.Run(rule, diffCase);
+        DiffOutcome outcome;
+        try
+        {
+            outcome = DiffHarness.Run(rule, diffCase);
+        }
+        catch (Stop stop)
+        {
+            problems.Add($"  {what}: stopped, not compared: {stop.Message}");
+            return;
+        }
         if (!outcome.Rewritten)
         {
             problems.Add($"  {what}: the rule did not rewrite the case");
