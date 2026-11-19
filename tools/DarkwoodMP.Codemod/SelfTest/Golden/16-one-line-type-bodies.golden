@@ -1,6 +1,10 @@
 === input
 namespace Golden.Bodies { enum Top { A } }
 
+namespace Golden.Commented { /* first */ class C { } }
+
+enum AfterComma { A, /* one */ B, /* two */ }
+
 namespace Golden.Types
 {
     enum Kind { Body, Title }
@@ -38,6 +42,20 @@ namespace Golden.Bodies
     {
         A
     }
+}
+
+namespace Golden.Commented
+{
+    /* first */
+    class C
+    {
+    }
+}
+
+enum AfterComma
+{
+    A, /* one */
+    B, /* two */
 }
 
 namespace Golden.Types

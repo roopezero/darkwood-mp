@@ -14,8 +14,14 @@ sealed class LineCensus
 
     public void Count(SyntaxTree tree, SyntaxNode root, string file)
     {
-        foreach (var line in tree.GetText().Lines)
+        var source = tree.GetText();
+        foreach (var line in source.Lines)
         {
+            // What follows a file's last line break isn't a line.
+            if (line.Start == source.Length)
+            {
+                continue;
+            }
             Lines++;
             var text = line.ToString();
             if (text.Length > Limit)

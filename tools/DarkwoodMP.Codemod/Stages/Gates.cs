@@ -47,11 +47,9 @@ sealed class Gates
         {
             throw new Stop($"{file}: comment words changed at {words}");
         }
-        if (_stage == "layout" && !SameCode.Of(tree.GetRoot(), rootAfter))
+        if (_stage == "layout")
         {
-            throw new Stop(
-                $"{file}: layout changed more than whitespace: "
-                    + TokenDiff.First(tree.GetRoot(), rootAfter));
+            CheckLayout(file, tree.GetRoot(), rootAfter);
         }
         if (_stage == "braces")
         {
@@ -66,6 +64,23 @@ sealed class Gates
             throw new Stop($"{file}: a second {_stage} run changed the output.");
         }
         CheckEndState(file, rootAfter);
+    }
+
+    /// The layout stage changes whitespace, and moves comments only in the
+    /// two ways it is meant to.
+    void CheckLayout(string file, SyntaxNode before, SyntaxNode after)
+    {
+        if (!SameCode.Of(before, after))
+        {
+            throw new Stop(
+                $"{file}: layout changed more than whitespace: "
+                    + TokenDiff.First(before, after));
+        }
+        var moved = CommentPlaces.Difference(before, after);
+        if (moved != null)
+        {
+            throw new Stop($"{file}: layout moved a comment: {moved}");
+        }
     }
 
     /// Nothing the stage is responsible for may be left in the file.

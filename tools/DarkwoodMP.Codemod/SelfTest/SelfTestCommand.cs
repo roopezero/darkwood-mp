@@ -45,13 +45,14 @@ static class SelfTestCommand
         Console.WriteLine(
             $"{files.Count - failed} of {files.Count} golden cases passed.");
         var accepted = BracedCodeCases.Failures();
+        accepted.AddRange(LayoutCheckCases.Failures());
         foreach (var problem in accepted)
         {
-            Console.WriteLine("FAIL  braces check\n" + problem);
+            Console.WriteLine("FAIL  check\n" + problem);
         }
+        int cases = BracedCodeCases.Count + LayoutCheckCases.Count;
         Console.WriteLine(
-            $"{BracedCodeCases.Count - accepted.Count} of "
-                + $"{BracedCodeCases.Count} wrong rewrites refused.");
+            $"{cases - accepted.Count} of {cases} gate cases passed.");
         if (failed > 0 || accepted.Count > 0)
         {
             return 1;
@@ -102,11 +103,16 @@ static class SelfTestCommand
         }
         CompareComments(golden.Input, braces, "braces", problems);
         CompareComments(braces, layout, "layout", problems);
-        if (!SameCode.Of(
-                CSharpSyntaxTree.ParseText(braces, parse).GetRoot(),
-                CSharpSyntaxTree.ParseText(layout, parse).GetRoot()))
+        var opened = CSharpSyntaxTree.ParseText(braces, parse).GetRoot();
+        var formatted = CSharpSyntaxTree.ParseText(layout, parse).GetRoot();
+        if (!SameCode.Of(opened, formatted))
         {
             problems.Add("  layout changed more than whitespace");
+        }
+        var moved = CommentPlaces.Difference(opened, formatted);
+        if (moved != null)
+        {
+            problems.Add("  layout moved a comment: " + moved);
         }
         CompareDlls(golden.Input, braces, layout, problems);
         return problems;

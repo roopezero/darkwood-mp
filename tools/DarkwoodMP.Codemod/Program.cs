@@ -16,9 +16,9 @@ static class Program
         codemod layout                 stage 2: one-line blocks and bodies,
                                        then the Formatter over every file
         codemod check [--braces] <dirA> <dirB>
-                                       same code and same comment words, file
-                                       by file? --braces allows the new blocks
-                                       of stage 1
+                                       same code, same comment words and every
+                                       comment in its place, file by file?
+                                       --braces allows the new blocks of stage 1
         codemod selftest [--show NAME] the golden cases of both stages
         """;
 

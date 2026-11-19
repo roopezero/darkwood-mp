@@ -7,12 +7,42 @@ class Trailing
         if (a < 0) { a = -a; /* flipped */ } // negative
         if (a == 0) { /* nothing */ }
         if (a == 1) { return 2; } /* one */ else { return 3; } // done
+        if (a == 4) { if (a > 5) { a = 6; } } // ends in a block
+        if (a == 7) { a = 8; if (a > 9) { a = 10; } } // the same, after a statement
+        try { a = 11; } catch { } // an empty block
+        try { a = 12; } catch { /* first */ } // second
         return a;
     }
 
     void G() { } // does nothing
 
     int H() { return 1; } /* one */
+
+    int J(int a)
+    {
+        if (a > 0)
+        {
+            a = 1;
+            return a;
+        } // the last statement ends in a semicolon
+        if (a < 0)
+        {
+            if (a < -1)
+            {
+                a = 2;
+            }
+        } // the last statement ends in a brace
+        if (a == 0)
+        {
+            a = 3; // already one here
+        } // after that one
+        if (a == 1)
+        {
+            a = 4;
+            // and on its own line
+        } // after that too
+        return a;
+    }
 }
 === layout
 class Trailing
@@ -21,33 +51,97 @@ class Trailing
     {
         if (a > 0)
         {
-            return 1;
-        } // positive
+            return 1; // positive
+        }
         if (a < 0)
         {
-            a = -a; /* flipped */
-        } // negative
+            a = -a; /* flipped */ // negative
+        }
         if (a == 0)
         {
             /* nothing */
         }
         if (a == 1)
         {
-            return 2;
-        } /* one */
+            return 2; /* one */
+        }
         else
         {
-            return 3;
-        } // done
+            return 3; // done
+        }
+        if (a == 4)
+        {
+            if (a > 5)
+            {
+                a = 6;
+            }
+            // ends in a block
+        }
+        if (a == 7)
+        {
+            a = 8;
+            if (a > 9)
+            {
+                a = 10;
+            }
+            // the same, after a statement
+        }
+        try
+        {
+            a = 11;
+        }
+        catch
+        {
+            // an empty block
+        }
+        try
+        {
+            a = 12;
+        }
+        catch
+        {
+            /* first */
+            // second
+        }
         return a;
     }
 
     void G()
     {
-    } // does nothing
+        // does nothing
+    }
 
     int H()
     {
-        return 1;
-    } /* one */
+        return 1; /* one */
+    }
+
+    int J(int a)
+    {
+        if (a > 0)
+        {
+            a = 1;
+            return a; // the last statement ends in a semicolon
+        }
+        if (a < 0)
+        {
+            if (a < -1)
+            {
+                a = 2;
+            }
+            // the last statement ends in a brace
+        }
+        if (a == 0)
+        {
+            a = 3; // already one here
+                   // after that one
+        }
+        if (a == 1)
+        {
+            a = 4;
+            // and on its own line
+            // after that too
+        }
+        return a;
+    }
 }

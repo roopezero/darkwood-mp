@@ -50,10 +50,13 @@ static class CodeStyle
             CSharpFormattingOptions.WrappingPreserveSingleLine, true);
 
     /// For the braces stage, which formats only its new blocks: they must line
-    /// up with the code around them. A block under a case label has its brace
-    /// at the label's column everywhere in the plugin, and with the Formatter's
-    /// default a new block inside one lands four columns too far right and
-    /// takes the next statement with it.
+    /// up with the code around them. Until the layout stage runs, a block under
+    /// a case label has its brace at the label's column, and with the
+    /// Formatter's default a new block inside one lands four columns too far
+    /// right and takes the next statement with it. The layout stage then uses
+    /// that default for the whole file, as .editorconfig does by not setting
+    /// csharp_indent_case_contents_when_block, so those blocks move one level
+    /// in under their labels.
     public static readonly OptionSet BraceOptions = Options.WithChangedOption(
         CSharpFormattingOptions.IndentSwitchCaseSectionWhenBlock, false);
 }

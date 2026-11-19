@@ -20,6 +20,23 @@ class Switches
         switch (a) { }
         return a switch { 1 => 2, _ => 3 };
     }
+
+    int H(int a)
+    {
+        switch (a) { /* c */ case 1: break; }
+        switch (a) { case 1: a = 2; break; /* later */ case 2: a = 3; break; }
+        switch (a)
+        {
+            case 1: a = 2; break; // why this section
+            case 2: a = 3; a = 4; break; /* why that one */
+            case 3: break; // nothing to hang it on
+            case 4: if (a > 0) { a = 5; } break; // stays on the break
+            case 5:
+                a = 6;
+                break; // on lines of their own already
+        }
+        return a;
+    }
 }
 === braces
 class Switches
@@ -46,6 +63,23 @@ class Switches
         switch (a) { case 1: a = 2; break; default: a = 3; break; }
         switch (a) { }
         return a switch { 1 => 2, _ => 3 };
+    }
+
+    int H(int a)
+    {
+        switch (a) { /* c */ case 1: break; }
+        switch (a) { case 1: a = 2; break; /* later */ case 2: a = 3; break; }
+        switch (a)
+        {
+            case 1: a = 2; break; // why this section
+            case 2: a = 3; a = 4; break; /* why that one */
+            case 3: break; // nothing to hang it on
+            case 4: if (a > 0) { a = 5; } break; // stays on the break
+            case 5:
+                a = 6;
+                break; // on lines of their own already
+        }
+        return a;
     }
 }
 === layout
@@ -94,5 +128,46 @@ class Switches
         {
         }
         return a switch { 1 => 2, _ => 3 };
+    }
+
+    int H(int a)
+    {
+        switch (a)
+        {
+            /* c */
+            case 1:
+                break;
+        }
+        switch (a)
+        {
+            case 1:
+                a = 2;
+                break; /* later */
+            case 2:
+                a = 3;
+                break;
+        }
+        switch (a)
+        {
+            case 1:
+                a = 2; // why this section
+                break;
+            case 2:
+                a = 3;
+                a = 4; /* why that one */
+                break;
+            case 3:
+                break; // nothing to hang it on
+            case 4:
+                if (a > 0)
+                {
+                    a = 5;
+                }
+                break; // stays on the break
+            case 5:
+                a = 6;
+                break; // on lines of their own already
+        }
+        return a;
     }
 }

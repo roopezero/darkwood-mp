@@ -17,6 +17,19 @@ class Continued
                     () => 3);
         return a;
     }
+
+    int G(int a)
+    {
+        switch (a)
+        {
+            case 1: return Call(1,
+                                2,
+                                () => 3);
+            case 2: return a > 1 ||
+                           a < 0 ? 1 : 0;
+            default: return 0;
+        }
+    }
 }
 === braces
 using System;
@@ -41,6 +54,19 @@ class Continued
         }
         return a;
     }
+
+    int G(int a)
+    {
+        switch (a)
+        {
+            case 1: return Call(1,
+                                2,
+                                () => 3);
+            case 2: return a > 1 ||
+                           a < 0 ? 1 : 0;
+            default: return 0;
+        }
+    }
 }
 === layout
 using System;
@@ -64,5 +90,21 @@ class Continued
                       () => 3);
         }
         return a;
+    }
+
+    int G(int a)
+    {
+        switch (a)
+        {
+            case 1:
+                return Call(1,
+                            2,
+                            () => 3);
+            case 2:
+                return a > 1 ||
+                       a < 0 ? 1 : 0;
+            default:
+                return 0;
+        }
     }
 }

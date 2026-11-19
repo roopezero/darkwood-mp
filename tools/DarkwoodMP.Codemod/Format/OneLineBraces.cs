@@ -6,33 +6,75 @@ namespace DarkwoodMP.Codemod.Format;
 
 /// Puts every pair of braces that is on one line onto separate lines: blocks,
 /// switch statements, type bodies and namespaces, the things the build's
-/// DW0002 rule reports. It only decides where line breaks go: the Formatter
-/// does the rest. Accessor lists ({ get; set; }) and initializers stay on one
-/// line, as the rule allows.
+/// DW0002 rule reports. It only decides where line breaks go, and where a
+/// comment behind a closing brace or a "break;" ends up: the Formatter does the
+/// rest. Accessor lists ({ get; set; }) and initializers stay on one line, as
+/// the rule allows, except an initializer behind a multi-line argument list.
 sealed class OneLineBraces : CSharpSyntaxRewriter
 {
     public override SyntaxNode VisitBlock(BlockSyntax node)
     {
         var visited = (BlockSyntax)base.VisitBlock(node);
-        if (!Lines.Same(node.OpenBraceToken, node.CloseBraceToken))
+        if (Lines.Same(node.OpenBraceToken, node.CloseBraceToken))
+        {
+            visited = Opened(visited);
+        }
+        return Lines.CommentsInside(visited);
+    }
+
+    static BlockSyntax Opened(BlockSyntax block)
+    {
+        var comments = Lines.MovedComments(block.OpenBraceToken);
+        var open = Lines.OpenLine(block.OpenBraceToken);
+        if (block.Statements.Count == 0)
+        {
+            return block
+                .WithOpenBraceToken(open)
+                .WithCloseBraceToken(
+                    Lines.CloseEmpty(block.CloseBraceToken, comments));
+        }
+        var first = block.Statements[0];
+        return block
+            .WithStatements(block.Statements.Replace(
+                first, Lines.WithComments(first, comments)))
+            .WithOpenBraceToken(open)
+            .WithCloseBraceToken(Lines.CloseLine(block.CloseBraceToken));
+    }
+
+    public override SyntaxNode VisitSwitchSection(SwitchSectionSyntax node)
+    {
+        var visited = (SwitchSectionSyntax)base.VisitSwitchSection(node);
+        if (Lines.CommentBehindBreak(node))
+        {
+            visited = visited.WithStatements(
+                Lines.CommentOffBreak(visited.Statements));
+        }
+        return KeptAligned(node, visited);
+    }
+
+    /// A statement over several lines that starts on its case label's line
+    /// moves to a line of its own. Its old column goes with it, for the
+    /// Formatter to replace: the Formatter then moves the continuation lines
+    /// by as much as it moves the statement, so what lined up still does.
+    static SwitchSectionSyntax KeptAligned(
+        SwitchSectionSyntax node, SwitchSectionSyntax visited)
+    {
+        var first = node.Statements.FirstOrDefault();
+        if (first == null
+            || !Lines.Same(
+                node.Labels.Last().GetLastToken(), first.GetFirstToken())
+            || Lines.Same(first.GetFirstToken(), first.GetLastToken()))
         {
             return visited;
         }
-        var comments = Lines.MovedComments(visited.OpenBraceToken);
-        var open = Lines.OpenLine(visited.OpenBraceToken);
-        if (visited.Statements.Count == 0)
-        {
-            return visited
-                .WithOpenBraceToken(open)
-                .WithCloseBraceToken(
-                    Lines.CloseEmpty(visited.CloseBraceToken, comments));
-        }
-        var first = visited.Statements[0];
-        return visited
-            .WithStatements(visited.Statements.Replace(
-                first, Lines.WithComments(first, comments)))
-            .WithOpenBraceToken(open)
-            .WithCloseBraceToken(Lines.CloseLine(visited.CloseBraceToken));
+        var text = node.SyntaxTree.GetText();
+        int column = text.Lines.GetLinePosition(first.SpanStart).Character;
+        var moved = visited.Statements[0];
+        var leading = SyntaxFactory.TriviaList(
+                Lines.Break, SyntaxFactory.Whitespace(new string(' ', column)))
+            .AddRange(moved.GetLeadingTrivia());
+        return visited.WithStatements(visited.Statements.Replace(
+            moved, moved.WithLeadingTrivia(leading)));
     }
 
     public override SyntaxNode VisitSwitchStatement(SwitchStatementSyntax node)
@@ -52,10 +94,7 @@ sealed class OneLineBraces : CSharpSyntaxRewriter
                 .WithCloseBraceToken(
                     Lines.CloseEmpty(visited.CloseBraceToken, comments));
         }
-        for (int i = 1; i < sections.Count; i++)
-        {
-            sections = sections.Replace(sections[i], OnNewLine(sections[i]));
-        }
+        // The Formatter puts the sections after the first on their own lines.
         sections = sections.Replace(
             sections[0], Lines.WithComments(sections[0], comments));
         return visited
@@ -101,22 +140,7 @@ sealed class OneLineBraces : CSharpSyntaxRewriter
             return visited;
         }
         // Every member gets its line: the break goes after each comma.
-        var parts = visited.Members.GetWithSeparators();
-        var opened = new List<SyntaxNodeOrToken>();
-        for (int i = 0; i < parts.Count; i++)
-        {
-            // A trailing comma is followed by the closing brace's own break.
-            if (parts[i].IsToken && i < parts.Count - 1)
-            {
-                opened.Add(AfterComma(parts[i].AsToken()));
-            }
-            else
-            {
-                opened.Add(parts[i]);
-            }
-        }
-        var members =
-            SyntaxFactory.SeparatedList<EnumMemberDeclarationSyntax>(opened);
+        var members = OnePerLine(visited.Members);
         var comments = Lines.MovedComments(visited.OpenBraceToken);
         var open = Lines.OpenLine(visited.OpenBraceToken);
         if (members.Count == 0)
@@ -158,11 +182,84 @@ sealed class OneLineBraces : CSharpSyntaxRewriter
             .WithCloseBraceToken(Lines.CloseLine(visited.CloseBraceToken));
     }
 
+    /// An object initializer behind a multi-line argument list gets a line
+    /// per member. On one line, the Formatter leaves it under the list's
+    /// closing parenthesis, where it looks like a block after the statement.
+    public override SyntaxNode VisitObjectCreationExpression(
+        ObjectCreationExpressionSyntax node)
+    {
+        var visited = (ObjectCreationExpressionSyntax)
+            base.VisitObjectCreationExpression(node);
+        if (!OpensInitializer(node.ArgumentList, node.Initializer))
+        {
+            return visited;
+        }
+        return visited.WithInitializer(OnePerLine(visited.Initializer));
+    }
+
+    public override SyntaxNode VisitImplicitObjectCreationExpression(
+        ImplicitObjectCreationExpressionSyntax node)
+    {
+        var visited = (ImplicitObjectCreationExpressionSyntax)
+            base.VisitImplicitObjectCreationExpression(node);
+        if (!OpensInitializer(node.ArgumentList, node.Initializer))
+        {
+            return visited;
+        }
+        return visited.WithInitializer(OnePerLine(visited.Initializer));
+    }
+
+    static bool OpensInitializer(
+        ArgumentListSyntax arguments, InitializerExpressionSyntax initializer)
+    {
+        return arguments != null
+            && initializer != null
+            && initializer.IsKind(SyntaxKind.ObjectInitializerExpression)
+            && initializer.Expressions.Count > 0
+            && Lines.Same(
+                initializer.OpenBraceToken, initializer.CloseBraceToken)
+            && !Lines.Same(arguments.OpenParenToken, arguments.CloseParenToken);
+    }
+
+    static InitializerExpressionSyntax OnePerLine(
+        InitializerExpressionSyntax initializer)
+    {
+        var comments = Lines.MovedComments(initializer.OpenBraceToken);
+        var members = OnePerLine(initializer.Expressions);
+        return initializer
+            .WithOpenBraceToken(Lines.OpenLine(initializer.OpenBraceToken))
+            .WithExpressions(members.Replace(
+                members[0], Lines.WithComments(members[0], comments)))
+            .WithCloseBraceToken(Lines.CloseLine(initializer.CloseBraceToken));
+    }
+
+    /// A line break after every comma but a trailing one, which is followed
+    /// by the closing brace's own break.
+    static SeparatedSyntaxList<T> OnePerLine<T>(SeparatedSyntaxList<T> items)
+        where T : SyntaxNode
+    {
+        var parts = items.GetWithSeparators();
+        var opened = new List<SyntaxNodeOrToken>();
+        for (int i = 0; i < parts.Count; i++)
+        {
+            if (parts[i].IsToken && i < parts.Count - 1)
+            {
+                opened.Add(AfterComma(parts[i].AsToken()));
+            }
+            else
+            {
+                opened.Add(parts[i]);
+            }
+        }
+        return SyntaxFactory.SeparatedList<T>(opened);
+    }
+
     /// The comma's comment stays on the line of the member before it.
     static SyntaxToken AfterComma(SyntaxToken comma)
     {
-        return comma.WithTrailingTrivia(
-            Lines.CommentsOf(comma.TrailingTrivia).Add(Lines.Break));
+        var comments = Lines.CommentsOf(comma.TrailingTrivia);
+        var kept = Lines.Behind(comma.WithTrailingTrivia(), comments);
+        return kept.WithTrailingTrivia(kept.TrailingTrivia.Add(Lines.Break));
     }
 
     static bool OnOneLine(BaseTypeDeclarationSyntax node)

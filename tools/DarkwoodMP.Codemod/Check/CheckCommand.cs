@@ -7,7 +7,9 @@ namespace DarkwoodMP.Codemod.Check;
 /// "codemod check [--braces] dirA dirB": two copies of the plugin's sources
 /// compared file by file. Each file must hold the same comment words in the
 /// same order, and the same code: apart from whitespace, or with --braces apart
-/// from the braces stage's new blocks. Exits with 1 on any difference.
+/// from the braces stage's new blocks. Every comment must still be between the
+/// same two tokens of code, apart from the moves the stage itself makes (see
+/// CommentPlaces and BracedCode). Exits with 1 on any difference.
 static class CheckCommand
 {
     const string BracesOption = "--braces";
@@ -56,7 +58,7 @@ static class CheckCommand
                 differentCode++;
                 if (differentCode <= Shown)
                 {
-                    Console.WriteLine($"  code differs in {name}: {code}");
+                    Console.WriteLine($"  differs in {name}: {code}");
                 }
             }
             var wordsA = CommentWords.Of(rootA);
@@ -77,7 +79,8 @@ static class CheckCommand
         Console.WriteLine(
             $"{left.Count} files against {right.Count}, compared one by one: "
                 + $"{missing.Count} only on one side, "
-                + $"{differentCode} with different code ({CodeRule(braces)}), "
+                + $"{differentCode} with different code or comment places "
+                + $"({CodeRule(braces)}), "
                 + $"{differentWords} with different comment words "
                 + $"({words} words compared)");
         if (missing.Count > 0 || differentCode > 0 || differentWords > 0)
@@ -105,7 +108,7 @@ static class CheckCommand
         }
         if (SameCode.Of(a, b))
         {
-            return null;
+            return CommentPlaces.Difference(a, b);
         }
         return TokenDiff.First(a, b);
     }
