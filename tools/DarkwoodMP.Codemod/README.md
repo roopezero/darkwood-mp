@@ -134,8 +134,9 @@ only change if the rule recorded a reason.
 `DiffTest/Cases/<rule>.cases` holds small methods, each written once in its
 original form, with every operand going through `Log("name", value)`. The
 harness compiles the original and the form the rule produces, runs both over
-every combination of bools, numbers, nulls and a fake `UnityObject` whose `==`
-treats a destroyed object as null, and compares the results and the logged
+every combination of bools, numbers (with NaN and the infinities for `double`
+and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
+object as null, and compares the results and the logged
 order of evaluation. The only allowed difference is a destroyed object under
 the rule named `unity-null`, and there the rewritten code must behave exactly
 as the original did for null.

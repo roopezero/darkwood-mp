@@ -125,3 +125,36 @@ sealed class ProbeUnityRule : Rule
         }
     }
 }
+
+/// A rule for the harness's own tests: the first statement that holds an
+/// operator site becomes the given text, right or wrong. It lets the self test
+/// show which wrong rewrites the harness catches.
+sealed class ProbeTextRule : Rule
+{
+    readonly string _text;
+
+    public ProbeTextRule(string name, string text)
+    {
+        Name = name;
+        _text = text;
+    }
+
+    public override string Name { get; }
+
+    public override void Plan(RulePlan plan)
+    {
+        var first = plan.Root.DescendantNodes()
+            .FirstOrDefault(node => OperatorCount.KindOf(node) != null);
+        if (first == null)
+        {
+            return;
+        }
+        var target = first.AncestorsAndSelf()
+            .OfType<StatementSyntax>()
+            .First();
+        var sites = target.DescendantNodes()
+            .Where(node => OperatorCount.KindOf(node) != null)
+            .ToList();
+        plan.ProposeAll(sites, target, _text);
+    }
+}

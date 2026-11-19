@@ -241,8 +241,9 @@ static class DiffHarness
         return new RunResult(outcome, entries.Cast<string>().ToList());
     }
 
-    /// The inputs for a parameter of this type: bools, numbers, nulls and the
-    /// fake Unity object (null, alive and destroyed).
+    /// The inputs for a parameter of this type: bools, numbers (with NaN and
+    /// the infinities for double and float), nulls and the fake Unity object
+    /// (null, alive and destroyed).
     static List<Input> InputsFor(Type type)
     {
         var inner = Nullable.GetUnderlyingType(type);
@@ -264,13 +265,23 @@ static class DiffHarness
         {
             return Values(0L, 1L, -1L, 5L);
         }
+        // NaN fails every comparison, so it shows an inverted one:
+        // "d > 0 ? a : b" is not "d <= 0 ? b : a".
         if (type == typeof(double))
         {
-            return Values(0.0, 1.5, -2.0);
+            var values = Values(0.0, 1.5, -2.0);
+            values.Add(Value("nan", double.NaN));
+            values.Add(Value("+inf", double.PositiveInfinity));
+            values.Add(Value("-inf", double.NegativeInfinity));
+            return values;
         }
         if (type == typeof(float))
         {
-            return Values(0f, 1.5f, -2f);
+            var values = Values(0f, 1.5f, -2f);
+            values.Add(Value("nan", float.NaN));
+            values.Add(Value("+inf", float.PositiveInfinity));
+            values.Add(Value("-inf", float.NegativeInfinity));
+            return values;
         }
         if (type == typeof(string))
         {

@@ -29,7 +29,28 @@ static class DiffHarnessCases
             "=== a\npublic static int Run()\n{\n    return 1;\n}\n=== b\n"),
     };
 
-    public const int Count = 9 + 5;
+    /// Wrong rewrites that only some inputs show: (what, case, rewrite).
+    static readonly (string What, string Method, string Wrong)[] Wrong =
+    {
+        ("an inverted double comparison", """
+            public static int Run(double d)
+            {
+                return Log("d", d) > 0 ? Log("a", 1) : Log("b", 2);
+            }
+            """,
+            "if (Log(\"d\", d) <= 0)\n{\nreturn Log(\"b\", 2);\n}\n"
+                + "return Log(\"a\", 1);"),
+        ("an inverted float comparison", """
+            public static int Run(float f)
+            {
+                return Log("f", f) < 1 ? Log("a", 1) : Log("b", 2);
+            }
+            """,
+            "if (Log(\"f\", f) >= 1)\n{\nreturn Log(\"b\", 2);\n}\n"
+                + "return Log(\"a\", 1);"),
+    };
+
+    public const int Count = 9 + 5 + 2;
 
     public static List<string> Failures()
     {
@@ -66,6 +87,12 @@ static class DiffHarnessCases
             new ProbeUnityRule("probe-unity"));
         ExpectCaught(problems, "a reference check under unity-null", unity,
             new ProbeUnityRule("unity-null", checksReference: true));
+        foreach (var (what, method, wrong) in Wrong)
+        {
+            var diffCase = new DiffCase { Name = what, Method = method };
+            ExpectCaught(problems, what, diffCase,
+                new ProbeTextRule("probe-text", wrong));
+        }
         foreach (var (what, text) in Unreadable)
         {
             ExpectUnreadable(problems, what, text);
