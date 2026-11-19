@@ -50,7 +50,48 @@ static class DiffHarnessCases
                 + "return Log(\"a\", 1);"),
     };
 
-    public const int Count = 9 + 5 + 2;
+    /// Keeps the operands and drops the store: "int dropped; if (c) ...".
+    const string DropsStore = "int dropped;\nif (Log(\"c\", c))\n{\n"
+        + "dropped = Log(\"a\", 1);\n}\nelse\n{\ndropped = Log(\"b\", 2);\n}";
+
+    /// Effects that aren't a logged operand: (what, case, rewrite).
+    static readonly (string What, string Method, string Wrong)[] Unlogged =
+    {
+        ("a dropped store to an argument's field", """
+            public static int Run(bool c, UnityObject u)
+            {
+                if (u == null)
+                {
+                    return 0;
+                }
+                u.Count = Log("c", c) ? Log("a", 1) : Log("b", 2);
+                return 0;
+            }
+            """, DropsStore),
+        ("a dropped store to a static field", """
+            static int _n;
+
+            public static void Reset()
+            {
+                _n = 0;
+            }
+
+            public static int Run(bool c)
+            {
+                _n = Log("c", c) ? Log("a", 1) : Log("b", 2);
+                return 0;
+            }
+            """, DropsStore),
+        ("different contents of a returned array", """
+            public static int[] Run(bool c)
+            {
+                return new[] { Log("c", c) ? Log("a", 1) : Log("b", 2) };
+            }
+            """, "int v;\nif (Log(\"c\", c))\n{\nv = Log(\"a\", 1);\n}\n"
+                + "else\n{\nv = Log(\"b\", 2);\n}\nreturn new[] { v + 1 };"),
+    };
+
+    public const int Count = 9 + 5 + 2 + 3;
 
     public static List<string> Failures()
     {
@@ -87,7 +128,7 @@ static class DiffHarnessCases
             new ProbeUnityRule("probe-unity"));
         ExpectCaught(problems, "a reference check under unity-null", unity,
             new ProbeUnityRule("unity-null", checksReference: true));
-        foreach (var (what, method, wrong) in Wrong)
+        foreach (var (what, method, wrong) in Wrong.Concat(Unlogged))
         {
             var diffCase = new DiffCase { Name = what, Method = method };
             ExpectCaught(problems, what, diffCase,

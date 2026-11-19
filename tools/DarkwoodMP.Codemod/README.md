@@ -136,10 +136,12 @@ original form, with every operand going through `Log("name", value)`. The
 harness compiles the original and the form the rule produces, runs both over
 every combination of bools, numbers (with NaN and the infinities for `double`
 and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
-object as null, and compares the results and the logged
-order of evaluation. The only allowed difference is a destroyed object under
-the rule named `unity-null`, and there the rewritten code must behave exactly
-as the original did for null.
+object as null. It compares the results, the logged order of evaluation and
+what each run left in its object arguments and in the case's static fields. A
+collection, returned or logged, is compared element by element. The only
+allowed difference is a destroyed object under the rule named `unity-null`, and
+there the rewritten code must behave exactly as the original did for null and
+leave the destroyed object as it was.
 
 ## Golden cases
 

@@ -107,6 +107,18 @@ static class DiffFixture
                         return value.GetType().Name + ":"
                             + number.ToString(null, CultureInfo.InvariantCulture);
                     }
+                    // A collection lists its elements. A lazy sequence isn't
+                    // run here: that would add effects to the Log call.
+                    if (value is System.Collections.ICollection items)
+                    {
+                        var parts = new List<string>();
+                        foreach (var item in items)
+                        {
+                            parts.Add(Describe(item));
+                        }
+                        return value.GetType().Name
+                            + "{" + string.Join(", ", parts) + "}";
+                    }
                     return value.ToString();
                 }
             }

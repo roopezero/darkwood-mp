@@ -24,7 +24,8 @@ sealed class DiffOutcome
 
 /// Runs a rule over one case (guide section 4.5): compiles the original and
 /// the form the rule produces, runs both over every combination of inputs and
-/// compares the results and the logged order of evaluation. The only allowed
+/// compares the results, the logged order of evaluation and what each run left
+/// in the object arguments and the case's static fields. The only allowed
 /// difference is a destroyed object under the rule named unity-null, and only
 /// the difference that rule exists to make: there a destroyed object must
 /// behave as the original did for null.
@@ -134,6 +135,17 @@ static class DiffHarness
                 outcome.DestroyedRows++;
                 var asNull = row.Select((index, i) => NullIndex(inputs[i], index));
                 var expected = Execute(original, asNull.ToArray(), inputs);
+                // The rewrite treats a destroyed object as null, so the run
+                // must leave it as it was made.
+                for (int i = 0; i < row.Length; i++)
+                {
+                    var input = inputs[i][row[i]];
+                    if (input.Destroyed)
+                    {
+                        expected.Objects[i] = ObjectState(
+                            original, parameters[i].Name, input.Make(original));
+                    }
+                }
                 Compare(label, Normal(expected), Normal(actual), outcome);
                 continue;
             }
@@ -155,7 +167,8 @@ static class DiffHarness
     {
         return new RunResult(
             result.Outcome.Replace("destroyed", "null"),
-            result.Log.Select(line => line.Replace("destroyed", "null")).ToList());
+            result.Log.Select(line => line.Replace("destroyed", "null")).ToList(),
+            result.Objects);
     }
 
     static void Compare(
@@ -171,6 +184,17 @@ static class DiffHarness
             outcome.Mismatches.Add(
                 $"{label}: order [{string.Join(", ", expected.Log)}] became "
                     + $"[{string.Join(", ", actual.Log)}]");
+        }
+        else
+        {
+            var changed = expected.Objects
+                .Zip(actual.Objects)
+                .FirstOrDefault(pair => pair.First != pair.Second);
+            if (changed.First != null)
+            {
+                outcome.Mismatches.Add(
+                    $"{label}: {changed.First} became {changed.Second}");
+            }
         }
     }
 
@@ -225,20 +249,66 @@ static class DiffHarness
         }
         var arguments = row.Select(
             (index, i) => inputs[i][index].Make(assembly)).ToArray();
+        var run = RunMethod(assembly);
         string outcome;
         try
         {
-            var value = RunMethod(assembly).Invoke(null, arguments);
-            var describe = trace.GetMethod("Describe");
-            outcome = "returned " + describe.Invoke(null, new[] { value });
+            var value = run.Invoke(null, arguments);
+            outcome = "returned " + Describe(assembly, value);
         }
         catch (TargetInvocationException e)
         {
             outcome = "threw " + e.InnerException.GetType().Name;
         }
+        outcome += Statics(assembly);
         var entries = (System.Collections.IEnumerable)trace
             .GetField("Entries").GetValue(null);
-        return new RunResult(outcome, entries.Cast<string>().ToList());
+        var names = run.GetParameters().Select(p => p.Name).ToArray();
+        var objects = arguments
+            .Select((argument, i) => ObjectState(assembly, names[i], argument))
+            .ToList();
+        return new RunResult(outcome, entries.Cast<string>().ToList(), objects);
+    }
+
+    static string Describe(Assembly assembly, object value)
+    {
+        var describe = assembly.GetType("DiffFixture.Trace").GetMethod("Describe");
+        return (string)describe.Invoke(null, new[] { value });
+    }
+
+    /// The static fields of the case after a run, so that a dropped store to
+    /// one shows.
+    static string Statics(Assembly assembly)
+    {
+        var fields = assembly.GetType("DiffFixture.Case")
+            .GetFields(AnyStatic)
+            .Where(field => !field.IsLiteral)
+            .OrderBy(field => field.Name, StringComparer.Ordinal);
+        var text = new StringBuilder();
+        foreach (var field in fields)
+        {
+            var value = Describe(assembly, field.GetValue(null));
+            text.Append($"; {field.Name}={value}");
+        }
+        return text.ToString();
+    }
+
+    /// The fields of an object argument after a run (the fake Unity object's
+    /// Dead, Count and Next), so that a dropped store to one shows. Empty for
+    /// null and for a value that can't change.
+    static string ObjectState(Assembly assembly, string name, object argument)
+    {
+        if (argument == null
+            || argument is string
+            || argument.GetType().IsValueType)
+        {
+            return "";
+        }
+        var parts = argument.GetType()
+            .GetFields(BindingFlags.Instance | BindingFlags.Public)
+            .Select(field => field.Name + "="
+                + Describe(assembly, field.GetValue(argument)));
+        return name + "{" + string.Join(", ", parts) + "}";
     }
 
     /// The inputs for a parameter of this type: bools, numbers (with NaN and
@@ -341,5 +411,7 @@ static class DiffHarness
         }
     }
 
-    sealed record RunResult(string Outcome, List<string> Log);
+    /// Objects holds the final state of each argument, in order.
+    sealed record RunResult(
+        string Outcome, List<string> Log, List<string> Objects);
 }
