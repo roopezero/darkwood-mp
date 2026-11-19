@@ -20,6 +20,7 @@ static class PurityCases
                 public int Computed { get { return Auto + 1; } }
                 public int this[int i] { get { return i; } }
                 public int Value;
+                public static int Shared;
                 public static Mod operator +(Mod a, Mod b) { return a; }
             }
 
@@ -75,6 +76,11 @@ static class PurityCases
         ("F(_n, c ? string.Concat(\"a\", \"b\").Length : 0);", Ok),
         ("F(_n, c ? int.Parse(\"1\") : 0);", Ok),
         ("F(_n, c ? bool.Parse(\"true\").GetHashCode() : 0);", Ok),
+        // A type in front of a static member is not a value: nothing runs.
+        ("Math.Max(1, c ? Bump() : 0);", Ok),
+        ("Mod.Shared = c ? Bump() : 0;", Ok),
+        ("Mod.Shared = c ? 1 : 0;", Ok),
+        ("System.Math.Max(1, c ? Bump() : 0);", Ok),
         // Asked about the loop or the if around it, the site is in a statement
         // of its own, which runs once per element or only sometimes.
         ("foreach (var i in _list)\n{\nlocal += c ? Bump() : 0;\n}",

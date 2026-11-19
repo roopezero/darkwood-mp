@@ -282,8 +282,23 @@ sealed class Purity
     /// the game or the mod, new of their types.
     public bool HasEffects(ExpressionSyntax expression)
     {
+        if (IsTypeName(expression))
+        {
+            return false;
+        }
         var operation = _model.GetOperation(expression);
         return operation == null || Effects(operation);
+    }
+
+    /// The type in front of a static member, as Math in Math.Max(a, b) or
+    /// Mod in "Mod.Shared = x". It is not a value, so nothing runs for it.
+    bool IsTypeName(ExpressionSyntax expression)
+    {
+        while (expression is ParenthesizedExpressionSyntax wrapped)
+        {
+            expression = wrapped.Expression;
+        }
+        return _model.GetSymbolInfo(expression).Symbol is INamespaceOrTypeSymbol;
     }
 
     bool Effects(IOperation operation)
@@ -395,7 +410,8 @@ sealed class Purity
         if (_model.GetConstantValue(operand).HasValue
             || operand is ThisExpressionSyntax
             || operand is BaseExpressionSyntax
-            || operand is TypeOfExpressionSyntax)
+            || operand is TypeOfExpressionSyntax
+            || IsTypeName(operand))
         {
             return true;
         }
