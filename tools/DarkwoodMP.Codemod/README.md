@@ -30,11 +30,13 @@ not in the default place.
 | `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted, and they line up with the code around them. |
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, gives an object initializer behind a multi-line argument list one line per member, and runs the Roslyn `Formatter` over every file. |
 | `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
-| `selftest [--show NAME]` | Runs the golden cases below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
+| `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
+| `ildiff <a.dll> <b.dll> [--manifest touched.json]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. |
+| `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. |
+| `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
-`Il/` (the IL diff) and `Prototype/` (the width pass and the first operator
-rule) are the prototype's code for the later stages of the pass. They compile,
-but no command runs them yet.
+`Prototype/Wrap.cs` is the prototype's width pass for stage 10. It compiles, but
+no command runs it yet.
 
 ## What stops a command
 
@@ -94,6 +96,49 @@ tools/verify-identical.sh HEAD~1 HEAD
 ```
 
 Exit code 0 means every DLL is identical to the byte.
+
+## Operator rules
+
+`codemod rule` plans every site on the original tree, replaces the planned
+statements, compiles the file with its tree replaced, and formats the result
+with the layout stage's pass, so the new code has its braces and blocks on their
+own lines. A site whose rewrite doesn't compile goes to the queue and the file
+is rewritten without it. A rule never adds a lambda or a local function, because
+the game's stack readers would see the extra frame. `DIR` gets:
+
+- `manifest.json`: the members the rule rewrote, for the IL diff,
+- `queue.jsonl`: one JSON line per site left alone (`file`, `line`, `rule`,
+  `reason`, `snippet`),
+- `sites.jsonl`: one JSON line per rewritten site (`file`, `line`, `member`,
+  `before`, `after`),
+- `census.txt`: per operator, the sites before, rewritten, queued, left for
+  later rules and after. The command stops, writing nothing, unless before =
+  rewritten + queued + later and the sites after are exactly those not
+  rewritten. `census --operators` prints the number of sites left per operator.
+
+The proof of a rule's commit:
+
+```bash
+tools/il-compare.sh HEAD~1 HEAD DIR/manifest.json
+```
+
+It builds both commits deterministically and runs `ildiff`: every changed method
+must belong to a member in the manifest (lambdas, local functions and state
+machines count for their owner), no type, field, property or event may appear or
+go unless the manifest allows it, parameter names, attributes, default values
+and constants stay as they were, and a manifest member's string constants may
+only change if the rule recorded a reason.
+
+## Differential tests
+
+`DiffTest/Cases/<rule>.cases` holds small methods, each written once in its
+original form, with every operand going through `Log("name", value)`. The
+harness compiles the original and the form the rule produces, runs both over
+every combination of bools, numbers, nulls and a fake `UnityObject` whose `==`
+treats a destroyed object as null, and compares the results and the logged
+order of evaluation. The only allowed difference is a destroyed object under
+the rule named `unity-null`, and there the rewritten code must behave exactly
+as the original did for null.
 
 ## Golden cases
 

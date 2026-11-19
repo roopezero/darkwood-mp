@@ -11,7 +11,8 @@ static class SnippetCompiler
     public static readonly CSharpParseOptions Parse = new CSharpParseOptions(
         LanguageVersion.CSharp12, DocumentationMode.Parse);
 
-    static readonly List<MetadataReference> References = ReadReferences();
+    public static readonly List<MetadataReference> References =
+        ReadReferences();
 
     /// The DLL's bytes, or null and the errors in <paramref name="errors"/>.
     public static byte[] Emit(string source, out string errors)

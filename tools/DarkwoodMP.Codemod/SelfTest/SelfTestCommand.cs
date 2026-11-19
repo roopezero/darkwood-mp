@@ -46,7 +46,14 @@ static class SelfTestCommand
             $"{files.Count - failed} of {files.Count} golden cases passed.");
         var accepted = BracedCodeCases.Failures();
         accepted.AddRange(LayoutCheckCases.Failures());
-        int cases = BracedCodeCases.Count + LayoutCheckCases.Count;
+        accepted.AddRange(IlDiffCases.Failures());
+        accepted.AddRange(RuleEngineCases.Failures());
+        accepted.AddRange(PurityCases.Failures());
+        accepted.AddRange(TempNameCases.Failures());
+        accepted.AddRange(DiffHarnessCases.Failures());
+        int cases = BracedCodeCases.Count + LayoutCheckCases.Count
+            + IlDiffCases.Count + RuleEngineCases.Count + PurityCases.Count
+            + TempNameCases.Count + DiffHarnessCases.Count;
         if (!OperatingSystem.IsWindows())
         {
             accepted.AddRange(OutputFilesCases.Failures());

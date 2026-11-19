@@ -1,0 +1,188 @@
+using DarkwoodMP.Codemod.Il;
+
+namespace DarkwoodMP.Codemod.SelfTest;
+
+/// Each case plants one difference between two tiny assemblies and says what
+/// the IL diff must make of it. The empty string means it must pass.
+static class IlDiffCases
+{
+    const string Base = """
+        using System;
+        using System.Collections.Generic;
+        namespace N
+        {
+            public class C
+            {
+                public const int Limit = 5;
+                public int Field;
+                public int Prop { get; set; }
+                public event Action Fired;
+                [Obsolete("old")] public void Attr() { Fired(); }
+                public int Foo(int x) { return x + 1; }
+                public int Foo(string s) { return s.Length; }
+                public string Say(int x) { return "hello" + x; }
+                public int Def(int x = 1) { return x; }
+                public int Lam(int x) { Func<int, int> f = y => y + x; return f(1); }
+                public IEnumerable<int> Iter(int x) { yield return x; }
+                public int Loc(int x) { int Inner(int y) { return y + 1; } return Inner(x); }
+            }
+        }
+        """;
+
+    const string Foo = "N.C::Foo(System.Int32)";
+    const string Say = "N.C::Say(System.Int32)";
+    const string Lam = "N.C::Lam(System.Int32)";
+    const string Iter = "N.C::Iter(System.Int32)";
+    const string Loc = "N.C::Loc(System.Int32)";
+    const string Def = "N.C::Def(System.Int32)";
+    const string Hello = "\"hello\"";
+    const string Hullo = "\"hullo\"";
+
+    static readonly (string Name, string From, string To, string[] Members,
+        string[] Allowed, StringChange[] Strings, string Fails)[] Cases =
+    {
+        ("identical builds pass", "", "", None, None, null, ""),
+        ("a body inside the manifest passes", "x + 1", "x + 2",
+            new[] { Foo }, None, null, ""),
+        ("a body outside the manifest fails", "x + 1", "x + 2",
+            None, None, null, "changed outside the manifest"),
+        ("another overload fails", "s.Length", "s.Length + 1",
+            new[] { Foo }, None, null, "changed outside the manifest"),
+        ("a name without types covers every overload", "s.Length", "s.Length + 1",
+            new[] { "N.C::Foo" }, None, null, ""),
+        ("a lambda counts for its owner", "y + x", "y + x + 1",
+            new[] { Lam }, None, null, ""),
+        ("a lambda outside the manifest fails", "y + x", "y + x + 1",
+            None, None, null, "changed outside the manifest"),
+        ("MoveNext counts for its owner", "yield return x;", "yield return x + 1;",
+            new[] { Iter }, None, null, ""),
+        ("MoveNext outside the manifest fails", "yield return x;",
+            "yield return x + 1;", None, None, null,
+            "changed outside the manifest"),
+        ("a new state machine field counts for its owner", "yield return x;",
+            "int t = x; yield return t; yield return t;",
+            new[] { Iter }, None, null, ""),
+        ("a new state machine field outside the manifest fails", "yield return x;",
+            "int t = x; yield return t; yield return t;",
+            None, None, null, "field added"),
+        ("a local function counts for its owner", "y + 1; } return Inner",
+            "y + 2; } return Inner", new[] { Loc }, None, null, ""),
+        ("a local function outside the manifest fails", "y + 1; } return Inner",
+            "y + 2; } return Inner", None, None, null,
+            "changed outside the manifest"),
+        ("a new closure class counts for its owner", "return y + 1; }",
+            "return y + x; }", new[] { Loc }, None, null, ""),
+        ("a new closure class outside the manifest fails", "return y + 1; }",
+            "return y + x; }", None, None, null, "type added"),
+        ("an added field fails", "public int Field;",
+            "public int Field; public int Extra;", None, None, null, "field added"),
+        ("a listed field passes", "public int Field;",
+            "public int Field; public int Extra;", None,
+            new[] { "field N.C::Extra" }, null, ""),
+        ("an added type fails", "public class C", "public class D { } public class C",
+            None, None, null, "type added"),
+        ("a listed type passes", "public class C",
+            "public class D { } public class C", None,
+            new[] { "type N.D" }, null, ""),
+        ("an added property fails", "public int Field;",
+            "public int Field; public int Other { get { return 1; } }",
+            None, None, null, "property added"),
+        ("an added event fails", "public int Field;",
+            "public int Field; public event Action Gone;",
+            None, None, null, "event added"),
+        ("an added method fails", "public int Field;",
+            "public int Field; public void New() { }",
+            None, None, null, "method added"),
+        ("a listed method passes", "public int Field;",
+            "public int Field; public void New() { }", None,
+            new[] { "method System.Void N.C::New()" }, null, ""),
+        ("a renamed parameter fails", "Def(int x = 1) { return x; }",
+            "Def(int y = 1) { return y; }", new[] { Def }, None, null,
+            "parameter names"),
+        ("a removed attribute fails", "[Obsolete(\"old\")] ", "", None, None, null,
+            "method facts changed"),
+        ("a changed attribute argument fails", "\"old\"", "\"new\"", None, None,
+            null, "method facts changed"),
+        ("a changed default value fails", "int x = 1", "int x = 2", new[] { Def },
+            None, null, "method facts changed"),
+        ("a changed constant fails", "Limit = 5", "Limit = 6", None, None, null,
+            "field facts changed"),
+        ("changed accessibility fails", "public int Foo(int x)",
+            "internal int Foo(int x)", new[] { Foo }, None, null,
+            "method facts changed"),
+        ("a changed string fails", Hello, Hullo, new[] { Say }, None, null,
+            "string constants changed"),
+        ("a string change with a recorded reason passes", Hello, Hullo,
+            new[] { Say }, None, new[] { Recorded(Say, "hello", "hullo", "typo") },
+            ""),
+        ("a recorded change without a reason fails", Hello, Hullo, new[] { Say },
+            None, new[] { Recorded(Say, "hello", "hullo", " ") },
+            "string constants changed"),
+        ("a recorded change of other strings fails", Hello, Hullo, new[] { Say },
+            None, new[] { Recorded(Say, "hello", "other", "typo") },
+            "string constants changed"),
+    };
+
+    static string[] None => Array.Empty<string>();
+
+    public static int Count => Cases.Length;
+
+    static StringChange Recorded(
+        string member, string removed, string added, string reason)
+    {
+        return new StringChange
+        {
+            Member = member,
+            Reason = reason,
+            Removed = new List<string> { removed },
+            Added = new List<string> { added },
+        };
+    }
+
+    public static List<string> Failures()
+    {
+        var problems = new List<string>();
+        foreach (var test in Cases)
+        {
+            var changed = Base;
+            if (test.From.Length > 0)
+            {
+                changed = Base.Replace(test.From, test.To);
+                if (changed == Base)
+                {
+                    problems.Add($"  {test.Name}: the planted text is not in the base");
+                    continue;
+                }
+            }
+            var a = SnippetCompiler.Emit(Base, out var errorsA);
+            var b = SnippetCompiler.Emit(changed, out var errorsB);
+            if (a == null || b == null)
+            {
+                problems.Add($"  {test.Name}: {errorsA}{errorsB}");
+                continue;
+            }
+            var manifest = new Manifest
+            {
+                Members = test.Members.ToList(),
+                Allowed = test.Allowed.ToList(),
+            };
+            if (test.Strings != null)
+            {
+                manifest.StringChanges = test.Strings.ToList();
+            }
+            var report = IlDiff.Compare(a, b, manifest);
+            if (test.Fails.Length == 0 && !report.Passed)
+            {
+                problems.Add($"  {test.Name}: should pass, but: "
+                    + string.Join("; ", report.Problems));
+            }
+            if (test.Fails.Length > 0
+                && !report.Problems.Any(p => p.Contains(test.Fails)))
+            {
+                problems.Add($"  {test.Name}: should report '{test.Fails}', but: "
+                    + string.Join("; ", report.Problems));
+            }
+        }
+        return problems;
+    }
+}

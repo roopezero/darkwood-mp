@@ -8,15 +8,20 @@ static class IlTools
 {
     public static string Render(MethodDefinition m)
     {
+        return Render(m, GeneratedNames.Identity);
+    }
+
+    public static string Render(MethodDefinition m, GeneratedNames names)
+    {
         if (!m.HasBody) { return "(no body)"; }
         var ins = m.Body.Instructions;
         var index = new Dictionary<Instruction, int>();
         for (int i = 0; i < ins.Count; i++) { index[ins[i]] = i; }
         var sb = new System.Text.StringBuilder();
-        foreach (var v in m.Body.Variables) { sb.Append("local ").Append(v.VariableType.FullName).Append('\n'); }
+        foreach (var v in m.Body.Variables) { sb.Append("local ").Append(names.Of(v.VariableType)).Append('\n'); }
         foreach (var h in m.Body.ExceptionHandlers)
         {
-            sb.Append($"handler {h.HandlerType} try {index[h.TryStart]}-{(h.TryEnd == null ? -1 : index[h.TryEnd])} handler {index[h.HandlerStart]}-{(h.HandlerEnd == null ? -1 : index[h.HandlerEnd])} {(h.CatchType == null ? "" : h.CatchType.FullName)}\n");
+            sb.Append($"handler {h.HandlerType} try {index[h.TryStart]}-{(h.TryEnd == null ? -1 : index[h.TryEnd])} handler {index[h.HandlerStart]}-{(h.HandlerEnd == null ? -1 : index[h.HandlerEnd])} filter {(h.FilterStart == null ? -1 : index[h.FilterStart])} {(h.CatchType == null ? "" : names.Of(h.CatchType))}\n");
         }
         for (int i = 0; i < ins.Count; i++)
         {
@@ -26,9 +31,9 @@ static class IlTools
             {
                 case Instruction t: sb.Append(" ->").Append(index[t]); break;
                 case Instruction[] ts: sb.Append(" ->").Append(string.Join(",", ts.Select(t => index[t]))); break;
-                case MethodReference r: sb.Append(' ').Append(r.FullName); break;
-                case FieldReference r: sb.Append(' ').Append(r.FullName); break;
-                case TypeReference r: sb.Append(' ').Append(r.FullName); break;
+                case MethodReference r: sb.Append(' ').Append(names.Of(r)); break;
+                case FieldReference r: sb.Append(' ').Append(names.Of(r)); break;
+                case TypeReference r: sb.Append(' ').Append(names.Of(r)); break;
                 case string s: sb.Append(" \"").Append(s).Append('"'); break;
                 case VariableDefinition v: sb.Append(" v").Append(v.Index); break;
                 case ParameterDefinition p: sb.Append(" p").Append(p.Index); break;

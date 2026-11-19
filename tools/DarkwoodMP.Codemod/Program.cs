@@ -1,6 +1,9 @@
 using DarkwoodMP.Codemod.Census;
 using DarkwoodMP.Codemod.Check;
+using DarkwoodMP.Codemod.DiffTest;
 using DarkwoodMP.Codemod.Format;
+using DarkwoodMP.Codemod.Il;
+using DarkwoodMP.Codemod.Rules;
 using DarkwoodMP.Codemod.SelfTest;
 using DarkwoodMP.Codemod.Stages;
 
@@ -10,8 +13,10 @@ namespace DarkwoodMP.Codemod;
 static class Program
 {
     const string Usage = """
-        codemod census                 counts per construct and context;
-                                       writes nothing
+        codemod census [--samples | --operators]
+                                       counts per construct and context;
+                                       writes nothing. --operators prints the
+                                       sites left of each operator
         codemod braces                 stage 1: every statement gets braces
         codemod layout                 stage 2: one-line blocks and bodies,
                                        then the Formatter over every file
@@ -19,7 +24,13 @@ static class Program
                                        same code, same comment words and every
                                        comment in its place, file by file?
                                        --braces allows the new blocks of stage 1
-        codemod selftest [--show NAME] the golden cases of both stages
+        codemod rule <name> [--receivers unity|other] --out DIR [--src DIR] [--dry-run]
+                                       one operator rule: writes manifest.json,
+                                       queue.jsonl and sites.jsonl to DIR
+        codemod ildiff <a.dll> <b.dll> [--manifest touched.json]
+                                       did only the manifest's members change?
+        codemod difftest <rule>        runs a rule's differential cases
+        codemod selftest [--show NAME] the golden cases and the tool's checks
         """;
 
     static int Main(string[] args)
@@ -53,6 +64,12 @@ static class Program
                 return StageCommand.Run("layout", Passes.Layout);
             case "check":
                 return CheckCommand.Run(rest);
+            case "rule":
+                return RuleCommand.Run(rest);
+            case "ildiff":
+                return IlDiffCommand.Run(rest);
+            case "difftest":
+                return DiffTestCommand.Run(rest);
             case "selftest":
                 return SelfTestCommand.Run(rest);
             default:

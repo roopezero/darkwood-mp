@@ -1,4 +1,5 @@
 using DarkwoodMP.Codemod.Loading;
+using DarkwoodMP.Codemod.Rules;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace DarkwoodMP.Codemod.Census;
@@ -10,6 +11,10 @@ static class CensusCommand
     public static int Run(string[] args)
     {
         var project = PluginLoader.Load(RepoPaths.Find());
+        if (args.Contains("--operators"))
+        {
+            return PrintOperators(project);
+        }
         var compilation = project.Compilation;
         var unity = compilation.GetTypeByMetadataName("UnityEngine.Object");
         var samples = new Samples();
@@ -41,6 +46,27 @@ static class CensusCommand
         if (args.Contains("--samples"))
         {
             samples.Print();
+        }
+        return 0;
+    }
+
+    /// One line per operator: the number of sites left in the sources, for a
+    /// stage to check census before = rewritten + queued + left for later.
+    static int PrintOperators(PluginProject project)
+    {
+        var totals = new int[OperatorCount.All.Length];
+        foreach (var tree in project.Sources)
+        {
+            var counts = OperatorCount.Of(tree.GetRoot());
+            for (int i = 0; i < totals.Length; i++)
+            {
+                totals[i] += counts[i];
+            }
+        }
+        foreach (var op in OperatorCount.All)
+        {
+            Console.WriteLine(
+                $"{OperatorCount.Label(op)} {totals[(int)op]}");
         }
         return 0;
     }

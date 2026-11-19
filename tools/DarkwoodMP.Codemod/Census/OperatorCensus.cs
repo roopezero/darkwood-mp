@@ -49,18 +49,11 @@ sealed class OperatorCensus
                     CountCoalesceAssign(a, model, file);
                     break;
                 case ConditionalAccessExpressionSyntax a
-                        when !IsInnerLink(a):
+                        when !Rules.OperatorCount.IsInnerLink(a):
                     CountConditional(a, model, file);
                     break;
             }
         }
-    }
-
-    /// One chain "a?.b?.c" counts once: skip the links inside it.
-    static bool IsInnerLink(ConditionalAccessExpressionSyntax node)
-    {
-        return node.Parent is ConditionalAccessExpressionSyntax outer
-            && outer.WhenNotNull == node;
     }
 
     void CountTernary(
