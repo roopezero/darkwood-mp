@@ -10,10 +10,25 @@ sealed class IlDiffReport
     /// Methods whose body changed, inside the manifest.
     public readonly List<string> Changed = new();
 
+    /// Each method of Changed with the manifest entries it counts for.
+    public readonly List<(string Method, string Entries)> Credits = new();
+
     /// Every reason the diff fails. Empty means the gate passed.
     public readonly List<string> Problems = new();
 
     public bool Passed => Problems.Count == 0;
+
+    /// One line per changed method, with what it was credited to, in the
+    /// order of the methods' names.
+    public void PrintCredits(TextWriter output)
+    {
+        var sorted = Credits.OrderBy(
+            credit => credit.Method, StringComparer.Ordinal);
+        foreach (var (method, entries) in sorted)
+        {
+            output.WriteLine("changed  " + method + "  for  " + entries);
+        }
+    }
 
     public void Print(TextWriter output)
     {

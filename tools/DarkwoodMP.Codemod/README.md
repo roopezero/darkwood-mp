@@ -31,7 +31,7 @@ not in the default place.
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, gives an object initializer behind a multi-line argument list one line per member, and runs the Roslyn `Formatter` over every file. |
 | `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
-| `ildiff <a.dll> <b.dll> [--manifest touched.json]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. |
+| `ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. `--list` first prints each changed method with the manifest entry it was credited to. |
 | `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
 | `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
@@ -297,11 +297,23 @@ that tests for that:
   read once and written once as before.
 
 Temporaries are named in the order they are declared (`TempNames.Pick`),
-after the parameter the value is passed to when that is a word (not
-`Math.Max`'s `val2`), the target it is stored to, or what it is: a call
-without a leading get (`getObjects()` gives `objects`), and an element that
-`First`, `Last`, `Single` or `ElementAt` picks after the `Select` in front
-of it or its type (`slot`). Only a name a new local could clash with is
+after the parameter the value is passed to when that says what it is (not
+`Math.Max`'s `val2` or `ReferenceEquals`'s `objA`), the target it is stored
+to, or what it is (`Rules/ValueNames.cs`): a get call after what it gets
+(`getObjects()` gives `objects`, `SawField.GetValue(x)` gives `saw`), a
+call named for what it does after the rest of its name or the type of its
+value (`Get(slot)` of a `Record` gives `record`,
+`DeserializeObject<SaveState>(s)` gives `saveState`, as `object` is a
+keyword), a trimmed text after the text (`line.Trim()` gives
+`trimmedLine`), an element after the singular of its collection, its type
+or `line` for a line of a split text (`objects[i]` of a `RandomObject`
+gives `randomObject`), and an element that `First`, `Last`, `Single` or
+`ElementAt` picks after the `Select` in front of it or its type (`slot`).
+Any other call is named after its method (`a.Child()` gives `child`). A
+run of capitals in front of a name goes small as a whole (`IPv4Mask` gives
+`ipv4Mask`), and a contextual keyword that is one only in front of an
+attribute or in a type's declaration stays a name (`method`, `type`,
+`record`). Only a name a new local could clash with is
 taken: not one after a dot, nor a tuple element's or one in front of a
 colon (an argument's, a tuple literal's or a property pattern's). A hint
 that another variable or member has is passed over, because a number would
@@ -380,7 +392,10 @@ x?.B ?? true             ->  x == null || x.B
 ```
 
 They hold only when `v` has no effects and can't throw: a constant,
-`typeof`, a local, a parameter or `this`, with no user-defined conversion.
+`typeof`, a local, a parameter or `this`, and when no user-defined
+conversion runs on either side. The original runs one for a null `x` too:
+Unity's `bool` operator makes `x?.Go == false` true for a null `x`, so such
+a comparison moves into a temporary instead.
 "Not null" means a value type that isn't a Nullable, or a constant that
 isn't null. A member of a type with an `==` of its own goes to the hoist,
 unless that `==` is string's, .NET's or a Unity object's, which all give
@@ -398,20 +413,25 @@ treats only null as equal to null, and so do a Nullable receiver, a type
 parameter and `dynamic`. An interface and `object` stay reference checks,
 as `?.` makes them.
 
+The comment behind a rewritten statement goes on a line of its own above
+the new code, at the statement's indentation, and the new code's first line
+starts there too, so the formatter doesn't line the comment up under a
+comment behind the line above.
+
 The queue gets what ternary-hoist's hazards refuse (a call earlier in the
 statement, a mutable value read earlier when the `?.` has effects, code
-that may not run, an initializer, a value made into text by code that
-isn't plain), a `?.` inside the receiver or the later part of another one
-and the one that holds it (both, so a second run finds the same), a
-variable declared inside it, a directive or a comment inside it, a
-statement form inside an interpolation hole, an `await` in the statement,
-an async member's or lambda's expression body and the checks every
-rewrite makes.
+that may not run, an initializer, a for initializer, whose variable lives
+in the header, a value made into text by code that isn't plain), a `?.`
+inside the receiver or the later part of another one and the one that
+holds it (both, so a second run finds the same), a variable declared
+inside it, a directive or a comment inside it, a statement form inside an
+interpolation hole, an `await` in the statement, an async member's or
+lambda's expression body and the checks every rewrite makes.
 
 The proof of a rule's commit:
 
 ```bash
-tools/il-compare.sh HEAD~1 HEAD DIR/manifest.json
+tools/il-compare.sh HEAD~1 HEAD DIR/manifest.json [--list]
 ```
 
 It builds both commits deterministically and runs `ildiff`: every changed method
@@ -502,9 +522,17 @@ reads it twice throws), events and delegates, the natural type of a
 declaration, chains, a setter that logs each set, returns, expression
 bodies and lambdas, every fixed comparison and its parentheses, a compared
 value with effects or a null (which must still run and compare), a loop
-condition, element reads and .NET's `==`. Reading the receiver twice,
-writing `x?.F != v` as `x != null && x.F != v`, and translating a compared
-value with effects each fail a case.
+condition, element reads and .NET's `==`, a user-defined conversion of the
+`?.`'s value or of the compared value, receivers that are another type's
+property or a call, an assignment of a chain to a target that wasn't null
+and an assignment whose target runs a getter. Reading the receiver twice
+(a call's or another type's property's too), writing `x?.F != v` as
+`x != null && x.F != v`, translating a compared value with effects or a
+comparison that converts by code of its own, the assignment form for a
+chain and running the receiver before the target's getter each fail a
+case. The golden cases pin what a single thread can't show: a ref parameter
+or ref local goes into a temporary, and a statement in an interpolation
+hole or with an await goes to the queue.
 
 ## Golden cases
 

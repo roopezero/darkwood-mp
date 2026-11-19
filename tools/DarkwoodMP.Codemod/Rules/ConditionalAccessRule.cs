@@ -334,7 +334,10 @@ sealed partial class AccessPlanner
     }
 
     /// The statement becomes the new code, with the comment that was
-    /// behind it on a line of its own above.
+    /// behind it on a line of its own above, at the statement's own
+    /// indentation. The first line of the new code starts there too: when it
+    /// doesn't, the formatter lines the comment up under a comment behind
+    /// the line above, as if it went on with that one.
     void Direct(
         AccessChain chain,
         StatementSyntax statement,
@@ -346,7 +349,7 @@ sealed partial class AccessPlanner
         if (comment != null)
         {
             _plan.NoteComment(chain.Sites(), "above: " + comment);
-            above = comment + "\n";
+            above = comment + "\n" + Indent(statement.SpanStart);
         }
         int column = Column(statement.SpanStart);
         _edits.Add(new PlannedEdit

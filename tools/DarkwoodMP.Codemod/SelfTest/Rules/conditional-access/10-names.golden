@@ -1,0 +1,184 @@
+A temporary is named after what its value is. A call named for what it
+does gets the type of its value ("Get(i)" of a Record gives record), an
+element the singular of its collection or its type ("objects" would give
+"object", a keyword), a line of a split text "line" and the text trimmed
+"trimmedLine". The value a field found by reflection reads is named after
+the field, a parameter that takes anything (ReferenceEquals's objA) gives
+no name, a run of capitals in front goes small as a whole (ipv4Mask), and
+"method" is a name, as it is a keyword only in front of an attribute.
+=== input
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+
+namespace N
+{
+    public class Record
+    {
+        public string Name;
+    }
+
+    public class RandomObject
+    {
+        public string Prefab;
+    }
+
+    public class Box
+    {
+        public class SaveState
+        {
+            public string Label;
+        }
+
+        public static FieldInfo SawField;
+
+        public RandomObject[] objects;
+        public List<Record> Slots = new List<Record>();
+        public Box IPv4Mask;
+
+        public Record Get(int slot)
+        {
+            return null;
+        }
+
+        public static SaveState DeserializeObject(string text)
+        {
+            return null;
+        }
+
+        public byte[] GetAddressBytes()
+        {
+            return null;
+        }
+    }
+
+    public class C
+    {
+        public object Run(Box b, int i, string s, Exception why)
+        {
+            var name = b.Get(i)?.Name;
+            var label = Box.DeserializeObject(s)?.Label;
+            var prefab = b.objects[i]?.Prefab;
+            var first = b.Slots[i]?.Name;
+            byte[] mask = b.IPv4Mask?.GetAddressBytes();
+            bool inSaw = !ReferenceEquals(Box.SawField?.GetValue(b), null);
+            var where = "at " + why.StackTrace?.Split('\n')[0]?.Trim();
+            var t = new StackTrace().GetFrame(i)?.GetMethod()?.DeclaringType;
+            return (name, label, prefab, first, mask, inSaw, where, t);
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+
+namespace N
+{
+    public class Record
+    {
+        public string Name;
+    }
+
+    public class RandomObject
+    {
+        public string Prefab;
+    }
+
+    public class Box
+    {
+        public class SaveState
+        {
+            public string Label;
+        }
+
+        public static FieldInfo SawField;
+
+        public RandomObject[] objects;
+        public List<Record> Slots = new List<Record>();
+        public Box IPv4Mask;
+
+        public Record Get(int slot)
+        {
+            return null;
+        }
+
+        public static SaveState DeserializeObject(string text)
+        {
+            return null;
+        }
+
+        public byte[] GetAddressBytes()
+        {
+            return null;
+        }
+    }
+
+    public class C
+    {
+        public object Run(Box b, int i, string s, Exception why)
+        {
+            Record record = b.Get(i);
+            string name = null;
+            if (record != null)
+            {
+                name = record.Name;
+            }
+            Box.SaveState saveState = Box.DeserializeObject(s);
+            string label = null;
+            if (saveState != null)
+            {
+                label = saveState.Label;
+            }
+            RandomObject randomObject = b.objects[i];
+            string prefab = null;
+            if (randomObject != null)
+            {
+                prefab = randomObject.Prefab;
+            }
+            Record slot = b.Slots[i];
+            string first = null;
+            if (slot != null)
+            {
+                first = slot.Name;
+            }
+            Box ipv4Mask = b.IPv4Mask;
+            byte[] mask = null;
+            if (ipv4Mask != null)
+            {
+                mask = ipv4Mask.GetAddressBytes();
+            }
+            FieldInfo sawField = Box.SawField;
+            object saw = null;
+            if (sawField != null)
+            {
+                saw = sawField.GetValue(b);
+            }
+            bool inSaw = !ReferenceEquals(saw, null);
+            string stackTrace = why.StackTrace;
+            string trimmedLine = null;
+            if (stackTrace != null)
+            {
+                string line = stackTrace.Split('\n')[0];
+                if (line != null)
+                {
+                    trimmedLine = line.Trim();
+                }
+            }
+            var where = "at " + trimmedLine;
+            StackFrame frame = new StackTrace().GetFrame(i);
+            Type t = null;
+            if (frame != null)
+            {
+                MethodBase method = frame.GetMethod();
+                if (method != null)
+                {
+                    t = method.DeclaringType;
+                }
+            }
+            return (name, label, prefab, first, mask, inSaw, where, t);
+        }
+    }
+}

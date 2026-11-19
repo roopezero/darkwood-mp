@@ -10,19 +10,20 @@ namespace DarkwoodMP.Codemod.Rules;
 /// (codemod.md section 7.4) and is unique across the whole member: every
 /// identifier in it counts as taken, in all switch sections and lambdas and
 /// in code an #if leaves out, so a new local can never clash with or shadow
-/// anything there, in any build. A keyword is never a name.
-sealed class TempNames
+/// anything there, in any build. A keyword is never a name. What a value's
+/// own text suggests is in ValueNames.cs.
+sealed partial class TempNames
 {
     const string Fallback = "value";
 
     /// Anything in disabled text that could be an identifier.
     static readonly Regex Word = new Regex(@"[\p{L}_][\p{L}\p{Nd}_]*");
 
-    /// The methods whose value is one element of what they are called on.
-    static readonly HashSet<string> Elements = new()
+    /// The names .NET gives a parameter that takes any value, which say
+    /// nothing about the value passed: ReferenceEquals(objA, objB).
+    static readonly HashSet<string> Anything = new()
     {
-        "First", "FirstOrDefault", "Last", "LastOrDefault", "Single",
-        "SingleOrDefault", "ElementAt", "ElementAtOrDefault",
+        "obj", "objA", "objB", "value", "arg", "args", "item",
     };
 
     readonly HashSet<string> _taken = new();
@@ -151,11 +152,14 @@ sealed class TempNames
         return Number(words[0]);
     }
 
-    /// Not one letter and not ending in a digit, as the parameters of
-    /// Math.Max(val1, val2) do.
+    /// A parameter's name that says what the value passed is: not one
+    /// letter, not ending in a digit, as the parameters of Math.Max(val1,
+    /// val2) do, and not one of the names .NET gives a parameter that takes
+    /// any value, such as ReferenceEquals's objA.
     public static bool IsWord(string name)
     {
-        return name.Length > 1 && !char.IsDigit(name[name.Length - 1]);
+        return name.Length > 1 && !char.IsDigit(name[name.Length - 1])
+            && !Anything.Contains(name);
     }
 
     string Number(string word)
@@ -208,83 +212,6 @@ sealed class TempNames
                 return Clean(v.Identifier.ValueText);
         }
         return Clean(LastIdentifier(expression));
-    }
-
-    /// The name the value itself suggests, for Pick: a call is named
-    /// after its method without a leading get ("getObjects()" gives
-    /// "objects"), and one that picks an element after what the element
-    /// is ("Select(f => f.type).First()" gives "type", and a call that
-    /// returns a Slot "slot"); anything else after its last identifier.
-    public static string Named(ExpressionSyntax expression, SemanticModel model)
-    {
-        switch (expression)
-        {
-            case ParenthesizedExpressionSyntax p:
-                return Named(p.Expression, model);
-            case ConditionalAccessExpressionSyntax access:
-                return Named(access.WhenNotNull, model);
-            case InvocationExpressionSyntax call:
-                var method = LastIdentifier(call.Expression);
-                if (Elements.Contains(method))
-                {
-                    return CleanName(Element(call, model));
-                }
-                return CleanName(Verbless(method));
-            default:
-                return CleanName(LastIdentifier(expression));
-        }
-    }
-
-    /// Clean, but "type" stays "type": it is a keyword only in front of
-    /// an attribute ("[type: ...]"), where no local can be.
-    static string CleanName(string name)
-    {
-        var clean = Clean(name);
-        if (clean == "typeValue" && name == "type")
-        {
-            return name;
-        }
-        return clean;
-    }
-
-    static string Element(InvocationExpressionSyntax call, SemanticModel model)
-    {
-        if (call.Expression is MemberAccessExpressionSyntax
-            {
-                Expression: InvocationExpressionSyntax select,
-            }
-            && LastIdentifier(select.Expression) == "Select"
-            && select.ArgumentList.Arguments.Count == 1
-            && select.ArgumentList.Arguments[0].Expression
-                is AnonymousFunctionExpressionSyntax
-                {
-                    ExpressionBody: not null,
-                } selector)
-        {
-            return LastIdentifier(selector.ExpressionBody);
-        }
-        if (model.GetTypeInfo(call).Type is INamedTypeSymbol
-            {
-                SpecialType: SpecialType.None,
-                IsTupleType: false,
-                TypeArguments.Length: 0,
-            } type)
-        {
-            return type.Name;
-        }
-        return Fallback;
-    }
-
-    /// "getObjects" as "Objects"; any other name as it is.
-    static string Verbless(string method)
-    {
-        if (method.Length > 3
-            && (method.StartsWith("get") || method.StartsWith("Get"))
-            && char.IsUpper(method[3]))
-        {
-            return method.Substring(3);
-        }
-        return method;
     }
 
     static string LastIdentifier(ExpressionSyntax expression)
@@ -355,21 +282,69 @@ sealed class TempNames
         return words;
     }
 
-    /// Drops leading underscores and lowers the first letter; a keyword gets
+    /// Drops leading underscores and lowers the first word; a keyword gets
     /// a suffix.
     static string Clean(string name)
+    {
+        var lowered = Lowered(name);
+        if (lowered == null)
+        {
+            return Fallback;
+        }
+        if (IsAnyKeyword(lowered))
+        {
+            return lowered + "Value";
+        }
+        return lowered;
+    }
+
+    /// The name without leading underscores, its first word in small
+    /// letters, or null when it isn't a name.
+    static string Lowered(string name)
     {
         name = name.TrimStart('_');
         if (name.Length == 0 || !SyntaxFacts.IsValidIdentifier(name))
         {
-            return Fallback;
+            return null;
         }
-        name = char.ToLowerInvariant(name[0]) + name.Substring(1);
-        if (SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None
-            || SyntaxFacts.GetContextualKeywordKind(name) != SyntaxKind.None)
+        return LowerStart(name);
+    }
+
+    static bool IsAnyKeyword(string name)
+    {
+        return SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None
+            || SyntaxFacts.GetContextualKeywordKind(name) != SyntaxKind.None;
+    }
+
+    /// The first word in small letters: "Mask" gives "mask", and a run of
+    /// capitals in front goes small as a whole ("IPv4Mask" gives
+    /// "ipv4Mask", "NPCs" "npcs", "ID" "id"), but for its last capital
+    /// when that starts the next word ("IPAddress" gives "ipAddress").
+    static string LowerStart(string name)
+    {
+        int run = 0;
+        while (run < name.Length && char.IsUpper(name[run]))
         {
-            return name + "Value";
+            run++;
         }
-        return name;
+        int lowered = run;
+        if (run > 1 && run < name.Length && char.IsLower(name[run])
+            && !RunGoesOn(name.Substring(run)))
+        {
+            lowered = run - 1;
+        }
+        return name.Substring(0, lowered).ToLowerInvariant()
+            + name.Substring(lowered);
+    }
+
+    /// The small letters after a run of capitals are still part of it: a
+    /// plural s ("NPCs") or a version ("IPv4").
+    static bool RunGoesOn(string rest)
+    {
+        if (rest.Length > 1 && rest[0] == 'v' && char.IsDigit(rest[1]))
+        {
+            return true;
+        }
+        return rest[0] == 's' && (rest.Length == 1 || !char.IsLower(rest[1]));
     }
 }

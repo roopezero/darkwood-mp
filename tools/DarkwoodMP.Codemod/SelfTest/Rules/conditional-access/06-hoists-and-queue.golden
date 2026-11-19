@@ -201,16 +201,16 @@ namespace N
                     label5 = next.Label;
                 }
             }
-            string trim = null;
+            string trimmedText = null;
             if (b != null)
             {
-                string take = b.Next.Take();
-                if (take != null)
+                string text = b.Next.Take();
+                if (text != null)
                 {
-                    trim = take.Trim();
+                    trimmedText = text.Trim();
                 }
             }
-            var inner = label5 + trim;
+            var inner = label5 + trimmedText;
             var outer = a?.Next.Take()?.Insert(0, b?.Label);
             var found = a?.Find("k", out var value);
             var noted = a /* kept */ ?.Label;

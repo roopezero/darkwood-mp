@@ -1,15 +1,19 @@
 #!/bin/bash
-# tools/il-compare.sh BASE HEAD MANIFEST
+# tools/il-compare.sh BASE HEAD MANIFEST [--list]
 # Builds two commits the way verify-identical.sh does and compares their DLLs
 # against the manifest a rewrite rule wrote (guide section 4.5). Exit code 0
 # means every DLL is either identical to the byte or differs only inside the
-# manifest's members. Run it under the machine's build lock when other builds
-# may be running.
+# manifest's members. --list also prints each changed method with the
+# manifest entry it was credited to. Run it under the machine's build lock
+# when other builds may be running.
 set -euo pipefail
 export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:~/.dotnet/tools:$PATH
 
-if [ $# -ne 3 ]; then
-    echo "usage: tools/il-compare.sh BASE HEAD MANIFEST"
+list=()
+if [ $# -eq 4 ] && [ "$4" = "--list" ]; then
+    list=(--list)
+elif [ $# -ne 3 ]; then
+    echo "usage: tools/il-compare.sh BASE HEAD MANIFEST [--list]"
     exit 2
 fi
 manifest="$(realpath "$3")"
@@ -70,7 +74,7 @@ for dll in .cache/il-compare/out-head/*.dll; do
     fi
     echo "differs: $name"
     if ! dotnet "$tool" ildiff ".cache/il-compare/out-base/$name" "$dll" \
-        --manifest "$manifest"; then
+        --manifest "$manifest" ${list[@]+"${list[@]}"}; then
         status=1
     fi
 done

@@ -11,6 +11,9 @@ namespace DarkwoodMP.Codemod.Rules;
 /// so a context the rule wasn't written for is never rewritten by accident.
 sealed class HoistPath
 {
+    public const string ForInitializer =
+        "a for initializer: its variable is declared in the header";
+
     /// Why the expression can't move, or null.
     public string Refusal { get; private set; }
 
@@ -277,8 +280,9 @@ sealed class HoistPath
         return null;
     }
 
-    /// The declarators before this one run first. A for header runs its
-    /// parts more than once or apart from the loop.
+    /// The declarators before this one run first. A for initializer runs
+    /// once and first, unlike the rest of a for header, but the variable it
+    /// declares lives in the header, so the site is left to a person.
     string Declaration(VariableDeclarationSyntax declaration, SyntaxNode child)
     {
         switch (declaration.Parent)
@@ -287,7 +291,7 @@ sealed class HoistPath
             case UsingStatementSyntax:
                 break;
             case ForStatementSyntax:
-                return Purity.MayNotRun + ": a for header";
+                return ForInitializer;
             default:
                 return "not a local declaration: " + declaration.Parent.Kind();
         }

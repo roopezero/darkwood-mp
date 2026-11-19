@@ -27,7 +27,7 @@ static class Program
         codemod rule <name> [--receivers unity|other] --out DIR [--src DIR] [--dry-run]
                                        one operator rule: writes manifest.json,
                                        queue.jsonl and sites.jsonl to DIR
-        codemod ildiff <a.dll> <b.dll> [--manifest touched.json]
+        codemod ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]
                                        did only the manifest's members change?
         codemod difftest <rule>        runs a rule's differential cases
         codemod selftest [--show NAME] the golden cases and the tool's checks

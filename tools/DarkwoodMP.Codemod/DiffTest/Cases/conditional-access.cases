@@ -476,3 +476,183 @@ public static object Run(bool has, bool open, sbyte k)
     bool shut = b?.Open ?? false;
     return (Prefix(k), shut);
 }
+=== a conversion of the ?.'s value runs for a null receiver too
+public class Num
+{
+    public int V;
+
+    public static implicit operator int(Num n)
+    {
+        if (ReferenceEquals(n, null))
+        {
+            return Log("null num", 5);
+        }
+        return Log("num", n.V);
+    }
+}
+
+public class Box
+{
+    public Num Score;
+    public int N;
+}
+
+public static object Run(bool has, int v)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Score = new Num { V = v }, N = v };
+    }
+    bool five = a?.Score == 5;
+    bool more = a?.Score > 2;
+    bool plain = a?.N == 5;
+    return (five, more, plain);
+}
+=== a compared value's own conversion runs for a null receiver too
+public struct Meter
+{
+    public int V;
+
+    public static implicit operator int(Meter m)
+    {
+        return Log("meter", m.V);
+    }
+}
+
+public class Box
+{
+    public int Count;
+}
+
+public static object Run(bool has, int v)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Count = v };
+    }
+    var m = new Meter { V = 3 };
+    bool same = a?.Count == m;
+    bool plain = a?.Count == 3;
+    return (same, plain);
+}
+=== a receiver that is another type's property or a call is read once
+public class Box
+{
+    public int N;
+
+    public void Hit(int k)
+    {
+        Log("hit", k);
+    }
+}
+
+public static class Holder
+{
+    public static int Reads;
+    public static bool Has;
+
+    public static Box Current
+    {
+        get
+        {
+            Reads++;
+            Log("read", Reads);
+            if (Has && Reads == 1)
+            {
+                return new Box { N = 1 };
+            }
+            return null;
+        }
+    }
+}
+
+static bool s_has;
+
+static Box Make()
+{
+    Log("make", s_has);
+    if (s_has)
+    {
+        return new Box { N = 2 };
+    }
+    return null;
+}
+
+public static object Run(bool has, int n)
+{
+    Holder.Reads = 0;
+    Holder.Has = has;
+    s_has = has;
+    Holder.Current?.Hit(n);
+    Make()?.Hit(n);
+    return Holder.Reads;
+}
+=== an assignment of a chain sets its target to null at any null step
+public class Box
+{
+    public Box Inner;
+    public string Name;
+}
+
+static string s_name;
+
+public static object Run(bool has, bool inner, string start)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Name = "a" };
+        if (inner)
+        {
+            a.Inner = new Box { Name = "b" };
+        }
+    }
+    string local = start;
+    local = a?.Inner?.Name;
+    s_name = start;
+    s_name = a?.Inner?.Name;
+    return (local, s_name);
+}
+=== an assignment whose target runs a getter keeps its order
+public class Box
+{
+    public int Count;
+    public int? Size;
+}
+
+static Box s_box;
+static bool s_has;
+
+public static class Holder
+{
+    public static Box Current
+    {
+        get
+        {
+            Log("current", 1);
+            return s_box;
+        }
+    }
+}
+
+static Box Make()
+{
+    Log("make", s_has);
+    if (s_has)
+    {
+        return new Box { Count = 4 };
+    }
+    return null;
+}
+
+public static object Run(bool has, int start)
+{
+    s_box = new Box { Size = start };
+    s_has = has;
+    Holder.Current.Size = Make()?.Count;
+    int? local = start;
+    local = Make()?.Count;
+    return (s_box.Size, local);
+}

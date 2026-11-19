@@ -277,9 +277,23 @@ static class IlDiffCases
             new[] { Recorded("N.C::Pick", "up", "upp", "typo") }, ""),
     };
 
+    /// What --list prints for a changed method: the manifest entry it was
+    /// credited to.
+    static readonly (string Name, string From, string To, string[] Members,
+        string Credit)[] Credits =
+    {
+        ("a body is credited to its own entry", "x + 1", "x + 2",
+            new[] { Foo }, "N.C::Foo(System.Int32)  for  " + Foo),
+        ("a body is credited to a name for every overload",
+            "{ return s.Length; }", "{ return s.Length + 1; }",
+            new[] { "N.C::Foo" }, "  for  N.C::Foo (every overload)"),
+        ("a lambda is credited to its owner", "y + x", "y + x + 1",
+            new[] { Lam }, "<Lam>b__0(System.Int32)  for  " + Lam),
+    };
+
     static string[] None => Array.Empty<string>();
 
-    public static int Count => Cases.Length;
+    public static int Count => Cases.Length + Credits.Length;
 
     static StringChange Recorded(
         string member, string removed, string added, string reason)
@@ -335,6 +349,25 @@ static class IlDiffCases
             {
                 problems.Add($"  {test.Name}: should report '{test.Fails}', but: "
                     + string.Join("; ", report.Problems));
+            }
+        }
+        foreach (var test in Credits)
+        {
+            var a = SnippetCompiler.Emit(Base, out var errorsA);
+            var b = SnippetCompiler.Emit(
+                Base.Replace(test.From, test.To), out var errorsB);
+            if (a == null || b == null)
+            {
+                problems.Add($"  {test.Name}: {errorsA}{errorsB}");
+                continue;
+            }
+            var manifest = new Manifest { Members = test.Members.ToList() };
+            var listed = new StringWriter();
+            IlDiff.Compare(a, b, manifest).PrintCredits(listed);
+            if (!listed.ToString().Contains(test.Credit))
+            {
+                problems.Add($"  {test.Name}: should list '{test.Credit}', "
+                    + "but listed: " + listed.ToString().Trim());
             }
         }
         return problems;

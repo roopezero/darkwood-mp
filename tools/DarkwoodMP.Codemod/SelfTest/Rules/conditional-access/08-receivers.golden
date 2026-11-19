@@ -1,0 +1,109 @@
+A receiver that isn't a local, a parameter or this is read once, into a
+temporary: a member of another type, a call and a ref parameter or ref
+local, which another thread can change between two reads. The comment
+behind a rewritten statement goes on a line of its own above the new code,
+at the statement's indentation, also when the line above ends in a comment
+of its own.
+=== input
+namespace N
+{
+    public class Box
+    {
+        public static Box Instance { get; set; }
+
+        public int N;
+
+        public void Hit(int k)
+        {
+            N += k;
+        }
+    }
+
+    public class C
+    {
+        Box _box;
+
+        static Box Make()
+        {
+            return Box.Instance;
+        }
+
+        public void Run(Box a)
+        {
+            Box.Instance?.Hit(1);
+            Make()?.Hit(2);
+            a.Hit(3); // the first: a comment behind it
+            Box.Instance?.Hit(4); // the second, behind the ?.
+            a.Hit(5);
+        }
+
+        public void Hit(ref Box b)
+        {
+            b?.Hit(2);
+            ref Box held = ref _box;
+            held?.Hit(3);
+        }
+    }
+}
+=== output
+namespace N
+{
+    public class Box
+    {
+        public static Box Instance { get; set; }
+
+        public int N;
+
+        public void Hit(int k)
+        {
+            N += k;
+        }
+    }
+
+    public class C
+    {
+        Box _box;
+
+        static Box Make()
+        {
+            return Box.Instance;
+        }
+
+        public void Run(Box a)
+        {
+            Box instance = Box.Instance;
+            if (instance != null)
+            {
+                instance.Hit(1);
+            }
+            Box box = Make();
+            if (box != null)
+            {
+                box.Hit(2);
+            }
+            a.Hit(3); // the first: a comment behind it
+            // the second, behind the ?.
+            Box instance2 = Box.Instance;
+            if (instance2 != null)
+            {
+                instance2.Hit(4);
+            }
+            a.Hit(5);
+        }
+
+        public void Hit(ref Box b)
+        {
+            Box b2 = b;
+            if (b2 != null)
+            {
+                b2.Hit(2);
+            }
+            ref Box held = ref _box;
+            Box held2 = held;
+            if (held2 != null)
+            {
+                held2.Hit(3);
+            }
+        }
+    }
+}

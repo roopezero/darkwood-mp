@@ -401,9 +401,44 @@ sealed class IlDiff
         if (generated || HoldsSource(a))
         {
             _report.Changed.Add(a.FullName);
+            _report.Credits.Add((a.FullName, CreditOf(a, generated)));
             return;
         }
         Problem("changed outside the manifest: " + a.FullName);
+    }
+
+    /// The manifest entries a changed method counts for: its own entry, or
+    /// for generated code the members its code was traced to, or when
+    /// none was, the names whose every overload is listed.
+    string CreditOf(MethodDefinition m, bool generated)
+    {
+        var credits = new List<string>();
+        if (!generated)
+        {
+            credits.Add(Entry(MemberKey(m)));
+        }
+        else if (_ownersA.ExactOwnersOf(m).Count > 0)
+        {
+            credits.AddRange(_ownersA.ExactOwnersOf(m).Select(Entry));
+        }
+        else
+        {
+            credits.AddRange(_ownersA.OwnersOf(m)
+                .Select(name => name + " (every overload)"));
+        }
+        return string.Join(", ", credits.Distinct().OrderBy(
+            credit => credit, StringComparer.Ordinal));
+    }
+
+    /// A member's entry as the manifest lists it: its key, or its name for
+    /// every overload.
+    string Entry(string key)
+    {
+        if (_exact.Contains(key))
+        {
+            return key;
+        }
+        return Manifest.NameLevel(key) + " (every overload)";
     }
 
     /// A method written in source: its own entry, or its name for every

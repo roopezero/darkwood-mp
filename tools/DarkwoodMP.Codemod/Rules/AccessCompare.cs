@@ -26,7 +26,9 @@ namespace DarkwoodMP.Codemod.Rules;
 /// a value type that isn't a Nullable, or a constant that isn't null:
 /// "x?.F == v" is true for a null x and a null v. A member of a type with
 /// an == of its own (other than string's and a Unity object's) is left to
-/// the hoist, because the original calls that == for a null x too.
+/// the hoist, because the original calls that == for a null x too, and so
+/// is a comparison that converts either side by a user-defined conversion,
+/// which the original runs for a null x as well.
 sealed class AccessComparison
 {
     /// The expression the translation replaces: the comparison or the ??.
@@ -138,6 +140,13 @@ sealed partial class AccessPlanner
         if (binary.IsKind(SyntaxKind.CoalesceExpression))
         {
             return Coalesce(binary, outer, member);
+        }
+        // A user-defined conversion of the ?.'s value runs for a null x too
+        // in the original, and not in the translation: "h?.Go == false"
+        // calls Unity's bool operator on null and is true.
+        if (_model.GetConversion(outer).IsUserDefined)
+        {
+            return null;
         }
         var form = new AccessComparison
         {

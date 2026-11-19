@@ -21,6 +21,11 @@ static class TempNameCases
                 public int Size;
                 public int depth;
                 public string type;
+                public int NPCs;
+                public int IPAddress;
+                public int XMax;
+                public static Holder Make() { return null; }
+                public Holder Child() { return null; }
             }
 
             public class C
@@ -58,6 +63,8 @@ static class TempNameCases
                             F(amount: 1, label: "x");
                             var pair = (hue: 1, tone: 2);
                             bool typed = one is { type: "a" };
+                            var runs = (one.NPCs, one.IPAddress, one.XMax);
+                            var made = Holder.Make().Child();
                             break;
                     }
                 }
@@ -65,7 +72,7 @@ static class TempNameCases
         }
         """;
 
-    public const int Count = 28;
+    public const int Count = 34;
 
     public static List<string> Failures()
     {
@@ -164,6 +171,27 @@ static class TempNameCases
                     && c.ToString().Contains("h.type")), model));
         Expect(problems, "Math.Max's val2 is no word", "False",
             TempNames.IsWord("val2").ToString());
+        Expect(problems, "ReferenceEquals's objA says nothing", "False",
+            TempNames.IsWord("objA").ToString());
+        var reads = method.DescendantNodes()
+            .OfType<MemberAccessExpressionSyntax>()
+            .ToList();
+        Expect(problems, "a plural run of capitals goes small", "npcs",
+            TempNames.Named(reads.First(r => r.Name.ToString() == "NPCs"),
+                model));
+        Expect(problems, "the run's last capital starts a word", "ipAddress",
+            TempNames.Named(
+                reads.First(r => r.Name.ToString() == "IPAddress"), model));
+        Expect(problems, "one capital in front is a word", "xMax",
+            TempNames.Named(reads.First(r => r.Name.ToString() == "XMax"),
+                model));
+        Expect(problems, "a call named for what it does: its type", "holder",
+            TempNames.Named(calls.First(c => c.ToString() == "Holder.Make()"),
+                model));
+        Expect(problems, "a call named for what it gives: its method", "child",
+            TempNames.Named(
+                calls.First(c => c.ToString() == "Holder.Make().Child()"),
+                model));
         return problems;
     }
 
