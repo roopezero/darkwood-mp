@@ -122,53 +122,70 @@ static class DiffHarness
     {
         var parameters = RunMethod(original).GetParameters();
         var inputs = parameters.Select(p => InputsFor(p.ParameterType)).ToArray();
+        var through = parameters.Select(PassesThrough).ToArray();
         foreach (var row in Rows(inputs))
         {
             outcome.Rows++;
             var actual = Execute(rewritten, row, inputs);
             var label = Label(parameters, inputs, row);
-            bool destroyed = row.Where((index, i) => inputs[i][index].Destroyed).Any();
-            if (destroyed && unityRule)
+            // The destroyed inputs the rewrite must treat as null.
+            var asNull = Enumerable.Range(0, row.Length)
+                .Where(i => inputs[i][row[i]].Destroyed && !through[i])
+                .ToList();
+            if (asNull.Count > 0 && unityRule)
             {
                 // Asserted, not waived: a destroyed object must now behave
                 // as the original did for null.
                 outcome.DestroyedRows++;
-                var asNull = row.Select((index, i) => NullIndex(inputs[i], index));
-                var expected = Execute(original, asNull.ToArray(), inputs);
+                var nulls = (int[])row.Clone();
+                foreach (int i in asNull)
+                {
+                    nulls[i] = inputs[i].FindIndex(input => input.Label == "null");
+                }
+                var expected = Execute(original, nulls, inputs);
                 // The rewrite treats a destroyed object as null, so the run
                 // must leave it as it was made.
-                for (int i = 0; i < row.Length; i++)
+                foreach (int i in asNull)
                 {
-                    var input = inputs[i][row[i]];
-                    if (input.Destroyed)
-                    {
-                        expected.Objects[i] = ObjectState(
-                            original, parameters[i].Name, input.Make(original));
-                    }
+                    expected.Objects[i] = ObjectState(
+                        original, parameters[i].Name, inputs[i][row[i]].Make(original));
                 }
-                Compare(label, Normal(expected), Normal(actual), outcome);
+                // The log names the destroyed object where the original
+                // logged null. With one such object the outcome must match
+                // to the letter: the rewrite must not return it. With several,
+                // returning one is right where the original returned another.
+                if (asNull.Count == 1)
+                {
+                    Compare(label, NormalLog(expected), NormalLog(actual), outcome);
+                }
+                else
+                {
+                    Compare(label, Normal(expected), Normal(actual), outcome);
+                }
                 continue;
             }
             Compare(label, Execute(original, row, inputs), actual, outcome);
         }
     }
 
-    /// The null input in place of a destroyed one.
-    static int NullIndex(List<Input> inputs, int index)
+    static bool PassesThrough(ParameterInfo parameter)
     {
-        if (inputs[index].Destroyed)
-        {
-            return inputs.FindIndex(input => input.Label == "null");
-        }
-        return index;
+        return parameter.CustomAttributes.Any(
+            a => a.AttributeType.FullName == "DiffFixture.PassesThroughAttribute");
+    }
+
+    static RunResult NormalLog(RunResult result)
+    {
+        return new RunResult(
+            result.Outcome,
+            result.Log.Select(line => line.Replace("destroyed", "null")).ToList(),
+            result.Objects);
     }
 
     static RunResult Normal(RunResult result)
     {
-        return new RunResult(
-            result.Outcome.Replace("destroyed", "null"),
-            result.Log.Select(line => line.Replace("destroyed", "null")).ToList(),
-            result.Objects);
+        var log = NormalLog(result);
+        return log with { Outcome = result.Outcome.Replace("destroyed", "null") };
     }
 
     static void Compare(

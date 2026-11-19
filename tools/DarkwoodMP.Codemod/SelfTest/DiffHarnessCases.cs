@@ -131,7 +131,36 @@ static class DiffHarnessCases
         + "yield return Log(\"a\", 1);\n}\nelse\n{\n"
         + "yield return Log(\"b\", 2);\n}";
 
-    public const int Count = 9 + 5 + 2 + 3 + 4 + 1;
+    /// "u ?? null" with the reference check kept: it returns the destroyed
+    /// object where the original returned null for a null u.
+    const string Coalesce = """
+        public static UnityObject Run(UnityObject u)
+        {
+            return Log("u", u) ?? null;
+        }
+        """;
+
+    const string KeepsReferenceCheck = "var t = Log(\"u\", u);\n"
+        + "if ((object)t != null)\n{\nreturn t;\n}\nreturn null;";
+
+    /// "a ?? b" passes b on unchecked, so a destroyed b must come back.
+    const string Fallback = """
+        public static UnityObject Run(
+            UnityObject a, [PassesThrough] UnityObject b)
+        {
+            return Log("a", a) ?? Log("b", b);
+        }
+        """;
+
+    const string FallbackRight = "var t = Log(\"a\", a);\n"
+        + "if (t != null)\n{\nreturn t;\n}\nreturn Log(\"b\", b);";
+
+    /// Checks b as well, so a destroyed b becomes null.
+    const string FallbackChecked = "var t = Log(\"a\", a);\n"
+        + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
+        + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
+
+    public const int Count = 9 + 5 + 2 + 3 + 4 + 1 + 1 + 2;
 
     public static List<string> Failures()
     {
@@ -186,6 +215,19 @@ static class DiffHarnessCases
             problems.Add("  the right rewrite of an endless coroutine: "
                 + string.Join("; ", right.Mismatches.Take(3)));
         }
+        ExpectCaught(problems, "a destroyed object returned under unity-null",
+            new DiffCase { Name = "coalesce", Method = Coalesce },
+            new ProbeTextRule("unity-null", KeepsReferenceCheck));
+        var fallback = new DiffCase { Name = "fallback", Method = Fallback };
+        var kept = DiffHarness.Run(
+            new ProbeTextRule("unity-null", FallbackRight), fallback);
+        if (!kept.Passed)
+        {
+            problems.Add("  a destroyed object passed through under unity-null: "
+                + string.Join("; ", kept.Mismatches.Take(3)));
+        }
+        ExpectCaught(problems, "a passed-through object checked under unity-null",
+            fallback, new ProbeTextRule("unity-null", FallbackChecked));
         foreach (var (what, text) in Unreadable)
         {
             ExpectUnreadable(problems, what, text);

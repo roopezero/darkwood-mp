@@ -143,7 +143,13 @@ iterator or coroutine is run, for at most 1,000 values, and a returned task is
 waited for, so their bodies run in the row they belong to. The only
 allowed difference is a destroyed object under the rule named `unity-null`, and
 there the rewritten code must behave exactly as the original did for null and
-leave the destroyed object as it was.
+leave the destroyed object as it was. The log may name the destroyed object
+where the original logged null, but with one destroyed input the result must
+match to the letter, so a rewrite that lets the object through is caught. A
+parameter the code passes on without checking it, as `b` in `a ?? b`, is
+marked `[PassesThrough]`: a destroyed `b` must then come back as it did
+before, and isn't replaced by null in the original's run. Without the mark
+the right rewrite of `a ?? b` fails.
 
 ## Golden cases
 

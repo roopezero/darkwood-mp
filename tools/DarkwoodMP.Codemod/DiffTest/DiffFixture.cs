@@ -61,6 +61,15 @@ static class DiffFixture
                 }
             }
 
+            /// Marks a Unity object parameter that the code passes on without
+            /// checking it, as b in "a ?? b". The unity-null rule mustn't treat
+            /// it as null, so the harness expects the original's behaviour for
+            /// it when it is destroyed, instead of the behaviour for null.
+            [AttributeUsage(AttributeTargets.Parameter)]
+            public sealed class PassesThroughAttribute : Attribute
+            {
+            }
+
             public static class Trace
             {
                 public static List<string> Entries = new List<string>();
