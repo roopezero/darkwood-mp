@@ -35,6 +35,8 @@ static class IlDiffCases
                 public int LocOver(int x) { int In(int y) { return y + 4; } return In(x); }
                 public int LocOver(string s) { int In(int y) { return y + 5; } return In(s.Length); }
             }
+            public struct P { public int A; public int B; }
+            public class Q { public int X1; public int X2; }
         }
         """;
 
@@ -107,6 +109,10 @@ static class IlDiffCases
             new[] { LocOver }, None, null, ""),
         ("a local function of another overload fails", "y + 5", "y + 7",
             new[] { LocOver }, None, null, "changed outside the manifest"),
+        ("reordered fields of a struct fail", "public int A; public int B;",
+            "public int B; public int A;", None, None, null, "field order changed"),
+        ("reordered fields of a class pass", "public int X1; public int X2;",
+            "public int X2; public int X1;", None, None, null, ""),
         ("an added field fails", "public int Field;",
             "public int Field; public int Extra;", None, None, null, "field added"),
         ("a listed field passes", "public int Field;",

@@ -224,6 +224,24 @@ sealed class IlDiff
                 MissingField(field, _ownersB, owned, "added");
             }
         }
+        // The runtime lays out the instance fields of a sequential type, as
+        // every struct is by default, in the order they are declared.
+        if (!owned && a.IsSequentialLayout && b.IsSequentialLayout)
+        {
+            var orderA = InstanceFields(a, _namesA).Where(fieldsB.ContainsKey);
+            var orderB = InstanceFields(b, _namesB).Where(fieldsA.ContainsKey);
+            if (!orderA.SequenceEqual(orderB))
+            {
+                Problem("field order changed: " + a.FullName);
+            }
+        }
+    }
+
+    static IEnumerable<string> InstanceFields(TypeDefinition t, GeneratedNames names)
+    {
+        return t.Fields
+            .Where(f => !f.IsStatic)
+            .Select(f => names.MemberName(f.Name, t));
     }
 
     void MissingField(

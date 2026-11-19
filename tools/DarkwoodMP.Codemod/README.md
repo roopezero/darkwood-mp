@@ -126,7 +126,7 @@ It builds both commits deterministically and runs `ildiff`: every changed method
 must belong to a member in the manifest (lambdas, local functions and state
 machines count for the overload whose code leads to them, or, when none does,
 only when every overload of the name is listed), no type, field, property or event may appear or
-go unless the manifest allows it, parameter names, attributes, default values
+go unless the manifest allows it, the fields of a struct keep their order, parameter names, attributes, default values
 and constants stay as they were, and a manifest member's string constants may
 only change if the rule recorded a reason.
 
