@@ -128,6 +128,43 @@ sealed class Casts
     }
 }
 
+/// A comment the rewrite took in from behind its statement, and where it
+/// goes. One that starts with the text of a branch and a colon, such as
+/// "// null: ..." behind "c ? a : null", explains that branch, so it goes
+/// behind the statement that holds that value. Any other explains the whole
+/// statement and goes on a line of its own above the new code: behind the
+/// first if it would read as a note on the condition and the first branch,
+/// and behind a bare declaration as a note on nothing. A member's comment
+/// stays on its header's line.
+sealed class TakenComment
+{
+    public string Text;
+
+    /// The branch it explains, or null.
+    public ExpressionSyntax Branch;
+
+    /// The comment on a line of its own, or nothing when it goes behind a
+    /// branch.
+    public static string Above(TakenComment comment)
+    {
+        if (comment == null || comment.Branch != null)
+        {
+            return "";
+        }
+        return comment.Text + "\n";
+    }
+
+    /// The comment for a member's header line, or null.
+    public static string OnHeader(TakenComment comment)
+    {
+        if (comment == null || comment.Branch != null)
+        {
+            return null;
+        }
+        return comment.Text;
+    }
+}
+
 /// The statements a ?: chain becomes (codemod.md section 7.1). Text comes
 /// from the EditText, so edits inside a branch are kept.
 sealed class TernaryText
@@ -135,11 +172,12 @@ sealed class TernaryText
     readonly EditText _text;
     readonly Casts _casts;
 
-    /// The comment that was behind the statement, for the first if's
-    /// header, or null.
-    string _comment;
+    /// The comment that was behind the statement, when it goes behind one
+    /// branch's statement, or null.
+    readonly TakenComment _comment;
 
-    public TernaryText(EditText text, Casts casts, string comment = null)
+    public TernaryText(
+        EditText text, Casts casts, TakenComment comment = null)
     {
         _text = text;
         _casts = casts;
@@ -150,6 +188,14 @@ sealed class TernaryText
     /// store gives the statement that keeps one value.
     public string Stores(
         ConditionalExpressionSyntax site, Func<string, string> store)
+    {
+        return Stores(site, (branch, value) => store(value));
+    }
+
+    /// The same, with a store that also sees the branch the value is from.
+    public string Stores(
+        ConditionalExpressionSyntax site,
+        Func<ExpressionSyntax, string, string> store)
     {
         var output = new StringBuilder();
         Store(site, store, true, output);
@@ -162,13 +208,13 @@ sealed class TernaryText
         ConditionalExpressionSyntax site, Func<string, string> store)
     {
         var output = new StringBuilder();
-        Store(site, store, false, output);
+        Store(site, (branch, value) => store(value), false, output);
         return output.ToString();
     }
 
     void Store(
         ConditionalExpressionSyntax site,
-        Func<string, string> store,
+        Func<ExpressionSyntax, string, string> store,
         bool lastElse,
         StringBuilder output)
     {
@@ -221,19 +267,14 @@ sealed class TernaryText
             Return(nested, output);
             return;
         }
-        output.Append(Leaf(branch, value => "return " + value + ";\n"));
+        output.Append(
+            Leaf(branch, (leaf, value) => "return " + value + ";\n"));
     }
 
-    /// "if (c)" and the opening brace, with the comment behind the first.
+    /// "if (c)" and the opening brace.
     void Header(ConditionalExpressionSyntax site, StringBuilder output)
     {
-        output.Append("if (").Append(Condition(site)).Append(')');
-        if (_comment != null)
-        {
-            output.Append(' ').Append(_comment);
-            _comment = null;
-        }
-        output.Append("\n{\n");
+        output.Append("if (").Append(Condition(site)).Append(")\n{\n");
     }
 
     string Condition(ConditionalExpressionSyntax site)
@@ -241,9 +282,21 @@ sealed class TernaryText
         return _text.Of(TernaryChain.Strip(site.Condition));
     }
 
-    /// One value as a statement. A throw expression becomes a throw
-    /// statement, because "x = throw e;" isn't C#.
-    string Leaf(ExpressionSyntax branch, Func<string, string> store)
+    /// One value as a statement, with the comment that explains it. A throw
+    /// expression becomes a throw statement, because "x = throw e;" isn't C#.
+    string Leaf(
+        ExpressionSyntax branch, Func<ExpressionSyntax, string, string> store)
+    {
+        var statement = Value(branch, store);
+        if (_comment != null && _comment.Branch == branch)
+        {
+            statement = statement.TrimEnd('\n') + " " + _comment.Text + "\n";
+        }
+        return statement;
+    }
+
+    string Value(
+        ExpressionSyntax branch, Func<ExpressionSyntax, string, string> store)
     {
         var bare = TernaryChain.Strip(branch);
         if (bare is ThrowExpressionSyntax thrown)
@@ -252,14 +305,14 @@ sealed class TernaryText
         }
         if (!_casts.Leaves.Contains(branch))
         {
-            return store(_text.Of(bare));
+            return store(branch, _text.Of(bare));
         }
         var value = _text.Of(bare);
         if (!IsPrimary(bare))
         {
             value = "(" + value + ")";
         }
-        return store("(" + _casts.Type + ")" + value);
+        return store(branch, "(" + _casts.Type + ")" + value);
     }
 
     /// An expression a cast can stand in front of without parentheses. A
@@ -277,6 +330,9 @@ sealed class TernaryText
             case DefaultExpressionSyntax:
             case TypeOfExpressionSyntax:
             case ParenthesizedExpressionSyntax:
+            case TupleExpressionSyntax:
+            case ObjectCreationExpressionSyntax:
+            case InterpolatedStringExpressionSyntax:
                 return true;
             case LiteralExpressionSyntax literal:
                 return !literal.IsKind(SyntaxKind.DefaultLiteralExpression);

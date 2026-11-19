@@ -29,6 +29,14 @@ namespace N
 
         public int Prop { get; set; }
 
+        Box Computed
+        {
+            get
+            {
+                return _other;
+            }
+        }
+
         Box Get()
         {
             return _other;
@@ -59,7 +67,7 @@ namespace N
             _cells[i] = c ? 1 : 2;
             _map["key"] = c ? "a" : i > 0 ? "b" : (object)i;
             x += c ? 1 : 2;
-            _n -= c ? i : 1; // stays on the first line
+            _n -= c ? i : 1; // goes above the new code
         }
 
         public void Queued(bool c, int i)
@@ -72,6 +80,7 @@ namespace N
             x += c ? Index() : 2;
             _cells[i > 0 ? 1 : 0] = c ? 1 : 2;
             _other ??= c ? new Box() : null;
+            Computed.Size = c ? 1 : 2;
         }
     }
 }
@@ -96,6 +105,14 @@ namespace N
         Dictionary<string, object> _map = new Dictionary<string, object>();
 
         public int Prop { get; set; }
+
+        Box Computed
+        {
+            get
+            {
+                return _other;
+            }
+        }
 
         Box Get()
         {
@@ -208,7 +225,8 @@ namespace N
             {
                 x += 2;
             }
-            if (c) // stays on the first line
+            // goes above the new code
+            if (c)
             {
                 _n -= i;
             }
@@ -228,13 +246,15 @@ namespace N
             x += c ? Index() : 2;
             _cells[i > 0 ? 1 : 0] = c ? 1 : 2;
             _other ??= c ? new Box() : null;
+            Computed.Size = c ? 1 : 2;
         }
     }
 }
 === queue
-58: the hoisted code has effects and a mutable value is read earlier: _other
-59: a call runs earlier in the statement: Get()
-60: a call runs earlier in the statement: Index()
-61: the hoisted code has effects and a mutable value is read earlier: _n
-62: a compound assignment with a call in it
-63: the target holds another operator, which would be written twice
+66: the hoisted code has effects and a mutable value is read earlier: _other
+67: a call runs earlier in the statement: Get()
+68: a call runs earlier in the statement: Index()
+69: the hoisted code has effects and a mutable value is read earlier: _n
+70: a compound assignment with a call in it
+71: the target holds another operator, which would be written twice
+73: a call runs earlier in the statement: Computed

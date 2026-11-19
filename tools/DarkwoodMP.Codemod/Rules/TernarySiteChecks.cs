@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -185,11 +187,13 @@ sealed partial class TernarySite
     /// is the type each value is stored or returned as; null means the
     /// operator decides, as in a compound assignment, so every branch of
     /// another type needs one. A ?: with no natural type is target-typed:
-    /// each branch is already converted straight to the target.
+    /// each branch is already converted straight to the target. Where the
+    /// natural type converts to the sink by identity, as a tuple to one with
+    /// other element names, every branch already converts as the ?: did.
     string CastsFor(ITypeSymbol sink, int position, out Casts casts)
     {
         casts = Casts.None;
-        if (_natural == null || (sink != null && Same(sink, _natural)))
+        if (_natural == null || (sink != null && Identity(_natural, sink)))
         {
             return null;
         }
@@ -203,7 +207,7 @@ sealed partial class TernarySite
                 continue;
             }
             if (!TargetTyped(bare)
-                && Same(_model.GetTypeInfo(bare).Type, _natural))
+                && Identity(_model.GetTypeInfo(bare).Type, _natural))
             {
                 continue;
             }
@@ -249,13 +253,40 @@ sealed partial class TernarySite
     }
 
     /// null or default is a null reference both ways when the natural type
-    /// and the target are reference types.
+    /// and the target are reference types and the one converts to the other
+    /// as a reference. A user-defined conversion is a call: JToken's from
+    /// string makes a JValue of type String from a null string, so
+    /// "o[k] = c ? s : null" stores that, and "o[k] = null" a null JToken.
     bool NullToReference(ExpressionSyntax value, ITypeSymbol sink)
     {
         bool nullish = value.IsKind(SyntaxKind.NullLiteralExpression)
             || value.IsKind(SyntaxKind.DefaultLiteralExpression);
-        return nullish && sink != null && sink.IsReferenceType
-            && _natural.IsReferenceType;
+        if (!nullish || sink == null || !sink.IsReferenceType
+            || !_natural.IsReferenceType)
+        {
+            return false;
+        }
+        var conversion =
+            _model.Compilation.ClassifyCommonConversion(_natural, sink);
+        return conversion.IsImplicit && conversion.IsReference;
+    }
+
+    /// True when a value of type a is a value of type b without any
+    /// conversion code: the same type, or tuples whose elements only have
+    /// other names. dynamic stays apart, because its conversions are bound
+    /// when the code runs.
+    bool Identity(ITypeSymbol a, ITypeSymbol b)
+    {
+        if (Same(a, b))
+        {
+            return true;
+        }
+        if (a == null || b == null || a.TypeKind == TypeKind.Dynamic
+            || b.TypeKind == TypeKind.Dynamic)
+        {
+            return false;
+        }
+        return _model.Compilation.ClassifyCommonConversion(a, b).IsIdentity;
     }
 
     /// The type as written at this place in the file, or null and why it
@@ -273,7 +304,7 @@ sealed partial class TernarySite
             refused = "an anonymous type, which can't be written";
             return null;
         }
-        var text = type.ToMinimalDisplayString(_model, position);
+        var text = Written(type, position);
         var written = SyntaxFactory.ParseTypeName(text);
         var bound = _model.GetSpeculativeTypeInfo(
             position, written, SpeculativeBindingOption.BindAsTypeOrNamespace);
@@ -283,6 +314,54 @@ sealed partial class TernarySite
             return null;
         }
         return text;
+    }
+
+    /// The shortest spelling, with "global::" in front of a type of the
+    /// global namespace that a reader could take for another one: a type the
+    /// file writes as "global::Name", such as the game's Button and
+    /// EventTrigger, or one whose name a public type of .NET, of Unity or of
+    /// a namespace the file imports also has, such as Cursor beside
+    /// UnityEngine.Cursor. It binds to the game's type either way, but
+    /// CLAUDE.md asks for these to be qualified.
+    string Written(ITypeSymbol type, int position)
+    {
+        var output = new StringBuilder();
+        foreach (var part in type.ToMinimalDisplayParts(_model, position))
+        {
+            if (part.Symbol is INamedTypeSymbol named
+                && named.ContainingType == null
+                && named.ContainingNamespace != null
+                && named.ContainingNamespace.IsGlobalNamespace
+                && Mistakable(named))
+            {
+                output.Append("global::");
+            }
+            output.Append(part.ToString());
+        }
+        return output.ToString();
+    }
+
+    bool Mistakable(INamedTypeSymbol type)
+    {
+        var file = FileSpellings.Of(_model);
+        if (file.WrittenGlobal.Contains(type.OriginalDefinition))
+        {
+            return true;
+        }
+        if (FileSpellings.NetAndUnity(_model.Compilation)
+            .Contains(type.MetadataName))
+        {
+            return true;
+        }
+        foreach (var space in file.Imports)
+        {
+            if (space.GetTypeMembers(type.Name, type.Arity)
+                .Any(FileSpellings.Visible))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     static bool HasAnonymous(ITypeSymbol type)
@@ -309,5 +388,91 @@ sealed partial class TernarySite
     List<SyntaxNode> Sites()
     {
         return _chain.Cast<SyntaxNode>().ToList();
+    }
+}
+
+/// What a file says about the spelling of types: the types it writes as
+/// "global::Name" and the namespaces its using directives import.
+sealed class FileSpellings
+{
+    static readonly ConditionalWeakTable<SyntaxTree, FileSpellings> Files =
+        new();
+
+    static readonly ConditionalWeakTable<Compilation, HashSet<string>>
+        Shared = new();
+
+    public readonly HashSet<ISymbol> WrittenGlobal =
+        new(SymbolEqualityComparer.Default);
+
+    public readonly List<INamespaceSymbol> Imports = new();
+
+    FileSpellings(SemanticModel model)
+    {
+        var root = model.SyntaxTree.GetRoot();
+        foreach (var name in root.DescendantNodes()
+            .OfType<AliasQualifiedNameSyntax>())
+        {
+            if (name.Alias.Identifier.IsKind(SyntaxKind.GlobalKeyword)
+                && model.GetSymbolInfo(name).Symbol is INamedTypeSymbol type)
+            {
+                WrittenGlobal.Add(type.OriginalDefinition);
+            }
+        }
+        foreach (var directive in root.DescendantNodes()
+            .OfType<UsingDirectiveSyntax>())
+        {
+            if (directive.Alias == null
+                && directive.StaticKeyword.IsKind(SyntaxKind.None)
+                && directive.Name != null
+                && model.GetSymbolInfo(directive.Name).Symbol is
+                    INamespaceSymbol space)
+            {
+                Imports.Add(space);
+            }
+        }
+    }
+
+    public static FileSpellings Of(SemanticModel model)
+    {
+        return Files.GetValue(model.SyntaxTree, _ => new FileSpellings(model));
+    }
+
+    /// The metadata names ("Cursor", "List`1") of the public types in System
+    /// and UnityEngine and the namespaces inside them.
+    public static HashSet<string> NetAndUnity(Compilation compilation)
+    {
+        return Shared.GetValue(compilation, c =>
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var space in c.GlobalNamespace.GetNamespaceMembers())
+            {
+                if (space.Name == "System" || space.Name == "UnityEngine")
+                {
+                    AddTypes(space, names);
+                }
+            }
+            return names;
+        });
+    }
+
+    static void AddTypes(INamespaceSymbol space, HashSet<string> names)
+    {
+        foreach (var type in space.GetTypeMembers())
+        {
+            if (Visible(type))
+            {
+                names.Add(type.MetadataName);
+            }
+        }
+        foreach (var inner in space.GetNamespaceMembers())
+        {
+            AddTypes(inner, names);
+        }
+    }
+
+    public static bool Visible(INamedTypeSymbol type)
+    {
+        return type.DeclaredAccessibility == Accessibility.Public
+            || type.Locations.Any(l => l.IsInSource);
     }
 }

@@ -110,18 +110,26 @@ the game's stack readers would see the extra frame. `DIR` gets:
 - `queue.jsonl`: one JSON line per site left alone (`file`, `line`, `rule`,
   `reason`, `snippet`),
 - `sites.jsonl`: one JSON line per rewritten site (`file`, `line`, `member`,
-  `before`, `after`),
+  `before`, `after`, and `comment` when the rewrite took in the comment
+  behind the statement: where it put it, then the comment),
 - `census.txt`: per operator, the sites before, rewritten, queued, left for
   later rules and after. The command stops, writing nothing, unless before =
   rewritten + queued + later and the sites after are exactly those not
   rewritten. `census --operators` prints the number of sites left per operator.
 
+`line` is always a line of the tree the rule read, before its rewrite. For the
+queue of a stage's commit, run the rule again on that commit with `--dry-run`
+(the stage's second run does this): it lists the same queued sites at their
+lines in the rewritten files. That is the queue to keep with the stage.
+
 A rule can plan edits that sit inside each other, such as a lambda whose body
 it rewrites in a branch of a `?:` it rewrites too (`Rules/NestedEdits.cs`).
 Only the outermost edit is proposed, with the texts of the inner ones in place
 and all of their sites, so one run does both. A statement's edit may take in
-the comment behind it on its line, so that the new text can keep it on its
-first line.
+the comment behind it on its line, and then places it: a comment that starts
+with the text of a branch and a colon (`// null: ...`) goes behind the
+statement that holds that value; any other goes on a line of its own above the
+new code, or for an expression body stays on the member's line.
 
 ### ternary-direct (stage 3)
 
@@ -132,12 +140,17 @@ inside the branch:
 - a declaration: `T x; if (c) { x = a; } else { x = b; }`, or
   `T x = k; if (c) { x = a; }` when the last value is a literal and `T` is
   the natural type. `var` is spelled out, and the spelling must bind back to
-  the same type;
+  the same type. A type of the global namespace gets `global::` when the file
+  writes it so (the game's `Button`, `EventTrigger`) or when a public type of
+  `System`, `UnityEngine` or a namespace the file imports has its name
+  (`Cursor`);
 - an assignment, the target written in each branch. The condition then runs
   before the target's parts, so they go through `Purity` (hazard 2). A
   compound assignment reads its target first, so nothing in it may be a call
-  (hazard 3). A string constant in the target is there once per branch, and
-  the manifest records it;
+  (hazard 3), and `x += c ? 1 : -1` becomes `x += 1` and `x -= 1` when `x` is
+  a built-in number and the number has the type of its negation. A string
+  constant in the target is there once per branch, and the manifest records
+  it;
 - a return: `if (c) { return a; } return b;`; a `throw` branch becomes a
   throw statement;
 - an expression body of a method, accessor, operator or local function (a
@@ -145,13 +158,20 @@ inside the branch:
   block). A void member or an `Action` whose body assigns gets a block that
   assigns on every path;
 - an `if` condition (not an `else if`) or a `foreach` source, through a
-  temporary of the natural type in front of the statement.
+  temporary of the natural type in front of the statement, named after what
+  both branches have in common (`runs` for `StoryStepRuns()` and `Runs()`).
 
-Each value keeps the natural type: where the target's type differs, a branch
-of another type is cast to it first (hazard 1), and so is one that takes its
-type from where it is written (`default`, `new()`, a lambda). Nothing is
-hoisted out of an argument, an operand or an interpolation hole: those, the
-right of `&&`, `||`, `??` and `??=`, and initializers are left for later rules.
+Each value keeps the natural type: where the natural type converts to the
+target's type by more than identity (a tuple's element names don't count), a
+branch of another type is cast to it first (hazard 1), and so is one that takes
+its type from where it is written (`default`, `new()`, a lambda). A null is
+cast too when that conversion is user-defined: `o[k] = c ? s : null` on a
+`JObject` runs JToken's conversion from string for the null as well, and
+stores a JValue of type String, where `o[k] = null` would store a null token.
+Nothing is hoisted out of an argument, an operand or an interpolation hole:
+those, the right of `&&`, `||`, `??` and `??=`, and initializers are left for
+later rules, and so is every site inside an interpolation hole, such as a
+lambda's body there, because its rewrite would put statements in the hole.
 The queue gets several declarators, `const`, `using` and `ref` declarations,
 anonymous types, ref `?:`, a constant condition, a directive or a comment on
 `?` or `:` inside the statement, a branch declaring a variable whose name is

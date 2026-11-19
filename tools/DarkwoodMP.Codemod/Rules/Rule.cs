@@ -69,4 +69,10 @@ sealed class SiteEntry
 
     [JsonPropertyName("after")]
     public string After { get; set; }
+
+    /// Where the rewrite put the comment it took in from behind the
+    /// statement, and the comment; absent when it took in none.
+    [JsonPropertyName("comment")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string Comment { get; set; }
 }

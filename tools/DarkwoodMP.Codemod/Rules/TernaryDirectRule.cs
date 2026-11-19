@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 using Microsoft.CodeAnalysis.Text;
 
 namespace DarkwoodMP.Codemod.Rules;
@@ -35,6 +36,10 @@ sealed partial class TernarySite
 {
     const string LeftForHoist =
         "not the whole value of its statement: left for ternary-hoist";
+
+    const string InHole =
+        "inside an interpolation hole: left for ternary-hoist, which moves "
+            + "the hole into a local first";
 
     readonly RulePlan _plan;
     readonly SemanticModel _model;
@@ -178,8 +183,16 @@ sealed partial class TernarySite
         Later(LeftForHoist);
     }
 
+    /// A rewrite would write statements inside an interpolation hole, as
+    /// the block of a lambda there, so a site in a hole waits until
+    /// ternary-hoist has moved the hole into a local of its own.
     void Finish(string refusal)
     {
+        if (_outer.Ancestors().Any(node => node is InterpolationSyntax))
+        {
+            Later(InHole);
+            return;
+        }
         if (refusal != null)
         {
             Queue(refusal);
@@ -254,7 +267,7 @@ sealed partial class TernarySite
             KeepsLast = Same(local.Type, _natural)
                 && TernaryChain.IsLiteral(TernaryChain.LastElse(_site)),
             Casts = casts,
-            Comment = Behind(statement, out var span),
+            Comment = Taken(Behind(statement, out var span), "above"),
         };
         _edit = new PlannedEdit
         {
@@ -281,13 +294,14 @@ sealed partial class TernarySite
         public string Name;
         public bool KeepsLast;
         public Casts Casts;
-        public string Comment;
+        public TakenComment Comment;
     }
 
     /// The declaration and the if/else that give it its value.
     string Declare(EditText text, Declared declared, string type)
     {
-        var chain = new TernaryText(text, declared.Casts);
+        var comment = declared.Comment;
+        var chain = new TernaryText(text, declared.Casts, comment);
         var name = declared.Name;
         string Store(string value)
         {
@@ -297,26 +311,25 @@ sealed partial class TernarySite
         string rest;
         if (declared.KeepsLast)
         {
-            var last = TernaryChain.Strip(TernaryChain.LastElse(_site));
-            line += " = " + text.Of(last);
+            var last = TernaryChain.LastElse(_site);
+            line += " = " + text.Of(TernaryChain.Strip(last));
             rest = chain.StoresBeforeLast(_site, Store);
+            if (comment != null && comment.Branch == last)
+            {
+                line += "; " + comment.Text;
+                return line + "\n" + rest;
+            }
         }
         else
         {
             rest = chain.Stores(_site, Store);
         }
-        line += ";";
-        if (declared.Comment != null)
-        {
-            line += " " + declared.Comment;
-        }
-        return line + "\n" + rest;
+        return TakenComment.Above(comment) + line + ";\n" + rest;
     }
 
     /// The comments behind the statement on its line, as written, or null.
-    /// They explain the whole statement, so the rewrite keeps them on its
-    /// first line; behind its last line they would sit with one branch,
-    /// maybe the other one. Span is the statement with them.
+    /// The rewrite places them (see TakenComment), so span is the statement
+    /// with them.
     string Behind(StatementSyntax statement, out TextSpan span)
     {
         return Behind(statement.GetLastToken(), statement.SpanStart, out span);
@@ -344,6 +357,37 @@ sealed partial class TernarySite
         }
         var between = TextSpan.FromBounds(last.Span.End, end);
         return _plan.Tree.GetText().ToString(between).Trim();
+    }
+
+    /// Where a comment taken in goes (see TakenComment): behind the one
+    /// branch whose text it starts with, followed by a colon, or else where
+    /// says. sites.jsonl notes each, so a person can read them again.
+    TakenComment Taken(string text, string elsewhere)
+    {
+        if (text == null)
+        {
+            return null;
+        }
+        var words = text.TrimStart('/', '*').TrimStart();
+        var taken = new TakenComment { Text = text };
+        int matches = 0;
+        foreach (var leaf in TernaryChain.Leaves(_chain))
+        {
+            var written = TernaryChain.Strip(leaf).ToString();
+            if (words.StartsWith(written + ":", StringComparison.Ordinal))
+            {
+                taken.Branch = leaf;
+                matches++;
+            }
+        }
+        var place = "behind its branch";
+        if (matches != 1)
+        {
+            taken.Branch = null;
+            place = elsewhere;
+        }
+        _plan.NoteComment(_chain, place + ": " + text);
+        return taken;
     }
 
     /// "x = c ? a : b;" becomes "if (c) { x = a; } else { x = b; }". The
@@ -391,7 +435,8 @@ sealed partial class TernarySite
             return refused;
         }
         var op = assignment.OperatorToken.Text;
-        var comment = Behind(statement, out var span);
+        var flips = Flips(assignment, casts);
+        var comment = Taken(Behind(statement, out var span), "above");
         _edit = new PlannedEdit
         {
             Span = span,
@@ -401,11 +446,92 @@ sealed partial class TernarySite
             Build = text =>
             {
                 var target = text.Of(assignment.Left);
-                return new TernaryText(text, casts, comment).Stores(
-                    _site, value => target + " " + op + " " + value + ";\n");
+                string Store(ExpressionSyntax branch, string value)
+                {
+                    if (flips.TryGetValue(branch, out var number))
+                    {
+                        return target + " " + Opposite(op) + " "
+                            + text.Of(number) + ";\n";
+                    }
+                    return target + " " + op + " " + value + ";\n";
+                }
+                return TakenComment.Above(comment)
+                    + new TernaryText(text, casts, comment).Stores(
+                        _site, Store);
             },
         };
         return null;
+    }
+
+    /// The branches of "x += c ? 1 : -1" that are a minus and a number, with
+    /// the number, so that they become "x -= 1" rather than "x += -1". Only
+    /// for the operators of the built-in number types, where x + (-k) and
+    /// x - k are the same value and overflow alike (IEEE 754 defines x - y
+    /// as x + (-y)), and only when the number has the type of its negation:
+    /// 2147483648 is a uint, -2147483648 an int.
+    Dictionary<ExpressionSyntax, ExpressionSyntax> Flips(
+        AssignmentExpressionSyntax assignment, Casts casts)
+    {
+        var flips = new Dictionary<ExpressionSyntax, ExpressionSyntax>();
+        if (!assignment.IsKind(SyntaxKind.AddAssignmentExpression)
+            && !assignment.IsKind(SyntaxKind.SubtractAssignmentExpression))
+        {
+            return flips;
+        }
+        if (_model.GetOperation(assignment) is not
+            ICompoundAssignmentOperation { OperatorMethod: null } compound
+            || !IsNumber(compound.Target.Type))
+        {
+            return flips;
+        }
+        foreach (var leaf in TernaryChain.Leaves(_chain))
+        {
+            if (!casts.Leaves.Contains(leaf)
+                && TernaryChain.Strip(leaf) is PrefixUnaryExpressionSyntax sign
+                && sign.IsKind(SyntaxKind.UnaryMinusExpression)
+                && sign.Operand.IsKind(SyntaxKind.NumericLiteralExpression)
+                && Same(
+                    _model.GetTypeInfo(sign.Operand).Type,
+                    _model.GetTypeInfo(sign).Type))
+            {
+                flips[leaf] = sign.Operand;
+            }
+        }
+        return flips;
+    }
+
+    static string Opposite(string op)
+    {
+        if (op == "+=")
+        {
+            return "-=";
+        }
+        return "+=";
+    }
+
+    static bool IsNumber(ITypeSymbol type)
+    {
+        if (type == null)
+        {
+            return false;
+        }
+        switch (type.SpecialType)
+        {
+            case SpecialType.System_SByte:
+            case SpecialType.System_Byte:
+            case SpecialType.System_Int16:
+            case SpecialType.System_UInt16:
+            case SpecialType.System_Int32:
+            case SpecialType.System_UInt32:
+            case SpecialType.System_Int64:
+            case SpecialType.System_UInt64:
+            case SpecialType.System_Single:
+            case SpecialType.System_Double:
+            case SpecialType.System_Decimal:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /// "return c ? a : b;" becomes "if (c) { return a; } return b;".
@@ -417,14 +543,14 @@ sealed partial class TernarySite
             refused = ReturnCasts(statement.SpanStart, out var casts);
             if (refused == null)
             {
-                var comment = Behind(statement, out var span);
+                var comment = Taken(Behind(statement, out var span), "above");
                 _edit = new PlannedEdit
                 {
                     Span = span,
                     Sites = Sites(),
                     Statement = statement,
-                    Build = text =>
-                        new TernaryText(text, casts, comment).Returns(_site),
+                    Build = text => TakenComment.Above(comment)
+                        + new TernaryText(text, casts, comment).Returns(_site),
                 };
             }
         }
@@ -493,10 +619,13 @@ sealed partial class TernarySite
     }
 
     /// A name from what the branches hold, such as "ready" for
-    /// "c ? a.Ready : b.Ready". A branch that is a plain name gives none: its
-    /// name is taken, and "a2" says nothing.
+    /// "c ? a.Ready : b.Ready", and "runs" for "c ? StoryStepRuns() : Runs()":
+    /// the value is either one, so it is named after what both have in
+    /// common, or after the context when they have nothing. A branch that is
+    /// a plain name gives none: its name is taken, and "a2" says nothing.
     string Hint(string fallback)
     {
+        var hints = new List<string>();
         foreach (var branch in new[] { _site.WhenTrue, _site.WhenFalse })
         {
             if (TernaryChain.Strip(branch) is IdentifierNameSyntax)
@@ -506,9 +635,22 @@ sealed partial class TernarySite
             var hint = TempNames.Hint(branch, _model);
             if (hint != "value")
             {
-                return hint;
+                hints.Add(hint);
             }
         }
-        return fallback;
+        if (hints.Count == 0)
+        {
+            return fallback;
+        }
+        if (hints.Count == 1)
+        {
+            return hints[0];
+        }
+        var common = TempNames.CommonEnd(hints[0], hints[1]);
+        if (common == null)
+        {
+            return fallback;
+        }
+        return common;
     }
 }

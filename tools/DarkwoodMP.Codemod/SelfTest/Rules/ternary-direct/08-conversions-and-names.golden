@@ -1,0 +1,345 @@
+Conversions, spellings and names. Where the natural type converts to the
+target through a user-defined operator, null is cast to the natural type,
+so that the operator still runs for it (JToken's from string makes a JValue
+of type String). Where it converts by identity, as a tuple to one with
+element names, no branch needs a cast. A type of the global namespace is
+spelled with global:: when the file writes it so, or when a type of .NET,
+of Unity or of a namespace the file imports has its name. A minus and a number in a compound assignment
+of a number turn the operator round, unless the number alone has another
+type (2147483648 is a uint) or the target is a string. A temporary is named
+after what both branches have in common. A lambda inside an interpolation
+hole waits for ternary-hoist.
+=== input
+using System.Collections.Generic;
+using System.Linq;
+using Other;
+
+public class Button
+{
+}
+
+public class Plain
+{
+}
+
+public class Marked
+{
+}
+
+public class Random
+{
+}
+
+namespace Other
+{
+    public class Button
+    {
+    }
+}
+
+namespace N
+{
+    public sealed class Token
+    {
+        public string Kind;
+
+        public static implicit operator Token(string s)
+        {
+            var t = new Token();
+            t.Kind = s;
+            return t;
+        }
+    }
+
+    public sealed class Holder
+    {
+        public Token Stored;
+
+        public Token this[string key]
+        {
+            get
+            {
+                return Stored;
+            }
+            set
+            {
+                Stored = value;
+            }
+        }
+    }
+
+    public class C
+    {
+        long _got;
+        int _length;
+        int _first;
+        float _scale;
+
+        public global::Marked Last;
+
+        public (long Got, long Total)? Progress => _length == 0 ? ((long, long)?)null : (_got, _length);
+
+        static bool StoryStepRuns()
+        {
+            return true;
+        }
+
+        static bool Runs()
+        {
+            return false;
+        }
+
+        public Token Converted(bool c, string s, Holder h)
+        {
+            h["k"] = c ? s : null;
+            Token t = c ? s : null;
+            h.Stored = t;
+            return c ? s : null;
+        }
+
+        public object Spelled(bool c)
+        {
+            var b = c ? new Button() : null;
+            var p = c ? new Plain() : null;
+            var m = c ? new Marked() : null;
+            var r = c ? new Random() : null;
+            return (b, p, m, r);
+        }
+
+        public string Flipped(bool c, string s)
+        {
+            _first += c ? 1 : -1;
+            _first -= c ? -2 : 3;
+            _scale += c ? 0.5f : -1.5f;
+            _first += c ? 1 : -2147483648;
+            s += c ? 1 : -1;
+            return s;
+        }
+
+        public bool Named(bool c)
+        {
+            if (c ? StoryStepRuns() : Runs())
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public string InHole(List<string> items)
+        {
+            return $"{string.Join(",", items.Select(x => x == null ? "-" : x))}";
+        }
+    }
+}
+=== output
+using System.Collections.Generic;
+using System.Linq;
+using Other;
+
+public class Button
+{
+}
+
+public class Plain
+{
+}
+
+public class Marked
+{
+}
+
+public class Random
+{
+}
+
+namespace Other
+{
+    public class Button
+    {
+    }
+}
+
+namespace N
+{
+    public sealed class Token
+    {
+        public string Kind;
+
+        public static implicit operator Token(string s)
+        {
+            var t = new Token();
+            t.Kind = s;
+            return t;
+        }
+    }
+
+    public sealed class Holder
+    {
+        public Token Stored;
+
+        public Token this[string key]
+        {
+            get
+            {
+                return Stored;
+            }
+            set
+            {
+                Stored = value;
+            }
+        }
+    }
+
+    public class C
+    {
+        long _got;
+        int _length;
+        int _first;
+        float _scale;
+
+        public global::Marked Last;
+
+        public (long Got, long Total)? Progress
+        {
+            get
+            {
+                if (_length == 0)
+                {
+                    return ((long, long)?)null;
+                }
+                return (_got, _length);
+            }
+        }
+
+        static bool StoryStepRuns()
+        {
+            return true;
+        }
+
+        static bool Runs()
+        {
+            return false;
+        }
+
+        public Token Converted(bool c, string s, Holder h)
+        {
+            if (c)
+            {
+                h["k"] = s;
+            }
+            else
+            {
+                h["k"] = (string)null;
+            }
+            Token t;
+            if (c)
+            {
+                t = s;
+            }
+            else
+            {
+                t = (string)null;
+            }
+            h.Stored = t;
+            if (c)
+            {
+                return s;
+            }
+            return (string)null;
+        }
+
+        public object Spelled(bool c)
+        {
+            global::Button b = null;
+            if (c)
+            {
+                b = new Button();
+            }
+            Plain p = null;
+            if (c)
+            {
+                p = new Plain();
+            }
+            global::Marked m = null;
+            if (c)
+            {
+                m = new Marked();
+            }
+            global::Random r = null;
+            if (c)
+            {
+                r = new Random();
+            }
+            return (b, p, m, r);
+        }
+
+        public string Flipped(bool c, string s)
+        {
+            if (c)
+            {
+                _first += 1;
+            }
+            else
+            {
+                _first -= 1;
+            }
+            if (c)
+            {
+                _first += 2;
+            }
+            else
+            {
+                _first -= 3;
+            }
+            if (c)
+            {
+                _scale += 0.5f;
+            }
+            else
+            {
+                _scale -= 1.5f;
+            }
+            if (c)
+            {
+                _first += 1;
+            }
+            else
+            {
+                _first += -2147483648;
+            }
+            if (c)
+            {
+                s += 1;
+            }
+            else
+            {
+                s += -1;
+            }
+            return s;
+        }
+
+        public bool Named(bool c)
+        {
+            bool runs;
+            if (c)
+            {
+                runs = StoryStepRuns();
+            }
+            else
+            {
+                runs = Runs();
+            }
+            if (runs)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public string InHole(List<string> items)
+        {
+            return $"{string.Join(",", items.Select(x => x == null ? "-" : x))}";
+        }
+    }
+}
+=== queue

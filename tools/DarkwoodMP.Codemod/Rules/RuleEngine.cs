@@ -231,6 +231,7 @@ static class RuleEngine
                     Member = proposal.Member,
                     Before = proposal.Before,
                     After = proposal.Text,
+                    Comment = plan.CommentOf(site),
                 });
             }
             if (!result.Manifest.Members.Contains(proposal.Member))

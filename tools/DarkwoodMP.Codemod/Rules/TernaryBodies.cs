@@ -36,32 +36,37 @@ sealed partial class TernarySite
 
     PlannedEdit ArrowEdit(ArrowExpressionClauseSyntax arrow, Casts casts)
     {
-        string comment;
+        TakenComment comment;
         TextSpan span;
         if (arrow.Parent is BasePropertyDeclarationSyntax property)
         {
-            comment = Behind(
-                property.GetLastToken(), property.SpanStart, out span);
+            comment = Taken(
+                Behind(property.GetLastToken(), property.SpanStart, out span),
+                OnMembersLine);
             return new PlannedEdit
             {
                 Span = span,
                 Sites = Sites(),
                 Member = property,
-                Build = text => Header(text, property, arrow, comment)
+                Build = text => Header(
+                        text, property, arrow, TakenComment.OnHeader(comment))
                     + "{\nget\n{\n"
-                    + new TernaryText(text, casts).Returns(_site)
+                    + new TernaryText(text, casts, comment).Returns(_site)
                     + "}\n}",
             };
         }
-        comment = BodyComment(_outer, out span);
+        comment = Taken(BodyComment(_outer, out span), OnMembersLine);
         return new PlannedEdit
         {
             Span = span,
             Sites = Sites(),
             Build = text => Block(
-                comment, new TernaryText(text, casts).Returns(_site)),
+                TakenComment.OnHeader(comment),
+                new TernaryText(text, casts, comment).Returns(_site)),
         };
     }
+
+    const string OnMembersLine = "on the member's line";
 
     /// A property's attributes, modifiers, type and name as written, with
     /// the comment that was behind the property at the end of their line.
@@ -141,7 +146,7 @@ sealed partial class TernarySite
         {
             return refused;
         }
-        var comment = BodyComment(assignment, out span);
+        var comment = Taken(BodyComment(assignment, out span), OnMembersLine);
         _edit = new PlannedEdit
         {
             Span = span,
@@ -150,8 +155,11 @@ sealed partial class TernarySite
             Build = text =>
             {
                 var target = text.Of(assignment.Left);
-                return Block(comment, new TernaryText(text, casts).Stores(
-                    _site, value => target + " = " + value + ";\n"));
+                var chain = new TernaryText(text, casts, comment);
+                return Block(
+                    TakenComment.OnHeader(comment),
+                    chain.Stores(
+                        _site, value => target + " = " + value + ";\n"));
             },
         };
         return null;

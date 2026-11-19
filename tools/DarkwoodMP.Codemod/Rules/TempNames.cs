@@ -127,6 +127,49 @@ sealed class TempNames
         }
     }
 
+    /// The words two names end with, as a name: "runs" for "storyStepRuns"
+    /// and "runs", "isReady" and "ready" give "ready". Null when the last
+    /// words differ.
+    public static string CommonEnd(string a, string b)
+    {
+        var first = Words(a);
+        var second = Words(b);
+        int common = 0;
+        while (common < first.Count && common < second.Count
+            && string.Equals(
+                first[first.Count - 1 - common],
+                second[second.Count - 1 - common],
+                StringComparison.OrdinalIgnoreCase))
+        {
+            common++;
+        }
+        if (common == 0)
+        {
+            return null;
+        }
+        var end = string.Concat(first.Skip(first.Count - common));
+        return Clean(end);
+    }
+
+    /// "storyStepRuns" as "story", "Step", "Runs": a word starts at a
+    /// capital that follows a small letter or a digit.
+    static List<string> Words(string name)
+    {
+        var words = new List<string>();
+        int start = 0;
+        for (int i = 1; i < name.Length; i++)
+        {
+            if (char.IsUpper(name[i])
+                && (char.IsLower(name[i - 1]) || char.IsDigit(name[i - 1])))
+            {
+                words.Add(name.Substring(start, i - start));
+                start = i;
+            }
+        }
+        words.Add(name.Substring(start));
+        return words;
+    }
+
     /// Drops leading underscores and lowers the first letter; a keyword gets
     /// a suffix.
     static string Clean(string name)

@@ -29,6 +29,7 @@ sealed class RulePlan
     readonly string _text;
     readonly HashSet<TextSpan> _reported = new();
     readonly Dictionary<SyntaxNode, TempNames> _temps = new();
+    readonly Dictionary<SyntaxNode, string> _comments = new();
 
     public RulePlan(
         string ruleName,
@@ -59,6 +60,23 @@ sealed class RulePlan
         bool isUnity = kind == "UnityEngine.Object (derived)"
             || kind == "type parameter : UnityEngine.Object";
         return isUnity == (Receivers == ReceiverFilter.Unity);
+    }
+
+    /// Records where a rewrite put the comment it took in from behind its
+    /// statement, for the sites.jsonl line of each of these sites.
+    public void NoteComment(IEnumerable<SyntaxNode> sites, string note)
+    {
+        foreach (var site in sites)
+        {
+            _comments[site] = note;
+        }
+    }
+
+    /// What NoteComment recorded for a site, or null.
+    public string CommentOf(SyntaxNode site)
+    {
+        _comments.TryGetValue(site, out var note);
+        return note;
     }
 
     /// The names already taken in the member around a site.

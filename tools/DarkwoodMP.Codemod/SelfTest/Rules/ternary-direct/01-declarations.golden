@@ -180,7 +180,8 @@ namespace N
             {
                 count = it.Count;
             }
-            int w = 2; // explains w
+            // explains w
+            int w = 2;
             if (c)
             {
                 w = 1;

@@ -229,3 +229,71 @@ public static object Run(bool c)
     Func<string> f = () => Log("c", c) ? Caller() : "skipped";
     return f();
 }
+=== a compound assignment where the natural type changes the result
+public static object Run(bool c)
+{
+    string s = "x";
+    s += c ? 1 : 'a';
+    return s;
+}
+=== a user-defined conversion runs on every path
+public sealed class Token
+{
+    public string Kind;
+
+    public static implicit operator Token(string s)
+    {
+        var t = new Token();
+        t.Kind = "a string";
+        if (s == null)
+        {
+            t.Kind = "a null string";
+        }
+        return t;
+    }
+}
+
+public sealed class Holder
+{
+    public Token Stored;
+
+    public Token this[string key]
+    {
+        get => Stored;
+        set => Stored = value;
+    }
+}
+
+public static Token Make(bool c, string s) => Log("c", c) ? s : null;
+
+public static object Run(bool c, string s)
+{
+    var h = new Holder();
+    h["k"] = Log("c", c) ? s : null;
+    Token t = Log("d", !c) ? s : null;
+    return (h.Stored, t, Make(c, s));
+}
+=== a minus and a number in a compound assignment turn the operator round
+public static object Run(bool c, int n, double d)
+{
+    int x = n;
+    x += c ? 1 : -1;
+    int y = n;
+    y -= !c ? -2 : 3;
+    double z = d;
+    z += c ? 0.5 : -0.0;
+    checked
+    {
+        int w = n;
+        w += c ? 2 : -1;
+        return (x, y, z, w);
+    }
+}
+=== a tuple with element names needs no cast
+public static (long Got, long Total)? Progress(bool c, long a, int b) =>
+    Log("c", c) ? ((long, long)?)null : (Log("a", a), Log("b", b));
+
+public static object Run(bool c, long a, int b)
+{
+    return Progress(c, a, b);
+}
