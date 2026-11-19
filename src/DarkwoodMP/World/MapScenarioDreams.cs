@@ -553,7 +553,11 @@ namespace DarkwoodMP.World
             {
                 step = ge.events.FirstOrDefault(e => e != null && e.type == GameEvent.Type.modifyDoor);
             }
-            var go = step?.targetGameObjects.FirstOrDefault(g => g != null);
+            GameObject go = null;
+            if (step != null)
+            {
+                go = step.targetGameObjects.FirstOrDefault(g => g != null);
+            }
             if (go == null)
             {
                 return null;

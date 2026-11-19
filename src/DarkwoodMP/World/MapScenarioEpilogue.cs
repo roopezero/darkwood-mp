@@ -147,7 +147,13 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
-            r.Info = $"in the credits; session {Net.Session.Instance?.Active}";
+            Net.Session instance = Net.Session.Instance;
+            bool? active = null;
+            if (instance != null)
+            {
+                active = instance.Active;
+            }
+            r.Info = $"in the credits; session {active}";
             yield return ExitCredits();
         }
 
@@ -164,7 +170,13 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.5f);
             }
-            r.Info = $"at the main menu (credits seen {credits}); session {Net.Session.Instance?.Active}";
+            Net.Session instance = Net.Session.Instance;
+            bool? active = null;
+            if (instance != null)
+            {
+                active = instance.Active;
+            }
+            r.Info = $"at the main menu (credits seen {credits}); session {active}";
             if (!credits)
             {
                 r.Fail($"no credits: {r.Info}");

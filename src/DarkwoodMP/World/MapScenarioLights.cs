@@ -193,7 +193,13 @@ namespace DarkwoodMP.World
             var held = x.HeldLightShown;
             if (held != null)
             {
-                parts.Add($"{x.Last?.HeldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
+                Sync.PlayerSnapshot last2 = x.Last;
+                string heldLight = null;
+                if (last2 != null)
+                {
+                    heldLight = last2.HeldLight;
+                }
+                parts.Add($"{heldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
             }
             if (x.LanternLight != null)
             {

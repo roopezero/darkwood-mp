@@ -319,13 +319,27 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Burn), "Start")]
     static class BurnStartPatch
     {
-        static void Postfix(Burn __instance) => FireSync.Instance?.Changed(__instance, on: true);
+        static void Postfix(Burn __instance)
+        {
+            FireSync instance = FireSync.Instance;
+            if (instance != null)
+            {
+                instance.Changed(__instance, on: true);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Burn), nameof(Burn.stop))]
     static class BurnStopPatch
     {
-        static void Prefix(Burn __instance) => FireSync.Instance?.Changed(__instance, on: false);
+        static void Prefix(Burn __instance)
+        {
+            FireSync instance = FireSync.Instance;
+            if (instance != null)
+            {
+                instance.Changed(__instance, on: false);
+            }
+        }
     }
 
     /// <summary>Client: fire hurts only our own player here; the rest burns on the host.</summary>

@@ -200,7 +200,11 @@ namespace DarkwoodMP.World
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 world.SetLoadStatus("You stopped joining.");
-                session.Backend?.Leave();
+                INetBackend backend = session.Backend;
+                if (backend != null)
+                {
+                    backend.Leave();
+                }
                 Fail("stopped with Esc");
                 return;
             }

@@ -41,12 +41,30 @@ namespace DarkwoodMP.Net
             _transport.Init();
             _lobby.Init();
             _transport.ShouldAccept = id => _lobby.InLobby && (IsHost ? _lobby.IsMember(id) : id == _lobby.Owner);
-            _transport.OnMessage += (from, data, len, ch) => OnMessage?.Invoke(from.m_SteamID, data, len);
-            _lobby.OnEntered += () => OnEntered?.Invoke();
+            _transport.OnMessage += (from, data, len, ch) =>
+            {
+                Action<ulong, byte[], int> handler = OnMessage;
+                if (handler != null)
+                {
+                    handler(from.m_SteamID, data, len);
+                }
+            };
+            _lobby.OnEntered += () =>
+            {
+                Action handler2 = OnEntered;
+                if (handler2 != null)
+                {
+                    handler2();
+                }
+            };
             _lobby.OnLeft += () =>
             {
                 _transport.ClearPending();
-                OnLeft?.Invoke();
+                Action handler3 = OnLeft;
+                if (handler3 != null)
+                {
+                    handler3();
+                }
             };
             // A player whose connection died without leaving the lobby (its PC lost power, its network dropped):
             // the lobby only notices much later. Only for peers that got in, or a host that let us in: a session
@@ -62,7 +80,11 @@ namespace DarkwoodMP.Net
                 {
                     Plugin.Log.LogInfo($"Lost the connection to #{who.m_SteamID}");
                     _transport.CloseSession(who);
-                    OnPeerLost?.Invoke(who.m_SteamID);
+                    Action<ulong> handler4 = OnPeerLost;
+                    if (handler4 != null)
+                    {
+                        handler4(who.m_SteamID);
+                    }
                 }
                 else if (!IsHost && who == _lobby.Owner && session.Connected)
                 {
@@ -78,7 +100,11 @@ namespace DarkwoodMP.Net
                     return;
                 }
                 _transport.CloseSession(who);
-                OnPeerLost?.Invoke(who.m_SteamID);
+                Action<ulong> handler5 = OnPeerLost;
+                if (handler5 != null)
+                {
+                    handler5(who.m_SteamID);
+                }
             };
         }
 
@@ -173,7 +199,11 @@ namespace DarkwoodMP.Net
 
         public void Leave()
         {
-            World.Characters.Instance?.SaveNow();
+            World.Characters instance = World.Characters.Instance;
+            if (instance != null)
+            {
+                instance.SaveNow();
+            }
             _lobby.Leave();
         }
 

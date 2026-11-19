@@ -579,7 +579,11 @@ namespace DarkwoodMP.World
             bool any = false;
             foreach (var slot in inv.slots)
             {
-                var it = slot?.invItem;
+                InvItemClass it = null;
+                if (slot != null)
+                {
+                    it = slot.invItem;
+                }
                 if (InvItemClass.isNull(it) || it.baseClass == null || it.baseClass.rottenItem == null)
                 {
                     continue;
@@ -1232,8 +1236,24 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.refreshItems))]
     static class DriftPatch
     {
-        static void Prefix(Inventory __instance, out string[] __state) => __state = SlotShare.Instance?.BeforeDrift(__instance);
-        static void Postfix(Inventory __instance, string[] __state) => SlotShare.Instance?.Drift(__instance, __state);
+        static void Prefix(Inventory __instance, out string[] __state)
+        {
+            SlotShare instance = SlotShare.Instance;
+            string[] state = null;
+            if (instance != null)
+            {
+                state = instance.BeforeDrift(__instance);
+            }
+            __state = state;
+        }
+        static void Postfix(Inventory __instance, string[] __state)
+        {
+            SlotShare instance = SlotShare.Instance;
+            if (instance != null)
+            {
+                instance.Drift(__instance, __state);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
@@ -1260,7 +1280,11 @@ namespace DarkwoodMP.World
             WorkbenchStorage.ApplyAll("upgraded"); // the storage's new row (also without co-op)
             if (!WorldActions.Replaying)
             {
-                SlotShare.Instance?.LevelRaised(ctl.workbenchLevel);
+                SlotShare instance = SlotShare.Instance;
+                if (instance != null)
+                {
+                    instance.LevelRaised(ctl.workbenchLevel);
+                }
             }
         }
     }
@@ -1303,7 +1327,11 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world] picked up {__state.name} with a click");
             }
-            SlotShare.Instance?.Closed(__state);
+            SlotShare instance = SlotShare.Instance;
+            if (instance != null)
+            {
+                instance.Closed(__state);
+            }
         }
     }
 }

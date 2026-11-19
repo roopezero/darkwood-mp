@@ -127,7 +127,16 @@ namespace DarkwoodMP.World
                 string attacks = "no library";
                 if (an.Library != null)
                 {
-                    attacks = string.Join("/", an.Library.clips.Where(x => x != null && x.name.StartsWith("Attack")).Select(x => $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{x.frames?.Length ?? 0}"));
+                    attacks = string.Join("/", an.Library.clips.Where(x => x != null && x.name.StartsWith("Attack")).Select(x =>
+                    {
+                        tk2dSpriteAnimationFrame[] frames = x.frames;
+                        int? length = null;
+                        if (frames != null)
+                        {
+                            length = frames.Length;
+                        }
+                        return $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{length ?? 0}";
+                    }));
                 }
                 l.Add($"[{PathOf(an, c.transform)}{(an == c.animator ? " main" : "")}{(an.legs != null ? " legs=" + PathOf(an.legs, c.transform) : "")}" +
                       $"{(c.animator != null && c.animator.legs == an ? " (the main's legs)" : "")} clip {clip?.name ?? "none"} {attacks}]");

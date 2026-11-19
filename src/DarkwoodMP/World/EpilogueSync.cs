@@ -224,7 +224,11 @@ namespace DarkwoodMP.World
             if (s.IsHost)
             {
                 Plugin.Log.LogInfo("[epilogue] to the credits: the players go too, and the server stops");
-                WorldShare.Instance?.StopServer(GameEnd(1));
+                WorldShare instance = WorldShare.Instance;
+                if (instance != null)
+                {
+                    instance.StopServer(GameEnd(1));
+                }
                 return;
             }
             Plugin.Log.LogInfo("[epilogue] our outcomes are over: to the credits, leaving the session");
@@ -233,8 +237,20 @@ namespace DarkwoodMP.World
 
         private static void Leave(string why)
         {
-            S?.Backend?.Leave();
-            WorldShare.Instance?.SetLoadStatus(why);
+            Session s = S;
+            if (s != null)
+            {
+                INetBackend backend = s.Backend;
+                if (backend != null)
+                {
+                    backend.Leave();
+                }
+            }
+            WorldShare instance = WorldShare.Instance;
+            if (instance != null)
+            {
+                instance.SetLoadStatus(why);
+            }
             if (_toMenu)
             {
                 return;
@@ -542,7 +558,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo("[epilogue] the host starts the epilogue: we go in too");
                 Playing = true;
                 Reset();
-                Characters.Instance?.SaveNow(); // before the epilogue's own save
+                // before the epilogue's own save
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SaveNow();
+                }
                 Plugin.Notice("The host has reached the end of the game: the epilogue begins");
                 if (WorldShare.InWorld)
                 {

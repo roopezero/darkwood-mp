@@ -217,7 +217,14 @@ namespace DarkwoodMP.Sync
                 r = new RemotePlayer(id, name);
                 if (id != DummyId)
                 {
-                    r.OnDied += rp => OnRemoteDied?.Invoke(_session.NameOf(rp.Owner));
+                    r.OnDied += rp =>
+                    {
+                        System.Action<string> handler = OnRemoteDied;
+                        if (handler != null)
+                        {
+                            handler(_session.NameOf(rp.Owner));
+                        }
+                    };
                 }
                 Remotes[id] = r;
             }

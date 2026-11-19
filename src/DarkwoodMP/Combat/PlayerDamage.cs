@@ -46,7 +46,11 @@ namespace DarkwoodMP.Combat
                     value = $" (+{effects.Count} effects)";
                 }
                 Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + value);
-                PlayerSync.Instance?.FlashDummy(damage);
+                PlayerSync instance = PlayerSync.Instance;
+                if (instance != null)
+                {
+                    instance.FlashDummy(damage);
+                }
                 return;
             }
             var session = Session.Instance;

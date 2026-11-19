@@ -376,7 +376,12 @@ namespace DarkwoodMP
             // "--dwmp-window WxH": play in a window of that size (to check the UI at other sizes); without it, the
             // size from before is put back.
             {
-                var wh = Arg("--dwmp-window")?.Split('x');
+                string arg = Arg("--dwmp-window");
+                string[] wh = null;
+                if (arg != null)
+                {
+                    wh = arg.Split('x');
+                }
                 if (wh != null && wh.Length == 2 && int.TryParse(wh[0], out int ww) && int.TryParse(wh[1], out int hh))
                 {
                     if (_sizeBefore == null)
@@ -1226,7 +1231,13 @@ namespace DarkwoodMP
             var sp = t.GetComponent<tk2dBaseSprite>();
             if (sp != null)
             {
-                extra += $" sprite={sp.CurrentSprite?.name} coll={sp.Collection?.spriteCollectionName} color={sp.color}";
+                tk2dSpriteDefinition currentSprite = sp.CurrentSprite;
+                string name = null;
+                if (currentSprite != null)
+                {
+                    name = currentSprite.name;
+                }
+                extra += $" sprite={name} coll={sp.Collection?.spriteCollectionName} color={sp.color}";
             }
             var mb = t.GetComponent<Button>();
             if (mb != null)
@@ -1347,7 +1358,11 @@ namespace DarkwoodMP
                 for (int i = 0; i < et.eventTriggers.Count; i++)
                 {
                     var t = et.eventTriggers[i];
-                    var ge = t?.gameEvents;
+                    GameEvents ge = null;
+                    if (t != null)
+                    {
+                        ge = t.gameEvents;
+                    }
                     if (ge == null || !ge.events.Exists(e => e != null && e.type == GameEvent.Type.transportPlayerToObject && e.activeModifier))
                     {
                         continue;
@@ -1708,9 +1723,17 @@ namespace DarkwoodMP
             AfterNight.Update();
             if (_session.IsHost && WorldShare.InWorld)
             {
-                TraderSync.Instance?.HostUpdate();
+                TraderSync instance = TraderSync.Instance;
+                if (instance != null)
+                {
+                    instance.HostUpdate();
+                }
             }
-            NpcSync.Instance?.Update();
+            NpcSync instance2 = NpcSync.Instance;
+            if (instance2 != null)
+            {
+                instance2.Update();
+            }
             ModProfiler.Mark("npcs");
             DialogueGuard.Update();
             TestWorld.Update();
@@ -1736,8 +1759,22 @@ namespace DarkwoodMP
                 if (_steamInstance == null)
                 {
                     var t = AccessTools.TypeByName("SteamManager");
-                    _steamInstance = t?.GetField("s_instance", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-                    _steamInitialized = t?.GetField("m_bInitialized", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                    if (t != null)
+                    {
+                        _steamInstance = t.GetField("s_instance", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+                    }
+                    else
+                    {
+                        _steamInstance = null;
+                    }
+                    if (t != null)
+                    {
+                        _steamInitialized = t.GetField("m_bInitialized", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
+                    }
+                    else
+                    {
+                        _steamInitialized = null;
+                    }
                     if (_steamInstance == null || _steamInitialized == null)
                     {
                         _steamUnavailable = true;
@@ -1795,7 +1832,15 @@ namespace DarkwoodMP
             string name = Cfg.PlayerName.Value;
             if (string.IsNullOrWhiteSpace(name))
             {
-                name = (_steam as IGuiSection)?.SuggestedPlayerName;
+                IGuiSection guiSection = _steam as IGuiSection;
+                if (guiSection != null)
+                {
+                    name = guiSection.SuggestedPlayerName;
+                }
+                else
+                {
+                    name = null;
+                }
             }
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -2243,7 +2288,11 @@ namespace DarkwoodMP
             OptionsTest.RestoreIfCutShort();
             // Our character goes to the host here, while the world is whole, and only here: OnDestroy's Dispose
             // leaves the session (which waits for the TCP writers) without sending it again.
-            _characters?.SaveForQuit();
+            Characters characters = _characters;
+            if (characters != null)
+            {
+                characters.SaveForQuit();
+            }
         }
 
         /// <summary>A message over your character, as the game shows its own (and in the log).</summary>
@@ -2281,8 +2330,16 @@ namespace DarkwoodMP
 
         private void OnDestroy()
         {
-            _session?.Dispose();
-            _harmony?.UnpatchSelf();
+            Session session = _session;
+            if (session != null)
+            {
+                session.Dispose();
+            }
+            Harmony harmony = _harmony;
+            if (harmony != null)
+            {
+                harmony.UnpatchSelf();
+            }
         }
     }
 }

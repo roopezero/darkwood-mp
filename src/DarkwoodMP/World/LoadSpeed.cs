@@ -333,7 +333,12 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool RegisterToClosestNode(WorldGrid w, GameObject GO)
         {
-            var nodes = w.currentGrid?.nodes;
+            WorldGrid.Grid currentGrid = w.currentGrid;
+            List<WorldGrid.Node> nodes = null;
+            if (currentGrid != null)
+            {
+                nodes = currentGrid.nodes;
+            }
             if (nodes == null || nodes.Count == 0)
             {
                 return true;

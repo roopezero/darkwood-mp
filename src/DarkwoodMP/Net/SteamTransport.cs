@@ -49,7 +49,11 @@ namespace DarkwoodMP.Net
         private void OnSessionFailed(SteamNetworkingMessagesSessionFailed_t fail)
         {
             Plugin.Log.LogWarning($"P2P session failed: {fail.m_info.m_eEndReason} {fail.m_info.m_szEndDebug}");
-            OnSessionLost?.Invoke(fail.m_info.m_identityRemote.GetSteamID());
+            Action<CSteamID> handler = OnSessionLost;
+            if (handler != null)
+            {
+                handler(fail.m_info.m_identityRemote.GetSteamID());
+            }
         }
 
         /// <summary>
@@ -359,11 +363,19 @@ namespace DarkwoodMP.Net
                             var from = msg.m_identityPeer.GetSteamID();
                             if (_recvBuf[0] != (byte)MsgType.SteamPiece)
                             {
-                                OnMessage?.Invoke(from, _recvBuf, len, channel);
+                                MessageHandler handler = OnMessage;
+                                if (handler != null)
+                                {
+                                    handler(from, _recvBuf, len, channel);
+                                }
                             }
                             else if (AddPiece(from, channel, _recvBuf, len) is Joining whole)
                             {
-                                OnMessage?.Invoke(from, whole.Data, whole.Data.Length, channel);
+                                MessageHandler handler2 = OnMessage;
+                                if (handler2 != null)
+                                {
+                                    handler2(from, whole.Data, whole.Data.Length, channel);
+                                }
                             }
                         }
                     }
@@ -397,8 +409,16 @@ namespace DarkwoodMP.Net
 
         public void Dispose()
         {
-            _sessionRequest?.Dispose();
-            _sessionFailed?.Dispose();
+            Callback<SteamNetworkingMessagesSessionRequest_t> sessionRequest = _sessionRequest;
+            if (sessionRequest != null)
+            {
+                sessionRequest.Dispose();
+            }
+            Callback<SteamNetworkingMessagesSessionFailed_t> sessionFailed = _sessionFailed;
+            if (sessionFailed != null)
+            {
+                sessionFailed.Dispose();
+            }
         }
     }
 }

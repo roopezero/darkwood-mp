@@ -162,7 +162,11 @@ namespace DarkwoodMP.World
         {
             try
             {
-                (level as IDisposable)?.Dispose();
+                IDisposable disposable = level as IDisposable;
+                if (disposable != null)
+                {
+                    disposable.Dispose();
+                }
             }
             catch (Exception ex)
             {
@@ -178,7 +182,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            _runningResult?.Fail("stopped");
+            Result runningResult = _runningResult;
+            if (runningResult != null)
+            {
+                runningResult.Fail("stopped");
+            }
             while (stack.Count > 0)
             {
                 DisposeLevel(stack.Pop(), "stop");

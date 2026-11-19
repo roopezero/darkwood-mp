@@ -126,7 +126,16 @@ namespace DarkwoodMP.World
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 24; i++)
             {
-                var t = st.GetFrame(i)?.GetMethod()?.DeclaringType;
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                Type t = null;
+                if (frame != null)
+                {
+                    MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        t = method.DeclaringType;
+                    }
+                }
                 for (; t != null; t = t.DeclaringType)
                 {
                     if (PlayerSide.Contains(t))
@@ -739,7 +748,11 @@ namespace DarkwoodMP.World
                 {
                     return false;
                 }
-                FlagsSync.Instance?.DeathAllowed(npc.npc != null ? npc.npc.name : npc.name);
+                FlagsSync instance = FlagsSync.Instance;
+                if (instance != null)
+                {
+                    instance.DeathAllowed(npc.npc != null ? npc.npc.name : npc.name);
+                }
                 return true;
             }
             if (a == Action.ItemUnlock)
@@ -2197,8 +2210,16 @@ namespace DarkwoodMP.World
             // up) goes first, and the key itself again, in case the host didn't take it before.
             if (how == 1f && Net.Session.Instance != null && Net.Session.Instance.IsClient)
             {
-                FlagsSync.Instance?.FlushNow();
-                FlagsSync.Instance?.SendKey(l.keyType);
+                FlagsSync instance = FlagsSync.Instance;
+                if (instance != null)
+                {
+                    instance.FlushNow();
+                }
+                FlagsSync instance2 = FlagsSync.Instance;
+                if (instance2 != null)
+                {
+                    instance2.SendKey(l.keyType);
+                }
             }
             var door = l.GetComponent<Door>();
             if (door != null)

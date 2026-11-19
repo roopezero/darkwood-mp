@@ -808,7 +808,10 @@ namespace DarkwoodMP.World
                 text = $"FAIL {bad} frames moved";
             }
             Plugin.Log.LogInfo($"[skills] hover sweep: {frames} frames, {text}");
-            done?.Invoke(bad);
+            if (done != null)
+            {
+                done(bad);
+            }
         }
 
         /// <summary>
@@ -908,7 +911,10 @@ namespace DarkwoodMP.World
             {
                 fails.Add("negative skills: " + wrong);
             }
-            done?.Invoke(fails);
+            if (done != null)
+            {
+                done(fails);
+            }
         }
 
         /// <summary>For tests: the panel's window, in screen pixels from the top left.</summary>

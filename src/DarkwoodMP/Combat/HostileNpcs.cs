@@ -379,7 +379,11 @@ namespace DarkwoodMP.Combat
                 return;
             }
             Plugin.Log.LogInfo($"[npc] {s.NameOf(from)} hit {c.name} for {damage:0}");
-            NetEnemies.Instance?.ApplyHit(from, proxy, c, damage, f, effects, weapon);
+            NetEnemies instance = NetEnemies.Instance;
+            if (instance != null)
+            {
+                instance.ApplyHit(from, proxy, c, damage, f, effects, weapon);
+            }
         }
 
         internal static void OnNpcAttack(ulong from, PacketReader r)

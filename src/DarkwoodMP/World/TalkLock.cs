@@ -184,7 +184,11 @@ namespace DarkwoodMP.World
                 return;
             }
             // What the dialogue did goes first, so it's there before the NPC is free for the next player.
-            FlagsSync.Instance?.FlushNow();
+            FlagsSync instance = FlagsSync.Instance;
+            if (instance != null)
+            {
+                instance.FlushNow();
+            }
             if (s.IsHost)
             {
                 Release(Key(r, name), s.LocalId);

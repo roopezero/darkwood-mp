@@ -119,7 +119,12 @@ namespace DarkwoodMP.World
                     }
                     long id = NewId();
                     ObjRef.BindShared(id, go);
-                    DragSync.Instance?.Watch(go); // where it settles from here on is sent (as announced: it may not have yet)
+                    // where it settles from here on is sent (as announced: it may not have yet)
+                    DragSync instance = DragSync.Instance;
+                    if (instance != null)
+                    {
+                        instance.Watch(go);
+                    }
                     _outgoing.Add((id, go.name, go.transform.position, PlaceOf(go)));
                     Given++;
                 }
@@ -310,7 +315,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            DragSync.Instance?.PutAtHost(go, pos);
+            DragSync instance = DragSync.Instance;
+            if (instance != null)
+            {
+                instance.PutAtHost(go, pos);
+            }
         }
 
         /// <summary>Client: the host sent where an object we haven't tied yet came to rest (ObjMove, last).</summary>

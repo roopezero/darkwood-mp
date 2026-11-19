@@ -182,7 +182,11 @@ namespace DarkwoodMP.World
                 }
                 if (_noted.Add(loc))
                 {
-                    DragSync.Instance?.NoteAll(loc.gameObject);
+                    DragSync instance = DragSync.Instance;
+                    if (instance != null)
+                    {
+                        instance.NoteAll(loc.gameObject);
+                    }
                 }
             }
             _kept.RemoveWhere(l => l == null);
@@ -247,7 +251,11 @@ namespace DarkwoodMP.World
         {
             try
             {
-                ExitEvents?.Invoke(l, null);
+                MethodInfo exitEvents = ExitEvents;
+                if (exitEvents != null)
+                {
+                    exitEvents.Invoke(l, null);
+                }
             }
             catch (System.Exception e)
             {
@@ -268,7 +276,11 @@ namespace DarkwoodMP.World
         {
             try
             {
-                EnterEvents?.Invoke(l, null);
+                MethodInfo enterEvents = EnterEvents;
+                if (enterEvents != null)
+                {
+                    enterEvents.Invoke(l, null);
+                }
             }
             catch (System.Exception e)
             {

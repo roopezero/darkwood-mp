@@ -209,7 +209,10 @@ namespace DarkwoodMP.World
                 slot.removeItem();
             }
             slot.createItem(type, 1);
-            made?.Invoke(slot.invItem);
+            if (made != null)
+            {
+                made(slot.invItem);
+            }
             foreach (var s in p.Hotbar.slots)
             {
                 s.deselect();
@@ -1171,7 +1174,14 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 6f;
             while (true)
             {
-                rp = ps?.Remotes.Values.FirstOrDefault(x => x.Owner != Sync.PlayerSync.DummyId);
+                if (ps != null)
+                {
+                    rp = ps.Remotes.Values.FirstOrDefault(x => x.Owner != Sync.PlayerSync.DummyId);
+                }
+                else
+                {
+                    rp = null;
+                }
                 if (rp != null)
                 {
                     NetPlayerProxy.All.TryGetValue(rp.Owner, out proxy);
@@ -1184,7 +1194,15 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    Vector3? position = rp?.Last?.Position;
+                    Vector3? position = null;
+                    if (rp != null)
+                    {
+                        Sync.PlayerSnapshot last = rp.Last;
+                        if (last != null)
+                        {
+                            position = last.Position;
+                        }
+                    }
                     if (position.HasValue)
                     {
                         pos = position.Value;

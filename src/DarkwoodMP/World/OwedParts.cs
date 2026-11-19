@@ -41,7 +41,11 @@ namespace DarkwoodMP.World
         /// <summary>A name for this trigger that's the same in every game and after the world is loaded again.</summary>
         internal static string IdOf(global::EventTrigger t)
         {
-            var et = t?.thisEventTriggers;
+            EventTriggers et = null;
+            if (t != null)
+            {
+                et = t.thisEventTriggers;
+            }
             if (et == null)
             {
                 return null;

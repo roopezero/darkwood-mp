@@ -108,7 +108,11 @@ namespace DarkwoodMP.World
             slots[at2].createItem("rope", 1);
             yield return new WaitForSeconds(0.5f);
             _mark = Hotbar(p);
-            Characters.Instance?.SaveNow();
+            Characters instance = Characters.Instance;
+            if (instance != null)
+            {
+                instance.SaveNow();
+            }
             r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
         }
 
@@ -140,7 +144,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                t = e.eventTriggers.FirstOrDefault(x => x?.gameEvents != null && x.gameEvents.name == a[0]);
+                t = e.eventTriggers.FirstOrDefault(x => x != null && x.gameEvents != null && x.gameEvents.name == a[0]);
                 if (t != null)
                 {
                     et = e;

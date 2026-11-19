@@ -310,7 +310,12 @@ namespace DarkwoodMP.Net
                             continue;
                         }
                         byte[] ip = u.Address.GetAddressBytes();
-                        byte[] mask = u.IPv4Mask?.GetAddressBytes();
+                        IPAddress ipv4Mask = u.IPv4Mask;
+                        byte[] mask = null;
+                        if (ipv4Mask != null)
+                        {
+                            mask = ipv4Mask.GetAddressBytes();
+                        }
                         if (mask != null && mask.Length == 4)
                         {
                             var bc = new byte[4];

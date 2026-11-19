@@ -211,7 +211,12 @@ namespace DarkwoodMP.World
             {
                 r = ObjRef.Of(thisGO);
             }
-            Sync.PlayerSync.Instance?.FlushNow(); // the host checks our reach (a stage starts as we arrive): our newest position first
+            // the host checks our reach (a stage starts as we arrive): our newest position first
+            Sync.PlayerSync instance = Sync.PlayerSync.Instance;
+            if (instance != null)
+            {
+                instance.FlushNow();
+            }
             var w = S.Begin(MsgType.StoryRequest);
             r.Write(w);
             w.W.Write((byte)(ge != null ? Math.Max(0, ge.events.IndexOf(e)) : 0));
@@ -530,7 +535,11 @@ namespace DarkwoodMP.World
             var w = s.Begin(MsgType.GameEnd);
             w.W.Write((byte)kind);
             w.W.Write((byte)1); // phase 1: the session ends
-            WorldShare.Instance?.StopServer(w);
+            WorldShare instance = WorldShare.Instance;
+            if (instance != null)
+            {
+                instance.StopServer(w);
+            }
         }
 
         internal static void OnPrepareDream(string preset)
@@ -554,7 +563,12 @@ namespace DarkwoodMP.World
                 return;
             }
             int chapter = r.R.ReadInt32();
-            Characters.Instance?.SaveNow(); // before the host's game saves and moves on
+            // before the host's game saves and moves on
+            Characters instance = Characters.Instance;
+            if (instance != null)
+            {
+                instance.SaveNow();
+            }
             Plugin.Notice($"The host is starting chapter {chapter}. You'll follow once it's ready.");
             if (!WorldShare.InWorld)
             {
@@ -616,8 +630,19 @@ namespace DarkwoodMP.World
         internal static void SoloEnding(EndKind kind)
         {
             var s = S;
-            s?.Backend?.Leave();
-            WorldShare.Instance?.SetLoadStatus("The host reached the end of the game.");
+            if (s != null)
+            {
+                INetBackend backend = s.Backend;
+                if (backend != null)
+                {
+                    backend.Leave();
+                }
+            }
+            WorldShare instance = WorldShare.Instance;
+            if (instance != null)
+            {
+                instance.SetLoadStatus("The host reached the end of the game.");
+            }
             if (!WorldShare.InWorld || !SaveRedirect.Active)
             {
                 return;

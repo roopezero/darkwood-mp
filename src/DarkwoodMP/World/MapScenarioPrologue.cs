@@ -137,7 +137,12 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             j.keysDict.TryGetValue(a[0], out var k);
-            r.Info = $"key {a[0]} in our journal {k != null} (inDream {k?.inDream}), dreaming {D.dreaming}, shared dream {DreamSync.Shared ?? "none"}";
+            bool? inDream = null;
+            if (k != null)
+            {
+                inDream = k.inDream;
+            }
+            r.Info = $"key {a[0]} in our journal {k != null} (inDream {inDream}), dreaming {D.dreaming}, shared dream {DreamSync.Shared ?? "none"}";
             if ((k != null) != want)
             {
                 string text = "none";
@@ -260,7 +265,11 @@ namespace DarkwoodMP.World
             }
             d.lockMe(a[0]);
             Singleton<UI>.Instance.journal.keysDict.Remove(a[0]);
-            FlagsSync.Instance?.FlushNow();
+            FlagsSync instance = FlagsSync.Instance;
+            if (instance != null)
+            {
+                instance.FlushNow();
+            }
             var free = inv.slots.FirstOrDefault(s => s != null && InvItemClass.isNull(s.invItem));
             if (free == null)
             {
@@ -447,7 +456,11 @@ namespace DarkwoodMP.World
             // The host keeps our character from now on; send it now (in the prologue it isn't sent).
             if (NetEnemies.ClientMode)
             {
-                Characters.Instance?.SaveNow();
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SaveNow();
+                }
             }
         }
     }

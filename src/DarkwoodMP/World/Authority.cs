@@ -72,7 +72,11 @@ namespace DarkwoodMP.World
             {
                 try
                 {
-                    p.Done?.Invoke(false, "the session ended", "");
+                    Action<bool, string, string> handler = p.Done;
+                    if (handler != null)
+                    {
+                        handler(false, "the session ended", "");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -173,7 +177,11 @@ namespace DarkwoodMP.World
             }
             try
             {
-                p.Done?.Invoke(ok, reason, result);
+                Action<bool, string, string> handler = p.Done;
+                if (handler != null)
+                {
+                    handler(ok, reason, result);
+                }
             }
             catch (Exception e)
             {
@@ -458,7 +466,11 @@ namespace DarkwoodMP.World
                 }
                 foreach (var slot in inv.slots)
                 {
-                    var it = slot?.invItem;
+                    InvItemClass it = null;
+                    if (slot != null)
+                    {
+                        it = slot.invItem;
+                    }
                     if (InvItemClass.isNull(it))
                     {
                         continue;

@@ -724,7 +724,11 @@ namespace DarkwoodMP.World
         {
             if (S != null && S.IsClient)
             {
-                Sync.PlayerSync.Instance?.FlushNow();
+                Sync.PlayerSync instance = Sync.PlayerSync.Instance;
+                if (instance != null)
+                {
+                    instance.FlushNow();
+                }
             }
         }
 
@@ -1270,7 +1274,11 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static string WorldEventsOf(global::EventTrigger t)
         {
-            var ge = t?.gameEvents;
+            GameEvents ge = null;
+            if (t != null)
+            {
+                ge = t.gameEvents;
+            }
             if (ge == null || ge.events == null)
             {
                 return "";

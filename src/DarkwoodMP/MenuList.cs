@@ -239,7 +239,8 @@ namespace DarkwoodMP
         private static string LeaveText()
         {
             string s;
-            if (WorldShare.Instance?.PlayingHostCopy == true)
+            WorldShare instance = WorldShare.Instance;
+            if (instance != null && instance.PlayingHostCopy)
             {
                 s = "This is your copy of the host's world: your own saves are untouched.";
             }

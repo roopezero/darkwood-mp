@@ -178,7 +178,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            SlotShare.Instance?.Update();
+            SlotShare instance = SlotShare.Instance;
+            if (instance != null)
+            {
+                instance.Update();
+            }
             SendPendingSpawns();
             if (Time.unscaledTime < _nextCheck)
             {
@@ -265,7 +269,10 @@ namespace DarkwoodMP.World
                     {
                         try
                         {
-                            slot?.despawn();
+                            if (slot != null)
+                            {
+                                slot.despawn();
+                            }
                         }
                         catch (System.Exception)
                         {
@@ -295,7 +302,13 @@ namespace DarkwoodMP.World
                         ic.UpgradeMode = false;
                         ic.inWorkbench = false;
                     }
-                    if (!ReferenceEquals(SawField?.GetValue(inv), null))
+                    System.Reflection.FieldInfo sawField = SawField;
+                    object saw = null;
+                    if (sawField != null)
+                    {
+                        saw = sawField.GetValue(inv);
+                    }
+                    if (!ReferenceEquals(saw, null))
                     {
                         ic.inSaw = false;
                     }
@@ -371,7 +384,10 @@ namespace DarkwoodMP.World
             foreach (var inv in _slotGone)
             {
                 bool storage = slots != null && slots.Is(inv);
-                slots?.Closed(inv);
+                if (slots != null)
+                {
+                    slots.Closed(inv);
+                }
                 if (!storage)
                 {
                     Closed(inv);
@@ -783,7 +799,10 @@ namespace DarkwoodMP.World
                 slots.MergeOpen(inv, state, $"{ObjRef.Of(inv.gameObject)} contents from host, open here");
                 return;
             }
-            slots?.FlushBeforeLoad(inv);
+            if (slots != null)
+            {
+                slots.FlushBeforeLoad(inv);
+            }
             if (_watched.ContainsKey(inv))
             {
                 Check(inv);
@@ -797,7 +816,10 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
-            slots?.Loaded(inv);
+            if (slots != null)
+            {
+                slots.Loaded(inv);
+            }
             if (_watched.ContainsKey(inv))
             {
                 _watched[inv] = Contents(inv);
@@ -1088,7 +1110,12 @@ namespace DarkwoodMP.World
                 }
                 // And only with the item in their bags: the character the client sent as its player began placing
                 // (PlacingPatch), less what it has placed since. Not known yet (no character from it this session): allowed.
-                int? carried = Characters.Instance?.Carries(from, PlacedWith(prefab));
+                Characters instance = Characters.Instance;
+                int? carried = null;
+                if (instance != null)
+                {
+                    carried = instance.Carries(from, PlacedWith(prefab));
+                }
                 if (carried.HasValue && carried.Value < 1)
                 {
                     Authority.Refuse($"they don't carry anything that places {prefab}");
@@ -1202,7 +1229,11 @@ namespace DarkwoodMP.World
             // host's check of what it carries (Containers.OnSpawn) sees what was picked up or made a moment ago.
             if (__instance.placingItem && NetEnemies.ClientMode && WorldActions.Sharing)
             {
-                Characters.Instance?.SaveNow();
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SaveNow();
+                }
             }
         }
         static void Postfix()
@@ -1211,7 +1242,11 @@ namespace DarkwoodMP.World
             Containers.Placing = false;
             if (placed)
             {
-                Containers.Instance?.SendPlacedNow();
+                Containers instance = Containers.Instance;
+                if (instance != null)
+                {
+                    instance.SendPlacedNow();
+                }
             }
         }
         static System.Exception Finalizer(System.Exception __exception)
@@ -1228,7 +1263,14 @@ namespace DarkwoodMP.World
         /// <summary>Inside the string overload, which makes it with the Object overload: shared from here only.</summary>
         internal static int Depth;
         static void Prefix() => Depth++;
-        static void Postfix(string prefab, GameObject __result) => Containers.Instance?.Made(prefab, __result);
+        static void Postfix(string prefab, GameObject __result)
+        {
+            Containers instance = Containers.Instance;
+            if (instance != null)
+            {
+                instance.Made(prefab, __result);
+            }
+        }
         static System.Exception Finalizer(System.Exception __exception)
         {
             Depth--;
@@ -1251,7 +1293,11 @@ namespace DarkwoodMP.World
         {
             if (SharedPrefabPatch.Depth == 0)
             {
-                Containers.Instance?.MadeFrom(prefab, __result);
+                Containers instance = Containers.Instance;
+                if (instance != null)
+                {
+                    instance.MadeFrom(prefab, __result);
+                }
             }
         }
     }

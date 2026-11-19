@@ -256,8 +256,18 @@ namespace DarkwoodMP.World
             w.Write(v);
             _session.SendTo(from, w, Channel.Control, reliable: true);
             Progression.HostSendTo(from); // after the character: the shared essence and level (World.Progression)
-            DragSync.Instance?.JoinerInWorld(from); // loose things that moved since the snapshot it loaded
-            FlagsSync.Instance?.JoinerInWorld(from); // story changes made since the snapshot it loaded
+            // loose things that moved since the snapshot it loaded
+            DragSync instance = DragSync.Instance;
+            if (instance != null)
+            {
+                instance.JoinerInWorld(from);
+            }
+            // story changes made since the snapshot it loaded
+            FlagsSync instance2 = FlagsSync.Instance;
+            if (instance2 != null)
+            {
+                instance2.JoinerInWorld(from);
+            }
             if (dead)
             {
                 Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good in this world: they watch the others");
@@ -346,7 +356,7 @@ namespace DarkwoodMP.World
             }
             var state = JsonConvert.DeserializeObject<Inventory.SaveState>(inv);
             int n = 0;
-            if (state?.invItems != null)
+            if (state != null && state.invItems != null)
             {
                 foreach (var it in state.invItems)
                 {
@@ -407,7 +417,16 @@ namespace DarkwoodMP.World
             bool? has = null;
             try
             {
-                var skills = JsonConvert.DeserializeObject<Player.SaveState>(rec.Player)?.skillS?.skillsStates;
+                Player.SaveState saveState = JsonConvert.DeserializeObject<Player.SaveState>(rec.Player);
+                List<PlayerSkill.SaveState> skills = null;
+                if (saveState != null)
+                {
+                    PlayerSkills.SaveState skillS = saveState.skillS;
+                    if (skillS != null)
+                    {
+                        skills = skillS.skillsStates;
+                    }
+                }
                 if (skills != null)
                 {
                     has = skills.Exists(k => k != null && k.type == "electrician");
@@ -846,6 +865,13 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save))]
     static class HostSavedPatch
     {
-        static void Postfix() => Characters.Instance?.HostSaved();
+        static void Postfix()
+        {
+            Characters instance = Characters.Instance;
+            if (instance != null)
+            {
+                instance.HostSaved();
+            }
+        }
     }
 }

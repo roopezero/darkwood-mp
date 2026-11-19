@@ -456,7 +456,7 @@ namespace DarkwoodMP
                 }
                 float y = row.y;
                 Rect C(int c) => new Rect(rc[c].x + 4 * s, y, rc[c].width - 4 * s, rowH);
-                if (info?.Password == true)
+                if (info != null && info.Password)
                 {
                     DrawLock(C(0), col);
                 }
@@ -571,7 +571,7 @@ namespace DarkwoodMP
                 switch (_sortColumn)
                 {
                     case 0:
-                        if (i?.Password == true)
+                        if (i != null && i.Password)
                         {
                             return 1;
                         }
@@ -713,7 +713,11 @@ namespace DarkwoodMP
                 password2 = "";
             }
             _tcp.Join(addr, password2);
-            OnJoining?.Invoke();
+            Action handler = OnJoining;
+            if (handler != null)
+            {
+                handler();
+            }
             CloseWindows();
         }
 
@@ -830,7 +834,13 @@ namespace DarkwoodMP
             {
                 return "";
             }
-            if (_browser.Get(addr).Info?.Name is string n && n.Length > 0)
+            ServerInfo info = _browser.Get(addr).Info;
+            string name = null;
+            if (info != null)
+            {
+                name = info.Name;
+            }
+            if (name is string n && n.Length > 0)
             {
                 return n;
             }

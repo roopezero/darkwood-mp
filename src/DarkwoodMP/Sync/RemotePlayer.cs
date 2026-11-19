@@ -52,7 +52,11 @@ namespace DarkwoodMP.Sync
         {
             if (_hasLast && _last.Alive && !snap.Alive)
             {
-                OnDied?.Invoke(this);
+                System.Action<RemotePlayer> handler = OnDied;
+                if (handler != null)
+                {
+                    handler(this);
+                }
             }
             // A first position, or a jump further than anyone walks between two updates (placed on joining, a
             // teleport), is shown at once rather than slid across, through whoever stands between.

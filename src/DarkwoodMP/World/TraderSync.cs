@@ -341,14 +341,23 @@ namespace DarkwoodMP.World
                 return;
             }
             string name = npc.name, stock = StockOf(npc);
-            FlagsSync.Instance?.Absorb(name, repChange); // it goes with the trade
+            // it goes with the trade
+            FlagsSync instance = FlagsSync.Instance;
+            if (instance != null)
+            {
+                instance.Absorb(name, repChange);
+            }
             // Reputation our player earned just before (in the same dialogue, or since the last two-second FlagsDelta)
             // goes first, on the same reliable Control channel, so the host's copy has it when it checks the trade's
             // (CheckReputation). The trade's own change was absorbed above, so it isn't sent twice. Before WriteTrade:
             // the flush builds its message with Session.Begin, in the same writer the trade's is built in.
             if (!_session.IsHost)
             {
-                FlagsSync.Instance?.FlushNow();
+                FlagsSync instance2 = FlagsSync.Instance;
+                if (instance2 != null)
+                {
+                    instance2.FlushNow();
+                }
             }
             var at = npc.transform.position;
             var who = ObjRef.Of(npc.gameObject);
@@ -475,7 +484,12 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                FlagsSync.Instance?.AddReputation(name, repChange); // the reputation is in the NPC's state, here whether he is or not
+                // the reputation is in the NPC's state, here whether he is or not
+                FlagsSync instance = FlagsSync.Instance;
+                if (instance != null)
+                {
+                    instance.AddReputation(name, repChange);
+                }
                 if (!ApplyTo(name, who, at, stock))
                 {
                     _waiting[Key(name, who)] = stock;
@@ -507,7 +521,11 @@ namespace DarkwoodMP.World
                 return;
             }
             Apply(npc, stock);
-            FlagsSync.Instance?.AddReputation(name, repChange);
+            FlagsSync instance2 = FlagsSync.Instance;
+            if (instance2 != null)
+            {
+                instance2.AddReputation(name, repChange);
+            }
             Plugin.Log.LogInfo($"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
             _session.Broadcast(WriteTrade(name, ObjRef.Of(npc.gameObject), npc.transform.position, took, gave, stock, repChange), Channel.Control, reliable: true, except: from);
         }
@@ -554,7 +572,7 @@ namespace DarkwoodMP.World
             {
                 return "bad stock: " + e.Message;
             }
-            if (state?.invItems == null)
+            if (state == null || state.invItems == null)
             {
                 return "no stock";
             }
@@ -630,7 +648,11 @@ namespace DarkwoodMP.World
             }
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             _applied[npc.GetInstanceID()] = seen + 1;
-            Containers.Instance?.Apply(Inv(npc), stock);
+            Containers instance = Containers.Instance;
+            if (instance != null)
+            {
+                instance.Apply(Inv(npc), stock);
+            }
             Plugin.Log.LogInfo($"{npc.name} has the host's stock: {Inv(npc).getAllItems().Count} items");
         }
 
@@ -700,7 +722,11 @@ namespace DarkwoodMP.World
             }
             if (__instance.trader && __instance.inventory != null)
             {
-                TraderSync.Instance?.ClientStocking(__instance);
+                TraderSync instance = TraderSync.Instance;
+                if (instance != null)
+                {
+                    instance.ClientStocking(__instance);
+                }
             }
             return false;
         }
@@ -709,7 +735,11 @@ namespace DarkwoodMP.World
         {
             if (!NetEnemies.ClientMode)
             {
-                TraderSync.Instance?.HostStocked(__instance);
+                TraderSync instance = TraderSync.Instance;
+                if (instance != null)
+                {
+                    instance.HostStocked(__instance);
+                }
             }
         }
     }
@@ -765,7 +795,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            TraderSync.Instance?.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - rep);
+            TraderSync instance = TraderSync.Instance;
+            if (instance != null)
+            {
+                instance.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - rep);
+            }
         }
     }
 }

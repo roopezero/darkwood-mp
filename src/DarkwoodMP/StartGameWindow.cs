@@ -92,14 +92,22 @@ namespace DarkwoodMP
             _problem = null;
             var sm = Singleton<SaveManager>.Instance;
             var state = sm?.loadGameProfiles();
-            bool any = state?.profiles != null && state.profiles.Any(p => p != null && p.Active);
+            bool any = state != null && state.profiles != null && state.profiles.Any(p => p != null && p.Active);
             if (!any && sm != null && sm.CheckIfWorldFilesExist())
             {
                 _problem = "The game's list of saves is missing or damaged, but there are save files. The game's own profiles screen can restore it from a backup.";
             }
             // Five slots, as the game always has; a slot that isn't active (or whose character died for good) is free.
             _profiles = new List<GameProfile>();
-            int? count2 = state?.profiles?.Count;
+            int? count2 = null;
+            if (state != null)
+            {
+                List<GameProfile> profiles = state.profiles;
+                if (profiles != null)
+                {
+                    count2 = profiles.Count;
+                }
+            }
             int count3 = 0;
             if (count2.HasValue)
             {
@@ -109,7 +117,7 @@ namespace DarkwoodMP
             for (int i = 0; i < count; i++)
             {
                 GameProfile p = null;
-                if (state?.profiles != null && i < state.profiles.Count)
+                if (state != null && state.profiles != null && i < state.profiles.Count)
                 {
                     p = state.profiles[i];
                 }
@@ -143,7 +151,12 @@ namespace DarkwoodMP
 
         private static DateTime SavedAt(GameProfile p)
         {
-            if (DateTime.TryParse(p?.timeSaved, out var t))
+            string timeSaved = null;
+            if (p != null)
+            {
+                timeSaved = p.timeSaved;
+            }
+            if (DateTime.TryParse(timeSaved, out var t))
             {
                 return t;
             }
@@ -163,7 +176,19 @@ namespace DarkwoodMP
         }
         private Slot FreeSlot => _slots.FirstOrDefault(s => s.Free);
         /// <summary>The slot a new game goes in: the first free one, or the one chosen to overwrite.</summary>
-        private int NewSlot => FreeSlot?.Id ?? _overwrite;
+        private int NewSlot
+        {
+            get
+            {
+                Slot freeSlot = FreeSlot;
+                int? id = null;
+                if (freeSlot != null)
+                {
+                    id = freeSlot.Id;
+                }
+                return id ?? _overwrite;
+            }
+        }
 
         private void Choose(int choice)
         {
@@ -443,7 +468,12 @@ namespace DarkwoodMP
         private void DrawNewGame(Flow f, bool on)
         {
             // For a save: what it was started with, greyed out.
-            var p = Chosen?.Profile;
+            Slot chosen = Chosen;
+            GameProfile p = null;
+            if (chosen != null)
+            {
+                p = chosen.Profile;
+            }
             GameProfile.Difficulty diff;
             if (on || p == null)
             {
@@ -648,7 +678,8 @@ namespace DarkwoodMP
             }
             if (_choice > 0)
             {
-                if (Chosen?.Profile == null)
+                Slot chosen = Chosen;
+                if (chosen == null || chosen.Profile == null)
                 {
                     return "No save in that slot.";
                 }

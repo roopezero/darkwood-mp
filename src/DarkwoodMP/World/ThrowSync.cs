@@ -306,7 +306,11 @@ namespace DarkwoodMP.World
         {
             if (__state.go != null && ThrowSync.Held(__instance) == null)
             {
-                ThrowSync.Instance?.Thrown(__state.type, __state.go, __instance.transform.position, dropped: true);
+                ThrowSync instance = ThrowSync.Instance;
+                if (instance != null)
+                {
+                    instance.Thrown(__state.type, __state.go, __instance.transform.position, dropped: true);
+                }
             }
         }
     }
@@ -320,7 +324,11 @@ namespace DarkwoodMP.World
         {
             if (__state.go != null)
             {
-                ThrowSync.Instance?.Thrown(__state.type, __state.go, __instance.transform.position);
+                ThrowSync instance = ThrowSync.Instance;
+                if (instance != null)
+                {
+                    instance.Thrown(__state.type, __state.go, __instance.transform.position);
+                }
             }
         }
     }
@@ -445,7 +453,11 @@ namespace DarkwoodMP.World
             NetEnemies.HitEffects = null;
             if (__state != null && __state.GetComponent<Burn>() != null)
             {
-                FireSync.Instance?.ClientIgnited(__state);
+                FireSync instance = FireSync.Instance;
+                if (instance != null)
+                {
+                    instance.ClientIgnited(__state);
+                }
             }
         }
 
@@ -496,7 +508,17 @@ namespace DarkwoodMP.World
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 12; i++)
             {
-                if (st.GetFrame(i)?.GetMethod()?.DeclaringType == typeof(Explodes))
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                System.Type declaringType = null;
+                if (frame != null)
+                {
+                    System.Reflection.MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        declaringType = method.DeclaringType;
+                    }
+                }
+                if (declaringType == typeof(Explodes))
                 {
                     return true;
                 }

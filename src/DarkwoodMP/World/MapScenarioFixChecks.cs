@@ -156,7 +156,11 @@ namespace DarkwoodMP.World
         internal static uint IdOf(Character c)
         {
             uint id = 0;
-            NetEnemies.Instance?.NetIdOf(c, out id);
+            NetEnemies instance = NetEnemies.Instance;
+            if (instance != null)
+            {
+                instance.NetIdOf(c, out id);
+            }
             return id;
         }
 

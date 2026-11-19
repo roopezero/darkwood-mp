@@ -57,7 +57,11 @@ namespace DarkwoodMP.Combat
                 strengthModifier2 = attacker.strengthModifier;
             }
             float damage = s.damage * strengthModifier2;
-            s.onHit?.Invoke();
+            meleeSensorDelegate handler = s.onHit;
+            if (handler != null)
+            {
+                handler();
+            }
             PlayerDamage.Send(proxy.Owner, damage, s.attackerTransform, s.shadowSensor, s.effects);
             return false;
         }
@@ -85,7 +89,11 @@ namespace DarkwoodMP.Combat
                 {
                     y = __instance.transform.eulerAngles.y;
                 }
-                NetEnemies.Instance?.HostBlood(__instance, y);
+                NetEnemies instance = NetEnemies.Instance;
+                if (instance != null)
+                {
+                    instance.HostBlood(__instance, y);
+                }
             }
             if (!Threat.Enabled || attackerTransform == null)
             {
@@ -550,7 +558,11 @@ namespace DarkwoodMP.Combat
         {
             if (NetEnemies.ClientMode)
             {
-                NetEnemies.Instance?.LocationCharacters(__instance, active);
+                NetEnemies instance = NetEnemies.Instance;
+                if (instance != null)
+                {
+                    instance.LocationCharacters(__instance, active);
+                }
             }
         }
     }
@@ -702,7 +714,16 @@ namespace DarkwoodMP.Combat
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 6; i++)
             {
-                var t = st.GetFrame(i)?.GetMethod()?.DeclaringType;
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                System.Type t = null;
+                if (frame != null)
+                {
+                    System.Reflection.MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        t = method.DeclaringType;
+                    }
+                }
                 if (t == null || t == typeof(PlayerNoisePatch) || t == typeof(Character))
                 {
                     continue;

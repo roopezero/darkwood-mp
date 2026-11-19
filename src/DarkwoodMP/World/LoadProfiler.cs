@@ -133,7 +133,13 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo("[profile] slowest methods (inclusive: a method's time includes what it calls):");
             foreach (var kv in _stats.OrderByDescending(k => k.Value.Total).Take(60))
             {
-                Plugin.Log.LogInfo($"[profile] {kv.Value.Total,9:0} ms total, {kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} calls  {kv.Key.DeclaringType?.FullName}.{kv.Key.Name}");
+                Type declaringType = kv.Key.DeclaringType;
+                string fullName = null;
+                if (declaringType != null)
+                {
+                    fullName = declaringType.FullName;
+                }
+                Plugin.Log.LogInfo($"[profile] {kv.Value.Total,9:0} ms total, {kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} calls  {fullName}.{kv.Key.Name}");
             }
             foreach (var f in _longFrames.OrderByDescending(f => f.ms).Take(25))
             {

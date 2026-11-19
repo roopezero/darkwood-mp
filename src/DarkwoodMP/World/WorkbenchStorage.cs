@@ -174,7 +174,11 @@ namespace DarkwoodMP.World
                     player.openedItemInventory2 = inv;
                 }
             }
-            SlotShare.Instance?.Grew(inv);
+            SlotShare instance = SlotShare.Instance;
+            if (instance != null)
+            {
+                instance.Grew(inv);
+            }
             UiRefresh.Changed(inv);
             return true;
         }

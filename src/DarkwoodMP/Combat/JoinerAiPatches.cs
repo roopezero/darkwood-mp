@@ -297,7 +297,11 @@ namespace DarkwoodMP.Combat
         public static Location SpawnedLocation(Character.Activity a)
         {
             var hostLoc = HostLocation();
-            var c = a?.thisCharacter;
+            Character c = null;
+            if (a != null)
+            {
+                c = a.thisCharacter;
+            }
             if (!Threat.Enabled || c == null)
             {
                 return hostLoc;
@@ -320,7 +324,11 @@ namespace DarkwoodMP.Combat
         /// <summary>An activity aimed at "the player" (playerIsTarget): the joiner it was sent at, or the most-threat player.</summary>
         public static GameObject ActivityPlayer(Character.Activity a)
         {
-            var c = a?.thisCharacter;
+            Character c = null;
+            if (a != null)
+            {
+                c = a.thisCharacter;
+            }
             if (!Threat.Enabled || c == null)
             {
                 return Player.Instance.gameObject;

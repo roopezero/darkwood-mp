@@ -101,7 +101,11 @@ namespace DarkwoodMP.World
                 {
                     WorldShare.RemoveDir(Dir);
                     Copy(mine, Dir);
-                    Characters.Instance?.Forget("the test world reset");
+                    Characters instance = Characters.Instance;
+                    if (instance != null)
+                    {
+                        instance.Forget("the test world reset");
+                    }
                 }
                 catch (Exception e)
                 {
@@ -114,7 +118,15 @@ namespace DarkwoodMP.World
             // A living profile in the copy (the first one).
             SaveRedirect.Begin(Dir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
-            var profile = state?.profiles?.Where(p => p != null && p.Active).OrderBy(p => p.dead).ThenBy(p => p.id).FirstOrDefault();
+            GameProfile profile = null;
+            if (state != null)
+            {
+                List<GameProfile> profiles = state.profiles;
+                if (profiles != null)
+                {
+                    profile = profiles.Where(p => p != null && p.Active).OrderBy(p => p.dead).ThenBy(p => p.id).FirstOrDefault();
+                }
+            }
             if (profile == null)
             {
                 SaveRedirect.End();

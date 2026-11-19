@@ -234,7 +234,11 @@ namespace DarkwoodMP.World
                     return;
                 }
                 var inv = MakePackage(dest, id);
-                JsonConvert.DeserializeObject<Inventory.SaveState>(contents)?.loadValues(inv);
+                Inventory.SaveState saveState = JsonConvert.DeserializeObject<Inventory.SaveState>(contents);
+                if (saveState != null)
+                {
+                    saveState.loadValues(inv);
+                }
                 inv.gameObject.SetActive(false);
                 MakeSpawner(dest, inv.gameObject, spawnerId);
                 PorterLeaves();

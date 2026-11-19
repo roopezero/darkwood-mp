@@ -486,7 +486,11 @@ namespace DarkwoodMP.World
                         yield return new WaitForSeconds(0.8f);
                         int Filled() => storage.slots.Count(sl => !InvItemClass.isNull(sl.invItem));
                         int stacksBefore = storage.slots.Count(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == stackType), filledBefore = Filled();
-                        SlotShare.Instance?.SortPressed(storage);
+                        SlotShare instance = SlotShare.Instance;
+                        if (instance != null)
+                        {
+                            instance.SortPressed(storage);
+                        }
                         yield return new WaitForSeconds(0.8f);
                         var mine = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == stackType).ToList();
                         int firstEmpty = storage.slots.FindIndex(sl => InvItemClass.isNull(sl.invItem));
@@ -819,7 +823,11 @@ namespace DarkwoodMP.World
                     sl.createItem("nail", amounts[j]);
                 }
                 yield return new WaitForSeconds(0.8f);
-                SlotShare.Instance?.SortPressed(storage);
+                SlotShare instance = SlotShare.Instance;
+                if (instance != null)
+                {
+                    instance.SortPressed(storage);
+                }
                 yield return new WaitForSeconds(0.8f);
                 var nails = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == "nail").Select(sl => sl.invItem.amount).ToList();
                 Check(nails.Count == 1 && nails[0] == 46, $"sort & stack of 3 + 3 + 40 nails: {string.Join(", ", nails.Select(a => "x" + a))}");
@@ -860,7 +868,11 @@ namespace DarkwoodMP.World
                         sl.invItem.refresh();
                     }
                     yield return new WaitForSeconds(0.8f);
-                    SlotShare.Instance?.SortPressed(storage);
+                    SlotShare instance2 = SlotShare.Instance;
+                    if (instance2 != null)
+                    {
+                        instance2.SortPressed(storage);
+                    }
                     yield return new WaitForSeconds(0.8f);
                     var cans = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == gas).Select(sl => sl.invItem.durability).ToList();
                     Check(cans.Count == 1 && Mathf.Abs(cans[0] - max * 0.45f) < 0.01f * max,
@@ -1235,7 +1247,7 @@ namespace DarkwoodMP.World
                 {
                     if (c != null)
                     {
-                        return c.GetComponentsInChildren<SaveableObject>().Count(o => rwo != null && rwo.objects.Any(r => r?.prefab != null && r.prefab.name == o.name));
+                        return c.GetComponentsInChildren<SaveableObject>().Count(o => rwo != null && rwo.objects.Any(r => r != null && r.prefab != null && r.prefab.name == o.name));
                     }
                     return 0;
                 });

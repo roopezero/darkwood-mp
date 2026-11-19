@@ -29,7 +29,8 @@ namespace DarkwoodMP.Sync
 
         public static void Update(PlayerSync sync, ulong localId)
         {
-            if (Plugin.Cfg?.SoftPlayerCollision != null && !Plugin.Cfg.SoftPlayerCollision.Value)
+            ModConfig cfg = Plugin.Cfg;
+            if (cfg != null && cfg.SoftPlayerCollision != null && !Plugin.Cfg.SoftPlayerCollision.Value)
             {
                 return;
             }

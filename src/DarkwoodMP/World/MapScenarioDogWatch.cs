@@ -142,7 +142,12 @@ namespace DarkwoodMP.World
             var names = new List<string>();
             for (int i = 0; i < st.FrameCount && names.Count < 5; i++)
             {
-                var m = st.GetFrame(i)?.GetMethod();
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                System.Reflection.MethodBase m = null;
+                if (frame != null)
+                {
+                    m = frame.GetMethod();
+                }
                 if (m == null)
                 {
                     continue;

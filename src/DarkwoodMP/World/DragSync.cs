@@ -1335,7 +1335,11 @@ namespace DarkwoodMP.World
                 }
                 grid.registerToNode(go, type);
                 var now = co.node;
-                var cul = now?.getCullable(go);
+                WorldGrid.Cullable cul = null;
+                if (now != null)
+                {
+                    cul = now.getCullable(go);
+                }
                 if (cul == null)
                 {
                     return;

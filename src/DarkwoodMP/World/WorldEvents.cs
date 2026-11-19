@@ -611,7 +611,12 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         var chunk = gen.worldChunks[o.chunk];
-                        var prefab = rwo.objects[o.obj]?.prefab;
+                        RandomWorldObjects.RandomObject randomObject = rwo.objects[o.obj];
+                        GameObject prefab = null;
+                        if (randomObject != null)
+                        {
+                            prefab = randomObject.prefab;
+                        }
                         if (chunk == null || prefab == null)
                         {
                             continue;
@@ -628,7 +633,11 @@ namespace DarkwoodMP.World
                         var inv = go.GetComponent<Inventory>();
                         if (inv != null && o.contents.Length > 0)
                         {
-                            Containers.Instance?.Apply(inv, o.contents);
+                            Containers instance = Containers.Instance;
+                            if (instance != null)
+                            {
+                                instance.Apply(inv, o.contents);
+                            }
                         }
                         made++;
                     }
@@ -822,7 +831,14 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(CustomEvent), nameof(CustomEvent.fire))]
     static class NightEventSendPatch
     {
-        static void Postfix(CustomEvent __instance) => WorldEvents.Instance?.SendNightEvent(__instance);
+        static void Postfix(CustomEvent __instance)
+        {
+            WorldEvents instance = WorldEvents.Instance;
+            if (instance != null)
+            {
+                instance.SendNightEvent(__instance);
+            }
+        }
     }
 
     /// <summary>A joiner playing the host's night event runs only the steps that are seen or heard.</summary>
@@ -877,7 +893,11 @@ namespace DarkwoodMP.World
         {
             if (!NetEnemies.ClientMode)
             {
-                WorldEvents.Instance?.RandomObjectsMade();
+                WorldEvents instance = WorldEvents.Instance;
+                if (instance != null)
+                {
+                    instance.RandomObjectsMade();
+                }
             }
         }
     }
@@ -923,7 +943,11 @@ namespace DarkwoodMP.World
             var big = Player.Instance.whereAmI.bigLocation;
             if (list.Count > __state.count && big != null && big.nightMushroom != null)
             {
-                WorldEvents.Instance?.SendNightObject(list[list.Count - 1], big.nightMushroom.name);
+                WorldEvents instance = WorldEvents.Instance;
+                if (instance != null)
+                {
+                    instance.SendNightObject(list[list.Count - 1], big.nightMushroom.name);
+                }
             }
         }
     }
@@ -1035,7 +1059,11 @@ namespace DarkwoodMP.World
                 e.startedToday = true;
                 if (e.removeOnFire)
                 {
-                    RemoveMe?.Invoke(e, null);
+                    System.Reflection.MethodInfo removeMe = RemoveMe;
+                    if (removeMe != null)
+                    {
+                        removeMe.Invoke(e, null);
+                    }
                 }
             }
             return false;

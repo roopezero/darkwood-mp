@@ -99,7 +99,11 @@ namespace DarkwoodMP
                 return;
             }
             Open = false;
-            OnClose?.Invoke();
+            Action handler = OnClose;
+            if (handler != null)
+            {
+                handler();
+            }
         }
 
         /// <summary>Back to its default place the next time it's drawn.</summary>

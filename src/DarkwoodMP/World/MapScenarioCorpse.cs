@@ -162,10 +162,30 @@ namespace DarkwoodMP.World
             string all = string.Join("; ", Copies(a[0]).Select(Props));
             if (c == null)
             {
-                r.Fail($"no corpse shown here (state dead {st?.dead} deadID {st?.deadID}): {all}");
+                bool? dead = null;
+                if (st != null)
+                {
+                    dead = st.dead;
+                }
+                int? deadID = null;
+                if (st != null)
+                {
+                    deadID = st.deadID;
+                }
+                r.Fail($"no corpse shown here (state dead {dead} deadID {deadID}): {all}");
                 yield break;
             }
-            r.Info = $"state dead {st?.dead} deadID {st?.deadID}; {Props(c)}";
+            bool? dead2 = null;
+            if (st != null)
+            {
+                dead2 = st.dead;
+            }
+            int? deadID2 = null;
+            if (st != null)
+            {
+                deadID2 = st.deadID;
+            }
+            r.Info = $"state dead {dead2} deadID {deadID2}; {Props(c)}";
             if (c.GetComponent<Item>() == null)
             {
                 r.Fail($"not searchable: {r.Info}");

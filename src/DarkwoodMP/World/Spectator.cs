@@ -279,7 +279,12 @@ namespace DarkwoodMP.World
             _watching = first;
             if (Session.Instance.IsClient)
             {
-                Characters.Instance?.SendDead(); // the host keeps it with our character
+                // the host keeps it with our character
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SendDead();
+                }
             }
             var player = Player.Instance;
             Plugin.Log.LogInfo($"Dead for good, with others still playing: watching {Session.Instance.NameOf(first)}");

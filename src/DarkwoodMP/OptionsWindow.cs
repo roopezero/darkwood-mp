@@ -1549,7 +1549,11 @@ namespace DarkwoodMP
         /// <summary>The key maps into the game's store (ControlsMenu.Save), and the game's own copies of the maps refreshed.</summary>
         private static void SaveControls()
         {
-            RW.ReInput.userDataStore?.Save();
+            RW.Interfaces.IUserDataStore userDataStore = RW.ReInput.userDataStore;
+            if (userDataStore != null)
+            {
+                userDataStore.Save();
+            }
             if (Menu != null && Menu.ControlsMenu != null)
             {
                 Menu.ControlsMenu.loadMaps();
@@ -1576,7 +1580,11 @@ namespace DarkwoodMP
                 p.controllers.maps.LoadDefaultMaps(RW.ControllerType.Joystick);
                 p.controllers.maps.LoadDefaultMaps(RW.ControllerType.Keyboard);
                 p.controllers.maps.LoadDefaultMaps(RW.ControllerType.Mouse);
-                RW.ReInput.userDataStore?.Save();
+                RW.Interfaces.IUserDataStore userDataStore = RW.ReInput.userDataStore;
+                if (userDataStore != null)
+                {
+                    userDataStore.Save();
+                }
                 GameSettings.SetInt("RelativeControls", 0);
                 GameSettings.SetInt("MouseScrollHotbar", 1);
                 GameSettings.SetInt("DisableControllerMode", 0);
@@ -1723,7 +1731,11 @@ namespace DarkwoodMP
         /// <summary>The game's stored key maps read back into the player's maps (ControlsMenu.Load).</summary>
         internal static void TestReloadControls()
         {
-            RW.ReInput.userDataStore?.Load();
+            RW.Interfaces.IUserDataStore userDataStore = RW.ReInput.userDataStore;
+            if (userDataStore != null)
+            {
+                userDataStore.Load();
+            }
             if (Menu != null && Menu.ControlsMenu != null)
             {
                 Menu.ControlsMenu.loadMaps();

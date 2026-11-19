@@ -447,7 +447,7 @@ namespace DarkwoodMP.World
             var seen = new HashSet<MapElement>();
             foreach (var t in map.types)
             {
-                if (t?.elements != null)
+                if (t != null && t.elements != null)
                 {
                     foreach (var e in t.elements)
                     {
@@ -491,7 +491,7 @@ namespace DarkwoodMP.World
                     var req = new JArray();
                     foreach (var q in r.requirements)
                     {
-                        if (q?.item == null)
+                        if (q == null || q.item == null)
                         {
                             continue;
                         }
@@ -548,7 +548,7 @@ namespace DarkwoodMP.World
                     var after = new JArray();
                     foreach (var a in it.itemsAfterUsing)
                     {
-                        if (a?.item != null)
+                        if (a != null && a.item != null)
                         {
                             after.Add(a.item.type);
                         }
@@ -608,7 +608,7 @@ namespace DarkwoodMP.World
                 string type = null;
                 foreach (var t in map.types)
                 {
-                    if (t?.elements != null && t.elements.Contains(e))
+                    if (t != null && t.elements != null && t.elements.Contains(e))
                     {
                         type = t.name;
                         break;

@@ -105,7 +105,11 @@ namespace DarkwoodMP.Net
             {
                 Status = "Not connected"; // else keep why, for the notice
             }
-            OnLeft?.Invoke();
+            Action handler = OnLeft;
+            if (handler != null)
+            {
+                handler();
+            }
         }
 
         /// <summary>Client: the host is gone (its connection failed); leave as if it had left the lobby.</summary>
@@ -196,7 +200,11 @@ namespace DarkwoodMP.Net
                 Status = $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
             }
             Plugin.Log.LogInfo($"Entered lobby {id}, host={IsHost}");
-            OnEntered?.Invoke();
+            Action handler = OnEntered;
+            if (handler != null)
+            {
+                handler();
+            }
         }
 
         private void OnChatUpdate(LobbyChatUpdate_t u)
@@ -214,7 +222,11 @@ namespace DarkwoodMP.Net
             else
             {
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} left the lobby");
-                OnMemberLeft?.Invoke(who);
+                Action<CSteamID> handler = OnMemberLeft;
+                if (handler != null)
+                {
+                    handler(who);
+                }
                 // Host left: lobby ownership moves in Steam, but the game world can't; end the session.
                 if (!_iAmHost && who == _hostId)
                 {
@@ -236,11 +248,31 @@ namespace DarkwoodMP.Net
         public void Dispose()
         {
             Leave();
-            _createResult?.Dispose();
-            _enterResult?.Dispose();
-            _joinRequested?.Dispose();
-            _chatUpdate?.Dispose();
-            _entered?.Dispose();
+            CallResult<LobbyCreated_t> createResult = _createResult;
+            if (createResult != null)
+            {
+                createResult.Dispose();
+            }
+            CallResult<LobbyEnter_t> enterResult = _enterResult;
+            if (enterResult != null)
+            {
+                enterResult.Dispose();
+            }
+            Callback<GameLobbyJoinRequested_t> joinRequested = _joinRequested;
+            if (joinRequested != null)
+            {
+                joinRequested.Dispose();
+            }
+            Callback<LobbyChatUpdate_t> chatUpdate = _chatUpdate;
+            if (chatUpdate != null)
+            {
+                chatUpdate.Dispose();
+            }
+            Callback<LobbyEnter_t> entered = _entered;
+            if (entered != null)
+            {
+                entered.Dispose();
+            }
         }
     }
 }

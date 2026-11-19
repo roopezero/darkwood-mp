@@ -200,7 +200,11 @@ namespace DarkwoodMP.Net
             {
                 Mapper.Start(port);
             }
-            OnEntered?.Invoke();
+            Action handler = OnEntered;
+            if (handler != null)
+            {
+                handler();
+            }
             return true;
         }
 
@@ -611,13 +615,21 @@ namespace DarkwoodMP.Net
                         else
                         {
                             Status = $"Connected to {ev.Conn.Remote}";
-                            OnEntered?.Invoke();
+                            Action handler = OnEntered;
+                            if (handler != null)
+                            {
+                                handler();
+                            }
                         }
                         break;
                     case EvKind.Message:
                         if (!ev.Conn.Closed)
                         {
-                            OnMessage?.Invoke(ev.Conn.Id, ev.Data, ev.Data.Length);
+                            Action<ulong, byte[], int> handler2 = OnMessage;
+                            if (handler2 != null)
+                            {
+                                handler2(ev.Conn.Id, ev.Data, ev.Data.Length);
+                            }
                         }
                         break;
                     case EvKind.Lost:
@@ -684,7 +696,11 @@ namespace DarkwoodMP.Net
             }
             if (notify)
             {
-                OnPeerLost?.Invoke(c.Id);
+                Action<ulong> handler = OnPeerLost;
+                if (handler != null)
+                {
+                    handler(c.Id);
+                }
             }
         }
 
@@ -713,7 +729,12 @@ namespace DarkwoodMP.Net
 
         public void Leave()
         {
-            World.Characters.Instance?.SaveNow(); // our character goes to the host before we go
+            // our character goes to the host before we go
+            World.Characters instance = World.Characters.Instance;
+            if (instance != null)
+            {
+                instance.SaveNow();
+            }
             Shutdown("Not connected");
         }
 
@@ -736,14 +757,22 @@ namespace DarkwoodMP.Net
             Mapper.Stop(wait: _quitting); // nothing to do unless we hosted with the port opened
             try
             {
-                _listener?.Stop();
+                TcpListener listener = _listener;
+                if (listener != null)
+                {
+                    listener.Stop();
+                }
             }
             catch
             {
             }
             try
             {
-                _info?.Close();
+                UdpClient info = _info;
+                if (info != null)
+                {
+                    info.Close();
+                }
             }
             catch
             {
@@ -762,7 +791,11 @@ namespace DarkwoodMP.Net
             Status = status;
             if (was)
             {
-                OnLeft?.Invoke();
+                Action handler = OnLeft;
+                if (handler != null)
+                {
+                    handler();
+                }
             }
         }
 

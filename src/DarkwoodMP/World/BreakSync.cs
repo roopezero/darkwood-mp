@@ -125,7 +125,11 @@ namespace DarkwoodMP.World
             // to rest is our player's doing, however far away they stood.
             if (BreakSync.OurPlayers(attackerTransform))
             {
-                DragSync.Instance?.Hit(__instance);
+                DragSync instance = DragSync.Instance;
+                if (instance != null)
+                {
+                    instance.Hit(__instance);
+                }
             }
             if (__state.Same(BreakSync.ItemState.Of(__instance)) || !BreakSync.OurPlayers(attackerTransform))
             {

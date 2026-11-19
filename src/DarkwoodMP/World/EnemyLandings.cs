@@ -158,7 +158,13 @@ namespace DarkwoodMP.World
                 Core.RemovePooledPrefab(t);
                 return;
             }
-            Fly(ti, rb, NetEnemies.Instance?.CharacterOf(by), vel);
+            NetEnemies instance = NetEnemies.Instance;
+            Character thrower = null;
+            if (instance != null)
+            {
+                thrower = instance.CharacterOf(by);
+            }
+            Fly(ti, rb, thrower, vel);
             ti.thrown = true;
             Plugin.Instance.StartCoroutine(Expire(ti, t));
             if (WorldActions.Debug)
@@ -209,7 +215,12 @@ namespace DarkwoodMP.World
             float yaw = r.R.ReadSingle();
             var vel = r.ReadVector3();
             var land = new Vector3(r.R.ReadSingle(), 0f, r.R.ReadSingle());
-            var thrower = NetEnemies.Instance?.CharacterOf(by);
+            NetEnemies instance = NetEnemies.Instance;
+            Character thrower = null;
+            if (instance != null)
+            {
+                thrower = instance.CharacterOf(by);
+            }
             if (thrower == null)
             {
                 return; // not shown here: nobody would see it

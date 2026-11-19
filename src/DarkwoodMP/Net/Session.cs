@@ -23,8 +23,32 @@ namespace DarkwoodMP.Net
         /// <summary>Handshake done (always true for the host while hosting).</summary>
         public bool Connected { get; private set; }
         public ulong LocalId { get; private set; }
-        public ulong HostId => Backend?.HostId ?? 0;
-        public string Status => Backend?.Status ?? "Not connected";
+        public ulong HostId
+        {
+            get
+            {
+                INetBackend backend = Backend;
+                ulong? hostId = null;
+                if (backend != null)
+                {
+                    hostId = backend.HostId;
+                }
+                return hostId ?? 0;
+            }
+        }
+        public string Status
+        {
+            get
+            {
+                INetBackend backend = Backend;
+                string status = null;
+                if (backend != null)
+                {
+                    status = backend.Status;
+                }
+                return status ?? "Not connected";
+            }
+        }
         public string LocalName = "Player";
         public string LocalKey = "";
         /// <summary>Why the host turned us down last, for the panel.</summary>
@@ -98,7 +122,11 @@ namespace DarkwoodMP.Net
                 // Not the host, nor whoever was already in when we joined (they're listed right after Welcome).
                 if (isNew && Connected && id != LocalId && id != HostId && Now - _welcomedAt > 3f)
                 {
-                    OnPlayerJoined?.Invoke(name);
+                    Action<string> handler = OnPlayerJoined;
+                    if (handler != null)
+                    {
+                        handler(name);
+                    }
                 }
             });
             Register(MsgType.JoinNotice, (from, r) =>
@@ -111,11 +139,19 @@ namespace DarkwoodMP.Net
                 byte what = r.R.ReadByte();
                 if (what == 0)
                 {
-                    OnPlayerJoining?.Invoke(name);
+                    Action<string> handler2 = OnPlayerJoining;
+                    if (handler2 != null)
+                    {
+                        handler2(name);
+                    }
                 }
                 else
                 {
-                    OnPlayerStoppedJoining?.Invoke(name);
+                    Action<string> handler3 = OnPlayerStoppedJoining;
+                    if (handler3 != null)
+                    {
+                        handler3(name);
+                    }
                 }
             });
             Register(MsgType.PlayerLeft, (from, r) =>
@@ -127,10 +163,18 @@ namespace DarkwoodMP.Net
                 ulong who = r.R.ReadUInt64();
                 if (Names.TryGetValue(who, out var gone))
                 {
-                    OnPlayerLeft?.Invoke(gone);
+                    Action<string> handler4 = OnPlayerLeft;
+                    if (handler4 != null)
+                    {
+                        handler4(gone);
+                    }
                 }
                 Names.Remove(who);
-                OnPeerDisconnected?.Invoke(who);
+                Action<ulong> handler5 = OnPeerDisconnected;
+                if (handler5 != null)
+                {
+                    handler5(who);
+                }
             });
         }
 
@@ -163,7 +207,11 @@ namespace DarkwoodMP.Net
                 EndSession();
                 if (b.HostLost)
                 {
-                    OnHostLost?.Invoke(b.Status);
+                    Action<string> handler = OnHostLost;
+                    if (handler != null)
+                    {
+                        handler(b.Status);
+                    }
                 }
             };
             b.OnPeerLost += id =>
@@ -255,8 +303,14 @@ namespace DarkwoodMP.Net
             }
         }
 
-        public void SendTo(ulong peer, PacketWriter pw, int channel, bool reliable) =>
-            Backend?.Send(peer, pw.Buffer, pw.Length, channel, reliable);
+        public void SendTo(ulong peer, PacketWriter pw, int channel, bool reliable)
+        {
+            INetBackend backend = Backend;
+            if (backend != null)
+            {
+                backend.Send(peer, pw.Buffer, pw.Length, channel, reliable);
+            }
+        }
 
         /// <summary>Host: send to every connected client, optionally skipping one (e.g. the originator).</summary>
         public void Broadcast(PacketWriter pw, int channel, bool reliable, ulong except = 0)
@@ -308,7 +362,12 @@ namespace DarkwoodMP.Net
             w.WriteStr(Backend.JoinPassword);
             w.WriteStr(PluginInfo.Version);
             w.WriteStr(LocalName);
-            var hash = ClientWorldHash?.Invoke();
+            Func<byte[]> handler = ClientWorldHash;
+            byte[] hash = null;
+            if (handler != null)
+            {
+                hash = handler();
+            }
             byte[] b;
             if (hash != null && hash.Length == 32)
             {
@@ -420,7 +479,11 @@ namespace DarkwoodMP.Net
             {
                 _joining[from] = name;
                 Plugin.Log.LogInfo($"{name} (#{from}) is joining");
-                OnPlayerJoining?.Invoke(name);
+                Action<string> handler = OnPlayerJoining;
+                if (handler != null)
+                {
+                    handler(name);
+                }
                 BroadcastJoinNotice(name, 0, except: from);
             }
             if (BeforeWelcome != null && !BeforeWelcome(from, worldHash))
@@ -444,8 +507,16 @@ namespace DarkwoodMP.Net
 
             Peers.Add(from);
             Plugin.Log.LogInfo($"Player connected: {name} (#{from})");
-            OnPlayerJoined?.Invoke(name);
-            OnPeerConnected?.Invoke(from);
+            Action<string> handler2 = OnPlayerJoined;
+            if (handler2 != null)
+            {
+                handler2(name);
+            }
+            Action<ulong> handler3 = OnPeerConnected;
+            if (handler3 != null)
+            {
+                handler3(from);
+            }
         }
 
         public void Refuse(ulong peer, string reason)
@@ -490,8 +561,16 @@ namespace DarkwoodMP.Net
             Connected = true;
             _welcomedAt = Now;
             Plugin.Log.LogInfo($"Joined the host's game as #{LocalId}");
-            OnPeerConnected?.Invoke(HostId);
-            OnWelcomed?.Invoke();
+            Action<ulong> handler = OnPeerConnected;
+            if (handler != null)
+            {
+                handler(HostId);
+            }
+            Action handler2 = OnWelcomed;
+            if (handler2 != null)
+            {
+                handler2();
+            }
         }
 
         private void HandleRefused(ulong from, PacketReader r)
@@ -503,7 +582,11 @@ namespace DarkwoodMP.Net
             string reason = r.ReadStr();
             LastRefusal = reason;
             Plugin.Log.LogWarning($"Host refused us: {reason}");
-            OnRefused?.Invoke(reason);
+            Action<string> handler = OnRefused;
+            if (handler != null)
+            {
+                handler(reason);
+            }
             if (Backend is TcpBackend tcp)
             {
                 tcp.Refused(reason);
@@ -521,7 +604,11 @@ namespace DarkwoodMP.Net
             if (IsHost && Peers.Remove(who))
             {
                 Plugin.Log.LogInfo($"Player left: {NameOf(who)}");
-                OnPlayerLeft?.Invoke(NameOf(who));
+                Action<string> handler = OnPlayerLeft;
+                if (handler != null)
+                {
+                    handler(NameOf(who));
+                }
                 var w = Begin(MsgType.PlayerLeft);
                 w.W.Write(who);
                 Broadcast(w, Channel.Control, reliable: true);
@@ -529,13 +616,21 @@ namespace DarkwoodMP.Net
             else if (IsHost && _joining.TryGetValue(who, out var was))
             {
                 Plugin.Log.LogInfo($"{was} (#{who}) stopped joining");
-                OnPlayerStoppedJoining?.Invoke(was);
+                Action<string> handler2 = OnPlayerStoppedJoining;
+                if (handler2 != null)
+                {
+                    handler2(was);
+                }
                 BroadcastJoinNotice(was, 1);
             }
             _joining.Remove(who);
             Names.Remove(who);
             Keys.Remove(who);
-            OnPeerDisconnected?.Invoke(who);
+            Action<ulong> handler3 = OnPeerDisconnected;
+            if (handler3 != null)
+            {
+                handler3(who);
+            }
         }
 
         private void EndSession()
@@ -548,7 +643,11 @@ namespace DarkwoodMP.Net
             _heardHostAt = -1f;
             _late.Clear();
             _joining.Clear();
-            OnSessionEnded?.Invoke();
+            Action handler = OnSessionEnded;
+            if (handler != null)
+            {
+                handler();
+            }
         }
 
         /// <summary>Handle a message as if it had just come from this peer (a Request's inner message).</summary>
@@ -635,7 +734,11 @@ namespace DarkwoodMP.Net
                 string why = $"The host hasn't answered for {JoinSilence:0} s, so joining stopped.";
                 Plugin.Log.LogWarning(why);
                 _heardHostAt = -1f;
-                OnJoinTimedOut?.Invoke(why);
+                Action<string> handler = OnJoinTimedOut;
+                if (handler != null)
+                {
+                    handler(why);
+                }
                 Backend.Leave();
             }
         }

@@ -141,7 +141,13 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(4f);
             int during = ActiveNear(at);
             bool shown = dummy.Root != null && dummy.Root.activeSelf;
-            Plugin.Log.LogInfo($"--dwmp-test-away: in {grid.currentGrid?.name} (away {PlayerCapture.LocalAway()}): " +
+            WorldGrid.Grid currentGrid = grid.currentGrid;
+            string name = null;
+            if (currentGrid != null)
+            {
+                name = currentGrid.name;
+            }
+            Plugin.Log.LogInfo($"--dwmp-test-away: in {name} (away {PlayerCapture.LocalAway()}): " +
                                $"{during} enemies active near the dummy; its puppet shown: {shown}");
             stand.leave();
             o.playerInOutsideLocation = false;
@@ -156,7 +162,13 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             Plugin.Log.LogInfo($"--dwmp-test-away: locations loaded for the others: {Locations.LoadedForOthers}; our player is in {(PlayerCapture.LocalAway() ? Locations.Current() : "the world")}");
-            Plugin.Log.LogInfo($"--dwmp-test-away: back in {grid.currentGrid?.name} (away {PlayerCapture.LocalAway()}); {ActiveNear(at)} enemies active near the dummy; " +
+            WorldGrid.Grid currentGrid2 = grid.currentGrid;
+            string name2 = null;
+            if (currentGrid2 != null)
+            {
+                name2 = currentGrid2.name;
+            }
+            Plugin.Log.LogInfo($"--dwmp-test-away: back in {name2} (away {PlayerCapture.LocalAway()}); {ActiveNear(at)} enemies active near the dummy; " +
                                $"its puppet shown: {dummy.Root != null && dummy.Root.activeSelf}; done");
         }
     }

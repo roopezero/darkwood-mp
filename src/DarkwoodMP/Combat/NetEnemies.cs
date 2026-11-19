@@ -690,7 +690,11 @@ namespace DarkwoodMP.Combat
             }
             if (inv != null)
             {
-                Containers.Instance?.SendContentsTo(peer, inv);
+                Containers instance = Containers.Instance;
+                if (instance != null)
+                {
+                    instance.SendContentsTo(peer, inv);
+                }
             }
         }
 
@@ -971,7 +975,11 @@ namespace DarkwoodMP.Combat
         private static List<InvItemEffect> WeaponEffects(InvItemClass weapon, List<InvItemEffect> sent)
         {
             var result = new List<InvItemEffect>();
-            var b = weapon?.baseClass;
+            InvItem b = null;
+            if (weapon != null)
+            {
+                b = weapon.baseClass;
+            }
             if (b == null || sent == null || sent.Count == 0)
             {
                 return result;
@@ -1038,7 +1046,11 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static int MaxHits(InvItemClass weapon)
         {
-            var b = weapon?.baseClass;
+            InvItem b = null;
+            if (weapon != null)
+            {
+                b = weapon.baseClass;
+            }
             if (b == null || !b.isFirearm)
             {
                 return MaxHitsPerSecond;
@@ -1106,7 +1118,11 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static float DamageCap(InvItemClass weapon)
         {
-            var b = weapon?.baseClass;
+            InvItem b = null;
+            if (weapon != null)
+            {
+                b = weapon.baseClass;
+            }
             if (b == null)
             {
                 return 40f;
@@ -1172,10 +1188,17 @@ namespace DarkwoodMP.Combat
             var co = c.GetComponent<CullableObject>();
             if (co != null)
             {
-                co.node?.removeCullable(go);
+                WorldGrid.Node node = co.node;
+                if (node != null)
+                {
+                    node.removeCullable(go);
+                }
                 foreach (var n in co.nodes)
                 {
-                    n?.removeCullable(go);
+                    if (n != null)
+                    {
+                        n.removeCullable(go);
+                    }
                 }
                 co.node = null; // checkForNewNode then leaves it alone
                 co.nodes.Clear();
@@ -1387,7 +1410,13 @@ namespace DarkwoodMP.Combat
             Light2D l = null;
             if (Player.Instance != null)
             {
-                l = FovLightField?.GetValue(Player.Instance) as Light2D;
+                System.Reflection.FieldInfo fovLightField = FovLightField;
+                object fovLight = null;
+                if (fovLightField != null)
+                {
+                    fovLight = fovLightField.GetValue(Player.Instance);
+                }
+                l = fovLight as Light2D;
             }
             if (l != null)
             {
@@ -2282,7 +2311,11 @@ namespace DarkwoodMP.Combat
                     }
                 }
                 c.isActive = false;
-                YPosAfterDeath?.Invoke(c, null);
+                System.Reflection.MethodInfo yPosAfterDeath = YPosAfterDeath;
+                if (yPosAfterDeath != null)
+                {
+                    yPosAfterDeath.Invoke(c, null);
+                }
                 string text = "none";
                 if (a != null)
                 {
@@ -2309,9 +2342,19 @@ namespace DarkwoodMP.Combat
                 {
                     count = deathColliders.Count;
                 }
+                string stackTrace = why.StackTrace;
+                string trimmedLine = null;
+                if (stackTrace != null)
+                {
+                    string line = stackTrace.Split('\n')[0];
+                    if (line != null)
+                    {
+                        trimmedLine = line.Trim();
+                    }
+                }
                 Plugin.Log.LogInfo($"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
                                    $"animator {text}, clip {clip2}, collider {text2}, " +
-                                   $"capsule {text3}, death colliders {count}; at {why.StackTrace?.Split('\n')[0]?.Trim()}); trigger now {(c.collider != null && c.collider.isTrigger)}");
+                                   $"capsule {text3}, death colliders {count}; at {trimmedLine}); trigger now {(c.collider != null && c.collider.isTrigger)}");
             }
             catch (System.Exception e)
             {
@@ -2558,7 +2601,11 @@ namespace DarkwoodMP.Combat
             }
             w.WriteStr(s);
             _puppets.TryGetValue(id, out var p);
-            var hit = p?.C;
+            Character hit = null;
+            if (p != null)
+            {
+                hit = p.C;
+            }
             World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}", (ok, reason, result) =>
             {
                 if (ok)

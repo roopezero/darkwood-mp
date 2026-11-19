@@ -129,7 +129,16 @@ namespace DarkwoodMP.World
                 {
                     st = new System.Diagnostics.StackFrame[0];
                 }
-                string from = string.Join(" < ", st.Take(8).Select(f => f.GetMethod()).Where(m => m != null).Select(m => m.DeclaringType?.Name + "." + m.Name));
+                string from = string.Join(" < ", st.Take(8).Select(f => f.GetMethod()).Where(m => m != null).Select(m =>
+                {
+                    Type declaringType = m.DeclaringType;
+                    string name = null;
+                    if (declaringType != null)
+                    {
+                        name = declaringType.Name;
+                    }
+                    return name + "." + m.Name;
+                }));
                 string comps = string.Join("/", go.GetComponentsInChildren<MonoBehaviour>(true).Where(m => m != null).Select(m => m.GetType().Name).Distinct());
                 Plugin.Log.LogInfo($"[ee] made {n} at {Fmt(go.transform.position)} (parent {(go.transform.parent != null ? go.transform.parent.name : "none")}; {comps}) from {from}");
             }
@@ -948,7 +957,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Corpse(string[] a, Result r)
         {
             var p = P;
-            var c = NetEnemies.Instance?.CharacterOf(_fought);
+            NetEnemies instance = NetEnemies.Instance;
+            Character c = null;
+            if (instance != null)
+            {
+                c = instance.CharacterOf(_fought);
+            }
             if (c == null)
             {
                 r.Info = $"#{_fought} is gone here (no corpse)";

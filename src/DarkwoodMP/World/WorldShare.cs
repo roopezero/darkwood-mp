@@ -80,7 +80,11 @@ namespace DarkwoodMP.World
                     return;
                 }
                 Plugin.Notice("The host's world changed: loading it again");
-                _session.Backend?.Rejoin();
+                INetBackend backend = _session.Backend;
+                if (backend != null)
+                {
+                    backend.Rejoin();
+                }
             });
             session.Register(MsgType.JoinWait, (from, r) =>
             {
@@ -111,7 +115,11 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                _session.Backend?.Leave();
+                INetBackend backend2 = _session.Backend;
+                if (backend2 != null)
+                {
+                    backend2.Leave();
+                }
                 LeaveHostWorld("The host went back to the main menu and stopped the server.");
             });
             session.OnHostLost += why => LeaveHostWorld($"Lost the host: {why}");
@@ -1309,7 +1317,13 @@ namespace DarkwoodMP.World
             string error;
             if (job.IsFaulted)
             {
-                error = $"couldn't store the world: {job.Exception?.GetBaseException().Message}";
+                AggregateException exception = job.Exception;
+                string message = null;
+                if (exception != null)
+                {
+                    message = exception.GetBaseException().Message;
+                }
+                error = $"couldn't store the world: {message}";
             }
             else
             {
@@ -1422,7 +1436,11 @@ namespace DarkwoodMP.World
             _download = null;
             LoadStatus = $"Couldn't get the host's world: {why}";
             Plugin.Log.LogError(LoadStatus);
-            _session.Backend?.Leave();
+            INetBackend backend = _session.Backend;
+            if (backend != null)
+            {
+                backend.Leave();
+            }
         }
 
         // ---- loading the world -------------------------------------------------
@@ -1497,7 +1515,11 @@ namespace DarkwoodMP.World
             {
                 LoadStatus = "Couldn't keep the host's world out of your own saves, so it wasn't loaded (see the log).";
                 JoinScreen.Fail(LoadStatus);
-                _session.Backend?.Leave();
+                INetBackend backend = _session.Backend;
+                if (backend != null)
+                {
+                    backend.Leave();
+                }
                 yield break;
             }
             JoinScreen.HandOver();
@@ -1586,7 +1608,15 @@ namespace DarkwoodMP.World
                 SaveRedirect.Begin(sandboxDir);
             }
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
-            var profile = state?.profiles?.FirstOrDefault(p => p != null && p.id == id && p.Active);
+            GameProfile profile = null;
+            if (state != null)
+            {
+                List<GameProfile> profiles = state.profiles;
+                if (profiles != null)
+                {
+                    profile = profiles.FirstOrDefault(p => p != null && p.id == id && p.Active);
+                }
+            }
             if (profile == null)
             {
                 Plugin.Log.LogError($"--dwmp-continue: no saved profile {id}");
@@ -1623,8 +1653,16 @@ namespace DarkwoodMP.World
     {
         static void Prefix()
         {
-            WorldShare.Instance?.HostToMainMenu();
-            WorldShare.Instance?.ClientToMainMenu();
+            WorldShare instance = WorldShare.Instance;
+            if (instance != null)
+            {
+                instance.HostToMainMenu();
+            }
+            WorldShare instance2 = WorldShare.Instance;
+            if (instance2 != null)
+            {
+                instance2.ClientToMainMenu();
+            }
         }
     }
 }

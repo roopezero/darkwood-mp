@@ -401,8 +401,15 @@ namespace DarkwoodMP.World
             {
                 keys = db.itemsDict.Keys;
             }
-            _jType = keys?.Where(k => !string.IsNullOrEmpty(k) && (_jKind == "key" ? !j.keysDict.ContainsKey(k) : !j.itemsDict.ContainsKey(k)))
-                .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
+            if (keys != null)
+            {
+                _jType = keys.Where(k => !string.IsNullOrEmpty(k) && (_jKind == "key" ? !j.keysDict.ContainsKey(k) : !j.itemsDict.ContainsKey(k)))
+                    .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
+            }
+            else
+            {
+                _jType = null;
+            }
             if (_jType == null)
             {
                 r.Fail($"no {_jKind} our journal hasn't got (of {keys.Count} in the database)");

@@ -235,7 +235,11 @@ namespace DarkwoodMP.World
                     r.Fail($"still carrying {left} that place {path}");
                     yield break;
                 }
-                Characters.Instance?.SaveNow();
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SaveNow();
+                }
             }
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             at.y = P.transform.position.y;

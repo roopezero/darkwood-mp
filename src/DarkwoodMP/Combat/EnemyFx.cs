@@ -219,7 +219,12 @@ namespace DarkwoodMP.Combat
             {
                 uint id = r.R.ReadUInt32();
                 int toggle = r.R.ReadInt32();
-                var c = NetEnemies.Instance?.PuppetOf(id);
+                NetEnemies instance = NetEnemies.Instance;
+                Character c = null;
+                if (instance != null)
+                {
+                    c = instance.PuppetOf(id);
+                }
                 if (c == null)
                 {
                     return;

@@ -103,7 +103,17 @@ namespace DarkwoodMP.World
                 npc.reputation += 1;
             }
             f.setFlag("player_firstOvenInteraction", activeModifier: true); // a shared one, not read by the game's code
-            Plugin.Log.LogInfo($"[map] story-at-join: after the snapshot, {npc?.name}'s reputation {npc?.reputation}, player_firstOvenInteraction set");
+            string name = null;
+            if (npc != null)
+            {
+                name = npc.name;
+            }
+            int? reputation = null;
+            if (npc != null)
+            {
+                reputation = npc.reputation;
+            }
+            Plugin.Log.LogInfo($"[map] story-at-join: after the snapshot, {name}'s reputation {reputation}, player_firstOvenInteraction set");
         }
 
         /// <summary>"join-story" (host, after the join): the story changes made while the joiner loaded were sent to it.</summary>
@@ -172,7 +182,28 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = string.Join(", ", found.Select(f => $"{f.addr} \"{f.e.Info?.Name}\" {f.e.Info?.Players}/{f.e.Info?.MaxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms"));
+                r.Info = string.Join(", ", found.Select(f =>
+                {
+                    Net.ServerInfo info = f.e.Info;
+                    string name = null;
+                    if (info != null)
+                    {
+                        name = info.Name;
+                    }
+                    Net.ServerInfo info2 = f.e.Info;
+                    int? players = null;
+                    if (info2 != null)
+                    {
+                        players = info2.Players;
+                    }
+                    Net.ServerInfo info3 = f.e.Info;
+                    int? maxPlayers = null;
+                    if (info3 != null)
+                    {
+                        maxPlayers = info3.MaxPlayers;
+                    }
+                    return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms";
+                }));
             }
             if (!found.Any(f => f.e.Info != null && f.e.Info.Proto == Net.Protocol.Version && f.e.Info.Players >= 2))
             {
@@ -184,7 +215,15 @@ namespace DarkwoodMP.World
             MapScenarioWorld.Find<Trigger>(spec, t => t.active && !t.triggered && t.canDisarm && t.GetComponent<Item>() != null);
 
         /// <summary>The other player's puppet (not the test dummy).</summary>
-        private static RemotePlayer Other() => PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
+        private static RemotePlayer Other()
+        {
+            PlayerSync instance = PlayerSync.Instance;
+            if (instance != null)
+            {
+                return instance.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
+            }
+            return null;
+        }
 
         private static string Clip(Player p)
         {
@@ -253,7 +292,7 @@ namespace DarkwoodMP.World
                         foreach (var clip in new[] { "InventoryGet", "InventoryLoop" })
                         {
                             var c = lib.GetClipByName(clip);
-                            if (c?.frames == null)
+                            if (c == null || c.frames == null)
                             {
                                 continue;
                             }
@@ -367,14 +406,19 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             var cam = Singleton<CamMain>.Instance;
             var host = Other();
-            bool follows = cam != null && host?.Root != null && cam.followTarget == host.Root.transform;
+            bool follows = cam != null && host != null && host.Root != null && cam.followTarget == host.Root.transform;
             float dist = -1f;
-            if (host?.Root != null)
+            if (host != null && host.Root != null)
             {
                 dist = StateDump.Flat(P.transform.position - host.Root.transform.position);
             }
             bool touching = P.GetComponentsInChildren<Collider>().Any(c => c.enabled);
-            r.Info = $"watching {host?.Name}: camera follows {follows}, our body {dist:0} from them, colliders on {touching}, profile dead {Core.currentProfile.dead}, time scale {Time.timeScale}";
+            string name = null;
+            if (host != null)
+            {
+                name = host.Name;
+            }
+            r.Info = $"watching {name}: camera follows {follows}, our body {dist:0} from them, colliders on {touching}, profile dead {Core.currentProfile.dead}, time scale {Time.timeScale}";
             if (!follows || dist < 0f || dist > 50f || touching || !Core.currentProfile.dead || Time.timeScale == 0f)
             {
                 r.Fail(r.Info);

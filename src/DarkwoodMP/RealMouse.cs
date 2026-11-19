@@ -42,7 +42,10 @@ namespace DarkwoodMP
                 var d = target - Now;
                 if (d.magnitude <= 1.5f)
                 {
-                    done?.Invoke(true);
+                    if (done != null)
+                    {
+                        done(true);
+                    }
                     yield break;
                 }
                 // Accelerated moves overshoot the long way: go half of it, then the rest in small steps.
@@ -66,7 +69,10 @@ namespace DarkwoodMP
             }
             var left = target - Now;
             Plugin.Log.LogInfo($"[mouse] couldn't reach {target}: at {Now} ({left.magnitude:0.0} px away)");
-            done?.Invoke(left.magnitude <= 3f);
+            if (done != null)
+            {
+                done(left.magnitude <= 3f);
+            }
         }
 
         /// <summary>A left click where the pointer is: down, a few frames, up.</summary>

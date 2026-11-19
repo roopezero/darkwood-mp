@@ -397,7 +397,14 @@ namespace DarkwoodMP.World
                 b.burnTime = 5f;
                 if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
                 {
-                    AsPlayer(() => FireSync.Instance?.ClientIgnited(d.gameObject));
+                    AsPlayer(() =>
+                    {
+                        FireSync instance = FireSync.Instance;
+                        if (instance != null)
+                        {
+                            instance.ClientIgnited(d.gameObject);
+                        }
+                    });
                 }
             }
             yield return new WaitForSeconds(1f);
@@ -1747,7 +1754,11 @@ namespace DarkwoodMP.World
             {
                 // Down to 0 first, shared as any reputation change is, so the host's copy can't pay for the trade by itself.
                 npc.reputation = 0;
-                FlagsSync.Instance?.FlushNow();
+                FlagsSync instance = FlagsSync.Instance;
+                if (instance != null)
+                {
+                    instance.FlushNow();
+                }
                 yield return new WaitForSeconds(3f);
             }
             if (!earn && npc.reputation + repChange < 0)
@@ -1798,7 +1809,11 @@ namespace DarkwoodMP.World
                 }
                 npc.reputation += repChange;
                 // What TraderTradePatch does after acceptTrade.
-                TraderSync.Instance?.LocalTrade(npc, new Dictionary<string, int> { [boughtType] = 1 }, gave, repChange);
+                TraderSync instance2 = TraderSync.Instance;
+                if (instance2 != null)
+                {
+                    instance2.LocalTrade(npc, new Dictionary<string, int> { [boughtType] = 1 }, gave, repChange);
+                }
             });
             yield return new WaitForSeconds(1.5f);
             P.inShop = false;

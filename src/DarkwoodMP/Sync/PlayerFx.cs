@@ -255,7 +255,10 @@ namespace DarkwoodMP.Sync
                 return;
             }
             var relay = Relay(MsgType.PlayerSounds, owner);
-            relay?.W.Write((byte)n);
+            if (relay != null)
+            {
+                relay.W.Write((byte)n);
+            }
             var puppet = Puppet(owner);
             bool near = puppet != null && WorldShare.InWorld && Player.Instance != null
                 && (Player.Instance.transform.position - puppet.position).sqrMagnitude < HearingRange * HearingRange;
@@ -535,7 +538,12 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
-            var gun = __instance.currentItem?.baseClass;
+            InvItemClass currentItem = __instance.currentItem;
+            InvItem gun = null;
+            if (currentItem != null)
+            {
+                gun = currentItem.baseClass;
+            }
             if (gun != null)
             {
                 fx.OurShot(gun);

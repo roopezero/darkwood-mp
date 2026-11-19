@@ -317,7 +317,12 @@ namespace DarkwoodMP.World
                     }
                     break;
                 case Kind.Enemy:
-                    var c = NetEnemies.Instance?.CharacterOf((uint)r.Id);
+                    NetEnemies instance = NetEnemies.Instance;
+                    Character c = null;
+                    if (instance != null)
+                    {
+                        c = instance.CharacterOf((uint)r.Id);
+                    }
                     if (c != null)
                     {
                         go = c.gameObject;

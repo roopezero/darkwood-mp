@@ -476,14 +476,28 @@ namespace DarkwoodMP.World
     static class GeneratorFuelPatch
     {
         static void Prefix(Generator __instance, out float __state) => __state = __instance.fuel;
-        static void Postfix(Generator __instance, float __state) => FuelSync.Instance?.Poured(__instance, __instance.fuel - __state);
+        static void Postfix(Generator __instance, float __state)
+        {
+            FuelSync instance = FuelSync.Instance;
+            if (instance != null)
+            {
+                instance.Poured(__instance, __instance.fuel - __state);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Saw), nameof(Saw.addFuel))]
     static class SawFuelPatch
     {
         static void Prefix(Saw __instance, out float __state) => __state = __instance.fuel;
-        static void Postfix(Saw __instance, float __state) => FuelSync.Instance?.Poured(__instance, __instance.fuel - __state);
+        static void Postfix(Saw __instance, float __state)
+        {
+            FuelSync instance = FuelSync.Instance;
+            if (instance != null)
+            {
+                instance.Poured(__instance, __instance.fuel - __state);
+            }
+        }
     }
 
     /// <summary>Cutting a log (Saw.convert) uses fuelToConvert of the saw's fuel; it goes out like a pour.</summary>
@@ -496,7 +510,11 @@ namespace DarkwoodMP.World
 
         static System.Exception Finalizer(Saw __instance, System.Exception __exception, float __state)
         {
-            FuelSync.Instance?.Poured(__instance, __instance.fuel - __state);
+            FuelSync instance = FuelSync.Instance;
+            if (instance != null)
+            {
+                instance.Poured(__instance, __instance.fuel - __state);
+            }
             return __exception;
         }
     }
@@ -516,7 +534,11 @@ namespace DarkwoodMP.World
         {
             if (WorldActions.Sharing && !WorldActions.Replaying)
             {
-                FuelSync.Instance?.Flush();
+                FuelSync instance = FuelSync.Instance;
+                if (instance != null)
+                {
+                    instance.Flush();
+                }
             }
         }
     }

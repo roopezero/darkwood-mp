@@ -438,7 +438,12 @@ namespace DarkwoodMP.World
             // the low-power state as it was
             gen.drainFuel();
             gen.fuel = fuel;
-            var skill = Characters.Instance?.Electrician(j.Owner);
+            Characters instance = Characters.Instance;
+            bool? skill = null;
+            if (instance != null)
+            {
+                skill = instance.Electrician(j.Owner);
+            }
             string toString = "not known";
             if (skill.HasValue)
             {

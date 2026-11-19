@@ -56,7 +56,8 @@ namespace DarkwoodMP.World
                 {
                     return Path.Combine(BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
                 }
-                if (WorldShare.Instance?.PlayingHostCopy != false)
+                WorldShare instance = WorldShare.Instance;
+                if (instance == null || instance.PlayingHostCopy)
                 {
                     return null;
                 }
@@ -183,7 +184,16 @@ namespace DarkwoodMP.World
         private static string Now() => DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
         /// <summary>The name you gave the save in slot <paramref name="slot"/> ("" for none).</summary>
-        public static string NameOf(int slot) => Get(slot)?.Name ?? "";
+        public static string NameOf(int slot)
+        {
+            Record record = Get(slot);
+            string name = null;
+            if (record != null)
+            {
+                name = record.Name;
+            }
+            return name ?? "";
+        }
 
         public static void SetName(int slot, string name)
         {
@@ -322,7 +332,11 @@ namespace DarkwoodMP.World
             // The characters the host kept for the players who joined the slot's last world: the game writes the new
             // world over the old save and leaves them, so a joiner would get their old character (dead, if it died
             // for good). They go with the old world, as when the slot is deleted.
-            Characters.Instance?.Forget("a new game");
+            Characters instance = Characters.Instance;
+            if (instance != null)
+            {
+                instance.Forget("a new game");
+            }
             var sm = Singleton<SaveManager>.Instance;
             if (sm != null && WorldShare.Instance?.PlayingHostCopy != true)
             {
@@ -347,7 +361,11 @@ namespace DarkwoodMP.World
                 return;
             }
             SaveBook.Forget(p.id, "deleted");
-            Characters.Instance?.Forget("the slot deleted");
+            Characters instance = Characters.Instance;
+            if (instance != null)
+            {
+                instance.Forget("the slot deleted");
+            }
             SaveBook.DeletePlayersDir(__instance.baseSaveDirectory, p.id, "with it");
         }
     }

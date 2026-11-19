@@ -36,7 +36,16 @@ namespace DarkwoodMP.World
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 16; i++)
             {
-                var t = st.GetFrame(i)?.GetMethod()?.DeclaringType;
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                System.Type t = null;
+                if (frame != null)
+                {
+                    System.Reflection.MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        t = method.DeclaringType;
+                    }
+                }
                 if (t != null && t.DeclaringType == typeof(Player) && t.Name.Contains("onDeath"))
                 {
                     return true;
