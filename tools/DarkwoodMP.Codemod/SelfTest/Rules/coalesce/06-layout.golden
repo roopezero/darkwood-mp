@@ -58,4 +58,4 @@ namespace N
     }
 }
 === queue
-19: a call runs earlier in the statement: chosen() + _make()
+19: a call runs earlier in the statement: chosen()

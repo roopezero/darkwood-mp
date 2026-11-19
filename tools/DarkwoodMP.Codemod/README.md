@@ -246,7 +246,11 @@ deconstruction, a statement inside an interpolation hole, a `foreach`
 source or other header whose `?:` declares a variable, an `await` in the
 statement, a `const` declaration, a constant condition, every branch a
 throw, an anonymous type, and the checks every rewrite makes (a comment on
-`?` or `:`, a directive, a site that doesn't compile).
+`?` or `:`, a directive, a site that doesn't compile). A call earlier is
+named by its operand when that is a call, otherwise by the first call,
+getter or operator in it, in the order they run, with the type that
+declares a user-defined operator, or by the value made into text; every
+name is cut to about 60 characters. Every rule's queue names it this way.
 
 A getter declared in the plugin that does nothing but read a field
 (`W => _w`, `get { return _w; }`) counts as free of effects for every rule
@@ -392,10 +396,14 @@ x?.B ?? true             ->  x == null || x.B
 ```
 
 They hold only when `v` has no effects and can't throw: a constant,
-`typeof`, a local, a parameter or `this`, and when no user-defined
-conversion runs on either side. The original runs one for a null `x` too:
-Unity's `bool` operator makes `x?.Go == false` true for a null `x`, so such
-a comparison moves into a temporary instead.
+`typeof`, a local, a parameter or `this`; when no user-defined conversion
+runs on either side; and when the operator is built in, lifted, or the
+`==` of string, .NET or a Unity object. The original runs a conversion for
+a null `x` too: Unity's `bool` operator makes `x?.Go == false` true for a
+null `x`. A user-defined operator that isn't lifted gets the null itself:
+with an `==(int? a, Meter b)` of Meter's, `x?.Count == m` is what that
+operator says for a null `x`, not false. Such comparisons move into a
+temporary instead.
 "Not null" means a value type that isn't a Nullable, or a constant that
 isn't null. A member of a type with an `==` of its own goes to the hoist,
 unless that `==` is string's, .NET's or a Unity object's, which all give
@@ -521,18 +529,25 @@ receiver property that returns null on its second read (a rewrite that
 reads it twice throws), events and delegates, the natural type of a
 declaration, chains, a setter that logs each set, returns, expression
 bodies and lambdas, every fixed comparison and its parentheses, a compared
-value with effects or a null (which must still run and compare), a loop
-condition, element reads and .NET's `==`, a user-defined conversion of the
-`?.`'s value or of the compared value, receivers that are another type's
-property or a call, an assignment of a chain to a target that wasn't null
-and an assignment whose target runs a getter. Reading the receiver twice
-(a call's or another type's property's too), writing `x?.F != v` as
-`x != null && x.F != v`, translating a compared value with effects or a
-comparison that converts by code of its own, the assignment form for a
-chain and running the receiver before the target's getter each fail a
-case. The golden cases pin what a single thread can't show: a ref parameter
-or ref local goes into a temporary, and a statement in an interpolation
-hole or with an await goes to the queue.
+value with effects or a null (which must still run and compare), a
+compared value that is a property, a loop condition, element reads and
+.NET's `==`, a user-defined conversion of the `?.`'s value or of the
+compared value, an operator of the compared value's own that takes a
+Nullable, receivers that are another type's property or a call, a value
+read or a call earlier in the statement, an assignment of a chain to a
+target that wasn't null, an assignment whose target runs a getter and one
+whose receiver changes a part of its target. Reading the receiver twice (a
+call's or another type's property's too), writing `x?.F != v` as `x != null
+&& x.F != v`, translating a compared value with effects (a property too) or
+a comparison that converts by code of its own or whose operator gets the
+null itself, moving a `?.` with effects past an earlier read of a value it
+changes or one without effects past an earlier call, the assignment form
+for a chain and running the receiver before the target's getter or a part
+of the target it changes each fail a case. The golden cases pin what a
+single thread can't show, and the texts: a ref parameter or ref local goes
+into a temporary; a statement in an interpolation hole, with an await or in
+an else-if condition goes to the queue; a compared field or property moves
+into a temporary; and the queue names the call in an earlier operand.
 
 ## Golden cases
 

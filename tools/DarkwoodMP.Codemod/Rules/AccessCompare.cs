@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace DarkwoodMP.Codemod.Rules;
 
@@ -28,7 +29,8 @@ namespace DarkwoodMP.Codemod.Rules;
 /// an == of its own (other than string's and a Unity object's) is left to
 /// the hoist, because the original calls that == for a null x too, and so
 /// is a comparison that converts either side by a user-defined conversion,
-/// which the original runs for a null x as well.
+/// which the original runs for a null x as well, or whose operator is a
+/// user-defined one that isn't lifted and takes the null itself.
 sealed class AccessComparison
 {
     /// The expression the translation replaces: the comparison or the ??.
@@ -148,6 +150,13 @@ sealed partial class AccessPlanner
         {
             return null;
         }
+        // So does a user-defined operator that isn't lifted: it gets the
+        // null itself, and "a?.Count == m" with an "==(int?, Meter)" of
+        // Meter's is what that operator says, not false.
+        if (!OperatorKeeps(binary))
+        {
+            return null;
+        }
         var form = new AccessComparison
         {
             Whole = binary,
@@ -238,6 +247,28 @@ sealed partial class AccessPlanner
             || !CoalesceTypes.HasOwnEquality(member)
             || AccessTypes.DotNetEquality(member)
             || _types.Types.IsUnity(member);
+    }
+
+    /// The comparison's operator is one the fixed translations are written
+    /// for: a built-in one (string's == is one), a lifted one, or the == of
+    /// .NET or of a Unity object, which give the original's result for a
+    /// null x as OwnEqualityKeeps says. A user-defined operator that isn't
+    /// lifted gets the null of a null x itself. Tuple equality has no
+    /// operator of its own and is lifted for a Nullable tuple: false for a
+    /// null x before any element is compared, as the translation gives.
+    bool OperatorKeeps(BinaryExpressionSyntax binary)
+    {
+        if (_model.GetOperation(binary) is not IBinaryOperation operation)
+        {
+            return true;
+        }
+        if (operation.OperatorMethod == null || operation.IsLifted)
+        {
+            return true;
+        }
+        var owner = operation.OperatorMethod.ContainingType;
+        return AccessTypes.DotNetEquality(owner)
+            || _types.Types.IsUnity(owner);
     }
 
     /// A value whose reading has no effects and can't throw.

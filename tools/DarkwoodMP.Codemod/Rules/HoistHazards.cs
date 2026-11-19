@@ -80,7 +80,7 @@ sealed class HoistHazards
             // only names the reason first.
             if (HasEffects(operand, moved))
             {
-                return Purity.CallEarlier + ": " + operand;
+                return Purity.CallEarlier + ": " + NameCall(operand, moved);
             }
             if (effects && !_purity.IsStable(operand, hoisted))
             {
@@ -125,6 +125,24 @@ sealed class HoistHazards
         }
         var operation = _model.GetOperation(expression);
         return Formatting.Loud(operation, moved) != null;
+    }
+
+    /// What the queue names an earlier operand with effects by: Purity's
+    /// name for its call, or, when its only effect is making a value into
+    /// text, that value.
+    string NameCall(ExpressionSyntax operand, ICollection<SyntaxNode> moved)
+    {
+        if (TernaryChain.Strip(operand) is InvocationExpressionSyntax
+            || _purity.HasEffects(operand, moved))
+        {
+            return _purity.NameCall(operand, moved);
+        }
+        var loud = Formatting.Loud(_model.GetOperation(operand), moved);
+        if (loud == null)
+        {
+            return Purity.Cut(operand.ToString());
+        }
+        return Purity.Cut(loud.Syntax.ToString()) + " (made into text)";
     }
 
     /// A read of a volatile field in the operation, apart from what moved

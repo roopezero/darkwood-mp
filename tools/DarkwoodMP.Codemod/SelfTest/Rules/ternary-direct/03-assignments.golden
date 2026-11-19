@@ -2,11 +2,12 @@ Assignments. The target is written in each branch, and the condition now
 runs before the target's parts (hazard 2): with a condition that has
 effects, a parameter, a readonly field or a type in front of the member is
 fine and a mutable field is not; with one that has none, a call in the
-target is not. A compound assignment reads its target first (hazard 3), so
-nothing in it may be a call. A string in the target is there once per
-branch, which the manifest records. A target with another operator would
-have it twice, so it goes to the queue; the right side of ??= runs only
-sometimes and is left.
+target is not, and the queue names the first call in the target's parts.
+A compound assignment reads its target first (hazard 3), so nothing in it
+may be a call. A string in the target is there once per branch, which the
+manifest records. A target with another operator would have it twice, so
+it goes to the queue; the right side of ??= runs only sometimes and is
+left.
 === input
 using System;
 using System.Collections.Generic;
@@ -81,6 +82,27 @@ namespace N
             _cells[i > 0 ? 1 : 0] = c ? 1 : 2;
             _other ??= c ? new Box() : null;
             Computed.Size = c ? 1 : 2;
+        }
+    }
+
+    public class Pair
+    {
+        public Box Inner = new Box();
+    }
+
+    public class D
+    {
+        Pair Made
+        {
+            get
+            {
+                return new Pair();
+            }
+        }
+
+        public void Queued(bool c)
+        {
+            Made.Inner.Size = c ? 1 : 2;
         }
     }
 }
@@ -249,6 +271,27 @@ namespace N
             Computed.Size = c ? 1 : 2;
         }
     }
+
+    public class Pair
+    {
+        public Box Inner = new Box();
+    }
+
+    public class D
+    {
+        Pair Made
+        {
+            get
+            {
+                return new Pair();
+            }
+        }
+
+        public void Queued(bool c)
+        {
+            Made.Inner.Size = c ? 1 : 2;
+        }
+    }
 }
 === queue
 66: the hoisted code has effects and a mutable value is read earlier: _other
@@ -258,3 +301,4 @@ namespace N
 70: a compound assignment with a call in it
 71: the target holds another operator, which would be written twice
 73: a call runs earlier in the statement: Computed
+94: a call runs earlier in the statement: Made

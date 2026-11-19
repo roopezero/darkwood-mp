@@ -656,3 +656,200 @@ public static object Run(bool has, int start)
     local = Make()?.Count;
     return (s_box.Size, local);
 }
+=== a compared value that is a property runs for a null receiver
+public class Box
+{
+    public int N;
+}
+
+static int Limit
+{
+    get
+    {
+        return Log("limit", 3);
+    }
+}
+
+public static object Run(bool has)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 3 };
+    }
+    bool same = a?.N == Limit;
+    bool less = a?.N < Limit;
+    return (same, less);
+}
+=== a value read or a call earlier in the statement keeps the ?. in place
+public class Box
+{
+    public int N;
+
+    public int Bump()
+    {
+        s_n += 10;
+        return Log("bump", N);
+    }
+}
+
+static int s_n;
+static Box s_box;
+
+static int Shift()
+{
+    if (s_box != null)
+    {
+        s_box.N += 1;
+    }
+    return Log("shift", 1);
+}
+
+static (int, int?) Use(int n, int? value)
+{
+    return (n, value);
+}
+
+public static object Run(bool has, int start)
+{
+    s_n = start;
+    s_box = null;
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 3 };
+        s_box = new Box { N = 5 };
+    }
+    var read = Use(s_n, a?.Bump());
+    var called = Use(Shift(), s_box?.N);
+    int? plain = a?.N;
+    return (read, called, plain, s_n);
+}
+=== an assignment keeps the parts of its target in front of the receiver
+public class Box
+{
+    public int Count;
+    public int? Size;
+}
+
+static Box s_target;
+static Box s_box;
+static bool s_has;
+
+public static class Holder
+{
+    public static Box Current
+    {
+        get
+        {
+            Log("current", 1);
+            s_box = null;
+            return s_target;
+        }
+    }
+}
+
+static Box Make()
+{
+    Log("make", s_has);
+    s_target = new Box { Size = -1 };
+    if (s_has)
+    {
+        return new Box { Count = 4 };
+    }
+    return null;
+}
+
+public static object Run(bool has, int start)
+{
+    s_has = has;
+    s_target = new Box { Size = start };
+    var first = s_target;
+    s_target.Size = Make()?.Count;
+    var second = s_target;
+    s_box = null;
+    if (has)
+    {
+        s_box = new Box { Count = 6 };
+    }
+    Holder.Current.Size = s_box?.Count;
+    int? local = start;
+    local = Make()?.Count;
+    return (first.Size, second.Size, local);
+}
+=== a compared value's own operator that takes a Nullable runs for a null receiver
+public struct Meter
+{
+    public int V;
+
+    public static bool operator ==(int? a, Meter b)
+    {
+        Log("eq", a.HasValue);
+        return !a.HasValue || a.Value == b.V;
+    }
+
+    public static bool operator !=(int? a, Meter b)
+    {
+        return !(a == b);
+    }
+
+    public static bool operator <(int? a, Meter b)
+    {
+        Log("less", a.HasValue);
+        return !a.HasValue || a.Value < b.V;
+    }
+
+    public static bool operator >(int? a, Meter b)
+    {
+        Log("more", a.HasValue);
+        return a.HasValue && a.Value > b.V;
+    }
+
+    public override bool Equals(object o)
+    {
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return 0;
+    }
+}
+
+public class Box
+{
+    public int Count;
+}
+
+public static object Run(bool has, int v)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Count = v };
+    }
+    var m = new Meter { V = 3 };
+    bool same = a?.Count == m;
+    bool apart = a?.Count != m;
+    bool less = a?.Count < m;
+    bool plain = a?.Count == 3;
+    return (same, apart, less, plain);
+}
+=== a Nullable tuple's == compares as before for a null receiver
+public class Box
+{
+    public (int, int) Pair;
+}
+
+public static object Run(bool has, int v)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Pair = (v, 2) };
+    }
+    var t = (3, 2);
+    bool same = a?.Pair == t;
+    bool apart = a?.Pair != t;
+    return (same, apart);
+}

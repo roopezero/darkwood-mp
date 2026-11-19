@@ -3,10 +3,15 @@ of its statement: an argument, named after the parameter, an operand, an
 interpolation hole, which keeps its format, an if condition and a target
 with an element. Two of them move in the order they run. The hazard rules
 of ternary-hoist send to the queue a ?. that a call runs before, and one
-with effects that a mutable value is read before. Code that may not run
-(the right side of &&, a branch of ?:, a lambda body, a loop condition), a
-?. inside another or holding one, a variable declared inside it, a comment
-on ?., an initializer, an await and a field initializer go to the queue.
+with effects that a mutable value is read before, a field alone too; so
+does an assignment whose target's parts are such a call or value. For an
+earlier operand that isn't a call itself, a ?: in parentheses in an
+earlier hole too, the queue names the first call, getter or operator in it
+(with the operator's type), or the value made into text, cut to about 60
+characters. Code that may not run (the right side of &&, a branch of ?:, a
+lambda body, a loop condition, an else-if condition), a ?. inside another
+or holding one, a variable declared inside it, a comment on ?., an
+initializer, an await and a field initializer go to the queue.
 === input
 using System;
 using System.Collections.Generic;
@@ -86,6 +91,107 @@ namespace N
             return line.Length + waited + pick.Length + both.GetHashCode()
                 + inner.Length + outer.Length + found.GetHashCode()
                 + noted.Length + made.Text.Length;
+        }
+
+        int _n;
+        Worker _last;
+
+        static void Use(int n, int? bumped)
+        {
+        }
+
+        static Worker Make()
+        {
+            return new Worker();
+        }
+
+        static string Describe(string first, string second, string third)
+        {
+            return first + second + third;
+        }
+
+        public int Later(Worker w, Box a, Purse p, bool c)
+        {
+            Use(_n, w?.Bumped);
+            if (c)
+            {
+                _n++;
+            }
+            else if (Holder.Current?.Busy == true)
+            {
+                _n--;
+            }
+            else if (Make()?.Count > 0)
+            {
+                _n += 2;
+            }
+            _last.Size = Make()?.Count;
+            Holder.Next.Size = _last?.Count;
+            Show($"seen {Seen()} times", a?.Count);
+            Show("bumped " + w.Bumped, a?.Count);
+            Show("next " + Holder.Next.Bumped, a?.Count);
+            Show(p != null ? "purse" : "none", a?.Count);
+            Show("purse " + p, a?.Count);
+            Show($"{(p != null ? "purse" : "none")} has {a?.Count}", 0);
+            Show(Describe("a long first argument", "a second one",
+                "and a third") + "!", a?.Count);
+            return _n;
+        }
+    }
+
+    public class Worker
+    {
+        public bool Busy;
+        public int Count;
+        public int? Size;
+
+        public int Bumped
+        {
+            get
+            {
+                Count++;
+                return Count;
+            }
+        }
+    }
+
+    public static class Holder
+    {
+        static int s_reads;
+        static Worker s_next = new Worker();
+
+        public static Worker Current { get; set; }
+
+        public static Worker Next
+        {
+            get
+            {
+                s_reads++;
+                return s_next;
+            }
+        }
+    }
+
+    public class Purse
+    {
+        public static bool operator ==(Purse a, Purse b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Purse a, Purse b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
         }
     }
 }
@@ -220,6 +326,107 @@ namespace N
                 + inner.Length + outer.Length + found.GetHashCode()
                 + noted.Length + made.Text.Length;
         }
+
+        int _n;
+        Worker _last;
+
+        static void Use(int n, int? bumped)
+        {
+        }
+
+        static Worker Make()
+        {
+            return new Worker();
+        }
+
+        static string Describe(string first, string second, string third)
+        {
+            return first + second + third;
+        }
+
+        public int Later(Worker w, Box a, Purse p, bool c)
+        {
+            Use(_n, w?.Bumped);
+            if (c)
+            {
+                _n++;
+            }
+            else if (Holder.Current?.Busy == true)
+            {
+                _n--;
+            }
+            else if (Make()?.Count > 0)
+            {
+                _n += 2;
+            }
+            _last.Size = Make()?.Count;
+            Holder.Next.Size = _last?.Count;
+            Show($"seen {Seen()} times", a?.Count);
+            Show("bumped " + w.Bumped, a?.Count);
+            Show("next " + Holder.Next.Bumped, a?.Count);
+            Show(p != null ? "purse" : "none", a?.Count);
+            Show("purse " + p, a?.Count);
+            Show($"{(p != null ? "purse" : "none")} has {a?.Count}", 0);
+            Show(Describe("a long first argument", "a second one",
+                "and a third") + "!", a?.Count);
+            return _n;
+        }
+    }
+
+    public class Worker
+    {
+        public bool Busy;
+        public int Count;
+        public int? Size;
+
+        public int Bumped
+        {
+            get
+            {
+                Count++;
+                return Count;
+            }
+        }
+    }
+
+    public static class Holder
+    {
+        static int s_reads;
+        static Worker s_next = new Worker();
+
+        public static Worker Current { get; set; }
+
+        public static Worker Next
+        {
+            get
+            {
+                s_reads++;
+                return s_next;
+            }
+        }
+    }
+
+    public class Purse
+    {
+        public static bool operator ==(Purse a, Purse b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Purse a, Purse b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
     }
 }
 === queue
@@ -234,3 +441,15 @@ namespace N
 73: a comment inside the statement would be lost
 74: an object or collection initializer: the constructor and the earlier elements run first
 75: an await in the statement: a temporary could become a field of the state machine
+100: the hoisted code has effects and a mutable value is read earlier: _n
+105: conditionally evaluated: an else-if condition
+109: conditionally evaluated: an else-if condition
+113: the hoisted code has effects and a mutable value is read earlier: _last
+114: a call runs earlier in the statement: Holder.Next
+115: a call runs earlier in the statement: Seen()
+116: a call runs earlier in the statement: w.Bumped
+117: a call runs earlier in the statement: Holder.Next
+118: a call runs earlier in the statement: p != null (an operator of N.Purse)
+119: a call runs earlier in the statement: p (made into text)
+120: a call runs earlier in the statement: p != null (an operator of N.Purse)
+122: a call runs earlier in the statement: Describe("a long first argument", "a second one", "and a ...

@@ -46,7 +46,8 @@ sealed class Purity
             {
                 if (HasEffects(operand))
                 {
-                    return CallEarlier + ": " + operand;
+                    return CallEarlier + ": "
+                        + NameCall(operand, Array.Empty<SyntaxNode>());
                 }
             }
             return null;
@@ -329,11 +330,44 @@ sealed class Purity
 
     bool Effects(IOperation operation, ICollection<SyntaxNode> moved)
     {
+        return FirstEffect(operation, moved) != null;
+    }
+
+    /// The first operation in the tree whose own work has an effect, in the
+    /// order they run: the operands of a node run before the node itself.
+    /// What moved and the bodies of lambdas are left out.
+    static IOperation FirstEffect(
+        IOperation operation, ICollection<SyntaxNode> moved)
+    {
         if (operation is not IConversionOperation
             && moved.Contains(operation.Syntax))
         {
-            return false;
+            return null;
         }
+        if (operation is IAnonymousFunctionOperation
+            || operation is IDelegateCreationOperation)
+        {
+            return null;
+        }
+        foreach (var child in operation.ChildOperations)
+        {
+            var found = FirstEffect(child, moved);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+        if (OwnEffect(operation))
+        {
+            return operation;
+        }
+        return null;
+    }
+
+    /// Whether this one operation, apart from what it holds, can change
+    /// anything or run code the tool can't see.
+    static bool OwnEffect(IOperation operation)
+    {
         if (!Inert.Contains(operation.Kind))
         {
             return true;
@@ -341,54 +375,83 @@ sealed class Purity
         switch (operation)
         {
             case IInvocationOperation invocation:
-                if (!KnownPure.IsPureCall(invocation.TargetMethod))
-                {
-                    return true;
-                }
-                break;
+                return !KnownPure.IsPureCall(invocation.TargetMethod);
             case IPropertyReferenceOperation property:
-                if (!KnownPure.IsPureGetter(property.Property))
-                {
-                    return true;
-                }
-                break;
+                return !KnownPure.IsPureGetter(property.Property);
             case IObjectCreationOperation creation:
-                if (creation.Constructor == null
-                    || !KnownPure.IsPureCreation(creation.Constructor))
-                {
-                    return true;
-                }
-                break;
+                return creation.Constructor == null
+                    || !KnownPure.IsPureCreation(creation.Constructor);
             case IBinaryOperation { OperatorMethod: not null } binary:
-                if (!KnownPure.IsPureOperator(binary.OperatorMethod))
-                {
-                    return true;
-                }
-                break;
+                return !KnownPure.IsPureOperator(binary.OperatorMethod);
             case IUnaryOperation { OperatorMethod: not null } unary:
-                if (!KnownPure.IsPureOperator(unary.OperatorMethod))
-                {
-                    return true;
-                }
-                break;
+                return !KnownPure.IsPureOperator(unary.OperatorMethod);
             case IConversionOperation { OperatorMethod: not null } conversion:
-                if (!KnownPure.IsPureOperator(conversion.OperatorMethod))
-                {
-                    return true;
-                }
-                break;
-            case IAnonymousFunctionOperation:
-            case IDelegateCreationOperation:
+                return !KnownPure.IsPureOperator(conversion.OperatorMethod);
+            default:
                 return false;
         }
-        foreach (var child in operation.ChildOperations)
+    }
+
+    /// What a queue entry names an earlier operand with effects by: the
+    /// operand when it is a call, otherwise the first call, getter or
+    /// operator in it, in the order they run, so a long text or a ?: doesn't
+    /// hide what runs. A user-defined operator says whose it is, because
+    /// "x != null" doesn't look like a call.
+    public string NameCall(
+        ExpressionSyntax operand, ICollection<SyntaxNode> moved)
+    {
+        if (TernaryChain.Strip(operand) is InvocationExpressionSyntax)
         {
-            if (Effects(child, moved))
-            {
-                return true;
-            }
+            return Cut(operand.ToString());
         }
-        return false;
+        // A parenthesized expression has no operation of its own, such as
+        // a ?: in an interpolation hole.
+        var operation = _model.GetOperation(TernaryChain.Strip(operand));
+        if (operation == null)
+        {
+            return Cut(operand.ToString());
+        }
+        var first = FirstEffect(operation, moved);
+        if (first == null)
+        {
+            return Cut(operand.ToString());
+        }
+        var name = Cut(first.Syntax.ToString());
+        var owner = OperatorOwner(first);
+        if (owner != null)
+        {
+            name += " (an operator of " + owner.ToDisplayString() + ")";
+        }
+        return name;
+    }
+
+    /// The type that declares the user-defined operator the operation
+    /// calls, or null for any other operation.
+    static INamedTypeSymbol OperatorOwner(IOperation operation)
+    {
+        switch (operation)
+        {
+            case IBinaryOperation { OperatorMethod: not null } binary:
+                return binary.OperatorMethod.ContainingType;
+            case IUnaryOperation { OperatorMethod: not null } unary:
+                return unary.OperatorMethod.ContainingType;
+            case IConversionOperation { OperatorMethod: not null } conversion:
+                return conversion.OperatorMethod.ContainingType;
+            default:
+                return null;
+        }
+    }
+
+    /// The text on one line, cut to about 60 characters for a queue entry.
+    public static string Cut(string text)
+    {
+        var line = System.Text.RegularExpressions.Regex.Replace(
+            text, @"\s*\r?\n\s*", " ");
+        if (line.Length <= 60)
+        {
+            return line;
+        }
+        return line.Substring(0, 57) + "...";
     }
 
     /// Must a receiver go into a temporary before its null check? A second

@@ -1,0 +1,270 @@
+A comparison whose operator is a user-defined one that isn't lifted moves
+into a temporary: the original calls that operator with the null of a null
+receiver, and Gauge's "==(int?, Gauge)", "!=" and "<" say what that gives,
+not the fixed translation. A lifted operator, which a null never reaches,
+the == of string, .NET and a Unity object and the == of a Nullable tuple,
+which is false for a null before any element is compared, keep their
+translations.
+=== input
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public struct Gauge
+    {
+        public int V;
+
+        public static bool operator ==(int? a, Gauge b)
+        {
+            return !a.HasValue || a.Value == b.V;
+        }
+
+        public static bool operator !=(int? a, Gauge b)
+        {
+            return !(a == b);
+        }
+
+        public static bool operator <(int? a, Gauge b)
+        {
+            return !a.HasValue || a.Value < b.V;
+        }
+
+        public static bool operator >(int? a, Gauge b)
+        {
+            return a.HasValue && a.Value > b.V;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public struct Span
+    {
+        public int V;
+
+        public static bool operator ==(Span a, Span b)
+        {
+            return a.V == b.V;
+        }
+
+        public static bool operator !=(Span a, Span b)
+        {
+            return a.V != b.V;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class Holder
+    {
+        public int Count;
+        public Span Gap;
+        public string Label;
+        public Type Kind;
+        public GameObject Go;
+        public (int, int) Pair;
+    }
+
+    public class C
+    {
+        public bool Run(Holder h, Gauge g, Span s, (int, int) t)
+        {
+            bool same = h?.Count == g;
+            bool apart = h?.Count != g;
+            bool less = h?.Count < g;
+            bool gap = h?.Gap == s;
+            bool label = h?.Label == "x";
+            bool kind = h?.Kind == typeof(int);
+            bool gone = h?.Go == null;
+            bool pair = h?.Pair == t;
+            return same && apart && less && gap && label && kind && gone
+                && pair;
+        }
+    }
+}
+=== output
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public struct Gauge
+    {
+        public int V;
+
+        public static bool operator ==(int? a, Gauge b)
+        {
+            return !a.HasValue || a.Value == b.V;
+        }
+
+        public static bool operator !=(int? a, Gauge b)
+        {
+            return !(a == b);
+        }
+
+        public static bool operator <(int? a, Gauge b)
+        {
+            return !a.HasValue || a.Value < b.V;
+        }
+
+        public static bool operator >(int? a, Gauge b)
+        {
+            return a.HasValue && a.Value > b.V;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public struct Span
+    {
+        public int V;
+
+        public static bool operator ==(Span a, Span b)
+        {
+            return a.V == b.V;
+        }
+
+        public static bool operator !=(Span a, Span b)
+        {
+            return a.V != b.V;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class Holder
+    {
+        public int Count;
+        public Span Gap;
+        public string Label;
+        public Type Kind;
+        public GameObject Go;
+        public (int, int) Pair;
+    }
+
+    public class C
+    {
+        public bool Run(Holder h, Gauge g, Span s, (int, int) t)
+        {
+            int? count = null;
+            if (h != null)
+            {
+                count = h.Count;
+            }
+            bool same = count == g;
+            int? count2 = null;
+            if (h != null)
+            {
+                count2 = h.Count;
+            }
+            bool apart = count2 != g;
+            int? count3 = null;
+            if (h != null)
+            {
+                count3 = h.Count;
+            }
+            bool less = count3 < g;
+            bool gap = h != null && h.Gap == s;
+            bool label = h != null && h.Label == "x";
+            bool kind = h != null && h.Kind == typeof(int);
+            bool gone = h == null || h.Go == null;
+            bool pair = h != null && h.Pair == t;
+            return same && apart && less && gap && label && kind && gone
+                && pair;
+        }
+    }
+}

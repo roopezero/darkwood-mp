@@ -3,10 +3,10 @@ in a loop condition, a when clause and the right side of &&, where no
 statement can go. It is put in parentheses where the code around it would
 bind it another way. A receiver that isn't a local goes into a temporary in
 front of the statement first, where that is allowed, and goes to the queue
-where it isn't. A compared value that may have effects or be null, == null
-on a member of a value type, a member whose type has an == of its own and a
-chain take a temporary instead, and a comparison that can't take either
-goes to the queue.
+where it isn't. A compared value that may have effects or be null (a
+property or a field too, not only a call), == null on a member of a value
+type, a member whose type has an == of its own and a chain take a temporary
+instead, and a comparison that can't take either goes to the queue.
 === input
 namespace N
 {
@@ -155,6 +155,18 @@ namespace N
             }
             return c;
         }
+
+        public bool Capped(Box a)
+        {
+            bool same = a?.Count == Cap;
+            bool floor = a?.Count == _floor;
+            bool less = a?.Count < Cap;
+            return same && floor && less;
+        }
+
+        int _floor;
+
+        int Cap => _floor + 1;
     }
 }
 === output
@@ -340,6 +352,33 @@ namespace N
             }
             return c;
         }
+
+        public bool Capped(Box a)
+        {
+            int? count = null;
+            if (a != null)
+            {
+                count = a.Count;
+            }
+            bool same = count == Cap;
+            int? count2 = null;
+            if (a != null)
+            {
+                count2 = a.Count;
+            }
+            bool floor = count2 == _floor;
+            int? count3 = null;
+            if (a != null)
+            {
+                count3 = a.Count;
+            }
+            bool less = count3 < Cap;
+            return same && floor && less;
+        }
+
+        int _floor;
+
+        int Cap => _floor + 1;
     }
 }
 === queue
