@@ -6,12 +6,17 @@ static class RuleRegistry
 {
     public static Rule Find(string name)
     {
-        if (name == "probe-return")
+        switch (name)
         {
-            return new ProbeReturnRule(ProbeForm.Correct);
+            case "probe-return":
+                return new ProbeReturnRule(ProbeForm.Correct);
+            case "ternary-direct":
+                return new TernaryDirectRule();
+            default:
+                return null;
         }
-        return null;
     }
 
-    public static string Names => "probe-return (the tool's own test rule)";
+    public static string Names =>
+        "ternary-direct, probe-return (the tool's own test rule)";
 }

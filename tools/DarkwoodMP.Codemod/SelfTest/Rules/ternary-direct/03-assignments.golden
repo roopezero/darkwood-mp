@@ -1,0 +1,240 @@
+Assignments. The target is written in each branch, and the condition now
+runs before the target's parts (hazard 2): with a condition that has
+effects, a parameter, a readonly field or a type in front of the member is
+fine and a mutable field is not; with one that has none, a call in the
+target is not. A compound assignment reads its target first (hazard 3), so
+nothing in it may be a call. A string in the target is there once per
+branch, which the manifest records. A target with another operator would
+have it twice, so it goes to the queue; the right side of ??= runs only
+sometimes and is left.
+=== input
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public class Box
+    {
+        public int Size;
+        public static int Shared;
+    }
+
+    public class C
+    {
+        int _n;
+        readonly Box _box = new Box();
+        Box _other = new Box();
+        int[] _cells = new int[4];
+        Dictionary<string, object> _map = new Dictionary<string, object>();
+
+        public int Prop { get; set; }
+
+        Box Get()
+        {
+            return _other;
+        }
+
+        bool Bump()
+        {
+            _n++;
+            return _n > 1;
+        }
+
+        int Index()
+        {
+            return 0;
+        }
+
+        public void Rewritten(bool c, int i, Box local)
+        {
+            int x;
+            x = c ? 1 : 2;
+            _n = c ? i : 0;
+            Prop = c ? i : 0;
+            _ = c ? i : 0;
+            this._n = c ? 1 : 2;
+            local.Size = Bump() ? 1 : 2;
+            _box.Size = Bump() ? 1 : 2;
+            Box.Shared = Bump() ? 1 : 2;
+            _cells[i] = c ? 1 : 2;
+            _map["key"] = c ? "a" : i > 0 ? "b" : (object)i;
+            x += c ? 1 : 2;
+            _n -= c ? i : 1; // stays on the first line
+        }
+
+        public void Queued(bool c, int i)
+        {
+            int x = 0;
+            _other.Size = Bump() ? 1 : 2;
+            Get().Size = c ? 1 : 2;
+            _cells[Index()] = c ? 1 : 2;
+            _n += Bump() ? 1 : 2;
+            x += c ? Index() : 2;
+            _cells[i > 0 ? 1 : 0] = c ? 1 : 2;
+            _other ??= c ? new Box() : null;
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public class Box
+    {
+        public int Size;
+        public static int Shared;
+    }
+
+    public class C
+    {
+        int _n;
+        readonly Box _box = new Box();
+        Box _other = new Box();
+        int[] _cells = new int[4];
+        Dictionary<string, object> _map = new Dictionary<string, object>();
+
+        public int Prop { get; set; }
+
+        Box Get()
+        {
+            return _other;
+        }
+
+        bool Bump()
+        {
+            _n++;
+            return _n > 1;
+        }
+
+        int Index()
+        {
+            return 0;
+        }
+
+        public void Rewritten(bool c, int i, Box local)
+        {
+            int x;
+            if (c)
+            {
+                x = 1;
+            }
+            else
+            {
+                x = 2;
+            }
+            if (c)
+            {
+                _n = i;
+            }
+            else
+            {
+                _n = 0;
+            }
+            if (c)
+            {
+                Prop = i;
+            }
+            else
+            {
+                Prop = 0;
+            }
+            if (c)
+            {
+                _ = i;
+            }
+            else
+            {
+                _ = 0;
+            }
+            if (c)
+            {
+                this._n = 1;
+            }
+            else
+            {
+                this._n = 2;
+            }
+            if (Bump())
+            {
+                local.Size = 1;
+            }
+            else
+            {
+                local.Size = 2;
+            }
+            if (Bump())
+            {
+                _box.Size = 1;
+            }
+            else
+            {
+                _box.Size = 2;
+            }
+            if (Bump())
+            {
+                Box.Shared = 1;
+            }
+            else
+            {
+                Box.Shared = 2;
+            }
+            if (c)
+            {
+                _cells[i] = 1;
+            }
+            else
+            {
+                _cells[i] = 2;
+            }
+            if (c)
+            {
+                _map["key"] = "a";
+            }
+            else if (i > 0)
+            {
+                _map["key"] = "b";
+            }
+            else
+            {
+                _map["key"] = (object)i;
+            }
+            if (c)
+            {
+                x += 1;
+            }
+            else
+            {
+                x += 2;
+            }
+            if (c) // stays on the first line
+            {
+                _n -= i;
+            }
+            else
+            {
+                _n -= 1;
+            }
+        }
+
+        public void Queued(bool c, int i)
+        {
+            int x = 0;
+            _other.Size = Bump() ? 1 : 2;
+            Get().Size = c ? 1 : 2;
+            _cells[Index()] = c ? 1 : 2;
+            _n += Bump() ? 1 : 2;
+            x += c ? Index() : 2;
+            _cells[i > 0 ? 1 : 0] = c ? 1 : 2;
+            _other ??= c ? new Box() : null;
+        }
+    }
+}
+=== queue
+58: the hoisted code has effects and a mutable value is read earlier: _other
+59: a call runs earlier in the statement: Get()
+60: a call runs earlier in the statement: Index()
+61: the hoisted code has effects and a mutable value is read earlier: _n
+62: a compound assignment with a call in it
+63: the target holds another operator, which would be written twice

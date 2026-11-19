@@ -106,28 +106,77 @@ sealed class RulePlan
         string text,
         StringChange strings = null)
     {
+        ProposeStatement(sites, target, target.Span, text, strings);
+    }
+
+    /// The same for a span that starts with the statement and can take in
+    /// the comment behind it on its line, which the new text then places.
+    public void ProposeStatement(
+        IReadOnlyList<SyntaxNode> sites,
+        StatementSyntax target,
+        TextSpan span,
+        string text,
+        StringChange strings = null)
+    {
         if (target.Parent is not BlockSyntax
             && target.Parent is not SwitchSectionSyntax)
         {
             QueueAll(sites, "the statement isn't in a block or switch section");
             return;
         }
-        ProposeSpan(sites, target.Span, text, strings);
+        if (span.Start != target.SpanStart || span.End < target.Span.End)
+        {
+            throw new Stop(
+                $"{File}: rule {RuleName} proposed a span that doesn't start "
+                    + $"with its statement: {target}");
+        }
+        ProposeSpan(sites, span, text, strings);
     }
 
-    /// Replace any span, such as an expression body with a block.
+    /// Replace any span, such as an expression body with a block. The old and
+    /// the new text are checked as statements.
     public void ProposeSpan(
         IReadOnlyList<SyntaxNode> sites,
         TextSpan span,
         string text,
         StringChange strings = null)
     {
+        Offer(sites, span, text, strings, StatementFragment);
+    }
+
+    /// Replace a whole member, such as a property whose expression body
+    /// becomes an accessor with a block, and maybe the comment behind it on
+    /// its line. An accessor list doesn't parse as statements, so the old and
+    /// the new text are checked as members of a type.
+    public void ProposeMember(
+        IReadOnlyList<SyntaxNode> sites,
+        MemberDeclarationSyntax member,
+        TextSpan span,
+        string text,
+        StringChange strings = null)
+    {
+        if (span.Start != member.SpanStart || span.End < member.Span.End)
+        {
+            throw new Stop(
+                $"{File}: rule {RuleName} proposed a span that doesn't start "
+                    + $"with its member: {member}");
+        }
+        Offer(sites, span, text, strings, MemberFragment);
+    }
+
+    void Offer(
+        IReadOnlyList<SyntaxNode> sites,
+        TextSpan span,
+        string text,
+        StringChange strings,
+        Func<string, CSharpParseOptions, SyntaxNode> fragment)
+    {
         foreach (var site in sites)
         {
             Report(site);
         }
         var before = _text.Substring(span.Start, span.Length);
-        var refused = Refusal(before, text);
+        var refused = Refusal(before, text, fragment);
         if (refused != null)
         {
             Enqueue(sites, refused);
@@ -192,11 +241,14 @@ sealed class RulePlan
     /// Why a replacement is refused without compiling it: it doesn't parse,
     /// loses a comment, or adds a lambda or local function, which would add a
     /// stack frame around code the game's stack readers look at.
-    string Refusal(string before, string text)
+    string Refusal(
+        string before,
+        string text,
+        Func<string, CSharpParseOptions, SyntaxNode> fragment)
     {
         var parse = (CSharpParseOptions)Tree.Options;
-        var old = Fragment(before, parse);
-        var fresh = Fragment(text, parse);
+        var old = fragment(before, parse);
+        var fresh = fragment(text, parse);
         if (fresh.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
         {
             return "the rewrite doesn't parse";
@@ -216,10 +268,16 @@ sealed class RulePlan
         return null;
     }
 
-    static SyntaxNode Fragment(string text, CSharpParseOptions parse)
+    static SyntaxNode StatementFragment(string text, CSharpParseOptions parse)
     {
         var block = "{\n" + text + "\n}";
         return CSharpSyntaxTree.ParseText(block, parse).GetRoot();
+    }
+
+    static SyntaxNode MemberFragment(string text, CSharpParseOptions parse)
+    {
+        var type = "class Fragment\n{\n" + text + "\n}";
+        return CSharpSyntaxTree.ParseText(type, parse).GetRoot();
     }
 
     static int Frames(SyntaxNode node)

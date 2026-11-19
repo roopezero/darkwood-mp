@@ -1,0 +1,135 @@
+Lambdas and edits inside edits. A lambda whose body is a ?: gets a block
+with the return form; one whose body assigns, for an Action, gets a block
+that assigns. An edit inside another is made in the same run: a lambda in a
+branch of a rewritten declaration, a rewritten statement in the body of an
+if whose condition is rewritten. An expression tree can't hold a block, so
+that rewrite doesn't compile and goes to the queue.
+=== input
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+
+namespace N
+{
+    public class C
+    {
+        int _n;
+
+        public object Lambdas(bool c, List<int> items)
+        {
+            Func<int, string> name = i => i > 0 ? "plus" : "minus";
+            Func<int, int, int> pick = (a, b) => a > b ? a : b;
+            Action<int> store = i => _n = i > 0 ? i : 0;
+            var picked = c ? items.Select(i => i > 1 ? i : 1).ToList() : null;
+            var deep = items.Select(i => items.Where(j => j > i ? c : !c).Count());
+            Expression<Func<int, int>> tree = i => i > 0 ? 1 : 2;
+            return name(1) + pick(1, 2) + picked + deep + tree;
+        }
+
+        public int Nested(bool c, int i)
+        {
+            if (c ? i > 0 : i < 0)
+            {
+                var sign = i > 0 ? 1 : -1;
+                return c ? sign : -sign;
+            }
+            return 0;
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+
+namespace N
+{
+    public class C
+    {
+        int _n;
+
+        public object Lambdas(bool c, List<int> items)
+        {
+            Func<int, string> name = i =>
+            {
+                if (i > 0)
+                {
+                    return "plus";
+                }
+                return "minus";
+            };
+            Func<int, int, int> pick = (a, b) =>
+            {
+                if (a > b)
+                {
+                    return a;
+                }
+                return b;
+            };
+            Action<int> store = i =>
+            {
+                if (i > 0)
+                {
+                    _n = i;
+                }
+                else
+                {
+                    _n = 0;
+                }
+            };
+            List<int> picked = null;
+            if (c)
+            {
+                picked = items.Select(i =>
+                {
+                    if (i > 1)
+                    {
+                        return i;
+                    }
+                    return 1;
+                }).ToList();
+            }
+            var deep = items.Select(i => items.Where(j =>
+            {
+                if (j > i)
+                {
+                    return c;
+                }
+                return !c;
+            }).Count());
+            Expression<Func<int, int>> tree = i => i > 0 ? 1 : 2;
+            return name(1) + pick(1, 2) + picked + deep + tree;
+        }
+
+        public int Nested(bool c, int i)
+        {
+            bool condition;
+            if (c)
+            {
+                condition = i > 0;
+            }
+            else
+            {
+                condition = i < 0;
+            }
+            if (condition)
+            {
+                int sign = -1;
+                if (i > 0)
+                {
+                    sign = 1;
+                }
+                if (c)
+                {
+                    return sign;
+                }
+                return -sign;
+            }
+            return 0;
+        }
+    }
+}
+=== queue
+19: a lambda that becomes an expression tree, which can't hold a block

@@ -116,6 +116,50 @@ the game's stack readers would see the extra frame. `DIR` gets:
   rewritten + queued + later and the sites after are exactly those not
   rewritten. `census --operators` prints the number of sites left per operator.
 
+A rule can plan edits that sit inside each other, such as a lambda whose body
+it rewrites in a branch of a `?:` it rewrites too (`Rules/NestedEdits.cs`).
+Only the outermost edit is proposed, with the texts of the inner ones in place
+and all of their sites, so one run does both. A statement's edit may take in
+the comment behind it on its line, so that the new text can keep it on its
+first line.
+
+### ternary-direct (stage 3)
+
+A `?:` that is the whole value of its context becomes `if`/`else`
+(codemod.md section 7.1), with a `?:` in a branch as an `else if` or an `if`
+inside the branch:
+
+- a declaration: `T x; if (c) { x = a; } else { x = b; }`, or
+  `T x = k; if (c) { x = a; }` when the last value is a literal and `T` is
+  the natural type. `var` is spelled out, and the spelling must bind back to
+  the same type;
+- an assignment, the target written in each branch. The condition then runs
+  before the target's parts, so they go through `Purity` (hazard 2). A
+  compound assignment reads its target first, so nothing in it may be a call
+  (hazard 3). A string constant in the target is there once per branch, and
+  the manifest records it;
+- a return: `if (c) { return a; } return b;`; a `throw` branch becomes a
+  throw statement;
+- an expression body of a method, accessor, operator or local function (a
+  block), of a property or an indexer (a get accessor), or of a lambda (a
+  block). A void member or an `Action` whose body assigns gets a block that
+  assigns on every path;
+- an `if` condition (not an `else if`) or a `foreach` source, through a
+  temporary of the natural type in front of the statement.
+
+Each value keeps the natural type: where the target's type differs, a branch
+of another type is cast to it first (hazard 1), and so is one that takes its
+type from where it is written (`default`, `new()`, a lambda). Nothing is
+hoisted out of an argument, an operand or an interpolation hole: those, the
+right of `&&`, `||`, `??` and `??=`, and initializers are left for later rules.
+The queue gets several declarators, `const`, `using` and `ref` declarations,
+anonymous types, ref `?:`, a constant condition, a directive or a comment on
+`?` or `:` inside the statement, a branch declaring a variable whose name is
+used outside it, a nested `?:` of another type, a target that holds another
+operator or a lambda, an expression tree, an assignment that is its body's
+value, `else if`, loop and `for` conditions, switch expression arms and field
+or property initializers.
+
 The proof of a rule's commit:
 
 ```bash
@@ -193,5 +237,13 @@ folder, it makes the writing of a stage's files fail (a read-only file, a
 read-only folder, a replace that fails at the start or part of the way through)
 and checks what is left behind (`SelfTest/OutputFilesCases.cs`).
 
+An operator rule's cases are in `SelfTest/Rules/<rule>/*.golden`: an
+`=== input` section in the layout stage's form, the file the rule must make of
+it in `=== output`, and the sites it must leave in the queue in `=== queue`,
+one `line: reason` each. For every case the self test also checks that a
+second run of the rule changes nothing and that the IL diff of the input and
+the output passes with the rule's own manifest.
+
 To add a case, write the `=== input` section, read the output of
-`selftest --show NAME` line by line, and only then save it as the expected text.
+`selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case), and
+only then save it as the expected text.

@@ -1,0 +1,313 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Text;
+
+namespace DarkwoodMP.Codemod.Rules;
+
+/// The checks that decide whether a ?: may be rewritten, and what the
+/// rewrite must keep: the natural type, the scope of declared variables and
+/// the string constants of a target written twice.
+sealed partial class TernarySite
+{
+    /// The target is written by every branch but a throw, so its string
+    /// constants are in the code once per such branch instead of once.
+    List<string> Copies(ExpressionSyntax target)
+    {
+        var strings = new List<string>();
+        Constants(target, strings);
+        int writes = TernaryChain.Leaves(_chain)
+            .Count(leaf =>
+                TernaryChain.Strip(leaf) is not ThrowExpressionSyntax);
+        var added = new List<string>();
+        for (int i = 1; i < writes; i++)
+        {
+            added.AddRange(strings);
+        }
+        return added;
+    }
+
+    /// The strings the compiler loads for this code: each largest constant
+    /// string expression in it, such as "key" or a const field.
+    void Constants(SyntaxNode node, List<string> into)
+    {
+        if (node is ExpressionSyntax expression
+            && _model.GetConstantValue(expression) is
+            {
+                HasValue: true,
+                Value: string text,
+            })
+        {
+            into.Add(text);
+            return;
+        }
+        foreach (var child in node.ChildNodes())
+        {
+            Constants(child, into);
+        }
+    }
+
+    /// The target is written once per branch, so it must be a name, a member
+    /// or an element, and hold nothing that would then be there twice.
+    static string Target(ExpressionSyntax target)
+    {
+        if (target is not IdentifierNameSyntax
+            && !target.IsKind(SyntaxKind.SimpleMemberAccessExpression)
+            && target is not ElementAccessExpressionSyntax)
+        {
+            return "the target is not a name, a member or an element";
+        }
+        foreach (var node in target.DescendantNodesAndSelf())
+        {
+            if (OperatorCount.KindOf(node) != null)
+            {
+                return "the target holds another operator, which would be "
+                    + "written twice";
+            }
+            if (node is AnonymousFunctionExpressionSyntax)
+            {
+                return "the target holds a lambda, which would be written "
+                    + "twice";
+            }
+        }
+        return null;
+    }
+
+    /// The checks every rewrite needs. Span is what the rewrite builds anew,
+    /// so trivia in it that isn't a comment would be lost without the
+    /// engine's comment check seeing it.
+    string Common(TextSpan span)
+    {
+        foreach (var site in _chain)
+        {
+            if (TernaryChain.Strip(site.WhenTrue) is RefExpressionSyntax
+                || TernaryChain.Strip(site.WhenFalse) is RefExpressionSyntax)
+            {
+                return "a ref ?:";
+            }
+            if (_model.GetConstantValue(site.Condition).HasValue)
+            {
+                return "the condition is a constant: an if would leave "
+                    + "unreachable code";
+            }
+            if (!Same(_model.GetTypeInfo(site).Type, _natural))
+            {
+                return "a nested ?: has a type of its own";
+            }
+        }
+        var root = _plan.Root;
+        foreach (var trivia in root.DescendantTrivia(span))
+        {
+            if ((trivia.IsDirective
+                    || trivia.IsKind(SyntaxKind.DisabledTextTrivia))
+                && span.Contains(trivia.Span))
+            {
+                return "a preprocessor directive inside the statement";
+            }
+        }
+        return Narrowed();
+    }
+
+    /// A variable declared in a branch (out var, a pattern) is in scope in
+    /// the whole block today, and after the rewrite only in its own if or
+    /// statement. A name outside that part could then mean something else,
+    /// such as a field, so no other token may spell it.
+    string Narrowed()
+    {
+        var leaves = TernaryChain.Leaves(_chain);
+        var region = _site.Ancestors().FirstOrDefault(node =>
+            node is BlockSyntax
+            || node is ArrowExpressionClauseSyntax
+            || node is AnonymousFunctionExpressionSyntax);
+        if (region == null)
+        {
+            region = _plan.Root;
+        }
+        foreach (var branch in new[] { _site.WhenTrue, _site.WhenFalse })
+        {
+            foreach (var declared in Designations(branch))
+            {
+                var home = Home(declared, leaves);
+                var name = declared.Identifier.ValueText;
+                foreach (var token in region.DescendantTokens())
+                {
+                    if (token.IsKind(SyntaxKind.IdentifierToken)
+                        && token.ValueText == name
+                        && (home == null || !home.Span.Contains(token.Span)))
+                    {
+                        return "a branch declares " + name + ", which is "
+                            + "also named outside its branch";
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /// The part of the chain a declared variable stays in scope in: its
+    /// branch, or the nested ?: whose condition declares it.
+    SyntaxNode Home(SyntaxNode declared, List<ExpressionSyntax> leaves)
+    {
+        foreach (var node in declared.Ancestors())
+        {
+            if (node is ExpressionSyntax value && leaves.Contains(value))
+            {
+                return node;
+            }
+            if (node is ConditionalExpressionSyntax nested
+                && _chain.Contains(nested)
+                && nested.Condition.Span.Contains(declared.Span))
+            {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    /// The variables an expression declares (out var, a pattern, a
+    /// deconstruction), apart from those of a lambda or local function in it.
+    static IEnumerable<SingleVariableDesignationSyntax> Designations(
+        ExpressionSyntax expression)
+    {
+        return expression
+            .DescendantNodesAndSelf(node =>
+                node is not AnonymousFunctionExpressionSyntax
+                && node is not LocalFunctionStatementSyntax)
+            .OfType<SingleVariableDesignationSyntax>();
+    }
+
+    static bool Declares(ExpressionSyntax expression)
+    {
+        return Designations(expression).Any();
+    }
+
+    /// Which branches need a cast to keep the natural type (hazard 1). sink
+    /// is the type each value is stored or returned as; null means the
+    /// operator decides, as in a compound assignment, so every branch of
+    /// another type needs one. A ?: with no natural type is target-typed:
+    /// each branch is already converted straight to the target.
+    string CastsFor(ITypeSymbol sink, int position, out Casts casts)
+    {
+        casts = Casts.None;
+        if (_natural == null || (sink != null && Same(sink, _natural)))
+        {
+            return null;
+        }
+        var leaves = new HashSet<SyntaxNode>();
+        foreach (var leaf in TernaryChain.Leaves(_chain))
+        {
+            var bare = TernaryChain.Strip(leaf);
+            if (bare is ThrowExpressionSyntax
+                || NullToReference(bare, sink))
+            {
+                continue;
+            }
+            if (!TargetTyped(bare)
+                && Same(_model.GetTypeInfo(bare).Type, _natural))
+            {
+                continue;
+            }
+            leaves.Add(leaf);
+        }
+        if (leaves.Count == 0)
+        {
+            return null;
+        }
+        var type = Spell(_natural, position, out var refused);
+        if (type == null)
+        {
+            return refused;
+        }
+        casts = new Casts(leaves, type);
+        return null;
+    }
+
+    /// True for a value whose type comes from where it is written: default,
+    /// new(), a collection or switch expression, a lambda, or a tuple with
+    /// one of them or a null in it. Roslyn reports the type it was converted
+    /// to, the natural type, but written as "o = default" it would take the
+    /// target's type instead and box null where the ?: boxed 0.
+    static bool TargetTyped(ExpressionSyntax value)
+    {
+        switch (value)
+        {
+            case LiteralExpressionSyntax literal:
+                return literal.IsKind(SyntaxKind.DefaultLiteralExpression)
+                    || literal.IsKind(SyntaxKind.NullLiteralExpression);
+            case ImplicitObjectCreationExpressionSyntax:
+            case CollectionExpressionSyntax:
+            case SwitchExpressionSyntax:
+            case AnonymousFunctionExpressionSyntax:
+            case ConditionalExpressionSyntax:
+                return true;
+            case TupleExpressionSyntax tuple:
+                return tuple.Arguments.Any(
+                    a => TargetTyped(TernaryChain.Strip(a.Expression)));
+            default:
+                return false;
+        }
+    }
+
+    /// null or default is a null reference both ways when the natural type
+    /// and the target are reference types.
+    bool NullToReference(ExpressionSyntax value, ITypeSymbol sink)
+    {
+        bool nullish = value.IsKind(SyntaxKind.NullLiteralExpression)
+            || value.IsKind(SyntaxKind.DefaultLiteralExpression);
+        return nullish && sink != null && sink.IsReferenceType
+            && _natural.IsReferenceType;
+    }
+
+    /// The type as written at this place in the file, or null and why it
+    /// can't be. The text must bind back to the same type there.
+    string Spell(ITypeSymbol type, int position, out string refused)
+    {
+        refused = null;
+        if (type == null || type.TypeKind == TypeKind.Error)
+        {
+            refused = "the ?: has no type of its own";
+            return null;
+        }
+        if (HasAnonymous(type))
+        {
+            refused = "an anonymous type, which can't be written";
+            return null;
+        }
+        var text = type.ToMinimalDisplayString(_model, position);
+        var written = SyntaxFactory.ParseTypeName(text);
+        var bound = _model.GetSpeculativeTypeInfo(
+            position, written, SpeculativeBindingOption.BindAsTypeOrNamespace);
+        if (!SymbolEqualityComparer.Default.Equals(bound.Type, type))
+        {
+            refused = "its type can't be written here: " + text;
+            return null;
+        }
+        return text;
+    }
+
+    static bool HasAnonymous(ITypeSymbol type)
+    {
+        switch (type)
+        {
+            case IArrayTypeSymbol array:
+                return HasAnonymous(array.ElementType);
+            case IPointerTypeSymbol pointer:
+                return HasAnonymous(pointer.PointedAtType);
+            case INamedTypeSymbol named:
+                return named.IsAnonymousType
+                    || named.TypeArguments.Any(HasAnonymous);
+            default:
+                return false;
+        }
+    }
+
+    static bool Same(ITypeSymbol a, ITypeSymbol b)
+    {
+        return SymbolEqualityComparer.Default.Equals(a, b);
+    }
+
+    List<SyntaxNode> Sites()
+    {
+        return _chain.Cast<SyntaxNode>().ToList();
+    }
+}

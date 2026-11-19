@@ -44,6 +44,28 @@ static class SelfTestCommand
         }
         Console.WriteLine(
             $"{files.Count - failed} of {files.Count} golden cases passed.");
+        var ruleFiles = RuleGoldenCases.Files(RepoPaths.Find().Root);
+        int ruleFailed = 0;
+        foreach (var file in ruleFiles)
+        {
+            var problems = RuleGoldenCases.Failures(file);
+            var name = RuleGoldenCases.NameOf(file);
+            if (problems.Count == 0)
+            {
+                Console.WriteLine("ok    " + name);
+                continue;
+            }
+            ruleFailed++;
+            Console.WriteLine("FAIL  " + name);
+            foreach (var problem in problems)
+            {
+                Console.WriteLine(problem);
+            }
+        }
+        Console.WriteLine(
+            $"{ruleFiles.Count - ruleFailed} of {ruleFiles.Count} rule golden "
+                + "cases passed.");
+        failed += ruleFailed;
         var accepted = BracedCodeCases.Failures();
         accepted.AddRange(LayoutCheckCases.Failures());
         accepted.AddRange(IlDiffCases.Failures());
@@ -74,8 +96,16 @@ static class SelfTestCommand
 
     /// Prints a case's file as it would look with the actual outputs, for
     /// reading in a review, or for writing an expected output once it is read.
+    /// A rule's case is named "rule/case".
     static int Show(string folder, string name)
     {
+        var ruleCase = RuleGoldenCases.Files(RepoPaths.Find().Root)
+            .FirstOrDefault(f => RuleGoldenCases.NameOf(f) == name);
+        if (ruleCase != null)
+        {
+            Console.Write(RuleGoldenCases.Show(ruleCase));
+            return 0;
+        }
         var golden = GoldenCase.Read(Path.Combine(folder, name + ".golden"));
         var braces = Passes.Braces(golden.Input, SnippetCompiler.Parse);
         var layout = Passes.Layout(braces, SnippetCompiler.Parse);

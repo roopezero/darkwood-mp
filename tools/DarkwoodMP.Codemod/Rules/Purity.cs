@@ -32,7 +32,14 @@ sealed class Purity
         {
             return MayNotRun + ": " + context;
         }
-        var earlier = Earlier(expression, statement);
+        return WhyNotBefore(expression, Earlier(expression, statement));
+    }
+
+    /// Null when the expression may run before these operands, which ran
+    /// before it, otherwise the reason it may not.
+    public string WhyNotBefore(
+        ExpressionSyntax expression, IReadOnlyList<ExpressionSyntax> earlier)
+    {
         if (!HasEffects(expression))
         {
             foreach (var operand in earlier)
@@ -192,22 +199,31 @@ sealed class Purity
     static void AddTarget(
         AssignmentExpressionSyntax assignment, List<ExpressionSyntax> earlier)
     {
+        earlier.AddRange(TargetParts(assignment));
+    }
+
+    /// What an assignment evaluates of its target before its right side.
+    public static List<ExpressionSyntax> TargetParts(
+        AssignmentExpressionSyntax assignment)
+    {
+        var parts = new List<ExpressionSyntax>();
         if (!assignment.IsKind(SyntaxKind.SimpleAssignmentExpression))
         {
-            earlier.Add(assignment.Left);
-            return;
+            parts.Add(assignment.Left);
+            return parts;
         }
         switch (assignment.Left)
         {
             case MemberAccessExpressionSyntax member:
-                earlier.Add(member.Expression);
+                parts.Add(member.Expression);
                 break;
             case ElementAccessExpressionSyntax element:
-                earlier.Add(element.Expression);
-                earlier.AddRange(
+                parts.Add(element.Expression);
+                parts.AddRange(
                     element.ArgumentList.Arguments.Select(a => a.Expression));
                 break;
         }
+        return parts;
     }
 
     static void AddArguments(

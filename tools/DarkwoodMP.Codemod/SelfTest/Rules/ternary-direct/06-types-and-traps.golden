@@ -1,0 +1,242 @@
+Types and traps. Each value keeps the natural type of the ?:: where the
+target's type differs, a branch of another type is cast to it first
+(hazard 1), but a null stays as it is between reference types. Queued: a
+constant condition (an if would leave dead code), a directive inside the
+statement, a comment on ? or :, a branch declaring a name used elsewhere,
+a nested ?: of another type and a field or property initializer (hazard 7:
+a helper, never a static constructor). Left for later rules: arguments,
+operands, interpolation holes, the right of && and ??, an initializer and
+wire flags. A method that reads the stack is rewritten in place, with no
+helper, so no frame is added.
+=== input
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public int Size;
+    }
+
+    public class C
+    {
+        static readonly int Limit = Environment.ProcessorCount > 4 ? 8 : 4;
+        public int Prop { get; } = Environment.ProcessorCount > 2 ? 1 : 0;
+        int _n;
+
+        public object Natural(bool c, int i, string s)
+        {
+            object o = c ? 1 : 2.0;
+            object neg = c ? -1 : 2.5;
+            object none = c ? s : null;
+            object zero = c ? 5 : default;
+            double d = c ? 1 : 2.0;
+            long sum = 0;
+            sum += c ? i : 2L;
+            Func<object> f = () => c ? 1 : 2.0;
+            return o + "" + neg + none + zero + d + sum + f();
+        }
+
+        public object Mixed(bool c)
+        {
+            return c ? 1 : 2.5;
+        }
+
+        public async Task<object> Later(bool c)
+        {
+            await Task.Yield();
+            return c ? 1 : 2.5;
+        }
+
+        public string Queued(bool c, int i, string s, object o, int x)
+        {
+            var dead = true ? i : 0;
+            var flag = c
+#if DEBUG
+                ? 1
+#else
+                ? 2
+#endif
+                : 3;
+            var noted = c /* why */ ? 1 : 2;
+            var scoped = c ? (o is string x2 ? x2 : s) : s;
+            x2 = "again";
+            object mixed = c ? (i > 0 ? 1 : 2) : 2.5;
+            return dead + flag + noted + scoped + x2 + mixed;
+        }
+
+        public string Later(bool c, int i, string s, Box box)
+        {
+            var text = Math.Max(i, c ? 1 : 2) + $"{(c ? "a" : "b")}";
+            var sum = i + (c ? 1 : 2);
+            var both = c && (i > 0 ? true : false);
+            var either = s ?? (c ? "a" : "b");
+            var made = new Box { Size = c ? 1 : 2 };
+            int flags = (c ? 1 : 0) | (i > 0 ? 2 : 0);
+            return text + sum + both + either + made + flags;
+        }
+
+        public bool CalledFrom(bool c)
+        {
+            var frame = new StackTrace(2, false).GetFrame(0);
+            var name = frame != null ? frame.GetMethod().Name : "";
+            return c ? name.Length > 0 : false;
+        }
+    }
+}
+=== output
+using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public int Size;
+    }
+
+    public class C
+    {
+        static readonly int Limit = Environment.ProcessorCount > 4 ? 8 : 4;
+        public int Prop { get; } = Environment.ProcessorCount > 2 ? 1 : 0;
+        int _n;
+
+        public object Natural(bool c, int i, string s)
+        {
+            object o;
+            if (c)
+            {
+                o = (double)1;
+            }
+            else
+            {
+                o = 2.0;
+            }
+            object neg;
+            if (c)
+            {
+                neg = (double)(-1);
+            }
+            else
+            {
+                neg = 2.5;
+            }
+            object none;
+            if (c)
+            {
+                none = s;
+            }
+            else
+            {
+                none = null;
+            }
+            object zero;
+            if (c)
+            {
+                zero = 5;
+            }
+            else
+            {
+                zero = (int)(default);
+            }
+            double d = 2.0;
+            if (c)
+            {
+                d = 1;
+            }
+            long sum = 0;
+            if (c)
+            {
+                sum += (long)i;
+            }
+            else
+            {
+                sum += 2L;
+            }
+            Func<object> f = () =>
+            {
+                if (c)
+                {
+                    return (double)1;
+                }
+                return 2.0;
+            };
+            return o + "" + neg + none + zero + d + sum + f();
+        }
+
+        public object Mixed(bool c)
+        {
+            if (c)
+            {
+                return (double)1;
+            }
+            return 2.5;
+        }
+
+        public async Task<object> Later(bool c)
+        {
+            await Task.Yield();
+            if (c)
+            {
+                return (double)1;
+            }
+            return 2.5;
+        }
+
+        public string Queued(bool c, int i, string s, object o, int x)
+        {
+            var dead = true ? i : 0;
+            var flag = c
+#if DEBUG
+                ? 1
+#else
+                ? 2
+#endif
+                : 3;
+            var noted = c /* why */ ? 1 : 2;
+            var scoped = c ? (o is string x2 ? x2 : s) : s;
+            x2 = "again";
+            object mixed = c ? (i > 0 ? 1 : 2) : 2.5;
+            return dead + flag + noted + scoped + x2 + mixed;
+        }
+
+        public string Later(bool c, int i, string s, Box box)
+        {
+            var text = Math.Max(i, c ? 1 : 2) + $"{(c ? "a" : "b")}";
+            var sum = i + (c ? 1 : 2);
+            var both = c && (i > 0 ? true : false);
+            var either = s ?? (c ? "a" : "b");
+            var made = new Box { Size = c ? 1 : 2 };
+            int flags = (c ? 1 : 0) | (i > 0 ? 2 : 0);
+            return text + sum + both + either + made + flags;
+        }
+
+        public bool CalledFrom(bool c)
+        {
+            var frame = new StackTrace(2, false).GetFrame(0);
+            string name = "";
+            if (frame != null)
+            {
+                name = frame.GetMethod().Name;
+            }
+            if (c)
+            {
+                return name.Length > 0;
+            }
+            return false;
+        }
+    }
+}
+=== queue
+14: a field initializer: needs a helper method, never a static constructor
+15: a property initializer: needs a helper method
+44: the condition is a constant: an if would leave unreachable code
+45: a preprocessor directive inside the statement
+52: a comment inside the statement would be lost
+53: a branch declares x2, which is also named outside its branch
+53: a branch declares x2, which is also named outside its branch
+55: a nested ?: has a type of its own
+55: a nested ?: has a type of its own

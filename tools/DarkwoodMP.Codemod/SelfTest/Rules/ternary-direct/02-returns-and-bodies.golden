@@ -1,0 +1,227 @@
+Returns and expression bodies. "return c ? a : b;" becomes "if (c) { return
+a; } return b;", nested the same way; a throw branch becomes a throw
+statement. A method, accessor, operator or local function with an
+expression body gets a block; a property or an indexer gets a get accessor.
+A void member whose body assigns gets a block that assigns on every path,
+as a patch's Prefix(out T __state) does. A body whose assignment is its
+value goes to the queue.
+=== input
+using System;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class C
+    {
+        int _x;
+        int[] _items = new int[4];
+
+        public string Return(bool c, int i, string s)
+        {
+            if (i > 9)
+            {
+                return c ? s : i > 5 ? "big" : "small";
+            }
+            if (i > 3)
+            {
+                return c ? (i > 4 ? "a" : "b") : "c"; // a, b or c
+            }
+            return c ? s : throw new ArgumentException("no " + s);
+        }
+
+        public async Task<int> Later(bool c, Task<int> t)
+        {
+            return c ? await t : 0;
+        }
+
+        public int Sign(int i) => i > 0 ? 1 : i < 0 ? -1 : 0;
+
+        public bool Ready => _x > 0 ? _items[0] > 0 : false; // set by Fill
+
+        public int this[int i] => i >= 0 ? _items[i] : -1;
+
+        public int Value
+        {
+            get => _x > 0 ? _x : 0;
+            set => _x = value > 0 ? value : 0;
+        }
+
+        public static C operator +(C a, C b) => a._x > b._x ? a : b;
+
+        public int Local(bool c)
+        {
+            int Pick(int a, int b) => c ? a : b;
+            return Pick(1, 2);
+        }
+
+        public static void Prefix(bool c, out int __state) => __state = c ? 1 : 2;
+
+        public int Assigned(bool c) => _x = c ? 1 : 2;
+
+        public void Element(bool c, int i) => _items[i] = c ? 1 : 2;
+    }
+}
+=== output
+using System;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class C
+    {
+        int _x;
+        int[] _items = new int[4];
+
+        public string Return(bool c, int i, string s)
+        {
+            if (i > 9)
+            {
+                if (c)
+                {
+                    return s;
+                }
+                if (i > 5)
+                {
+                    return "big";
+                }
+                return "small";
+            }
+            if (i > 3)
+            {
+                if (c) // a, b or c
+                {
+                    if (i > 4)
+                    {
+                        return "a";
+                    }
+                    return "b";
+                }
+                return "c";
+            }
+            if (c)
+            {
+                return s;
+            }
+            throw new ArgumentException("no " + s);
+        }
+
+        public async Task<int> Later(bool c, Task<int> t)
+        {
+            if (c)
+            {
+                return await t;
+            }
+            return 0;
+        }
+
+        public int Sign(int i)
+        {
+            if (i > 0)
+            {
+                return 1;
+            }
+            if (i < 0)
+            {
+                return -1;
+            }
+            return 0;
+        }
+
+        public bool Ready // set by Fill
+        {
+            get
+            {
+                if (_x > 0)
+                {
+                    return _items[0] > 0;
+                }
+                return false;
+            }
+        }
+
+        public int this[int i]
+        {
+            get
+            {
+                if (i >= 0)
+                {
+                    return _items[i];
+                }
+                return -1;
+            }
+        }
+
+        public int Value
+        {
+            get
+            {
+                if (_x > 0)
+                {
+                    return _x;
+                }
+                return 0;
+            }
+            set
+            {
+                if (value > 0)
+                {
+                    _x = value;
+                }
+                else
+                {
+                    _x = 0;
+                }
+            }
+        }
+
+        public static C operator +(C a, C b)
+        {
+            if (a._x > b._x)
+            {
+                return a;
+            }
+            return b;
+        }
+
+        public int Local(bool c)
+        {
+            int Pick(int a, int b)
+            {
+                if (c)
+                {
+                    return a;
+                }
+                return b;
+            }
+            return Pick(1, 2);
+        }
+
+        public static void Prefix(bool c, out int __state)
+        {
+            if (c)
+            {
+                __state = 1;
+            }
+            else
+            {
+                __state = 2;
+            }
+        }
+
+        public int Assigned(bool c) => _x = c ? 1 : 2;
+
+        public void Element(bool c, int i)
+        {
+            if (c)
+            {
+                _items[i] = 1;
+            }
+            else
+            {
+                _items[i] = 2;
+            }
+        }
+    }
+}
+=== queue
+51: the assignment is the value of its expression body

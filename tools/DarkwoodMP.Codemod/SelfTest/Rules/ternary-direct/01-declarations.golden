@@ -1,0 +1,207 @@
+Declarations (codemod.md section 7.1). "T x = c ? a : k;" with a literal k
+and T the natural type starts with k; anything else declares, then assigns
+in each branch. var is spelled out, a nested ?: becomes an else-if or an if
+in its branch, and a comment behind the statement stays on its first line.
+A const, several declarators, an anonymous type and a ref local go to the
+queue.
+=== input
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public class Outer
+    {
+        public class Inner
+        {
+        }
+    }
+
+    public class Item
+    {
+        public int Count;
+        public string Name;
+    }
+
+    public class C
+    {
+        int _n;
+
+        public object Declarations(bool c, int i, string s, Item item)
+        {
+            int a = c ? 1 : 2;
+            var b = c ? i : -1;
+            string t = c ? s : null;
+            var name = item != null ? item.Name : "none";
+            Item same = c ? item : default;
+            object o = c ? s : "other";
+            var list = c ? new List<int>() : null;
+            double d = c ? i : 2.5;
+            long wide = c ? i : 0;
+            var total = c ? i : c ? 2 : 3;
+            var nested = c ? (i > 0 ? "plus" : "minus") : s;
+            var inner = c ? new Outer.Inner() : null;
+            var pair = c ? (1, "a") : (2, s);
+            var count = item is Item { Count: > 0 } it ? it.Count : 0;
+            var w = c ? 1 : 2; // explains w
+            return a + b + t + name + same + o + list + d + wide + total
+                + nested + inner + pair + count + w;
+        }
+
+        public int Queued(bool c, int i)
+        {
+            const int k = true ? 1 : 2;
+            int x = c ? 1 : 2, y = c ? 3 : 4;
+            var anon = c ? new { A = 1 } : null;
+            ref int r = ref c ? ref _n : ref _n;
+            return k + x + y + r + anon.A;
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public class Outer
+    {
+        public class Inner
+        {
+        }
+    }
+
+    public class Item
+    {
+        public int Count;
+        public string Name;
+    }
+
+    public class C
+    {
+        int _n;
+
+        public object Declarations(bool c, int i, string s, Item item)
+        {
+            int a = 2;
+            if (c)
+            {
+                a = 1;
+            }
+            int b = -1;
+            if (c)
+            {
+                b = i;
+            }
+            string t = null;
+            if (c)
+            {
+                t = s;
+            }
+            string name = "none";
+            if (item != null)
+            {
+                name = item.Name;
+            }
+            Item same = default;
+            if (c)
+            {
+                same = item;
+            }
+            object o;
+            if (c)
+            {
+                o = s;
+            }
+            else
+            {
+                o = "other";
+            }
+            List<int> list = null;
+            if (c)
+            {
+                list = new List<int>();
+            }
+            double d = 2.5;
+            if (c)
+            {
+                d = i;
+            }
+            long wide;
+            if (c)
+            {
+                wide = i;
+            }
+            else
+            {
+                wide = 0;
+            }
+            int total = 3;
+            if (c)
+            {
+                total = i;
+            }
+            else if (c)
+            {
+                total = 2;
+            }
+            string nested;
+            if (c)
+            {
+                if (i > 0)
+                {
+                    nested = "plus";
+                }
+                else
+                {
+                    nested = "minus";
+                }
+            }
+            else
+            {
+                nested = s;
+            }
+            Outer.Inner inner = null;
+            if (c)
+            {
+                inner = new Outer.Inner();
+            }
+            (int, string) pair;
+            if (c)
+            {
+                pair = (1, "a");
+            }
+            else
+            {
+                pair = (2, s);
+            }
+            int count = 0;
+            if (item is Item { Count: > 0 } it)
+            {
+                count = it.Count;
+            }
+            int w = 2; // explains w
+            if (c)
+            {
+                w = 1;
+            }
+            return a + b + t + name + same + o + list + d + wide + total
+                + nested + inner + pair + count + w;
+        }
+
+        public int Queued(bool c, int i)
+        {
+            const int k = true ? 1 : 2;
+            int x = c ? 1 : 2, y = c ? 3 : 4;
+            var anon = c ? new { A = 1 } : null;
+            ref int r = ref c ? ref _n : ref _n;
+            return k + x + y + r + anon.A;
+        }
+    }
+}
+=== queue
+46: a const or scoped declaration
+47: several declarators in one statement
+47: several declarators in one statement
+48: an anonymous type, which can't be written
+49: a ref ?:, which no if can stand for
