@@ -69,6 +69,13 @@ sealed class Purity
             {
                 return reason;
             }
+            // A loop body, a branch of an if or a case section runs more
+            // than once or only sometimes. So does any other statement inside
+            // the one the expression would move in front of.
+            if (parent is StatementSyntax && parent != statement)
+            {
+                return "a statement inside the statement";
+            }
         }
         return null;
     }

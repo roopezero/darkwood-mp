@@ -70,6 +70,11 @@ static class PurityCases
         ("F(_n, c ? (local = 1) : 0);", Purity.ReadEarlier),
         ("F(1, c ? throw new Exception() : 3);", Ok),
         ("F(Bump(), c ? throw new Exception() : 3);", Purity.ReadEarlier),
+        // Asked about the loop or the if around it, the site is in a statement
+        // of its own, which runs once per element or only sometimes.
+        ("foreach (var i in _list)\n{\nlocal += c ? Bump() : 0;\n}",
+            Purity.MayNotRun),
+        ("if (local > 0)\n{\nlocal = c ? Bump() : 0;\n}", Purity.MayNotRun),
     };
 
     public static int Count => Cases.Length + 2;
