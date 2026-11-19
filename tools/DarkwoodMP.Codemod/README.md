@@ -332,6 +332,82 @@ conversion, a chain whose first values would have to be unwrapped, a
 but `this`, a type, a local or a parameter), and a `??=` of a Nullable used
 as a value, whose value is the unwrapped one.
 
+### conditional-access (stage 6)
+
+A `?.` chain whose tested values are not Unity objects becomes ifs
+(codemod.md section 7.3, `Rules/ConditionalAccessRule.cs` and
+`Rules/Access*.cs`). Every value a `?.` tests is read once: a receiver
+that isn't a local, a parameter (neither a ref) or `this` goes into a
+temporary named after it, an event or a delegate into one named `handler`,
+which is then called as a delegate (`handler(a)` for `?.Invoke(a)`), and
+each inner `?.` of a chain tests a temporary of the step in front of it:
+
+- a statement: `x?.F(a);` becomes `if (x != null) { x.F(a); }`, with an if
+  per `?.` of a chain, so the arguments run only for a receiver that isn't
+  null;
+- a declaration: `T n = null; if (x != null) { n = x.F; }`, `var` spelled
+  out with the natural type (`int?` for `x?.Count`), when the value goes
+  into `T` by an identity or a reference conversion;
+- an assignment of one `?.` to a target without an element, a constant or
+  a call, whose parts may run after the receiver (hazard 2): `if (x !=
+  null) { t = x.F; } else { t = null; }`, so a field or a property is
+  written once, with the final value;
+- a return: `if (x != null) { return x.F; } return null;`;
+- an expression body: a block first, holding the statement form for a void
+  member or lambda and the return form for any other, a get accessor for a
+  property or an indexer;
+- a comparison on one `?.`: a fixed translation in place, in parentheses
+  where the code around it would bind it another way (see below);
+- anywhere else, and wherever the forms above don't fit, the chain moves
+  into a temporary of its natural type: `T t = null; if (x != null) { t =
+  x.F; }` in front of its statement, or in front of the value of an
+  expression body that becomes a block (a lambda's too), with the hazard
+  checks of ternary-hoist (`HoistPath`, `HoistHazards`).
+
+The comparisons keep their place, so they work in a loop condition, a
+`when` clause or the right side of `&&`, where no statement can go:
+
+```text
+x?.F == v, v not null    ->  x != null && x.F == v
+x?.F != v, v not null    ->  x == null || x.F != v
+x?.F > v (<, >=, <=)     ->  x != null && x.F > v
+x?.F == null             ->  x == null || x.F == null
+x?.F != null             ->  x != null && x.F != null
+x?.B == true             ->  x != null && x.B        (!= true: x == null || !x.B)
+x?.B == false            ->  x != null && !x.B       (!= false: x == null || x.B)
+x?.B ?? false            ->  x != null && x.B
+x?.B ?? true             ->  x == null || x.B
+```
+
+They hold only when `v` has no effects and can't throw: a constant,
+`typeof`, a local, a parameter or `this`, with no user-defined conversion.
+"Not null" means a value type that isn't a Nullable, or a constant that
+isn't null. A member of a type with an `==` of its own goes to the hoist,
+unless that `==` is string's, .NET's or a Unity object's, which all give
+the original's result for a null `x`; so do `== null` on a member of a
+value type and a chain. A receiver that isn't a local goes into a
+temporary in front of the statement first. These edits replace an
+expression, so `RulePlan.ProposeExpression` checks their texts as
+expressions.
+
+A chain that tests a Unity object anywhere is left whole for stage 7
+(`unity-null`), not queued; a Unity member in a comparison keeps Unity's
+`==`. A receiver whose type has an `==` of its own goes to the queue
+unless that `==` is .NET's (`Type`, `MethodBase`, `FieldInfo`), which
+treats only null as equal to null, and so do a Nullable receiver, a type
+parameter and `dynamic`. An interface and `object` stay reference checks,
+as `?.` makes them.
+
+The queue gets what ternary-hoist's hazards refuse (a call earlier in the
+statement, a mutable value read earlier when the `?.` has effects, code
+that may not run, an initializer, a value made into text by code that
+isn't plain), a `?.` inside the receiver or the later part of another one
+and the one that holds it (both, so a second run finds the same), a
+variable declared inside it, a directive or a comment inside it, a
+statement form inside an interpolation hole, an `await` in the statement,
+an async member's or lambda's expression body and the checks every
+rewrite makes.
+
 The proof of a rule's commit:
 
 ```bash
@@ -418,6 +494,17 @@ A hand-made break of any one of these fails one of the cases. A `??` on
 the right of another one is queued as nested before the check of code that
 may not run sees it, so for this rule that refusal is checked only by the
 golden case `ternary-hoist/06-may-not-run`.
+
+The conditional-access cases run every form over null and non-null
+receivers: arguments that run only for a receiver that isn't null, a
+receiver property that returns null on its second read (a rewrite that
+reads it twice throws), events and delegates, the natural type of a
+declaration, chains, a setter that logs each set, returns, expression
+bodies and lambdas, every fixed comparison and its parentheses, a compared
+value with effects or a null (which must still run and compare), a loop
+condition, element reads and .NET's `==`. Reading the receiver twice,
+writing `x?.F != v` as `x != null && x.F != v`, and translating a compared
+value with effects each fail a case.
 
 ## Golden cases
 

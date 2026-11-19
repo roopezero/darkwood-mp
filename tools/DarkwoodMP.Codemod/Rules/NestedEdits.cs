@@ -31,6 +31,11 @@ sealed class PlannedEdit
     /// it on its line. With neither set, the span is replaced as it is.
     public MemberDeclarationSyntax Member;
 
+    /// Set when the edit replaces this expression where it is, such as a
+    /// comparison that becomes "x != null && x.F == v". Its old and new
+    /// texts are checked as expressions.
+    public ExpressionSyntax Expression;
+
     /// String constants the new text holds once more than the old, such as
     /// the key of a target "e[\"key\"]" written in each branch. The IL diff
     /// lets a member's strings change only with such a record.
@@ -127,6 +132,10 @@ static class NestedEdits
             {
                 plan.ProposeMember(
                     sites, root.Member, root.Span, text, strings);
+            }
+            else if (root.Expression != null)
+            {
+                plan.ProposeExpression(sites, root.Expression, text, strings);
             }
             else
             {

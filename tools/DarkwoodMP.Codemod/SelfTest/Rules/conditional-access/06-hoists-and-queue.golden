@@ -1,0 +1,236 @@
+Anywhere else a chain moves into a temporary of its natural type in front
+of its statement: an argument, named after the parameter, an operand, an
+interpolation hole, which keeps its format, an if condition and a target
+with an element. Two of them move in the order they run. The hazard rules
+of ternary-hoist send to the queue a ?. that a call runs before, and one
+with effects that a mutable value is read before. Code that may not run
+(the right side of &&, a branch of ?:, a lambda body, a loop condition), a
+?. inside another or holding one, a variable declared inside it, a comment
+on ?., an initializer, an await and a field initializer go to the queue.
+=== input
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public Box Next;
+        public string Label;
+        public int Count;
+        public Dictionary<string, string> Tags;
+
+        public string Take()
+        {
+            Count++;
+            return Label;
+        }
+
+        public bool Find(string key, out string value)
+        {
+            value = key;
+            return true;
+        }
+
+        public Task<int> Wait()
+        {
+            return Task.FromResult(Count);
+        }
+    }
+
+    public class Line
+    {
+        public string Text;
+    }
+
+    public class C
+    {
+        static readonly string s_field = new Box()?.Label;
+        int _seen;
+
+        static void Show(string label, int? count)
+        {
+        }
+
+        int Seen()
+        {
+            return _seen++;
+        }
+
+        public async Task<int> Run(Box a, Box b, bool c, List<Box> boxes)
+        {
+            Show(a?.Label, b?.Count);
+            var line = "box " + a?.Label + $" has {a?.Count:000} things";
+            if (a?.Label.Length > 2)
+            {
+                _seen++;
+            }
+            var tags = new Dictionary<string, string>();
+            tags["first"] = a?.Label;
+            Show(Seen().ToString(), a?.Count);
+            Show(_seen.ToString(), a?.Take().Length);
+            bool both = c && a?.Label.Length > 0;
+            var pick = c ? a?.Label : "none";
+            boxes.ForEach(x => Show(x?.Label, 0));
+            while (a?.Next?.Next != null)
+            {
+                a = a.Next;
+            }
+            var inner = a?.Next?.Label + b?.Next.Take()?.Trim();
+            var outer = a?.Next.Take()?.Insert(0, b?.Label);
+            var found = a?.Find("k", out var value);
+            var noted = a /* kept */ ?.Label;
+            var made = new Line { Text = a?.Label };
+            int waited = await a?.Wait();
+            return line.Length + waited + pick.Length + both.GetHashCode()
+                + inner.Length + outer.Length + found.GetHashCode()
+                + noted.Length + made.Text.Length;
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public Box Next;
+        public string Label;
+        public int Count;
+        public Dictionary<string, string> Tags;
+
+        public string Take()
+        {
+            Count++;
+            return Label;
+        }
+
+        public bool Find(string key, out string value)
+        {
+            value = key;
+            return true;
+        }
+
+        public Task<int> Wait()
+        {
+            return Task.FromResult(Count);
+        }
+    }
+
+    public class Line
+    {
+        public string Text;
+    }
+
+    public class C
+    {
+        static readonly string s_field = new Box()?.Label;
+        int _seen;
+
+        static void Show(string label, int? count)
+        {
+        }
+
+        int Seen()
+        {
+            return _seen++;
+        }
+
+        public async Task<int> Run(Box a, Box b, bool c, List<Box> boxes)
+        {
+            string label = null;
+            if (a != null)
+            {
+                label = a.Label;
+            }
+            int? count = null;
+            if (b != null)
+            {
+                count = b.Count;
+            }
+            Show(label, count);
+            string label2 = null;
+            if (a != null)
+            {
+                label2 = a.Label;
+            }
+            int? count2 = null;
+            if (a != null)
+            {
+                count2 = a.Count;
+            }
+            var line = "box " + label2 + $" has {count2:000} things";
+            if (a != null && a.Label.Length > 2)
+            {
+                _seen++;
+            }
+            var tags = new Dictionary<string, string>();
+            string label3 = null;
+            if (a != null)
+            {
+                label3 = a.Label;
+            }
+            tags["first"] = label3;
+            Show(Seen().ToString(), a?.Count);
+            Show(_seen.ToString(), a?.Take().Length);
+            bool both = c && a != null && a.Label.Length > 0;
+            var pick = c ? a?.Label : "none";
+            boxes.ForEach(x =>
+            {
+                string label4 = null;
+                if (x != null)
+                {
+                    label4 = x.Label;
+                }
+                Show(label4, 0);
+            });
+            while (a?.Next?.Next != null)
+            {
+                a = a.Next;
+            }
+            string label5 = null;
+            if (a != null)
+            {
+                Box next = a.Next;
+                if (next != null)
+                {
+                    label5 = next.Label;
+                }
+            }
+            string trim = null;
+            if (b != null)
+            {
+                string take = b.Next.Take();
+                if (take != null)
+                {
+                    trim = take.Trim();
+                }
+            }
+            var inner = label5 + trim;
+            var outer = a?.Next.Take()?.Insert(0, b?.Label);
+            var found = a?.Find("k", out var value);
+            var noted = a /* kept */ ?.Label;
+            var made = new Line { Text = a?.Label };
+            int waited = await a?.Wait();
+            return line.Length + waited + pick.Length + both.GetHashCode()
+                + inner.Length + outer.Length + found.GetHashCode()
+                + noted.Length + made.Text.Length;
+        }
+    }
+}
+=== queue
+39: not a local declaration: FieldDeclaration
+61: a call runs earlier in the statement: Seen().ToString()
+62: the hoisted code has effects and a mutable value is read earlier: _seen.ToString()
+64: conditionally evaluated: a branch of ?:
+66: conditionally evaluated: a loop condition
+71: inside the part after another ?., which runs only when its receiver isn't null: rewrite one level per run
+71: holds another ?. in the part after its own, which runs only when the receiver isn't null: rewrite one level per run
+72: the ?. declares a variable, whose scope the rewrite would change
+73: a comment inside the statement would be lost
+74: an object or collection initializer: the constructor and the earlier elements run first
+75: an await in the statement: a temporary could become a field of the state machine

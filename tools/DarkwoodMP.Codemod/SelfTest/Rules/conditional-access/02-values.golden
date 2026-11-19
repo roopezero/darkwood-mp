@@ -1,0 +1,192 @@
+A declaration starts with null and fills the variable inside the if; var is
+spelled out with the natural type, a Nullable for a value type, and a
+declared type takes the value by an identity or a reference conversion.
+Any other conversion keeps the natural type in a temporary in front. An
+assignment writes its target once on each path, so a field never holds a
+value between, and a return returns null last. A chain gets an if per ?..
+An element read ?[ works as a member read does.
+=== input
+using System.Collections.Generic;
+
+namespace N
+{
+    public interface IShape
+    {
+    }
+
+    public class Box : IShape
+    {
+        public Box Inner;
+        public string Label;
+        public int Count;
+        public List<int> Items;
+
+        public int this[int i] => Count + i;
+    }
+
+    public class C
+    {
+        Box _box;
+        string _label;
+
+        string Label { get; set; }
+
+        public object Run(Box a, Box b)
+        {
+            var label = a?.Label;
+            var count = a?.Count;
+            string text = a?.Inner?.Label;
+            IShape shape = a?.Inner;
+            long? wide = a?.Count;
+            object boxed = b?.Count;
+            int? item = a?[2];
+            var first = a?.Items?[0];
+            _label = a?.Label;
+            Label = _box?.Label; // a property, set once
+            b = b?.Inner;
+            return (label, count, text, shape, wide, boxed, item, first);
+        }
+
+        public string Name(Box a)
+        {
+            return a?.Inner?.Label;
+        }
+
+        public object Boxed(Box a)
+        {
+            return a?.Count;
+        }
+    }
+}
+=== output
+using System.Collections.Generic;
+
+namespace N
+{
+    public interface IShape
+    {
+    }
+
+    public class Box : IShape
+    {
+        public Box Inner;
+        public string Label;
+        public int Count;
+        public List<int> Items;
+
+        public int this[int i] => Count + i;
+    }
+
+    public class C
+    {
+        Box _box;
+        string _label;
+
+        string Label { get; set; }
+
+        public object Run(Box a, Box b)
+        {
+            string label = null;
+            if (a != null)
+            {
+                label = a.Label;
+            }
+            int? count = null;
+            if (a != null)
+            {
+                count = a.Count;
+            }
+            string text = null;
+            if (a != null)
+            {
+                Box inner = a.Inner;
+                if (inner != null)
+                {
+                    text = inner.Label;
+                }
+            }
+            IShape shape = null;
+            if (a != null)
+            {
+                shape = a.Inner;
+            }
+            int? count2 = null;
+            if (a != null)
+            {
+                count2 = a.Count;
+            }
+            long? wide = count2;
+            int? count3 = null;
+            if (b != null)
+            {
+                count3 = b.Count;
+            }
+            object boxed = count3;
+            int? item = null;
+            if (a != null)
+            {
+                item = a[2];
+            }
+            int? first = null;
+            if (a != null)
+            {
+                List<int> items = a.Items;
+                if (items != null)
+                {
+                    first = items[0];
+                }
+            }
+            if (a != null)
+            {
+                _label = a.Label;
+            }
+            else
+            {
+                _label = null;
+            }
+            // a property, set once
+            Box box = _box;
+            if (box != null)
+            {
+                Label = box.Label;
+            }
+            else
+            {
+                Label = null;
+            }
+            if (b != null)
+            {
+                b = b.Inner;
+            }
+            else
+            {
+                b = null;
+            }
+            return (label, count, text, shape, wide, boxed, item, first);
+        }
+
+        public string Name(Box a)
+        {
+            if (a != null)
+            {
+                Box inner = a.Inner;
+                if (inner != null)
+                {
+                    return inner.Label;
+                }
+            }
+            return null;
+        }
+
+        public object Boxed(Box a)
+        {
+            int? count = null;
+            if (a != null)
+            {
+                count = a.Count;
+            }
+            return count;
+        }
+    }
+}
+=== queue

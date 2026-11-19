@@ -1,0 +1,166 @@
+A ?. statement becomes an if. A local, a parameter or this is tested as it
+is; any other receiver is read once, into a temporary named after it, and
+an event or a delegate field into one named handler, which is then called
+as a delegate. A chain gets an if per ?., with a temporary for each value an
+inner ?. tests, named after its step. The arguments stay inside the if, so
+they run only for a receiver that isn't null. The comment behind the
+statement goes on a line of its own above it.
+=== input
+using System;
+
+namespace N
+{
+    public class Node
+    {
+        public Node Next;
+        public int Count;
+
+        public void Hit(int n)
+        {
+            Count += n;
+        }
+
+        public Node Child()
+        {
+            return Next;
+        }
+    }
+
+    public class C
+    {
+        static C s_instance;
+        Node _node;
+        public event Action<int> Changed;
+        Action _done;
+
+        static C Instance => s_instance;
+
+        int Value(int n)
+        {
+            return n + 1;
+        }
+
+        public void Run(Node a, Action<bool> done, int n)
+        {
+            a?.Hit(Value(n));
+            _node?.Hit(n);
+            Instance?._node?.Hit(n); // both read once
+            Changed?.Invoke(n);
+            _done?.Invoke();
+            done?.Invoke(true);
+            this?.Run(null, null, 0);
+            a?.Child()?.Child()?.Hit(1);
+            a?.Item(0).Hit(2);
+        }
+    }
+
+    public static class Ext
+    {
+        public static Node Item(this Node node, int i)
+        {
+            return node;
+        }
+    }
+}
+=== output
+using System;
+
+namespace N
+{
+    public class Node
+    {
+        public Node Next;
+        public int Count;
+
+        public void Hit(int n)
+        {
+            Count += n;
+        }
+
+        public Node Child()
+        {
+            return Next;
+        }
+    }
+
+    public class C
+    {
+        static C s_instance;
+        Node _node;
+        public event Action<int> Changed;
+        Action _done;
+
+        static C Instance => s_instance;
+
+        int Value(int n)
+        {
+            return n + 1;
+        }
+
+        public void Run(Node a, Action<bool> done, int n)
+        {
+            if (a != null)
+            {
+                a.Hit(Value(n));
+            }
+            Node node = _node;
+            if (node != null)
+            {
+                node.Hit(n);
+            }
+            // both read once
+            C instance = Instance;
+            if (instance != null)
+            {
+                Node node2 = instance._node;
+                if (node2 != null)
+                {
+                    node2.Hit(n);
+                }
+            }
+            Action<int> handler = Changed;
+            if (handler != null)
+            {
+                handler(n);
+            }
+            Action handler2 = _done;
+            if (handler2 != null)
+            {
+                handler2();
+            }
+            if (done != null)
+            {
+                done(true);
+            }
+            if (this != null)
+            {
+                this.Run(null, null, 0);
+            }
+            if (a != null)
+            {
+                Node child = a.Child();
+                if (child != null)
+                {
+                    Node child2 = child.Child();
+                    if (child2 != null)
+                    {
+                        child2.Hit(1);
+                    }
+                }
+            }
+            if (a != null)
+            {
+                a.Item(0).Hit(2);
+            }
+        }
+    }
+
+    public static class Ext
+    {
+        public static Node Item(this Node node, int i)
+        {
+            return node;
+        }
+    }
+}
+=== queue

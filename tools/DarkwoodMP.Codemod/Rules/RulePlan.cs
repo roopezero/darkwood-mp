@@ -182,6 +182,18 @@ sealed class RulePlan
         Offer(sites, span, text, strings, MemberFragment);
     }
 
+    /// Replace an expression where it is, such as a comparison that keeps
+    /// its place as "x != null && x.F == v". The old and the new text are
+    /// checked as expressions.
+    public void ProposeExpression(
+        IReadOnlyList<SyntaxNode> sites,
+        ExpressionSyntax target,
+        string text,
+        StringChange strings = null)
+    {
+        Offer(sites, target.Span, text, strings, ExpressionFragment);
+    }
+
     void Offer(
         IReadOnlyList<SyntaxNode> sites,
         TextSpan span,
@@ -290,6 +302,12 @@ sealed class RulePlan
     {
         var block = "{\n" + text + "\n}";
         return CSharpSyntaxTree.ParseText(block, parse).GetRoot();
+    }
+
+    static SyntaxNode ExpressionFragment(string text, CSharpParseOptions parse)
+    {
+        var field = "class Fragment\n{\nobject f = (\n" + text + "\n);\n}";
+        return CSharpSyntaxTree.ParseText(field, parse).GetRoot();
     }
 
     static SyntaxNode MemberFragment(string text, CSharpParseOptions parse)

@@ -16,12 +16,14 @@ static class RuleRegistry
                 return new TernaryHoistRule();
             case "coalesce":
                 return new CoalesceRule();
+            case "conditional-access":
+                return new ConditionalAccessRule();
             default:
                 return null;
         }
     }
 
     public static string Names =>
-        "ternary-direct, ternary-hoist, coalesce, probe-return (the tool's "
-            + "own test rule)";
+        "ternary-direct, ternary-hoist, coalesce, conditional-access, "
+            + "probe-return (the tool's own test rule)";
 }

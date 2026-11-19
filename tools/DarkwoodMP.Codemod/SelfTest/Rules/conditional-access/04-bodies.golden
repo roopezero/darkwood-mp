@@ -1,0 +1,257 @@
+An expression body gets a block first: a void method's or lambda's holds
+the statement form, any other the return form, and a property or an
+indexer gets a get accessor. A ?. deeper inside a body moves into the
+block, in front of the value it returns. The comment behind the body goes
+on the member's line. An async member or lambda and a value that converts
+by more than a reference conversion go to the queue. (An expression tree
+can't hold a ?. at all.)
+=== input
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public Box Inner;
+        public string Label;
+        public int Count;
+
+        public void Hit()
+        {
+            Count++;
+        }
+
+        public Task Wait()
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    public class C
+    {
+        static C s_instance;
+        Box _box;
+
+        static C Instance => s_instance;
+
+        void Hit() => _box?.Hit(); // patched
+
+        string Label => _box?.Label;
+
+        int Count => _box?.Count ?? 0;
+
+        string this[int i] => _box?.Inner?.Label;
+
+        static bool Prefix(Box __instance) => Instance?.Allow(__instance) ?? true;
+
+        static void Postfix(Box __instance, out string __state) =>
+            __state = Instance?.Name(__instance);
+
+        object Boxed => _box?.Count;
+
+        async Task Later() => await _box?.Wait();
+
+        bool Allow(Box b)
+        {
+            return b != null;
+        }
+
+        string Name(Box b)
+        {
+            return b.Label;
+        }
+
+        public object Run(List<Box> boxes)
+        {
+            Action<Box> hit = b => b?.Hit();
+            Func<Box, string> label = b => b?.Label;
+            var counts = boxes.Select(b => b?.Count ?? 0).ToList();
+            Func<Box, string> both = b => b?.Label + "/" + b?.Inner?.Label;
+            Func<Box, Task> wait = async b => await b?.Wait();
+            return (hit, label, counts, both, wait);
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace N
+{
+    public class Box
+    {
+        public Box Inner;
+        public string Label;
+        public int Count;
+
+        public void Hit()
+        {
+            Count++;
+        }
+
+        public Task Wait()
+        {
+            return Task.CompletedTask;
+        }
+    }
+
+    public class C
+    {
+        static C s_instance;
+        Box _box;
+
+        static C Instance => s_instance;
+
+        void Hit() // patched
+        {
+            Box box = _box;
+            if (box != null)
+            {
+                box.Hit();
+            }
+        }
+
+        string Label
+        {
+            get
+            {
+                Box box = _box;
+                if (box != null)
+                {
+                    return box.Label;
+                }
+                return null;
+            }
+        }
+
+        int Count
+        {
+            get
+            {
+                Box box = _box;
+                int? count = null;
+                if (box != null)
+                {
+                    count = box.Count;
+                }
+                return count ?? 0;
+            }
+        }
+
+        string this[int i]
+        {
+            get
+            {
+                Box box = _box;
+                if (box != null)
+                {
+                    Box inner = box.Inner;
+                    if (inner != null)
+                    {
+                        return inner.Label;
+                    }
+                }
+                return null;
+            }
+        }
+
+        static bool Prefix(Box __instance)
+        {
+            C instance = Instance;
+            return instance == null || instance.Allow(__instance);
+        }
+
+        static void Postfix(Box __instance, out string __state)
+        {
+            C instance = Instance;
+            string state = null;
+            if (instance != null)
+            {
+                state = instance.Name(__instance);
+            }
+            __state = state;
+        }
+
+        object Boxed
+        {
+            get
+            {
+                Box box = _box;
+                int? count = null;
+                if (box != null)
+                {
+                    count = box.Count;
+                }
+                return count;
+            }
+        }
+
+        async Task Later() => await _box?.Wait();
+
+        bool Allow(Box b)
+        {
+            return b != null;
+        }
+
+        string Name(Box b)
+        {
+            return b.Label;
+        }
+
+        public object Run(List<Box> boxes)
+        {
+            Action<Box> hit = b =>
+            {
+                if (b != null)
+                {
+                    b.Hit();
+                }
+            };
+            Func<Box, string> label = b =>
+            {
+                if (b != null)
+                {
+                    return b.Label;
+                }
+                return null;
+            };
+            var counts = boxes.Select(b =>
+            {
+                int? count = null;
+                if (b != null)
+                {
+                    count = b.Count;
+                }
+                return count ?? 0;
+            }).ToList();
+            Func<Box, string> both = b =>
+            {
+                string label2 = null;
+                if (b != null)
+                {
+                    label2 = b.Label;
+                }
+                string label3 = null;
+                if (b != null)
+                {
+                    Box inner = b.Inner;
+                    if (inner != null)
+                    {
+                        label3 = inner.Label;
+                    }
+                }
+                return label2 + "/" + label3;
+            };
+            Func<Box, Task> wait = async b => await b?.Wait();
+            return (hit, label, counts, both, wait);
+        }
+    }
+}
+=== queue
+47: an await in the statement: a temporary could become a field of the state machine
+65: an await in the statement: a temporary could become a field of the state machine

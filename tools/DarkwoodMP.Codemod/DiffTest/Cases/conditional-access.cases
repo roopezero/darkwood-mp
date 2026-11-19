@@ -1,0 +1,478 @@
+=== a statement runs its arguments only for a receiver that isn't null
+public class Box
+{
+    public int N;
+
+    public void Hit(int k)
+    {
+        Log("hit", k);
+        N += 1;
+    }
+}
+
+public static object Run(bool has, int k)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 2 };
+    }
+    a?.Hit(Log("k", k));
+    return a;
+}
+=== a receiver that is a property is read once
+public class Box
+{
+    public int N;
+
+    public void Hit(int k)
+    {
+        Log("hit", k);
+    }
+}
+
+static int s_reads;
+static bool s_has;
+
+static Box Current
+{
+    get
+    {
+        s_reads++;
+        Log("read", s_reads);
+        if (s_has && s_reads == 1)
+        {
+            return new Box { N = 1 };
+        }
+        return null;
+    }
+}
+
+public static object Run(bool has, bool more)
+{
+    s_reads = 0;
+    s_has = has;
+    Current?.Hit(1);
+    s_reads = 0;
+    var seen = Current?.N;
+    s_reads = 0;
+    if (Current?.N == 1)
+    {
+        Log("one", more);
+    }
+    return seen;
+}
+=== an event and a delegate field go through a local and are called
+static event Action<int> Changed;
+static Func<int, int> s_twice;
+
+public static object Run(bool subscribed, int n)
+{
+    Changed = null;
+    s_twice = null;
+    if (subscribed)
+    {
+        Changed += k => Log("handled", k);
+        s_twice = k => Log("twice", k * 2);
+    }
+    Changed?.Invoke(Log("n", n));
+    var doubled = s_twice?.Invoke(n);
+    Changed = null;
+    s_twice = null;
+    return doubled;
+}
+=== a delegate local is called only when it isn't null
+public static object Run(bool has, int n)
+{
+    Action<int> done = null;
+    Func<int, int> twice = null;
+    if (has)
+    {
+        done = k => Log("done", k);
+        twice = k => k * 2;
+    }
+    done?.Invoke(Log("n", n));
+    var doubled = twice?.Invoke(n);
+    return doubled;
+}
+=== declarations keep the natural type, a Nullable for a value type
+public class Box
+{
+    public int N;
+
+    public string Name => Log("name", "b" + N);
+
+    public int Count => Log("count", N);
+}
+
+public static object Run(bool has, int n)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = n };
+    }
+    var name = a?.Name;
+    var count = a?.Count;
+    long? wide = a?.Count;
+    object boxed = a?.Count;
+    return (name, count, wide, boxed is int, boxed is long);
+}
+=== a chain tests each value once, in order
+public class Box
+{
+    public int N;
+    public Box Inner;
+
+    public Box Next
+    {
+        get
+        {
+            Log("next", N);
+            return Inner;
+        }
+    }
+
+    public string Name => Log("name", "b" + N);
+
+    public void Hit()
+    {
+        Log("hit", N);
+    }
+}
+
+public static object Run(bool first, bool second, bool third)
+{
+    Box a = null;
+    if (first)
+    {
+        a = new Box { N = 1 };
+        if (second)
+        {
+            a.Inner = new Box { N = 2 };
+            if (third)
+            {
+                a.Inner.Inner = new Box { N = 3 };
+            }
+        }
+    }
+    var name = a?.Next?.Next?.Name;
+    a?.Next?.Next?.Hit();
+    return name;
+}
+=== an assignment sets its target once, with the final value
+public class Box
+{
+    public int N;
+
+    public string Name => Log("name", "b" + N);
+}
+
+static string s_set;
+
+static string Target
+{
+    get
+    {
+        return s_set;
+    }
+    set
+    {
+        Log("set", value);
+        s_set = value;
+    }
+}
+
+public static object Run(bool has, string start)
+{
+    s_set = start;
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 4 };
+    }
+    Target = a?.Name;
+    string local = start;
+    local = a?.Name;
+    return (s_set, local);
+}
+=== a return, expression bodies and lambdas
+public class Box
+{
+    public int N;
+    public Box Inner;
+
+    public string Name => Log("name", "b" + N);
+
+    public void Hit()
+    {
+        Log("hit", N);
+    }
+}
+
+static Box s_box;
+
+static string Label => s_box?.Inner?.Name;
+
+static int Count => s_box?.Inner?.N ?? -1;
+
+static object Boxed => s_box?.N;
+
+static void Hit() => s_box?.Hit();
+
+static string Find(Box a)
+{
+    return a?.Inner?.Name;
+}
+
+public static object Run(bool has, bool inner)
+{
+    s_box = null;
+    if (has)
+    {
+        s_box = new Box { N = 1 };
+        if (inner)
+        {
+            s_box.Inner = new Box { N = 2 };
+        }
+    }
+    Hit();
+    Func<Box, string> name = b => b?.Name;
+    Action<Box> hit = b => b?.Hit();
+    hit(s_box);
+    Func<Box, string> both = b => b?.Name + "/" + b?.Inner?.Name;
+    return (Label, Count, Boxed is int, Find(s_box), name(s_box), both(s_box));
+}
+=== comparisons keep the original's result for a null receiver
+public class Box
+{
+    public int N;
+    public bool Open;
+    public string Label;
+    public int? Size;
+}
+
+public static object Run(bool has, int n, bool open)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = n, Open = open, Label = "x" + n };
+        if (open)
+        {
+            a.Size = n;
+        }
+    }
+    var results = new List<bool>();
+    results.Add(a?.N == 5);
+    results.Add(a?.N != 5);
+    results.Add(a?.N > 2);
+    results.Add(a?.N <= 2);
+    results.Add(5 == a?.N);
+    results.Add(a?.N != n);
+    results.Add(a?.Label == null);
+    results.Add(a?.Label != null);
+    results.Add(a?.Label == "x5");
+    results.Add(a?.Size == null);
+    results.Add(a?.Size >= 3);
+    results.Add(a?.Open == true);
+    results.Add(a?.Open != true);
+    results.Add(a?.Open == false);
+    results.Add(a?.Open != false);
+    results.Add(true != a?.Open);
+    results.Add(a?.Open ?? false);
+    results.Add(a?.Open ?? true);
+    results.Add(!(a?.N == 1) || a?.N == 2);
+    results.Add(open && a?.N == 3);
+    results.Add(a?.N == 4 ? open : !open);
+    return results;
+}
+=== a comparison in a loop condition stays one expression
+public class Box
+{
+    public int N;
+    public Box Next;
+}
+
+public static object Run(bool first, bool second)
+{
+    Box a = null;
+    if (first)
+    {
+        a = new Box { N = 1 };
+        if (second)
+        {
+            a.Next = new Box { N = 2 };
+        }
+    }
+    int steps = 0;
+    while (a?.Next != null)
+    {
+        a = a.Next;
+        steps++;
+    }
+    return (steps, a?.N);
+}
+=== a compared value with effects or a null runs and compares as before
+public class Box
+{
+    public int N;
+}
+
+static int Next(int k)
+{
+    return Log("next", k);
+}
+
+public static object Run(bool has, int? m)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 3 };
+    }
+    bool same = a?.N == Next(3);
+    bool nullable = a?.N == m;
+    bool none = a?.N == null;
+    bool after = Next(4) > a?.N;
+    return (same, nullable, none, after);
+}
+=== a receiver that is a static field is read once into a temporary
+public class Box
+{
+    public int N;
+}
+
+static Box s_box;
+
+public static object Run(bool has, int n)
+{
+    s_box = null;
+    if (has)
+    {
+        s_box = new Box { N = n };
+    }
+    bool five = s_box?.N == 5;
+    return five;
+}
+=== arguments, operands and holes move in the order they run
+public class Box
+{
+    public int N;
+
+    public string Name => Log("name", "b" + N);
+
+    public int Count => Log("count", N);
+}
+
+static string Show(string a, int? b)
+{
+    return Log("show", a + "/" + b);
+}
+
+public static object Run(bool first, bool second)
+{
+    Box a = null;
+    if (first)
+    {
+        a = new Box { N = 1 };
+    }
+    Box b = null;
+    if (second)
+    {
+        b = new Box { N = 2 };
+    }
+    var shown = Show(a?.Name, b?.Count);
+    var line = "box " + a?.Name + $" has {b?.Count:000}";
+    if (a?.Name.Length > 1)
+    {
+        Log("long", true);
+    }
+    return (shown, line);
+}
+=== an element read, and receivers whose == is .NET's
+public static object Run(bool has, sbyte i)
+{
+    int[] items = null;
+    Type type = null;
+    if (has)
+    {
+        items = new[] { 10, 20, 30 };
+        type = typeof(string);
+    }
+    int? item = items?[i];
+    var name = type?.Name;
+    bool text = type?.Name == "String";
+    return (item, name, text);
+}
+=== a call earlier in the statement keeps the ?. where it is
+public class Box
+{
+    public int N;
+
+    public int Count => Log("count", N);
+}
+
+static int s_calls;
+
+static int Bump()
+{
+    s_calls++;
+    return Log("bump", s_calls);
+}
+
+static int Sum(int a, int? b)
+{
+    return a + b.GetValueOrDefault();
+}
+
+public static object Run(bool has)
+{
+    s_calls = 0;
+    Box a = null;
+    if (has)
+    {
+        a = new Box { N = 5 };
+    }
+    var sum = Sum(Bump(), a?.Count);
+    var count = a?.Count;
+    return (sum, count, s_calls);
+}
+=== a receiver with an == of its own stays as written
+public static object Run(UnityObject o, bool flag)
+{
+    var hit = o?.Hit();
+    string s = null;
+    if (flag)
+    {
+        s = "abc";
+    }
+    var length = s?.Length;
+    return (hit, length);
+}
+=== a ?? true in a patch's expression body, and a ?? false
+public class Box
+{
+    public bool Open;
+
+    public bool Allow(int k)
+    {
+        return Log("allow", Open && k > 0);
+    }
+}
+
+static Box s_box;
+
+static bool Prefix(int k) => s_box?.Allow(k) ?? true;
+
+public static object Run(bool has, bool open, sbyte k)
+{
+    s_box = null;
+    if (has)
+    {
+        s_box = new Box { Open = open };
+    }
+    Box b = s_box;
+    bool shut = b?.Open ?? false;
+    return (Prefix(k), shut);
+}
