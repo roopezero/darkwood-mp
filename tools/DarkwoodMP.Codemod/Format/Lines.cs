@@ -19,6 +19,21 @@ static class Lines
             == lines.GetLineFromPosition(close.SpanStart).LineNumber;
     }
 
+    /// True when nothing but whitespace comes before the statement on its
+    /// line in the original source.
+    public static bool StartsItsLine(StatementSyntax original)
+    {
+        var first = original.GetFirstToken();
+        var previous = first.GetPreviousToken();
+        if (previous.IsKind(SyntaxKind.None))
+        {
+            return true;
+        }
+        var lines = original.SyntaxTree.GetText().Lines;
+        return lines.GetLineFromPosition(previous.Span.End).LineNumber
+            != lines.GetLineFromPosition(first.SpanStart).LineNumber;
+    }
+
     /// The comments in a trivia list, without the spaces and line breaks.
     public static SyntaxTriviaList CommentsOf(SyntaxTriviaList list)
     {
@@ -77,10 +92,54 @@ static class Lines
         return close.WithLeadingTrivia(comments.Add(Break));
     }
 
+    /// True for a block of several statements with a comment behind its
+    /// closing brace that can go on the line of the block's header. Such a
+    /// comment explains the whole block, not its last statement. A bare block
+    /// has no header. The comments must keep their order, so no other comment
+    /// may be inside the block, and the header's line can't already end in a
+    /// line comment. The original tree only.
+    public static bool CommentOnHeader(BlockSyntax block)
+    {
+        int behind = CommentsOf(block.CloseBraceToken.TrailingTrivia).Count;
+        if (block.Statements.Count < 2
+            || behind == 0
+            || block.Parent is BlockSyntax
+            || block.Parent is SwitchSectionSyntax)
+        {
+            return false;
+        }
+        var header = block.OpenBraceToken.GetPreviousToken();
+        return !header.TrailingTrivia.Any(SyntaxKind.SingleLineCommentTrivia)
+            && block.DescendantTrivia().Count(IsComment) == behind;
+    }
+
+    /// The last token of a block's header with the comments from behind the
+    /// block's closing brace at the end of its line. The opening brace goes on
+    /// the next line, so a line comment can't swallow it.
+    public static SyntaxToken OnHeader(
+        SyntaxToken header, SyntaxTriviaList comments)
+    {
+        var moved = Behind(header, comments);
+        if (moved.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia))
+        {
+            return moved;
+        }
+        return moved.WithTrailingTrivia(moved.TrailingTrivia.Add(Break));
+    }
+
+    /// A block whose closing brace gave its comments to the block's header.
+    public static BlockSyntax WithoutCloseComments(BlockSyntax block)
+    {
+        var close = block.CloseBraceToken;
+        return block.WithCloseBraceToken(
+            close.WithTrailingTrivia(LineEnds(close.TrailingTrivia)));
+    }
+
     /// Comments behind a block's closing brace move in front of it, so they
     /// don't read as notes on the code after the block. They go behind the
     /// last statement if it ends in a semicolon, and otherwise on a line of
-    /// their own at the end of the block.
+    /// their own at the end of the block. See CommentOnHeader for the blocks
+    /// whose comment goes to the header instead.
     public static BlockSyntax CommentsInside(BlockSyntax block)
     {
         var close = block.CloseBraceToken;
@@ -121,14 +180,14 @@ static class Lines
             && !last.TrailingTrivia.Any(SyntaxKind.SingleLineCommentTrivia);
     }
 
-    /// True for a case section on one line that ends in "break;" after another
-    /// statement, with a comment closing the line behind the break. The
-    /// comment explains the section, not the break, so the layout stage hangs
-    /// it on the statement before the break.
+    /// True for a case section on one line of one statement and "break;",
+    /// with a comment closing the line behind the break. The comment explains
+    /// the statement, not the break, so the layout stage hangs it on that
+    /// statement. With more statements on the line, see FirstOfLine.
     public static bool CommentBehindBreak(SwitchSectionSyntax section)
     {
         var statements = section.Statements;
-        if (statements.Count < 2
+        if (statements.Count != 2
             || statements.Last() is not BreakStatementSyntax)
         {
             return false;
@@ -159,6 +218,95 @@ static class Lines
         return statements.Replace(
             statements[last],
             bare.WithLeadingTrivia(bare.GetLeadingTrivia().Insert(0, Break)));
+    }
+
+    /// When the statement at "last" ends a line of several statements and a
+    /// comment closes that line, the index of the line's first statement;
+    /// otherwise -1. The comment was written for the whole line, so the layout
+    /// stage puts it above the first statement instead of leaving it on the
+    /// last one. It can't pass another comment, so any comment inside the
+    /// line's statements leaves it where it is, and a section of one statement
+    /// and a break has its own rule (see CommentBehindBreak). The original tree
+    /// only.
+    public static int FirstOfLine(
+        SyntaxList<StatementSyntax> statements, int last)
+    {
+        var closing = statements[last];
+        var end = closing.GetLastToken();
+        if (!end.IsKind(SyntaxKind.SemicolonToken)
+            || CommentsOf(end.TrailingTrivia).Count == 0
+            || !end.TrailingTrivia.Any(SyntaxKind.EndOfLineTrivia)
+            || (closing.Parent is SwitchSectionSyntax section
+                && CommentBehindBreak(section)))
+        {
+            return -1;
+        }
+        int first = last;
+        while (first > 0
+            && Same(statements[first - 1].GetFirstToken(), end)
+            && Same(statements[first - 1].GetLastToken(), end))
+        {
+            first--;
+        }
+        if (first == last || !OnlyAtTheEnds(statements, first, last))
+        {
+            return -1;
+        }
+        return first;
+    }
+
+    /// True when the statements from first to last hold no comments but those
+    /// above the first and behind the last.
+    static bool OnlyAtTheEnds(
+        SyntaxList<StatementSyntax> statements, int first, int last)
+    {
+        int all = 0;
+        for (int i = first; i <= last; i++)
+        {
+            all += statements[i].DescendantTrivia().Count(IsComment);
+        }
+        return all == CommentsOf(statements[first].GetLeadingTrivia()).Count
+            + CommentsOf(statements[last].GetTrailingTrivia()).Count;
+    }
+
+    /// The visited statements of a list, with the comment that closes a line
+    /// of several statements (see FirstOfLine) above the line's first one.
+    public static SyntaxList<StatementSyntax> CommentsAbove(
+        SyntaxList<StatementSyntax> original,
+        SyntaxList<StatementSyntax> visited)
+    {
+        for (int last = 1; last < original.Count; last++)
+        {
+            int first = FirstOfLine(original, last);
+            if (first < 0)
+            {
+                continue;
+            }
+            var comments = CommentsOf(
+                original[last].GetLastToken().TrailingTrivia);
+            var closing = visited[last];
+            var end = closing.GetLastToken();
+            visited = visited.Replace(closing, closing.ReplaceToken(
+                end, end.WithTrailingTrivia(LineEnds(end.TrailingTrivia))));
+            bool startsLine = StartsItsLine(original[first]);
+            visited = visited.Replace(
+                visited[first], Under(visited[first], comments, startsLine));
+        }
+        return visited;
+    }
+
+    /// A statement under comments on lines of their own. One that shared its
+    /// line with what came before gets a line break in front of the comments.
+    static StatementSyntax Under(
+        StatementSyntax statement, SyntaxTriviaList comments, bool startsLine)
+    {
+        var leading = statement.GetLeadingTrivia().ToList();
+        if (!startsLine)
+        {
+            leading.Add(Break);
+        }
+        leading.AddRange(OwnLines(comments));
+        return statement.WithLeadingTrivia(leading);
     }
 
     /// A token with comments added at the end of its line.

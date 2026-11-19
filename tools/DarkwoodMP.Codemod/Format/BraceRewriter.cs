@@ -139,7 +139,7 @@ sealed class BraceRewriter : CSharpSyntaxRewriter
             .WithLeadingTrivia(Before(visited.GetLeadingTrivia()))
             .WithTrailingTrivia(trailing);
         var block = SyntaxFactory.Block(inner);
-        if (StartsItsLine(original))
+        if (Lines.StartsItsLine(original))
         {
             // The statement keeps its indentation for now: the Formatter
             // moves its continuation lines by as much as it moves the
@@ -158,19 +158,6 @@ sealed class BraceRewriter : CSharpSyntaxRewriter
             .WithCloseBraceToken(
                 block.CloseBraceToken.WithTrailingTrivia(closeTrailing))
             .WithAdditionalAnnotations(Formatter.Annotation);
-    }
-
-    static bool StartsItsLine(StatementSyntax original)
-    {
-        var first = original.GetFirstToken();
-        var previous = first.GetPreviousToken();
-        if (previous.IsKind(SyntaxKind.None))
-        {
-            return true;
-        }
-        var lines = original.SyntaxTree.GetText().Lines;
-        return lines.GetLineFromPosition(previous.Span.End).LineNumber
-            != lines.GetLineFromPosition(first.SpanStart).LineNumber;
     }
 
     /// What stays in front of a statement that moves into a block: comments

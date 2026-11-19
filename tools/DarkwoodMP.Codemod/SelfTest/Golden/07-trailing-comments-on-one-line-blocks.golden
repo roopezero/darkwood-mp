@@ -43,6 +43,34 @@ class Trailing
         } // after that too
         return a;
     }
+
+    int K(int a)
+    {
+        if (a == 13) { a = 14; a = 15; } // the whole block's
+        if (a == 16) { a = 17; /* inside */ a = 18; } // stays behind the last
+        if (a == 19) // the header's own
+        { a = 20; a = 21; } // the header is taken
+        { a = 22; a = 23; } // a bare block has no header
+        if (a == 24) { a = 25; a = 26; } /* one */ else { a = 27; a = 28; } // two
+        if (a == 29) /* first */ { a = 30; a = 31; } // second
+        if (a == 43) { a = 44; a = 45; } /* one of two */ // the other
+        try { a = 32; a = 33; } // the try
+        catch { a = 34; a = 35; } // the catch
+        finally { a = 36; a = 37; } // the finally
+        switch (a)
+        {
+            case 1: { a = 38; a = 39; } // a section's bare block
+                break;
+        }
+        return a;
+    }
+
+    void L() { int a = 40; a = 41; } // a method's body
+
+    int M
+    {
+        get { int a = 42; return a; } // the getter
+    }
 }
 === layout
 class Trailing
@@ -77,14 +105,13 @@ class Trailing
             }
             // ends in a block
         }
-        if (a == 7)
+        if (a == 7) // the same, after a statement
         {
             a = 8;
             if (a > 9)
             {
                 a = 10;
             }
-            // the same, after a statement
         }
         try
         {
@@ -118,10 +145,10 @@ class Trailing
 
     int J(int a)
     {
-        if (a > 0)
+        if (a > 0) // the last statement ends in a semicolon
         {
             a = 1;
-            return a; // the last statement ends in a semicolon
+            return a;
         }
         if (a < 0)
         {
@@ -143,5 +170,88 @@ class Trailing
             // after that too
         }
         return a;
+    }
+
+    int K(int a)
+    {
+        if (a == 13) // the whole block's
+        {
+            a = 14;
+            a = 15;
+        }
+        if (a == 16)
+        {
+            a = 17; /* inside */
+            a = 18; // stays behind the last
+        }
+        if (a == 19) // the header's own
+        {
+            a = 20;
+            a = 21; // the header is taken
+        }
+        {
+            a = 22;
+            a = 23; // a bare block has no header
+        }
+        if (a == 24) /* one */
+        {
+            a = 25;
+            a = 26;
+        }
+        else // two
+        {
+            a = 27;
+            a = 28;
+        }
+        if (a == 29) /* first */ // second
+        {
+            a = 30;
+            a = 31;
+        }
+        if (a == 43) /* one of two */ // the other
+        {
+            a = 44;
+            a = 45;
+        }
+        try // the try
+        {
+            a = 32;
+            a = 33;
+        }
+        catch // the catch
+        {
+            a = 34;
+            a = 35;
+        }
+        finally // the finally
+        {
+            a = 36;
+            a = 37;
+        }
+        switch (a)
+        {
+            case 1:
+                {
+                    a = 38;
+                    a = 39; // a section's bare block
+                }
+                break;
+        }
+        return a;
+    }
+
+    void L() // a method's body
+    {
+        int a = 40;
+        a = 41;
+    }
+
+    int M
+    {
+        get // the getter
+        {
+            int a = 42;
+            return a;
+        }
     }
 }

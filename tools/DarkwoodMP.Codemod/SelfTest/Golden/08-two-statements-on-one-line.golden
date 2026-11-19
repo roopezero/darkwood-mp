@@ -9,6 +9,31 @@ class Two
         lock (this) { a++; a++; }
         return a;
     }
+
+    int G(int a)
+    {
+        a += 3; a += 4; // for both
+        a += 5; /* in between */ a += 6; // stays on the last
+        a += 7; a += 8; /* a block comment */
+        a += 24; a += 25; /* first */ // second
+        // above the line
+        a += 9; a += 10; // under the one above
+        { a += 11; a += 12; // behind the brace's line
+        }
+        if (a > 1) { a += 13; a += 14; /* inside the braces */ }
+        F(a); a += G(a +
+            1); // the last one is over two lines
+        F(a +
+            1); a += 15; a += 16; // behind the end of a longer statement
+        switch (a)
+        {
+            case 1: a += 17; a += 18; // a section's first line
+                break;
+            case 2: a += 19; a += 20; break; // two and a break
+            case 3: a += 21; break; // one and a break
+        }
+        return a;
+    }
 }
 === layout
 class Two
@@ -30,6 +55,61 @@ class Two
         {
             a++;
             a++;
+        }
+        return a;
+    }
+
+    int G(int a)
+    {
+        // for both
+        a += 3;
+        a += 4;
+        a += 5; /* in between */
+        a += 6; // stays on the last
+        /* a block comment */
+        a += 7;
+        a += 8;
+        /* first */
+        // second
+        a += 24;
+        a += 25;
+        // above the line
+        // under the one above
+        a += 9;
+        a += 10;
+        {
+            // behind the brace's line
+            a += 11;
+            a += 12;
+        }
+        if (a > 1)
+        {
+            a += 13;
+            a += 14; /* inside the braces */
+        }
+        F(a);
+        a += G(a +
+            1); // the last one is over two lines
+        F(a +
+            1);
+        // behind the end of a longer statement
+        a += 15;
+        a += 16;
+        switch (a)
+        {
+            case 1:
+                // a section's first line
+                a += 17;
+                a += 18;
+                break;
+            case 2:
+                // two and a break
+                a += 19;
+                a += 20;
+                break;
+            case 3:
+                a += 21; // one and a break
+                break;
         }
         return a;
     }

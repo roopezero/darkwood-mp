@@ -7,17 +7,50 @@ namespace DarkwoodMP.Codemod.Format;
 /// Puts every pair of braces that is on one line onto separate lines: blocks,
 /// switch statements, type bodies and namespaces, the things the build's
 /// DW0002 rule reports. It only decides where line breaks go, and where a
-/// comment behind a closing brace or a "break;" ends up: the Formatter does the
-/// rest. Accessor lists ({ get; set; }) and initializers stay on one line, as
-/// the rule allows, except an initializer behind a multi-line argument list.
+/// comment behind a closing brace, a "break;" or a line of several statements
+/// ends up: the Formatter does the rest. Accessor lists ({ get; set; }) and
+/// initializers stay on one line, as the rule allows, except an initializer
+/// behind a multi-line argument list.
 sealed class OneLineBraces : CSharpSyntaxRewriter
 {
+    /// The comments that go on a block's header line, by the header's last
+    /// token. That token isn't part of the block, so it is found up front.
+    readonly Dictionary<SyntaxToken, SyntaxTriviaList> _headers = new();
+
+    public OneLineBraces(SyntaxNode root)
+    {
+        foreach (var block in root.DescendantNodes().OfType<BlockSyntax>())
+        {
+            if (Lines.CommentOnHeader(block))
+            {
+                _headers[block.OpenBraceToken.GetPreviousToken()] =
+                    Lines.CommentsOf(block.CloseBraceToken.TrailingTrivia);
+            }
+        }
+    }
+
+    public override SyntaxToken VisitToken(SyntaxToken token)
+    {
+        var visited = base.VisitToken(token);
+        if (_headers.TryGetValue(token, out var comments))
+        {
+            return Lines.OnHeader(visited, comments);
+        }
+        return visited;
+    }
+
     public override SyntaxNode VisitBlock(BlockSyntax node)
     {
         var visited = (BlockSyntax)base.VisitBlock(node);
+        visited = visited.WithStatements(
+            Lines.CommentsAbove(node.Statements, visited.Statements));
         if (Lines.Same(node.OpenBraceToken, node.CloseBraceToken))
         {
             visited = Opened(visited);
+        }
+        if (Lines.CommentOnHeader(node))
+        {
+            return Lines.WithoutCloseComments(visited);
         }
         return Lines.CommentsInside(visited);
     }
@@ -44,6 +77,8 @@ sealed class OneLineBraces : CSharpSyntaxRewriter
     public override SyntaxNode VisitSwitchSection(SwitchSectionSyntax node)
     {
         var visited = (SwitchSectionSyntax)base.VisitSwitchSection(node);
+        visited = visited.WithStatements(
+            Lines.CommentsAbove(node.Statements, visited.Statements));
         if (Lines.CommentBehindBreak(node))
         {
             visited = visited.WithStatements(

@@ -34,7 +34,7 @@ static class Passes
     public static string Layout(string source, CSharpParseOptions parse)
     {
         var root = CSharpSyntaxTree.ParseText(source, parse).GetRoot();
-        var opened = new OneLineBraces().Visit(root);
+        var opened = new OneLineBraces(root).Visit(root);
         var formatted = Formatter.Format(
             opened, CodeStyle.Workspace, CodeStyle.Options);
         return formatted.ToFullString();

@@ -67,7 +67,7 @@ sealed class Gates
     }
 
     /// The layout stage changes whitespace, and moves comments only in the
-    /// two ways it is meant to.
+    /// ways it is meant to (see CommentPlaces).
     void CheckLayout(string file, SyntaxNode before, SyntaxNode after)
     {
         if (!SameCode.Of(before, after))

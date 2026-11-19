@@ -4,9 +4,9 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace DarkwoodMP.Codemod.SelfTest;
 
-/// Rewrites the layout stage's gates must refuse, and the two moves of a
-/// comment they must let through. The golden cases show the gates accept what
-/// the stage really writes; these show they aren't always saying yes.
+/// Rewrites the layout stage's gates must refuse, and the moves of a comment
+/// they must let through. The golden cases show the gates accept what the stage
+/// really writes; these show they aren't always saying yes.
 static class LayoutCheckCases
 {
     const string Start = "class C { void F(bool a) { ";
@@ -54,6 +54,42 @@ static class LayoutCheckCases
         ("a comment moved off a break in a section over several lines",
             "switch (a) { case true:\nG();\nbreak; // why\n }",
             "switch (a) { case true:\nG(); // why\nbreak; }"),
+        ("a comment left behind the last of a block's statements",
+            "if (a) { G(); H(); } // why\n",
+            "if (a) { G(); H(); // why\n}\n"),
+        ("a comment moved to the start of a block of several statements",
+            "if (a) { G(); H(); } // why\n",
+            "if (a) { // why\nG(); H(); }\n"),
+        ("a comment moved to the header of a block of one statement",
+            "if (a) { G(); } // why\n",
+            "if (a) // why\n{ G(); }\n"),
+        ("a comment moved to the header past a comment in the block",
+            "if (a) { G(); /* in */ H(); } // why\n",
+            "if (a) // why\n{ G(); /* in */ H(); }\n"),
+        ("a comment moved to a header that ends in a line comment",
+            "if (a) // first\n{ G(); H(); } // why\n",
+            "if (a) // first\n// why\n{ G(); H(); }\n"),
+        ("a comment moved in front of a bare block",
+            "{ G(); H(); } // why\n",
+            "// why\n{ G(); H(); }\n"),
+        ("a comment moved to the first statement of a shared line",
+            "G(); H(); // why\n",
+            "G(); // why\nH();\n"),
+        ("a comment moved above the last statement of a shared line",
+            "G(); H(); // why\n",
+            "G();\n// why\nH();\n"),
+        ("a comment moved above a statement with a line of its own",
+            "G(); // why\n",
+            "// why\nG();\n"),
+        ("a comment moved above a shared line past a comment in it",
+            "G(); /* in */ H(); // why\n",
+            "// why\nG(); /* in */ H();\n"),
+        ("a comment moved above a statement over two lines",
+            "G(); H(\n); // why\n",
+            "// why\nG(); H(\n);\n"),
+        ("a comment moved above a section's statement from behind its break",
+            "switch (a) { case true: G(); break; // why\n }",
+            "switch (a) { case true: // why\nG(); break; }"),
     };
 
     static readonly (string Name, string Before, string After)[] RightPlaces =
@@ -67,6 +103,15 @@ static class LayoutCheckCases
         ("a comment from a one-line section's break to the statement before",
             "switch (a) { case true: G(); break; // why\n }",
             "switch (a) { case true: G(); // why\nbreak; }"),
+        ("a comment from behind a block of several statements to its header",
+            "if (a) { G(); H(); } // why\n",
+            "if (a) // why\n{ G(); H(); }\n"),
+        ("a comment from the end of a shared line to above it",
+            "G(); H(); // why\n",
+            "// why\nG();\nH();\n"),
+        ("a comment from behind a shared line's break to above it",
+            "switch (a) { case true: G(); H(); break; // why\n }",
+            "switch (a) { case true:\n// why\nG(); H(); break; }"),
     };
 
     public static int Count =>

@@ -29,7 +29,7 @@ not in the default place.
 | `census [--samples]` | Counts what the pass has to change, per construct and context: statements without braces, one-line blocks and bodies, lines over 80 columns, `?:`, `??`, `??=` and `?.`. Writes nothing. `--samples` adds example lines. |
 | `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted, and they line up with the code around them. |
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, gives an object initializer behind a multi-line argument list one line per member, and runs the Roslyn `Formatter` over every file. |
-| `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the two moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
+| `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
 | `selftest [--show NAME]` | Runs the golden cases below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
 `Il/` (the IL diff) and `Prototype/` (the width pass and the first operator
@@ -59,10 +59,18 @@ unless all of these hold:
   else-if is still an else-if, each new block holds one statement, and every
   comment is between the same two tokens of code,
 - after `layout`, every file holds the same code apart from whitespace, and
-  every comment is between the same two tokens of code. Two moves are the
-  stage's own: a comment behind a block's closing brace goes in front of it,
-  and one behind the `break;` of a case section on one line goes to the
-  statement before the break, because that is the code it explains.
+  every comment is between the same two tokens of code. Four moves are the
+  stage's own, because they keep a comment with the code it explains:
+  - a comment behind the closing brace of a block of several statements goes on
+    the line of the block's header (`if`, `else`, `catch`, ...), unless the
+    block has no header, holds another comment or the header's line already
+    ends in a line comment,
+  - any other comment behind a block's closing brace goes in front of it,
+  - a comment behind the `break;` of a case section on one line goes to the
+    statement before the break, when that is the section's only other
+    statement,
+  - a comment at the end of a line of several statements goes on a line of its
+    own above the first of them.
 
 `selftest` compiles its own snippets instead of the plugin. It needs neither the
 game nor the core DLL.

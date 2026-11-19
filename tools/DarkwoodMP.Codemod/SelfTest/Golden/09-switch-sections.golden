@@ -30,7 +30,7 @@ class Switches
             case 1: a = 2; break; // why this section
             case 2: a = 3; a = 4; break; /* why that one */
             case 3: break; // nothing to hang it on
-            case 4: if (a > 0) { a = 5; } break; // stays on the break
+            case 4: if (a > 0) { a = 5; } break; // for all of the line
             case 5:
                 a = 6;
                 break; // on lines of their own already
@@ -74,7 +74,7 @@ class Switches
             case 1: a = 2; break; // why this section
             case 2: a = 3; a = 4; break; /* why that one */
             case 3: break; // nothing to hang it on
-            case 4: if (a > 0) { a = 5; } break; // stays on the break
+            case 4: if (a > 0) { a = 5; } break; // for all of the line
             case 5:
                 a = 6;
                 break; // on lines of their own already
@@ -153,17 +153,19 @@ class Switches
                 a = 2; // why this section
                 break;
             case 2:
+                /* why that one */
                 a = 3;
-                a = 4; /* why that one */
+                a = 4;
                 break;
             case 3:
                 break; // nothing to hang it on
             case 4:
+                // for all of the line
                 if (a > 0)
                 {
                     a = 5;
                 }
-                break; // stays on the break
+                break;
             case 5:
                 a = 6;
                 break; // on lines of their own already
