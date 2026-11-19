@@ -124,24 +124,16 @@ sealed class BraceRewriter : CSharpSyntaxRewriter
     BlockSyntax Wrap(StatementSyntax original, StatementSyntax visited)
     {
         Added++;
+        // The statement's line break goes behind the closing brace. After a
+        // line comment the Formatter puts that brace on a line of its own.
         var trailing = visited.GetTrailingTrivia().ToList();
         var closeTrailing = SyntaxFactory.TriviaList();
-        if (trailing.Any(t => t.IsKind(SyntaxKind.SingleLineCommentTrivia)))
+        int lineEnd = trailing.FindLastIndex(
+            t => t.IsKind(SyntaxKind.EndOfLineTrivia));
+        if (lineEnd >= 0)
         {
-            // A line comment keeps its own line break, or it would swallow
-            // the closing brace. The brace gets one of its own.
-            closeTrailing = SyntaxFactory.TriviaList(Lines.Break);
-        }
-        else
-        {
-            int lineEnd = trailing.FindLastIndex(
-                t => t.IsKind(SyntaxKind.EndOfLineTrivia));
-            if (lineEnd >= 0)
-            {
-                closeTrailing = SyntaxFactory.TriviaList(
-                    trailing.Skip(lineEnd));
-                trailing = trailing.Take(lineEnd).ToList();
-            }
+            closeTrailing = SyntaxFactory.TriviaList(trailing.Skip(lineEnd));
+            trailing = trailing.Take(lineEnd).ToList();
         }
         var inner = visited
             .WithLeadingTrivia(Before(visited.GetLeadingTrivia()))
