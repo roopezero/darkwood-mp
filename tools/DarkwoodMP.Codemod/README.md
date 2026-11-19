@@ -72,6 +72,15 @@ unless all of these hold:
   - a comment at the end of a line of several statements goes on a line of its
     own above the first of them.
 
+Writing the files can still fail after every gate has passed: a read-only file
+or folder, a full disk. Each new text goes to a temp file beside its source
+first (`*.cs.codemod-tmp`), and the sources are replaced only when all of those
+are complete. So a failed write stops the command with exit code 2, names the
+file and leaves every source as it was. If replacing the sources fails part of
+the way through, the message says how many were already replaced and to restore
+them with `git checkout -- src/DarkwoodMP` in the repo's root. The temp files
+are deleted in both cases.
+
 `selftest` compiles its own snippets instead of the plugin. It needs neither the
 game nor the core DLL.
 
@@ -97,7 +106,10 @@ whitespace, and the input and both outputs compile to the same bytes. It also
 feeds the check behind `check --braces` a list of wrong rewrites
 (`SelfTest/BracedCodeCases.cs`), and the comment word, same-code and comment
 place checks behind `layout` and plain `check` lists of their own
-(`SelfTest/LayoutCheckCases.cs`). Each must refuse all of them.
+(`SelfTest/LayoutCheckCases.cs`). Each must refuse all of them. Last, in a temp
+folder, it makes the writing of a stage's files fail (a read-only file, a
+read-only folder, a replace that fails at the start or part of the way through)
+and checks what is left behind (`SelfTest/OutputFilesCases.cs`).
 
 To add a case, write the `=== input` section, read the output of
 `selftest --show NAME` line by line, and only then save it as the expected text.

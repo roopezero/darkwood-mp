@@ -9,7 +9,7 @@ namespace DarkwoodMP.Codemod.Stages;
 
 /// Runs one whitespace stage over the plugin's sources: loads the compilation
 /// (stopping on any existing error), rewrites every file in memory, proves the
-/// result (see Gates) and only then writes the files.
+/// result (see Gates) and only then writes the files (see OutputFiles).
 static class StageCommand
 {
     public delegate string Pass(string source, CSharpParseOptions parse);
@@ -36,10 +36,8 @@ static class StageCommand
         }
         var gates = new Gates(project, stage, pass);
         gates.Run(rewritten);
-        foreach (var (tree, after) in rewritten)
-        {
-            File.WriteAllText(tree.FilePath, after, new UTF8Encoding(false));
-        }
+        OutputFiles.WriteAll(
+            rewritten.Select(r => (r.Tree.FilePath, r.After)).ToList());
         Console.WriteLine(
             $"{stage}: {rewritten.Count} of {project.Sources.Count} files "
                 + "rewritten. The compiled DLL is byte-identical in memory; "

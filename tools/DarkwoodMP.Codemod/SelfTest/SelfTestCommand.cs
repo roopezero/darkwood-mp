@@ -46,11 +46,16 @@ static class SelfTestCommand
             $"{files.Count - failed} of {files.Count} golden cases passed.");
         var accepted = BracedCodeCases.Failures();
         accepted.AddRange(LayoutCheckCases.Failures());
+        int cases = BracedCodeCases.Count + LayoutCheckCases.Count;
+        if (!OperatingSystem.IsWindows())
+        {
+            accepted.AddRange(OutputFilesCases.Failures());
+            cases += OutputFilesCases.Count;
+        }
         foreach (var problem in accepted)
         {
             Console.WriteLine("FAIL  check\n" + problem);
         }
-        int cases = BracedCodeCases.Count + LayoutCheckCases.Count;
         Console.WriteLine(
             $"{cases - accepted.Count} of {cases} gate cases passed.");
         if (failed > 0 || accepted.Count > 0)
