@@ -429,13 +429,32 @@ sealed class IlDiff
         return left;
     }
 
+    /// True when the rule's records for this member, taken together, are
+    /// exactly this change and each gives a reason. A rule records one change
+    /// per site, so a member with two rewritten strings has two records.
     bool Recorded(string member, List<string> removed, List<string> added)
     {
-        return _manifest.StringChanges.Any(change =>
-            Manifest.NameLevel(change.Member) == member
-            && change.Reason.Trim().Length > 0
-            && SameItems(change.Removed, removed)
-            && SameItems(change.Added, added));
+        var records = _manifest.StringChanges
+            .Where(change => Manifest.NameLevel(change.Member) == member)
+            .ToList();
+        if (records.Count == 0
+            || records.Any(change => string.IsNullOrWhiteSpace(change.Reason)))
+        {
+            return false;
+        }
+        var recordedRemoved = records.SelectMany(c => Items(c.Removed)).ToList();
+        var recordedAdded = records.SelectMany(c => Items(c.Added)).ToList();
+        return SameItems(recordedRemoved, removed)
+            && SameItems(recordedAdded, added);
+    }
+
+    static List<string> Items(List<string> items)
+    {
+        if (items == null)
+        {
+            return new List<string>();
+        }
+        return items;
     }
 
     static bool SameItems(List<string> a, List<string> b)

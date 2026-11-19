@@ -21,6 +21,7 @@ static class IlDiffCases
                 public int Foo(int x) { return x + 1; }
                 public int Foo(string s) { return s.Length; }
                 public string Say(int x) { return "hello" + x; }
+                public string Two(int x) { return "first" + x + "second"; }
                 public int Def(int x = 1) { return x; }
                 public int Lam(int x) { Func<int, int> f = y => y + x; return f(1); }
                 public IEnumerable<int> Iter(int x) { yield return x; }
@@ -39,6 +40,7 @@ static class IlDiffCases
 
     const string Foo = "N.C::Foo(System.Int32)";
     const string Say = "N.C::Say(System.Int32)";
+    const string Two = "N.C::Two(System.Int32)";
     const string Lam = "N.C::Lam(System.Int32)";
     const string Iter = "N.C::Iter(System.Int32)";
     const string Loc = "N.C::Loc(System.Int32)";
@@ -151,6 +153,23 @@ static class IlDiffCases
             "string constants changed"),
         ("a recorded change of other strings fails", Hello, Hullo, new[] { Say },
             None, new[] { Recorded(Say, "hello", "other", "typo") },
+            "string constants changed"),
+        ("two recorded changes in one member pass", "\"first\" + x + \"second\"",
+            "\"furst\" + x + \"secund\"", new[] { Two }, None,
+            new[]
+            {
+                Recorded(Two, "first", "furst", "typo"),
+                Recorded(Two, "second", "secund", "typo"),
+            },
+            ""),
+        ("two recorded changes, one without a reason, fail",
+            "\"first\" + x + \"second\"", "\"furst\" + x + \"secund\"",
+            new[] { Two }, None,
+            new[]
+            {
+                Recorded(Two, "first", "furst", "typo"),
+                Recorded(Two, "second", "secund", ""),
+            },
             "string constants changed"),
     };
 
