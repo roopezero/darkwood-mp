@@ -9,8 +9,9 @@ namespace DarkwoodMP.Codemod.Rules;
 /// whose null check is by reference becomes ifs (CoalesceText):
 ///
 /// - "T x = a ?? b;" becomes "T x = a; if (x == null) { x = b; }", when T
-///   is the type of the ?? itself, and "x = x ?? b;" for a local becomes
-///   "if (x == null) { x = b; }";
+///   is the type of the ?? itself, and "x = a ?? b;" for a local that
+///   nothing can see in between "x = a; if (x == null) { x = b; }"
+///   (CoalesceLocals);
 /// - anywhere else, an assignment to a field, a return, an argument, an
 ///   operand or a hole, the ?? moves into a temporary of its natural type in
 ///   front of its statement, "T t = a; if (t == null) { t = b; } _f = t;",
@@ -58,6 +59,14 @@ sealed partial class CoalescePlanner
     const string Nested =
         "a ?? or ??= inside another one: the inner one would run only "
             + "sometimes after the rewrite";
+
+    const string HoldsFirst =
+        "holds another ?? or ??= in its first value, which runs every "
+            + "time: rewrite one level per run";
+
+    const string InFirst =
+        "inside the first value of another ?? or ??=, which runs every "
+            + "time: rewrite one level per run";
 
     const string Declares =
         "the ?? declares a variable, whose scope the rewrite would change";
@@ -130,7 +139,7 @@ sealed partial class CoalescePlanner
             return;
         }
         var outer = TernaryChain.Outer(chain.Top);
-        if (Declaration(chain, outer) || SelfAssignment(chain, outer))
+        if (Declaration(chain, outer) || IntoLocal(chain, outer))
         {
             return;
         }
@@ -138,20 +147,41 @@ sealed partial class CoalescePlanner
     }
 
     /// What the text of any site must allow: no other site inside it or
-    /// around it, no variable declared in it, no directive in it.
+    /// around it, no variable declared in it, no directive in it. A site
+    /// in a right side runs only sometimes; one in a first value (or a
+    /// ??= target) runs every time, and only the reason says which.
     string Shape(
         ExpressionSyntax site,
         List<SyntaxNode> own,
         List<ExpressionSyntax> all)
     {
+        string nested = null;
         foreach (var other in all)
         {
-            if (!own.Contains(other)
-                && (other.Span.Contains(site.Span)
-                    || site.Span.Contains(other.Span)))
+            if (own.Contains(other))
             {
-                return Nested;
+                continue;
             }
+            if (other.Span.Contains(site.Span))
+            {
+                if (RightOf(other).Span.Contains(site.Span))
+                {
+                    return Nested;
+                }
+                nested = InFirst;
+            }
+            else if (site.Span.Contains(other.Span))
+            {
+                if (own.Any(link => RightOf(link).Span.Contains(other.Span)))
+                {
+                    return Nested;
+                }
+                nested = HoldsFirst;
+            }
+        }
+        if (nested != null)
+        {
+            return nested;
         }
         if (HoistPlanner.Declares(site))
         {
@@ -204,7 +234,7 @@ sealed partial class CoalescePlanner
         {
             names.Type = declaration.Type.ToString();
         }
-        if (!Temporaries(chain, names, statement))
+        if (!Temporaries(chain, names, statement, new List<string>()))
         {
             return true;
         }
@@ -212,35 +242,18 @@ sealed partial class CoalescePlanner
         return true;
     }
 
-    /// "x = x ?? b;" for a local or a parameter: "if (x == null) { x = b;
-    /// }". Nothing else can read x before the store, so it is the
-    /// temporary.
-    bool SelfAssignment(CoalesceChain chain, ExpressionSyntax outer)
+    /// The right side of a ?? link or of a ??=, which runs only sometimes.
+    static ExpressionSyntax RightOf(SyntaxNode site)
     {
-        if (outer.Parent is not AssignmentExpressionSyntax
-            {
-                Parent: ExpressionStatementSyntax statement,
-            } assignment
-            || !assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
-            || assignment.Right != outer
-            || chain.Form != CoalesceForm.Fill
-            || chain.Access != null
-            || !IsLocal(assignment.Left)
-            || chain.First is not IdentifierNameSyntax first
-            || !SymbolEqualityComparer.Default.Equals(
-                _model.GetSymbolInfo(first).Symbol,
-                _model.GetSymbolInfo(assignment.Left).Symbol)
-            || !_types.Identity(
-                _types.TypeOf(assignment.Left), chain.Natural))
+        if (site is AssignmentExpressionSyntax assignment)
         {
-            return false;
+            return assignment.Right;
         }
-        var names = new CoalesceNames { Name = first.Identifier.Text };
-        Direct(chain.Sites(), statement, text => text.Chain(chain, names));
-        return true;
+        return ((BinaryExpressionSyntax)site).Right;
     }
 
-    /// The chain moves into a temporary in front of its statement.
+    /// The chain moves into a temporary in front of its statement. The
+    /// temporaries it needs are named in the order they are declared.
     void Hoist(CoalesceChain chain)
     {
         var site = chain.Top;
@@ -251,18 +264,24 @@ sealed partial class CoalescePlanner
             Queue(links, refused);
             return;
         }
+        var replaced = HoistPlanner.Replaced(site, null);
+        if (HoistIntoLocal(chain, replaced, statement))
+        {
+            return;
+        }
         var names = new CoalesceNames();
         names.Type = Spell(chain, chain.Natural, statement);
         if (names.Type == null)
         {
             return;
         }
-        var replaced = HoistPlanner.Replaced(site, null);
-        names.Name = Temps(site).Unique(Hint(replaced, chain.First));
-        if (!Temporaries(chain, names, statement))
+        var hints = Hints(replaced, chain.First);
+        if (!Temporaries(chain, names, statement, hints))
         {
             return;
         }
+        names.Name = Temps(site).Pick(
+            hints, Related(replaced, chain.First, null));
         int column = Column(statement.SpanStart);
         _hoists.Add(new CoalesceHoist
         {
@@ -276,10 +295,15 @@ sealed partial class CoalescePlanner
     }
 
     /// The temporaries for the receiver of an opened ?. and for a first
-    /// value that is unwrapped. False when one of their types can't be
-    /// written, after the chain went to the queue.
+    /// value that is unwrapped, named after what they hold, and a first
+    /// value then after the variable the chain fills (names.Name) or the
+    /// hints of the chain's own temporary. False when one of their types
+    /// can't be written, after the chain went to the queue.
     bool Temporaries(
-        CoalesceChain chain, CoalesceNames names, StatementSyntax statement)
+        CoalesceChain chain,
+        CoalesceNames names,
+        StatementSyntax statement,
+        List<string> later)
     {
         ExpressionSyntax held = null;
         if (chain.Access != null)
@@ -302,7 +326,21 @@ sealed partial class CoalescePlanner
         {
             return false;
         }
-        var name = Temps(held).For(held, _model);
+        // An unwrapped first value is the chain's value before it is
+        // unwrapped, so it may take the name of what the chain fills; a
+        // receiver is something else.
+        var hints = new List<string> { TempNames.Named(held, _model) };
+        string filled = null;
+        if (chain.Access == null)
+        {
+            filled = names.Name;
+            if (filled != null)
+            {
+                hints.Add(filled);
+            }
+            hints.AddRange(later);
+        }
+        var name = Temps(held).Pick(hints, Related(held, held, filled));
         if (chain.Access != null)
         {
             names.ReceiverType = type;
@@ -368,31 +406,58 @@ sealed partial class CoalescePlanner
         return moved;
     }
 
-    /// The parameter an argument is passed to, the target an assignment
-    /// stores to, or the last name in the first value, or "text" in an
-    /// interpolation hole.
-    string Hint(ExpressionSyntax replaced, ExpressionSyntax first)
+    /// The names for a temporary of the chain's value, best first: the
+    /// parameter it is passed to, when that is a word, the target an
+    /// assignment stores it to,
+    /// the name of its first value, and "text" in an interpolation hole.
+    List<string> Hints(ExpressionSyntax replaced, ExpressionSyntax first)
     {
-        string hint = "value";
+        var hints = new List<string>();
         if (replaced.Parent is ArgumentSyntax)
         {
-            hint = TempNames.Hint(replaced, _model);
+            var parameter = TempNames.Hint(replaced, _model);
+            if (TempNames.IsWord(parameter))
+            {
+                hints.Add(parameter);
+            }
         }
         if (replaced.Parent is AssignmentExpressionSyntax assignment
             && assignment.Right == replaced)
         {
-            hint = TempNames.Hint(assignment.Left, _model);
+            hints.Add(TempNames.Hint(assignment.Left, _model));
         }
-        if (hint != "value")
+        hints.Add(TempNames.Named(first, _model));
+        if (replaced.Parent is InterpolationSyntax)
         {
-            return hint;
+            hints.Add("text");
         }
-        var own = TempNames.Hint(first, _model);
-        if (own == "value" && replaced.Parent is InterpolationSyntax)
+        return hints;
+    }
+
+    /// The names a temporary may take with a number, as a second version
+    /// of what they name: the target an assignment stores the value to,
+    /// the variable the chain fills, and the first value when it is a
+    /// name or a member.
+    List<string> Related(
+        ExpressionSyntax replaced, ExpressionSyntax first, string filled)
+    {
+        var related = new List<string>();
+        if (replaced.Parent is AssignmentExpressionSyntax assignment
+            && assignment.Right == replaced)
         {
-            return "text";
+            related.Add(TempNames.Hint(assignment.Left, _model));
         }
-        return own;
+        if (filled != null)
+        {
+            related.Add(filled);
+        }
+        var bare = TernaryChain.Strip(first);
+        if (bare is IdentifierNameSyntax
+            || bare is MemberAccessExpressionSyntax)
+        {
+            related.Add(TempNames.Named(bare, _model));
+        }
+        return related;
     }
 
     /// A local or a parameter, which nothing but the code in front of it

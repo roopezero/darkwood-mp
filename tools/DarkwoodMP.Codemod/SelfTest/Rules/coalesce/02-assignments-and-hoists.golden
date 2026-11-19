@@ -86,42 +86,42 @@ namespace N
                 name = b;
             }
             _name = name;
-            string text2 = a;
-            if (text2 == null)
-            {
-                text2 = "none";
-            }
-            var shown = Pick(text2).Length;
             string a2 = a;
             if (a2 == null)
             {
-                a2 = "x";
+                a2 = "none";
+            }
+            var shown = Pick(a2).Length;
+            string a3 = a;
+            if (a3 == null)
+            {
+                a3 = "x";
             }
             string b2 = b;
             if (b2 == null)
             {
                 b2 = "y";
             }
-            var both = Join(a2, b2);
-            string a3 = a;
-            if (a3 == null)
+            var both = Join(a3, b2);
+            string a4 = a;
+            if (a4 == null)
             {
-                a3 = "none";
+                a4 = "none";
             }
             int n2 = 0;
             if (n.HasValue)
             {
                 n2 = n.Value;
             }
-            var text = $"{a3,8} and {n2:0.0}";
+            var text = $"{a4,8} and {n2:0.0}";
             var late = Join(Pick(b), a ?? "z");
             var counted = Join(_count.ToString(), a ?? Load());
-            string a4 = a;
-            if (a4 == null)
+            string a5 = a;
+            if (a5 == null)
             {
-                a4 = b;
+                a5 = b;
             }
-            return a4 + shown + both + text + late + counted;
+            return a5 + shown + both + text + late + counted;
         }
 
         public int Size(string a)

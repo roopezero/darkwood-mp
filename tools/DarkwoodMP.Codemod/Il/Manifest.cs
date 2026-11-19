@@ -20,6 +20,20 @@ sealed class StringChange
     public List<string> Added { get; set; } = new();
 }
 
+/// A temporary a rule named with a number at the end, for stage 9, which
+/// renames the temporaries to words. The ildiff command doesn't read it.
+sealed class NumberedTemp
+{
+    [JsonPropertyName("file")]
+    public string File { get; set; } = "";
+
+    [JsonPropertyName("member")]
+    public string Member { get; set; } = "";
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+}
+
 /// What a rule says it touched. A member is "Ns.Type::Name(Param,Types)", in
 /// Cecil's spelling, or "Ns.Type::Name" for every overload of that name. An
 /// allowed entry names one thing that may be added or removed: "type T",
@@ -42,6 +56,9 @@ sealed class Manifest
 
     [JsonPropertyName("stringChanges")]
     public List<StringChange> StringChanges { get; set; } = new();
+
+    [JsonPropertyName("temps")]
+    public List<NumberedTemp> Temps { get; set; } = new();
 
     public static Manifest Read(string path)
     {

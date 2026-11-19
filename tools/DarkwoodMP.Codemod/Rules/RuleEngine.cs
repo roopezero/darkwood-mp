@@ -1,6 +1,7 @@
 using System.Text;
 using DarkwoodMP.Codemod.Census;
 using DarkwoodMP.Codemod.Format;
+using DarkwoodMP.Codemod.Il;
 using DarkwoodMP.Codemod.Stages;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -207,6 +208,38 @@ static class RuleEngine
         }
     }
 
+    /// The variables the proposal declares that its old text didn't and
+    /// whose names end in a digit: the numbered temporaries.
+    static void NoteTemps(
+        string file, Proposal proposal, List<NumberedTemp> temps)
+    {
+        var old = Declared(proposal.Before);
+        foreach (var name in Declared(proposal.Text))
+        {
+            if (!old.Contains(name)
+                && char.IsDigit(name[name.Length - 1])
+                && !temps.Any(t => t.File == file
+                    && t.Member == proposal.Member && t.Name == name))
+            {
+                temps.Add(new NumberedTemp
+                {
+                    File = file,
+                    Member = proposal.Member,
+                    Name = name,
+                });
+            }
+        }
+    }
+
+    static List<string> Declared(string statements)
+    {
+        return SyntaxFactory.ParseStatement("{\n" + statements + "\n}")
+            .DescendantNodes()
+            .OfType<VariableDeclaratorSyntax>()
+            .Select(declarator => declarator.Identifier.ValueText)
+            .ToList();
+    }
+
     /// Records the fate of every site of the file.
     static void Tally(
         RulePlan plan,
@@ -242,6 +275,7 @@ static class RuleEngine
             {
                 result.Manifest.StringChanges.Add(proposal.Strings);
             }
+            NoteTemps(plan.File, proposal, result.Manifest.Temps);
         }
         foreach (var (site, reason) in plan.Queued.Concat(banned))
         {

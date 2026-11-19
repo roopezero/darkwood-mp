@@ -106,7 +106,8 @@ own lines. A site whose rewrite doesn't compile goes to the queue and the file
 is rewritten without it. A rule never adds a lambda or a local function, because
 the game's stack readers would see the extra frame. `DIR` gets:
 
-- `manifest.json`: the members the rule rewrote, for the IL diff,
+- `manifest.json`: the members the rule rewrote, for the IL diff, and under
+  `temps` every temporary whose name ends in a digit, for stage 9,
 - `queue.jsonl`: one JSON line per site left alone (`file`, `line`, `rule`,
   `reason`, `snippet`),
 - `sites.jsonl`: one JSON line per rewritten site (`file`, `line`, `member`,
@@ -262,7 +263,15 @@ that tests for that:
 - a declaration whose type is the type of the `??` itself:
   `T x = a; if (x == null) { x = b; }`, one if per value of a chain
   (`var` is spelled out), and a throw last becomes a throw statement;
-- `x = x ?? b;` for a local or a parameter: `if (x == null) { x = b; }`;
+- `x = a ?? b;` for a local or a parameter x: `x = a; if (x == null) { x =
+  b; }`, so x is the temporary, when nothing can see x while the chain
+  runs: no lambda or local function captures x, it is no `ref`, no later
+  value reads it (nor the first, when that is an opened `?.`), and in a
+  `try` only literals and locals follow the first store. When x is the
+  first value itself, `if (x == null) { x = b; }`;
+- `x = f(x ?? b);` for such an x that nothing else in the statement reads,
+  outside any `try`: `if (x == null) { x = b; } x = f(x);`, and
+  `x ?? (x = v)` on a local or a parameter is `x ??= v`;
 - anywhere else, an assignment, a return, an argument, an operand, a hole, an
   `if` condition or a `foreach` source: the `??` moves into a temporary of
   its natural type in front of its statement, with the hazard checks of
@@ -287,6 +296,17 @@ that tests for that:
   `T t = x; if (t == null) { t = v; x = t; }` and then `t.Add(i)`, so it is
   read once and written once as before.
 
+Temporaries are named in the order they are declared (`TempNames.Pick`),
+after the parameter the value is passed to when that is a word (not
+`Math.Max`'s `val2`), the target it is stored to, or what it is: a call
+without a leading get (`getObjects()` gives `objects`), and an element that
+`First`, `Last`, `Single` or `ElementAt` picks after the `Select` in front
+of it or its type (`slot`). Only a name a new local could clash with is
+taken, so not one after a dot. A name that another variable or member has
+is passed over, because a number would make the temporary read as a copy of
+it; a number goes only on a second version of another temporary, of the
+target or of the first value.
+
 The left side's static type decides (codemod.md section 6). A tested value
 or a result that is a Unity object is left for stage 7 (`unity-null`), not
 queued, and so is a `?.` on a Unity receiver. A type with an `==` of its own
@@ -299,7 +319,9 @@ conversion, which keep a null a null and run no code; otherwise a single
 The queue gets: what ternary-hoist's hazards refuse (a call earlier in the
 statement, a mutable value read earlier when the `??` has effects, code
 that may not run, an expression body, an initializer, an `await` in the
-statement), a `??` or `??=` inside another one, a variable declared inside
+statement), a `??` or `??=` inside another one or holding one, with one
+reason when the inner one is in a right side and another when it is in the
+first value, which runs every time, a variable declared inside
 the `??`, a directive or a comment inside it, `dynamic`, a type with an
 `==` of its own, a left side that converts by more than a reference
 conversion, a chain whose first values would have to be unwrapped, a
@@ -367,6 +389,15 @@ parameter the code passes on without checking it, as `b` in `a ?? b`, is
 marked `[PassesThrough]`: a destroyed `b` must then come back as it did
 before, and isn't replaced by null in the original's run. Without the mark
 the right rewrite of `a ?? b` fails.
+
+The fake `UnityObject` doesn't derive from `UnityEngine.Object`, so the
+rules see it as a type with an `==` of its own. Which sites the coalesce
+rule counts as Unity objects, and leaves for stage 7, is checked only by
+the golden case `coalesce/04-types`. A case must hold a site the rule
+rewrites, so a case about a site that must stay as written has one of each.
+The coalesce cases guard every refusal of code that may not run (`&&`, `||`,
+a `?:` branch, a lambda body) and each condition of the forms that write
+into a local: a hand-made break of any of them fails one of the cases.
 
 ## Golden cases
 

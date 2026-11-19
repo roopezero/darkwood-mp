@@ -11,12 +11,16 @@ static class TempNameCases
 {
     const string Source = """
         using System;
+        using System.Collections.Generic;
+        using System.Linq;
         namespace N
         {
             public class Holder
             {
                 public static Holder Instance;
                 public int Size;
+                public int depth;
+                public string type;
             }
 
             public class C
@@ -25,6 +29,7 @@ static class TempNameCases
                 @class = 0;
                 void F(int amount, string label) { }
                 int Get() { return 1; }
+                List<int> getItems() { return null; }
 
                 void M(int count, int n, bool c)
                 {
@@ -42,6 +47,13 @@ static class TempNameCases
         #if NEVER_DEFINED
                             int hidden = 3;
         #endif
+                            int deep = Holder.Instance.depth;
+                            var items = getItems();
+                            var size = new List<Holder>()
+                                .Select(h => h.Size).FirstOrDefault();
+                            var one = new List<Holder>().FirstOrDefault();
+                            var kind = new List<Holder>()
+                                .Select(h => h.type).FirstOrDefault();
                             break;
                     }
                 }
@@ -49,7 +61,7 @@ static class TempNameCases
         }
         """;
 
-    public const int Count = 11;
+    public const int Count = 23;
 
     public static List<string> Failures()
     {
@@ -96,7 +108,52 @@ static class TempNameCases
             names.Unique("hidden"));
         // From an @object parameter: "object" wouldn't compile.
         Expect(problems, "a keyword", "object2", names.Unique("object"));
+
+        // Pick, for the coalesce rule: a name after a dot is looked up in
+        // what is in front of the dot, so no local can clash with it.
+        Expect(problems, "after a dot, for Unique", "depth2",
+            names.Unique("depth"));
+        Expect(problems, "after a dot, for Pick", "depth",
+            Pick(names, new[] { "depth" }));
+        Expect(problems, "another variable's name is passed over", "tally",
+            Pick(names, new[] { "count", "tally" }));
+        Expect(problems, "a related name gets a number", "count2",
+            names.Pick(new List<string> { "count" }, new List<string>
+            {
+                "count",
+            }));
+        Expect(problems, "another temp's name gets a number", "tally2",
+            Pick(names, new[] { "tally" }));
+        Expect(problems, "all taken by others: the first gets a number",
+            "n2", Pick(names, new[] { "n", "c" }));
+        Expect(problems, "value comes last", "spare",
+            Pick(names, new[] { "value", "spare" }));
+        var calls = method.DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .ToList();
+        Expect(problems, "a get call without its get", "items",
+            TempNames.Named(calls.First(c => c.ToString() == "getItems()"),
+                model));
+        Expect(problems, "an element picked after a Select", "size",
+            TempNames.Named(calls.First(
+                c => c.ToString().EndsWith(".FirstOrDefault()")
+                    && c.ToString().Contains("Select")), model));
+        Expect(problems, "an element named after its type", "holder",
+            TempNames.Named(calls.Last(
+                c => c.ToString() == "new List<Holder>().FirstOrDefault()"),
+                model));
+        Expect(problems, "type is a name: a keyword only before attributes",
+            "type", TempNames.Named(calls.First(
+                c => c.ToString().EndsWith(".FirstOrDefault()")
+                    && c.ToString().Contains("h.type")), model));
+        Expect(problems, "Math.Max's val2 is no word", "False",
+            TempNames.IsWord("val2").ToString());
         return problems;
+    }
+
+    static string Pick(TempNames names, string[] hints)
+    {
+        return names.Pick(hints.ToList(), new List<string>());
     }
 
     static void Expect(

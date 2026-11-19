@@ -12,6 +12,10 @@ sealed class CoalesceNames
 
     public string Name;
 
+    /// Name is a variable that exists already, the target of "x = a ?? b",
+    /// which takes the first value with "x = a;" instead of a declaration.
+    public bool Assigned;
+
     /// The temporary the receiver of an opened ?. goes into, or null when
     /// the receiver is a local, a parameter or this.
     public string ReceiverType;
@@ -79,7 +83,7 @@ sealed class CoalesceText
         }
         if (chain.Access != null)
         {
-            output.Append(names.Type + " " + names.Name + " = null;\n");
+            output.Append(Target(names) + " = null;\n");
             output.Append(If(test, Line(names.Name + " = " + value + ";")));
         }
         else if (names.Type != null)
@@ -87,6 +91,11 @@ sealed class CoalesceText
             output.Append(Line(
                 names.Type + " " + names.Name + " = " + _text.Of(chain.First)
                     + ";"));
+        }
+        else if (names.Assigned)
+        {
+            output.Append(Line(
+                names.Name + " = " + _text.Of(chain.First) + ";"));
         }
         var empty = Empty(names.Name, CoalesceTypes.IsNullable(chain.Natural));
         for (int i = 1; i < chain.Values.Count; i++)
@@ -103,14 +112,28 @@ sealed class CoalesceText
         CoalesceChain chain, CoalesceNames names, string test, string value)
     {
         var store = Line(names.Name + " = " + value + ";");
-        var declared = names.Type + " " + names.Name;
         if (TernaryChain.IsLiteral(chain.Last))
         {
-            return Line(declared + " = " + _text.Of(chain.Last) + ";")
+            return Line(Target(names) + " = " + _text.Of(chain.Last) + ";")
                 + If(test, store);
         }
-        return declared + ";\n" + If(test, store) + "else\n{\n"
+        var declared = "";
+        if (names.Type != null)
+        {
+            declared = names.Type + " " + names.Name + ";\n";
+        }
+        return declared + If(test, store) + "else\n{\n"
             + Store(names.Name, chain.Last) + "}\n";
+    }
+
+    /// "T t" for a new temporary, or "x" for a variable that exists.
+    static string Target(CoalesceNames names)
+    {
+        if (names.Type == null)
+        {
+            return names.Name;
+        }
+        return names.Type + " " + names.Name;
     }
 
     /// "if (x == null) { x = v; }" for "x ??= v", or with a temporary,

@@ -65,7 +65,9 @@ sealed partial class CoalescePlanner
                 Queue(sites, refused);
                 return;
             }
-            names.Name = Temps(site).For(site.Left, _model);
+            names.Name = Temps(site).Pick(
+                new List<string> { TempNames.Named(site.Left, _model) },
+                Related(site.Left, site.Left, null));
             name = names.Name;
         }
         int column = Column(front.SpanStart);

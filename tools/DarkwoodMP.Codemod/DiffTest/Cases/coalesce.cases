@@ -278,3 +278,122 @@ public static object Run(bool c, string a, string b)
     var pick = Log("a", a) ?? (Log("c", c) ? b : "c");
     return pick;
 }
+=== a ?? on the right of && runs only when the left side is true
+public static object Run(bool c, string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    return (c && (Log("a", a) ?? Log("b", b)).Length > 0, seen);
+}
+=== a ?? on the right of || runs only when the left side is false
+public static object Run(bool c, string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    return (c || (Log("a", a) ?? Log("b", b)).Length > 0, seen);
+}
+=== a ?? in a branch of ?: runs only when that branch is taken
+public static object Run(bool c, string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    return (c ? Log("a", a) ?? Log("b", b) : "none", seen);
+}
+=== a ?? in a lambda body runs each time the lambda does
+public static object Run(string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    Func<string> f = () => Log("a", a) ?? Log("b", b);
+    Log("between", 0);
+    return f() + f() + seen;
+}
+=== a chain assigned to a local fills the local itself
+public static object Run(string a, string b)
+{
+    string x = Log("old", "old");
+    x = Log("a", a) ?? Log("b", b) ?? "none";
+    return x;
+}
+=== a later value that reads the local keeps the temporary
+public static object Run(string a, string b)
+{
+    string x = Log("b", b);
+    x = Log("a", a) ?? x;
+    return x;
+}
+=== inside a try, a call after the first store keeps the temporary
+static string Fail(string a)
+{
+    throw new InvalidOperationException("no " + a);
+}
+
+public static object Run(string a, string b)
+{
+    string x = "old";
+    try
+    {
+        x = Log("a", a) ?? Fail(b);
+    }
+    catch (InvalidOperationException)
+    {
+    }
+    return x;
+}
+=== inside a try, a literal after the first store fills the local
+static bool? Flag(int? n)
+{
+    if (n == null)
+    {
+        return null;
+    }
+    return Log("flag", n.Value > 0);
+}
+
+public static object Run(int? n)
+{
+    bool dead = true;
+    try
+    {
+        dead = Flag(n) ?? false;
+    }
+    catch (InvalidOperationException)
+    {
+        return "caught";
+    }
+    return dead;
+}
+=== a Nullable and a ?. unwrapped into a local
+public static object Run(int? n, string s)
+{
+    int x = 7;
+    x = Log("n", n) ?? 5;
+    int count = 3;
+    count = Log("s", s)?.Length ?? -1;
+    return (x, count);
+}
+=== a local refilled in front of its statement
+static string Clean(string text)
+{
+    return Log("clean", text + "!");
+}
+
+public static object Run(string name, string b)
+{
+    name = Clean(name ?? Log("b", b));
+    return name;
+}
+=== a local read again in its statement keeps the temporary
+public static object Run(string name)
+{
+    name = string.Concat(Log("first", name ?? ""), Log("again", name));
+    return name;
+}
+=== x ?? (x = v) on a local is x ??= v
+public static object Run(string a, int d)
+{
+    List<int> gone = null;
+    if (a != null)
+    {
+        gone = new List<int>();
+        gone.Add(-1);
+    }
+    (gone ?? (gone = Log("new", new List<int>()))).Add(d);
+    return gone;
+}
