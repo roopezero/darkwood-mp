@@ -93,7 +93,48 @@ sealed class IlDiff
             }
         }
         CompareStrings(typesA.Values, typesB.Values);
+        CompareFrames(a, b);
         return _report;
+    }
+
+    /// No member may gain a lambda, local function or state machine, listed
+    /// or not, because the game's stack readers would see the extra frame
+    /// (see Frames). The manifest can allow one by name: "method <full
+    /// name>", or "type <full name>" for a state machine.
+    void CompareFrames(ModuleDefinition a, ModuleDefinition b)
+    {
+        var before = Frames.Of(a, _ownersA, _namesA);
+        foreach (var (key, frames) in Frames.Of(b, _ownersB, _namesB))
+        {
+            var counted = frames
+                .Where(f => !_allowed.Contains(f.Allowance))
+                .ToList();
+            var names = new List<string>();
+            if (before.TryGetValue(key, out var old))
+            {
+                names = old.Select(f => f.Name).ToList();
+            }
+            if (counted.Count <= names.Count)
+            {
+                continue;
+            }
+            foreach (var frame in counted)
+            {
+                if (names.Remove(frame.Name))
+                {
+                    continue;
+                }
+                if (frame.Allowance.StartsWith("type "))
+                {
+                    Problem("a state machine was added: " + frame.FullName);
+                }
+                else
+                {
+                    Problem("a lambda or local function was added: "
+                        + frame.FullName);
+                }
+            }
+        }
     }
 
     void Problem(string text)

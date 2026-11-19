@@ -53,6 +53,10 @@ static class IlDiffCases
         """;
 
     const string Foo = "N.C::Foo(System.Int32)";
+    const string FooBody = "public int Foo(int x) { return x + 1; }";
+    /// The lambda that "a lambda added to a listed member" adds to Foo.
+    const string FooLambda =
+        "System.Int32 N.C/<>c__DisplayClass10_0::<Foo>b__0()";
     const string Say = "N.C::Say(System.Int32)";
     const string Two = "N.C::Two(System.Int32)";
     const string Lam = "N.C::Lam(System.Int32)";
@@ -119,6 +123,28 @@ static class IlDiffCases
             "return y + x; }", new[] { Loc }, None, null, ""),
         ("a new closure class outside the manifest fails", "return y + 1; }",
             "return y + x; }", None, None, null, "type added"),
+        // A lambda, local function or state machine is a stack frame of its
+        // own, which the game's stack readers would count.
+        ("a lambda added to a listed member fails", FooBody,
+            "public int Foo(int x) { Func<int> g = () => x; return g() + 1; }",
+            new[] { Foo }, None, null, "a lambda or local function was added"),
+        ("a local function added to a listed member fails", FooBody,
+            "public int Foo(int x) { int G() { return x; } return G() + 1; }",
+            new[] { Foo }, None, null, "a lambda or local function was added"),
+        ("a lambda without a capture added to a listed member fails", FooBody,
+            "public int Foo(int x) { Func<int, int> g = y => y + 1; "
+                + "return g(x); }",
+            new[] { Foo }, None, null, "a lambda or local function was added"),
+        ("a state machine added to a listed member fails", FooBody,
+            "public int Foo(int x) { IEnumerable<int> L() { yield return 1; } "
+                + "foreach (var i in L()) { x += i; } return x + 1; }",
+            new[] { Foo }, None, null, "a state machine was added"),
+        ("a lambda the manifest allows by name passes", FooBody,
+            "public int Foo(int x) { Func<int> g = () => x; return g() + 1; }",
+            new[] { Foo }, new[] { "method " + FooLambda }, null, ""),
+        ("a second lambda in a listed member fails", "y => y + x; return f(1)",
+            "y => y + x; Func<int> g = () => x; return f(g())",
+            new[] { Lam }, None, null, "a lambda or local function was added"),
         ("a lambda of the listed overload passes", "y - x", "y - x - 1",
             new[] { Over }, None, null, ""),
         ("a lambda of another overload fails", "y - s.Length", "y - s.Length - 1",

@@ -125,7 +125,11 @@ tools/il-compare.sh HEAD~1 HEAD DIR/manifest.json
 It builds both commits deterministically and runs `ildiff`: every changed method
 must belong to a member in the manifest (lambdas, local functions and state
 machines count for the overload whose code leads to them, or, when none does,
-only when every overload of the name is listed), no type, field, property or event may appear or
+only when every overload of the name is listed), no member may gain a lambda,
+local function or state machine, listed or not, because the game's stack
+readers would see the extra frame (the manifest can allow one by name:
+`method <full name>`, or `type <full name>` for a state machine; a new closure
+class adds no frame and counts for its owner), no type, field, property or event may appear or
 go unless the manifest allows it, the fields of a struct keep their order, parameter names, attributes, default values
 and constants stay as they were, and a manifest member's string constants may
 only change if the rule recorded a reason for that member. Each overload is a
