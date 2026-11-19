@@ -29,6 +29,7 @@ static class LayoutCheckCases
 
     static readonly (string Name, string Before, string After)[] WrongPlaces =
     {
+        ("a comment added", "G();", "G(); // new\n"),
         ("a comment moved past a closing brace",
             "try { G(); } catch { /* none */ } H();",
             "try { G(); } catch { } /* none */ H();"),

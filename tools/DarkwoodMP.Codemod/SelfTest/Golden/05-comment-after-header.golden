@@ -22,6 +22,19 @@ class Headers
         else
             return 3; /* block */
     }
+
+    void Comments(bool a, bool b)
+    {
+        if (a) { /* why */ if (b) C(); }
+        if (a)
+
+            // kept with the call
+            C();
+    }
+
+    void C()
+    {
+    }
 }
 === braces
 class Headers
@@ -63,6 +76,27 @@ class Headers
             return 3; /* block */
         }
     }
+
+    void Comments(bool a, bool b)
+    {
+        if (a)
+        {
+            /* why */
+            if (b)
+            {
+                C();
+            }
+        }
+        if (a)
+        {
+            // kept with the call
+            C();
+        }
+    }
+
+    void C()
+    {
+    }
 }
 === layout
 class Headers
@@ -103,5 +137,26 @@ class Headers
         {
             return 3; /* block */
         }
+    }
+
+    void Comments(bool a, bool b)
+    {
+        if (a)
+        {
+            /* why */
+            if (b)
+            {
+                C();
+            }
+        }
+        if (a)
+        {
+            // kept with the call
+            C();
+        }
+    }
+
+    void C()
+    {
     }
 }
