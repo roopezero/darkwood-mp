@@ -16,7 +16,6 @@ sealed class IlDiff
     readonly GeneratedNames _namesB;
     readonly HashSet<string> _exact = new();
     readonly HashSet<string> _anyOverload = new();
-    readonly HashSet<string> _byName = new();
     readonly Dictionary<string, HashSet<string>> _overloads = new();
     readonly HashSet<string> _allowed;
 
@@ -32,7 +31,6 @@ sealed class IlDiff
         AddOverloads(b);
         foreach (var member in manifest.Members)
         {
-            _byName.Add(Manifest.NameLevel(member));
             if (member.Contains('('))
             {
                 _exact.Add(member);
@@ -372,15 +370,19 @@ sealed class IlDiff
             || _anyOverload.Contains(m.DeclaringType.FullName + "::" + m.Name);
     }
 
-    /// Per member of the manifest, the string constants of its methods and of
-    /// what the compiler generated for it must be the same, unless the rule
-    /// recorded a reason for exactly this change.
+    /// Per member of the manifest, as it is listed, the string constants of
+    /// its code and of what the compiler generated for it must be the same,
+    /// unless the rule recorded a reason for exactly this change. An overload
+    /// is a member of its own, so strings that move between two overloads
+    /// change both.
     void CompareStrings(
         IEnumerable<TypeDefinition> typesA, IEnumerable<TypeDefinition> typesB)
     {
         var a = Strings(typesA, _ownersA);
         var b = Strings(typesB, _ownersB);
-        foreach (var member in _byName.OrderBy(m => m, StringComparer.Ordinal))
+        var members = a.Keys.Union(b.Keys)
+            .OrderBy(m => m, StringComparer.Ordinal);
+        foreach (var member in members)
         {
             a.TryGetValue(member, out var before);
             b.TryGetValue(member, out var after);
@@ -411,22 +413,50 @@ sealed class IlDiff
                 {
                     continue;
                 }
-                foreach (var owner in owners.OwnersOf(m))
+                foreach (var member in StringMembers(m, owners))
                 {
-                    if (!_byName.Contains(owner))
-                    {
-                        continue;
-                    }
-                    if (!map.TryGetValue(owner, out var list))
+                    if (!map.TryGetValue(member, out var list))
                     {
                         list = new List<string>();
-                        map[owner] = list;
+                        map[member] = list;
                     }
                     list.AddRange(literals);
                 }
             }
         }
         return map;
+    }
+
+    /// The manifest members a method's strings count for. A method written
+    /// in source counts for its own overload, generated code for the
+    /// overloads its code was traced to; each also for its name, when the
+    /// manifest lists the name. Generated code that no overload leads to
+    /// counts for its name only when every overload of it is listed, as in
+    /// Holds.
+    HashSet<string> StringMembers(MethodDefinition m, Ownership owners)
+    {
+        var members = new HashSet<string>();
+        IReadOnlyCollection<string> exact = new[] { MemberKey(m) };
+        if (IsGeneratedMethod(m))
+        {
+            exact = owners.ExactOwnersOf(m);
+            if (exact.Count == 0)
+            {
+                members.UnionWith(owners.OwnersOf(m).Where(HoldsEveryOverload));
+            }
+        }
+        foreach (var key in exact)
+        {
+            if (_exact.Contains(key))
+            {
+                members.Add(key);
+            }
+            if (_anyOverload.Contains(Manifest.NameLevel(key)))
+            {
+                members.Add(Manifest.NameLevel(key));
+            }
+        }
+        return members;
     }
 
     /// The items of a that are not matched by an item of b (multiset minus).
@@ -453,7 +483,7 @@ sealed class IlDiff
     bool Recorded(string member, List<string> removed, List<string> added)
     {
         var records = _manifest.StringChanges
-            .Where(change => Manifest.NameLevel(change.Member) == member)
+            .Where(change => Covers(change.Member, member))
             .ToList();
         if (records.Count == 0
             || records.Any(change => string.IsNullOrWhiteSpace(change.Reason)))
@@ -464,6 +494,19 @@ sealed class IlDiff
         var recordedAdded = records.SelectMany(c => Items(c.Added)).ToList();
         return SameItems(recordedRemoved, removed)
             && SameItems(recordedAdded, added);
+    }
+
+    /// A record names a member the way the manifest does. A record for an
+    /// overload covers that overload only, a record for a name every overload
+    /// of it (code in a field initializer runs in every constructor), and a
+    /// member listed by name takes the records of all its overloads.
+    static bool Covers(string recorded, string member)
+    {
+        if (!member.Contains('('))
+        {
+            return Manifest.NameLevel(recorded) == member;
+        }
+        return recorded == member || recorded == Manifest.NameLevel(member);
     }
 
     static List<string> Items(List<string> items)

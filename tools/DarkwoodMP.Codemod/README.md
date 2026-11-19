@@ -128,7 +128,9 @@ machines count for the overload whose code leads to them, or, when none does,
 only when every overload of the name is listed), no type, field, property or event may appear or
 go unless the manifest allows it, the fields of a struct keep their order, parameter names, attributes, default values
 and constants stay as they were, and a manifest member's string constants may
-only change if the rule recorded a reason.
+only change if the rule recorded a reason for that member. Each overload is a
+member of its own: a record for one overload covers only that overload, a
+record for a name every overload of it.
 
 ## Differential tests
 

@@ -22,6 +22,8 @@ static class IlDiffCases
                 public int Foo(string s) { return s.Length; }
                 public string Say(int x) { return "hello" + x; }
                 public string Two(int x) { return "first" + x + "second"; }
+                public string Pick(bool c) { return c ? "up" : "down"; }
+                public string Pick(int c) { return c > 0 ? "yes" : "no"; }
                 public int Def(int x = 1) { return x; }
                 public int Lam(int x) { Func<int, int> f = y => y + x; return f(1); }
                 public IEnumerable<int> Iter(int x) { yield return x; }
@@ -69,6 +71,15 @@ static class IlDiffCases
     const string Mark = "public int Mark;";
     const string Hello = "\"hello\"";
     const string Hullo = "\"hullo\"";
+    const string PickBool = "N.C::Pick(System.Boolean)";
+    const string PickInt = "N.C::Pick(System.Int32)";
+
+    /// The strings of both overloads of Pick, as the base has them and with
+    /// the two overloads' strings swapped.
+    const string Picks = "\"up\" : \"down\"; }\n"
+        + "        public string Pick(int c) { return c > 0 ? \"yes\" : \"no\"; }";
+    const string PicksSwapped = "\"yes\" : \"no\"; }\n"
+        + "        public string Pick(int c) { return c > 0 ? \"up\" : \"down\"; }";
 
     static readonly (string Name, string From, string To, string[] Members,
         string[] Allowed, StringChange[] Strings, string Fails)[] Cases =
@@ -213,6 +224,18 @@ static class IlDiffCases
                 Recorded(Two, "second", "secund", ""),
             },
             "string constants changed"),
+        // Each overload is a member of its own: the strings of the name as a
+        // whole stay the same, but each overload's change.
+        ("strings swapped between two listed overloads fail", Picks,
+            PicksSwapped, new[] { PickBool, PickInt }, None, null,
+            "string constants changed in " + PickBool),
+        ("a record for one overload doesn't cover another", "\"up\"", "\"upp\"",
+            new[] { PickBool, PickInt }, None,
+            new[] { Recorded(PickInt, "up", "upp", "typo") },
+            "string constants changed in " + PickBool),
+        ("a record for the name covers each overload", "\"up\"", "\"upp\"",
+            new[] { PickBool, PickInt }, None,
+            new[] { Recorded("N.C::Pick", "up", "upp", "typo") }, ""),
     };
 
     static string[] None => Array.Empty<string>();
