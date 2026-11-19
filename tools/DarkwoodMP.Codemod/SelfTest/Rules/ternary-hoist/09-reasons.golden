@@ -1,0 +1,97 @@
+Each refusal names the hazard the site meets. A call earlier in the
+statement is named as a call when the ?: has effects too. A ?: whose only
+effect is a volatile read says so, and it moves past a stable value whose
+read may throw, because no effect would come before the throw. An array
+initializer gets a reason of its own: it always runs, after the array is
+made and the elements before it are stored.
+=== input
+using System;
+
+namespace N
+{
+    public class Box
+    {
+        public readonly int Size = 4;
+    }
+
+    public class C
+    {
+        int _n;
+        volatile int _seen;
+        readonly Box _box = new Box();
+
+        int Bump()
+        {
+            return ++_n;
+        }
+
+        int Peek()
+        {
+            return _n;
+        }
+
+        static int Sum(int a, int b)
+        {
+            return a + b;
+        }
+
+        public int Run(bool c)
+        {
+            int total = Sum(Peek(), c ? Bump() : 0);
+            total += Sum(_n, c ? _seen : 0);
+            total += Sum(_box.Size, c ? _seen : 0);
+            int[] parts = { 1, c ? 2 : 3 };
+            return total + parts.Length;
+        }
+    }
+}
+=== output
+using System;
+
+namespace N
+{
+    public class Box
+    {
+        public readonly int Size = 4;
+    }
+
+    public class C
+    {
+        int _n;
+        volatile int _seen;
+        readonly Box _box = new Box();
+
+        int Bump()
+        {
+            return ++_n;
+        }
+
+        int Peek()
+        {
+            return _n;
+        }
+
+        static int Sum(int a, int b)
+        {
+            return a + b;
+        }
+
+        public int Run(bool c)
+        {
+            int total = Sum(Peek(), c ? Bump() : 0);
+            total += Sum(_n, c ? _seen : 0);
+            int b = 0;
+            if (c)
+            {
+                b = _seen;
+            }
+            total += Sum(_box.Size, b);
+            int[] parts = { 1, c ? 2 : 3 };
+            return total + parts.Length;
+        }
+    }
+}
+=== queue
+33: a call runs earlier in the statement: Peek()
+34: the hoisted code reads a volatile field and a mutable value is read earlier: _n
+36: an array initializer: the array is made and the earlier elements stored first

@@ -235,4 +235,4 @@ namespace N
 83: the hoisted code has effects and a mutable value is read earlier: _handler
 84: a volatile field is read earlier: _seen
 86: the hoisted code has effects and a mutable value is read earlier: kept
-87: a call runs earlier in the statement: making named into text
+87: an earlier value is made into text by code that isn't plain: named

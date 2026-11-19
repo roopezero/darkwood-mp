@@ -231,13 +231,16 @@ cast that was around the chain (`Rules/HoistFlags.cs`); another operand is
 or-ed in where it was, or starts the flags. The statement keeps the column
 it starts at, so the lines that continue it stay where they were.
 
-The queue gets: a call earlier in the statement (hazard 4), a mutable value
-read earlier when the `?:` has effects (hazard 8), a read that can throw,
-a value made into text by code that isn't plain, an earlier conversion,
-a volatile read, code that may not run (the right side of `&&`, `||`, `??`
-and `??=`, a branch of another `?:`, after `?.`, a lambda body, an object or
-collection initializer, a switch expression arm, a `when` clause, an
-`else if`, loop or `for` header), an expression body, `checked()`, a
+The queue gets: a call earlier in the statement (hazard 4), whether or not
+the `?:` has effects; a mutable value read earlier when the `?:` has effects
+(hazard 8) or reads a volatile field; a read that can throw when the `?:`
+has effects; a value made into text by code that isn't plain; an earlier
+conversion; a volatile read earlier; an initializer, which runs after the
+object, collection or array it fills is made and its earlier elements have
+run; code that may not run (the right side of `&&`, `||`, `??` and `??=`, a
+branch of another `?:`, after `?.`, a lambda body, a switch expression arm,
+a `when` clause, an `else if`, loop or `for` header); an expression body,
+`checked()`, a
 deconstruction, a statement inside an interpolation hole, a `foreach`
 source or other header whose `?:` declares a variable, an `await` in the
 statement, a `const` declaration, a constant condition, every branch a

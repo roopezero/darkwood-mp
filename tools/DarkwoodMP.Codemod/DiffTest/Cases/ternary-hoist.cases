@@ -514,3 +514,133 @@ public static object Run(bool c, int i)
     var moved = Pair(i, c ? 2 : 3);
     return (kept, moved);
 }
+=== the right of && may not run, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, bool d, int i)
+{
+    bool kept = Log("d", d) && Twice(Log("c", c) ? i : 1) > 2;
+    var moved = Twice(c ? 2 : 3);
+    return (kept, moved);
+}
+=== the right of || may not run, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, bool d, int i)
+{
+    bool kept = Log("d", d) || Twice(Log("c", c) ? i : 1) > 2;
+    var moved = Twice(c ? 2 : 3);
+    return (kept, moved);
+}
+=== the right of ?? may not run, so that ?: stays
+static int? Maybe(bool d)
+{
+    if (Log("d", d))
+    {
+        return 5;
+    }
+    return null;
+}
+
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, bool d, int i)
+{
+    int kept = Maybe(d) ?? Twice(Log("c", c) ? i : 1);
+    var moved = Twice(c ? 2 : 3);
+    return (kept, moved);
+}
+=== the part after ?. may not run, so that ?: stays
+public class Bag
+{
+    public int Add(int x)
+    {
+        return Log("add", x);
+    }
+}
+
+static Bag Find(bool d)
+{
+    if (Log("d", d))
+    {
+        return new Bag();
+    }
+    return null;
+}
+
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, bool d, int i)
+{
+    int? kept = Find(d)?.Add(Log("c", c) ? i : 1);
+    var moved = Twice(c ? 2 : 3);
+    return (kept, moved);
+}
+=== a branch of another ?: may not run, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, bool d, int i)
+{
+    int kept = Log("d", d) ? Twice(Log("c", c) ? i : 1) : 0;
+    var moved = Twice(c ? 2 : 3);
+    return (kept, moved);
+}
+=== a lambda body runs at each call, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, int i)
+{
+    Func<int> f = () => Twice(Log("c", c) ? i : 1);
+    var moved = Twice(c ? 2 : 3);
+    return (f() + f(), moved);
+}
+=== a while condition runs each time round, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, int i)
+{
+    int n = 0;
+    while (Twice(Log("c", c) ? n : i) < 6 && n < 5)
+    {
+        n++;
+    }
+    var moved = Twice(c ? 2 : 3);
+    return (n, moved);
+}
+=== a for iterator runs each time round, so that ?: stays
+static int Twice(int x)
+{
+    return Log("twice", x * 2);
+}
+
+public static object Run(bool c, int i)
+{
+    int n = 0;
+    for (int k = 0; k < 6; k += Twice(Log("c", c) ? 1 : 2))
+    {
+        n += Log("k", k);
+    }
+    var moved = Twice(c ? i : 3);
+    return (n, moved);
+}

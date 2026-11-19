@@ -1,8 +1,9 @@
 Code that may not run, and contexts the rule doesn't take. Nothing moves
 out of the right side of &&, || or ??, the right side of ??=, a branch of
-another ?:, the part after ?., a lambda or an expression body, an object
-or collection initializer, a switch expression arm or a when clause:
-moved in front of the statement it would run every time. checked() would
+another ?:, the part after ?., a lambda or an expression body, a switch
+expression arm or a when clause: moved in front of the statement it would
+run every time. An object or collection initializer runs every time, but
+after the constructor and the elements before it. checked() would
 be left behind, a deconstruction's targets run first, and a statement in
 an interpolation hole can take no statement in front of it. A constant
 condition, a ?: whose every branch throws and an anonymous type go to the
@@ -161,8 +162,8 @@ namespace N
 31: conditionally evaluated: a branch of ?:
 32: conditionally evaluated: the part after ?.
 33: conditionally evaluated: a lambda body
-34: conditionally evaluated: an object or collection initializer
-35: conditionally evaluated: an object or collection initializer
+34: an object or collection initializer: the constructor and the earlier elements run first
+35: an object or collection initializer: the constructor and the earlier elements run first
 38: conditionally evaluated: a switch expression arm
 43: conditionally evaluated: a when clause
 47: inside checked() or unchecked(), which the temporary would be outside of

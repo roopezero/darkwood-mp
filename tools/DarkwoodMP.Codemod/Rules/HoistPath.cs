@@ -196,9 +196,8 @@ sealed class HoistPath
                 return null;
             case VariableDeclarationSyntax declaration:
                 return Declaration(declaration, child);
-            case InitializerExpressionSyntax:
-                return Purity.MayNotRun
-                    + ": an object or collection initializer";
+            case InitializerExpressionSyntax initializer:
+                return Initializer(initializer);
             case SwitchExpressionArmSyntax:
                 return Purity.MayNotRun + ": a switch expression arm";
             case WhenClauseSyntax:
@@ -213,6 +212,24 @@ sealed class HoistPath
             default:
                 return "not a context the rule knows: " + parent.Kind();
         }
+    }
+
+    /// An initializer always runs, but only after what it fills has been
+    /// made, and its elements run in order, so a temporary in front of the
+    /// statement would run before those.
+    static string Initializer(InitializerExpressionSyntax initializer)
+    {
+        if (initializer.IsKind(SyntaxKind.ArrayInitializerExpression))
+        {
+            return "an array initializer: the array is made and the earlier "
+                + "elements stored first";
+        }
+        if (initializer.IsKind(SyntaxKind.WithInitializerExpression))
+        {
+            return "a with initializer: the copy is made first";
+        }
+        return "an object or collection initializer: the constructor and the "
+            + "earlier elements run first";
     }
 
     /// The left side runs first. The right side of &&, || and ?? runs only

@@ -25,6 +25,18 @@ sealed class HoistHazards
     /// would put one in front of it.
     public const string VolatileEarlier = "a volatile field is read earlier";
 
+    /// The moved code has no effect but a volatile read, and a value that
+    /// may change would then be read after it instead of before.
+    public const string VolatileMoves =
+        "the hoisted code reads a volatile field and a mutable value is read "
+            + "earlier";
+
+    /// Making the value into text runs its ToString, which may do anything.
+    /// When that runs depends on how the compiler lowers the string, so the
+    /// reason doesn't say it runs earlier.
+    public const string MadeIntoText =
+        "an earlier value is made into text by code that isn't plain";
+
     static readonly SyntaxNode[] NoneMoved = Array.Empty<SyntaxNode>();
 
     readonly SemanticModel _model;
@@ -44,8 +56,9 @@ sealed class HoistHazards
         HoistPath path,
         ICollection<SyntaxNode> moved)
     {
-        bool loud = HasEffects(hoisted)
-            || ReadsVolatile(_model.GetOperation(hoisted), NoneMoved);
+        bool effects = HasEffects(hoisted);
+        bool readsVolatile = !effects
+            && ReadsVolatile(_model.GetOperation(hoisted), NoneMoved);
         foreach (var operand in path.Earlier)
         {
             // A conversion of a value stays where the value was used, even
@@ -62,15 +75,24 @@ sealed class HoistHazards
             {
                 return VolatileEarlier + ": " + operand;
             }
-            if (!loud && HasEffects(operand, moved))
+            // A call is named as one whether or not the moved code has
+            // effects. An operand with effects is never stable, so this
+            // only names the reason first.
+            if (HasEffects(operand, moved))
             {
                 return Purity.CallEarlier + ": " + operand;
             }
-            if (loud && !_purity.IsStable(operand, hoisted))
+            if (effects && !_purity.IsStable(operand, hoisted))
             {
                 return Purity.ReadEarlier + ": " + operand;
             }
-            if (loud && MayThrow(operand))
+            if (readsVolatile && !_purity.IsStable(operand, hoisted))
+            {
+                return VolatileMoves + ": " + operand;
+            }
+            // A read alone has no effect for an earlier throw to come in
+            // front of, so this needs effects.
+            if (effects && MayThrow(operand))
             {
                 return MayThrowEarlier + ": " + operand;
             }
@@ -81,7 +103,7 @@ sealed class HoistHazards
         {
             if (!Formatting.IsPlain(_model.GetTypeInfo(value).Type))
             {
-                return Purity.CallEarlier + ": making " + value + " into text";
+                return MadeIntoText + ": " + value;
             }
         }
         return null;
