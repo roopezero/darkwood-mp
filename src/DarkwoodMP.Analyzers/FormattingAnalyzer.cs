@@ -123,6 +123,7 @@ namespace DarkwoodMP.Analyzers
                 {
                     continue;
                 }
+
                 var over = TextSpan.FromBounds(
                     line.Start + MaxColumns, line.End);
                 var place = Location.Create(context.Tree, over);

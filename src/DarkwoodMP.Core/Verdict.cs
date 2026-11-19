@@ -40,10 +40,12 @@ namespace DarkwoodMP
             {
                 return "Allow";
             }
+
             if (Detail == null)
             {
                 return "Refuse(" + Reason + ")";
             }
+
             return "Refuse(" + Reason + ", " + Detail + ")";
         }
     }
