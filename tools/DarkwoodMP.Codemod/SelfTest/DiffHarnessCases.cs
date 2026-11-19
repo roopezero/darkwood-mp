@@ -172,6 +172,50 @@ static class DiffHarnessCases
                 return Log("c", c) ? Log("a", 1) : Log("b", 2);
             }
             """, "return 7;"),
+        // A ValueTask isn't a Task, and a pending one prints as "".
+        ("a changed async ValueTask method", """
+            public static async System.Threading.Tasks.ValueTask<int> Run(bool c)
+            {
+                await System.Threading.Tasks.Task.Delay(1);
+                return Log("c", c) ? Log("a", 1) : Log("b", 2);
+            }
+            """, Swapped),
+        ("a changed async ValueTask method without a result", """
+            public static async System.Threading.Tasks.ValueTask Run(bool c)
+            {
+                await System.Threading.Tasks.Task.Delay(1);
+                Log("x", Log("c", c) ? Log("a", 1) : Log("b", 2));
+            }
+            """, AsyncVoidSwapped),
+    };
+
+    /// The branches of "c ? a : b" swapped.
+    const string Swapped = "if (Log(\"c\", c))\n{\nreturn Log(\"b\", 2);\n}\n"
+        + "return Log(\"a\", 1);";
+
+    /// Cases the harness can't compare, so it must stop: (what, case,
+    /// wrong rewrite).
+    static readonly (string What, string Method, string Wrong)[] Refused =
+    {
+        ("a returned delegate, whose body would never run", """
+            public static Func<int> Run(bool c)
+            {
+                return () => Log("c", c) ? Log("a", 1) : Log("b", 2);
+            }
+            """, "return () =>\n{\n" + Swapped + "\n};"),
+        ("a logged value the harness can't show", """
+            public static int Run(bool c)
+            {
+                Log("r", new Random(1));
+                return Log("c", c) ? 1 : 2;
+            }
+            """, "if (Log(\"c\", c))\n{\nreturn 2;\n}\nreturn 1;"),
+        ("a returned value the harness can't show", """
+            public static object Run(bool c)
+            {
+                return Log("c", c) ? new object() : null;
+            }
+            """, "if (Log(\"c\", c))\n{\nreturn null;\n}\nreturn new object();"),
     };
 
     /// An async void Run returns at its first await, and the rest of its body
@@ -223,7 +267,7 @@ static class DiffHarnessCases
         + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
         + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
 
-    public const int Count = 9 + 5 + 5 + 3 + 4 + 1 + 1 + 2 + 1 + 2;
+    public const int Count = 9 + 5 + 5 + 3 + 6 + 1 + 1 + 2 + 1 + 2 + 3;
 
     public static List<string> Failures()
     {
@@ -297,6 +341,12 @@ static class DiffHarnessCases
         foreach (var (what, text) in Unreadable)
         {
             ExpectUnreadable(problems, what, text);
+        }
+        foreach (var (what, method, wrong) in Refused)
+        {
+            ExpectStop(problems, what,
+                new DiffCase { Name = what, Method = method },
+                new ProbeTextRule("probe-text", wrong));
         }
         foreach (var (what, method, rewrite, rows) in Typed)
         {

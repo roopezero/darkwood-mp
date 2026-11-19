@@ -153,9 +153,14 @@ message), the logged order of evaluation and
 what each run left in its object arguments and in the case's static fields. A
 collection, returned or logged, is compared element by element. A returned
 iterator or coroutine is run, for at most 1,000 values, and a returned task is
-waited for, so their bodies run in the row they belong to. A `Run` declared
-`async void` stops the command: the part after its first await would run
-during later rows, so it must return `Task`. The only
+waited for (a `ValueTask` too), so their bodies run in the row they belong
+to. A `Run` declared `async void` stops the command: the part after its first
+await would run during later rows, so it must return `Task`. So does a `Run`
+that returns a delegate, whose body would never run (call it inside `Run`),
+and a value logged, returned or left behind that the harness can't show, so
+that a difference in it would go unseen: it shows numbers, bools, chars,
+strings, enums, collections, tuples, the fake `UnityObject` and types with a
+`ToString` of their own, apart from tasks. The only
 allowed difference is a destroyed object under the rule named `unity-null`, and
 there the rewritten code must behave exactly as the original did for null and
 leave the destroyed object as it was. The log may name the destroyed object

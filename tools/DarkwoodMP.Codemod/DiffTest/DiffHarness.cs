@@ -293,6 +293,15 @@ static class DiffHarness
         var objects = arguments
             .Select((argument, i) => ObjectState(assembly, names[i], argument))
             .ToList();
+        var unseen = (string)trace.GetField("Undescribable").GetValue(null);
+        if (unseen != null)
+        {
+            throw new Stop($"A differential case logged, returned or left "
+                + $"behind a {unseen}, which the harness can't show, so a "
+                + "difference in it would go unseen. Use values it can show: "
+                + "numbers, bools, strings, enums, collections, tuples and "
+                + "the fake UnityObject.");
+        }
         return new RunResult(outcome, entries.Cast<string>().ToList(), objects);
     }
 
@@ -303,9 +312,17 @@ static class DiffHarness
     /// What a run returned. An iterator is run to its end, or for StepLimit
     /// values, and a task is waited for, because otherwise their bodies
     /// wouldn't run here (or would run on another thread during later rows).
+    /// A delegate stops the command: its body would never run.
     static string Finish(Assembly assembly, MethodInfo run, object value)
     {
-        if (value is Task task)
+        if (value is Delegate)
+        {
+            throw new Stop("A differential case's Run returns a delegate, "
+                + "whose body the harness would never run. Call it inside "
+                + "Run and return what it returns.");
+        }
+        var task = AsTask(value);
+        if (task != null)
         {
             return Await(assembly, run, task);
         }
@@ -341,6 +358,32 @@ static class DiffHarness
         return text;
     }
 
+    /// A Task, or the task behind a ValueTask, which isn't a Task: a
+    /// pending one would print as an empty string.
+    static Task AsTask(object value)
+    {
+        if (value is Task task)
+        {
+            return task;
+        }
+        if (value == null || !IsValueTask(value.GetType()))
+        {
+            return null;
+        }
+        var asTask = value.GetType().GetMethod("AsTask", Type.EmptyTypes);
+        return (Task)asTask.Invoke(value, null);
+    }
+
+    static bool IsValueTask(Type type)
+    {
+        if (type == typeof(ValueTask))
+        {
+            return true;
+        }
+        return type.IsGenericType
+            && type.GetGenericTypeDefinition() == typeof(ValueTask<>);
+    }
+
     static string Await(Assembly assembly, MethodInfo run, Task task)
     {
         try
@@ -358,12 +401,16 @@ static class DiffHarness
         // An async Task is a Task<VoidTaskResult> underneath, so the declared
         // type says whether there is a result.
         var type = run.ReturnType;
-        if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Task<>))
+        bool result = type.IsGenericType
+            && (type.GetGenericTypeDefinition() == typeof(Task<>)
+                || type.GetGenericTypeDefinition() == typeof(ValueTask<>));
+        if (!result)
         {
             return "completed";
         }
-        var result = type.GetProperty("Result").GetValue(task);
-        return "returned " + Describe(assembly, result);
+        var typed = typeof(Task<>).MakeGenericType(type.GetGenericArguments());
+        var value = typed.GetProperty("Result").GetValue(task);
+        return "returned " + Describe(assembly, value);
     }
 
     /// An exception by its type and message, so that a rewrite that throws

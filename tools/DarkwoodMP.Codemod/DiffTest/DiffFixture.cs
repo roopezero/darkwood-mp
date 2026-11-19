@@ -74,9 +74,15 @@ static class DiffFixture
             {
                 public static List<string> Entries = new List<string>();
 
+                /// The type of the first value since Reset that Describe
+                /// couldn't show, or null. The harness stops on it, because
+                /// a difference in such a value would go unseen.
+                public static string Undescribable;
+
                 public static void Reset()
                 {
                     Entries = new List<string>();
+                    Undescribable = null;
                 }
 
                 public static T Log<T>(string name, T value)
@@ -111,10 +117,15 @@ static class DiffFixture
                     {
                         return "\"" + text + "\"";
                     }
+                    // Numbers and enums.
                     if (value is IFormattable number)
                     {
                         return value.GetType().Name + ":"
                             + number.ToString(null, CultureInfo.InvariantCulture);
+                    }
+                    if (value is char letter)
+                    {
+                        return "Char:" + letter;
                     }
                     // A collection lists its elements. A lazy sequence isn't
                     // run here: that would add effects to the Log call.
@@ -128,7 +139,40 @@ static class DiffFixture
                         return value.GetType().Name
                             + "{" + string.Join(", ", parts) + "}";
                     }
-                    return value.ToString();
+                    if (value is System.Runtime.CompilerServices.ITuple tuple)
+                    {
+                        var parts = new List<string>();
+                        for (int i = 0; i < tuple.Length; i++)
+                        {
+                            parts.Add(Describe(tuple[i]));
+                        }
+                        return value.GetType().Name
+                            + "(" + string.Join(", ", parts) + ")";
+                    }
+                    if (SaysWhatItIs(value.GetType()))
+                    {
+                        return value.GetType().Name + ":" + value.ToString();
+                    }
+                    if (Undescribable == null)
+                    {
+                        Undescribable = value.GetType().FullName;
+                    }
+                    return "undescribable " + value.GetType().Name;
+                }
+
+                /// A type with a ToString of its own, apart from a task's:
+                /// a pending ValueTask prints as an empty string. A delegate,
+                /// a lazy sequence, a Task and a type that keeps object's
+                /// ToString print only their type's name.
+                static bool SaysWhatItIs(Type type)
+                {
+                    if (type.Namespace == "System.Threading.Tasks")
+                    {
+                        return false;
+                    }
+                    var method = type.GetMethod("ToString", Type.EmptyTypes);
+                    return method.DeclaringType != typeof(object)
+                        && method.DeclaringType != typeof(ValueType);
                 }
             }
         }
