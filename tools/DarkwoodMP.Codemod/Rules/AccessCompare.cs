@@ -31,7 +31,7 @@ namespace DarkwoodMP.Codemod.Rules;
 /// which the original runs for a null x as well, is left to the hoist, and
 /// so is one whose operator is a user-defined one that isn't lifted and
 /// takes the null itself, such as the == of a member's type, unless it is
-/// .NET's or a Unity object's.
+/// .NET's or the one UnityEngine.Object declares.
 sealed class AccessComparison
 {
     /// The expression the translation replaces: the comparison or the ??.
@@ -237,16 +237,18 @@ sealed partial class AccessPlanner
 
     /// The comparison's operator is one the fixed translations are written
     /// for: a built-in one (string's == and the reference == are), a lifted
-    /// one, or the == of .NET or of a Unity object, which give the
-    /// original's result for a null x. A user-defined operator that isn't
-    /// lifted gets the null of a null x itself; a reference type's never is
-    /// lifted, so this is also the check that sends to the hoist a member
-    /// whose type's own == the comparison calls. Where the reference == is
-    /// called instead, as for "h?.It == this" with an It of a type that
-    /// derives from this one's, both forms compare references. Tuple
-    /// equality has no operator of its own and is lifted for a Nullable
-    /// tuple: false for a null x before any element is compared, as the
-    /// translation gives.
+    /// one, or the == of .NET or Unity's, which UnityEngine.Object
+    /// declares; they give the original's result for a null x. An == that a
+    /// class deriving from UnityEngine.Object declares of its own is like
+    /// any other user-defined one. A user-defined operator that isn't
+    /// lifted gets the null of a null x itself. The operator of a reference
+    /// type is never lifted, so this is also the check that sends to the
+    /// hoist a member whose type's own == the comparison calls. Where the
+    /// reference == is called instead, as for "h?.It == this" with an It
+    /// of a type that derives from this one's, both forms compare
+    /// references. Tuple equality has no operator of its own and is lifted
+    /// for a Nullable tuple: false for a null x before any element is
+    /// compared, as the translation gives.
     bool OperatorKeeps(BinaryExpressionSyntax binary)
     {
         if (_model.GetOperation(binary) is not IBinaryOperation operation)
@@ -259,7 +261,7 @@ sealed partial class AccessPlanner
         }
         var owner = operation.OperatorMethod.ContainingType;
         return AccessTypes.DotNetEquality(owner)
-            || _types.Types.IsUnity(owner);
+            || _types.Types.IsUnityObject(owner);
     }
 
     /// A value whose reading has no effects and can't throw.

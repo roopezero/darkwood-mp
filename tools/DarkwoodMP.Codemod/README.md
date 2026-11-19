@@ -400,7 +400,9 @@ x?.B ?? true             ->  x == null || x.B
 They hold only when `v` has no effects and can't throw: a constant,
 `typeof`, a local, a parameter or `this`; when no user-defined conversion
 runs on either side; and when the operator is built in, lifted, or the
-`==` of string, .NET or a Unity object. The original runs a conversion for
+`==` of string, .NET or Unity, which `UnityEngine.Object` declares (an
+`==` that a class deriving from it declares of its own counts as any other
+user-defined one). The original runs a conversion for
 a null `x` too: Unity's `bool` operator makes `x?.Go == false` true for a
 null `x`. A user-defined operator that isn't lifted gets the null itself:
 with an `==(int? a, Meter b)` of Meter's, `x?.Count == m` is what that
@@ -560,8 +562,9 @@ a case. The golden cases pin what a single thread can't show, and the
 texts: a ref parameter or ref local and a field of this, also written
 `this._box`, go into a temporary; a statement in an interpolation hole,
 with an await or in an else-if condition goes to the queue; a compared
-field or property moves into a temporary, and so does a compared `this`
-of a Unity object; and the queue names the call in an earlier operand.
+field or property moves into a temporary, and so do a compared `this`
+of a Unity object and a member whose Unity type declares an `==` of its
+own; and the queue names the call in an earlier operand.
 
 ## Golden cases
 

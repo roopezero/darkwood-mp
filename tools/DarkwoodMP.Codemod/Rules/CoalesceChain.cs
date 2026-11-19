@@ -303,6 +303,15 @@ sealed class CoalesceTypes
         return _model.GetTypeInfo(expression).Type;
     }
 
+    /// The type is UnityEngine.Object itself, the one that declares
+    /// Unity's == and !=. A class that derives from it can declare an ==
+    /// of its own.
+    public bool IsUnityObject(ITypeSymbol type)
+    {
+        return _unity != null
+            && SymbolEqualityComparer.Default.Equals(type, _unity);
+    }
+
     public bool IsUnity(ITypeSymbol type)
     {
         var kind = OperandClass.TypeClass(type, _unity);

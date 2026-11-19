@@ -9,7 +9,8 @@ null" moves into a temporary. "h?.It == this" calls the reference ==,
 since an Owner doesn't convert to an Item, so Item's own == doesn't count
 and the translation holds; a this that is a Unity object isn't "not null",
 because Unity's == counts a destroyed one as null, so "h?.Go == this"
-moves into a temporary.
+moves into a temporary. Mob derives from a Unity object and has an == of
+its own, which isn't Unity's: "h?.Pet == null" moves into a temporary.
 === input
 using System;
 
@@ -175,6 +176,30 @@ namespace N
         public (int, int) Pair;
         public Meter? M;
         public Item It;
+        public Mob Pet;
+    }
+
+    public class Mob : GameObject
+    {
+        public static bool operator ==(Mob a, Mob b)
+        {
+            return false;
+        }
+
+        public static bool operator !=(Mob a, Mob b)
+        {
+            return true;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
     }
 
     public class Mono : GameObject
@@ -207,6 +232,12 @@ namespace N
         {
             bool none = h?.M == null;
             return none;
+        }
+
+        public bool Lost(Holder h)
+        {
+            bool lost = h?.Pet == null;
+            return lost;
         }
     }
 }
@@ -375,6 +406,30 @@ namespace N
         public (int, int) Pair;
         public Meter? M;
         public Item It;
+        public Mob Pet;
+    }
+
+    public class Mob : GameObject
+    {
+        public static bool operator ==(Mob a, Mob b)
+        {
+            return false;
+        }
+
+        public static bool operator !=(Mob a, Mob b)
+        {
+            return true;
+        }
+
+        public override bool Equals(object o)
+        {
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
     }
 
     public class Mono : GameObject
@@ -437,6 +492,17 @@ namespace N
             }
             bool none = m == null;
             return none;
+        }
+
+        public bool Lost(Holder h)
+        {
+            Mob pet = null;
+            if (h != null)
+            {
+                pet = h.Pet;
+            }
+            bool lost = pet == null;
+            return lost;
         }
     }
 }
