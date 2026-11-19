@@ -254,7 +254,7 @@ static class DiffHarness
         try
         {
             var value = run.Invoke(null, arguments);
-            outcome = "returned " + Describe(assembly, value);
+            outcome = Finish(assembly, run, value);
         }
         catch (TargetInvocationException e)
         {
@@ -268,6 +268,76 @@ static class DiffHarness
             .Select((argument, i) => ObjectState(assembly, names[i], argument))
             .ToList();
         return new RunResult(outcome, entries.Cast<string>().ToList(), objects);
+    }
+
+    /// How many values an iterator may yield before the harness stops it. A
+    /// coroutine can loop for ever.
+    const int StepLimit = 1000;
+
+    /// What a run returned. An iterator is run to its end, or for StepLimit
+    /// values, and a task is waited for, because otherwise their bodies
+    /// wouldn't run here (or would run on another thread during later rows).
+    static string Finish(Assembly assembly, MethodInfo run, object value)
+    {
+        if (value is Task task)
+        {
+            return Await(assembly, run, task);
+        }
+        var enumerator = value as System.Collections.IEnumerator;
+        if (value is System.Collections.IEnumerable sequence
+            && value is not string
+            && value is not System.Collections.ICollection)
+        {
+            enumerator = sequence.GetEnumerator();
+        }
+        if (enumerator == null)
+        {
+            return "returned " + Describe(assembly, value);
+        }
+        var yielded = new List<string>();
+        try
+        {
+            while (yielded.Count < StepLimit && enumerator.MoveNext())
+            {
+                yielded.Add(Describe(assembly, enumerator.Current));
+            }
+        }
+        catch (Exception e)
+        {
+            return $"yielded [{string.Join(", ", yielded)}], then threw "
+                + e.GetType().Name;
+        }
+        var text = $"yielded [{string.Join(", ", yielded)}]";
+        if (yielded.Count == StepLimit)
+        {
+            text += $", stopped after {StepLimit} values";
+        }
+        return text;
+    }
+
+    static string Await(Assembly assembly, MethodInfo run, Task task)
+    {
+        try
+        {
+            if (!task.Wait(TimeSpan.FromSeconds(10)))
+            {
+                throw new Stop(
+                    "A differential case's task didn't finish in 10 seconds.");
+            }
+        }
+        catch (AggregateException e)
+        {
+            return "threw " + e.InnerException.GetType().Name;
+        }
+        // An async Task is a Task<VoidTaskResult> underneath, so the declared
+        // type says whether there is a result.
+        var type = run.ReturnType;
+        if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Task<>))
+        {
+            return "completed";
+        }
+        var result = type.GetProperty("Result").GetValue(task);
+        return "returned " + Describe(assembly, result);
     }
 
     static string Describe(Assembly assembly, object value)

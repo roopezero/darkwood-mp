@@ -91,7 +91,47 @@ static class DiffHarnessCases
                 + "else\n{\nv = Log(\"b\", 2);\n}\nreturn new[] { v + 1 };"),
     };
 
-    public const int Count = 9 + 5 + 2 + 3;
+    /// Bodies that run only when the harness enumerates or waits for what
+    /// Run returns: (what, case, rewrite).
+    static readonly (string What, string Method, string Wrong)[] Deferred =
+    {
+        ("a changed iterator", """
+            public static IEnumerable<int> Run(bool c)
+            {
+                yield return Log("c", c) ? Log("a", 1) : Log("b", 2);
+            }
+            """, "yield return 7;"),
+        ("a changed coroutine", """
+            public static System.Collections.IEnumerator Run(bool c)
+            {
+                yield return Log("c", c) ? Log("a", 1) : Log("b", 2);
+            }
+            """, "yield return 7;"),
+        ("a changed coroutine that never ends", """
+            public static System.Collections.IEnumerator Run(bool c)
+            {
+                while (true)
+                {
+                    yield return Log("c", c) ? Log("a", 1) : Log("b", 2);
+                }
+            }
+            """, "yield return 7;"),
+        ("a changed async method", """
+            public static async System.Threading.Tasks.Task<int> Run(bool c)
+            {
+                await System.Threading.Tasks.Task.Delay(100);
+                return Log("c", c) ? Log("a", 1) : Log("b", 2);
+            }
+            """, "return 7;"),
+    };
+
+    /// The right rewrite of the endless coroutine: both runs stop at the same
+    /// step and must compare equal.
+    const string EndlessRight = "if (Log(\"c\", c))\n{\n"
+        + "yield return Log(\"a\", 1);\n}\nelse\n{\n"
+        + "yield return Log(\"b\", 2);\n}";
+
+    public const int Count = 9 + 5 + 2 + 3 + 4 + 1;
 
     public static List<string> Failures()
     {
@@ -128,11 +168,23 @@ static class DiffHarnessCases
             new ProbeUnityRule("probe-unity"));
         ExpectCaught(problems, "a reference check under unity-null", unity,
             new ProbeUnityRule("unity-null", checksReference: true));
-        foreach (var (what, method, wrong) in Wrong.Concat(Unlogged))
+        foreach (var (what, method, wrong) in Wrong.Concat(Unlogged).Concat(Deferred))
         {
             var diffCase = new DiffCase { Name = what, Method = method };
             ExpectCaught(problems, what, diffCase,
                 new ProbeTextRule("probe-text", wrong));
+        }
+        var endless = new DiffCase
+        {
+            Name = "endless coroutine",
+            Method = Deferred[2].Method,
+        };
+        var right = DiffHarness.Run(
+            new ProbeTextRule("probe-text", EndlessRight), endless);
+        if (!right.Passed)
+        {
+            problems.Add("  the right rewrite of an endless coroutine: "
+                + string.Join("; ", right.Mismatches.Take(3)));
         }
         foreach (var (what, text) in Unreadable)
         {

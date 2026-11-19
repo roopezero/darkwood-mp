@@ -138,7 +138,9 @@ every combination of bools, numbers (with NaN and the infinities for `double`
 and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
 object as null. It compares the results, the logged order of evaluation and
 what each run left in its object arguments and in the case's static fields. A
-collection, returned or logged, is compared element by element. The only
+collection, returned or logged, is compared element by element. A returned
+iterator or coroutine is run, for at most 1,000 values, and a returned task is
+waited for, so their bodies run in the row they belong to. The only
 allowed difference is a destroyed object under the rule named `unity-null`, and
 there the rewritten code must behave exactly as the original did for null and
 leave the destroyed object as it was.
