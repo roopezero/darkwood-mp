@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>DarkwoodMP.Analyzers.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" PrivateAssets="all" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <!-- The Roslyn the analyzer is built against. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Directory.Build.props references the analyzer as an analyzer only,
+         so the compiler checks this project's code with it. The tests also
+         call it, so the same reference gives the compiler its DLL as a
+         library too. -->
+    <ProjectReference Update="../../src/DarkwoodMP.Analyzers/DarkwoodMP.Analyzers.csproj"
+                      ReferenceOutputAssembly="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+</Project>

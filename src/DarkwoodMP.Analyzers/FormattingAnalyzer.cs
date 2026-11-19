@@ -71,6 +71,15 @@ namespace DarkwoodMP.Analyzers
                 DiagnosticSeverity.Warning,
                 true);
 
+        static readonly DiagnosticDescriptor BlankLine =
+            new DiagnosticDescriptor(
+                "DW0007",
+                "No blank line after a block",
+                "Put a blank line after this block",
+                Category,
+                DiagnosticSeverity.Warning,
+                true);
+
         public override ImmutableArray<DiagnosticDescriptor>
             SupportedDiagnostics =>
                 ImmutableArray.Create(
@@ -79,7 +88,8 @@ namespace DarkwoodMP.Analyzers
                     Ternary,
                     Coalesce,
                     CoalesceAssign,
-                    NullConditional);
+                    NullConditional,
+                    BlankLine);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -88,6 +98,7 @@ namespace DarkwoodMP.Analyzers
             context.EnableConcurrentExecution();
 
             context.RegisterSyntaxTreeAction(CheckLines);
+            context.RegisterSyntaxTreeAction(CheckBlankLines);
             context.RegisterSyntaxNodeAction(
                 CheckBraces,
                 SyntaxKind.Block,
@@ -129,6 +140,16 @@ namespace DarkwoodMP.Analyzers
                 var place = Location.Create(context.Tree, over);
                 context.ReportDiagnostic(
                     Diagnostic.Create(LineTooLong, place, length));
+            }
+        }
+
+        static void CheckBlankLines(SyntaxTreeAnalysisContext context)
+        {
+            var cancel = context.CancellationToken;
+            foreach (var last in BlankLines.Find(context.Tree, cancel))
+            {
+                context.ReportDiagnostic(
+                    Diagnostic.Create(BlankLine, last.GetLocation()));
             }
         }
 
