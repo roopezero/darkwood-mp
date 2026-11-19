@@ -29,7 +29,8 @@ sealed class TempNames
 
     /// The names a new local could clash with or change the meaning of:
     /// all but the names after a dot, which are looked up in what is in
-    /// front of the dot. Pick checks only these.
+    /// front of the dot, and the names of tuple elements, arguments and
+    /// property patterns (ElementName). Pick checks only these.
     readonly HashSet<string> _simple = new();
 
     /// The names this member's temporaries got.
@@ -42,7 +43,7 @@ sealed class TempNames
             if (token.IsKind(SyntaxKind.IdentifierToken))
             {
                 _taken.Add(token.ValueText);
-                if (!AfterDot(token))
+                if (!AfterDot(token) && !ElementName(token))
                 {
                     _simple.Add(token.ValueText);
                 }
@@ -88,6 +89,20 @@ sealed class TempNames
             default:
                 return false;
         }
+    }
+
+    /// The name of a tuple element ("(string type, bool exp)"), or a name
+    /// in front of a colon: an argument's ("F(type: t)"), a tuple
+    /// element's ("(type: t, exp: e)") or a property pattern's ("{ type:
+    /// t }"). It is looked up in the tuple, the parameters of the method
+    /// called or the type tested, so no local can clash with it.
+    static bool ElementName(SyntaxToken token)
+    {
+        return token.Parent is TupleElementSyntax
+            || token.Parent is IdentifierNameSyntax
+            {
+                Parent: NameColonSyntax,
+            };
     }
 
     /// A name of its own for a temporary that holds this expression.

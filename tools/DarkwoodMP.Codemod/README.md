@@ -302,10 +302,13 @@ after the parameter the value is passed to when that is a word (not
 without a leading get (`getObjects()` gives `objects`), and an element that
 `First`, `Last`, `Single` or `ElementAt` picks after the `Select` in front
 of it or its type (`slot`). Only a name a new local could clash with is
-taken, so not one after a dot. A name that another variable or member has
-is passed over, because a number would make the temporary read as a copy of
-it; a number goes only on a second version of another temporary, of the
-target or of the first value.
+taken: not one after a dot, nor a tuple element's or one in front of a
+colon (an argument's, a tuple literal's or a property pattern's). A hint
+that another variable or member has is passed over, because a number would
+make the temporary read as a copy of it. A number goes on a second version
+of another temporary, of the target or of the first value, and on the
+first hint when other variables or members have every hint (`slot2`
+beside an `int slot`).
 
 The left side's static type decides (codemod.md section 6). A tested value
 or a result that is a Unity object is left for stage 7 (`unity-null`), not
@@ -395,9 +398,26 @@ rules see it as a type with an `==` of its own. Which sites the coalesce
 rule counts as Unity objects, and leaves for stage 7, is checked only by
 the golden case `coalesce/04-types`. A case must hold a site the rule
 rewrites, so a case about a site that must stay as written has one of each.
-The coalesce cases guard every refusal of code that may not run (`&&`, `||`,
-a `?:` branch, a lambda body) and each condition of the forms that write
-into a local: a hand-made break of any of them fails one of the cases.
+The coalesce cases guard the refusals of code that may not run (the right
+of `&&` or `||`, a `?:` branch, the part after `?.`, a lambda body), the
+type a `var` is spelled with, the refusal of a value that converts by code
+of its own, and these checks of the forms that write into a local or a
+parameter x:
+
+- `x = a ?? b`: a plain `=` to a local or a parameter; the form of `x = x
+  ?? b` only when the first value is x; no lambda captures x and x is no
+  `ref`; neither a later value nor an opened `?.` first value reads x; and
+  in a `try` the first value is no opened `?.` and only literals and
+  locals follow it;
+- `x = f(x ?? b)`: a plain `=` to the variable the `??` tests, which
+  nothing else in the statement reads, no lambda captures and is no `ref`,
+  outside any `try`;
+- `x ?? (x = v)`: the store is to x itself, and no value follows it.
+
+A hand-made break of any one of these fails one of the cases. A `??` on
+the right of another one is queued as nested before the check of code that
+may not run sees it, so for this rule that refusal is checked only by the
+golden case `ternary-hoist/06-may-not-run`.
 
 ## Golden cases
 

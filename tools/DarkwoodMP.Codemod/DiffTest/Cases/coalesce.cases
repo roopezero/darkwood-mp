@@ -16,6 +16,22 @@ public static object Run(string a)
     string x = Log("a", a) ?? throw new ArgumentException("no " + a);
     return x.Length;
 }
+=== a var declaration keeps the type of its ??
+static string Kind(object value)
+{
+    return "object";
+}
+
+static string Kind(string value)
+{
+    return "string";
+}
+
+public static object Run(string a, string b)
+{
+    var x = Log("a", a) ?? Log("b", b);
+    return Kind(x);
+}
 === Nullable left with a literal and with a call last
 static int s_calls;
 
@@ -258,6 +274,23 @@ public static object Run(string s, object o)
     object x = Log("s", s) ?? Log("o", o);
     return x;
 }
+=== a value that converts by code of its own stays as written
+class Box
+{
+    public string Text;
+
+    public static implicit operator Box(string text)
+    {
+        return new Box { Text = Log("convert", text) };
+    }
+}
+
+public static object Run(string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    Box x = Log("a", a) ?? new Box { Text = "made" };
+    return (x.Text, seen);
+}
 === a delegate's null check is a reference check
 public static object Run(bool c, int i)
 {
@@ -304,11 +337,31 @@ public static object Run(string a, string b)
     Log("between", 0);
     return f() + f() + seen;
 }
+=== a ?? after ?. runs only when the receiver isn't null
+public static object Run(string r, string a, string b)
+{
+    string seen = Log("seen", b) ?? "none";
+    return (Log("r", r)?.Insert(0, Log("a", a) ?? Log("b", b)), seen);
+}
 === a chain assigned to a local fills the local itself
 public static object Run(string a, string b)
 {
     string x = Log("old", "old");
     x = Log("a", a) ?? Log("b", b) ?? "none";
+    return x;
+}
+=== x = y ?? b on two locals fills x with y
+public static object Run(string y, string b)
+{
+    string x = Log("old", "old");
+    x = y ?? Log("b", b);
+    return x;
+}
+=== x += a ?? b keeps the temporary
+public static object Run(string a, string b)
+{
+    string x = Log("old", "old");
+    x += Log("a", a) ?? Log("b", b);
     return x;
 }
 === a later value that reads the local keeps the temporary
@@ -317,6 +370,27 @@ public static object Run(string a, string b)
     string x = Log("b", b);
     x = Log("a", a) ?? x;
     return x;
+}
+=== x = x?.Next ?? b keeps the temporary
+class Node
+{
+    public Node Next;
+    public string Name;
+}
+
+public static object Run(bool made, bool linked, string b)
+{
+    Node x = null;
+    if (made)
+    {
+        x = new Node { Name = "first" };
+        if (linked)
+        {
+            x.Next = new Node { Name = "next" };
+        }
+    }
+    x = x?.Next ?? new Node { Name = Log("b", b) };
+    return x.Name;
 }
 === inside a try, a call after the first store keeps the temporary
 static string Fail(string a)
@@ -385,6 +459,30 @@ public static object Run(string name)
     name = string.Concat(Log("first", name ?? ""), Log("again", name));
     return name;
 }
+=== x = f(y ?? b) leaves y as it was
+static string Twice(string text)
+{
+    return Log("twice", text + text);
+}
+
+public static object Run(string y, string b)
+{
+    string x = Log("old", "old");
+    x = Twice(y ?? Log("b", b));
+    return (x, y);
+}
+=== x += f(x ?? b) keeps the temporary
+static string Twice(string text)
+{
+    return Log("twice", text + text);
+}
+
+public static object Run(string a, string b)
+{
+    string x = Log("a", a);
+    x += Twice(x ?? Log("b", b));
+    return x;
+}
 === x ?? (x = v) on a local is x ??= v
 public static object Run(string a, int d)
 {
@@ -396,4 +494,116 @@ public static object Run(string a, int d)
     }
     (gone ?? (gone = Log("new", new List<int>()))).Add(d);
     return gone;
+}
+=== x ?? (x = v) ?? w keeps its last value
+public static object Run(string a, string v, string w)
+{
+    string x = Log("a", a);
+    string r = (x ?? (x = Log("v", v)) ?? Log("w", w)).Trim();
+    return (r, x);
+}
+=== x ?? (y = v) on two locals keeps the ?? of x
+public static object Run(string a, string b)
+{
+    string x = Log("a", a);
+    string y = Log("b", b);
+    string r = (x ?? (y = Log("v", "v"))).ToUpper();
+    return (r, x, y);
+}
+=== x = a ?? b on a local a lambda reads keeps the temporary
+public static object Run(string a)
+{
+    string x = Log("old", "old");
+    Func<string> f = () => Log("seen", x);
+    x = Log("a", a) ?? f();
+    return x;
+}
+=== x = a ?? b on a ref parameter keeps the temporary
+static string s_field;
+
+static void Fill(ref string x, string a)
+{
+    x = Log("a", a) ?? Log("seen", s_field);
+}
+
+public static object Run(string a, string b)
+{
+    s_field = b;
+    Fill(ref s_field, a);
+    return s_field;
+}
+=== inside a try, a ?. first value keeps the temporary
+class Named
+{
+    public bool Fails;
+
+    public string Name
+    {
+        get
+        {
+            if (Fails)
+            {
+                throw new InvalidOperationException("no name");
+            }
+            return Log("name", "named");
+        }
+    }
+}
+
+public static object Run(bool made, bool fails)
+{
+    Named r = null;
+    if (made)
+    {
+        r = new Named { Fails = fails };
+    }
+    string x = Log("old", "old");
+    try
+    {
+        x = r?.Name ?? "none";
+    }
+    catch (InvalidOperationException)
+    {
+    }
+    return x;
+}
+=== x = f(x ?? b) on a local a lambda reads keeps the temporary
+public static object Run(string a, string b)
+{
+    string x = Log("a", a);
+    Func<string, string> f = s => Log("seen", x) + s;
+    x = f(x ?? Log("b", b));
+    return x;
+}
+=== x = f(x ?? b) on a ref parameter keeps the temporary
+static string s_text;
+
+static string Seen(string text)
+{
+    return Log("seen", s_text) + text;
+}
+
+static void Refill(ref string x, string b)
+{
+    x = Seen(x ?? Log("b", b));
+}
+
+public static object Run(string a, string b)
+{
+    s_text = a;
+    Refill(ref s_text, b);
+    return s_text;
+}
+=== inside a try, x = f(x ?? b) keeps the temporary
+public static object Run(string a, string b, int n)
+{
+    string x = Log("a", a);
+    try
+    {
+        x = (x ?? Log("b", b)).Substring(Log("n", n));
+    }
+    catch (ArgumentOutOfRangeException)
+    {
+    }
+    return x;
 }

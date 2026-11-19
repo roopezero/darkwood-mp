@@ -54,6 +54,10 @@ static class TempNameCases
                             var one = new List<Holder>().FirstOrDefault();
                             var kind = new List<Holder>()
                                 .Select(h => h.type).FirstOrDefault();
+                            var pairs = new List<(string shade, bool lit)>();
+                            F(amount: 1, label: "x");
+                            var pair = (hue: 1, tone: 2);
+                            bool typed = one is { type: "a" };
                             break;
                     }
                 }
@@ -61,7 +65,7 @@ static class TempNameCases
         }
         """;
 
-    public const int Count = 23;
+    public const int Count = 28;
 
     public static List<string> Failures()
     {
@@ -128,6 +132,18 @@ static class TempNameCases
             "n2", Pick(names, new[] { "n", "c" }));
         Expect(problems, "value comes last", "spare",
             Pick(names, new[] { "value", "spare" }));
+        // A tuple element's name, or one in front of a colon, is looked up
+        // in the tuple, the method called or the type tested.
+        Expect(problems, "a tuple element's name is free", "shade",
+            Pick(names, new[] { "shade" }));
+        Expect(problems, "an argument's name is free", "label",
+            Pick(names, new[] { "label" }));
+        Expect(problems, "a name in a tuple literal is free", "hue",
+            Pick(names, new[] { "hue" }));
+        Expect(problems, "a property pattern's name is free", "type",
+            Pick(names, new[] { "type" }));
+        Expect(problems, "a tuple element's name, for Unique", "lit2",
+            names.Unique("lit"));
         var calls = method.DescendantNodes()
             .OfType<InvocationExpressionSyntax>()
             .ToList();
