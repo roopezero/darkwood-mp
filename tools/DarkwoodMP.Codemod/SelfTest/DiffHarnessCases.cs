@@ -48,6 +48,47 @@ static class DiffHarnessCases
             """,
             "if (Log(\"f\", f) >= 1)\n{\nreturn Log(\"b\", 2);\n}\n"
                 + "return Log(\"a\", 1);"),
+        // Both differ only at int.MaxValue.
+        ("a value of the wrong type in an intermediate result", """
+            public static long Run(bool c, int n)
+            {
+                return Log("c", c) ? Log("n", n) + 1 : 0L;
+            }
+            """,
+            "if (Log(\"c\", c))\n{\nreturn Log(\"n\", n) + 1L;\n}\n"
+                + "return 0L;"),
+        ("a dropped checked context", """
+            public static int Run(bool c, int n)
+            {
+                return checked(Log("c", c) ? Log("n", n) * 2 : 0);
+            }
+            """,
+            "if (Log(\"c\", c))\n{\nreturn unchecked(Log(\"n\", n) * 2);\n}\n"
+                + "return 0;"),
+    };
+
+    /// The parameter types the wire code is full of, which the harness must
+    /// give inputs to: (what, case, right rewrite, rows).
+    static readonly (string What, string Method, string Right, int Rows)[] Typed =
+    {
+        ("a byte and an enum", """
+            public enum Kind { A, B }
+
+            public static int Run(byte b, Kind k)
+            {
+                return Log("k", k) == Kind.A ? Log("b", b) : 0;
+            }
+            """,
+            "if (Log(\"k\", k) == Kind.A)\n{\nreturn Log(\"b\", b);\n}\n"
+                + "return 0;", 9),
+        ("a short and an unsigned long", """
+            public static long Run(short s, ulong u)
+            {
+                return Log("s", s) > 0 ? (long)Log("u", u) : s;
+            }
+            """,
+            "if (Log(\"s\", s) > 0)\n{\nreturn (long)Log(\"u\", u);\n}\n"
+                + "return s;", 15),
     };
 
     /// Keeps the operands and drops the store: "int dropped; if (c) ...".
@@ -174,7 +215,7 @@ static class DiffHarnessCases
         + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
         + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
 
-    public const int Count = 9 + 5 + 2 + 3 + 4 + 1 + 1 + 2 + 1;
+    public const int Count = 9 + 5 + 4 + 3 + 4 + 1 + 1 + 2 + 1 + 2;
 
     public static List<string> Failures()
     {
@@ -249,7 +290,32 @@ static class DiffHarnessCases
         {
             ExpectUnreadable(problems, what, text);
         }
+        foreach (var (what, method, rewrite, rows) in Typed)
+        {
+            var diffCase = new DiffCase { Name = what, Method = method };
+            ExpectPasses(problems, what, diffCase,
+                new ProbeTextRule("probe-text", rewrite), rows);
+        }
         return problems;
+    }
+
+    static void ExpectPasses(
+        List<string> problems, string what, DiffCase diffCase, Rule rule,
+        int rows)
+    {
+        try
+        {
+            var outcome = DiffHarness.Run(rule, diffCase);
+            if (!outcome.Passed || outcome.Rows != rows)
+            {
+                problems.Add($"  {what}: {outcome.Rows} rows, not {rows}: "
+                    + string.Join("; ", outcome.Mismatches.Take(3)));
+            }
+        }
+        catch (Stop stop)
+        {
+            problems.Add($"  {what}: stopped: {stop.Message}");
+        }
     }
 
     static void ExpectStop(

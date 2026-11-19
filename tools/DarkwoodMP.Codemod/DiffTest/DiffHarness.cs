@@ -407,9 +407,10 @@ static class DiffHarness
         return name + "{" + string.Join(", ", parts) + "}";
     }
 
-    /// The inputs for a parameter of this type: bools, numbers (with NaN and
-    /// the infinities for double and float), nulls and the fake Unity object
-    /// (null, alive and destroyed).
+    /// The inputs for a parameter of this type: bools, integers with their
+    /// type's limits, the values of an enum and one it doesn't name, other
+    /// numbers (with NaN and the infinities for double and float), nulls and
+    /// the fake Unity object (null, alive and destroyed).
     static List<Input> InputsFor(Type type)
     {
         var inner = Nullable.GetUnderlyingType(type);
@@ -423,13 +424,14 @@ static class DiffHarness
         {
             return Values(false, true);
         }
-        if (type == typeof(int))
+        if (type.IsEnum)
         {
-            return Values(0, 1, -1, 5);
+            return EnumValues(type);
         }
-        if (type == typeof(long))
+        var integers = Integers(type);
+        if (integers != null)
         {
-            return Values(0L, 1L, -1L, 5L);
+            return integers;
         }
         // NaN fails every comparison, so it shows an inverted one:
         // "d > 0 ? a : b" is not "d <= 0 ? b : a".
@@ -473,6 +475,87 @@ static class DiffHarness
             };
         }
         throw new Stop("The harness has no inputs for parameter type " + type);
+    }
+
+    /// Small values and the type's limits, or null for a type that isn't an
+    /// integer. The limits show a value of the wrong type in an intermediate
+    /// result ("n + 1" and "n + 1L" differ only at int.MaxValue) and an
+    /// overflow that checked arithmetic throws for.
+    static List<Input> Integers(Type type)
+    {
+        if (type == typeof(int))
+        {
+            return Limits("int", int.MinValue, int.MaxValue, 0, 1, -1, 5);
+        }
+        if (type == typeof(long))
+        {
+            return Limits("long", long.MinValue, long.MaxValue, 0L, 1L, -1L, 5L);
+        }
+        if (type == typeof(short))
+        {
+            return Limits("short", short.MinValue, short.MaxValue,
+                (short)0, (short)1, (short)-1);
+        }
+        if (type == typeof(sbyte))
+        {
+            return Limits("sbyte", sbyte.MinValue, sbyte.MaxValue,
+                (sbyte)0, (sbyte)1, (sbyte)-1);
+        }
+        if (type == typeof(byte))
+        {
+            return Limits("byte", byte.MinValue, byte.MaxValue, (byte)1);
+        }
+        if (type == typeof(ushort))
+        {
+            return Limits("ushort", ushort.MinValue, ushort.MaxValue, (ushort)1);
+        }
+        if (type == typeof(uint))
+        {
+            return Limits("uint", uint.MinValue, uint.MaxValue, 1u);
+        }
+        if (type == typeof(ulong))
+        {
+            return Limits("ulong", ulong.MinValue, ulong.MaxValue, 1ul);
+        }
+        return null;
+    }
+
+    static List<Input> Limits(
+        string name, object min, object max, params object[] small)
+    {
+        var values = Values(small);
+        values.Add(Value(name + ".min", min));
+        values.Add(Value(name + ".max", max));
+        return values;
+    }
+
+    /// Every value the enum names, and the first it doesn't, which a switch
+    /// sends to its default. Made in each assembly, because the original's
+    /// enum is another type than the rewritten one's.
+    static List<Input> EnumValues(Type type)
+    {
+        var underlying = Enum.GetUnderlyingType(type);
+        var values = new List<Input>();
+        foreach (var named in Enum.GetValues(type).Cast<object>().Distinct())
+        {
+            var raw = Convert.ChangeType(named, underlying);
+            values.Add(EnumValue(type, type.Name + "." + named, raw));
+        }
+        for (long n = 0; ; n++)
+        {
+            var raw = Convert.ChangeType(n, underlying);
+            if (!Enum.IsDefined(type, raw))
+            {
+                values.Add(EnumValue(type, type.Name + "(" + n + ")", raw));
+                return values;
+            }
+        }
+    }
+
+    static Input EnumValue(Type type, string label, object raw)
+    {
+        return new Input(
+            label, a => Enum.ToObject(a.GetType(type.FullName), raw), false);
     }
 
     static object NewObject(Assembly assembly, bool dead)

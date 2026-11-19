@@ -143,7 +143,10 @@ differ only in what they return, so their keys carry the return type as well:
 `DiffTest/Cases/<rule>.cases` holds small methods, each written once in its
 original form, with every operand going through `Log("name", value)`. The
 harness compiles the original and the form the rule produces, runs both over
-every combination of bools, numbers (with NaN and the infinities for `double`
+every combination of bools, integers of every size with their type's limits
+(a wrong type in an intermediate result, `n + 1` against `n + 1L`, shows only
+at `int.MaxValue`, and so does a lost `checked`), every value of an enum and
+one it doesn't name, other numbers (with NaN and the infinities for `double`
 and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
 object as null. It compares the results, the logged order of evaluation and
 what each run left in its object arguments and in the case's static fields. A
