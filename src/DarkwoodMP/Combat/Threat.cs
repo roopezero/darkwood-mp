@@ -54,7 +54,11 @@ namespace DarkwoodMP.Combat
                 var keys = new List<CharBase>(Values.Keys);
                 foreach (var c in keys)
                 {
-                    if (c == null) { Values.Remove(c); continue; }
+                    if (c == null)
+                    {
+                        Values.Remove(c);
+                        continue;
+                    }
                     float v = Values[c] * k;
                     if (v < 0.05f)
                     {
@@ -240,7 +244,8 @@ namespace DarkwoodMP.Combat
             // nothing (a small farViewDistance, or none while asleep) still goes for the player beside it, not
             // whoever is listed first.
             float range = Mathf.Max(MinCloseRange, c.farViewDistance * c.aniSightRangeModifier * 3f);
-            CharBase best = null; float bestScore = float.MinValue, bestDist = float.MaxValue;
+            CharBase best = null;
+            float bestScore = float.MinValue, bestDist = float.MaxValue;
             var candidates = new List<CharBase>();
             if (host != null && host.alive && !host.dying)
             {
@@ -257,7 +262,12 @@ namespace DarkwoodMP.Combat
             {
                 float dist = Vector3.Distance(p.transform.position, c.transform.position);
                 float score = table.Get(p) + CloseWeight * Mathf.Clamp01(1f - dist / range);
-                if (score > bestScore || (score == bestScore && dist < bestDist)) { bestScore = score; bestDist = dist; best = p; } // a tie: the nearer
+                if (score > bestScore || (score == bestScore && dist < bestDist)) // a tie: the nearer
+                {
+                    bestScore = score;
+                    bestDist = dist;
+                    best = p;
+                }
             }
             return best ?? host;
         }
@@ -295,7 +305,11 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 float d = Core.trueDistance(p.transform.position, me);
-                if (d < bestDist) { bestDist = d; best = p.transform.position; }
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = p.transform.position;
+                }
             }
             return best;
         }

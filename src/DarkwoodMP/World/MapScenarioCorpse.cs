@@ -78,7 +78,11 @@ namespace DarkwoodMP.World
         private static IEnumerator SnGoto(string[] a, Result r)
         {
             var c = Nearest(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} in this world"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} in this world");
+                yield break;
+            }
             float dist = a.Length > 1 ? F(a[1]) : 250f;
             var to = c.transform.position;
             yield return Walk(to, dist);
@@ -90,7 +94,11 @@ namespace DarkwoodMP.World
         private static IEnumerator SnKill(string[] a, Result r)
         {
             var c = Nearest(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             int hits = 0;
             while (c != null && c.alive && hits < 60)
             {
@@ -126,7 +134,11 @@ namespace DarkwoodMP.World
             }
             var st = State(a[0]);
             string all = string.Join("; ", Copies(a[0]).Select(Props));
-            if (c == null) { r.Fail($"no corpse shown here (state dead {st?.dead} deadID {st?.deadID}): {all}"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no corpse shown here (state dead {st?.dead} deadID {st?.deadID}): {all}");
+                yield break;
+            }
             r.Info = $"state dead {st?.dead} deadID {st?.deadID}; {Props(c)}";
             if (c.GetComponent<Item>() == null)
             {
@@ -146,7 +158,11 @@ namespace DarkwoodMP.World
         private static IEnumerator SnAway(string[] a, Result r)
         {
             var c = Nearest(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             var at = c.transform.position;
             var back = P.transform.position;
             yield return Walk(at + new Vector3(0f, 0f, -F(a[1])), 100f);
@@ -170,7 +186,11 @@ namespace DarkwoodMP.World
             }
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Core.AddPrefab("Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
-            if (go == null) { r.Fail($"no prefab Characters/NPC/{a[0]}"); yield break; }
+            if (go == null)
+            {
+                r.Fail($"no prefab Characters/NPC/{a[0]}");
+                yield break;
+            }
             Core.addToSaveable(go, isDynamic: true, assignID: true);
             var c = go.GetComponent<Character>();
             if (c != null)
@@ -178,7 +198,11 @@ namespace DarkwoodMP.World
                 c.isActive = true;
             }
             yield return new WaitForSecondsRealtime(1f);
-            if (c == null || c.npc == null) { r.Fail($"{a[0]} isn't an NPC"); yield break; }
+            if (c == null || c.npc == null)
+            {
+                r.Fail($"{a[0]} isn't an NPC");
+                yield break;
+            }
             _story = c.npc.name;
             r.Info = Props(c);
         }
@@ -193,7 +217,11 @@ namespace DarkwoodMP.World
         private static IEnumerator SnLoot(string[] a, Result r)
         {
             var c = Corpse(a[0]);
-            if (c == null) { r.Fail($"no searchable corpse of {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no searchable corpse of {a[0]} here");
+                yield break;
+            }
             yield return Walk(c.transform.position, 80f);
             var inv = c.inventory;
             P.openedItemInventory = inv; // as if its window were open
@@ -202,7 +230,11 @@ namespace DarkwoodMP.World
             foreach (var slot in inv.slots.Where(s => s != null && !InvItemClass.isNull(s.invItem)).ToList())
             {
                 var item = new InvItemClass(slot.invItem);
-                AsPlayer(() => { slot.removeItem(); P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true); });
+                AsPlayer(() =>
+                {
+                    slot.removeItem();
+                    P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true);
+                });
                 took.Add($"{item.type} x{item.amount}");
                 yield return new WaitForSeconds(0.3f);
             }
@@ -233,7 +265,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.25f);
             }
-            if (c == null) { r.Fail($"no searchable corpse of {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no searchable corpse of {a[0]} here");
+                yield break;
+            }
             r.Info = Props(c);
             if (Things(c.inventory) > 0)
             {
@@ -252,9 +288,17 @@ namespace DarkwoodMP.World
         private static IEnumerator CwDog(string[] a, Result r)
         {
             var proxy = MapScenarioEnemies.ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
             var c = MapScenarioFixChecks.SpawnAt(proxy.transform.position + new Vector3(250f, 0f, 0f));
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             yield return new WaitForSeconds(1.5f);
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1.5f);
             _cwDog = c;
@@ -282,13 +326,18 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(0.5f);
                 }
             }
-            if (c == null) { r.Fail("no kept corpse of the host's enemies here"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no kept corpse of the host's enemies here");
+                yield break;
+            }
             yield return Walk(c.transform.position, 80f);
             var item = c.GetComponent<Item>();
             var inv = c.GetComponentInChildren<Inventory>(true);
             AsPlayer(() => item.openInventory());
             yield return new WaitForSeconds(1.5f);
-            _cwInv = inv; _cwWindow = inv.thisUI;
+            _cwInv = inv;
+            _cwWindow = inv.thisUI;
             r.Info = $"{c.name} at {Fmt(c.transform.position)}: open {inv.open}, window {(inv.thisUI != null ? inv.thisUI.name : "none")}, " +
                      $"ours open {ReferenceEquals(P.openedItemInventory, inv)}, windows [{string.Join(", ", Windows())}]";
             if (!inv.open || inv.thisUI == null || !ReferenceEquals(P.openedItemInventory, inv))
@@ -301,7 +350,11 @@ namespace DarkwoodMP.World
         /// (the safety net's case, Containers.DropOrphanedWindows: a way of going that CloseIfOpen doesn't cover).</summary>
         private static IEnumerator CwBreak(string[] a, Result r)
         {
-            if (_cwInv == null || !_cwInv.open) { r.Fail("no open corpse here"); yield break; }
+            if (_cwInv == null || !_cwInv.open)
+            {
+                r.Fail("no open corpse here");
+                yield break;
+            }
             Object.Destroy(_cwInv);
             yield return new WaitForSeconds(0.5f);
             r.Info = "destroyed its Inventory";
@@ -310,7 +363,11 @@ namespace DarkwoodMP.World
         /// <summary>"cw-remove" (host): the dog's corpse removed from the world (the client's copy goes too).</summary>
         private static IEnumerator CwRemove(string[] a, Result r)
         {
-            if (_cwDog == null) { r.Fail("no dog of cw-dog's"); yield break; }
+            if (_cwDog == null)
+            {
+                r.Fail("no dog of cw-dog's");
+                yield break;
+            }
             r.Info = $"{_cwDog.name} #{MapScenarioFixChecks.IdOf(_cwDog)} removed";
             Object.Destroy(_cwDog.gameObject);
             _cwDog = null;
@@ -358,7 +415,8 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"a window was left: {r.Info}");
             }
-            _cwInv = null; _cwWindow = null;
+            _cwInv = null;
+            _cwWindow = null;
         }
     }
 }

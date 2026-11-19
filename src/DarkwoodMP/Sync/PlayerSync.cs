@@ -61,7 +61,11 @@ namespace DarkwoodMP.Sync
             _session = session;
             session.Register(MsgType.PlayerState, OnPlayerState);
             _moves = new MoveCheck(session);
-            session.OnPeerDisconnected += id => { RemoveRemote(id); _left[id] = Time.unscaledTime; };
+            session.OnPeerDisconnected += id =>
+            {
+                RemoveRemote(id);
+                _left[id] = Time.unscaledTime;
+            };
             session.OnPeerConnected += id => _left.Remove(id);
             session.OnSessionEnded += () =>
             {
@@ -205,7 +209,11 @@ namespace DarkwoodMP.Sync
 
         private void RemoveRemote(ulong id)
         {
-            if (Remotes.TryGetValue(id, out var r)) { r.Destroy(); Remotes.Remove(id); }
+            if (Remotes.TryGetValue(id, out var r))
+            {
+                r.Destroy();
+                Remotes.Remove(id);
+            }
         }
 
         /// <summary>Draw name tags above puppets (IMGUI; avoids depending on a font asset).</summary>
@@ -217,7 +225,11 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
-            if (MapMarkers.MapOpen) { MapMarkers.DrawNames(); return; }
+            if (MapMarkers.MapOpen)
+            {
+                MapMarkers.DrawNames();
+                return;
+            }
             if (World.UiState.WorldOverlaysHidden)
             {
                 return;

@@ -74,9 +74,13 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                list[i].opcode = OpCodes.Ldarg_0; list[i].operand = null; // keeps the instruction's labels
-                list[i + 1].opcode = OpCodes.Nop; list[i + 1].operand = null;
-                list[i + 3].opcode = OpCodes.Call; list[i + 3].operand = mine;
+                // keeps the instruction's labels
+                list[i].opcode = OpCodes.Ldarg_0;
+                list[i].operand = null;
+                list[i + 1].opcode = OpCodes.Nop;
+                list[i + 1].operand = null;
+                list[i + 3].opcode = OpCodes.Call;
+                list[i + 3].operand = mine;
                 swapped++;
             }
             Plugin.Log.Log(swapped == 2 ? BepInEx.Logging.LogLevel.Info : BepInEx.Logging.LogLevel.Warning,
@@ -108,9 +112,12 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                list[i].opcode = OpCodes.Ldarg_0; list[i].operand = null;
-                list[i + 1].opcode = OpCodes.Call; list[i + 1].operand = AccessTools.Method(typeof(Wards), isFriend ? nameof(FriendOfTheForest) : nameof(EnemyOfTheForest));
-                list[i + 2].opcode = OpCodes.Nop; list[i + 2].operand = null;
+                list[i].opcode = OpCodes.Ldarg_0;
+                list[i].operand = null;
+                list[i + 1].opcode = OpCodes.Call;
+                list[i + 1].operand = AccessTools.Method(typeof(Wards), isFriend ? nameof(FriendOfTheForest) : nameof(EnemyOfTheForest));
+                list[i + 2].opcode = OpCodes.Nop;
+                list[i + 2].operand = null;
                 swapped++;
                 for (int j = i - 1; j >= 0 && j >= i - 16; j--)
                 {
@@ -118,8 +125,10 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
-                    list[j].opcode = OpCodes.Ldarg_0; list[j].operand = null;
-                    list[j + 1].opcode = OpCodes.Call; list[j + 1].operand = AccessTools.Method(typeof(Wards), nameof(PlayerTarget));
+                    list[j].opcode = OpCodes.Ldarg_0;
+                    list[j].operand = null;
+                    list[j + 1].opcode = OpCodes.Call;
+                    list[j + 1].operand = AccessTools.Method(typeof(Wards), nameof(PlayerTarget));
                     targets++;
                     break;
                 }
@@ -177,7 +186,9 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            Vector3 fwd = parent.TransformDirection(Vector3.up); fwd.y = 0f; // players are rotated Euler(90, yaw, 0): local up is ahead
+            // players are rotated Euler(90, yaw, 0): local up is ahead
+            Vector3 fwd = parent.TransformDirection(Vector3.up);
+            fwd.y = 0f;
             if (fwd.sqrMagnitude < 0.01f)
             {
                 return;

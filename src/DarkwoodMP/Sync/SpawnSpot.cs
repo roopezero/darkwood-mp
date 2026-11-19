@@ -153,8 +153,14 @@ namespace DarkwoodMP.Sync
         /// <summary>The game's pathfinding grid counts it walkable (Core.isPointWalkable); true if there's no grid.</summary>
         private static bool Walkable(Vector3 at)
         {
-            try { return Core.isPointWalkable(at); }
-            catch { return true; }
+            try
+            {
+                return Core.isPointWalkable(at);
+            }
+            catch
+            {
+                return true;
+            }
         }
     }
 }

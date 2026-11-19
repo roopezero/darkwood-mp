@@ -48,7 +48,11 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var w = Window;
-            if (p == null || w == null || !p.inDialogue) { _goneSince = _offSince = -1f; return; }
+            if (p == null || w == null || !p.inDialogue)
+            {
+                _goneSince = _offSince = -1f;
+                return;
+            }
             float now = Time.unscaledTime;
             bool gone = w.npc == null; // destroyed, or cleared by a close that is on its way
             bool off = !gone && !w.npc.gameObject.activeInHierarchy && Hideouts.Together;
@@ -69,8 +73,16 @@ namespace DarkwoodMP.World
                 _offSince = now;
             }
 
-            if (NpcDestroyed(w) && !w.tweening) { ForceClose(w, "destroyed"); return; }
-            if (gone && now - _goneSince > StuckAfter) { ForceClose(w, "gone for " + StuckAfter + " s"); return; }
+            if (NpcDestroyed(w) && !w.tweening)
+            {
+                ForceClose(w, "destroyed");
+                return;
+            }
+            if (gone && now - _goneSince > StuckAfter)
+            {
+                ForceClose(w, "gone for " + StuckAfter + " s");
+                return;
+            }
             if (off && !w.tweening && now - _offSince > 1f)
             {
                 _offSince = now; // tried; try again in a second if it didn't close
@@ -87,7 +99,11 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            if (NpcDestroyed(w)) { ForceClose(w, "destroyed"); return true; }
+            if (NpcDestroyed(w))
+            {
+                ForceClose(w, "destroyed");
+                return true;
+            }
             if (w.npc == null)
             {
                 return false;
@@ -102,7 +118,11 @@ namespace DarkwoodMP.World
                 w.currentMenu = DialogueWindow.CurrentMenu.gossip;
                 w.close();
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}"); ForceClose(w, "close failed"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
+                ForceClose(w, "close failed");
+            }
             return true;
         }
 
@@ -157,10 +177,17 @@ namespace DarkwoodMP.World
                     w.exchangeTrader.hide();
                     p.Hotbar.thisUI.transform.localPosition = p.Hotbar.position;
                     var pos = p.Hotbar.thisUI.GetComponent<PositionMe>();
-                    if (pos != null) { pos.offset = new Vector2(p.Hotbar.position.x, p.Hotbar.position.z); pos.init(); }
+                    if (pos != null)
+                    {
+                        pos.offset = new Vector2(p.Hotbar.position.x, p.Hotbar.position.z);
+                        pos.init();
+                    }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Closing the trade without the trader: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Closing the trade without the trader: {e.Message}");
+            }
             _shopUI = null;
             p.inShop = false;
             w.tweening = true;
@@ -176,11 +203,17 @@ namespace DarkwoodMP.World
                 Core.forbidInputsFor(1.2f);
                 Singleton<UI>.Instance.tweenBlackScreenTop(new Color(0f, 0f, 0f, 1f), 0.5f);
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
+            }
             // onTweenClose gives the controls back (inDialogue, performingAction, the pause, the camera).
             Singleton<Controller>.Instance.Invoke(() =>
             {
-                try { TweenClose(w); }
+                try
+                {
+                    TweenClose(w);
+                }
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");

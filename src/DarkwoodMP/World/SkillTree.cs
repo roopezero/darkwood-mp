@@ -272,8 +272,16 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             why = null;
-            if (p == null || p.skills == null || Tiers == null) { why = "not in a world"; return false; }
-            if (_waiting) { why = "waiting for the host"; return false; }
+            if (p == null || p.skills == null || Tiers == null)
+            {
+                why = "not in a world";
+                return false;
+            }
+            if (_waiting)
+            {
+                why = "waiting for the host";
+                return false;
+            }
             var chosen = Chosen(p);
             int level = p.currentLevel;
             why = Check(level, chosen, good, negative);
@@ -305,7 +313,8 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
-                    Take(gs); Take(ns);
+                    Take(gs);
+                    Take(ns);
                     Plugin.Log.LogInfo($"[skills] the host refused {good}: {reason}; taken back");
                     Player.Instance?.displayMessage(reason);
                 }, inventory: false);
@@ -327,7 +336,13 @@ namespace DarkwoodMP.World
             }
             p.skills.refreshAll();
             p.gainExp(0);
-            try { AudioController.Play("UI_placeItem"); } catch { }
+            try
+            {
+                AudioController.Play("UI_placeItem");
+            }
+            catch
+            {
+            }
             Singleton<SkillsMenu>.Instance?.tryShowActiveSkillsHelpPopup();
         }
 
@@ -357,11 +372,23 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (Tiers == null) { Authority.Refuse("the host isn't in a world"); return; }
+            if (Tiers == null)
+            {
+                Authority.Refuse("the host isn't in a world");
+                return;
+            }
             int most = Progression.MostLevels(Player.Instance);
-            if (level > most) { Authority.Refuse($"level {level} is more than the shared essence gives ({most})"); return; }
+            if (level > most)
+            {
+                Authority.Refuse($"level {level} is more than the shared essence gives ({most})");
+                return;
+            }
             string why = Check(level, chosen, good, negative);
-            if (why != null) { Authority.Refuse(why); return; }
+            if (why != null)
+            {
+                Authority.Refuse(why);
+                return;
+            }
             Plugin.Log.LogInfo($"[skills] {S.NameOf(from)} learned {good}{(negative.Length > 0 ? " with " + negative : "")} at level {level}");
         }
 

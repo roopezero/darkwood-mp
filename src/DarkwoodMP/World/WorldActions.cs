@@ -226,7 +226,11 @@ namespace DarkwoodMP.World
                 }
                 return;
             }
-            if (S.IsClient && HammerStroke.Depth > 0) { HammerStroke.Held.Add(() => Send(a, r, name, x, y, f1, f2, str)); return; }
+            if (S.IsClient && HammerStroke.Depth > 0)
+            {
+                HammerStroke.Held.Add(() => Send(a, r, name, x, y, f1, f2, str));
+                return;
+            }
             var w = S.Begin(MsgType.WorldAction);
             WriteAction(w, a, r, x, y, f1, f2, str, byPlayer && S.IsHost);
             if (Debug)
@@ -249,7 +253,8 @@ namespace DarkwoodMP.World
         {
             w.W.Write((byte)a);
             r.Write(w);
-            w.W.Write(x); w.W.Write(y);
+            w.W.Write(x);
+            w.W.Write(y);
             w.W.Write((byte)((f1 ? 1 : 0) | (f2 ? 2 : 0) | (byPlayer ? 4 : 0)));
             w.WriteStr(str ?? "");
         }
@@ -279,15 +284,21 @@ namespace DarkwoodMP.World
                 // A player in a dream of their own (or a place the host doesn't have) acted on their own copy of it:
                 // not the host's to refuse, nor to apply. Their game no longer sends these (OursAlone); this is for one
                 // that was on the way as they went.
-                if (Authority.RequesterAway) { Authority.AcceptAway($"{a} {obj}"); return; }
+                if (Authority.RequesterAway)
+                {
+                    Authority.AcceptAway($"{a} {obj}");
+                    return;
+                }
                 SendState(from, obj, padlock: a == Action.PadlockUnlock, goneMeansGone: GoneMeansGone(a));
                 return;
             }
 
             // Applied as outside any explosion or flame, whatever this frame was in when the message was read: on a
             // client a hit inside one is left to the host (BreakSync.HostsHit), and this is the host's hit.
-            int thrownDepth = ThrownHits.Depth; var flame = ThrownHits.CurrentFlame;
-            ThrownHits.Depth = 0; ThrownHits.CurrentFlame = null;
+            int thrownDepth = ThrownHits.Depth;
+            var flame = ThrownHits.CurrentFlame;
+            ThrownHits.Depth = 0;
+            ThrownHits.CurrentFlame = null;
             Replaying = true;
             var leftWas = ScriptedEvents.LeftToActor;
             if (byPlayer)
@@ -378,12 +389,14 @@ namespace DarkwoodMP.World
                                 y = item.health;
                             }
                             break;
-                        case Action.ItemBroken: if (!item.destroyed)
+                        case Action.ItemBroken:
+                            if (!item.destroyed)
                             {
                                 item.die();
                             }
                             break;
-                        case Action.ItemRepaired: if (item.destroyed)
+                        case Action.ItemRepaired:
+                            if (item.destroyed)
                             {
                                 item.setNormalState();
                             }
@@ -480,18 +493,39 @@ namespace DarkwoodMP.World
                     }
                     switch (a)
                     {
-                        case Action.DoorOpen: door.open(new Vector3(x, door.transform.position.y, y), null, 0f); break;
-                        case Action.DoorClose: door.close(null); break;
+                        case Action.DoorOpen:
+                            door.open(new Vector3(x, door.transform.position.y, y), null, 0f);
+                            break;
+                        case Action.DoorClose:
+                            door.close(null);
+                            break;
                         // As the hammer's third stroke: Door.barricade only nails it up when barricadeState reaches 3
                         // (and rebuilds a broken door instead).
-                        case Action.DoorBarricade: door.barricadeState = 2; door.barricade(f1); break;
-                        case Action.DoorDestroyBarricade: door.destroyBarricade(f1); break;
-                        case Action.DoorDestroy: door.destroyDoor(f1); break;
-                        case Action.DoorHit: door.getHit((int)x, null, f1, f2); break;
-                        case Action.DoorLock: door.lockMe(str); break;
-                        case Action.DoorUnlock: door.unlock(); break;
-                        case Action.DoorUndestroy: door.unDestroy(); break;
-                        case Action.DoorUnblock: door.unblock(); break;
+                        case Action.DoorBarricade:
+                            door.barricadeState = 2;
+                            door.barricade(f1);
+                            break;
+                        case Action.DoorDestroyBarricade:
+                            door.destroyBarricade(f1);
+                            break;
+                        case Action.DoorDestroy:
+                            door.destroyDoor(f1);
+                            break;
+                        case Action.DoorHit:
+                            door.getHit((int)x, null, f1, f2);
+                            break;
+                        case Action.DoorLock:
+                            door.lockMe(str);
+                            break;
+                        case Action.DoorUnlock:
+                            door.unlock();
+                            break;
+                        case Action.DoorUndestroy:
+                            door.unDestroy();
+                            break;
+                        case Action.DoorUnblock:
+                            door.unblock();
+                            break;
                     }
                 }
                 else
@@ -503,14 +537,32 @@ namespace DarkwoodMP.World
                     }
                     switch (a)
                     {
-                        case Action.WindowBarricade: window.barricadeState = 2; window.barricade((int)x, f1); break; // as for a door
-                        case Action.WindowDestroyBarricade: window.destroyBarricade(f1); break;
-                        case Action.WindowHit: window.getHit((int)x, null, f1); break;
+                        case Action.WindowBarricade:
+                            // as for a door
+                            window.barricadeState = 2;
+                            window.barricade((int)x, f1);
+                            break;
+                        case Action.WindowDestroyBarricade:
+                            window.destroyBarricade(f1);
+                            break;
+                        case Action.WindowHit:
+                            window.getHit((int)x, null, f1);
+                            break;
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {a} to {obj}: {e.Message}"); }
-            finally { Replaying = false; ScriptedEvents.LeftToActor = leftWas; ThrownHits.Depth = thrownDepth; ThrownHits.CurrentFlame = flame; ScriptedEvents.Cause = wasCause; }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't apply {a} to {obj}: {e.Message}");
+            }
+            finally
+            {
+                Replaying = false;
+                ScriptedEvents.LeftToActor = leftWas;
+                ThrownHits.Depth = thrownDepth;
+                ThrownHits.CurrentFlame = flame;
+                ScriptedEvents.Cause = wasCause;
+            }
 
             if (s.IsHost)
             {
@@ -551,7 +603,8 @@ namespace DarkwoodMP.World
             {
                 return c;
             }
-            Character best = null; float bestD = 400f * 400f;
+            Character best = null;
+            float bestD = 400f * 400f;
             foreach (var n in UnityEngine.Object.FindObjectsOfType<NPC>())
             {
                 if (n == null || n.name != name)
@@ -564,7 +617,11 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 float d = FlatSq(ch.transform.position, new Vector3(x, 0f, z));
-                if (d < bestD) { bestD = d; best = ch; }
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = ch;
+                }
             }
             return best ?? c;
         }
@@ -589,32 +646,58 @@ namespace DarkwoodMP.World
             if (a == Action.Explode)
             {
                 var ex = ObjRef.Resolve<Explodes>(obj);
-                if (ex == null || ex.GetComponent<Character>() != null) { Authority.Refuse("it isn't here (gone or already blown up)"); return false; }
-                if (BreakSync.Activated(ex)) { Authority.Refuse("it had already gone off"); return false; }
+                if (ex == null || ex.GetComponent<Character>() != null)
+                {
+                    Authority.Refuse("it isn't here (gone or already blown up)");
+                    return false;
+                }
+                if (BreakSync.Activated(ex))
+                {
+                    Authority.Refuse("it had already gone off");
+                    return false;
+                }
                 return Authority.InReach(ex.transform.position, ShotReach, ex.name);
             }
             if (a >= Action.ItemHit)
             {
                 var item = ObjRef.Resolve<Item>(obj);
-                if (item == null) { Authority.Refuse("not here"); return false; }
+                if (item == null)
+                {
+                    Authority.Refuse("not here");
+                    return false;
+                }
                 if (!Authority.InReach(item.transform.position, a == Action.ItemHit ? ShotReach : Reach, item.name))
                 {
                     return false;
                 }
                 switch (a)
                 {
-                    case Action.ItemHit when item.destroyed: Authority.Refuse("it is already broken"); return false;
-                    case Action.ItemHit when x > 1000f || x < 0f: Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false;
-                    case Action.ItemBroken when item.destroyed: Authority.Refuse("it is already broken"); return false;
-                    case Action.ItemBroken when !item.destructible: Authority.Refuse("it can't be broken"); return false;
-                    case Action.ItemRepaired when !item.destroyed: Authority.Refuse("it isn't broken"); return false;
+                    case Action.ItemHit when item.destroyed:
+                        Authority.Refuse("it is already broken");
+                        return false;
+                    case Action.ItemHit when x > 1000f || x < 0f:
+                        Authority.Refuse($"a hit of {x:0} is more than any weapon does");
+                        return false;
+                    case Action.ItemBroken when item.destroyed:
+                        Authority.Refuse("it is already broken");
+                        return false;
+                    case Action.ItemBroken when !item.destructible:
+                        Authority.Refuse("it can't be broken");
+                        return false;
+                    case Action.ItemRepaired when !item.destroyed:
+                        Authority.Refuse("it isn't broken");
+                        return false;
                 }
                 return true;
             }
             if (a == Action.NpcDied)
             {
                 var npc = DyingNpc(obj, str, x, y);
-                if (npc == null) { Authority.Refuse("no such NPC here"); return false; }
+                if (npc == null)
+                {
+                    Authority.Refuse("no such NPC here");
+                    return false;
+                }
                 if (!Authority.InReach(npc.transform.position, 2500f, npc.name))
                 {
                     return false;
@@ -625,52 +708,104 @@ namespace DarkwoodMP.World
             if (a == Action.ItemUnlock)
             {
                 var l = ObjRef.Resolve<Locked>(obj);
-                if (l == null) { Authority.Refuse("there's no lock on it here"); return false; }
+                if (l == null)
+                {
+                    Authority.Refuse("there's no lock on it here");
+                    return false;
+                }
                 if (!Authority.InReach(l.transform.position, Reach, l.name))
                 {
                     return false;
                 }
-                if (!l.locked) { Authority.Refuse("it isn't locked"); return false; }
-                if (x == 0f) { Authority.Refuse(StoryOnly); return false; }
-                if (x == 1f && !HasKey(l)) { Authority.Refuse($"nobody has the key ({l.keyType})"); return false; }
+                if (!l.locked)
+                {
+                    Authority.Refuse("it isn't locked");
+                    return false;
+                }
+                if (x == 0f)
+                {
+                    Authority.Refuse(StoryOnly);
+                    return false;
+                }
+                if (x == 1f && !HasKey(l))
+                {
+                    Authority.Refuse($"nobody has the key ({l.keyType})");
+                    return false;
+                }
                 return true;
             }
             if (a == Action.ItemSearched)
             {
                 // A client's player opened a container. Only the host says a crate was picked open (its TrapDisarm roll).
                 var item = ObjRef.Resolve<Item>(obj);
-                if (item == null) { Authority.Refuse("no such thing here"); return false; }
-                if (Crate(item) != null && !item.searched) { Authority.Refuse("a crate is picked open by the host's roll"); return false; }
-                if (item.GetComponent<Inventory>() == null) { Authority.Refuse("there's nothing to search in it"); return false; }
+                if (item == null)
+                {
+                    Authority.Refuse("no such thing here");
+                    return false;
+                }
+                if (Crate(item) != null && !item.searched)
+                {
+                    Authority.Refuse("a crate is picked open by the host's roll");
+                    return false;
+                }
+                if (item.GetComponent<Inventory>() == null)
+                {
+                    Authority.Refuse("there's nothing to search in it");
+                    return false;
+                }
                 return Authority.InReach(item.transform.position, Reach, item.name);
             }
             if (a == Action.PadlockUnlock)
             {
                 var p = ObjRef.Resolve<Padlock>(obj);
-                if (p == null) { Authority.Refuse("no such padlock here"); return false; }
+                if (p == null)
+                {
+                    Authority.Refuse("no such padlock here");
+                    return false;
+                }
                 if (!Authority.InReach(p.transform.position, Reach, p.name))
                 {
                     return false;
                 }
-                if (!f1) { Authority.Refuse(StoryOnly); return false; }
-                if (p.locked && str != p.combination) { Authority.Refuse("that isn't the padlock's code"); return false; }
+                if (!f1)
+                {
+                    Authority.Refuse(StoryOnly);
+                    return false;
+                }
+                if (p.locked && str != p.combination)
+                {
+                    Authority.Refuse("that isn't the padlock's code");
+                    return false;
+                }
                 return true;
             }
             if (a == Action.TrapDisarm && ObjRef.Resolve<Item>(obj) is Item picked && picked.GetComponent<Trigger>() == null)
             {
-                if (Crate(picked) == null) { Authority.Refuse("there's no lock to pick on it"); return false; }
+                if (Crate(picked) == null)
+                {
+                    Authority.Refuse("there's no lock to pick on it");
+                    return false;
+                }
                 return Authority.InReach(picked.transform.position, Reach, picked.name);
             }
             if (a >= Action.ItemOn)
             {
                 var item = ObjRef.Resolve<Item>(obj);
-                if (item == null) { Authority.Refuse("not here"); return false; }
+                if (item == null)
+                {
+                    Authority.Refuse("not here");
+                    return false;
+                }
                 return Authority.InReach(item.transform.position, Reach, item.name);
             }
             if (a >= Action.TrapFired)
             {
                 var trap = ObjRef.Resolve<Trigger>(obj);
-                if (trap == null) { Authority.Refuse("the trap is gone"); return false; }
+                if (trap == null)
+                {
+                    Authority.Refuse("the trap is gone");
+                    return false;
+                }
                 if (!Authority.InReach(trap.transform.position, Reach, trap.name))
                 {
                     return false;
@@ -682,18 +817,34 @@ namespace DarkwoodMP.World
                     {
                         OnAfterTrigger.Invoke(trap, new object[] { null, false }); // it went off here first, and that went to everyone
                     }
-                    else { trap.active = false; UnityEngine.Object.DestroyImmediate(trap.gameObject); } // it isn't here
+                    else // it isn't here
+                    {
+                        trap.active = false;
+                        UnityEngine.Object.DestroyImmediate(trap.gameObject);
+                    }
                     Authority.Refuse(TrapFiredPatch.TestRefuse == "race" ? "the trap had already gone off (test)" : "the trap is gone (test)");
                     return false;
                 }
-                if (a == Action.TrapFired && !trap.active) { Authority.Refuse("the trap had already gone off"); return false; }
-                if (a == Action.TrapDisarm && (!trap.active || !trap.canDisarm)) { Authority.Refuse("the trap can't be disarmed now"); return false; }
+                if (a == Action.TrapFired && !trap.active)
+                {
+                    Authority.Refuse("the trap had already gone off");
+                    return false;
+                }
+                if (a == Action.TrapDisarm && (!trap.active || !trap.canDisarm))
+                {
+                    Authority.Refuse("the trap can't be disarmed now");
+                    return false;
+                }
                 return true;
             }
             if (a < Action.WindowBarricade)
             {
                 var door = ObjRef.Resolve<Door>(obj);
-                if (door == null) { Authority.Refuse("no such door here"); return false; }
+                if (door == null)
+                {
+                    Authority.Refuse("no such door here");
+                    return false;
+                }
                 // A hit can come from a shot or our flamethrower's flame (BreakSync.OwnFlame), which reach further than a hand.
                 if (!Authority.InReach(door.transform.position, a == Action.DoorHit ? ShotReach : Reach, door.name))
                 {
@@ -703,32 +854,74 @@ namespace DarkwoodMP.World
                 bool isLocked = locked != null && locked.locked;
                 switch (a)
                 {
-                    case Action.DoorOpen when door.destroyed: Authority.Refuse("the door is broken"); return false;
-                    case Action.DoorOpen when isLocked: Authority.Refuse("the door is locked"); return false;
-                    case Action.DoorOpen when door.blocked: Authority.Refuse("the door is blocked"); return false;
+                    case Action.DoorOpen when door.destroyed:
+                        Authority.Refuse("the door is broken");
+                        return false;
+                    case Action.DoorOpen when isLocked:
+                        Authority.Refuse("the door is locked");
+                        return false;
+                    case Action.DoorOpen when door.blocked:
+                        Authority.Refuse("the door is blocked");
+                        return false;
                     // On a broken door the hammer's strokes rebuild it (Door.setBarricadeState calls unDestroy): that's a repair, allowed.
-                    case Action.DoorBarricade when door.barricaded && !door.destroyed: Authority.Refuse("the door is already barricaded"); return false;
-                    case Action.DoorDestroyBarricade when !door.barricaded: Authority.Refuse("the door isn't barricaded"); return false;
-                    case Action.DoorHit when door.destroyed: Authority.Refuse("the door is already broken"); return false;
-                    case Action.DoorUnlock when locked == null: Authority.Refuse("the door has no lock to open"); return false;
-                    case Action.DoorUnlock when !locked.locked: Authority.Refuse("the door isn't locked"); return false;
-                    case Action.DoorUnlock when x == 0f: Authority.Refuse(StoryOnly); return false;
-                    case Action.DoorLock: Authority.Refuse(StoryOnly); return false;
-                    case Action.DoorUnblock: Authority.Refuse(StoryOnly); return false;
-                    case Action.DoorUnlock when x == 1f && !HasKey(locked): Authority.Refuse($"nobody has the key ({locked.keyType})"); return false;
-                    case Action.DoorHit when x > 1000f: Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false;
+                    case Action.DoorBarricade when door.barricaded && !door.destroyed:
+                        Authority.Refuse("the door is already barricaded");
+                        return false;
+                    case Action.DoorDestroyBarricade when !door.barricaded:
+                        Authority.Refuse("the door isn't barricaded");
+                        return false;
+                    case Action.DoorHit when door.destroyed:
+                        Authority.Refuse("the door is already broken");
+                        return false;
+                    case Action.DoorUnlock when locked == null:
+                        Authority.Refuse("the door has no lock to open");
+                        return false;
+                    case Action.DoorUnlock when !locked.locked:
+                        Authority.Refuse("the door isn't locked");
+                        return false;
+                    case Action.DoorUnlock when x == 0f:
+                        Authority.Refuse(StoryOnly);
+                        return false;
+                    case Action.DoorLock:
+                        Authority.Refuse(StoryOnly);
+                        return false;
+                    case Action.DoorUnblock:
+                        Authority.Refuse(StoryOnly);
+                        return false;
+                    case Action.DoorUnlock when x == 1f && !HasKey(locked):
+                        Authority.Refuse($"nobody has the key ({locked.keyType})");
+                        return false;
+                    case Action.DoorHit when x > 1000f:
+                        Authority.Refuse($"a hit of {x:0} is more than any weapon does");
+                        return false;
                 }
                 return true;
             }
             var window = ObjRef.Resolve<Window>(obj);
-            if (window == null) { Authority.Refuse("no such window here"); return false; }
+            if (window == null)
+            {
+                Authority.Refuse("no such window here");
+                return false;
+            }
             if (!Authority.InReach(window.transform.position, a == Action.WindowHit ? ShotReach : Reach, window.name))
             {
                 return false;
             }
-            if (a == Action.WindowBarricade && window.barricaded) { Authority.Refuse("the window is already barricaded"); return false; }
-            if (a == Action.WindowDestroyBarricade && !window.barricaded) { Authority.Refuse("the window isn't barricaded"); return false; }
-            if (a == Action.WindowHit && x > 1000f) { Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false; }
+            if (a == Action.WindowBarricade && window.barricaded)
+            {
+                Authority.Refuse("the window is already barricaded");
+                return false;
+            }
+            if (a == Action.WindowDestroyBarricade && !window.barricaded)
+            {
+                Authority.Refuse("the window isn't barricaded");
+                return false;
+            }
+            if (a == Action.WindowHit && x > 1000f)
+            {
+                Authority.Refuse($"a hit of {x:0} is more than any weapon does");
+                return false;
+            }
             return true;
         }
 
@@ -753,7 +946,16 @@ namespace DarkwoodMP.World
 
         // ---- the state to roll back to ----------------------------------------------------
 
-        private enum Kind : byte { Gone = 0, Door = 1, Window = 2, Trap = 3, Item = 4, Padlock = 5, Explosive = 6 }
+        private enum Kind : byte
+        {
+            Gone = 0,
+            Door = 1,
+            Window = 2,
+            Trap = 3,
+            Item = 4,
+            Padlock = 5,
+            Explosive = 6
+        }
 
         /// <summary>
         /// Host: tell a client how this thing really is (ObjState: ObjRef, u8 kind, then the kind's state), so it
@@ -781,13 +983,18 @@ namespace DarkwoodMP.World
             Trigger trap = go != null ? go.GetComponent<Trigger>() : null;
             Item item = go != null ? go.GetComponent<Item>() : null;
             Padlock pad = padlock && go != null ? go.GetComponent<Padlock>() : null;
-            if (pad != null) { w.W.Write((byte)Kind.Padlock); w.W.Write((byte)(pad.locked ? 1 : 0)); }
+            if (pad != null)
+            {
+                w.W.Write((byte)Kind.Padlock);
+                w.W.Write((byte)(pad.locked ? 1 : 0));
+            }
             else if (door != null)
             {
                 var l = door.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Door);
                 w.W.Write((byte)((door.opened ? 1 : 0) | (door.barricaded ? 2 : 0) | (door.destroyed ? 4 : 0) | (l != null && l.locked ? 8 : 0) | (door.blocked ? 16 : 0)));
-                w.W.Write(door.health); w.W.Write(door.barricadeHealth);
+                w.W.Write(door.health);
+                w.W.Write(door.barricadeHealth);
                 w.WriteStr(l != null ? l.keyType ?? "" : "");
             }
             else if (window != null)
@@ -796,7 +1003,11 @@ namespace DarkwoodMP.World
                 w.W.Write((byte)(window.barricaded ? 1 : 0));
                 w.W.Write(window.barricadeHealth);
             }
-            else if (trap != null) { w.W.Write((byte)Kind.Trap); w.W.Write((byte)(trap.active ? 1 : 0)); }
+            else if (trap != null)
+            {
+                w.W.Write((byte)Kind.Trap);
+                w.W.Write((byte)(trap.active ? 1 : 0));
+            }
             else if (item != null)
             {
                 var l = item.GetComponent<Locked>();
@@ -851,162 +1062,185 @@ namespace DarkwoodMP.World
                             break;
                         }
                         // Ours alone (a dream of our own): the host not having it says nothing about ours.
-                        if (OursAlone(go.gameObject)) { Plugin.Log.LogInfo($"[world] the host hasn't got {go.name} {obj}: ours alone, kept"); break; }
+                        if (OursAlone(go.gameObject))
+                        {
+                            Plugin.Log.LogInfo($"[world] the host hasn't got {go.name} {obj}: ours alone, kept");
+                            break;
+                        }
                         Plugin.Log.LogInfo($"[world] {go.name} {obj} is gone on the host: removed ours");
                         Containers.CloseIfOpen(go.gameObject);
                         UnityEngine.Object.Destroy(go.gameObject);
                         break;
                     case Kind.Door:
-                    {
-                        byte f = r.R.ReadByte(); int health = r.R.ReadInt32(), barricade = r.R.ReadInt32(); string key = r.ReadStr();
-                        var door = go != null ? go.GetComponent<Door>() : null;
-                        if (door == null)
                         {
+                            byte f = r.R.ReadByte();
+                            int health = r.R.ReadInt32(), barricade = r.R.ReadInt32();
+                            string key = r.ReadStr();
+                            var door = go != null ? go.GetComponent<Door>() : null;
+                            if (door == null)
+                            {
+                                break;
+                            }
+                            bool open = (f & 1) != 0, barricaded = (f & 2) != 0, broken = (f & 4) != 0, locked = (f & 8) != 0;
+                            door.blocked = (f & 16) != 0; // only the story sets or clears it (Door.unblock), and only the host runs that
+                            if (broken && !door.destroyed)
+                            {
+                                door.destroyDoor(true); // silently: a rollback, not the door breaking again
+                            }
+                            else if (!broken && door.destroyed)
+                            {
+                                door.unDestroy();
+                            }
+                            var l = door.GetComponent<Locked>();
+                            if (locked && (l == null || !l.locked))
+                            {
+                                door.lockMe(key);
+                            }
+                            else if (!locked && l != null && l.locked)
+                            {
+                                door.unlock();
+                            }
+                            if (barricaded && !door.barricaded) // as in OnAction
+                            {
+                                door.barricadeState = 2;
+                                door.barricade(false);
+                            }
+                            else if (!barricaded && door.barricaded)
+                            {
+                                door.destroyBarricade(false);
+                            }
+                            if (open && !door.opened)
+                            {
+                                door.open(door.transform.position + door.transform.right, null, 0f);
+                            }
+                            else if (!open && door.opened)
+                            {
+                                door.close(null);
+                            }
+                            door.health = health;
+                            door.barricadeHealth = barricade;
                             break;
                         }
-                        bool open = (f & 1) != 0, barricaded = (f & 2) != 0, broken = (f & 4) != 0, locked = (f & 8) != 0;
-                        door.blocked = (f & 16) != 0; // only the story sets or clears it (Door.unblock), and only the host runs that
-                        if (broken && !door.destroyed)
-                        {
-                            door.destroyDoor(true); // silently: a rollback, not the door breaking again
-                        }
-                        else if (!broken && door.destroyed)
-                        {
-                            door.unDestroy();
-                        }
-                        var l = door.GetComponent<Locked>();
-                        if (locked && (l == null || !l.locked))
-                        {
-                            door.lockMe(key);
-                        }
-                        else if (!locked && l != null && l.locked)
-                        {
-                            door.unlock();
-                        }
-                        if (barricaded && !door.barricaded) { door.barricadeState = 2; door.barricade(false); } // as in OnAction
-                        else if (!barricaded && door.barricaded)
-                        {
-                            door.destroyBarricade(false);
-                        }
-                        if (open && !door.opened)
-                        {
-                            door.open(door.transform.position + door.transform.right, null, 0f);
-                        }
-                        else if (!open && door.opened)
-                        {
-                            door.close(null);
-                        }
-                        door.health = health;
-                        door.barricadeHealth = barricade;
-                        break;
-                    }
                     case Kind.Window:
-                    {
-                        bool barricaded = (r.R.ReadByte() & 1) != 0; int barricade = r.R.ReadInt32();
-                        var window = go != null ? go.GetComponent<Window>() : null;
-                        if (window == null)
                         {
+                            bool barricaded = (r.R.ReadByte() & 1) != 0;
+                            int barricade = r.R.ReadInt32();
+                            var window = go != null ? go.GetComponent<Window>() : null;
+                            if (window == null)
+                            {
+                                break;
+                            }
+                            if (barricaded && !window.barricaded)
+                            {
+                                window.barricadeState = 2;
+                                window.barricade(barricade, false);
+                            }
+                            else if (!barricaded && window.barricaded)
+                            {
+                                window.destroyBarricade(false);
+                            }
+                            window.barricadeHealth = barricade;
                             break;
                         }
-                        if (barricaded && !window.barricaded) { window.barricadeState = 2; window.barricade(barricade, false); }
-                        else if (!barricaded && window.barricaded)
-                        {
-                            window.destroyBarricade(false);
-                        }
-                        window.barricadeHealth = barricade;
-                        break;
-                    }
                     case Kind.Trap:
-                    {
-                        bool armed = (r.R.ReadByte() & 1) != 0;
-                        var trap = go != null ? go.GetComponent<Trigger>() : null;
-                        if (trap != null && trap.active != armed)
                         {
-                            trap.active = armed;
-                        }
-                        break;
-                    }
-                    case Kind.Item:
-                    {
-                        byte f = r.R.ReadByte(); int health = r.R.ReadInt32();
-                        bool on = (f & 1) != 0, broken = (f & 8) != 0;
-                        var item = go != null ? go.GetComponent<Item>() : null;
-                        if (item == null)
-                        {
+                            bool armed = (r.R.ReadByte() & 1) != 0;
+                            var trap = go != null ? go.GetComponent<Trigger>() : null;
+                            if (trap != null && trap.active != armed)
+                            {
+                                trap.active = armed;
+                            }
                             break;
                         }
-                        if (item.isOn != on)
+                    case Kind.Item:
                         {
-                            if (on)
+                            byte f = r.R.ReadByte();
+                            int health = r.R.ReadInt32();
+                            bool on = (f & 1) != 0, broken = (f & 8) != 0;
+                            var item = go != null ? go.GetComponent<Item>() : null;
+                            if (item == null)
                             {
-                                item.turnOn();
+                                break;
                             }
-                            else
+                            if (item.isOn != on)
                             {
-                                item.turnOff();
+                                if (on)
+                                {
+                                    item.turnOn();
+                                }
+                                else
+                                {
+                                    item.turnOff();
+                                }
                             }
-                        }
-                        var l = item.GetComponent<Locked>();
-                        if (l != null)
-                        {
-                            l.locked = (f & 2) != 0;
-                        }
-                        item.searched = (f & 4) != 0;
-                        var ii = item.GetComponent<InteractiveItem>();
-                        if (ii != null)
-                        {
-                            ii.isOn = (f & 16) != 0;
-                        }
-                        var feeder = item.GetComponent<Feeder>();
-                        if (feeder != null && feeder.Active != ((f & 32) != 0))
-                        {
-                            if ((f & 32) != 0)
+                            var l = item.GetComponent<Locked>();
+                            if (l != null)
                             {
-                                feeder.makeActive();
+                                l.locked = (f & 2) != 0;
                             }
-                            else
+                            item.searched = (f & 4) != 0;
+                            var ii = item.GetComponent<InteractiveItem>();
+                            if (ii != null)
                             {
-                                feeder.makeInactive();
+                                ii.isOn = (f & 16) != 0;
                             }
+                            var feeder = item.GetComponent<Feeder>();
+                            if (feeder != null && feeder.Active != ((f & 32) != 0))
+                            {
+                                if ((f & 32) != 0)
+                                {
+                                    feeder.makeActive();
+                                }
+                                else
+                                {
+                                    feeder.makeInactive();
+                                }
+                            }
+                            if (broken && !item.destroyed && item.destructible)
+                            {
+                                item.die();
+                            }
+                            else if (!broken && item.destroyed)
+                            {
+                                item.setNormalState();
+                            }
+                            item.health = health;
+                            break;
                         }
-                        if (broken && !item.destroyed && item.destructible)
-                        {
-                            item.die();
-                        }
-                        else if (!broken && item.destroyed)
-                        {
-                            item.setNormalState();
-                        }
-                        item.health = health;
-                        break;
-                    }
                     case Kind.Explosive:
-                    {
-                        r.R.ReadByte(); // an explosion here can't be taken back; the next state the host sends is how it is
-                        break;
-                    }
-                    case Kind.Padlock:
-                    {
-                        bool locked = (r.R.ReadByte() & 1) != 0;
-                        var pad = go != null ? go.GetComponent<Padlock>() : null;
-                        if (pad != null && pad.locked != locked)
                         {
-                            pad.locked = locked;
-                            if (locked)
-                            {
-                                pad.currentCombination = "0000";
-                            }
+                            r.R.ReadByte(); // an explosion here can't be taken back; the next state the host sends is how it is
+                            break;
                         }
-                        break;
-                    }
+                    case Kind.Padlock:
+                        {
+                            bool locked = (r.R.ReadByte() & 1) != 0;
+                            var pad = go != null ? go.GetComponent<Padlock>() : null;
+                            if (pad != null && pad.locked != locked)
+                            {
+                                pad.locked = locked;
+                                if (locked)
+                                {
+                                    pad.currentCombination = "0000";
+                                }
+                            }
+                            break;
+                        }
                 }
                 if (Debug)
                 {
                     Plugin.Log.LogInfo($"[world] the host's state of {obj} ({kind}) applied");
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply the host's state of {obj}: {e.Message}"); }
-            finally { Replaying = false; ScriptedEvents.LeftToActor = leftWas; }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't apply the host's state of {obj}: {e.Message}");
+            }
+            finally
+            {
+                Replaying = false;
+                ScriptedEvents.LeftToActor = leftWas;
+            }
         }
 
         // ---- what changed ------------------------------------------------------
@@ -1056,8 +1290,14 @@ namespace DarkwoodMP.World
             Held.Clear();
             foreach (var send in held)
             {
-                try { send(); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send a hammer stroke's action: {e.Message}"); }
+                try
+                {
+                    send();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't send a hammer stroke's action: {e.Message}");
+                }
             }
         }
     }
@@ -1065,7 +1305,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.open))]
     static class DoorOpenPatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, Vector3 openerPosition, Transform openerTransform, WorldActions.DoorState __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1080,7 +1324,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.close))]
     static class DoorClosePatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1093,7 +1341,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.barricade))]
     static class DoorBarricadePatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, bool byPlayer, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1106,7 +1358,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.destroyBarricade))]
     static class DoorDestroyBarricadePatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, bool silent, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1119,7 +1375,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.destroyDoor))]
     static class DoorDestroyPatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, bool silently, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1132,7 +1392,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.unDestroy))]
     static class DoorUndestroyPatch
     {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state) { WorldActions.Depth++; __state = WorldActions.DoorState.Of(__instance); }
+        static void Prefix(Door __instance, out WorldActions.DoorState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.DoorState.Of(__instance);
+        }
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.DoorState.Of(__instance)))
@@ -1225,7 +1489,11 @@ namespace DarkwoodMP.World
             int swapped = 0;
             foreach (var ci in instructions)
             {
-                if (ci.Calls(unblock)) { yield return new CodeInstruction(OpCodes.Call, ours) { labels = ci.labels, blocks = ci.blocks }; swapped++; }
+                if (ci.Calls(unblock))
+                {
+                    yield return new CodeInstruction(OpCodes.Call, ours) { labels = ci.labels, blocks = ci.blocks };
+                    swapped++;
+                }
                 else
                 {
                     yield return ci;
@@ -1252,7 +1520,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Window), nameof(Window.barricade))]
     static class WindowBarricadePatch
     {
-        static void Prefix(Window __instance, out WorldActions.WindowState __state) { WorldActions.Depth++; __state = WorldActions.WindowState.Of(__instance); }
+        static void Prefix(Window __instance, out WorldActions.WindowState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.WindowState.Of(__instance);
+        }
         static void Postfix(Window __instance, int destHealth, bool byPlayer, WorldActions.WindowState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.WindowState.Of(__instance)))
@@ -1265,7 +1537,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Window), nameof(Window.destroyBarricade))]
     static class WindowDestroyBarricadePatch
     {
-        static void Prefix(Window __instance, out WorldActions.WindowState __state) { WorldActions.Depth++; __state = WorldActions.WindowState.Of(__instance); }
+        static void Prefix(Window __instance, out WorldActions.WindowState __state)
+        {
+            WorldActions.Depth++;
+            __state = WorldActions.WindowState.Of(__instance);
+        }
         static void Postfix(Window __instance, bool silent, WorldActions.WindowState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && !__state.Same(WorldActions.WindowState.Of(__instance)))
@@ -1356,7 +1632,8 @@ namespace DarkwoodMP.World
             {
                 __instance.prefabToSpawn = __state; // pooled: the next one spawns again
             }
-            float healthBefore = HealthBefore; HealthBefore = -1f;
+            float healthBefore = HealthBefore;
+            HealthBefore = -1f;
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null)
             {
                 return;
@@ -1366,7 +1643,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var s = Net.Session.Instance;
-            if (s.IsHost) { WorldActions.Send(WorldActions.Action.TrapFired, __instance.gameObject, byPlayerKnown: true); return; }
+            if (s.IsHost)
+            {
+                WorldActions.Send(WorldActions.Action.TrapFired, __instance.gameObject, byPlayerKnown: true);
+                return;
+            }
 
             var r = ObjRef.Of(__instance.gameObject);
             if (!r.Valid)
@@ -1582,7 +1863,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Character), nameof(Character.die))]
     static class NpcDiedPatch
     {
-        static void Prefix(Character __instance, out bool __state) { WorldActions.Depth++; __state = __instance.alive; }
+        static void Prefix(Character __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.alive;
+        }
         static void Postfix(Character __instance, bool __state)
         {
             if (__state && __instance != null && __instance.npc != null && !__instance.alive && Net.Session.Instance != null)
@@ -1655,7 +1940,11 @@ namespace DarkwoodMP.World
             // stand-up in DisarmDonePatch may not see that a disarm ended, which left our player crouched for good.
             DisarmAnimation.StandUp(__instance);
             var trigger = trap.GetComponent<Trigger>();
-            if (trigger != null && trigger.bendDownToDisarm) { __instance.hidingInventory = true; __instance.gotInventory = false; }
+            if (trigger != null && trigger.bendDownToDisarm)
+            {
+                __instance.hidingInventory = true;
+                __instance.gotInventory = false;
+            }
 
             var s = Session.Instance;
             var w = s.Begin(MsgType.WorldAction);
@@ -1682,7 +1971,10 @@ namespace DarkwoodMP.World
                     }
                     // refused: the trap was gone or had gone off on the host; ObjState put ours as it is there
                 }
-                finally { WorldActions.Replaying = false; }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
             });
         }
     }
@@ -1723,7 +2015,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Locked), nameof(Locked.unlock))]
     static class LockedUnlockPatch
     {
-        static void Prefix(Locked __instance, out bool __state) { WorldActions.Depth++; __state = __instance.locked; }
+        static void Prefix(Locked __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.locked;
+        }
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state && !__instance.locked)
@@ -1736,7 +2032,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Locked), nameof(Locked.tryToOpenWithKey))]
     static class LockedKeyPatch
     {
-        static void Prefix(Locked __instance, out bool __state) { WorldActions.Depth++; __state = __instance.locked; }
+        static void Prefix(Locked __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.locked;
+        }
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state && !__instance.locked)
@@ -1749,7 +2049,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Locked), nameof(Locked.tryToLockpick))]
     static class LockedLockpickPatch
     {
-        static void Prefix(Locked __instance, out bool __state) { WorldActions.Depth++; __state = __instance.locked; }
+        static void Prefix(Locked __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.locked;
+        }
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state && !__instance.locked)
@@ -1812,7 +2116,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Padlock), nameof(Padlock.unlock), new[] { typeof(bool) })]
     static class PadlockUnlockPatch
     {
-        static void Prefix(Padlock __instance, out bool __state) { WorldActions.Depth++; __state = __instance.locked; }
+        static void Prefix(Padlock __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.locked;
+        }
         static void Postfix(Padlock __instance, bool manually, bool __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || !__state || __instance.locked)

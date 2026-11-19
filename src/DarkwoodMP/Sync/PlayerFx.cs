@@ -42,7 +42,12 @@ namespace DarkwoodMP.Sync
             session.Register(MsgType.PlayerShot, OnShot);
             session.Register(MsgType.PlayerHurt, OnHurt);
             session.OnPeerConnected += _ => _burningSent = false; // a newcomer hears whether we burn
-            session.OnSessionEnded += () => { _sounds.Clear(); _burningSent = false; _logged.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _sounds.Clear();
+                _burningSent = false;
+                _logged.Clear();
+            };
         }
 
         /// <summary>We're in a world with someone to tell.</summary>
@@ -50,7 +55,11 @@ namespace DarkwoodMP.Sync
 
         public void Update()
         {
-            if (!Sharing) { _sounds.Clear(); return; }
+            if (!Sharing)
+            {
+                _sounds.Clear();
+                return;
+            }
             float now = Time.unscaledTime;
             if (_sounds.Count > 0 && now >= _nextSounds)
             {
@@ -58,7 +67,11 @@ namespace DarkwoodMP.Sync
                 var w = Begin(MsgType.PlayerSounds);
                 int n = Mathf.Min(_sounds.Count, MaxSounds);
                 w.W.Write((byte)n);
-                for (int i = 0; i < n; i++) { w.WriteStr(_sounds[i].Key); w.W.Write(_sounds[i].Value); }
+                for (int i = 0; i < n; i++)
+                {
+                    w.WriteStr(_sounds[i].Key);
+                    w.W.Write(_sounds[i].Value);
+                }
                 Send(w, reliable: false);
                 LogOnce("sent sounds", $"[fx] sending our player's sounds ({_sounds[0].Key}...)");
                 _sounds.Clear();
@@ -197,7 +210,11 @@ namespace DarkwoodMP.Sync
             {
                 string id = r.ReadStr();
                 float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 2f);
-                if (relay != null) { relay.WriteStr(id); relay.W.Write(volume); }
+                if (relay != null)
+                {
+                    relay.WriteStr(id);
+                    relay.W.Write(volume);
+                }
                 if (near)
                 {
                     AudioController.Play(id, puppet, volume);
@@ -221,7 +238,13 @@ namespace DarkwoodMP.Sync
                 return;
             }
             var relay = Relay(MsgType.PlayerShot, owner);
-            if (relay != null) { relay.WriteStr(muzzle); relay.WriteStr(particles); relay.W.Write(flash); relay.Write(offset); }
+            if (relay != null)
+            {
+                relay.WriteStr(muzzle);
+                relay.WriteStr(particles);
+                relay.W.Write(flash);
+                relay.Write(offset);
+            }
             Relayed(relay, from, reliable: false);
 
             var t = Puppet(owner);
@@ -259,9 +282,19 @@ namespace DarkwoodMP.Sync
         {
             ulong owner = Owner(from, r);
             byte what = r.R.ReadByte();
-            string a = "", b = ""; float dy = 0f, yaw = 0f;
-            if (what == 1) { a = r.ReadStr(); dy = r.R.ReadSingle(); yaw = r.R.ReadSingle(); }
-            else if (what == 2) { a = r.ReadStr(); b = r.ReadStr(); }
+            string a = "", b = "";
+            float dy = 0f, yaw = 0f;
+            if (what == 1)
+            {
+                a = r.ReadStr();
+                dy = r.R.ReadSingle();
+                yaw = r.R.ReadSingle();
+            }
+            else if (what == 2)
+            {
+                a = r.ReadStr();
+                b = r.ReadStr();
+            }
             else if (what != 3)
             {
                 return;
@@ -274,8 +307,17 @@ namespace DarkwoodMP.Sync
             if (relay != null)
             {
                 relay.W.Write(what);
-                if (what == 1) { relay.WriteStr(a); relay.W.Write(dy); relay.W.Write(yaw); }
-                else if (what == 2) { relay.WriteStr(a); relay.WriteStr(b); }
+                if (what == 1)
+                {
+                    relay.WriteStr(a);
+                    relay.W.Write(dy);
+                    relay.W.Write(yaw);
+                }
+                else if (what == 2)
+                {
+                    relay.WriteStr(a);
+                    relay.WriteStr(b);
+                }
             }
             Relayed(relay, from, reliable: what != 1);
 
@@ -297,14 +339,28 @@ namespace DarkwoodMP.Sync
                 Core.AddPrefab(a, t.position + Vector3.up * Mathf.Clamp(dy, -50f, 50f), Quaternion.Euler(90f, yaw, 0f), null);
                 Plugin.Log.LogInfo($"[fx] {who} bled ({a}): shown on their puppet");
             }
-            else if (what == 2) { rp.ShowBurning(a, b); Plugin.Log.LogInfo($"[fx] {who} is burning: flames on their puppet ({a})"); }
-            else { rp.StopBurning(); Plugin.Log.LogInfo($"[fx] {who} stopped burning"); }
+            else if (what == 2)
+            {
+                rp.ShowBurning(a, b);
+                Plugin.Log.LogInfo($"[fx] {who} is burning: flames on their puppet ({a})");
+            }
+            else
+            {
+                rp.StopBurning();
+                Plugin.Log.LogInfo($"[fx] {who} stopped burning");
+            }
         }
 
         private static void Pooled(string name, Vector3 at, Quaternion rot)
         {
-            try { Core.AddPooledPrefab("FX", name, at, rot); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[fx] no \"{name}\" in the FX pool here: {e.Message}"); }
+            try
+            {
+                Core.AddPooledPrefab("FX", name, at, rot);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[fx] no \"{name}\" in the FX pool here: {e.Message}");
+            }
         }
 
         private void LogOnce(string key, string line)

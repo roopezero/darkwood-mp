@@ -67,11 +67,17 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Host: its world changed, so the joiners' copies are stale until they load the new one.</summary>
-        public static void ResetHost() { _hostMin = int.MaxValue; _hostMax = 0; _hostScene = Scene; }
+        public static void ResetHost()
+        {
+            _hostMin = int.MaxValue;
+            _hostMax = 0;
+            _hostScene = Scene;
+        }
 
         internal static void OnLoaded(int n)
         {
-            _loaded = n; _saved = n;
+            _loaded = n;
+            _saved = n;
             Plugin.Log.LogInfo($"Loaded a world whose save id counter is at {n}");
         }
 

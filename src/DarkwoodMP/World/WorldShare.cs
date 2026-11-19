@@ -59,8 +59,20 @@ namespace DarkwoodMP.World
                     EndWatch("gone");
                 }
             };
-            session.OnSessionEnded += () => { _offered.Clear(); _waiting.Clear(); _staleTold.Clear(); _download = null; _hostWorldKey = 0; EndWatch("the session ended"); };
-            session.OnJoinTimedOut += why => { _download = null; LoadStatus = why; };
+            session.OnSessionEnded += () =>
+            {
+                _offered.Clear();
+                _waiting.Clear();
+                _staleTold.Clear();
+                _download = null;
+                _hostWorldKey = 0;
+                EndWatch("the session ended");
+            };
+            session.OnJoinTimedOut += why =>
+            {
+                _download = null;
+                LoadStatus = why;
+            };
             session.Register(MsgType.WorldReload, (from, r) =>
             {
                 if (from != _session.HostId || _session.IsHost)
@@ -82,7 +94,11 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"Waiting to join: {why}");
                 }
                 LoadStatus = why;
-                if (_download != null) { Plugin.Log.LogInfo("The host no longer offers the world we were downloading"); _download = null; }
+                if (_download != null)
+                {
+                    Plugin.Log.LogInfo("The host no longer offers the world we were downloading");
+                    _download = null;
+                }
                 if (why == Preparing)
                 {
                     JoinScreen.Begin(); // it's on its way: the loading screen says so
@@ -149,7 +165,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (_session.Peers.Count == 0) { _session.Backend.Leave(); return; }
+            if (_session.Peers.Count == 0)
+            {
+                _session.Backend.Leave();
+                return;
+            }
             _session.Broadcast(farewell, Channel.Control, reliable: true);
             _runner.StartCoroutine(StopServerSoon(_session.Backend));
         }
@@ -225,7 +245,11 @@ namespace DarkwoodMP.World
             {
                 UpdateDownload();
             }
-            if (!_session.IsHost) { _hostWorldKey = 0; return; }
+            if (!_session.IsHost)
+            {
+                _hostWorldKey = 0;
+                return;
+            }
             if (!WorldReady)
             {
                 return;
@@ -278,7 +302,11 @@ namespace DarkwoodMP.World
             get
             {
                 bool now = InWorld && Core.worldGenFinished() && !Core.loadingGame && !Core.forbidInputs;
-                if (!now) { _readySince = -1f; return false; }
+                if (!now)
+                {
+                    _readySince = -1f;
+                    return false;
+                }
                 if (_readySince < 0f)
                 {
                     _readySince = Time.realtimeSinceStartup;
@@ -356,9 +384,14 @@ namespace DarkwoodMP.World
             }
             string dir = Path.Combine(_cacheDir, "..", "host-snapshot");
             string profDir = ProfDir(dir, Core.currentProfile.id);
-            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse && _lastSnapshotScene == ActiveScene && File.Exists(Path.Combine(profDir, "sav.dat"))) { _snapshotDir = profDir; yield break; }
+            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse && _lastSnapshotScene == ActiveScene && File.Exists(Path.Combine(profDir, "sav.dat")))
+            {
+                _snapshotDir = profDir;
+                yield break;
+            }
             string ownDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id); // before the redirect below
-            var lastSaved = sm.lastTimeSaved; bool haveSaved = sm.haveSaved;
+            var lastSaved = sm.lastTimeSaved;
+            bool haveSaved = sm.haveSaved;
             var outside = Singleton<OutsideLocations>.Instance;
             bool newLocation = outside != null && outside.addedNewLocation;
             bool haveStatic = false;
@@ -434,7 +467,11 @@ namespace DarkwoodMP.World
                 }
                 // Most likely the game changed a list while it was being written. Save it the game's way instead.
                 Plugin.Log.LogWarning($"Couldn't write the snapshot off the main thread, saving it the game's way: {writing.Exception?.GetBaseException().Message}");
-                if (!InWorld || Core.loadingGame) { Restore(); yield break; }
+                if (!InWorld || Core.loadingGame)
+                {
+                    Restore();
+                    yield break;
+                }
             }
             DragSync.NoteSnapshot();
             FlagsSync.NoteSnapshot();
@@ -483,7 +520,9 @@ namespace DarkwoodMP.World
 
         private static void RestoreAfterSnapshot(SaveManager sm, DateTime lastSaved, bool haveSaved, OutsideLocations outside, bool newLocation)
         {
-            sm.lastTimeSaved = lastSaved; sm.haveSaved = haveSaved; // the menu's "progress since your last save" is about your own save
+            // the menu's "progress since your last save" is about your own save
+            sm.lastTimeSaved = lastSaved;
+            sm.haveSaved = haveSaved;
             // The game clears this once it has saved the static part; that was the snapshot's, so the host's own next
             // save must still write its own.
             if (outside != null && newLocation)
@@ -530,8 +569,16 @@ namespace DarkwoodMP.World
                 if (InWorld && sm != null)
                 {
                     string snapDir = null;
-                    if (Plugin.Cfg.LiveWorld.Value) { yield return SaveSnapshot(); snapDir = _snapshotDir; }
-                    else { DragSync.ForgetSnapshot(); FlagsSync.ForgetSnapshot(); } // the last save: what was where then isn't known
+                    if (Plugin.Cfg.LiveWorld.Value)
+                    {
+                        yield return SaveSnapshot();
+                        snapDir = _snapshotDir;
+                    }
+                    else // the last save: what was where then isn't known
+                    {
+                        DragSync.ForgetSnapshot();
+                        FlagsSync.ForgetSnapshot();
+                    }
                     string profDir = snapDir ?? (Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id));
                     string stamp = profDir == null || !InWorld ? "" : WorldFiles.Stamp(profDir); // left the world meanwhile: nothing to offer
                     if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene)
@@ -599,19 +646,36 @@ namespace DarkwoodMP.World
             var hash = WorldFiles.Hash(json, files);
             var raw = new byte[files.Sum(f => (long)f.Data.Length)];
             int at = 0;
-            foreach (var f in files) { Buffer.BlockCopy(f.Data, 0, raw, at, f.Data.Length); at += f.Data.Length; }
+            foreach (var f in files)
+            {
+                Buffer.BlockCopy(f.Data, 0, raw, at, f.Data.Length);
+                at += f.Data.Length;
+            }
             long readMs = sw.ElapsedMilliseconds;
-            byte[] sent = raw; byte packing = 0; string packError = null;
+            byte[] sent = raw;
+            byte packing = 0;
+            string packError = null;
             try
             {
                 var packed = WorldFiles.Deflate(raw);
-                if (packed.Length < raw.Length) { sent = packed; packing = 1; }
+                if (packed.Length < raw.Length)
+                {
+                    sent = packed;
+                    packing = 1;
+                }
             }
-            catch (Exception e) { packError = e.Message; }
+            catch (Exception e)
+            {
+                packError = e.Message;
+            }
             return new Snapshot
             {
-                Hash = hash, ProfileJson = json, Files = files.Select(f => (f.Name, f.Data.Length)).ToList(),
-                Sent = sent, Packing = packing, RawSize = raw.Length,
+                Hash = hash,
+                ProfileJson = json,
+                Files = files.Select(f => (f.Name, f.Data.Length)).ToList(),
+                Sent = sent,
+                Packing = packing,
+                RawSize = raw.Length,
                 Timing = $"read and hashed in {readMs} ms, " + (packError == null ? $"packed in {sw.ElapsedMilliseconds - readMs} ms" : $"couldn't pack it ({packError})") + " on a worker thread",
             };
         }
@@ -625,7 +689,11 @@ namespace DarkwoodMP.World
             w.W.Write((uint)world.Sent.Length);
             w.WriteBigStr(world.ProfileJson);
             w.W.Write((byte)world.Files.Count);
-            foreach (var f in world.Files) { w.WriteStr(f.Name); w.W.Write((uint)f.Size); }
+            foreach (var f in world.Files)
+            {
+                w.WriteStr(f.Name);
+                w.W.Write((uint)f.Size);
+            }
             w.W.Write(world.Packing);
             w.W.Write((uint)world.RawSize);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
@@ -642,7 +710,13 @@ namespace DarkwoodMP.World
         /// <summary>Host: note the longest frame from now until the joiner is in (or a couple of minutes), for the log.</summary>
         private void WatchFrames(ulong peer)
         {
-            if (_watchUntil < 0f) { _watchFrom = Time.realtimeSinceStartup; _longestFrame = 0f; _slowFrames = 0; _frames = 0; }
+            if (_watchUntil < 0f)
+            {
+                _watchFrom = Time.realtimeSinceStartup;
+                _longestFrame = 0f;
+                _slowFrames = 0;
+                _frames = 0;
+            }
             _watchPeer = peer;
             _watchUntil = Time.realtimeSinceStartup + 120f;
         }
@@ -748,7 +822,11 @@ namespace DarkwoodMP.World
         private bool HostBeforeWelcome(ulong peer, byte[] clientHash)
         {
             string ending = EpilogueSync.JoinRefusal();
-            if (ending != null) { _session.Refuse(peer, ending); return false; }
+            if (ending != null)
+            {
+                _session.Refuse(peer, ending);
+                return false;
+            }
             string wait = HostNotReady();
             if (wait != null)
             {
@@ -769,7 +847,11 @@ namespace DarkwoodMP.World
             {
                 // Make one (PrepareWorld), and offer it when it's ready. Until then the joiner is told to wait, and its
                 // Hellos meanwhile get the same answer.
-                if (!InWorld) { _session.Refuse(peer, NotInWorld); return false; }
+                if (!InWorld)
+                {
+                    _session.Refuse(peer, NotInWorld);
+                    return false;
+                }
                 _waiting.Add(peer);
                 if (!_preparing)
                 {
@@ -886,10 +968,17 @@ namespace DarkwoodMP.World
                 foreach (var dir in new DirectoryInfo(_cacheDir).GetDirectories().OrderByDescending(d => d.LastWriteTimeUtc))
                 {
                     var h = HashOfCached(dir.FullName);
-                    if (h != null && WorldFiles.Hex(h) == dir.Name) { _readyHash = h; break; }
+                    if (h != null && WorldFiles.Hex(h) == dir.Name)
+                    {
+                        _readyHash = h;
+                        break;
+                    }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't check cached worlds: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't check cached worlds: {e.Message}");
+            }
             return _readyHash;
         }
 
@@ -905,11 +994,16 @@ namespace DarkwoodMP.World
                 long n = 0, bytes = 0, newest = 0;
                 foreach (var f in new DirectoryInfo(worldDir).GetFiles("*", SearchOption.AllDirectories))
                 {
-                    n++; bytes += f.Length; newest = Math.Max(newest, f.LastWriteTimeUtc.Ticks);
+                    n++;
+                    bytes += f.Length;
+                    newest = Math.Max(newest, f.LastWriteTimeUtc.Ticks);
                 }
                 stamp = $"{n}/{bytes}/{newest}";
             }
-            catch { return HashOfCachedNow(worldDir); }
+            catch
+            {
+                return HashOfCachedNow(worldDir);
+            }
             if (_hashCache.TryGetValue(worldDir, out var c) && c.Stamp == stamp)
             {
                 return c.Hash;
@@ -966,16 +1060,31 @@ namespace DarkwoodMP.World
             }
             d.Packing = r.R.ReadByte();
             uint raw = r.R.ReadUInt32();
-            if (d.Packing > 1) { Fail($"the host packed its world in a way this version can't read ({d.Packing})"); return; }
+            if (d.Packing > 1)
+            {
+                Fail($"the host packed its world in a way this version can't read ({d.Packing})");
+                return;
+            }
             if (sum != raw || raw == 0 || raw > WorldFiles.MaxSize || size == 0 || size > WorldFiles.MaxSize || (d.Packing == 0 && size != raw))
             {
                 Fail("the host's world has a bad size");
                 return;
             }
             d.RawSize = (int)raw;
-            try { d.Profile = JsonConvert.DeserializeObject<GameProfile>(d.ProfileJson); }
-            catch (Exception e) { Fail($"couldn't read the host's profile: {e.Message}"); return; }
-            if (d.Profile == null || d.Profile.id < 1 || d.Profile.id > 99) { Fail("the host's profile is invalid"); return; }
+            try
+            {
+                d.Profile = JsonConvert.DeserializeObject<GameProfile>(d.ProfileJson);
+            }
+            catch (Exception e)
+            {
+                Fail($"couldn't read the host's profile: {e.Message}");
+                return;
+            }
+            if (d.Profile == null || d.Profile.id < 1 || d.Profile.id > 99)
+            {
+                Fail("the host's profile is invalid");
+                return;
+            }
 
             d.Blob = new byte[size];
             d.Have = new bool[(size + PieceSize - 1) / PieceSize];
@@ -1025,17 +1134,29 @@ namespace DarkwoodMP.World
                 return; // a piece of an earlier offer, still on its way
             }
             long piece = offset / PieceSize;
-            if (n <= 0 || offset % PieceSize != 0 || offset + (long)n > d.Blob.Length) { Fail("bad piece from the host"); return; }
+            if (n <= 0 || offset % PieceSize != 0 || offset + (long)n > d.Blob.Length)
+            {
+                Fail("bad piece from the host");
+                return;
+            }
             d.LastPieceAt = Time.realtimeSinceStartup;
             d.Stalls = 0;
             if (d.Have[piece])
             {
                 return; // asked for twice (after a stall), came twice
             }
-            if (r.R.Read(d.Blob, (int)offset, n) != n) { Fail("a short piece from the host"); return; }
+            if (r.R.Read(d.Blob, (int)offset, n) != n)
+            {
+                Fail("a short piece from the host");
+                return;
+            }
             d.Have[piece] = true;
             d.Received += n;
-            if (d.Received < d.Blob.Length) { RequestNext(); return; }
+            if (d.Received < d.Blob.Length)
+            {
+                RequestNext();
+                return;
+            }
             float secs = Time.realtimeSinceStartup - d.StartedAt;
             Plugin.Log.LogInfo($"[join] the world's {d.Blob.Length / 1024} KiB came in {secs * 1000f:0} ms ({d.Blob.Length / 1024f / Mathf.Max(secs, 0.001f):0} KiB/s, {d.Have.Length} pieces)");
             _runner.StartCoroutine(Finish(d));
@@ -1059,7 +1180,10 @@ namespace DarkwoodMP.World
             for (int i = 0; i < d.Have.Length && (uint)i * PieceSize < d.NextOffset; i++)
             {
                 if (!d.Have[i])
-                { RequestPiece(d, (uint)(i * PieceSize)); asked++; }
+                {
+                    RequestPiece(d, (uint)(i * PieceSize));
+                    asked++;
+                }
             }
             Plugin.Log.LogWarning($"No piece of the host's world for {StallSecs:0} s: asked again for {asked} ({d.Stalls}/{MaxStalls})");
         }
@@ -1115,9 +1239,20 @@ namespace DarkwoodMP.World
             {
                 yield break; // stopped joining meanwhile
             }
-            if (error != null) { Fail(error); yield break; }
+            if (error != null)
+            {
+                Fail(error);
+                yield break;
+            }
             Plugin.Log.LogInfo($"[join] the world was unpacked, checked and stored in {took} ms on a worker thread");
-            try { PruneCache(dir); } catch (Exception e) { Plugin.Log.LogWarning($"Couldn't tidy the world cache: {e.Message}"); }
+            try
+            {
+                PruneCache(dir);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't tidy the world cache: {e.Message}");
+            }
 
             Plugin.Log.LogInfo($"Got the host's world {hex.Substring(0, 12)}; asking to join with it");
             LoadStatus = null;
@@ -1135,7 +1270,13 @@ namespace DarkwoodMP.World
                 {
                     continue; // never the world being played
                 }
-                try { WorldFiles.DeleteTree(old.FullName); } catch { }
+                try
+                {
+                    WorldFiles.DeleteTree(old.FullName);
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -1157,16 +1298,37 @@ namespace DarkwoodMP.World
             if (Directory.Exists(parent))
             {
                 foreach (var old in Directory.GetDirectories(parent, aside + "*"))
-                { try { WorldFiles.DeleteTree(old); } catch { } }
+                {
+                    try
+                    {
+                        WorldFiles.DeleteTree(old);
+                    }
+                    catch
+                    {
+                    }
+                }
             }
             if (!Directory.Exists(dir))
             {
                 return;
             }
             string moved = Path.Combine(parent, aside + DateTime.UtcNow.Ticks);
-            try { Directory.Move(dir, moved); }
-            catch (Exception) { WorldFiles.DeleteTree(dir); return; } // can't be moved: delete it where it is
-            try { WorldFiles.DeleteTree(moved); } catch { }
+            try
+            {
+                Directory.Move(dir, moved);
+            }
+            catch (Exception) // can't be moved: delete it where it is
+            {
+                WorldFiles.DeleteTree(dir);
+                return;
+            }
+            try
+            {
+                WorldFiles.DeleteTree(moved);
+            }
+            catch
+            {
+            }
         }
 
         /// <summary>
@@ -1199,8 +1361,17 @@ namespace DarkwoodMP.World
         private IEnumerator LoadWorld(string worldDir)
         {
             GameProfile profile;
-            try { profile = JsonConvert.DeserializeObject<GameProfile>(File.ReadAllText(Path.Combine(worldDir, "profile.json"))); }
-            catch (Exception e) { LoadStatus = $"Couldn't read the host's world: {e.Message}"; Plugin.Log.LogError(LoadStatus); JoinScreen.Fail(LoadStatus); yield break; }
+            try
+            {
+                profile = JsonConvert.DeserializeObject<GameProfile>(File.ReadAllText(Path.Combine(worldDir, "profile.json")));
+            }
+            catch (Exception e)
+            {
+                LoadStatus = $"Couldn't read the host's world: {e.Message}";
+                Plugin.Log.LogError(LoadStatus);
+                JoinScreen.Fail(LoadStatus);
+                yield break;
+            }
 
             if (!Core.mainMenu || PauseMenuInWorld)
             {
@@ -1212,15 +1383,30 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(LoadStatus);
                 // On our way into the host's world (a WorldReload, a chapter): the session stays (ClientToMainMenu).
                 _joiningWorld = true;
-                try { Core.returnToMainMenu(); }
-                finally { _joiningWorld = false; }
+                try
+                {
+                    Core.returnToMainMenu();
+                }
+                finally
+                {
+                    _joiningWorld = false;
+                }
             }
             LoadStatus = $"Loading the host's world (day {profile.day})..."; // waiting for the main menu first
             float until = Time.realtimeSinceStartup + 120f;
             while (!MainMenuReady())
             {
-                if (Time.realtimeSinceStartup > until) { LoadStatus = "Timed out waiting for the main menu."; JoinScreen.Fail(LoadStatus); yield break; }
-                if (!_session.Connected) { LoadStatus = null; yield break; }
+                if (Time.realtimeSinceStartup > until)
+                {
+                    LoadStatus = "Timed out waiting for the main menu.";
+                    JoinScreen.Fail(LoadStatus);
+                    yield break;
+                }
+                if (!_session.Connected)
+                {
+                    LoadStatus = null;
+                    yield break;
+                }
                 yield return null;
             }
             yield return new WaitForSecondsRealtime(0.5f);

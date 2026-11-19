@@ -25,7 +25,14 @@ namespace DarkwoodMP.World
         public static FireSync Instance { get; private set; }
         private readonly Session _session;
 
-        public enum What : byte { None = 0, Enemy = 1, Door = 2, Window = 3, Item = 4 }
+        public enum What : byte
+        {
+            None = 0,
+            Enemy = 1,
+            Door = 2,
+            Window = 3,
+            Item = 4
+        }
 
         public FireSync(Session session)
         {
@@ -155,8 +162,14 @@ namespace DarkwoodMP.World
                     return;
                 }
                 WorldActions.Replaying = true;
-                try { b.stop(); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    b.stop();
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
             });
         }
 
@@ -167,15 +180,31 @@ namespace DarkwoodMP.World
             {
                 return; // only as a request
             }
-            if (!on) { Authority.Refuse("players only light things"); return; }
+            if (!on)
+            {
+                Authority.Refuse("players only light things");
+                return;
+            }
             Component c = what == What.Enemy ? null : Resolve(obj, what);
-            if (c == null) { Authority.Refuse("there's no such thing here to burn"); return; }
+            if (c == null)
+            {
+                Authority.Refuse("there's no such thing here to burn");
+                return;
+            }
             if (!Authority.InReach(c.transform.position, FlameReach, c.name))
             {
                 return;
             }
-            if (c is Item item && (!item.destructible || item.destroyed)) { Authority.Refuse($"{c.name} can't burn"); return; }
-            if (c is Door door && door.destroyed) { Authority.Refuse($"{c.name} is broken"); return; }
+            if (c is Item item && (!item.destructible || item.destroyed))
+            {
+                Authority.Refuse($"{c.name} can't burn");
+                return;
+            }
+            if (c is Door door && door.destroyed)
+            {
+                Authority.Refuse($"{c.name} is broken");
+                return;
+            }
             if (c.GetComponent<Burn>() != null)
             {
                 return; // burning already: nothing to do
@@ -194,11 +223,16 @@ namespace DarkwoodMP.World
         {
             switch (what)
             {
-                case What.Enemy: return ObjRef.Resolve<Character>(obj);
-                case What.Door: return ObjRef.Resolve<Door>(obj);
-                case What.Window: return ObjRef.Resolve<Window>(obj);
-                case What.Item: return ObjRef.Resolve<Item>(obj);
-                default: return null;
+                case What.Enemy:
+                    return ObjRef.Resolve<Character>(obj);
+                case What.Door:
+                    return ObjRef.Resolve<Door>(obj);
+                case What.Window:
+                    return ObjRef.Resolve<Window>(obj);
+                case What.Item:
+                    return ObjRef.Resolve<Item>(obj);
+                default:
+                    return null;
             }
         }
 
@@ -213,7 +247,11 @@ namespace DarkwoodMP.World
             var what = (What)r.R.ReadByte();
             float time = r.R.ReadSingle();
             bool on = r.R.ReadByte() != 0;
-            if (s.IsHost) { OnClientIgnited(obj, what, time, on); return; }
+            if (s.IsHost)
+            {
+                OnClientIgnited(obj, what, time, on);
+                return;
+            }
             if (!s.IsClient || from != s.HostId)
             {
                 return;
@@ -244,7 +282,10 @@ namespace DarkwoodMP.World
                     burn.stop();
                 }
             }
-            finally { WorldActions.Replaying = false; }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
         }
     }
 
@@ -274,6 +315,9 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        private static IEnumerator Nothing() { yield break; }
+        private static IEnumerator Nothing()
+        {
+            yield break;
+        }
     }
 }

@@ -34,8 +34,14 @@ namespace DarkwoodMP
             if (FieldFont == null)
             {
                 // Tahoma where there is one (Windows), as the game's own pixel font is Tahoma; else a plain sans.
-                try { FieldFont = Font.CreateDynamicFontFromOSFont(new[] { "Tahoma", "Verdana", "DejaVu Sans", "Liberation Sans", "Noto Sans", "Arial" }, 12); }
-                catch { FieldFont = null; }
+                try
+                {
+                    FieldFont = Font.CreateDynamicFontFromOSFont(new[] { "Tahoma", "Verdana", "DejaVu Sans", "Liberation Sans", "Noto Sans", "Arial" }, 12);
+                }
+                catch
+                {
+                    FieldFont = null;
+                }
             }
             if (Skin == null)
             {

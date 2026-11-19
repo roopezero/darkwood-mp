@@ -42,7 +42,12 @@ namespace DarkwoodMP.World
             session.Register(MsgType.TraderAsk, OnAsk);
             session.Register(MsgType.TraderStock, OnStock);
             session.Register(MsgType.TraderTrade, OnTrade);
-            session.OnSessionEnded += () => { _waiting.Clear(); _applied.Clear(); _copies.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _waiting.Clear();
+                _applied.Clear();
+                _copies.Clear();
+            };
         }
 
         /// <summary>Client: a trader would stock up here. Use the host's stock: what came already, or ask.</summary>
@@ -53,7 +58,12 @@ namespace DarkwoodMP.World
                 return;
             }
             string key = Key(npc.name, ObjRef.Of(npc.gameObject));
-            if (_waiting.TryGetValue(key, out var stock)) { _waiting.Remove(key); Apply(npc, stock); return; }
+            if (_waiting.TryGetValue(key, out var stock))
+            {
+                _waiting.Remove(key);
+                Apply(npc, stock);
+                return;
+            }
             var w = _session.Begin(MsgType.TraderAsk);
             WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             _session.SendToHost(w, Channel.Control, reliable: true);
@@ -125,7 +135,11 @@ namespace DarkwoodMP.World
             }
             var (name, who, at) = ReadWho(r);
             var npc = Find(name, who, at);
-            if (npc != null) { Send(npc, from); return; }
+            if (npc != null)
+            {
+                Send(npc, from);
+                return;
+            }
             if (who.K == ObjRef.Kind.Saved)
             {
                 return; // one from the shared save that isn't here (yet): no copy of ours
@@ -164,7 +178,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            Location best = null; float bestD = 300f * 300f;
+            Location best = null;
+            float bestD = 300f * 300f;
             foreach (var loc in Object.FindObjectsOfType<Location>(true))
             {
                 if (loc == null || !loc.playerBase || loc.traderPosition == null)
@@ -172,7 +187,11 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 float d = WorldActions.FlatSq(loc.traderPosition.transform.position, at);
-                if (d < bestD) { bestD = d; best = loc; }
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = loc;
+                }
             }
             if (best == null)
             {
@@ -180,8 +199,15 @@ namespace DarkwoodMP.World
             }
             bool had = best.trader != null;
             NPC npc;
-            try { npc = best.spawnTrader(); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't put {name} in {best.name}: {e.Message}"); return false; }
+            try
+            {
+                npc = best.spawnTrader();
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't put {name} in {best.name}: {e.Message}");
+                return false;
+            }
             if (npc == null)
             {
                 return false;
@@ -218,7 +244,10 @@ namespace DarkwoodMP.World
                 foreach (var kv in sync.Remotes)
                 {
                     if (kv.Key != Sync.PlayerSync.DummyId && kv.Value.Last != null && kv.Value.Last.AfterNight)
-                    { someone = true; break; }
+                    {
+                        someone = true;
+                        break;
+                    }
                 }
             }
             var c = Singleton<Controller>.Instance;
@@ -226,14 +255,26 @@ namespace DarkwoodMP.World
             for (int i = _copies.Count - 1; i >= 0; i--)
             {
                 var (loc, npc, since) = _copies[i];
-                if (npc == null || loc == null) { _copies.RemoveAt(i); continue; }
+                if (npc == null || loc == null)
+                {
+                    _copies.RemoveAt(i);
+                    continue;
+                }
                 var ch = npc.GetComponent<Character>();
-                if (ch != null && !ch.alive) { _copies.RemoveAt(i); continue; }
+                if (ch != null && !ch.alive)
+                {
+                    _copies.RemoveAt(i);
+                    continue;
+                }
                 if (someone || Time.unscaledTime - since < CopyGrace)
                 {
                     continue;
                 }
-                if (c != null && c.isAfterNight && p != null && p.whereAmI != null && p.whereAmI.bigLocation == loc) { _copies.RemoveAt(i); continue; } // ours now
+                if (c != null && c.isAfterNight && p != null && p.whereAmI != null && p.whereAmI.bigLocation == loc) // ours now
+                {
+                    _copies.RemoveAt(i);
+                    continue;
+                }
                 Plugin.Log.LogInfo($"[world] no joiner is in a morning: our {npc.name} leaves {loc.name}");
                 if (loc.trader == npc.gameObject)
                 {
@@ -294,7 +335,11 @@ namespace DarkwoodMP.World
             var who = ObjRef.Of(npc.gameObject);
             var w = WriteTrade(name, who, at, took, gave, stock, repChange);
             Plugin.Log.LogInfo($"Traded with {name}: took {Text(took)}, gave {Text(gave)}");
-            if (_session.IsHost) { _session.Broadcast(w, Channel.Control, reliable: true); return; }
+            if (_session.IsHost)
+            {
+                _session.Broadcast(w, Channel.Control, reliable: true);
+                return;
+            }
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             var change = new Dictionary<string, int>(); // for InventoryWatch.Undo: + what the player got, - what they gave
@@ -302,7 +347,11 @@ namespace DarkwoodMP.World
             {
                 change[kv.Key] = kv.Value;
             }
-            foreach (var kv in gave) { change.TryGetValue(kv.Key, out int n); change[kv.Key] = n - kv.Value; }
+            foreach (var kv in gave)
+            {
+                change.TryGetValue(kv.Key, out int n);
+                change[kv.Key] = n - kv.Value;
+            }
             Authority.Request(w, $"trade with {name}", (ok, reason, result) =>
             {
                 if (ok)
@@ -343,8 +392,14 @@ namespace DarkwoodMP.World
                         t.inventory.addItemType(kv.Key, kv.Value);
                     }
                 }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't undo the trade with {name}: {e.Message}"); }
-                finally { WorldActions.Replaying = false; }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't undo the trade with {name}: {e.Message}");
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
             }, inventory: false);
         }
 
@@ -355,7 +410,11 @@ namespace DarkwoodMP.World
             foreach (var d in new[] { took, gave })
             {
                 w.W.Write((ushort)d.Count);
-                foreach (var kv in d) { w.WriteStr(kv.Key); w.W.Write(kv.Value); }
+                foreach (var kv in d)
+                {
+                    w.WriteStr(kv.Key);
+                    w.W.Write(kv.Value);
+                }
             }
             w.WriteBigStr(stock);
             w.W.Write(repChange);
@@ -366,7 +425,13 @@ namespace DarkwoodMP.World
         {
             var d = new Dictionary<string, int>();
             int n = r.R.ReadUInt16();
-            for (int i = 0; i < n; i++) { string t = r.ReadStr(); int c = r.R.ReadInt32(); d.TryGetValue(t, out int was); d[t] = was + c; }
+            for (int i = 0; i < n; i++)
+            {
+                string t = r.ReadStr();
+                int c = r.R.ReadInt32();
+                d.TryGetValue(t, out int was);
+                d[t] = was + c;
+            }
             return d;
         }
 
@@ -393,10 +458,23 @@ namespace DarkwoodMP.World
 
             // Host: a client's trade, as a request, checked against our copy of that trader.
             var npc = Find(name, who, at);
-            if (npc == null) { Authority.Refuse($"{name} isn't here"); return; }
-            if (!Authority.InReach(at, WorldActions.Reach, name)) { Send(npc, from); return; }
+            if (npc == null)
+            {
+                Authority.Refuse($"{name} isn't here");
+                return;
+            }
+            if (!Authority.InReach(at, WorldActions.Reach, name))
+            {
+                Send(npc, from);
+                return;
+            }
             string why = Check(Inv(npc), took, gave, stock) ?? CheckReputation(name, took, gave, repChange);
-            if (why != null) { Send(npc, from); Authority.Refuse(why); return; }
+            if (why != null)
+            {
+                Send(npc, from);
+                Authority.Refuse(why);
+                return;
+            }
             Apply(npc, stock);
             FlagsSync.Instance?.AddReputation(name, repChange);
             Plugin.Log.LogInfo($"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
@@ -433,8 +511,14 @@ namespace DarkwoodMP.World
         {
             var have = TraderTradePatch.Count(inv);
             Inventory.SaveState state;
-            try { state = JsonConvert.DeserializeObject<Inventory.SaveState>(stock); }
-            catch (System.Exception e) { return "bad stock: " + e.Message; }
+            try
+            {
+                state = JsonConvert.DeserializeObject<Inventory.SaveState>(stock);
+            }
+            catch (System.Exception e)
+            {
+                return "bad stock: " + e.Message;
+            }
             if (state?.invItems == null)
             {
                 return "no stock";
@@ -546,7 +630,8 @@ namespace DarkwoodMP.World
                     return null;
                 }
             }
-            NPC best = null; float bestD = float.MaxValue;
+            NPC best = null;
+            float bestD = float.MaxValue;
             foreach (var n in Object.FindObjectsOfType<NPC>())
             {
                 if (n == null || !n.trader || n.name != name || Inv(n) == null)
@@ -558,7 +643,11 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 float d = WorldActions.FlatSq(n.transform.position, at);
-                if (d < bestD) { bestD = d; best = n; }
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = n;
+                }
             }
             return best;
         }

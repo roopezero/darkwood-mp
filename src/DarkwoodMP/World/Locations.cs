@@ -29,7 +29,11 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
 
-        private struct Slot { public Vector3 Pos; public int Rot; }
+        private struct Slot
+        {
+            public Vector3 Pos;
+            public int Rot;
+        }
 
         /// <summary>Where each location stands. Host: what it promised or used; client: what the host said.</summary>
         private static readonly Dictionary<string, Slot> _slots = new Dictionary<string, Slot>();
@@ -57,7 +61,16 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.LocationAsk, OnAsk);
             s.Register(MsgType.LocationSlot, OnSlot);
-            s.OnSessionEnded += () => { _slots.Clear(); _gaveUp.Clear(); _asked.Clear(); _toSpawn.Clear(); _spawning = null; _kept.Clear(); _quietEnter.Clear(); };
+            s.OnSessionEnded += () =>
+            {
+                _slots.Clear();
+                _gaveUp.Clear();
+                _asked.Clear();
+                _toSpawn.Clear();
+                _spawning = null;
+                _kept.Clear();
+                _quietEnter.Clear();
+            };
         }
 
         // ---- host: running a location for the joiners in it ----------------------------------------
@@ -114,7 +127,10 @@ namespace DarkwoodMP.World
                 foreach (var kv in o.spawnedLocations)
                 {
                     if (kv.Value != null && (kv.Key == place || Core.getTrueLocationName(kv.Key) == place))
-                    { loc = kv.Value; break; }
+                    {
+                        loc = kv.Value;
+                        break;
+                    }
                 }
             }
             if (loc == null)
@@ -220,11 +236,25 @@ namespace DarkwoodMP.World
         private static readonly MethodInfo EnterEvents = AccessTools.Method(typeof(Location), "checkEnterEvents");
         private static void CheckExitEvents(Location l)
         {
-            try { ExitEvents?.Invoke(l, null); } catch (System.Exception e) { Plugin.Log.LogWarning($"[locations] {l.name}'s exit events: {e.InnerException?.Message ?? e.Message}"); }
+            try
+            {
+                ExitEvents?.Invoke(l, null);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[locations] {l.name}'s exit events: {e.InnerException?.Message ?? e.Message}");
+            }
         }
         private static void CheckEnterEvents(Location l)
         {
-            try { EnterEvents?.Invoke(l, null); } catch (System.Exception e) { Plugin.Log.LogWarning($"[locations] {l.name}'s enter events: {e.InnerException?.Message ?? e.Message}"); }
+            try
+            {
+                EnterEvents?.Invoke(l, null);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[locations] {l.name}'s enter events: {e.InnerException?.Message ?? e.Message}");
+            }
         }
 
         /// <summary>
@@ -315,7 +345,8 @@ namespace DarkwoodMP.World
             while (list.Count < need)
             {
                 // More rows of seven, 30000 apart, past the game's own rows (z -80000, -50000, 50000).
-                int extra = list.Count - 21; if (extra < 0)
+                int extra = list.Count - 21;
+                if (extra < 0)
                 {
                     extra = 0;
                 }
@@ -426,7 +457,11 @@ namespace DarkwoodMP.World
                     LoadedForOthers++;
                     _spawning = null;
                 }
-                else if (Time.realtimeSinceStartup - _spawningSince > 60f) { Plugin.Log.LogWarning($"[locations] {_spawning} didn't load"); _spawning = null; }
+                else if (Time.realtimeSinceStartup - _spawningSince > 60f)
+                {
+                    Plugin.Log.LogWarning($"[locations] {_spawning} didn't load");
+                    _spawning = null;
+                }
                 return;
             }
             KeepRunning(o);
@@ -439,7 +474,8 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            _spawning = name; _spawningSince = Time.realtimeSinceStartup;
+            _spawning = name;
+            _spawningSince = Time.realtimeSinceStartup;
             _gridBefore = Singleton<WorldGrid>.Instance?.currentGrid?.name;
             Plugin.Log.LogInfo($"[locations] loading {name} for the others (we stay where we are)");
             o.StartCoroutine(o.spawnLocation(name, transportAfterSpawn: false));
@@ -456,7 +492,11 @@ namespace DarkwoodMP.World
             {
                 var astar = AstarPath.active;
                 var graph = astar != null ? astar.astarData.GetGraph(name) : null;
-                if (graph == null) { Plugin.Log.LogInfo($"[locations] {name} has no pathfinding graph to scan"); return; }
+                if (graph == null)
+                {
+                    Plugin.Log.LogInfo($"[locations] {name} has no pathfinding graph to scan");
+                    return;
+                }
                 int i = System.Array.IndexOf(astar.graphs, graph);
                 if (i >= 0)
                 {
@@ -464,7 +504,10 @@ namespace DarkwoodMP.World
                 }
                 Plugin.Log.LogInfo($"[locations] {name}'s pathfinding graph scanned (graph {i})");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[locations] couldn't scan {name}'s pathfinding: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[locations] couldn't scan {name}'s pathfinding: {e.Message}");
+            }
         }
 
         /// <summary>

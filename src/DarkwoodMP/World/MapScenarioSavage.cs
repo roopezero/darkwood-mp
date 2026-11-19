@@ -47,11 +47,20 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
-            if (a.Length < 1) { r.Fail("usage: sv-spawn KIND[,KIND...] [N]"); yield break; }
+            if (a.Length < 1)
+            {
+                r.Fail("usage: sv-spawn KIND[,KIND...] [N]");
+                yield break;
+            }
             int n = a.Length > 1 ? int.Parse(a[1], CultureInfo.InvariantCulture) : 1;
             var proxy = MapScenarioEnemies.ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
-            var away = proxy.transform.position - P.transform.position; away.y = 0f;
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
+            var away = proxy.transform.position - P.transform.position;
+            away.y = 0f;
             var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.forward;
             var made = new List<Character>();
             int k = 0;
@@ -60,15 +69,27 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < n; i++, k++)
                 {
                     if (Resources.Load("Prefabs/Characters/" + kind) == null)
-                    { r.Fail($"no prefab Characters/{kind}"); yield break; }
+                    {
+                        r.Fail($"no prefab Characters/{kind}");
+                        yield break;
+                    }
                     var side = Quaternion.Euler(0f, (k - 1) * 35f, 0f) * dir;
                     var spot = MapScenarioEnemies.FreeSpot(proxy.transform.position + side * 400f);
                     Character c;
                     try
-                    { c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true); }
-                    catch (Exception e) { r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}"); yield break; }
+                    {
+                        c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true);
+                    }
+                    catch (Exception e)
+                    {
+                        r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}");
+                        yield break;
+                    }
                     if (c == null)
-                    { r.Fail($"couldn't spawn {kind}"); yield break; }
+                    {
+                        r.Fail($"couldn't spawn {kind}");
+                        yield break;
+                    }
                     c.transform.position = spot;
                     made.Add(c);
                     _spawned.Add(c);
@@ -119,7 +140,10 @@ namespace DarkwoodMP.World
             foreach (var c in _spawned)
             {
                 if (c != null)
-                { Object.Destroy(c.gameObject); n++; }
+                {
+                    Object.Destroy(c.gameObject);
+                    n++;
+                }
             }
             _spawned.Clear();
             yield return new WaitForSeconds(1.5f);
@@ -148,7 +172,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Sample(string[] a, Result r)
         {
-            if (a.Length < 3) { r.Fail("usage: sv-sample AT SECS TAG [--walk] [--provoke]"); yield break; }
+            if (a.Length < 3)
+            {
+                r.Fail("usage: sv-sample AT SECS TAG [--walk] [--provoke]");
+                yield break;
+            }
             double at = double.Parse(a[0], CultureInfo.InvariantCulture);
             float secs = F(a[1]);
             string tag = a[2];
@@ -182,7 +210,11 @@ namespace DarkwoodMP.World
             while (Now < end)
             {
                 double t = Now;
-                if (t - listed > 0.5) { chars = Object.FindObjectsOfType<Character>().ToList(); listed = t; }
+                if (t - listed > 0.5)
+                {
+                    chars = Object.FindObjectsOfType<Character>().ToList();
+                    listed = t;
+                }
                 foreach (var c in chars)
                 {
                     if (c == null || ne == null || !ne.NetIdOf(c, out uint id) || !NetEnemies.InPlay(c))
@@ -213,9 +245,16 @@ namespace DarkwoodMP.World
                         }
                         samples.Add(new S
                         {
-                            T = t, Id = id, Kind = StateDump.Clean(c.name), Path = PathOf(an, c.transform), Clip = clip.name,
-                            Frame = an.CurrentFrame, Sprite = an.Sprite != null ? an.Sprite.spriteId : -1, Frames = clip.frames.Length,
-                            Playing = an.Playing, State = state,
+                            T = t,
+                            Id = id,
+                            Kind = StateDump.Clean(c.name),
+                            Path = PathOf(an, c.transform),
+                            Clip = clip.name,
+                            Frame = an.CurrentFrame,
+                            Sprite = an.Sprite != null ? an.Sprite.spriteId : -1,
+                            Frames = clip.frames.Length,
+                            Playing = an.Playing,
+                            State = state,
                         });
                     }
                 }
@@ -227,7 +266,11 @@ namespace DarkwoodMP.World
                 File.WriteAllLines(FileOf(tag, host ? "host" : "client"), samples.Select(x => FormattableString.Invariant(
                     $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{(x.Playing ? 1 : 0)}\t{x.State}")));
             }
-            catch (Exception e) { r.Fail($"couldn't write the samples: {e.Message}"); yield break; }
+            catch (Exception e)
+            {
+                r.Fail($"couldn't write the samples: {e.Message}");
+                yield break;
+            }
             var (summary, stuck) = Analyse(samples);
             r.Info = $"{samples.Count} samples; {summary}";
             if (stuck.Count > 0)
@@ -323,8 +366,16 @@ namespace DarkwoodMP.World
                 }
                 l.Add(new S
                 {
-                    T = double.Parse(f[0], CultureInfo.InvariantCulture), Id = uint.Parse(f[1]), Kind = f[2], Path = f[3], Clip = f[4],
-                    Frame = int.Parse(f[5]), Sprite = int.Parse(f[6]), Frames = int.Parse(f[7]), Playing = f[8] == "1", State = f[9],
+                    T = double.Parse(f[0], CultureInfo.InvariantCulture),
+                    Id = uint.Parse(f[1]),
+                    Kind = f[2],
+                    Path = f[3],
+                    Clip = f[4],
+                    Frame = int.Parse(f[5]),
+                    Sprite = int.Parse(f[6]),
+                    Frames = int.Parse(f[7]),
+                    Playing = f[8] == "1",
+                    State = f[9],
                 });
             }
             return l;
@@ -338,16 +389,32 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Compare(string[] a, Result r)
         {
-            if (a.Length < 1) { r.Fail("usage: sv-compare TAG"); yield break; }
+            if (a.Length < 1)
+            {
+                r.Fail("usage: sv-compare TAG");
+                yield break;
+            }
             string tag = a[0];
             List<S> host, ours;
-            try { host = Load(FileOf(tag, "host")); ours = Load(FileOf(tag, "client")); }
-            catch (Exception e) { r.Fail($"couldn't read the samples: {e.Message}"); yield break; }
+            try
+            {
+                host = Load(FileOf(tag, "host"));
+                ours = Load(FileOf(tag, "client"));
+            }
+            catch (Exception e)
+            {
+                r.Fail($"couldn't read the samples: {e.Message}");
+                yield break;
+            }
             var parts = new List<string>();
             foreach (var g in ours.GroupBy(x => (x.Id, x.Path)).OrderBy(g => g.Key.Id))
             {
                 var h = host.Where(x => x.Id == g.Key.Id && x.Path == g.Key.Path).OrderBy(x => x.T).ToList();
-                if (h.Count == 0) { r.Fail($"#{g.Key.Id} {g.Key.Path}: the host has no samples of it"); continue; }
+                if (h.Count == 0)
+                {
+                    r.Fail($"#{g.Key.Id} {g.Key.Path}: the host has no samples of it");
+                    continue;
+                }
                 var mine = g.Where(x => x.T >= h[0].T + 0.5 && x.T <= h[h.Count - 1].T).ToList();
                 if (mine.Count < 20)
                 {

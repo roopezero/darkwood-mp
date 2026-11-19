@@ -26,16 +26,35 @@ namespace DarkwoodMP.World
 
         public static void Register()
         {
-            MapScenario.Add("dw-on", (a, r) => { Start(); r.Info = "watching"; return None(); });
-            MapScenario.Add("dw-off", (a, r) => { r.Info = Watch.Summary(); Stop(); return None(); });
-            MapScenario.Add("dw-list", (a, r) => { r.Info = List(); return None(); });
+            MapScenario.Add("dw-on", (a, r) =>
+            {
+                Start();
+                r.Info = "watching";
+                return None();
+            });
+            MapScenario.Add("dw-off", (a, r) =>
+            {
+                r.Info = Watch.Summary();
+                Stop();
+                return None();
+            });
+            MapScenario.Add("dw-list", (a, r) =>
+            {
+                r.Info = List();
+                return None();
+            });
         }
 
         private static void Start()
         {
             On = true;
             Watch.Reset();
-            if (_go == null) { _go = new GameObject("DarkwoodMP.DogWatch"); Object.DontDestroyOnLoad(_go); _go.AddComponent<Watch>(); }
+            if (_go == null)
+            {
+                _go = new GameObject("DarkwoodMP.DogWatch");
+                Object.DontDestroyOnLoad(_go);
+                _go.AddComponent<Watch>();
+            }
         }
 
         private static void Stop()
@@ -71,7 +90,11 @@ namespace DarkwoodMP.World
 
         internal static string Id(Character c) => NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint id) ? id.ToString() : "i" + c.GetInstanceID();
 
-        internal static string Rel(Vector3 p) { var c = MapScenario.Centre; return $"{p.x - c.x:0},{p.z - c.z:0}"; }
+        internal static string Rel(Vector3 p)
+        {
+            var c = MapScenario.Centre;
+            return $"{p.x - c.x:0},{p.z - c.z:0}";
+        }
 
         /// <summary>How far from each player (host's own and the proxies), as "host 120 / client 45 (proxy at x,z)".</summary>
         internal static string Dists(Vector3 p)
@@ -128,14 +151,26 @@ namespace DarkwoodMP.World
 
         private sealed class Watch : MonoBehaviour
         {
-            private struct St { public bool Sleep, Waking, Eat, Alive, Ani, Atk; public Character.Behaviour B; public Transform T; }
+            private struct St
+            {
+                public bool Sleep, Waking, Eat, Alive, Ani, Atk;
+                public Character.Behaviour B;
+                public Transform T;
+            }
             private static readonly Dictionary<Character, St> _last = new Dictionary<Character, St>();
             private static float _next, _nextScan, _nextPos;
             private static List<Character> _list = new List<Character>();
             public static int Wakes, Alerts, Changes, Close;
             private static readonly HashSet<uint> _closeNow = new HashSet<uint>();
 
-            public static void Reset() { _last.Clear(); _list.Clear(); Wakes = Alerts = Changes = Close = 0; _closeNow.Clear(); _next = _nextScan = _nextPos = 0f; }
+            public static void Reset()
+            {
+                _last.Clear();
+                _list.Clear();
+                Wakes = Alerts = Changes = Close = 0;
+                _closeNow.Clear();
+                _next = _nextScan = _nextPos = 0f;
+            }
             public static void Woke() => Wakes++;
             public static void Alerted() => Alerts++;
             public static string Summary() => $"wakes {Wakes}, alerts {Alerts}, state changes {Changes}, close contacts {Close}";
@@ -221,7 +256,14 @@ namespace DarkwoodMP.World
                 {
                     float d = StateDump.Flat(c.transform.position - at);
                     ne.NetIdOf(c, out uint id);
-                    if (d < 45f) { if (_closeNow.Add(id)) { Close++; Plugin.Log.LogInfo($"[dogwatch] our player touches the host's {c.name} #{id}: {d:0} apart, it at {Rel(c.transform.position)}{(c.sleeping ? " asleep" : "")}, we at {Rel(at)}"); } }
+                    if (d < 45f)
+                    {
+                        if (_closeNow.Add(id))
+                        {
+                            Close++;
+                            Plugin.Log.LogInfo($"[dogwatch] our player touches the host's {c.name} #{id}: {d:0} apart, it at {Rel(c.transform.position)}{(c.sleeping ? " asleep" : "")}, we at {Rel(at)}");
+                        }
+                    }
                     else
                     {
                         _closeNow.Remove(id);

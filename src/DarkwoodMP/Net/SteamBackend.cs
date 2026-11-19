@@ -43,7 +43,11 @@ namespace DarkwoodMP.Net
             _transport.ShouldAccept = id => _lobby.InLobby && (IsHost ? _lobby.IsMember(id) : id == _lobby.Owner);
             _transport.OnMessage += (from, data, len, ch) => OnMessage?.Invoke(from.m_SteamID, data, len);
             _lobby.OnEntered += () => OnEntered?.Invoke();
-            _lobby.OnLeft += () => { _transport.ClearPending(); OnLeft?.Invoke(); };
+            _lobby.OnLeft += () =>
+            {
+                _transport.ClearPending();
+                OnLeft?.Invoke();
+            };
             // A player whose connection died without leaving the lobby (its PC lost power, its network dropped):
             // the lobby only notices much later. Only for peers that got in, or a host that let us in: a session
             // can also fail while it's first being set up, and Hello is sent again then.
@@ -82,7 +86,11 @@ namespace DarkwoodMP.Net
         {
             if (!InSession)
             {
-                if (session.Active) { Ui.Text(f, "In a direct game.", MenuSkin.Dim); return; }
+                if (session.Active)
+                {
+                    Ui.Text(f, "In a direct game.", MenuSkin.Dim);
+                    return;
+                }
                 if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)"))
                 {
                     _lobby.Host();
@@ -135,9 +143,21 @@ namespace DarkwoodMP.Net
         {
             string group = _lobby.InLobby ? _lobby.Id.m_SteamID.ToString() : "";
             string size = _lobby.InLobby ? players.ToString() : "";
-            if (status != _presStatus) { SteamFriends.SetRichPresence("status", status); _presStatus = status; }
-            if (group != _presGroup) { SteamFriends.SetRichPresence("steam_player_group", group); _presGroup = group; }
-            if (size != _presSize) { SteamFriends.SetRichPresence("steam_player_group_size", size); _presSize = size; }
+            if (status != _presStatus)
+            {
+                SteamFriends.SetRichPresence("status", status);
+                _presStatus = status;
+            }
+            if (group != _presGroup)
+            {
+                SteamFriends.SetRichPresence("steam_player_group", group);
+                _presGroup = group;
+            }
+            if (size != _presSize)
+            {
+                SteamFriends.SetRichPresence("steam_player_group_size", size);
+                _presSize = size;
+            }
         }
 
         /// <summary>Our own "status" as Steam has it (for the log).</summary>

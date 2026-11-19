@@ -69,7 +69,12 @@ namespace DarkwoodMP.World
             {
                 p.upgradeHotbar();
             }
-            if (a.Length > 0 && a[0] == "keep") { _mark = Hotbar(p); r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}"; yield break; }
+            if (a.Length > 0 && a[0] == "keep")
+            {
+                _mark = Hotbar(p);
+                r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
+                yield break;
+            }
             int n = a.Length > 0 ? int.Parse(a[0]) : 0;
             var slots = p.Hotbar.slots;
             foreach (var s in slots)
@@ -81,9 +86,11 @@ namespace DarkwoodMP.World
             }
             p.switchToItem(p.fists);
             int at = n % slots.Count;
-            slots[at].inventory = p.Hotbar; slots[at].createItem("bandages", n + 2);
+            slots[at].inventory = p.Hotbar;
+            slots[at].createItem("bandages", n + 2);
             int at2 = (n + 1) % slots.Count;
-            slots[at2].inventory = p.Hotbar; slots[at2].createItem("rope", 1);
+            slots[at2].inventory = p.Hotbar;
+            slots[at2].createItem("rope", 1);
             yield return new WaitForSeconds(0.5f);
             _mark = Hotbar(p);
             Characters.Instance?.SaveNow();
@@ -110,7 +117,8 @@ namespace DarkwoodMP.World
         private static IEnumerator Fire(string[] a, Result r)
         {
             // The trigger that runs it (the exit's EventTriggers), set off by our player beside it.
-            EventTriggers et = null; global::EventTrigger t = null;
+            EventTriggers et = null;
+            global::EventTrigger t = null;
             foreach (var e in Object.FindObjectsOfType<EventTriggers>(true))
             {
                 if (e == null || !e.gameObject.scene.IsValid())
@@ -118,9 +126,17 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 t = e.eventTriggers.FirstOrDefault(x => x?.gameEvents != null && x.gameEvents.name == a[0]);
-                if (t != null) { et = e; break; }
+                if (t != null)
+                {
+                    et = e;
+                    break;
+                }
             }
-            if (et == null) { r.Fail($"no trigger for {a[0]} here (in {Locations.Current() ?? "the world"})"); yield break; }
+            if (et == null)
+            {
+                r.Fail($"no trigger for {a[0]} here (in {Locations.Current() ?? "the world"})");
+                yield break;
+            }
             // Its area is off while we land in it and the host sees us there: the host checks the exit is within
             // reach of where it last saw us, and the area set off in the frame we landed sent it before our new
             // place (refused: "5995 away", at the spot loc-go left us).
@@ -360,7 +376,8 @@ namespace DarkwoodMP.World
         /// <summary>The hotbar has the same slots as `had`, with the same kind of thing in each slot that had one.</summary>
         private static bool Keeps(string now, string had)
         {
-            var n = Types(now).Split(','); var h = Types(had).Split(',');
+            var n = Types(now).Split(',');
+            var h = Types(had).Split(',');
             return n.Length == h.Length && h.Select((t, i) => t == "-" || t == n[i]).All(ok => ok);
         }
 

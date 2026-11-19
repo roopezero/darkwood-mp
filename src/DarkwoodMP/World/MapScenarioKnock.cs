@@ -56,7 +56,11 @@ namespace DarkwoodMP.World
         private static Item ByIndex(string[] a, Result r)
         {
             int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
-            if (k < 0 || k >= _order.Count) { r.Fail($"no item {k} (kn-info found {_order.Count})"); return null; }
+            if (k < 0 || k >= _order.Count)
+            {
+                r.Fail($"no item {k} (kn-info found {_order.Count})");
+                return null;
+            }
             var it = Dropped(1000f).FirstOrDefault(i => Ref(i) == _order[k]);
             if (it == null)
             {
@@ -124,7 +128,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var start = it.transform.position;
-            var dir = start - P.transform.position; dir.y = 0f;
+            var dir = start - P.transform.position;
+            dir.y = 0f;
             dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.forward;
             yield return Walk(start - dir * 90f, 10f, detours: 0);
             yield return Walk(start + dir * 80f, 5f, detours: 0);
@@ -138,7 +143,11 @@ namespace DarkwoodMP.World
             float since = Time.unscaledTime;
             var t = P.spawnDroppedInvItemm(false, type, 1);
             var b = t != null ? t.GetComponent<Rigidbody>() : null;
-            if (b == null) { r.Fail($"couldn't drop {type}"); yield break; }
+            if (b == null)
+            {
+                r.Fail($"couldn't drop {type}");
+                yield break;
+            }
             Plugin.Instance.StartCoroutine(KeepSliding(b, since));
             yield return new WaitForSeconds(0.5f);
             r.Info = $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt1(t.position)}";
@@ -179,14 +188,27 @@ namespace DarkwoodMP.World
             }
             string kind = a.Length > 1 ? a[1] : "Dog";
             var start = it.transform.position;
-            var dir = start - P.transform.position; dir.y = 0f;
+            var dir = start - P.transform.position;
+            dir.y = 0f;
             dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.forward;
             dir = Quaternion.Euler(0f, 90f, 0f) * dir; // across, not from our player's side
-            var from = start - dir * 150f; var to = start + dir * 150f;
+            var from = start - dir * 150f;
+            var to = start + dir * 150f;
             Character c;
-            try { c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, from, 1f, kind, nocturnal: false); }
-            catch (Exception e) { r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}"); yield break; }
-            if (c == null) { r.Fail($"couldn't spawn {kind}"); yield break; }
+            try
+            {
+                c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, from, 1f, kind, nocturnal: false);
+            }
+            catch (Exception e)
+            {
+                r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}");
+                yield break;
+            }
+            if (c == null)
+            {
+                r.Fail($"couldn't spawn {kind}");
+                yield break;
+            }
             var rb = c.GetComponent<Rigidbody>();
             c.transform.position = new Vector3(from.x, c.transform.position.y, from.z);
             yield return new WaitForSeconds(1f); // the client's copy is made

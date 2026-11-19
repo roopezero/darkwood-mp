@@ -66,7 +66,12 @@ namespace DarkwoodMP.World
             Instance = this;
             _session = session;
             session.Register(MsgType.FlagsDelta, OnDelta);
-            session.OnSessionEnded += () => { _baseline = null; _rewards.Clear(); _deathsAllowed.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _baseline = null;
+                _rewards.Clear();
+                _deathsAllowed.Clear();
+            };
         }
 
         private static bool Sharing =>
@@ -114,7 +119,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (_baseline == null) { _baseline = now; _baselineScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle; return; } // what we start from isn't news
+            if (_baseline == null) // what we start from isn't news
+            {
+                _baseline = now;
+                _baselineScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+                return;
+            }
 
             var changed = new List<KeyValuePair<string, string>>();
             foreach (var kv in now)
@@ -284,7 +294,11 @@ namespace DarkwoodMP.World
             bool had = _rewards.TryGetValue(trader, out var was) && was.Key == day;
             if (_session.IsHost)
             {
-                if (had) { Plugin.Log.LogInfo($"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given"); return false; }
+                if (had)
+                {
+                    Plugin.Log.LogInfo($"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given");
+                    return false;
+                }
                 AddReputation(trader, amount);
             }
             else
@@ -422,7 +436,11 @@ namespace DarkwoodMP.World
         /// only by games in the world (a loading one drops it), and with nobody in yet nothing is sent at all, the
         /// first look after the joiner is let in taking what there is then as known. JoinerInWorld sends the difference.
         /// </summary>
-        public static void NoteSnapshot() { _atSnapshot = Snapshot(true); SnapshotNoted++; }
+        public static void NoteSnapshot()
+        {
+            _atSnapshot = Snapshot(true);
+            SnapshotNoted++;
+        }
         /// <summary>How many snapshots' story was noted (for the tests).</summary>
         internal static int SnapshotNoted;
 
@@ -477,7 +495,11 @@ namespace DarkwoodMP.World
                 int n = Math.Min(64, entries.Count - start);
                 var w = _session.Begin(MsgType.FlagsDelta);
                 w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++) { w.WriteStr(entries[i].Key); w.WriteStr(entries[i].Value); }
+                for (int i = start; i < start + n; i++)
+                {
+                    w.WriteStr(entries[i].Key);
+                    w.WriteStr(entries[i].Value);
+                }
                 if (_session.IsHost && to != 0)
                 {
                     _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -566,7 +588,10 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't apply {kv.Key}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't apply {kv.Key}: {e.Message}");
+                }
                 if (pass)
                 {
                     relay.Add(kv);
@@ -605,8 +630,14 @@ namespace DarkwoodMP.World
         {
             var st = Singleton<Flags>.Instance.getNPCState(npc);
             bool dead;
-            try { dead = JObject.Parse(value).Value<bool?>("dead") ?? false; }
-            catch { return true; } // not ours to judge: Apply reports it
+            try
+            {
+                dead = JObject.Parse(value).Value<bool?>("dead") ?? false;
+            }
+            catch
+            {
+                return true; // not ours to judge: Apply reports it
+            }
             if (st != null && st.dead)
             {
                 if (dead)
@@ -637,7 +668,8 @@ namespace DarkwoodMP.World
             }
             var w = _session.Begin(MsgType.FlagsDelta);
             w.W.Write((ushort)1);
-            w.WriteStr("n:" + npc); w.WriteStr(NpcJson(st));
+            w.WriteStr("n:" + npc);
+            w.WriteStr(NpcJson(st));
             _session.SendTo(to, w, Channel.Control, reliable: true);
         }
 
@@ -650,7 +682,11 @@ namespace DarkwoodMP.World
                 return;
             }
             int v = int.Parse(value.Substring(1));
-            if (value[0] != '=') { AddReputation(npc, v); return; }
+            if (value[0] != '=')
+            {
+                AddReputation(npc, v);
+                return;
+            }
             st.reputation = v;
             if (_baseline != null)
             {
@@ -662,8 +698,16 @@ namespace DarkwoodMP.World
         private static void Apply(string key, string value)
         {
             var f = Singleton<Flags>.Instance;
-            if (key == "k") { f.karmaPoints = int.Parse(value); return; }
-            if (key[0] == 'j') { ApplyJournal(key[1], key.Substring(3), value); return; }
+            if (key == "k")
+            {
+                f.karmaPoints = int.Parse(value);
+                return;
+            }
+            if (key[0] == 'j')
+            {
+                ApplyJournal(key[1], key.Substring(3), value);
+                return;
+            }
             string name = key.Substring(2);
             switch (key[0])
             {
@@ -673,7 +717,11 @@ namespace DarkwoodMP.World
                         break;
                     }
                     var parts = value.Split('|');
-                    if (name.StartsWith(ModPrefix)) { SetModFlag(f, name, bool.Parse(parts[0]), int.Parse(parts[1])); break; }
+                    if (name.StartsWith(ModPrefix))
+                    {
+                        SetModFlag(f, name, bool.Parse(parts[0]), int.Parse(parts[1]));
+                        break;
+                    }
                     f.setFlag(name, bool.Parse(parts[0]));
                     f.setFlag(name, int.Parse(parts[1]));
                     break;
@@ -727,8 +775,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            try { talked.inventory.refreshReputation(); }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't refresh {npc}'s reputation: {e.Message}"); }
+            try
+            {
+                talked.inventory.refreshReputation();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't refresh {npc}'s reputation: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -748,7 +802,10 @@ namespace DarkwoodMP.World
                 Singleton<Map>.Instance?.showElement(el);
                 Plugin.Log.LogInfo($"Journal: {name} shown on the map");
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't show {name} on the map: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't show {name} on the map: {e.Message}");
+            }
         }
 
         /// <summary>Another player's new journal entry: added here if it isn't yet (removed, for "-").</summary>
@@ -833,13 +890,20 @@ namespace DarkwoodMP.World
                     }
                     j.locationDirections.Add(JsonConvert.DeserializeObject<Journal.LocationDirection>(value));
                     break;
-                default: return;
+                default:
+                    return;
             }
             Plugin.Log.LogInfo($"Journal: another player's {kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
             if (popup != null && WorldShare.WorldReady)
             {
-                try { j.showJournalInfoPopup(popup, name); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't show the journal popup for {name}: {e.Message}"); }
+                try
+                {
+                    j.showJournalInfoPopup(popup, name);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't show the journal popup for {name}: {e.Message}");
+                }
             }
         }
 
@@ -892,8 +956,14 @@ namespace DarkwoodMP.World
                 }
                 Plugin.Log.LogInfo($"{name} was killed in another player's game");
                 WorldActions.Replaying = true;
-                try { c.die(); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    c.die();
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
             }
         }
     }
@@ -916,15 +986,27 @@ namespace DarkwoodMP.World
                 switch (_type)
                 {
                     case "Location":
-                    case "LocationAlreadyFound": has = Has(_desc, "UI"); break;
-                    case "JournalEntry": has = Has(_desc + "_name", "JournalEntries"); break;
-                    case "Note": has = Has(_desc + "_name", "Notes") || Has(_desc + "_name", "Items"); break;
+                    case "LocationAlreadyFound":
+                        has = Has(_desc, "UI");
+                        break;
+                    case "JournalEntry":
+                        has = Has(_desc + "_name", "JournalEntries");
+                        break;
+                    case "Note":
+                        has = Has(_desc + "_name", "Notes") || Has(_desc + "_name", "Items");
+                        break;
                     case "Key":
-                    case "InvItem": has = Has(_desc + "_name", "Items"); break;
-                    default: return true; // reputation and others carry their own text
+                    case "InvItem":
+                        has = Has(_desc + "_name", "Items");
+                        break;
+                    default:
+                        return true; // reputation and others carry their own text
                 }
             }
-            catch (Exception) { return true; } // the language isn't loaded: leave it to the game
+            catch (Exception)
+            {
+                return true; // the language isn't loaded: leave it to the game
+            }
             if (!has)
             {
                 Plugin.Log.LogInfo($"Journal: no popup for {_type} {_desc}, the game has no text for it");

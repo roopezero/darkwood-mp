@@ -34,13 +34,24 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.AfterNightEnded, OnEnded);
             s.Register(MsgType.AfterNightLeft, OnLeft);
-            s.OnSessionEnded += () => { _clockFreed = false; _since = -1f; _endPending = false; _overDay = -1; _told.Clear(); };
+            s.OnSessionEnded += () =>
+            {
+                _clockFreed = false;
+                _since = -1f;
+                _endPending = false;
+                _overDay = -1;
+                _told.Clear();
+            };
         }
 
         /// <summary>Whether this game's player is in an after-night (for PlayerState).</summary>
         public static bool Local
         {
-            get { var c = Singleton<Controller>.Instance; return c != null && c.isAfterNight; }
+            get
+            {
+                var c = Singleton<Controller>.Instance;
+                return c != null && c.isAfterNight;
+            }
         }
 
         /// <summary>Host: we turned the clock back on during our own after-night.</summary>
@@ -85,7 +96,12 @@ namespace DarkwoodMP.World
             }
             TellLateMornings(s, c);
             bool frozen = c.isAfterNight && p.effects != null && p.effects.hasEffectType(CharacterEffectType.timeFreeze);
-            if (!frozen) { _clockFreed = false; _since = -1f; return; }
+            if (!frozen)
+            {
+                _clockFreed = false;
+                _since = -1f;
+                return;
+            }
             if (_since < 0f)
             {
                 _since = UnityEngine.Time.unscaledTime;
@@ -98,7 +114,10 @@ namespace DarkwoodMP.World
                 {
                     var last = kv.Value.Last;
                     if (kv.Key != Sync.PlayerSync.DummyId && last != null && !last.AfterNight)
-                    { someoneOut = true; break; }
+                    {
+                        someoneOut = true;
+                        break;
+                    }
                 }
             }
             if (someoneOut && !_clockFreed)
@@ -190,7 +209,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (_overDay != c.day) { _overDay = -1; _told.Clear(); return; }
+            if (_overDay != c.day)
+            {
+                _overDay = -1;
+                _told.Clear();
+                return;
+            }
             float now = UnityEngine.Time.unscaledTime;
             foreach (var kv in sync.Remotes)
             {
@@ -218,7 +242,11 @@ namespace DarkwoodMP.World
             }
             var c = Singleton<Controller>.Instance;
             var d = Singleton<Dreams>.Instance;
-            if (c == null || !c.isAfterNight || (d != null && d.dreaming)) { Plugin.Log.LogInfo("[world] the host's after-night is over (ours already was)"); return; }
+            if (c == null || !c.isAfterNight || (d != null && d.dreaming))
+            {
+                Plugin.Log.LogInfo("[world] the host's after-night is over (ours already was)");
+                return;
+            }
             if (TalkingToMorningVisitor())
             {
                 // endAfterNight destroys the trader, and a dialogue or trade whose NPC is destroyed can't be closed
@@ -246,7 +274,10 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = true;
             }
-            try { c.endAfterNight(); }
+            try
+            {
+                c.endAfterNight();
+            }
             finally
             {
                 if (!host)
@@ -302,11 +333,23 @@ namespace DarkwoodMP.World
             }
             var c = Singleton<Controller>.Instance;
             var w = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
-            if (c == null || w == null || Player.Instance == null || !WorldShare.InWorld) { _endPending = false; return; }
+            if (c == null || w == null || Player.Instance == null || !WorldShare.InWorld)
+            {
+                _endPending = false;
+                return;
+            }
             // close() lets go of the NPC at once (the fade and the controls follow without him), so the morning can end.
-            if (!TalkingToMorningVisitor()) { End(c); return; }
+            if (!TalkingToMorningVisitor())
+            {
+                End(c);
+                return;
+            }
             DialogueGuard.Close(w); // does nothing while the window is still opening: tried again next frame
-            if (w.npc == null) { End(c); return; }
+            if (w.npc == null)
+            {
+                End(c);
+                return;
+            }
             if (UnityEngine.Time.unscaledTime - _pendingSince > 10f)
             {
                 Plugin.Log.LogWarning("[world] our dialogue with the trader didn't close: closing it without him and ending the morning");
@@ -366,7 +409,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Location), "OnTriggerExit", new[] { typeof(UnityEngine.Collider) })]
     static class AfterNightWalkOutPatch
     {
-        static void Prefix(out bool __state) { var c = Singleton<Controller>.Instance; __state = c != null && c.isAfterNight; }
+        static void Prefix(out bool __state)
+        {
+            var c = Singleton<Controller>.Instance;
+            __state = c != null && c.isAfterNight;
+        }
         static void Postfix(bool __state)
         {
             var c = Singleton<Controller>.Instance;

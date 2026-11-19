@@ -82,13 +82,18 @@ namespace DarkwoodMP.Sync
                 return;
             }
             var pos = light.transform.position;
-            if (!Hidden(pos)) { _logged = ""; return; }
+            if (!Hidden(pos))
+            {
+                _logged = "";
+                return;
+            }
             string set = string.Join("; ", Hiders(pos));
             if (set == _logged && Time.unscaledTime - _loggedAt < 30f)
             {
                 return;
             }
-            _logged = set; _loggedAt = Time.unscaledTime;
+            _logged = set;
+            _loggedAt = Time.unscaledTime;
             var r = light.GetComponent<Renderer>();
             Plugin.Log.LogInfo($"[view] our player's view is switched off at ({pos.x:0}, {pos.z:0}) (a black screen): " +
                                $"the game's ray down through the player's light hits {set}; light drawn {(r != null && r.enabled)}");

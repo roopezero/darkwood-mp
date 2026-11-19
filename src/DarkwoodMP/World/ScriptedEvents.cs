@@ -296,26 +296,40 @@ namespace DarkwoodMP.World
         {
             switch (Current)
             {
-                case Part.SharedAndMessages: return !host && (!player || t == GameEvent.Type.displayMessage);
-                case Part.PlayerAndShared: return !host;
-                case Part.HostAndShared: return !player;
-                case Part.SharedOnly: return !player && !host;
-                case Part.PlayerOnly: return player && !host;
-                default: return true;
+                case Part.SharedAndMessages:
+                    return !host && (!player || t == GameEvent.Type.displayMessage);
+                case Part.PlayerAndShared:
+                    return !host;
+                case Part.HostAndShared:
+                    return !player;
+                case Part.SharedOnly:
+                    return !player && !host;
+                case Part.PlayerOnly:
+                    return player && !host;
+                default:
+                    return true;
             }
         }
 
         /// <summary>Run something with Current set to part (and Replaying, for a change that came from another game).</summary>
         public static void RunAs(Part part, bool replaying, Action a)
         {
-            var was = Current; bool wasReplaying = WorldActions.Replaying;
+            var was = Current;
+            bool wasReplaying = WorldActions.Replaying;
             Current = part;
             if (replaying)
             {
                 WorldActions.Replaying = true;
             }
-            try { a(); }
-            finally { Current = was; WorldActions.Replaying = wasReplaying; }
+            try
+            {
+                a();
+            }
+            finally
+            {
+                Current = was;
+                WorldActions.Replaying = wasReplaying;
+            }
         }
 
         private static Session S => Session.Instance;
@@ -324,7 +338,11 @@ namespace DarkwoodMP.World
         public static void Register(Session s)
         {
             s.Register(MsgType.EventFired, OnFired);
-            s.OnSessionEnded += () => { OwedParts.SessionEnded(); Asking.Clear(); };
+            s.OnSessionEnded += () =>
+            {
+                OwedParts.SessionEnded();
+                Asking.Clear();
+            };
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) => AreasChanged();
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ => AreasChanged();
         }
@@ -345,7 +363,11 @@ namespace DarkwoodMP.World
             public int Index;
         }
         internal static readonly ConditionalWeakTable<object, Started> Coroutines = new ConditionalWeakTable<object, Started>();
-        internal static void Remember(object coroutine, Started st) { Coroutines.Remove(coroutine); Coroutines.Add(coroutine, st); }
+        internal static void Remember(object coroutine, Started st)
+        {
+            Coroutines.Remove(coroutine);
+            Coroutines.Add(coroutine, st);
+        }
 
         /// <summary>The trigger whose coroutine is running now (EventTrigger.fire's body), if it's one to share.</summary>
         internal static Started Firing;
@@ -403,10 +425,20 @@ namespace DarkwoodMP.World
         /// <summary>Do a, leaving the triggers of these types it sets off to the player who did it (LeftToActor). Returns how many were left.</summary>
         internal static int LeavingToActor(HashSet<global::EventTrigger.Type> types, Action a)
         {
-            var was = LeftToActor; int count = LeftCount;
-            LeftToActor = types; LeftCount = 0;
-            try { a(); return LeftCount; }
-            finally { LeftToActor = was; LeftCount = count; }
+            var was = LeftToActor;
+            int count = LeftCount;
+            LeftToActor = types;
+            LeftCount = 0;
+            try
+            {
+                a();
+                return LeftCount;
+            }
+            finally
+            {
+                LeftToActor = was;
+                LeftCount = count;
+            }
         }
 
         /// <summary>The end of the host's result for a hit whose onGetAttackedByPlayer triggers it left to the hitter (Combat.NetEnemies.ApplyHit).</summary>
@@ -435,8 +467,14 @@ namespace DarkwoodMP.World
         {
             bool was = OwnAction;
             OwnAction = true;
-            try { a(); }
-            finally { OwnAction = was; }
+            try
+            {
+                a();
+            }
+            finally
+            {
+                OwnAction = was;
+            }
         }
 
         /// <summary>EventTrigger.fire: whether this trigger, set off now, is left to the player whose action it was (LeftToActor).</summary>
@@ -508,7 +546,10 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        internal static IEnumerator Nothing() { yield break; }
+        internal static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         /// <summary>How many GameEvent step coroutines are running right now (a trigger set off inside one is a chain).</summary>
         internal static int StepDepth;
@@ -551,7 +592,15 @@ namespace DarkwoodMP.World
 
         // ---- sending ------------------------------------------------------------------------------------
 
-        private enum Kind : byte { Trigger = 1, WorldEvent = 2, WorldTrigger = 3, TriggerExit = 4, PlayerPart = 5, WorldTriggerCaused = 6 }
+        private enum Kind : byte
+        {
+            Trigger = 1,
+            WorldEvent = 2,
+            WorldTrigger = 3,
+            TriggerExit = 4,
+            PlayerPart = 5,
+            WorldTriggerCaused = 6
+        }
 
         // ---- who caused a world trigger -----------------------------------------------------------------
         //
@@ -568,7 +617,10 @@ namespace DarkwoodMP.World
 
         /// <summary>Host: who switched an item on, while it's on: a joiner's peer id (the host's own player isn't kept).</summary>
         private static readonly ConditionalWeakTable<Item, Switcher> Switchers = new ConditionalWeakTable<Item, Switcher>();
-        private sealed class Switcher { public ulong Peer; }
+        private sealed class Switcher
+        {
+            public ulong Peer;
+        }
 
         /// <summary>Host: an item was switched on, by Cause (a joiner's ItemOn) or by the host's own player or world.</summary>
         internal static void SwitchedOn(Item item)
@@ -634,7 +686,11 @@ namespace DarkwoodMP.World
                     s.SendTo(cause, w, Channel.Control, reliable: true);
                 }
             }
-            if (t != null) { OwedParts.Give(cause, t); ExpectTrips(cause, t.gameEvents); }
+            if (t != null)
+            {
+                OwedParts.Give(cause, t);
+                ExpectTrips(cause, t.gameEvents);
+            }
             Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({t?.type}): {s.NameOf(cause)} caused it, so its player part is theirs");
             return true;
         }
@@ -712,12 +768,21 @@ namespace DarkwoodMP.World
             }
             switch (e.type)
             {
-                case GameEvent.Type.transportPlayerToObject: return !e.activeModifier;
-                case GameEvent.Type.transportToOutsideLocation: case GameEvent.Type.startDream: case GameEvent.Type.endDream:
+                case GameEvent.Type.transportPlayerToObject:
+                    return !e.activeModifier;
+                case GameEvent.Type.transportToOutsideLocation:
+                case GameEvent.Type.startDream:
+                case GameEvent.Type.endDream:
                 case GameEvent.Type.returnToWorld:
-                case GameEvent.Type.displayMessage: case GameEvent.Type.cameraEffect: case GameEvent.Type.timeScale:
-                case GameEvent.Type.forbidInputs: case GameEvent.Type.switchCantChangeForbidInputs: case GameEvent.Type.switchVisibleUI:
-                case GameEvent.Type.addJournalItem: case GameEvent.Type.addAllJournalItems: case GameEvent.Type.addRecipes:
+                case GameEvent.Type.displayMessage:
+                case GameEvent.Type.cameraEffect:
+                case GameEvent.Type.timeScale:
+                case GameEvent.Type.forbidInputs:
+                case GameEvent.Type.switchCantChangeForbidInputs:
+                case GameEvent.Type.switchVisibleUI:
+                case GameEvent.Type.addJournalItem:
+                case GameEvent.Type.addAllJournalItems:
+                case GameEvent.Type.addRecipes:
                 case GameEvent.Type.unlockAchievement:
                     return true;
                 case GameEvent.Type.addOrRemoveInvItem:
@@ -734,7 +799,9 @@ namespace DarkwoodMP.World
                         }
                     }
                     return true;
-                case GameEvent.Type.openDialogue: case GameEvent.Type.moveInventory: case GameEvent.Type.endGame:
+                case GameEvent.Type.openDialogue:
+                case GameEvent.Type.moveInventory:
+                case GameEvent.Type.endGame:
                     return false;
                 default:
                     return TargetsPlayer(e);
@@ -820,7 +887,11 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            if (s.IsHost) { RunLater(t, ge, what); yield break; }
+            if (s.IsHost)
+            {
+                RunLater(t, ge, what);
+                yield break;
+            }
             var r = ObjRef.Of(et.gameObject);
             if (!r.Valid)
             {
@@ -883,7 +954,10 @@ namespace DarkwoodMP.World
                             Singleton<Controller>.Instance.StartCoroutine(e.fire(ge.gameObject));
                         }
                     }
-                    catch (Exception ex) { Plugin.Log.LogWarning($"Couldn't run {what}: {ex.Message}"); }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't run {what}: {ex.Message}");
+                    }
                 }
             });
         }
@@ -891,11 +965,31 @@ namespace DarkwoodMP.World
         /// <summary>Host: a joiner asks for its own part of a once-only trigger that already fired (kind 5).</summary>
         private static void OnPlayerPart(ulong from, EventTriggers et, global::EventTrigger t)
         {
-            if (t == null) { Authority.Refuse("no such trigger here"); return; }
-            if (t.disabled) { Authority.Refuse("that event is switched off"); return; }
-            if (!Once(t) || !OnceDone(t)) { Authority.Refuse("that hasn't happened here"); return; }
-            if (!HasLaterSteps(t.gameEvents)) { Authority.Refuse("nothing in it is a player's own"); return; }
-            if (OwedParts.Given(from, t)) { Authority.Refuse(HadIt); return; }
+            if (t == null)
+            {
+                Authority.Refuse("no such trigger here");
+                return;
+            }
+            if (t.disabled)
+            {
+                Authority.Refuse("that event is switched off");
+                return;
+            }
+            if (!Once(t) || !OnceDone(t))
+            {
+                Authority.Refuse("that hasn't happened here");
+                return;
+            }
+            if (!HasLaterSteps(t.gameEvents))
+            {
+                Authority.Refuse("nothing in it is a player's own");
+                return;
+            }
+            if (OwedParts.Given(from, t))
+            {
+                Authority.Refuse(HadIt);
+                return;
+            }
             if (!Authority.InReach(et.transform.position, 3000f, et.name))
             {
                 return;
@@ -903,7 +997,10 @@ namespace DarkwoodMP.World
             foreach (var req in t.eventRequirements)
             {
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet())
-                { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return; }
+                {
+                    Authority.Refuse($"its requirement ({req.type}) isn't met here");
+                    return;
+                }
             }
             OwedParts.Give(from, t);
             ExpectTrips(from, t.gameEvents);
@@ -1041,7 +1138,11 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world] sent the exit of {et.name} #{index} {r}");
             }
-            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
+            if (S.IsHost)
+            {
+                S.Broadcast(w, Channel.Control, reliable: true);
+                return;
+            }
             string what = $"exit of {et.name} #{index} {r}";
             Authority.Request(w, what, (ok, reason, _) =>
             {
@@ -1071,7 +1172,11 @@ namespace DarkwoodMP.World
                 }
                 return;
             }
-            if (OurPlayerInside(et)) { Plugin.Log.LogInfo($"[world] exit of {et.name} #{index}: our player is still in it, it runs when they leave"); return; }
+            if (OurPlayerInside(et))
+            {
+                Plugin.Log.LogInfo($"[world] exit of {et.name} #{index}: our player is still in it, it runs when they leave");
+                return;
+            }
             t.firedExit = true;
             if (t.multipleFire)
             {
@@ -1086,8 +1191,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            try { RunAs(part, replaying, ge.fire); }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run the exit of {et.name} #{index}: {e.Message}"); }
+            try
+            {
+                RunAs(part, replaying, ge.fire);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't run the exit of {et.name} #{index}: {e.Message}");
+            }
         }
 
         /// <summary>Whether our player is in this area trigger, as EventTriggers.OnTriggerExit tells (entered and not left, and standing on its collider).</summary>
@@ -1147,8 +1258,14 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogInfo($"[world] {what} isn't here: running its world event {n}");
                 }
-                try { RunAs(part, replaying, () => events.fireWorldEvent(n)); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world event {n}: {e.Message}"); }
+                try
+                {
+                    RunAs(part, replaying, () => events.fireWorldEvent(n));
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't run world event {n}: {e.Message}");
+                }
             }
         }
 
@@ -1235,24 +1352,44 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world] sent {what}");
             }
-            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
+            if (S.IsHost)
+            {
+                S.Broadcast(w, Channel.Control, reliable: true);
+                return;
+            }
             Authority.Request(w, what, (ok, reason, result) =>
             {
-                if (!ok) { Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})"); return; }
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo($"[world] {what} not run here: the host refused it ({reason})");
+                    return;
+                }
                 if (result == Alone)
                 {
                     // We were somewhere the host doesn't run (Authority.AcceptAway): every part of it is ours.
                     Plugin.Log.LogInfo($"[world] {what}: ours alone, the host says; running all of it here");
-                    try { RunAs(Part.All, replaying: false, accepted); }
-                    catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}"); }
+                    try
+                    {
+                        RunAs(Part.All, replaying: false, accepted);
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}");
+                    }
                     return;
                 }
                 if (Debug)
                 {
                     Plugin.Log.LogInfo($"[world] {what}: the host agreed, running our part and the shared part");
                 }
-                try { RunAs(Part.PlayerAndShared, replaying: false, accepted); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}"); }
+                try
+                {
+                    RunAs(Part.PlayerAndShared, replaying: false, accepted);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't run {what}: {e.Message}");
+                }
             }, inventory: false);
         }
 
@@ -1278,7 +1415,11 @@ namespace DarkwoodMP.World
             {
                 // Only the host's world sends these; a joiner runs the shared part (and the messages, if near), and
                 // the joiner who caused it (kind 6) its own part too.
-                if (s.IsHost) { Authority.Refuse("the world's own events are the host's"); return; }
+                if (s.IsHost)
+                {
+                    Authority.Refuse("the world's own events are the host's");
+                    return;
+                }
                 bool ours = kind == Kind.WorldTriggerCaused;
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
@@ -1286,7 +1427,11 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}{(ours ? " (we caused it: our part too)" : "")}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
                 }
-                if (t == null) { RunWorldEvents(name, ours ? Part.PlayerAndShared : Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}"); return; }
+                if (t == null)
+                {
+                    RunWorldEvents(name, ours ? Part.PlayerAndShared : Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}");
+                    return;
+                }
                 if (t.fired && !t.multipleFire)
                 {
                     return;
@@ -1302,8 +1447,14 @@ namespace DarkwoodMP.World
                 {
                     var p = Player.Instance;
                     bool near = p != null && (p.transform.position - et.transform.position).sqrMagnitude < NearMessages * NearMessages;
-                    try { RunAs(ours ? Part.PlayerAndShared : near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire); }
-                    catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world trigger {et.name} #{index}: {e.Message}"); }
+                    try
+                    {
+                        RunAs(ours ? Part.PlayerAndShared : near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire);
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't run world trigger {et.name} #{index}: {e.Message}");
+                    }
                 }
                 return;
             }
@@ -1327,12 +1478,19 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                var wasBy = By; if (s.IsHost)
+                var wasBy = By;
+                if (s.IsHost)
                 {
                     By = from;
                 }
-                try { ExitArrived(et, t, index, s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient); }
-                finally { By = wasBy; }
+                try
+                {
+                    ExitArrived(et, t, index, s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient);
+                }
+                finally
+                {
+                    By = wasBy;
+                }
             }
             else if (kind == Kind.Trigger)
             {
@@ -1343,8 +1501,16 @@ namespace DarkwoodMP.World
                     // A trigger the host doesn't have (in a separate location only the joiner has loaded) is still
                     // the joiner's to use, if the world events it fires are ones the host has: the joiner's trip is its
                     // own, and the world events are what a joiner may ask for by name anyway (kind 2).
-                    if (t == null && Authority.RequesterAway) { Authority.AcceptAway($"event {obj} #{index}", Alone); return; }
-                    if (t == null && !WorldEventsKnown(name)) { Authority.Refuse("no such event here"); return; }
+                    if (t == null && Authority.RequesterAway)
+                    {
+                        Authority.AcceptAway($"event {obj} #{index}", Alone);
+                        return;
+                    }
+                    if (t == null && !WorldEventsKnown(name))
+                    {
+                        Authority.Refuse("no such event here");
+                        return;
+                    }
                     if (t != null && !TriggerAllowed(et, t))
                     {
                         return;
@@ -1362,7 +1528,8 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
                 }
-                var wasBy = By; if (s.IsHost)
+                var wasBy = By;
+                if (s.IsHost)
                 {
                     By = from;
                 }
@@ -1380,13 +1547,22 @@ namespace DarkwoodMP.World
                         var ge = t.gameEvents;
                         if (CanRun(ge))
                         {
-                            try { RunAs(part, replaying: s.IsClient, ge.fire); }
-                            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run event {et.name} #{index}: {e.Message}"); }
+                            try
+                            {
+                                RunAs(part, replaying: s.IsClient, ge.fire);
+                            }
+                            catch (Exception e)
+                            {
+                                Plugin.Log.LogWarning($"Couldn't run event {et.name} #{index}: {e.Message}");
+                            }
                             Owe(t, $"{et.name} #{index}");
                         }
                     }
                 }
-                finally { By = wasBy; }
+                finally
+                {
+                    By = wasBy;
+                }
             }
             else
             {
@@ -1395,9 +1571,21 @@ namespace DarkwoodMP.World
                 bool known = events != null && events.worldEvents.TryGetValue(name, out ge) && ge != null;
                 if (s.IsHost)
                 {
-                    if (!known && Authority.RequesterAway) { Authority.AcceptAway($"world event {name}", Alone); return; }
-                    if (!known) { Authority.Refuse($"no world event {name} here"); return; }
-                    if (ge.fired && !ge.multipleFire) { Authority.Refuse($"{name} has already happened"); return; }
+                    if (!known && Authority.RequesterAway)
+                    {
+                        Authority.AcceptAway($"world event {name}", Alone);
+                        return;
+                    }
+                    if (!known)
+                    {
+                        Authority.Refuse($"no world event {name} here");
+                        return;
+                    }
+                    if (ge.fired && !ge.multipleFire)
+                    {
+                        Authority.Refuse($"{name} has already happened");
+                        return;
+                    }
                     ExpectTrips(from, ge);
                 }
                 if (Debug)
@@ -1408,13 +1596,23 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                var wasBy = By; if (s.IsHost)
+                var wasBy = By;
+                if (s.IsHost)
                 {
                     By = from;
                 }
-                try { RunAs(s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient, () => events.fireWorldEvent(name)); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't run world event {name}: {e.Message}"); }
-                finally { By = wasBy; }
+                try
+                {
+                    RunAs(s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient, () => events.fireWorldEvent(name));
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't run world event {name}: {e.Message}");
+                }
+                finally
+                {
+                    By = wasBy;
+                }
             }
 
             if (s.IsHost)
@@ -1447,17 +1645,37 @@ namespace DarkwoodMP.World
         /// <summary>Host: a joiner's player can have left this area trigger: it's an area here and they are near it.</summary>
         private static bool ExitAllowed(ulong from, EventTriggers et, global::EventTrigger t)
         {
-            if (t.type != global::EventTrigger.Type.area) { Authority.Refuse($"{et.name} isn't an area here"); return false; }
+            if (t.type != global::EventTrigger.Type.area)
+            {
+                Authority.Refuse($"{et.name} isn't an area here");
+                return false;
+            }
             return Authority.InReach(et.transform.position, 3000f, et.name);
         }
 
         /// <summary>The trigger can fire in the host's world and the requester is near it.</summary>
         private static bool TriggerAllowed(EventTriggers et, global::EventTrigger t)
         {
-            if (t.disabled) { Authority.Refuse("that event is switched off"); return false; }
-            if (t.fired && !t.multipleFire) { Authority.Refuse("that has already happened"); return false; }
-            if (t.gameEvents == null) { Authority.Refuse("nothing happens there"); return false; }
-            if (t.gameEvents.fired && !t.gameEvents.multipleFire) { Authority.Refuse("its events have already run"); return false; }
+            if (t.disabled)
+            {
+                Authority.Refuse("that event is switched off");
+                return false;
+            }
+            if (t.fired && !t.multipleFire)
+            {
+                Authority.Refuse("that has already happened");
+                return false;
+            }
+            if (t.gameEvents == null)
+            {
+                Authority.Refuse("nothing happens there");
+                return false;
+            }
+            if (t.gameEvents.fired && !t.gameEvents.multipleFire)
+            {
+                Authority.Refuse("its events have already run");
+                return false;
+            }
             if (!Authority.InReach(et.transform.position, 3000f, et.name))
             {
                 return false;
@@ -1465,7 +1683,10 @@ namespace DarkwoodMP.World
             foreach (var req in t.eventRequirements)
             {
                 if (req != null && HostChecks.Contains(req.type) && !req.requirementsMet())
-                { Authority.Refuse($"its requirement ({req.type}) isn't met here"); return false; }
+                {
+                    Authority.Refuse($"its requirement ({req.type}) isn't met here");
+                    return false;
+                }
             }
             return true;
         }
@@ -1551,7 +1772,12 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.StepDepth--;
             }
-            if (__state.Item3) { ScriptedEvents.Current = __state.Item1; ScriptedEvents.Firing = __state.Item2; ScriptedEvents.By = __state.Item4; }
+            if (__state.Item3)
+            {
+                ScriptedEvents.Current = __state.Item1;
+                ScriptedEvents.Firing = __state.Item2;
+                ScriptedEvents.By = __state.Item4;
+            }
             return __exception;
         }
     }
@@ -1570,7 +1796,11 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Collider other) =>
             ScriptedEvents.PlayerEntered = other != null && Player.Instance != null && other.gameObject == Player.Instance.gameObject;
-        static Exception Finalizer(Exception __exception) { ScriptedEvents.PlayerEntered = false; return __exception; }
+        static Exception Finalizer(Exception __exception)
+        {
+            ScriptedEvents.PlayerEntered = false;
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(EventTriggers), "OnTriggerExit")]
@@ -1578,7 +1808,11 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Collider other) =>
             ScriptedEvents.PlayerEntered = other != null && Player.Instance != null && other.gameObject == Player.Instance.gameObject;
-        static Exception Finalizer(Exception __exception) { ScriptedEvents.PlayerEntered = false; return __exception; }
+        static Exception Finalizer(Exception __exception)
+        {
+            ScriptedEvents.PlayerEntered = false;
+            return __exception;
+        }
     }
 
     /// <summary>
@@ -1618,8 +1852,14 @@ namespace DarkwoodMP.World
                 return; // it didn't run (its requirements)
             }
             var et = __instance.thisEventTriggers;
-            try { ScriptedEvents.SendExit(et, et.eventTriggers.IndexOf(__instance)); }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send the exit of {et.name}: {e.Message}"); }
+            try
+            {
+                ScriptedEvents.SendExit(et, et.eventTriggers.IndexOf(__instance));
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't send the exit of {et.name}: {e.Message}");
+            }
         }
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part) __state)
@@ -1640,7 +1880,11 @@ namespace DarkwoodMP.World
             __state = ScriptedEvents.SettingOff;
             ScriptedEvents.SettingOff = ScriptedEvents.ByOurPlayer(TriggerType);
         }
-        static Exception Finalizer(Exception __exception, bool __state) { ScriptedEvents.SettingOff = __state; return __exception; }
+        static Exception Finalizer(Exception __exception, bool __state)
+        {
+            ScriptedEvents.SettingOff = __state;
+            return __exception;
+        }
     }
 
     /// <summary>Remember, for each trigger coroutine, whether our player set it off and in which part it runs.</summary>
@@ -1689,9 +1933,12 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
-                    Part = ScriptedEvents.Part.All, ByPlayer = true, World = true,
+                    Part = ScriptedEvents.Part.All,
+                    ByPlayer = true,
+                    World = true,
                     By = ScriptedEvents.CauseFor(TriggerType), // a joiner behind it gets its player part (SendCaused)
-                    Triggers = thisEventTriggers, Index = thisEventTriggers.eventTriggers.IndexOf(__instance),
+                    Triggers = thisEventTriggers,
+                    Index = thisEventTriggers.eventTriggers.IndexOf(__instance),
                 });
                 return;
             }
@@ -1848,7 +2095,11 @@ namespace DarkwoodMP.World
                 ScriptedEvents.Cause = ScriptedEvents.SwitcherOf(__instance.GetComponent<Item>());
             }
         }
-        static Exception Finalizer(Exception __exception, ulong __state) { ScriptedEvents.Cause = __state; return __exception; }
+        static Exception Finalizer(Exception __exception, ulong __state)
+        {
+            ScriptedEvents.Cause = __state;
+            return __exception;
+        }
     }
 
     /// <summary>A world event a character's animation fires is the host's (ScriptedEvents.FromAnimation).</summary>
@@ -1858,6 +2109,10 @@ namespace DarkwoodMP.World
         static bool Prefix(AnimationTriggerListener __instance, string eventInfo, tk2dSpriteAnimationFrame.Trigger.Type type) =>
             type != tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent || ScriptedEvents.FromAnimation(__instance, eventInfo);
 
-        static Exception Finalizer(Exception __exception) { ScriptedEvents.AnimationSent = false; return __exception; }
+        static Exception Finalizer(Exception __exception)
+        {
+            ScriptedEvents.AnimationSent = false;
+            return __exception;
+        }
     }
 }

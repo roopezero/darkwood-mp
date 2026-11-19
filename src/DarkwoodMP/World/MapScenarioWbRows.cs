@@ -45,7 +45,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Check(string[] a, Result r)
         {
             var args = a.ToList();
-            string Opt(string name, int k = 1) { int i = args.IndexOf(name); return i >= 0 && i + k < args.Count ? args[i + k] : null; }
+            string Opt(string name, int k = 1)
+            {
+                int i = args.IndexOf(name);
+                return i >= 0 && i + k < args.Count ? args[i + k] : null;
+            }
             int wantLevel = Opt("--level") != null ? int.Parse(Opt("--level")) : -1;
             int grown = Opt("--grown") != null ? int.Parse(Opt("--grown")) : -1;
             if (args.Contains("--after-reload"))
@@ -55,11 +59,19 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
-                if (Scene == _sceneBefore || !WorldShare.WorldReady) { r.Fail("our world wasn't loaded again"); yield break; }
+                if (Scene == _sceneBefore || !WorldShare.WorldReady)
+                {
+                    r.Fail("our world wasn't loaded again");
+                    yield break;
+                }
                 yield return new WaitForSeconds(5f); // the host's contents of the storage (SlotShare.Update asks for them)
             }
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until && (st.slots.Count != WorkbenchStorage.Wanted(wb, Level) || (wantLevel > 0 && Level != wantLevel)))
@@ -68,9 +80,21 @@ namespace DarkwoodMP.World
             }
             int want = WorkbenchStorage.Wanted(wb, Level);
             r.Info = $"{MapScenarioWorld.Ref(st)} level {Level}: {st.slots.Count} slots (base {WorkbenchStorage.BaseSlots(wb)}, wanted {want}), {st.maxColumns} columns, {st.getAllItems().Count} filled";
-            if (wantLevel > 0 && Level != wantLevel) { r.Fail($"level {Level}, not {wantLevel}: {r.Info}"); yield break; }
-            if (st.slots.Count != want) { r.Fail($"slot count isn't the level's: {r.Info}"); yield break; }
-            if (grown >= 0 && st.slots.Count - _countBefore != grown) { r.Fail($"grew by {st.slots.Count - _countBefore}, not {grown}: {r.Info}"); yield break; }
+            if (wantLevel > 0 && Level != wantLevel)
+            {
+                r.Fail($"level {Level}, not {wantLevel}: {r.Info}");
+                yield break;
+            }
+            if (st.slots.Count != want)
+            {
+                r.Fail($"slot count isn't the level's: {r.Info}");
+                yield break;
+            }
+            if (grown >= 0 && st.slots.Count - _countBefore != grown)
+            {
+                r.Fail($"grew by {st.slots.Count - _countBefore}, not {grown}: {r.Info}");
+                yield break;
+            }
             if (grown < 0)
             {
                 _countBefore = st.slots.Count;   // what a later --grown counts from (in this game)
@@ -81,20 +105,30 @@ namespace DarkwoodMP.World
             }
             if (Opt("--slot") != null)
             {
-                int i = int.Parse(Opt("--slot")); if (i < 0)
+                int i = int.Parse(Opt("--slot"));
+                if (i < 0)
                 {
                     i += st.slots.Count;
                 }
-                string type = Opt("--slot", 2); int amount = int.Parse(Opt("--slot", 3));
+                string type = Opt("--slot", 2);
+                int amount = int.Parse(Opt("--slot", 3));
                 var s = st.slots[i];
                 bool ok = type == "-" ? InvItemClass.isNull(s.invItem) : !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
                 r.Info += $"; slot {i}: {Slot(s)}";
-                if (!ok) { r.Fail($"slot {i} holds {Slot(s)}, not {type}x{amount}: {r.Info}"); yield break; }
+                if (!ok)
+                {
+                    r.Fail($"slot {i} holds {Slot(s)}, not {type}x{amount}: {r.Info}");
+                    yield break;
+                }
             }
             if (st.open)
             {
                 string drawn = MapScenarioUi.Drawn(st) ?? Layout(st);
-                if (drawn != null) { r.Fail($"drawn wrong: {drawn}; {r.Info}"); yield break; }
+                if (drawn != null)
+                {
+                    r.Fail($"drawn wrong: {drawn}; {r.Info}");
+                    yield break;
+                }
                 r.Info += "; drawn right";
             }
             string dir = Opt("--shot");
@@ -172,9 +206,17 @@ namespace DarkwoodMP.World
         private static IEnumerator Upgrade(string[] a, Result r)
         {
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
-            if (P.openedItemInventory2 != st || P.openedItemInventory == null || !P.openedItemInventory.isWorkbench) { r.Fail("the workbench isn't open here"); yield break; }
+            if (P.openedItemInventory2 != st || P.openedItemInventory == null || !P.openedItemInventory.isWorkbench)
+            {
+                r.Fail("the workbench isn't open here");
+                yield break;
+            }
             bool max = a.Length > 0 && a[0] == "max";
             int first = Level, firstCount = st.slots.Count;
             var done = new List<string>();
@@ -184,7 +226,11 @@ namespace DarkwoodMP.World
                 var up = level - 1 < wb.levels.Count ? wb.levels[level - 1].upgradeRecipe : null;
                 if (up == null || up.recipes.Count == 0)
                 {
-                    if (n == 0) { r.Fail($"no upgrade from level {level} ({wb.levels.Count} levels)"); yield break; }
+                    if (n == 0)
+                    {
+                        r.Fail($"no upgrade from level {level} ({wb.levels.Count} levels)");
+                        yield break;
+                    }
                     break;
                 }
                 var recipe = up.recipes[0];
@@ -197,12 +243,24 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.8f);
                 int before = st.slots.Count;
-                if (n == 0) { _countBefore = before; _sceneBefore = Scene; }
+                if (n == 0)
+                {
+                    _countBefore = before;
+                    _sceneBefore = Scene;
+                }
                 AsPlayer(() => up.doCraft(recipe));
                 yield return new WaitForSeconds(1f);
                 done.Add($"{level} -> {Level} ({string.Join(", ", recipe.requirements.Where(q => q?.item != null).Select(q => $"{q.item.type}x{q.amount}"))})");
-                if (Level != level + 1) { r.Fail($"the level didn't go up from {level}: {string.Join("; ", done)}"); yield break; }
-                if (st.slots.Count != before + WorkbenchStorage.RowSize) { r.Fail($"the storage didn't grow by a row at level {Level}: {before} -> {st.slots.Count}"); yield break; }
+                if (Level != level + 1)
+                {
+                    r.Fail($"the level didn't go up from {level}: {string.Join("; ", done)}");
+                    yield break;
+                }
+                if (st.slots.Count != before + WorkbenchStorage.RowSize)
+                {
+                    r.Fail($"the storage didn't grow by a row at level {Level}: {before} -> {st.slots.Count}");
+                    yield break;
+                }
             }
             r.Info = $"level {first} -> {Level} of {wb.levels.Count} levels; storage {firstCount} -> {st.slots.Count} slots; upgrades {string.Join("; ", done)}";
         }
@@ -213,20 +271,43 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Reload(string[] a, Result r)
         {
-            if (!SaveRedirect.Active) { r.Fail("the saves aren't a test copy (--dwmp-sandbox or the test world)"); yield break; }
+            if (!SaveRedirect.Active)
+            {
+                r.Fail("the saves aren't a test copy (--dwmp-sandbox or the test world)");
+                yield break;
+            }
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
             int count = st.slots.Count, level = Level;
-            int i = int.Parse(a[0]); if (i < 0)
+            int i = int.Parse(a[0]);
+            if (i < 0)
             {
                 i += count;
             }
             string before = Slot(st.slots[i]);
-            try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] wb-rows-reload: closeInventory: {e.Message}"); }
+            try
+            {
+                P.closeInventory();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[map] wb-rows-reload: closeInventory: {e.Message}");
+            }
             yield return new WaitForSeconds(0.8f);
-            try { Singleton<SaveManager>.Instance.Save(doJson: true, force: true); }
-            catch (Exception e) { r.Fail($"Save threw: {e.Message}"); yield break; }
+            try
+            {
+                Singleton<SaveManager>.Instance.Save(doJson: true, force: true);
+            }
+            catch (Exception e)
+            {
+                r.Fail($"Save threw: {e.Message}");
+                yield break;
+            }
             yield return new WaitForSeconds(1.5f);
             Plugin.Log.LogInfo($"[map] wb-rows-reload: saved ({count} slots, slot {i} {before}, level {level}); loading the world again");
             Singleton<UI>.Instance.quickLoadGame();
@@ -236,10 +317,18 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (!WorldShare.WorldReady) { r.Fail("the world didn't load again"); yield break; }
+            if (!WorldShare.WorldReady)
+            {
+                r.Fail("the world didn't load again");
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             wb = Bench();
-            if (wb == null) { r.Fail("no workbench after the reload"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench after the reload");
+                yield break;
+            }
             st = wb.normalInventory;
             string after = i < st.slots.Count ? Slot(st.slots[i]) : "(no such slot)";
             r.Info = $"before: level {level}, {count} slots, slot {i} {before}; after: level {Level}, {st.slots.Count} slots, slot {i} {after}";

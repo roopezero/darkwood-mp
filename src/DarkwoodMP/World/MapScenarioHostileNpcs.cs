@@ -39,9 +39,14 @@ namespace DarkwoodMP.World
         private static IEnumerator KeepAway(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             float dist = F(a[1]);
-            var away = P.transform.position - c.transform.position; away.y = 0f;
+            var away = P.transform.position - c.transform.position;
+            away.y = 0f;
             if (away.sqrMagnitude < 1f)
             {
                 away = Vector3.right;
@@ -82,7 +87,11 @@ namespace DarkwoodMP.World
         {
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Core.AddPrefab("Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
-            if (go == null) { r.Fail($"no prefab Characters/NPC/{a[0]}"); yield break; }
+            if (go == null)
+            {
+                r.Fail($"no prefab Characters/NPC/{a[0]}");
+                yield break;
+            }
             Core.addToSaveable(go, isDynamic: true, assignID: true);
             var c = go.GetComponent<Character>();
             if (c != null)
@@ -90,7 +99,11 @@ namespace DarkwoodMP.World
                 c.isActive = true;
             }
             yield return new WaitForSecondsRealtime(1f);
-            if (c == null || c.npc == null) { r.Fail($"{a[0]} isn't an NPC"); yield break; }
+            if (c == null || c.npc == null)
+            {
+                r.Fail($"{a[0]} isn't an NPC");
+                yield break;
+            }
             r.Info = Props(c);
             if (Combat.HostileNpcs.TurnedHostile(c))
             {
@@ -103,7 +116,11 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSecondsRealtime(0.5f);
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             r.Info = Props(c);
             if (Combat.NetEnemies.Eligible(c) || Combat.NetEnemies.Frozen.Contains(c))
             {
@@ -118,7 +135,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Hit(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             float dmg = F(a[1]);
             int times = a.Length > 2 ? int.Parse(a[2]) : 1;
             float was = c.health;
@@ -136,7 +157,11 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             yield return new WaitForSecondsRealtime(1f); // the host's health for it, from its next states
-            if (c == null) { r.Fail("it's gone"); yield break; }
+            if (c == null)
+            {
+                r.Fail("it's gone");
+                yield break;
+            }
             r.Info = $"health {was:0} -> {c.health:0}; {Props(c)}";
             if (ne == null || !ne.NetIdOf(c, out _))
             {
@@ -152,7 +177,11 @@ namespace DarkwoodMP.World
         private static IEnumerator HostRuns(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             bool wantClient = a.Length < 2 || a[1] == "client";
             float until = Time.realtimeSinceStartup + 10f;
             bool ok = false;
@@ -167,7 +196,11 @@ namespace DarkwoodMP.World
                 }
                 yield return null;
             }
-            if (c == null) { r.Fail("it's gone"); yield break; }
+            if (c == null)
+            {
+                r.Fail("it's gone");
+                yield break;
+            }
             // One that lost sight of them since (an NPC that doesn't fight on) was still sent after them by us.
             string sent = MapScenarioIssues.LogLines().LastOrDefault(l => l.Contains($"[npc] {c.name} sent after ") || l.Contains($"[npc] {c.name} turned hostile"));
             bool tracked2 = Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IdOf(c, out _);
@@ -186,7 +219,11 @@ namespace DarkwoodMP.World
         private static IEnumerator AttacksUs(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             float was = _healthAtHit > 0f ? _healthAtHit : P.health; // it may have hurt us since we hit it
             float until = Time.realtimeSinceStartup + 35f;
             while (Time.realtimeSinceStartup < until && P.health >= was && c != null && c.alive)
@@ -211,7 +248,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Provoke(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             yield return Walk(c.transform.position, 300f);
             AsPlayer(() => c.attackPlayer());
             var ne = Combat.NetEnemies.Instance;
@@ -220,7 +261,11 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (c == null) { r.Fail("it's gone"); yield break; }
+            if (c == null)
+            {
+                r.Fail("it's gone");
+                yield break;
+            }
             r.Info = Props(c);
             if (ne == null || !ne.NetIdOf(c, out _))
             {
@@ -232,7 +277,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Kill(string[] a, Result r)
         {
             var c = Npc(a[0]);
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             int hits = 0;
             while (c != null && c.alive && hits < 60)
             {
@@ -256,7 +305,8 @@ namespace DarkwoodMP.World
             // A corpse may have lost its NPC part (the game's destroyComponents): found by its kind, its story
             // state by the NPC's name ("npc-dead KIND NPCNAME").
             float until = Time.realtimeSinceStartup + 10f;
-            Character c = null; Flags.NPCState st = null;
+            Character c = null;
+            Flags.NPCState st = null;
             while (Time.realtimeSinceStartup < until)
             {
                 c = Object.FindObjectsOfType<Character>().Where(x => x != null && Kind(x) == a[0])
@@ -268,7 +318,11 @@ namespace DarkwoodMP.World
                 }
                 yield return null;
             }
-            if (c == null) { r.Fail($"no {a[0]} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no {a[0]} here");
+                yield break;
+            }
             r.Info = $"alive {c.alive}, story dead {(st != null ? st.dead.ToString() : "no state")}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(a.Length > 2 ? a[2] : a.Length > 1 ? a[1] : a[0])}";
             if (c.alive || (st != null && !st.dead))
             {

@@ -63,7 +63,11 @@ namespace DarkwoodMP.World
                     return; // a client keeps the host's until it leaves
                 }
                 Apply(Current);
-                if (s.IsHost) { s.Broadcast(Write(Current), Channel.Control, reliable: true); Plugin.Log.LogInfo($"[stacks] sent {Current} to everyone"); }
+                if (s.IsHost)
+                {
+                    s.Broadcast(Write(Current), Channel.Control, reliable: true);
+                    Plugin.Log.LogInfo($"[stacks] sent {Current} to everyone");
+                }
             };
             Apply(Current); // a database made before the mod loaded (if none yet, this does nothing)
         }
@@ -118,12 +122,22 @@ namespace DarkwoodMP.World
             foreach (var k in new List<string>(db.itemsDict.Keys))
             {
                 InvItem it = null;
-                try { it = db.getItem(k, instantiate: false); } catch { }
+                try
+                {
+                    it = db.getItem(k, instantiate: false);
+                }
+                catch
+                {
+                }
                 if (it == null)
                 {
                     continue;
                 }
-                if (!Original.TryGetValue(it, out int orig)) { orig = it.maxAmount; Original[it] = orig; }
+                if (!Original.TryGetValue(it, out int orig))
+                {
+                    orig = it.maxAmount;
+                    Original[it] = orig;
+                }
                 if (!Eligible(it, orig))
                 {
                     continue;

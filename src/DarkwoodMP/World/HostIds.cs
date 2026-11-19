@@ -56,7 +56,18 @@ namespace DarkwoodMP.World
             _session = s;
             s.Register(MsgType.HostIds, OnHostIds);
             s.OnPeerConnected += SendAllTo;
-            s.OnSessionEnded += () => { _started.Clear(); _pending.Clear(); _outgoing.Clear(); _late.Clear(); _lateChecked.Clear(); _lateTied.Clear(); _hostAt.Clear(); Given = 0; Tied = 0; };
+            s.OnSessionEnded += () =>
+            {
+                _started.Clear();
+                _pending.Clear();
+                _outgoing.Clear();
+                _late.Clear();
+                _lateChecked.Clear();
+                _lateTied.Clear();
+                _hostAt.Clear();
+                Given = 0;
+                Tied = 0;
+            };
         }
 
         private static bool Hosting => _session != null && _session.IsHost && WorldActions.Sharing;
@@ -82,7 +93,11 @@ namespace DarkwoodMP.World
                 return;
             }
             float now = Time.unscaledTime;
-            if (now >= _nextPrune) { _nextPrune = now + 10f; ObjRef.PruneShared(); }
+            if (now >= _nextPrune)
+            {
+                _nextPrune = now + 10f;
+                ObjRef.PruneShared();
+            }
             if (_started.Count == 0 && _pending.Count == 0)
             {
                 return;
@@ -108,10 +123,18 @@ namespace DarkwoodMP.World
                     _outgoing.Add((id, go.name, go.transform.position, PlaceOf(go)));
                     Given++;
                 }
-                if (_outgoing.Count > 0) { Send(_outgoing, 0, 0); _outgoing.Clear(); }
+                if (_outgoing.Count > 0)
+                {
+                    Send(_outgoing, 0, 0);
+                    _outgoing.Clear();
+                }
                 return;
             }
-            if (!Joined) { _started.Clear(); return; }
+            if (!Joined)
+            {
+                _started.Clear();
+                return;
+            }
 
             // Client: tie what the host announced to objects that started here after the message.
             for (int i = 0; i < _pending.Count; i++)
@@ -121,7 +144,11 @@ namespace DarkwoodMP.World
                 {
                     _pending.RemoveAt(i--);
                 }
-                else if (now > p.until) { AddLate(p.id, p.name, p.pos, p.place); _pending.RemoveAt(i--); }
+                else if (now > p.until)
+                {
+                    AddLate(p.id, p.name, p.pos, p.place);
+                    _pending.RemoveAt(i--);
+                }
             }
             // What started a while ago and is still unnamed: maybe the copy of an id the host gave out long before.
             if (_late.Count > 0)
@@ -136,7 +163,11 @@ namespace DarkwoodMP.World
             }
             // Forget what started too long ago to be anyone's copy.
             _started.RemoveAll(s => s.go == null || now - s.at > Window);
-            if (_started.Count == 0) { _lateChecked.Clear(); _lateTied.Clear(); }
+            if (_started.Count == 0)
+            {
+                _lateChecked.Clear();
+                _lateTied.Clear();
+            }
         }
 
         private static void AddLate(long id, string name, Vector3 pos, int place)
@@ -196,7 +227,12 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (best < 0 || Better(d, p == place, bestD, bestSame)) { bestD = d; best = i; bestSame = p == place; }
+                if (best < 0 || Better(d, p == place, bestD, bestSame))
+                {
+                    bestD = d;
+                    best = i;
+                    bestSame = p == place;
+                }
             }
             if (best < 0 || !ObjRef.BindShared(list[best].id, go))
             {
@@ -233,7 +269,12 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 bool same = PlaceOf(go) == place;
-                if (best == null || Better(d, same, bestD, bestSame)) { bestD = d; best = go; bestSame = same; }
+                if (best == null || Better(d, same, bestD, bestSame))
+                {
+                    bestD = d;
+                    best = go;
+                    bestSame = same;
+                }
             }
             if (best == null)
             {
@@ -347,7 +388,11 @@ namespace DarkwoodMP.World
                 ObjRef.Announced(id, name, pos);
                 _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it loaded, found by name and position when named.
-                if ((flags & MadeBefore) != 0) { AddLate(id, name, pos, place); continue; }
+                if ((flags & MadeBefore) != 0)
+                {
+                    AddLate(id, name, pos, place);
+                    continue;
+                }
                 if (!Joined || !TryBind(id, name, pos, place))
                 {
                     _pending.Add((id, name, pos, place, until));

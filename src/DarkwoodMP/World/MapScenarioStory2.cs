@@ -16,7 +16,13 @@ namespace DarkwoodMP.World
     {
         private const string Item = "rope";
 
-        private sealed class Made { public EventTriggers Et; public global::EventTrigger T; public LaterTestCounter C; public int Had; }
+        private sealed class Made
+        {
+            public EventTriggers Et;
+            public global::EventTrigger T;
+            public LaterTestCounter C;
+            public int Had;
+        }
         private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
 
         public static void Register()
@@ -34,7 +40,11 @@ namespace DarkwoodMP.World
         private static IEnumerator OwedLoaded(string[] a, Result r)
         {
             var et = a.Length > 0 ? GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>() : null;
-            if (et == null || et.eventTriggers.Count == 0) { r.Fail("no such trigger (later-setup first)"); yield break; }
+            if (et == null || et.eventTriggers.Count == 0)
+            {
+                r.Fail("no such trigger (later-setup first)");
+                yield break;
+            }
             var t = et.eventTriggers[0];
             t.fired = true;
             if (t.gameEvents != null)
@@ -92,7 +102,11 @@ namespace DarkwoodMP.World
             ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpLaterCount", targetGameObjects = new List<GameObject> { m.C.gameObject }, eventAmount = 1 });
             var db = Singleton<ItemsDatabase>.Instance;
             var prefab = db != null && db.itemsDict.TryGetValue(Item, out var path) ? Resources.Load(path) as GameObject : null;
-            if (prefab == null || prefab.GetComponent<InvItem>() == null) { r.Fail($"no item prefab {Item}"); return null; }
+            if (prefab == null || prefab.GetComponent<InvItem>() == null)
+            {
+                r.Fail($"no item prefab {Item}");
+                return null;
+            }
             ge.events.Add(new GameEvent { type = GameEvent.Type.addOrRemoveInvItem, activeModifier = true, prefabList = new List<Object> { prefab }, amount = 1, eventAmount = 1 });
             return ge;
         }
@@ -104,9 +118,17 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator CausedSetup(string[] a, Result r)
         {
-            if (a.Length < 4) { r.Fail("caused-setup ID LAMP DX DZ"); yield break; }
+            if (a.Length < 4)
+            {
+                r.Fail("caused-setup ID LAMP DX DZ");
+                yield break;
+            }
             var lamp = MapScenarioWorld.Find<Item>(a[1], i => i.switchable);
-            if (lamp == null) { r.Fail($"nothing switchable called {a[1]}"); yield break; }
+            if (lamp == null)
+            {
+                r.Fail($"nothing switchable called {a[1]}");
+                yield break;
+            }
             if (lamp.isOn)
             {
                 lamp.turnOff();
@@ -125,8 +147,11 @@ namespace DarkwoodMP.World
             var awto = lamp.GetComponent<ActionWhenTurnedOn>() ?? lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
             awto.actions.Add(new ActionWhenTurnedOn.Action
             {
-                type = ActionWhenTurnedOn.Action.Type.refreshWhenTurnedOn, destTransform = go.transform,
-                onUpdate = true, interval = 0.5f, requirements = new List<EventTriggerRequirement>(),
+                type = ActionWhenTurnedOn.Action.Type.refreshWhenTurnedOn,
+                destTransform = go.transform,
+                onUpdate = true,
+                interval = 0.5f,
+                requirements = new List<EventTriggerRequirement>(),
             });
             MakeRoom();
             m.Had = MapScenarioWorld.CarriedOf(Item);
@@ -138,7 +163,11 @@ namespace DarkwoodMP.World
         /// <summary>"caused-check ID N GOT": the shared part of ID ran N times here, and our player got GOT Item from it.</summary>
         private static IEnumerator CausedCheck(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("caused-check ID N GOT (caused-setup first)"); yield break; }
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null)
+            {
+                r.Fail("caused-check ID N GOT (caused-setup first)");
+                yield break;
+            }
             int want = int.Parse(a[1]), wantGot = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 8f;
             while ((m.C.N < want || MapScenarioWorld.CarriedOf(Item) - m.Had < wantGot) && Time.realtimeSinceStartup < until)

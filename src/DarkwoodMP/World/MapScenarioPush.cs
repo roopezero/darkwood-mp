@@ -162,7 +162,11 @@ namespace DarkwoodMP.World
                 }
                 Plugin.Log.LogInfo(FormattableString.Invariant($"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
             }
-            if (_order.Count == 0 || a.Contains("new")) { _order.Clear(); _order.AddRange(things.Select(Ref)); }
+            if (_order.Count == 0 || a.Contains("new"))
+            {
+                _order.Clear();
+                _order.AddRange(things.Select(Ref));
+            }
             r.Info = string.Join("; ", things.Select(i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} {Fmt1(i.transform.position)}"));
             if (things.Count == 0)
             {
@@ -178,7 +182,11 @@ namespace DarkwoodMP.World
         private static Item ByIndex(string[] a, Result r)
         {
             int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
-            if (k < 0 || k >= _order.Count) { r.Fail($"no thing {k} (ps-list found {_order.Count})"); return null; }
+            if (k < 0 || k >= _order.Count)
+            {
+                r.Fail($"no thing {k} (ps-list found {_order.Count})");
+                return null;
+            }
             var it = StateDump.All<Item>().FirstOrDefault(i => i != null && Ref(i) == _order[k]);
             if (it == null)
             {
@@ -212,7 +220,8 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            dir.y = 0f; dir = dir.normalized;
+            dir.y = 0f;
+            dir = dir.normalized;
             float until = Time.time + secs;
             while (Time.time < until && (stop == null || !stop()))
             {
@@ -253,7 +262,8 @@ namespace DarkwoodMP.World
         private static bool Clear(Item it, Vector3 a, Vector3 b)
         {
             float y = P.transform.position.y;
-            a.y = y; b.y = y;
+            a.y = y;
+            b.y = y;
             var d = b - a;
             foreach (var h in Physics.SphereCastAll(a, 15f, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
             {
@@ -293,7 +303,11 @@ namespace DarkwoodMP.World
             start = it.transform.position;
             float moved() => StateDump.Flat(it.transform.position - start);
             yield return BodyWalk(dir, 6f, () => it == null || moved() >= dist);
-            if (it == null) { r.Fail("it's gone"); yield break; }
+            if (it == null)
+            {
+                r.Fail("it's gone");
+                yield break;
+            }
             if (lean)
             {
                 // Pressed against it while it's still: a body held there. A thing in the way stops it, else it goes on.
@@ -355,7 +369,11 @@ namespace DarkwoodMP.World
         {
             var dir = Dir(a.Length > 0 ? F(a[0]) : 0f);
             var d = Nearest(Object.FindObjectsOfType<Door>().Where(x => x.opened && !x.destroyed && !x.barricaded && x.body != null && ObjRef.Of(x.gameObject).Valid), Centre);
-            if (d == null) { r.Fail("no open door"); yield break; }
+            if (d == null)
+            {
+                r.Fail("no open door");
+                yield break;
+            }
             float before = DoorLeaf.Signed(d);
             // From DEG's side, and if the leaf doesn't turn (it's against the wall that way), from the other.
             for (int side = 0; side < 2 && Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f; side++, dir = -dir)
@@ -376,7 +394,8 @@ namespace DarkwoodMP.World
         private static IEnumerator Overlap(string[] a, Result r)
         {
             var sync = Sync.PlayerSync.Instance;
-            Sync.RemotePlayer near = null; float best = float.MaxValue;
+            Sync.RemotePlayer near = null;
+            float best = float.MaxValue;
             if (sync != null)
             {
                 foreach (var rp in sync.Remotes.Values)
@@ -387,10 +406,17 @@ namespace DarkwoodMP.World
                     }
                     float d = StateDump.Flat(rp.Root.transform.position - P.transform.position);
                     if (d < best)
-                    { best = d; near = rp; }
+                    {
+                        best = d;
+                        near = rp;
+                    }
                 }
             }
-            if (near == null) { r.Fail("no other player shown here"); yield break; }
+            if (near == null)
+            {
+                r.Fail("no other player shown here");
+                yield break;
+            }
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
             Place(on);

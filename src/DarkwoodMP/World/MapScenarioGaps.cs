@@ -38,7 +38,12 @@ namespace DarkwoodMP.World
             MapScenario.Add("gaps-setup", Setup);
             // 11 dreams
             MapScenario.Add("dream", Dream, timeout: 30f);
-            MapScenario.Add("clock-note", (a, r) => { _noted = Singleton<Controller>.Instance.CurrentTime; r.Info = $"{_noted}"; return Nothing(); });
+            MapScenario.Add("clock-note", (a, r) =>
+            {
+                _noted = Singleton<Controller>.Instance.CurrentTime;
+                r.Info = $"{_noted}";
+                return Nothing();
+            });
             MapScenario.Add("clock-check", ClockCheck, timeout: 30f);
             // 61 journal
             MapScenario.Add("journal-pick", JournalPick);
@@ -69,7 +74,10 @@ namespace DarkwoodMP.World
                 foreach (var t in _awayTraders)
                 {
                     if (t != null)
-                    { t.gameObject.SetActive(true); n++; }
+                    {
+                        t.gameObject.SetActive(true);
+                        n++;
+                    }
                 }
                 _awayTraders.Clear();
                 r.Info = $"{n} back";
@@ -108,7 +116,8 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(cp.gameObject);
-                    e["attached"] = cp.attached; e["health"] = StateDump.R(cp.health, 1f);
+                    e["attached"] = cp.attached;
+                    e["health"] = StateDump.R(cp.health, 1f);
                 }
             });
             StateDump.AddSection("shadows", ctx =>
@@ -117,7 +126,9 @@ namespace DarkwoodMP.World
                 if (crate != null && ctx.Near(crate.transform.position))
                 {
                     var e = ctx.Add(crate.gameObject);
-                    e["shadow"] = crate.GetComponent<ShadowArmor>() != null; e["health"] = crate.health; e["destroyed"] = crate.destroyed;
+                    e["shadow"] = crate.GetComponent<ShadowArmor>() != null;
+                    e["health"] = crate.health;
+                    e["destroyed"] = crate.destroyed;
                 }
                 foreach (var sa in StateDump.All<ShadowArmor>())
                 {
@@ -188,7 +199,14 @@ namespace DarkwoodMP.World
             foreach (var t in db.itemsDict.Keys.OrderBy(k => k, StringComparer.Ordinal))
             {
                 InvItem it;
-                try { it = db.getItem(t, instantiate: false); } catch { continue; }
+                try
+                {
+                    it = db.getItem(t, instantiate: false);
+                }
+                catch
+                {
+                    continue;
+                }
                 if (it != null && it.rottenItem != null && it.durabilityDrain > 0f && it.maxDurability > 0f)
                 {
                     found.Add((t, it.isExpItem));
@@ -204,8 +222,13 @@ namespace DarkwoodMP.World
         {
             var made = new List<string>();
             var w = Place(RotPrefab, Spot("rot"));
-            if (w == null) { r.Fail($"couldn't place {RotPrefab}"); yield break; }
-            GameObject crate = null; string used = null;
+            if (w == null)
+            {
+                r.Fail($"couldn't place {RotPrefab}");
+                yield break;
+            }
+            GameObject crate = null;
+            string used = null;
             foreach (var pf in ShadowPrefabs)
             {
                 if (Resources.Load("Prefabs/" + pf) == null)
@@ -213,9 +236,17 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 crate = Place(pf, Spot("shadow"));
-                if (crate != null) { used = pf; break; }
+                if (crate != null)
+                {
+                    used = pf;
+                    break;
+                }
             }
-            if (crate == null) { r.Fail("couldn't place a crate for the shadow"); yield break; }
+            if (crate == null)
+            {
+                r.Fail("couldn't place a crate for the shadow");
+                yield break;
+            }
             yield return new WaitForSecondsRealtime(0.5f);
 
             var inv = w.GetComponent<Inventory>() ?? w.GetComponentInChildren<Inventory>();
@@ -245,7 +276,10 @@ namespace DarkwoodMP.World
 
             var item = crate.GetComponent<Item>();
             var sa = crate.GetComponent<ShadowArmor>() ?? crate.AddComponent<ShadowArmor>();
-            sa.maxHealth = 30f; sa.health = 30f; sa.normalDamageMod = 1f; sa.lightDamage = 0f;
+            sa.maxHealth = 30f;
+            sa.health = 30f;
+            sa.normalDamageMod = 1f;
+            sa.lightDamage = 0f;
             AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth")(sa) = 30f;
             if (item != null)
             {
@@ -269,7 +303,11 @@ namespace DarkwoodMP.World
             var d = Singleton<Dreams>.Instance;
             var c = Singleton<Controller>.Instance;
             bool client = Net.Session.Instance != null && Net.Session.Instance.IsClient;
-            if (d == null || c == null) { r.Fail("no Dreams or Controller"); yield break; }
+            if (d == null || c == null)
+            {
+                r.Fail("no Dreams or Controller");
+                yield break;
+            }
             if (a.Length > 0 && a[0] == "start")
             {
                 d.timeCopy = c.CurrentTime;
@@ -288,7 +326,8 @@ namespace DarkwoodMP.World
             else
             {
                 c.CurrentTime = (int)d.timeCopy;
-                d.dreaming = false; d.switchingDream = false;
+                d.dreaming = false;
+                d.switchingDream = false;
                 c.refreshTime(afterGameLoad: true);
                 r.Info = $"woke at {c.CurrentTime}";
             }
@@ -336,7 +375,11 @@ namespace DarkwoodMP.World
         /// <summary>"journal-add": our player picks up the picked key or item (as KeyReference/QuestItemReference.pickup).</summary>
         private static IEnumerator JournalAdd(string[] a, Result r)
         {
-            if (_jType == null) { r.Fail("journal-pick found nothing"); yield break; }
+            if (_jType == null)
+            {
+                r.Fail("journal-pick found nothing");
+                yield break;
+            }
             var j = Singleton<UI>.Instance.journal;
             if (_jKind == "key")
             {
@@ -353,7 +396,11 @@ namespace DarkwoodMP.World
         /// <summary>"journal-remove": handed over in a dialogue (DialogueWindow's removeItem outcome takes it out of the journal).</summary>
         private static IEnumerator JournalRemove(string[] a, Result r)
         {
-            if (_jType == null) { r.Fail("journal-pick found nothing"); yield break; }
+            if (_jType == null)
+            {
+                r.Fail("journal-pick found nothing");
+                yield break;
+            }
             var j = Singleton<UI>.Instance.journal;
             bool had = _jKind == "key" ? j.keysDict.Remove(_jType) : j.itemsDict.Remove(_jType);
             if (!had)
@@ -367,7 +414,11 @@ namespace DarkwoodMP.World
         /// <summary>"journal-has yes|no": whether our journal has the picked one (waiting up to 8 s for it to arrive).</summary>
         private static IEnumerator JournalHas(string[] a, Result r)
         {
-            if (_jType == null) { r.Fail("journal-pick found nothing"); yield break; }
+            if (_jType == null)
+            {
+                r.Fail("journal-pick found nothing");
+                yield break;
+            }
             var j = Singleton<UI>.Instance.journal;
             bool want = a.Length == 0 || a[0] == "yes";
             bool Has() => _jKind == "key" ? j.keysDict.ContainsKey(_jType) : j.itemsDict.ContainsKey(_jType);
@@ -421,14 +472,22 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             var c = Singleton<Controller>.Instance;
             var l = Hideout(p);
-            if (l == null) { r.Fail("no hideout"); yield break; }
+            if (l == null)
+            {
+                r.Fail("no hideout");
+                yield break;
+            }
             if (Location.getAtPos(p.transform.position) != l)
             {
                 var to = l.traderPosition != null ? l.traderPosition.transform.position : l.transform.position;
                 yield return Walk(to, 150f);
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            if (Location.getAtPos(p.transform.position) != l) { r.Fail($"couldn't get into {l.name} (at {Fmt(p.transform.position)})"); yield break; }
+            if (Location.getAtPos(p.transform.position) != l)
+            {
+                r.Fail($"couldn't get into {l.name} (at {Fmt(p.transform.position)})");
+                yield break;
+            }
             bool reward = !a.Contains("noreward");
             c.startAfterNight(reward);
             // late: the day's morning is already over, so the host ends this one at once; here only that it began counts.
@@ -466,7 +525,11 @@ namespace DarkwoodMP.World
         private static IEnumerator AnEnd(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
-            if (!c.isAfterNight) { r.Fail("not in a morning"); yield break; }
+            if (!c.isAfterNight)
+            {
+                r.Fail("not in a morning");
+                yield break;
+            }
             AsPlayer(() =>
             {
                 c.endAfterNight();
@@ -511,7 +574,11 @@ namespace DarkwoodMP.World
         {
             var c = Singleton<Controller>.Instance;
             bool want = a.Length > 0 && a[0] == "running";
-            if (!c.isAfterNight) { r.Fail("not in a morning"); yield break; }
+            if (!c.isAfterNight)
+            {
+                r.Fail("not in a morning");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 15f;
             while (c.DoUpdateTime != want && Time.realtimeSinceStartup < until)
             {
@@ -536,8 +603,16 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var npc = MorningNpc(Hideout(p));
-            if (npc == null) { r.Fail("no trader or wolf in our hideout"); yield break; }
-            if (!npc.wantsToTalk || npc.characterDialogue == null) { r.Fail($"{npc.name} doesn't want to talk (wantsToTalk {npc.wantsToTalk})"); yield break; }
+            if (npc == null)
+            {
+                r.Fail("no trader or wolf in our hideout");
+                yield break;
+            }
+            if (!npc.wantsToTalk || npc.characterDialogue == null)
+            {
+                r.Fail($"{npc.name} doesn't want to talk (wantsToTalk {npc.wantsToTalk})");
+                yield break;
+            }
             bool expectRefused = a.Contains("--refused");
             yield return Walk(npc.transform.position, 150f);
             int mark = MapScenarioIssues.LogMark();
@@ -586,7 +661,14 @@ namespace DarkwoodMP.World
                     // Not from the main menu, which shows the goodbye line instead (see TalkLock.CloseWhenReady). This
                     // runs nested in the step, where an exception would end it without a reply: catch it.
                     win.currentMenu = DialogueWindow.CurrentMenu.gossip;
-                    try { win.close(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] closing the dialogue: {e.Message}"); }
+                    try
+                    {
+                        win.close();
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"[map] closing the dialogue: {e.Message}");
+                    }
                 }
                 yield return new WaitForSecondsRealtime(0.3f);
             }
@@ -597,13 +679,25 @@ namespace DarkwoodMP.World
         {
             var win = Singleton<UI>.Instance.dialogueWindow;
             var p = Player.Instance;
-            if (win.npc == null || !win.npc.trader) { r.Fail($"not talking to a trader ({(win.npc != null ? win.npc.name : "no one")})"); yield break; }
+            if (win.npc == null || !win.npc.trader)
+            {
+                r.Fail($"not talking to a trader ({(win.npc != null ? win.npc.name : "no one")})");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             while ((win.tweening || !p.inDialogue) && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
-            try { win.openTrade(); } catch (Exception e) { r.Fail($"openTrade: {e.Message}"); yield break; }
+            try
+            {
+                win.openTrade();
+            }
+            catch (Exception e)
+            {
+                r.Fail($"openTrade: {e.Message}");
+                yield break;
+            }
             yield return new WaitForSecondsRealtime(1f);
             r.Info = $"{win.npc?.name}: inShop {p.inShop}";
             if (!p.inShop)
@@ -639,7 +733,11 @@ namespace DarkwoodMP.World
         {
             var win = Singleton<UI>.Instance.dialogueWindow;
             var npc = _talkingTo ?? win.npc;
-            if (npc == null) { r.Fail("not talking to anyone"); yield break; }
+            if (npc == null)
+            {
+                r.Fail("not talking to anyone");
+                yield break;
+            }
             yield return Close(win, npc);
             _talkingTo = null;
             r.Info = $"dialogue {(win.npc == null ? "closed" : "still open")}";
@@ -658,12 +756,21 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var inv = RotWardrobe();
-            if (inv == null) { r.Fail("no wardrobe at the rot spot"); yield break; }
+            if (inv == null)
+            {
+                r.Fail("no wardrobe at the rot spot");
+                yield break;
+            }
             yield return Walk(inv.transform.position);
             p.openedItemInventory = inv; // as if its window were open
             yield return new WaitForSecondsRealtime(SlotShare.AskTimeout + 0.5f);
             var slot = inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.rottenItem != null);
-            if (slot == null) { r.Fail($"no rotting food in {inv.name} {ObjRef.Of(inv.gameObject)}"); p.openedItemInventory = null; yield break; }
+            if (slot == null)
+            {
+                r.Fail($"no rotting food in {inv.name} {ObjRef.Of(inv.gameObject)}");
+                p.openedItemInventory = null;
+                yield break;
+            }
             var it = slot.invItem;
             string food = it.type; // (the slot's item is cleared when it moves)
             float max = Mathf.Max(1f, it.baseClass.maxDurability), d0 = it.durability;
@@ -683,8 +790,18 @@ namespace DarkwoodMP.World
                 {
                     ctl.DoUpdateTime = true;
                 }
-                try { for (int i = 0; i < 1000 && slot.invItem == it && d0 - it.durability < 0.02f * max; i++) { inv.refreshItems(); calls++; } }
-                finally { ctl.DoUpdateTime = was; }
+                try
+                {
+                    for (int i = 0; i < 1000 && slot.invItem == it && d0 - it.durability < 0.02f * max; i++)
+                    {
+                        inv.refreshItems();
+                        calls++;
+                    }
+                }
+                finally
+                {
+                    ctl.DoUpdateTime = was;
+                }
                 yield return null;
             }
             float d1 = InvItemClass.isNull(slot.invItem) ? -1f : slot.invItem.durability;
@@ -692,7 +809,12 @@ namespace DarkwoodMP.World
             var sent = LogSince(mark).Where(l => l.Contains($"slot(s) of {inv.name}") && l.Contains("sent") && !l.Contains("[map]")).ToList();
             var refused = Refused(mark);
             r.Info = $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} in {calls} refreshes";
-            if (d1 < 0f || d1 >= d0) { r.Fail($"it didn't rot: {r.Info}"); p.openedItemInventory = null; yield break; }
+            if (d1 < 0f || d1 >= d0)
+            {
+                r.Fail($"it didn't rot: {r.Info}");
+                p.openedItemInventory = null;
+                yield break;
+            }
             if (sent.Count > 0)
             {
                 r.Fail($"the rot was sent as our change: {sent[0].Trim()}; {r.Info}");
@@ -724,7 +846,11 @@ namespace DarkwoodMP.World
         private static IEnumerator RotHost(string[] a, Result r)
         {
             var inv = RotWardrobe();
-            if (inv == null) { r.Fail("no wardrobe at the rot spot"); yield break; }
+            if (inv == null)
+            {
+                r.Fail("no wardrobe at the rot spot");
+                yield break;
+            }
             var left = inv.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}").ToList();
             var refused = MapScenarioIssues.LogLines().Where(l => l.Contains($"of {inv.name}: refused")).ToList();
             r.Info = $"{inv.name} {ObjRef.Of(inv.gameObject)}: [{string.Join(",", left)}]";
@@ -761,13 +887,20 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (Has(pf)) { from = path; return pf; }
+                if (Has(pf))
+                {
+                    from = path;
+                    return pf;
+                }
                 foreach (var t in pf.GetComponentsInChildren<Trigger>(true))
                 {
                     foreach (var o in new[] { t.prefabToSpawn, t.nonPooledPrefabToSpawn })
                     {
                         if (Has(o))
-                        { from = $"{path} (its trap's {o.name})"; return (GameObject)o; }
+                        {
+                            from = $"{path} (its trap's {o.name})";
+                            return (GameObject)o;
+                        }
                     }
                 }
                 foreach (var vs in pf.GetComponentsInChildren<VineSpawner>(true))
@@ -775,7 +908,10 @@ namespace DarkwoodMP.World
                     foreach (var o in vs.vines)
                     {
                         if (Has(o))
-                        { from = $"{path} (its spawner's {o.name})"; return o; }
+                        {
+                            from = $"{path} (its spawner's {o.name})";
+                            return o;
+                        }
                     }
                 }
             }
@@ -789,7 +925,11 @@ namespace DarkwoodMP.World
         private static IEnumerator VineMake(string[] a, Result r)
         {
             var pf = VinePrefab(out string from);
-            if (pf == null) { r.Fail($"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}"); yield break; }
+            if (pf == null)
+            {
+                r.Fail($"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}");
+                yield break;
+            }
             var go = Object.Instantiate(pf, Spot("vine"), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer != null ? Core.ItemContainer.transform : null);
             go.name = pf.name;
             var cp = go.GetComponentInChildren<ChainParent>(true);
@@ -813,7 +953,11 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var cp = Vine();
-            if (cp == null || !cp.attached) { r.Fail($"no attached vine ({cp != null})"); yield break; }
+            if (cp == null || !cp.attached)
+            {
+                r.Fail($"no attached vine ({cp != null})");
+                yield break;
+            }
             yield return Walk(cp.transform.position, 150f);
             float dmg = a.Length > 0 && a[0] == "all" ? cp.health : Mathf.Floor(cp.maxHealth / 2f);
             var seg = cp.lastChainSegment != null ? cp.lastChainSegment.GetComponent<Vine>() : null;
@@ -821,7 +965,11 @@ namespace DarkwoodMP.World
             {
                 seg = cp.GetComponentInChildren<Vine>();
             }
-            if (seg == null) { r.Fail("the vine has no segment to hit"); yield break; }
+            if (seg == null)
+            {
+                r.Fail("the vine has no segment to hit");
+                yield break;
+            }
             int mark = MapScenarioIssues.LogMark();
             AsPlayer(() => cp.getHit(dmg, p.transform, seg));
             yield return new WaitForSecondsRealtime(1.5f);
@@ -838,7 +986,11 @@ namespace DarkwoodMP.World
         {
             bool attached = a.Length == 0 || a[0] == "attached";
             var cp = Vine();
-            if (cp == null) { r.Fail("no vine"); yield break; }
+            if (cp == null)
+            {
+                r.Fail("no vine");
+                yield break;
+            }
             // "half": what one vine-cut half left
             float health = a.Length < 2 ? -1f : a[1] == "half" ? cp.maxHealth - Mathf.Floor(cp.maxHealth / 2f) : F(a[1]);
             bool Ok() => cp.attached == attached && (health < 0f || Mathf.Abs(cp.health - health) < 0.5f);
@@ -861,9 +1013,17 @@ namespace DarkwoodMP.World
         private static IEnumerator ShadowReady(string[] a, Result r)
         {
             var crate = ShadowCrate();
-            if (crate == null) { r.Fail("no crate at the shadow spot"); yield break; }
+            if (crate == null)
+            {
+                r.Fail("no crate at the shadow spot");
+                yield break;
+            }
             var sa = crate.GetComponent<ShadowArmor>();
-            if (sa == null) { r.Fail($"{crate.name} {ObjRef.Of(crate.gameObject)} has no shadow"); yield break; }
+            if (sa == null)
+            {
+                r.Fail($"{crate.name} {ObjRef.Of(crate.gameObject)} has no shadow");
+                yield break;
+            }
             crate.shadowArmor = sa;
             r.Info = $"{crate.name} {ObjRef.Of(crate.gameObject)}: shadow {BreakSync.ShadowHealth(crate):0.#} of {sa.maxHealth:0}, item health {crate.health}";
         }
@@ -873,7 +1033,11 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var crate = ShadowCrate();
-            if (crate == null || crate.shadowArmor == null) { r.Fail("no shadow-covered crate"); yield break; }
+            if (crate == null || crate.shadowArmor == null)
+            {
+                r.Fail("no shadow-covered crate");
+                yield break;
+            }
             int dmg = a.Length > 0 ? int.Parse(a[0]) : 10;
             yield return Walk(crate.transform.position, 150f);
             int hp = crate.health;
@@ -897,7 +1061,11 @@ namespace DarkwoodMP.World
         private static IEnumerator ShadowCheck(string[] a, Result r)
         {
             var crate = ShadowCrate();
-            if (crate == null) { r.Fail("no crate at the shadow spot"); yield break; }
+            if (crate == null)
+            {
+                r.Fail("no crate at the shadow spot");
+                yield break;
+            }
             bool alive = a.Length == 0 || a[0] == "alive";
             float at = a.Length > 1 ? F(a[1]) : 1e9f;
             bool Ok()
@@ -924,8 +1092,16 @@ namespace DarkwoodMP.World
         private static IEnumerator ShadowReload(string[] a, Result r)
         {
             var crate = ShadowCrate();
-            if (crate == null) { r.Fail("no crate at the shadow spot"); yield break; }
-            if (crate.GetComponent<ShadowArmor>() != null) { r.Fail("the crate's shadow is still alive before the reload"); yield break; }
+            if (crate == null)
+            {
+                r.Fail("no crate at the shadow spot");
+                yield break;
+            }
+            if (crate.GetComponent<ShadowArmor>() != null)
+            {
+                r.Fail("the crate's shadow is still alive before the reload");
+                yield break;
+            }
             var saved = new Item.SaveState(crate); // no shadow, so no saS
             crate.shadowArmor = crate.gameObject.AddComponent<ShadowArmor>();
             yield return null; // its Start makes the effect
@@ -950,14 +1126,27 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             var bags = p.Inventory.slots.Where(s => InvItemClass.isNull(s.invItem)).Take(4).ToList();
             string[] kit = { "bandages", "wire", "rope", "nail" };
-            for (int i = 0; i < bags.Count; i++) { bags[i].inventory = p.Inventory; bags[i].createItem(kit[i], 1); }
+            for (int i = 0; i < bags.Count; i++)
+            {
+                bags[i].inventory = p.Inventory;
+                bags[i].createItem(kit[i], 1);
+            }
             var o = Singleton<OutsideLocations>.Instance;
             var transport = new GameObject("dwmp_test_transport");
             transport.transform.position = Spot("transport");
-            bool wasIn = o.playerInOutsideLocation; var wasObj = o.objectThatTransportedMe;
-            o.playerInOutsideLocation = true; o.objectThatTransportedMe = transport;
-            try { p.dropBody(p.transform.position + new Vector3(80f, 0f, 0f)); }
-            finally { o.playerInOutsideLocation = wasIn; o.objectThatTransportedMe = wasObj; }
+            bool wasIn = o.playerInOutsideLocation;
+            var wasObj = o.objectThatTransportedMe;
+            o.playerInOutsideLocation = true;
+            o.objectThatTransportedMe = transport;
+            try
+            {
+                p.dropBody(p.transform.position + new Vector3(80f, 0f, 0f));
+            }
+            finally
+            {
+                o.playerInOutsideLocation = wasIn;
+                o.objectThatTransportedMe = wasObj;
+            }
             yield return new WaitForSecondsRealtime(3f); // a bag is sent once it has come to rest
             var bag = NearestAll<DeathDrop>(p.transform.position, d => d.GetComponent<Inventory>() != null);
             _marker = bag != null ? bag.additionalMapMarker : null;
@@ -1006,7 +1195,11 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var bag = Bag();
-            if (bag == null) { r.Fail("no bag"); yield break; }
+            if (bag == null)
+            {
+                r.Fail("no bag");
+                yield break;
+            }
             var inv = bag.GetComponent<Inventory>();
             yield return Walk(bag.transform.position);
             _marker = bag.additionalMapMarker;
@@ -1033,7 +1226,10 @@ namespace DarkwoodMP.World
                         AsPlayer(() => inv.hide());
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"[map] bag-take: hide: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[map] bag-take: hide: {e.Message}");
+                }
                 p.openedItemInventory = null;
             }
             yield return new WaitForSecondsRealtime(1.5f);

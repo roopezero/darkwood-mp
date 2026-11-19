@@ -46,11 +46,21 @@ namespace DarkwoodMP
                 while (true)
                 {
                     TcpClient c;
-                    try { c = listener.AcceptTcpClient(); }
-                    catch { return; }
+                    try
+                    {
+                        c = listener.AcceptTcpClient();
+                    }
+                    catch
+                    {
+                        return;
+                    }
                     new Thread(() => Serve(c)) { IsBackground = true, Name = "DarkwoodMP test control" }.Start();
                 }
-            }) { IsBackground = true, Name = "DarkwoodMP test control" }.Start();
+            })
+            {
+                IsBackground = true,
+                Name = "DarkwoodMP test control"
+            }.Start();
         }
 
         private static void Serve(TcpClient c)
@@ -78,7 +88,10 @@ namespace DarkwoodMP
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Test control: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Test control: {e.Message}");
+            }
         }
 
         /// <summary>Replies from the main thread, then lets the connection's thread read the next command.</summary>
@@ -87,8 +100,23 @@ namespace DarkwoodMP
             private readonly StreamWriter _to;
             private readonly ManualResetEventSlim _done;
             public bool Sent { get; private set; }
-            public ReplyWriter(StreamWriter to, ManualResetEventSlim done) : base(Stream.Null) { _to = to; _done = done; }
-            public override void WriteLine(string value) { Sent = true; try { _to.WriteLine(value); } catch { } _done.Set(); }
+            public ReplyWriter(StreamWriter to, ManualResetEventSlim done) : base(Stream.Null)
+            {
+                _to = to;
+                _done = done;
+            }
+            public override void WriteLine(string value)
+            {
+                Sent = true;
+                try
+                {
+                    _to.WriteLine(value);
+                }
+                catch
+                {
+                }
+                _done.Set();
+            }
         }
 
         /// <summary>Called every frame (Plugin.Update): runs the commands that came in, one at a time.</summary>
@@ -100,7 +128,10 @@ namespace DarkwoodMP
             }
             var words = cmd.line.Split('\t');
             Plugin.Log.LogInfo($"[test control] {cmd.line.Replace('\t', ' ')}");
-            try { Run(words, cmd.reply); }
+            try
+            {
+                Run(words, cmd.reply);
+            }
             catch (Exception e)
             {
                 // Without a reply the connection's thread waits for ever, and a set _busy stops every later command.
@@ -130,10 +161,18 @@ namespace DarkwoodMP
                     reply.WriteLine("ok");
                     break;
                 case "do":
-                    if (words.Length < 2) { reply.WriteLine("fail usage: do STEP ARG..."); break; }
+                    if (words.Length < 2)
+                    {
+                        reply.WriteLine("fail usage: do STEP ARG...");
+                        break;
+                    }
                     _busy = true;
                     var doReply = reply;
-                    _plugin.StartCoroutine(MapScenario.Run(words[1], words.Skip(2).ToArray(), line => { _busy = false; doReply.WriteLine(line); }));
+                    _plugin.StartCoroutine(MapScenario.Run(words[1], words.Skip(2).ToArray(), line =>
+                    {
+                        _busy = false;
+                        doReply.WriteLine(line);
+                    }));
                     break;
                 case "dump":
                     try
@@ -142,7 +181,8 @@ namespace DarkwoodMP
                         {
                             throw new ArgumentException("usage: dump PATH [X Z R]");
                         }
-                        Vector3? at = null; float radius = StateDump.DefaultRadius;
+                        Vector3? at = null;
+                        float radius = StateDump.DefaultRadius;
                         if (words.Length >= 4)
                         {
                             at = new Vector3(MapScenario.F(words[2]), 0f, MapScenario.F(words[3]));
@@ -153,7 +193,11 @@ namespace DarkwoodMP
                         }
                         reply.WriteLine("ok " + StateDump.Write(words[1], at, radius));
                     }
-                    catch (Exception e) { Plugin.Log.LogWarning($"[test control] dump: {e}"); reply.WriteLine($"fail {e.GetType().Name}: {e.Message}"); }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"[test control] dump: {e}");
+                        reply.WriteLine($"fail {e.GetType().Name}: {e.Message}");
+                    }
                     break;
                 case "wait":
                     _busy = true;
@@ -176,9 +220,16 @@ namespace DarkwoodMP
             Func<bool> done;
             switch (what)
             {
-                case "world-ready": done = () => WorldShare.WorldReady; break;
-                case "player-joined": done = () => PlayersIn() >= count; break;
-                default: _busy = false; reply.WriteLine($"fail unknown event {what} (world-ready, player-joined)"); yield break;
+                case "world-ready":
+                    done = () => WorldShare.WorldReady;
+                    break;
+                case "player-joined":
+                    done = () => PlayersIn() >= count;
+                    break;
+                default:
+                    _busy = false;
+                    reply.WriteLine($"fail unknown event {what} (world-ready, player-joined)");
+                    yield break;
             }
             float until = Time.realtimeSinceStartup + secs;
             while (!done() && Time.realtimeSinceStartup < until)
@@ -223,8 +274,14 @@ namespace DarkwoodMP
         /// <summary>Back to a clean main menu: the last test stopped, its session left, its world closed.</summary>
         private static IEnumerator Reset(StreamWriter reply)
         {
-            try { _plugin.StopTests(); }
-            catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
+            try
+            {
+                _plugin.StopTests();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[test control] reset: {e}");
+            }
             // The next test's area is the test world's again, not one a step of the last test moved it to (a game
             // kept between map items, e.g. map:prologue's "centre-me").
             MapScenario.ResetCentre();
@@ -244,7 +301,10 @@ namespace DarkwoodMP
                     }
                     Core.returnToMainMenu();
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"[test control] reset: {e}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[test control] reset: {e}");
+                }
                 yield return null;
             }
             until = Time.realtimeSinceStartup + 90f;

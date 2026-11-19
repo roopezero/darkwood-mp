@@ -199,7 +199,11 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 var playing = Playing();
-                if (playing.Count > 0) { Begin(playing[0].Owner); yield break; }
+                if (playing.Count > 0)
+                {
+                    Begin(playing[0].Owner);
+                    yield break;
+                }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             Plugin.Log.LogInfo("Dead for good, and nobody is playing: permadeath");
@@ -265,7 +269,14 @@ namespace DarkwoodMP.World
             if (Core.currentProfile != null)
             {
                 Core.currentProfile.dead = true;
-                try { Singleton<SaveManager>.Instance.saveGameProfiles(); } catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't mark the profile dead: {e.Message}"); }
+                try
+                {
+                    Singleton<SaveManager>.Instance.saveGameProfiles();
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't mark the profile dead: {e.Message}");
+                }
             }
 
             // Undo what dying did to the screen and sound, and let the world go on.
@@ -309,13 +320,29 @@ namespace DarkwoodMP.World
                 }
                 if (playing.Count == 0)
                 {
-                    if (!WorldShare.InWorld) { End(); yield break; } // the world is being replaced (a reload): it decides again
-                    if (!inSession) { Plugin.Log.LogInfo("The session ended while watching: permadeath"); End(); Permadeath(); yield break; }
+                    if (!WorldShare.InWorld) // the world is being replaced (a reload): it decides again
+                    {
+                        End();
+                        yield break;
+                    }
+                    if (!inSession)
+                    {
+                        Plugin.Log.LogInfo("The session ended while watching: permadeath");
+                        End();
+                        Permadeath();
+                        yield break;
+                    }
                     if (nobodySince < 0f)
                     {
                         nobodySince = Time.unscaledTime;
                     }
-                    if (Time.unscaledTime - nobodySince > 3f) { Plugin.Log.LogInfo("Nobody is left playing: permadeath"); End(); Permadeath(); yield break; }
+                    if (Time.unscaledTime - nobodySince > 3f)
+                    {
+                        Plugin.Log.LogInfo("Nobody is left playing: permadeath");
+                        End();
+                        Permadeath();
+                        yield break;
+                    }
                     yield return null;
                     continue;
                 }
@@ -400,7 +427,11 @@ namespace DarkwoodMP.World
             }
             string name = Session.Instance?.NameOf(_watching) ?? "?";
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
-            if (Epilogue) { GUI.Label(rect, $"Watching {name}. Click for the next player.", Plugin.NameTagStyle); return; }
+            if (Epilogue)
+            {
+                GUI.Label(rect, $"Watching {name}. Click for the next player.", Plugin.NameTagStyle);
+                return;
+            }
             GUI.Label(rect, $"You're dead. Watching {name}. Click for the next player, right-click for the one before.", Plugin.NameTagStyle);
         }
     }

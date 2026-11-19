@@ -67,16 +67,28 @@ namespace DarkwoodMP
             }
             yield return new WaitForSecondsRealtime(2f);
             _real = true;
-            _win = new UiWindow(0x0D5F, "Drag test") { DefaultRect = () => new Rect(200, 200, 500, 300), Body = f => { } };
+            _win = new UiWindow(0x0D5F, "Drag test")
+            {
+                DefaultRect = () => new Rect(200, 200, 500, 300),
+                Body = f =>
+                {
+                }
+            };
             _win.Show();
             Plugin.Log.LogInfo($"[drag-real] ready: screen {Screen.width}x{Screen.height}, window at (200, 200), title bar to y {200 + 20 * UiWindow.S}");
-            float t0 = Time.realtimeSinceStartup; bool held = false; Vector2 grab = default, start = default;
+            float t0 = Time.realtimeSinceStartup;
+            bool held = false;
+            Vector2 grab = default, start = default;
             while (Time.realtimeSinceStartup - t0 < 120f)
             {
                 yield return null;
                 var m = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
                 bool down = Input.GetMouseButton(0);
-                if (down && !held) { grab = m; start = _win.Rect.position; }
+                if (down && !held)
+                {
+                    grab = m;
+                    start = _win.Rect.position;
+                }
                 if (down || held)
                 {
                     Plugin.Log.LogInfo($"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} mouse {m.x:0.#},{m.y:0.#} ev {_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size {_win.Rect.width:0.#}x{_win.Rect.height:0.#} off {(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
@@ -84,7 +96,9 @@ namespace DarkwoodMP
                 _drags = 0;
                 held = down;
             }
-            _win.Close(); _win = null; _real = false;
+            _win.Close();
+            _win = null;
+            _real = false;
             Plugin.Log.LogInfo("[drag-real] done");
         }
 
@@ -104,7 +118,13 @@ namespace DarkwoodMP
             yield return new WaitForSecondsRealtime(3f);
             _fails = 0;
             UiWindow.TestMouse = () => _mouse;
-            _win = new UiWindow(0x0D5F, "Drag test") { DefaultRect = () => new Rect(100, 100, 500, 300), Body = f => { } };
+            _win = new UiWindow(0x0D5F, "Drag test")
+            {
+                DefaultRect = () => new Rect(100, 100, 500, 300),
+                Body = f =>
+                {
+                }
+            };
             Log($"screen {Screen.width}x{Screen.height}, scale {UiWindow.S}");
             var cases = new (string name, bool resize, float step, int steps)[]
             {
@@ -119,7 +139,8 @@ namespace DarkwoodMP
             {
                 _win.ResetPlace();
                 _win.Show();
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 var before = _win.Rect;
                 var dir = new Vector2(1f, 0.5f);
                 var from = c.resize ? new Vector2(before.xMax - 3, before.yMax - 3) : new Vector2(before.x + 40, before.y + 6);
@@ -127,7 +148,11 @@ namespace DarkwoodMP
                 {
                     _events.Enqueue(Mouse(EventType.MouseDown, from, Vector2.zero));
                 }
-                else { _mouse = from; _win.BeginDrag(); }
+                else
+                {
+                    _mouse = from;
+                    _win.BeginDrag();
+                }
                 for (int i = 1; i <= c.steps; i++)
                 {
                     _events.Enqueue(Mouse(EventType.MouseDrag, from + dir * (c.step * i), dir * c.step));
@@ -137,7 +162,8 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 var after = _win.Rect;
                 var want = dir * (c.step * c.steps);
                 var got = c.resize ? after.size - before.size : after.position - before.position;

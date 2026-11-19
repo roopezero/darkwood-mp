@@ -31,7 +31,13 @@ namespace DarkwoodMP.World
     {
         private const string Item = "rope";
 
-        private sealed class Made { public EventTriggers Et; public global::EventTrigger T; public LaterTestCounter C; public Transform Marker; }
+        private sealed class Made
+        {
+            public EventTriggers Et;
+            public global::EventTrigger T;
+            public LaterTestCounter C;
+            public Transform Marker;
+        }
         private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
 
         public static void Register()
@@ -66,7 +72,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Setup(string[] a, Result r)
         {
-            if (a.Length < 3) { r.Fail("later-setup ID DX DZ [trip DX2 DZ2] [item] [count]"); yield break; }
+            if (a.Length < 3)
+            {
+                r.Fail("later-setup ID DX DZ [trip DX2 DZ2] [item] [count]");
+                yield break;
+            }
             string id = a[0];
             var pos = At(a[1], a[2]);
             var m = new Made();
@@ -87,8 +97,16 @@ namespace DarkwoodMP.World
                     var db = Singleton<ItemsDatabase>.Instance;
                     var prefab = db != null && db.itemsDict.TryGetValue(Item, out var path) ? Resources.Load(path) as GameObject : null;
                     var inv = prefab != null ? prefab.GetComponent<InvItem>() : null;
-                    if (inv == null) { r.Fail($"no item prefab {Item}"); yield break; }
-                    if (inv.isImportantItem) { r.Fail($"{Item} is an important item: a later player wouldn't get it"); yield break; }
+                    if (inv == null)
+                    {
+                        r.Fail($"no item prefab {Item}");
+                        yield break;
+                    }
+                    if (inv.isImportantItem)
+                    {
+                        r.Fail($"{Item} is an important item: a later player wouldn't get it");
+                        yield break;
+                    }
                     ge.events.Add(new GameEvent { type = GameEvent.Type.addOrRemoveInvItem, activeModifier = true, prefabList = new List<Object> { prefab }, amount = 1, eventAmount = 1 });
                     parts.Add("item");
                 }
@@ -122,7 +140,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Fire(string[] a, Result r)
         {
-            if (a.Length < 1 || !_made.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("no such trigger (later-setup first)"); yield break; }
+            if (a.Length < 1 || !_made.TryGetValue(a[0], out var m) || m.Et == null)
+            {
+                r.Fail("no such trigger (later-setup first)");
+                yield break;
+            }
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             // Room for the item in the bags (a full inventory drops it on the ground instead, out of what we count).
@@ -131,7 +153,11 @@ namespace DarkwoodMP.World
             if (!bag.slots.Exists(s => s != null && InvItemClass.isNull(s.invItem)))
             {
                 var last = bag.slots.FindLast(s => s != null && !InvItemClass.isNull(s.invItem) && s.invItem.type != Item);
-                if (last != null) { made = $" (made room: took {last.invItem.type}x{last.invItem.amount})"; bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount); }
+                if (last != null)
+                {
+                    made = $" (made room: took {last.invItem.type}x{last.invItem.amount})";
+                    bag.removeItemAmountFromPlayer(last.invItem.type, last.invItem.amount);
+                }
             }
             int had = MapScenarioWorld.CarriedOf(Item);
             bool owed = ScriptedEvents.IsOwed(m.T);
@@ -166,7 +192,11 @@ namespace DarkwoodMP.World
         /// <summary>"later-again ID": our player sets trigger ID off again: nothing of it may run a second time for us.</summary>
         private static IEnumerator Again(string[] a, Result r)
         {
-            if (a.Length < 1 || !_made.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("no such trigger (later-setup first)"); yield break; }
+            if (a.Length < 1 || !_made.TryGetValue(a[0], out var m) || m.Et == null)
+            {
+                r.Fail("no such trigger (later-setup first)");
+                yield break;
+            }
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             int had = MapScenarioWorld.CarriedOf(Item);
@@ -186,7 +216,11 @@ namespace DarkwoodMP.World
         /// <summary>"later-count ID N": the shared part of trigger ID ran N times in this game.</summary>
         private static IEnumerator Count(string[] a, Result r)
         {
-            if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("no such trigger with a counter (later-setup first)"); yield break; }
+            if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.C == null)
+            {
+                r.Fail("no such trigger with a counter (later-setup first)");
+                yield break;
+            }
             int want = int.Parse(a[1]);
             float until = Time.realtimeSinceStartup + 5f;
             while (m.C.N < want && Time.realtimeSinceStartup < until)
@@ -209,7 +243,10 @@ namespace DarkwoodMP.World
         private static IEnumerator Arrive(string[] a, Result r)
         {
             if (a.Length < 2 || !_made.TryGetValue(a[0], out var trip) || !_made.TryGetValue(a[1], out var at) || trip.Marker == null || at.C == null)
-            { r.Fail("arrive-go TRIP AT (later-setup both first: TRIP with a trip, AT with a counter)"); yield break; }
+            {
+                r.Fail("arrive-go TRIP AT (later-setup both first: TRIP with a trip, AT with a counter)");
+                yield break;
+            }
             yield return Walk(trip.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             int refusedBefore = Authority.RolledBack;
@@ -220,7 +257,11 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (!Arrived(trip)) { r.Fail($"the trip didn't take us to {Fmt(trip.Marker.position)} (at {Fmt(p.transform.position)})"); yield break; }
+            if (!Arrived(trip))
+            {
+                r.Fail($"the trip didn't take us to {Fmt(trip.Marker.position)} (at {Fmt(p.transform.position)})");
+                yield break;
+            }
             float from = StateDump.Flat(trip.Et.transform.position - at.Et.transform.position);
             SetOff(at); // the same frame we arrived
             until = Time.realtimeSinceStartup + 6f;

@@ -51,7 +51,11 @@ namespace DarkwoodMP.Sync
                 {
                     var go = Core.AddPrefab("UI/UIMapElement", Vector3.zero, Quaternion.Euler(90f, 0f, 0f), map.iconHolder);
                     var spr = go.GetComponent<tk2dSprite>();
-                    if (spr != null) { spr.SetSprite("generic_marker"); spr.color = Tint; }
+                    if (spr != null)
+                    {
+                        spr.SetSprite("generic_marker");
+                        spr.color = Tint;
+                    }
                     go.transform.localScale = Vector3.one;
                     var col = go.GetComponent<Collider>();
                     if (col != null)
@@ -61,7 +65,10 @@ namespace DarkwoodMP.Sync
                     Markers[r.Owner] = go.transform;
                     Place(type, go.transform, r.Root.transform.position);
                 }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"No map marker for {r.Name}: {e.Message}"); }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"No map marker for {r.Name}: {e.Message}");
+                }
             }
             if (Markers.Count > 0)
             {
@@ -86,7 +93,11 @@ namespace DarkwoodMP.Sync
             }
             var type = WorldType(Singleton<Map>.Instance);
             var sync = PlayerSync.Instance;
-            if (type == null || sync == null) { Markers.Clear(); return; }
+            if (type == null || sync == null)
+            {
+                Markers.Clear();
+                return;
+            }
             foreach (var kv in Markers)
             {
                 if (kv.Value == null)

@@ -59,7 +59,13 @@ namespace DarkwoodMP.World
             session.Register(MsgType.CharacterSave, OnSave);
             session.Register(MsgType.CharacterLoad, OnLoad);
             session.Register(MsgType.CharacterDead, OnDead);
-            session.OnSessionEnded += () => { _asked = false; _have = false; _quitSent = false; _carried.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _asked = false;
+                _have = false;
+                _quitSent = false;
+                _carried.Clear();
+            };
             session.OnPeerDisconnected += peer => _carried.Remove(peer);
         }
 
@@ -135,7 +141,10 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"This world keeps {_records.Count} other players' characters");
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read players' characters in {dir}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't read players' characters in {dir}: {e.Message}");
+            }
             return _records;
         }
 
@@ -159,7 +168,10 @@ namespace DarkwoodMP.World
                     File.WriteAllText(Path.Combine(_recordsDir, kv.Key + ".json"), JsonConvert.SerializeObject(kv.Value));
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't write players' characters: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't write players' characters: {e.Message}");
+            }
         }
 
         private void OnRequest(ulong from, PacketReader r)
@@ -179,14 +191,20 @@ namespace DarkwoodMP.World
             bool dead = rec != null && rec.Dead;
             // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new, 3: yours, beside the host, 4: yours, dead for good
             w.W.Write((byte)(dead ? 4 : earlier ? 3 : rec != null ? 1 : copy ? 2 : 0));
-            w.WriteBigStr(rec?.Player ?? ""); w.WriteBigStr(rec?.Inv ?? ""); w.WriteBigStr(rec?.Hotbar ?? "");
+            w.WriteBigStr(rec?.Player ?? "");
+            w.WriteBigStr(rec?.Inv ?? "");
+            w.WriteBigStr(rec?.Hotbar ?? "");
             // Where the host stands: the joiner's game finds a free spot beside it (Sync.SpawnSpot), off the host.
             w.Write(host != null ? host.transform.position : Vector3.zero);
             _session.SendTo(from, w, Channel.Control, reliable: true);
             Progression.HostSendTo(from); // after the character: the shared essence and level (World.Progression)
             DragSync.Instance?.JoinerInWorld(from); // loose things that moved since the snapshot it loaded
             FlagsSync.Instance?.JoinerInWorld(from); // story changes made since the snapshot it loaded
-            if (dead) { Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good in this world: they watch the others"); return; }
+            if (dead)
+            {
+                Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good in this world: they watch the others");
+                return;
+            }
             Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character: " + (rec != null ? $"theirs, from {DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}" + (earlier ? $" in chapter {rec.Chapter}: beside you" : "") : copy ? "a copy of yours" : "a new one"));
         }
 
@@ -217,7 +235,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>What a client's player carried, by the character it sent last this session, and what it placed since.</summary>
-        private sealed class Carried { public string Inv, Hotbar; public int Placed; }
+        private sealed class Carried
+        {
+            public string Inv, Hotbar;
+            public int Placed;
+        }
         private readonly Dictionary<ulong, Carried> _carried = new Dictionary<ulong, Carried>();
 
         /// <summary>
@@ -231,8 +253,15 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            try { return Count(c.Inv, types) + Count(c.Hotbar, types) - c.Placed; }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read what {_session.NameOf(peer)} carries: {e.Message}"); return null; }
+            try
+            {
+                return Count(c.Inv, types) + Count(c.Hotbar, types) - c.Placed;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't read what {_session.NameOf(peer)} carries: {e.Message}");
+                return null;
+            }
         }
 
         /// <summary>Host: this client's player has placed one more thing since its last character.</summary>
@@ -319,7 +348,10 @@ namespace DarkwoodMP.World
                     has = skills.Exists(k => k != null && k.type == "electrician");
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read {rec.Name}'s skills: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't read {rec.Name}'s skills: {e.Message}");
+            }
             _electrician[peer] = (rec.Player, has);
             return has;
         }
@@ -360,11 +392,17 @@ namespace DarkwoodMP.World
 
         public void Update()
         {
-            if (!NetEnemies.ClientMode || !WorldShare.InWorld) { _readyAt = -1f; return; }
+            if (!NetEnemies.ClientMode || !WorldShare.InWorld)
+            {
+                _readyAt = -1f;
+                return;
+            }
             if (_asked && ActiveScene != _askedScene)
             {
                 // Another world loaded in this session: what we had or asked for was the last one's.
-                _asked = false; _have = false; _readyAt = -1f;
+                _asked = false;
+                _have = false;
+                _readyAt = -1f;
             }
             if (!WorldShare.WorldReady)
             {
@@ -413,7 +451,10 @@ namespace DarkwoodMP.World
                 w.W.Write(Chapters.HostChapter); // the chapter of the world we're in (the host's, until it moves on)
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't send your character: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't send your character: {e.Message}");
+            }
         }
 
         // Set once the game quits: sent then, while the world is still whole. Leaving at OnDestroy sends nothing more,
@@ -498,7 +539,10 @@ namespace DarkwoodMP.World
                 Progression.AfterCharacter(p);
                 Plugin.Log.LogInfo(prologue ? "A new character for you in the host's prologue" : kind == 1 ? "Your character in this world is back" : kind == 3 ? "Your character from the last chapter is back, beside the host" : kind == 0 ? "A new character for you in this world" : "You start as a copy of the host's character");
             }
-            catch (Exception e) { Plugin.Log.LogError($"Couldn't load your character: {e}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError($"Couldn't load your character: {e}");
+            }
             _have = true;
             _nextSave = Time.unscaledTime + CharacterInterval;
         }
@@ -540,10 +584,18 @@ namespace DarkwoodMP.World
         {
             var want = p.transform.position;
             var at = Sync.SpawnSpot.Find(p, want, host.HasValue ? new[] { host.Value } : null);
-            if ((at - want).sqrMagnitude < 1f) { Plugin.Log.LogInfo($"[spawn] placed at {want}: free"); return; }
+            if ((at - want).sqrMagnitude < 1f)
+            {
+                Plugin.Log.LogInfo($"[spawn] placed at {want}: free");
+                return;
+            }
             p.transform.position = at;
             var body = p.GetComponent<Rigidbody>();
-            if (body != null) { body.position = at; body.velocity = Vector3.zero; }
+            if (body != null)
+            {
+                body.position = at;
+                body.velocity = Vector3.zero;
+            }
             Plugin.Log.LogInfo($"[spawn] placed at {at}, {new Vector2(at.x - want.x, at.z - want.z).magnitude:0} from {want}, which wasn't free");
         }
 
@@ -552,8 +604,16 @@ namespace DarkwoodMP.World
             var state = JsonConvert.DeserializeObject<Player.SaveState>(ps);
             // loadValues applies upgrades by repeating them, as for a player just loaded with none; ours already has
             // the host's (we loaded the host's save), so apply only the difference, and take back any extra.
-            state.healthUpgrades = Delta(state.healthUpgrades, p.healthUpgrades, () => { p.healthUpgrades--; p.maxHealth -= 25f; });
-            state.staminaUpgrades = Delta(state.staminaUpgrades, p.staminaUpgrades, () => { p.staminaUpgrades--; p.maxStamina -= 25f; });
+            state.healthUpgrades = Delta(state.healthUpgrades, p.healthUpgrades, () =>
+            {
+                p.healthUpgrades--;
+                p.maxHealth -= 25f;
+            });
+            state.staminaUpgrades = Delta(state.staminaUpgrades, p.staminaUpgrades, () =>
+            {
+                p.staminaUpgrades--;
+                p.maxStamina -= 25f;
+            });
             int hotbarUpgrades = state.hotbarUpgrades, inventoryUpgrades = state.inventoryUpgrades;
             state.hotbarUpgrades = 0;    // these only add slots; the inventory and hotbar below come with their own
             state.inventoryUpgrades = 0; // slot counts (loadValues adds or removes slots to match), fewer included
@@ -634,7 +694,11 @@ namespace DarkwoodMP.World
                     p.switchAniLibrary(p.fists.baseClass.aniLibrary);
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't re-equip your item: {e.Message}"); return; }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't re-equip your item: {e.Message}");
+                return;
+            }
             Plugin.Log.LogInfo($"[chars] re-equipped {(InvItemClass.isNull(item) ? "none" : item.type)}");
         }
 

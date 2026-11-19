@@ -58,7 +58,10 @@ namespace DarkwoodMP.Combat
             {
                 var e = effects[i];
                 w.W.Write((int)e.type);
-                w.W.Write(e.startDelay); w.W.Write(e.duration); w.W.Write(e.modifier); w.W.Write(e.interval);
+                w.W.Write(e.startDelay);
+                w.W.Write(e.duration);
+                w.W.Write(e.modifier);
+                w.W.Write(e.interval);
                 w.W.Write((byte)((e.stopsBleeding ? 1 : 0) | (e.stopsPoison ? 2 : 0) | (e.hasPoisonOverlay ? 4 : 0)));
                 w.WriteStr(e.activateSound ?? "");
             }
@@ -73,10 +76,15 @@ namespace DarkwoodMP.Combat
                 var e = new InvItemEffect
                 {
                     type = (CharacterEffectType)r.R.ReadInt32(),
-                    startDelay = r.R.ReadSingle(), duration = r.R.ReadSingle(), modifier = r.R.ReadSingle(), interval = r.R.ReadSingle(),
+                    startDelay = r.R.ReadSingle(),
+                    duration = r.R.ReadSingle(),
+                    modifier = r.R.ReadSingle(),
+                    interval = r.R.ReadSingle(),
                 };
                 byte f = r.R.ReadByte();
-                e.stopsBleeding = (f & 1) != 0; e.stopsPoison = (f & 2) != 0; e.hasPoisonOverlay = (f & 4) != 0;
+                e.stopsBleeding = (f & 1) != 0;
+                e.stopsPoison = (f & 2) != 0;
+                e.hasPoisonOverlay = (f & 4) != 0;
                 string snd = r.ReadStr();
                 e.activateSound = snd.Length > 0 ? snd : null;
                 effects.Add(e);

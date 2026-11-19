@@ -49,50 +49,96 @@ namespace DarkwoodMP.World
         internal static bool Allowed(Action a, ObjRef obj, bool on, float x)
         {
             var t = ObjRef.Resolve<Transform>(obj);
-            if (t == null) { Authority.Refuse(a == Action.Removed ? "it's already gone" : "not here"); return false; }
+            if (t == null)
+            {
+                Authority.Refuse(a == Action.Removed ? "it's already gone" : "not here");
+                return false;
+            }
             switch (a)
             {
                 case Action.VineHit:
-                {
-                    var cp = t.GetComponent<ChainParent>();
-                    if (cp == null) { Authority.Refuse("it isn't a vine"); return false; }
-                    if (!cp.attached || cp.health <= 0f) { Authority.Refuse("it's already cut"); return false; }
-                    if (x < 0f || x > VineDamageCap) { Authority.Refuse($"a hit of {x:0} is more than any weapon does"); return false; }
-                    return Authority.InReach(t.position, WorldActions.ShotReach, t.name); // a vine is long: its root may be far from the cut
-                }
-                case Action.ShadowArmorDied: Authority.Refuse("the host decides when a shadow dies"); return false;
-                case Action.InteractiveSwitch:
-                {
-                    var ii = t.GetComponent<InteractiveItem>();
-                    if (ii == null) { Authority.Refuse("it isn't a switch"); return false; }
-                    if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
                     {
+                        var cp = t.GetComponent<ChainParent>();
+                        if (cp == null)
+                        {
+                            Authority.Refuse("it isn't a vine");
+                            return false;
+                        }
+                        if (!cp.attached || cp.health <= 0f)
+                        {
+                            Authority.Refuse("it's already cut");
+                            return false;
+                        }
+                        if (x < 0f || x > VineDamageCap)
+                        {
+                            Authority.Refuse($"a hit of {x:0} is more than any weapon does");
+                            return false;
+                        }
+                        return Authority.InReach(t.position, WorldActions.ShotReach, t.name); // a vine is long: its root may be far from the cut
+                    }
+                case Action.ShadowArmorDied:
+                    Authority.Refuse("the host decides when a shadow dies");
+                    return false;
+                case Action.InteractiveSwitch:
+                    {
+                        var ii = t.GetComponent<InteractiveItem>();
+                        if (ii == null)
+                        {
+                            Authority.Refuse("it isn't a switch");
+                            return false;
+                        }
+                        if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
+                        {
+                            return false;
+                        }
+                        if (ii.isOn == on)
+                        {
+                            Authority.Refuse(on ? "it's already on" : "it's already off");
+                            return false;
+                        }
+                        return true;
+                    }
+                case Action.Removed:
+                    if (t.GetComponent<Lure>() != null)
+                    {
+                        Authority.Refuse("lures are eaten by the host's animals");
                         return false;
                     }
-                    if (ii.isOn == on) { Authority.Refuse(on ? "it's already on" : "it's already off"); return false; }
-                    return true;
-                }
-                case Action.Removed:
-                    if (t.GetComponent<Lure>() != null) { Authority.Refuse("lures are eaten by the host's animals"); return false; }
-                    if (t.GetComponent<JournalNoteReference>() == null && t.GetComponent<DeathDrop>() == null) { Authority.Refuse("it can't be picked up"); return false; }
+                    if (t.GetComponent<JournalNoteReference>() == null && t.GetComponent<DeathDrop>() == null)
+                    {
+                        Authority.Refuse("it can't be picked up");
+                        return false;
+                    }
                     return Authority.InReach(t.position, WorldActions.Reach, t.name);
                 case Action.LiquidLit:
-                {
-                    var liquid = t.GetComponent<Liquid>();
-                    if (liquid == null || !liquid.flammable) { Authority.Refuse("it can't burn"); return false; }
-                    return Authority.InReach(t.position, 1500f, t.name);
-                }
-                case Action.FeederUsed:
-                {
-                    var feeder = t.GetComponent<Feeder>();
-                    if (feeder == null) { Authority.Refuse("it isn't a feeder"); return false; }
-                    if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
                     {
-                        return false;
+                        var liquid = t.GetComponent<Liquid>();
+                        if (liquid == null || !liquid.flammable)
+                        {
+                            Authority.Refuse("it can't burn");
+                            return false;
+                        }
+                        return Authority.InReach(t.position, 1500f, t.name);
                     }
-                    if (!feeder.Active) { Authority.Refuse("the feeder was already used today"); return false; }
-                    return true;
-                }
+                case Action.FeederUsed:
+                    {
+                        var feeder = t.GetComponent<Feeder>();
+                        if (feeder == null)
+                        {
+                            Authority.Refuse("it isn't a feeder");
+                            return false;
+                        }
+                        if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
+                        {
+                            return false;
+                        }
+                        if (!feeder.Active)
+                        {
+                            Authority.Refuse("the feeder was already used today");
+                            return false;
+                        }
+                        return true;
+                    }
             }
             return false;
         }
@@ -112,74 +158,78 @@ namespace DarkwoodMP.World
             switch (a)
             {
                 case Action.VineHit:
-                {
-                    var cp = t.GetComponent<ChainParent>();
-                    if (cp == null || !cp.attached || cp.health <= 0f)
                     {
+                        var cp = t.GetComponent<ChainParent>();
+                        if (cp == null || !cp.attached || cp.health <= 0f)
+                        {
+                            break;
+                        }
+                        var s = Session.Instance;
+                        // The host's own hit says the health it left, so a copy that missed a hit comes back in step.
+                        if (s != null && !s.IsHost)
+                        {
+                            cp.health = y + x;
+                        }
+                        var vine = cp.lastChainSegment != null ? cp.lastChainSegment.GetComponent<Vine>() : null;
+                        if (vine == null)
+                        {
+                            vine = cp.GetComponentInChildren<Vine>();
+                        }
+                        if (vine != null)
+                        {
+                            cp.getHit(x, null, vine);
+                        }
+                        else // getHit needs a segment for its sound
+                        {
+                            cp.health = Mathf.Max(0f, cp.health - x);
+                            if (cp.health <= 0f)
+                            {
+                                cp.detach();
+                            }
+                        }
+                        if (s != null && s.IsHost)
+                        {
+                            y = cp.health;
+                        }
                         break;
                     }
-                    var s = Session.Instance;
-                    // The host's own hit says the health it left, so a copy that missed a hit comes back in step.
-                    if (s != null && !s.IsHost)
-                    {
-                        cp.health = y + x;
-                    }
-                    var vine = cp.lastChainSegment != null ? cp.lastChainSegment.GetComponent<Vine>() : null;
-                    if (vine == null)
-                    {
-                        vine = cp.GetComponentInChildren<Vine>();
-                    }
-                    if (vine != null)
-                    {
-                        cp.getHit(x, null, vine);
-                    }
-                    else
-                    {
-                        cp.health = Mathf.Max(0f, cp.health - x);
-                        if (cp.health <= 0f)
-                        {
-                            cp.detach();
-                        }
-                    } // getHit needs a segment for its sound
-                    if (s != null && s.IsHost)
-                    {
-                        y = cp.health;
-                    }
-                    break;
-                }
                 case Action.ShadowArmorDied:
-                {
-                    var sa = t.GetComponent<ShadowArmor>();
-                    if (sa != null)
                     {
-                        sa.die();
+                        var sa = t.GetComponent<ShadowArmor>();
+                        if (sa != null)
+                        {
+                            sa.die();
+                        }
+                        break;
                     }
-                    break;
-                }
                 case Action.InteractiveSwitch:
-                {
-                    var ii = t.GetComponent<InteractiveItem>();
-                    if (ii != null)
                     {
-                        ii.isOn = on; // its events are the switcher's (and the host's), not ours
+                        var ii = t.GetComponent<InteractiveItem>();
+                        if (ii != null)
+                        {
+                            ii.isOn = on; // its events are the switcher's (and the host's), not ours
+                        }
+                        break;
                     }
-                    break;
-                }
                 case Action.Removed:
-                    if (t.GetComponent<Item>() != null || t.GetComponent<Lure>() != null) { Containers.CloseIfOpen(t.gameObject); Object.Destroy(t.gameObject); }
+                    if (t.GetComponent<Item>() != null || t.GetComponent<Lure>() != null)
+                    {
+                        Containers.CloseIfOpen(t.gameObject);
+                        Object.Destroy(t.gameObject);
+                    }
                     break;
                 case Action.FeederUsed:
                     t.GetComponent<Feeder>()?.makeInactive();
                     break;
                 case Action.LiquidLit:
-                {
-                    var liquid = t.GetComponent<Liquid>();
-                    if (liquid != null && !liquid.burning)
                     {
-                        liquid.startBurning();
+                        var liquid = t.GetComponent<Liquid>();
+                        if (liquid != null && !liquid.burning)
+                        {
+                            liquid.startBurning();
+                        }
+                        break;
                     }
-                    break;
-                }
             }
         }
 
@@ -195,8 +245,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            try { (on ? ii.onTrigger : ii.offTrigger)?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't run the events of switch {ii.name}: {e.Message}"); }
+            try
+            {
+                (on ? ii.onTrigger : ii.offTrigger)?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't run the events of switch {ii.name}: {e.Message}");
+            }
         }
 
         // ---- what the local player picks up -------------------------------------------------------
@@ -220,17 +276,30 @@ namespace DarkwoodMP.World
             var w = s.Begin(MsgType.WorldAction);
             w.W.Write((byte)Action.FeederUsed);
             r.Write(w);
-            w.W.Write(0f); w.W.Write(0f); w.W.Write((byte)0); w.WriteStr("");
+            w.W.Write(0f);
+            w.W.Write(0f);
+            w.W.Write((byte)0);
+            w.WriteStr("");
             Authority.Request(w, $"FeederUsed {r} ({feeder.name})", (ok, reason, result) =>
             {
                 if (feeder == null || Player.Instance == null)
                 {
                     return;
                 }
-                if (!ok) { Player.Instance.displayMessage(Language.Get("Playermsg_feederInactive", "UI")); return; }
+                if (!ok)
+                {
+                    Player.Instance.displayMessage(Language.Get("Playermsg_feederInactive", "UI"));
+                    return;
+                }
                 WorldActions.Replaying = true;
-                try { feeder.activate(); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    feeder.activate();
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
             });
         }
     }
@@ -283,7 +352,12 @@ namespace DarkwoodMP.World
             WorldActions.Send(Action.Removed, __instance.gameObject);
         }
 
-        static System.Exception Finalizer(System.Exception __exception) { ObjectActions.Activating = null; ObjectActions.Took = false; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            ObjectActions.Activating = null;
+            ObjectActions.Took = false;
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(JournalNoteReference), nameof(JournalNoteReference.pickup))]
@@ -425,7 +499,11 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        static System.Exception Finalizer(System.Exception __exception) { Containers.ThrownSpawning = null; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            Containers.ThrownSpawning = null;
+            return __exception;
+        }
 
         private static string PathOf(Object prefab)
         {
@@ -445,21 +523,33 @@ namespace DarkwoodMP.World
     static class LiquidSpreadPatch
     {
         static void Prefix() => LiquidLitPatch.Spreading = true;
-        static System.Exception Finalizer(System.Exception __exception) { LiquidLitPatch.Spreading = false; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            LiquidLitPatch.Spreading = false;
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
     static class OwnSwingPatch
     {
         static void Prefix(MeleeSensor __instance) => LiquidLitPatch.OwnSwing = __instance.type == MeleeSensor.MeleeSensorType.player;
-        static System.Exception Finalizer(System.Exception __exception) { LiquidLitPatch.OwnSwing = false; return __exception; }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            LiquidLitPatch.OwnSwing = false;
+            return __exception;
+        }
     }
 
     /// <summary>A vine cut at (ObjectActions, VineHit). The detach it may make, and the parent's break in it, are nested.</summary>
     [HarmonyPatch(typeof(ChainParent), nameof(ChainParent.getHit), new[] { typeof(float), typeof(Transform), typeof(Vine) })]
     static class VineHitPatch
     {
-        static void Prefix(ChainParent __instance, out float __state) { WorldActions.Depth++; __state = __instance.health; }
+        static void Prefix(ChainParent __instance, out float __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.health;
+        }
         static void Postfix(ChainParent __instance, float damage, Transform attackerTransform, float __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __instance.health == __state)

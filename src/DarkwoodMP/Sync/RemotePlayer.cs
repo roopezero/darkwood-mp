@@ -47,7 +47,11 @@ namespace DarkwoodMP.Sync
             // A first position, or a jump further than anyone walks between two updates (placed on joining, a
             // teleport), is shown at once rather than slid across, through whoever stands between.
             bool jump = _hasLast && new Vector2(snap.Position.x - _last.Position.x, snap.Position.z - _last.Position.z).magnitude > JumpDistance;
-            if (_hasLast && !jump) { _prev.CopyFrom(_last); _hasPrev = true; }
+            if (_hasLast && !jump)
+            {
+                _prev.CopyFrom(_last);
+                _hasPrev = true;
+            }
             else
             {
                 _hasPrev = false;
@@ -97,10 +101,14 @@ namespace DarkwoodMP.Sync
                             {
                                 _heldFlames = Core.AddPrefab(item._particleEmitter, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), Root).transform;
                             }
-                            NotSolid(_heldLight); NotSolid(_heldFlames);
+                            NotSolid(_heldLight);
+                            NotSolid(_heldFlames);
                         }
                     }
-                    catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show {Name}'s {want}: {e.Message}"); }
+                    catch (System.Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't show {Name}'s {want}: {e.Message}");
+                    }
                 }
             }
             // The flames go where their game put them: on the torch in hand, which moves with each animation frame and
@@ -158,7 +166,11 @@ namespace DarkwoodMP.Sync
         private void ApplyLantern()
         {
             float want = _last.Alive && !_last.Spectating && !_last.Away ? _last.Lantern : 0f;
-            if (want <= 0f) { RemoveLantern(); return; }
+            if (want <= 0f)
+            {
+                RemoveLantern();
+                return;
+            }
             var ctl = Singleton<Controller>.Instance;
             if (_lantern == null)
             {
@@ -171,7 +183,11 @@ namespace DarkwoodMP.Sync
                 go.SetActive(true);
                 NotSolid(go.transform);
                 _lantern = go.GetComponent<Light2D>();
-                if (_lantern == null) { Object.Destroy(go); return; }
+                if (_lantern == null)
+                {
+                    Object.Destroy(go);
+                    return;
+                }
                 Plugin.Log.LogInfo($"[fx] {Name}'s lantern: a light of radius {want:0} on their puppet");
             }
             if (_lantern.LightRadius != want)
@@ -253,7 +269,8 @@ namespace DarkwoodMP.Sync
             if (ctl != null)
             {
                 while (ctl.logicLights.Remove(light))
-                { }
+                {
+                }
             }
         }
 
@@ -316,7 +333,11 @@ namespace DarkwoodMP.Sync
                 {
                     spr.gameObject.layer = s.Layer;
                 }
-                if (spr.Collection != coll || spr.spriteId != s.SpriteId) { spr.SetSprite(coll, s.SpriteId); NotSolid(spr.transform); }
+                if (spr.Collection != coll || spr.spriteId != s.SpriteId)
+                {
+                    spr.SetSprite(coll, s.SpriteId);
+                    NotSolid(spr.transform);
+                }
                 t.localPosition = s.Pos;
                 t.localRotation = s.Rot;
                 t.localScale = s.Scale;
@@ -348,7 +369,8 @@ namespace DarkwoodMP.Sync
                 return;
             }
             EnsureRoot();
-            Vector3 pos; Quaternion rot;
+            Vector3 pos;
+            Quaternion rot;
             if (_hasPrev && _last.Time > _prev.Time)
             {
                 // Render one snapshot interval behind: blend prev->last over the time it took last to arrive.
@@ -358,7 +380,8 @@ namespace DarkwoodMP.Sync
             }
             else
             {
-                pos = _last.Position; rot = _last.Rotation;
+                pos = _last.Position;
+                rot = _last.Rotation;
             }
             Root.transform.SetPositionAndRotation(pos, rot);
             // A spectator isn't seen, nor a player somewhere else: in a separate location or a dream while we aren't
@@ -386,8 +409,14 @@ namespace DarkwoodMP.Sync
             EnsureRoot();
             if (flames != "")
             {
-                try { _flames = Core.AddPooledPrefab("FX", flames, Root.transform.position, Quaternion.identity, Root.transform); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"[fx] no flames \"{flames}\" here: {e.Message}"); }
+                try
+                {
+                    _flames = Core.AddPooledPrefab("FX", flames, Root.transform.position, Quaternion.identity, Root.transform);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"[fx] no flames \"{flames}\" here: {e.Message}");
+                }
             }
             if (sound != "")
             {

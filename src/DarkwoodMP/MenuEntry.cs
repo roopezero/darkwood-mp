@@ -27,7 +27,11 @@ namespace DarkwoodMP
             MenuWords.Update(mm);
             // The mod's version under the game's, both in the bottom right corner (MenuLayout).
             var v = mm.CurrentVersion;
-            if (v != null && !string.IsNullOrEmpty(v.text) && !v.text.Contains(PluginInfo.Name)) { v.text += $"\n{PluginInfo.Name} {PluginInfo.Version}"; v.Commit(); }
+            if (v != null && !string.IsNullOrEmpty(v.text) && !v.text.Contains(PluginInfo.Name))
+            {
+                v.text += $"\n{PluginInfo.Name} {PluginInfo.Version}";
+                v.Commit();
+            }
             MenuLayout.Apply(mm);
         }
 
@@ -49,17 +53,33 @@ namespace DarkwoodMP
                 cam.gameObject.SetActive(true);
             }
             var backdrop = mm.transform.Find("Background");
-            if (backdrop != null && backdrop.gameObject.activeSelf) { backdrop.gameObject.SetActive(false); _hiddenBackdrop = backdrop.gameObject; }
-            if (mm.blackScreen != null && !mm.blackScreen.activeSelf) { mm.blackScreen.SetActive(true); _dimmed = true; }
+            if (backdrop != null && backdrop.gameObject.activeSelf)
+            {
+                backdrop.gameObject.SetActive(false);
+                _hiddenBackdrop = backdrop.gameObject;
+            }
+            if (mm.blackScreen != null && !mm.blackScreen.activeSelf)
+            {
+                mm.blackScreen.SetActive(true);
+                _dimmed = true;
+            }
             PauseHud.Hide(); // the HUD would show through with the world
             // In co-op the game goes on, with its own sound; alone it's paused and the menu's music plays as before.
-            if (World.CoopPause.InCoop && mm.menuMusic != null) { mm.menuMusic.Stop(0.3f); mm.menuMusic = null; }
+            if (World.CoopPause.InCoop && mm.menuMusic != null)
+            {
+                mm.menuMusic.Stop(0.3f);
+                mm.menuMusic = null;
+            }
         }
 
         internal static void PauseMenuClosed(MainMenu mm)
         {
             PauseHud.Restore();
-            if (_hiddenBackdrop != null) { _hiddenBackdrop.SetActive(true); _hiddenBackdrop = null; }
+            if (_hiddenBackdrop != null)
+            {
+                _hiddenBackdrop.SetActive(true);
+                _hiddenBackdrop = null;
+            }
             if (_dimmed && mm.blackScreen != null)
             {
                 mm.blackScreen.SetActive(false);
@@ -83,30 +103,55 @@ namespace DarkwoodMP
         /// <summary>The picture's name (without its "_0_EN" ending) and the UI sheet's key for its word.</summary>
         private static readonly Dictionary<string, string> Keys = new Dictionary<string, string>
         {
-            ["play"] = "Play", ["options"] = "Options", ["credits"] = "Credits", ["exit"] = "Quit",
-            ["continue"] = "Resume", ["help"] = "Help", ["mainMenu"] = "Main_menu",
-            ["controls"] = "Controls", ["graphics"] = "Video", ["sound"] = "Sound",
+            ["play"] = "Play",
+            ["options"] = "Options",
+            ["credits"] = "Credits",
+            ["exit"] = "Quit",
+            ["continue"] = "Resume",
+            ["help"] = "Help",
+            ["mainMenu"] = "Main_menu",
+            ["controls"] = "Controls",
+            ["graphics"] = "Video",
+            ["sound"] = "Sound",
         };
 
-        private sealed class Word { public global::Button Button; public tk2dBaseSprite Picture; public MeshRenderer PictureRenderer; public tk2dTextMesh Text; }
+        private sealed class Word
+        {
+            public global::Button Button;
+            public tk2dBaseSprite Picture;
+            public MeshRenderer PictureRenderer;
+            public tk2dTextMesh Text;
+        }
         private static readonly List<Word> _words = new List<Word>();
         private static readonly HashSet<int> _seen = new HashSet<int>();
         private static float _nextScan;
 
         public static void Update(MainMenu mm)
         {
-            if (Time.unscaledTime >= _nextScan) { _nextScan = Time.unscaledTime + 1f; Scan(mm); }
+            if (Time.unscaledTime >= _nextScan)
+            {
+                _nextScan = Time.unscaledTime + 1f;
+                Scan(mm);
+            }
             for (int i = _words.Count - 1; i >= 0; i--)
             {
                 var w = _words[i];
-                if (w.Button == null || w.Text == null) { _words.RemoveAt(i); continue; }
+                if (w.Button == null || w.Text == null)
+                {
+                    _words.RemoveAt(i);
+                    continue;
+                }
                 if (w.PictureRenderer != null && w.PictureRenderer.enabled)
                 {
                     w.PictureRenderer.enabled = false;
                 }
                 var c = w.Button.rolledOver ? Color.white : Grey;
                 c.a = w.Picture != null ? w.Picture.color.a : 1f;
-                if (w.Text.color != c) { w.Text.color = c; w.Text.Commit(); }
+                if (w.Text.color != c)
+                {
+                    w.Text.color = c;
+                    w.Text.Commit();
+                }
             }
         }
 
@@ -123,8 +168,14 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
-                try { Redraw(b, font); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't redraw the menu's {b.name}: {e.Message}"); }
+                try
+                {
+                    Redraw(b, font);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't redraw the menu's {b.name}: {e.Message}");
+                }
             }
         }
 
@@ -164,7 +215,12 @@ namespace DarkwoodMP
             text.Commit();
             var pr = b.GetComponent<MeshRenderer>();
             var tr = label.GetComponent<MeshRenderer>();
-            if (pr != null && tr != null) { tr.sortingLayerID = pr.sortingLayerID; tr.sortingOrder = pr.sortingOrder; pr.enabled = false; }
+            if (pr != null && tr != null)
+            {
+                tr.sortingLayerID = pr.sortingLayerID;
+                tr.sortingOrder = pr.sortingOrder;
+                pr.enabled = false;
+            }
             _words.Add(new Word { Button = b, Picture = pic, PictureRenderer = pr, Text = text });
         }
 
@@ -232,9 +288,18 @@ namespace DarkwoodMP
                 return;
             }
             _busy = true;
-            try { Lay(mm, cam); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't lay out the menu: {e.Message}"); }
-            finally { _busy = false; }
+            try
+            {
+                Lay(mm, cam);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't lay out the menu: {e.Message}");
+            }
+            finally
+            {
+                _busy = false;
+            }
         }
 
         private static void Lay(MainMenu mm, Camera cam)
@@ -265,7 +330,11 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
-                if (t.anchor != TextAnchor.LowerRight) { t.anchor = TextAnchor.LowerRight; t.Commit(); }
+                if (t.anchor != TextAnchor.LowerRight)
+                {
+                    t.anchor = TextAnchor.LowerRight;
+                    t.Commit();
+                }
                 var r = t.GetComponent<Renderer>();
                 if (r == null)
                 {
@@ -335,7 +404,11 @@ namespace DarkwoodMP
     /// </summary>
     public static class PauseHud
     {
-        private sealed class Off { public GameObject Go; public Func<bool> Still; }
+        private sealed class Off
+        {
+            public GameObject Go;
+            public Func<bool> Still;
+        }
         private static readonly List<Off> _off = new List<Off>();
         private static readonly List<Renderer> _renderers = new List<Renderer>();
         private static bool _hidden;
@@ -356,7 +429,8 @@ namespace DarkwoodMP
             Window(p.Inventory, null);
             Window(p.Hotbar, null);
             Window(p.Crafting, null);
-            var c1 = p.openedItemInventory; var c2 = p.openedItemInventory2;
+            var c1 = p.openedItemInventory;
+            var c2 = p.openedItemInventory2;
             Window(c1, () => p.openedItemInventory == c1 || p.openedItemInventory2 == c1);
             Window(c2, () => p.openedItemInventory == c2 || p.openedItemInventory2 == c2);
             var up = ui.upgradeItemMenu;
@@ -398,8 +472,19 @@ namespace DarkwoodMP
                     continue;
                 }
                 bool still;
-                try { still = o.Still == null || o.Still(); } catch { still = false; }
-                if (still) { o.Go.SetActive(true); back++; }
+                try
+                {
+                    still = o.Still == null || o.Still();
+                }
+                catch
+                {
+                    still = false;
+                }
+                if (still)
+                {
+                    o.Go.SetActive(true);
+                    back++;
+                }
             }
             foreach (var r in _renderers)
             {
@@ -437,7 +522,10 @@ namespace DarkwoodMP
             foreach (var r in rs)
             {
                 if (r != null && r.enabled)
-                { r.enabled = false; _renderers.Add(r); }
+                {
+                    r.enabled = false;
+                    _renderers.Add(r);
+                }
             }
         }
 

@@ -105,7 +105,10 @@ namespace DarkwoodMP.World
                     _data.Slots = new Dictionary<string, Record>();
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't read {path}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[saves] couldn't read {path}: {e.Message}");
+            }
             return _data;
         }
 
@@ -128,7 +131,10 @@ namespace DarkwoodMP.World
                 File.Move(tmp, path);
                 _stamp = File.GetLastWriteTimeUtc(path);
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't write {path}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[saves] couldn't write {path}: {e.Message}");
+            }
         }
 
         /// <summary>The record for slot <paramref name="slot"/>, or null if there's none.</summary>
@@ -203,7 +209,10 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't read slot {slot}'s players' characters: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[saves] couldn't read slot {slot}'s players' characters: {e.Message}");
+            }
             return names;
         }
 
@@ -238,7 +247,10 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[saves] slot {slot}'s players' characters deleted {why}");
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}");
+            }
         }
 
         /// <summary>A new game in slot <paramref name="slot"/>, or the slot deleted: its record goes.</summary>

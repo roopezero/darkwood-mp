@@ -30,19 +30,25 @@ namespace DarkwoodMP.Combat
     {
         private static readonly Collider[] _near = new Collider[64];
 
-        private sealed class Sent { public NetPlayerProxy Proxy; public Location Loc; }
+        private sealed class Sent
+        {
+            public NetPlayerProxy Proxy;
+            public Location Loc;
+        }
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Character, Sent> _sent =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Character, Sent>();
 
         /// <summary>A night attacker this sent at a joiner's hideout: that joiner and the hideout (JoinerAi uses them for its activities).</summary>
         public static bool SentAt(Character c, out NetPlayerProxy proxy, out Location loc)
         {
-            proxy = null; loc = null;
+            proxy = null;
+            loc = null;
             if (c == null || !_sent.TryGetValue(c, out var s))
             {
                 return false;
             }
-            proxy = s.Proxy; loc = s.Loc;
+            proxy = s.Proxy;
+            loc = s.Loc;
             return true;
         }
 
@@ -50,7 +56,8 @@ namespace DarkwoodMP.Combat
         public static Location BigLocationAt(Vector3 pos)
         {
             int n = Physics.OverlapSphereNonAlloc(pos, 300f, _near, 73402368); // WhereAmI's radius and layers
-            Location closest = null; float best = float.MaxValue;
+            Location closest = null;
+            float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
                 var loc = _near[i] != null ? _near[i].GetComponent<Location>() : null;
@@ -59,7 +66,11 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 float d = Core.trueDistance(pos, loc.transform.position);
-                if (d < best) { best = d; closest = loc; }
+                if (d < best)
+                {
+                    best = d;
+                    closest = loc;
+                }
             }
             if (closest == null || !closest.isSubLocation)
             {
@@ -88,7 +99,11 @@ namespace DarkwoodMP.Combat
 
         // Host: the attackers out at each hideout, by kind, and which hideout and kind each one counts against.
         private static readonly Dictionary<Location, Dictionary<string, int>> _out = new Dictionary<Location, Dictionary<string, int>>();
-        private sealed class Spent { public Location Loc; public string Kind; }
+        private sealed class Spent
+        {
+            public Location Loc;
+            public string Kind;
+        }
         private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Character, Spent> _spent =
             new System.Runtime.CompilerServices.ConditionalWeakTable<Character, Spent>();
 
@@ -205,7 +220,11 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>A new day (NightScenarios.resetScenarios): every hideout's budget starts again.</summary>
-        internal static void NewDay() { _out.Clear(); SentLog.Clear(); }
+        internal static void NewDay()
+        {
+            _out.Clear();
+            SentLog.Clear();
+        }
 
         private static bool LaterChapter()
         {
@@ -250,7 +269,10 @@ namespace DarkwoodMP.Combat
                         }
                     }
                 }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Night worm spawn failed: {e.Message}"); }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Night worm spawn failed: {e.Message}");
+                }
             }
         }
 
@@ -340,8 +362,14 @@ namespace DarkwoodMP.Combat
             {
                 return true; // alone: the game's own
             }
-            try { NightSpawns.NightChars(__instance); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Night attacker spawn failed: {e.Message}"); }
+            try
+            {
+                NightSpawns.NightChars(__instance);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Night attacker spawn failed: {e.Message}");
+            }
             return false;
         }
     }

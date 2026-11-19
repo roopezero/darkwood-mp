@@ -115,7 +115,13 @@ namespace DarkwoodMP.World
             }
             _barFrame = frame;
             _barUi = ui;
-            try { ui.loadingBar.SetSprite("loadingBar_" + frame.ToString("00")); } catch { }
+            try
+            {
+                ui.loadingBar.SetSprite("loadingBar_" + frame.ToString("00"));
+            }
+            catch
+            {
+            }
             if (ui.percentLoadedText != null)
             {
                 ui.percentLoadedText.text = pct + "%";
@@ -130,7 +136,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (ui != _ui || _line == null || _hint == null) { _ui = ui; Make(ui); }
+            if (ui != _ui || _line == null || _hint == null)
+            {
+                _ui = ui;
+                Make(ui);
+            }
             if (_line == null)
             {
                 return;
@@ -161,7 +171,10 @@ namespace DarkwoodMP.World
                 ScreenCapture.CaptureScreenshot(path);
                 Plugin.Log.LogInfo($"[loading] screenshot {path}: {text}");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[loading] screenshot failed: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[loading] screenshot failed: {e.Message}");
+            }
         }
 
         private static void Set(tk2dTextMesh t, string text)
@@ -175,7 +188,11 @@ namespace DarkwoodMP.World
             {
                 t.gameObject.SetActive(on);
             }
-            if (on && t.text != text) { t.text = text; t.Commit(); }
+            if (on && t.text != text)
+            {
+                t.text = text;
+                t.Commit();
+            }
         }
 
         /// <summary>
@@ -189,7 +206,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void Make(UI ui)
         {
-            if (!_loggedTree) { _loggedTree = true; LogTree(ui.loadingScreen.transform, 0); }
+            if (!_loggedTree)
+            {
+                _loggedTree = true;
+                LogTree(ui.loadingScreen.transform, 0);
+            }
             var screen = ui.loadingScreen.transform;
             var barR = ui.loadingBar.GetComponent<Renderer>();
             var tip = screen.Find("Tip")?.GetComponent<tk2dTextMesh>() ?? ui.percentLoadedText;
@@ -247,14 +268,19 @@ namespace DarkwoodMP.World
             t.maxChars = 160;
             t.anchor = TextAnchor.MiddleCenter;
             // The same size on screen as the tip, whatever the two transforms' scales are.
-            var ls = like.transform.lossyScale; var ps = screen.lossyScale;
+            var ls = like.transform.lossyScale;
+            var ps = screen.lossyScale;
             t.scale = new Vector3(like.scale.x * ls.x / ps.x, like.scale.y * ls.y / ps.y, 1f) * size;
             t.color = color;
             t.text = "";
             t.Commit();
             var r = go.GetComponent<MeshRenderer>();
             var lr = like.GetComponent<MeshRenderer>();
-            if (r != null && lr != null) { r.sortingLayerID = lr.sortingLayerID; r.sortingOrder = lr.sortingOrder; }
+            if (r != null && lr != null)
+            {
+                r.sortingLayerID = lr.sortingLayerID;
+                r.sortingOrder = lr.sortingOrder;
+            }
             go.SetActive(false);
             return t;
         }
@@ -293,7 +319,11 @@ namespace DarkwoodMP.World
                 return null; // done: the screen is fading out (or is up for a location, OutsideLocations)
             }
             float p = wg.percentLoaded;
-            if (wg != _stageWg) { _stageWg = wg; _stageLoading = false; }
+            if (wg != _stageWg)
+            {
+                _stageWg = wg;
+                _stageLoading = false;
+            }
             if (Core.loadingGame)
             {
                 _stageLoading = true; // it goes false again just before Load's last step
@@ -366,7 +396,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (ui != _tipUi) { _tipUi = ui; _tip = ui.loadingScreen.transform.Find("Tip")?.GetComponent<Renderer>(); }
+            if (ui != _tipUi)
+            {
+                _tipUi = ui;
+                _tip = ui.loadingScreen.transform.Find("Tip")?.GetComponent<Renderer>();
+            }
             if (_tip != null && _tip.enabled)
             {
                 _tip.enabled = false;

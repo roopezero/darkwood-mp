@@ -27,7 +27,12 @@ namespace DarkwoodMP.World
             Add("mt-stand", Stand, timeout: 60f);
             Add("mt-home", HomeStep, timeout: 90f);
             Add("mt-tough", Tough);
-            Add("mt-debug-threat", (a, r) => { Threat.Debug = a.Length == 0 || a[0] == "on"; r.Info = $"threat log {Threat.Debug}"; return Nothing(); });
+            Add("mt-debug-threat", (a, r) =>
+            {
+                Threat.Debug = a.Length == 0 || a[0] == "on";
+                r.Info = $"threat log {Threat.Debug}";
+                return Nothing();
+            });
             Add("mt-die", Die, timeout: 60f);
             Add("mt-spawn", SpawnEnemy, timeout: 15f);
             Add("mt-hit", HitEnemy, timeout: 40f);
@@ -64,7 +69,10 @@ namespace DarkwoodMP.World
             r.Info = $"centre {Fmt(Centre)}, we're at {Fmt(P.transform.position)}";
         }
 
-        private static IEnumerator Nothing() { yield break; }
+        private static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         private static bool _tough;
 
@@ -92,7 +100,11 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 var p = P;
-                if (p != null && p.alive && p.health < p.maxHealth * 0.5f) { p.bleeding = false; p.setHealth(p.maxHealth); }
+                if (p != null && p.alive && p.health < p.maxHealth * 0.5f)
+                {
+                    p.bleeding = false;
+                    p.setHealth(p.maxHealth);
+                }
             }
         }
 
@@ -101,7 +113,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Die(string[] a, Result r)
         {
             var p = P;
-            if (p == null || !p.alive) { r.Fail("not alive"); yield break; }
+            if (p == null || !p.alive)
+            {
+                r.Fail("not alive");
+                yield break;
+            }
             p.die();
             float until = Time.realtimeSinceStartup + 50f;
             yield return new WaitForSeconds(2f);
@@ -148,7 +164,12 @@ namespace DarkwoodMP.World
             while (c != null && c == _enemy && c.alive)
             {
                 string now = NameOf(c.target);
-                if (now != last) { _targets.Add(now); last = now; Plugin.Log.LogInfo($"[map] {c.name} #{_enemyId} now after {now}"); }
+                if (now != last)
+                {
+                    _targets.Add(now);
+                    last = now;
+                    Plugin.Log.LogInfo($"[map] {c.name} #{_enemyId} now after {now}");
+                }
                 if (c.target != null && now != "-")
                 {
                     float mine = StateDump.Flat(c.target.position - c.transform.position);
@@ -180,14 +201,23 @@ namespace DarkwoodMP.World
         /// who it goes after is recorded.</summary>
         private static IEnumerator SpawnEnemy(string[] a, Result r)
         {
-            if (Net.Session.Instance != null && Net.Session.Instance.IsClient) { r.Fail("enemies are the host's"); yield break; }
+            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            {
+                r.Fail("enemies are the host's");
+                yield break;
+            }
             var spot = MapScenarioEnemies.FreeSpot(Centre + new Vector3(F(a[1]), 0f, F(a[2])));
             // spawnCharacterAround takes a non-zero offset times the distance as the position itself.
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, a[0], nocturnal: false, attackPlayer: false);
-            if (c == null) { r.Fail($"couldn't spawn {a[0]}"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"couldn't spawn {a[0]}");
+                yield break;
+            }
             c.transform.position = spot;
             _enemy = c;
-            _targets.Clear(); _nearerWhile.Clear();
+            _targets.Clear();
+            _nearerWhile.Clear();
             yield return new WaitForSeconds(1.5f);
             NetEnemies.Instance.NetIdOf(c, out _enemyId);
             Plugin.Instance.StartCoroutine(WatchEnemy(c));
@@ -214,7 +244,11 @@ namespace DarkwoodMP.World
             float dmg = F(a[1]);
             var from = P.transform.position;
             var c = HostEnemy(true);
-            if (c == null) { r.Fail("no enemy of the host's near us"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no enemy of the host's near us");
+                yield break;
+            }
             float was = c.health;
             for (int i = 0; i < n && c != null && c.alive; i++)
             {
@@ -253,7 +287,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Target(string[] a, Result r)
         {
             var c = _enemy;
-            if (c == null) { r.Fail("no enemy (mt-spawn first)"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no enemy (mt-spawn first)");
+                yield break;
+            }
             string want = PlayerName(a[0]);
             float secs = a.Length > 1 && !a[1].StartsWith("--") ? F(a[1]) : 15f;
             int ni = Array.IndexOf(a, "--nearer");
@@ -273,7 +311,11 @@ namespace DarkwoodMP.World
                 }
             }
             r.Info = $"after {NameOf(c != null ? c.target : null)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
-            if (c == null || !c.alive) { r.Fail($"{r.Info}: it's dead"); yield break; }
+            if (c == null || !c.alive)
+            {
+                r.Fail($"{r.Info}: it's dead");
+                yield break;
+            }
             if (NameOf(c.target) != want)
             {
                 r.Fail($"{r.Info}: not after {want}");
@@ -311,7 +353,11 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
             var alive = HostEnemy(true, 2500f);
-            if (c == null) { r.Fail($"no dead enemy of the host's near us (a living one: {(alive != null ? alive.name : "none")})"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no dead enemy of the host's near us (a living one: {(alive != null ? alive.name : "none")})");
+                yield break;
+            }
             var inv = c.GetComponentInChildren<Inventory>(true);
             NetEnemies.Instance.NetIdOf(c, out uint id);
             r.Info = $"{c.name} #{id} dead at {Fmt(c.transform.position)}, searchable {c.GetComponent<Item>() != null}, loot [{(inv != null ? MapScenarioWorld.Contents(inv) : "-")}]";
@@ -327,7 +373,11 @@ namespace DarkwoodMP.World
         {
             var c = HostEnemy(false);
             var inv = c != null ? c.GetComponentInChildren<Inventory>(true) : null;
-            if (c == null || inv == null || c.GetComponent<Item>() == null) { r.Fail($"no searchable corpse near us ({(c != null ? c.name : "none")})"); yield break; }
+            if (c == null || inv == null || c.GetComponent<Item>() == null)
+            {
+                r.Fail($"no searchable corpse near us ({(c != null ? c.name : "none")})");
+                yield break;
+            }
             yield return Walk(c.transform.position, 90f);
             int mark = MapScenarioIssues.LogMark();
             P.openedItemInventory = inv;
@@ -344,7 +394,11 @@ namespace DarkwoodMP.World
                 {
                     var it = new InvItemClass(slot.invItem);
                     int before = MapScenarioWorld.CarriedOf(it.type);
-                    AsPlayer(() => { slot.removeItem(); P.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true); });
+                    AsPlayer(() =>
+                    {
+                        slot.removeItem();
+                        P.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                    });
                     yield return new WaitForSeconds(1f);
                     took = $"took {it.type} x{it.amount} (we carry {before} -> {MapScenarioWorld.CarriedOf(it.type)})";
                 }
@@ -370,10 +424,18 @@ namespace DarkwoodMP.World
         private static IEnumerator Grab(string[] a, Result r)
         {
             var inv = MapScenarioWorld.Container(a[0]);
-            if (inv == null) { r.Fail($"no container {a[0]}"); yield break; }
+            if (inv == null)
+            {
+                r.Fail($"no container {a[0]}");
+                yield break;
+            }
             double at = double.Parse(a[1], CultureInfo.InvariantCulture);
             yield return Walk(inv.transform.position);
-            if (Now > at) { r.Fail($"walked past the moment ({Now - at:0.0} s late)"); yield break; }
+            if (Now > at)
+            {
+                r.Fail($"walked past the moment ({Now - at:0.0} s late)");
+                yield break;
+            }
             while (Now < at)
             {
                 yield return null;
@@ -382,11 +444,20 @@ namespace DarkwoodMP.World
             yield return null; // the game's open: the lock is asked for, the slots watched
             yield return null;
             var slot = inv.slots.FirstOrDefault(s => s != null && !InvItemClass.isNull(s.invItem));
-            if (slot == null) { P.openedItemInventory = null; r.Fail($"{inv.name} is empty here"); yield break; }
+            if (slot == null)
+            {
+                P.openedItemInventory = null;
+                r.Fail($"{inv.name} is empty here");
+                yield break;
+            }
             var item = new InvItemClass(slot.invItem);
             int si = inv.slots.IndexOf(slot);
             int before = MapScenarioWorld.CarriedOf(item.type);
-            AsPlayer(() => { slot.removeItem(); P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true); });
+            AsPlayer(() =>
+            {
+                slot.removeItem();
+                P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true);
+            });
             yield return new WaitForSeconds(3f);
             if (P.openedItemInventory == inv)
             {
@@ -424,7 +495,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Leave(string[] a, Result r)
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsClient) { r.Fail("not a client"); yield break; }
+            if (s == null || !s.IsClient)
+            {
+                r.Fail("not a client");
+                yield break;
+            }
             s.Backend.Leave();
             yield return new WaitForSeconds(3f);
             r.Info = "left";
@@ -434,7 +509,11 @@ namespace DarkwoodMP.World
         private static IEnumerator OpenFree(string[] a, Result r)
         {
             var inv = MapScenarioWorld.Container(a[0]);
-            if (inv == null) { r.Fail($"no container {a[0]}"); yield break; }
+            if (inv == null)
+            {
+                r.Fail($"no container {a[0]}");
+                yield break;
+            }
             yield return Walk(inv.transform.position);
             float t0 = Time.realtimeSinceStartup;
             P.openedItemInventory = inv;
@@ -459,7 +538,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Talk(string[] a, Result r)
         {
             var npc = MapScenarioWorld.Trader();
-            if (npc == null) { r.Fail("no trader here"); yield break; }
+            if (npc == null)
+            {
+                r.Fail("no trader here");
+                yield break;
+            }
             bool expectRefused = a.Contains("--refused");
             yield return Walk(npc.transform.position, 150f);
             int mark = MapScenarioIssues.LogMark();
@@ -497,7 +580,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorDrawn(string[] a, Result r)
         {
             var door = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), Centre);
-            if (door == null || door.body == null) { r.Fail("no door"); yield break; }
+            if (door == null || door.body == null)
+            {
+                r.Fail("no door");
+                yield break;
+            }
             yield return new WaitForSeconds(1f); // let a body that was just switched on settle
             float swung = DoorSwing(door);
             bool drawnOpen = Mathf.Abs(swung) > 15f;
@@ -521,7 +608,11 @@ namespace DarkwoodMP.World
             var here = NightSpawns.BigLocationAt(Centre);
             var to = wg?.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
                 .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
-            if (to == null) { r.Fail($"no other hideout (the centre's is {(here != null ? here.name : "none")})"); yield break; }
+            if (to == null)
+            {
+                r.Fail($"no other hideout (the centre's is {(here != null ? here.name : "none")})");
+                yield break;
+            }
             yield return Walk(to.transform.position, 60f);
             yield return new WaitForSeconds(1.5f);
             var now = NightSpawns.BigLocationAt(P.transform.position);
@@ -537,7 +628,11 @@ namespace DarkwoodMP.World
         /// are in it, else at a joiner there; players sharing a hideout get no extra ones. Then they're removed again.</summary>
         private static IEnumerator Night(string[] a, Result r)
         {
-            if (Net.Session.Instance == null || !Net.Session.Instance.IsHost) { r.Fail("night attackers are the host's"); yield break; }
+            if (Net.Session.Instance == null || !Net.Session.Instance.IsHost)
+            {
+                r.Fail("night attackers are the host's");
+                yield break;
+            }
             int n = a.Length > 0 ? int.Parse(a[0]) : 3;
             var spawner = Singleton<CharacterSpawner>.Instance;
             var call = HarmonyLib.AccessTools.Method(typeof(CharacterSpawner), "spawnNightChar");
@@ -572,9 +667,16 @@ namespace DarkwoodMP.World
             try
             {
                 spawner.spawnNocturnalCharacters = true;
-                for (int i = 0; i < n; i++) { call.Invoke(spawner, null); yield return new WaitForSeconds(0.3f); }
+                for (int i = 0; i < n; i++)
+                {
+                    call.Invoke(spawner, null);
+                    yield return new WaitForSeconds(0.3f);
+                }
             }
-            finally { spawner.spawnNocturnalCharacters = was; }
+            finally
+            {
+                spawner.spawnNocturnalCharacters = was;
+            }
             var sent = NightSpawns.SentLog.Skip(from).ToList();
             var per = sent.GroupBy(s => s.Hideout).ToDictionary(g => g.Key, g => g.ToList());
             r.Info = $"{string.Join("; ", where)} | {budget} | " +

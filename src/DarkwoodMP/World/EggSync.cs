@@ -79,13 +79,27 @@ namespace DarkwoodMP.World
             var egg = Find(obj, x, z, name);
             if (s.IsHost) // a client's break comes only as a request (Authority drops a bare one)
             {
-                if (egg == null) { Authority.Refuse("there's no such egg here"); WorldActions.SendState(from, obj); return; }
-                if (!IsEgg(egg)) { WorldActions.SendState(from, obj); Authority.Refuse($"{egg.gameObject.name} isn't an egg"); return; }
+                if (egg == null)
+                {
+                    Authority.Refuse("there's no such egg here");
+                    WorldActions.SendState(from, obj);
+                    return;
+                }
+                if (!IsEgg(egg))
+                {
+                    WorldActions.SendState(from, obj);
+                    Authority.Refuse($"{egg.gameObject.name} isn't an egg");
+                    return;
+                }
                 if (egg.destroyed)
                 {
                     return; // broken here already (by the host, or another player): nothing to do or pass on
                 }
-                if (!Authority.InReach(egg.transform.position, WorldActions.ShotReach, egg.gameObject.name)) { WorldActions.SendState(from, obj); return; }
+                if (!Authority.InReach(egg.transform.position, WorldActions.ShotReach, egg.gameObject.name))
+                {
+                    WorldActions.SendState(from, obj);
+                    return;
+                }
             }
             Plugin.Log.LogInfo($"[world] egg {obj} destroyed (from {s.NameOf(from)})" + (egg == null ? ": not found here" : egg.destroyed ? ": already broken here" : ""));
             if (egg == null || egg.destroyed)
@@ -94,8 +108,14 @@ namespace DarkwoodMP.World
             }
 
             WorldActions.Replaying = true;
-            try { Break(egg); }
-            finally { WorldActions.Replaying = false; }
+            try
+            {
+                Break(egg);
+            }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
 
             if (s.IsHost)
             {
@@ -107,7 +127,8 @@ namespace DarkwoodMP.World
         {
             var w = S.Begin(MsgType.EggDestroyed);
             obj.Write(w);
-            w.W.Write(x); w.W.Write(z);
+            w.W.Write(x);
+            w.W.Write(z);
             w.WriteStr(name);
             return w;
         }
@@ -116,10 +137,20 @@ namespace DarkwoodMP.World
         private static void Break(Item egg)
         {
             egg.health = 0;
-            if (egg.gameObject.activeInHierarchy) { egg.die(); return; }
+            if (egg.gameObject.activeInHierarchy)
+            {
+                egg.die();
+                return;
+            }
             egg.destroyed = true;
-            try { egg.setDeathState(); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show {egg.gameObject.name} broken: {e.Message}"); }
+            try
+            {
+                egg.setDeathState();
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't show {egg.gameObject.name} broken: {e.Message}");
+            }
             Core.sendTriggerInfo(egg.gameObject, global::EventTrigger.Type.onDeath);
         }
 
@@ -131,7 +162,8 @@ namespace DarkwoodMP.World
             {
                 return egg;
             }
-            Item best = null; float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
+            Item best = null;
+            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
             foreach (var i in Resources.FindObjectsOfTypeAll<Item>())
             {
                 if (i == null || !i.gameObject.scene.IsValid() || i.gameObject.name != name)
@@ -140,7 +172,11 @@ namespace DarkwoodMP.World
                 }
                 var p = i.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
-                if (d <= bestD) { bestD = d; best = i; }
+                if (d <= bestD)
+                {
+                    bestD = d;
+                    best = i;
+                }
             }
             if (best == null && WorldActions.Debug)
             {

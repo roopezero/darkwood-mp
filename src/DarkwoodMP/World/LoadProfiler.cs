@@ -29,7 +29,11 @@ namespace DarkwoodMP.World
             "addToLoadedTextures", "removeFromLoadedTextures", "leave", "hide", "show",
         };
 
-        private sealed class Stat { public double Total, Max; public int Calls; }
+        private sealed class Stat
+        {
+            public double Total, Max;
+            public int Calls;
+        }
         private static readonly Dictionary<MethodBase, Stat> _stats = new Dictionary<MethodBase, Stat>();
         private static readonly List<(int frame, float ms, float at)> _longFrames = new List<(int, float, float)>();
         private static bool _on;
@@ -74,8 +78,14 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
-                        try { harmony.Patch(m, prefix, postfix); n++; }
-                        catch { }
+                        try
+                        {
+                            harmony.Patch(m, prefix, postfix);
+                            n++;
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
             }
@@ -106,7 +116,9 @@ namespace DarkwoodMP.World
             {
                 _stats[__originalMethod] = s = new Stat();
             }
-            s.Total += ms; s.Calls++; if (ms > s.Max)
+            s.Total += ms;
+            s.Calls++;
+            if (ms > s.Max)
             {
                 s.Max = ms;
             }

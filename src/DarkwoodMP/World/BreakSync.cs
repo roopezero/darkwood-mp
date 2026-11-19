@@ -125,7 +125,11 @@ namespace DarkwoodMP.World
                 return;
             }
             // An egg this hit broke: EggSync's message breaks it in the other games, wherever it is there.
-            if (!__state.Destroyed && __instance.destroyed && EggSync.IsEgg(__instance)) { EggSync.Send(__instance); return; }
+            if (!__state.Destroyed && __instance.destroyed && EggSync.IsEgg(__instance))
+            {
+                EggSync.Send(__instance);
+                return;
+            }
             WorldActions.Send(WorldActions.Action.ItemHit, ObjRef.Of(__instance.gameObject), __instance.name, damage, __instance.health, f1: normalHit);
         }
     }
@@ -134,7 +138,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.die))]
     static class ItemBrokenPatch
     {
-        static void Prefix(Item __instance, out bool __state) { WorldActions.Depth++; __state = __instance.destroyed; }
+        static void Prefix(Item __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.destroyed;
+        }
         static void Postfix(Item __instance, bool __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __state || !__instance.destroyed)
@@ -145,7 +153,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (EggSync.IsEgg(__instance)) { EggSync.Send(__instance); return; }
+            if (EggSync.IsEgg(__instance))
+            {
+                EggSync.Send(__instance);
+                return;
+            }
             WorldActions.Send(WorldActions.Action.ItemBroken, ObjRef.Of(__instance.gameObject), __instance.name);
         }
     }
@@ -154,7 +166,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.setNormalState))]
     static class ItemRepairedPatch
     {
-        static void Prefix(Item __instance, out bool __state) { WorldActions.Depth++; __state = __instance.destroyed; }
+        static void Prefix(Item __instance, out bool __state)
+        {
+            WorldActions.Depth++;
+            __state = __instance.destroyed;
+        }
         static void Postfix(Item __instance, bool __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || !__state || __instance.destroyed)
@@ -182,7 +198,15 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Explodes), nameof(Explodes.onActivate), new System.Type[0])]
     static class ExplodePatch
     {
-        public struct State { public bool Track; public ObjRef Ref; public string Name; public bool Host; public int Depth; public bool Replaying; }
+        public struct State
+        {
+            public bool Track;
+            public ObjRef Ref;
+            public string Name;
+            public bool Host;
+            public int Depth;
+            public bool Replaying;
+        }
 
         static void Prefix(Explodes __instance, out State __state)
         {
@@ -204,8 +228,11 @@ namespace DarkwoodMP.World
             __state = new State { Track = true, Ref = ObjRef.Of(__instance.gameObject), Name = __instance.name };
             if (Session.Instance != null && Session.Instance.IsHost)
             {
-                __state.Host = true; __state.Depth = WorldActions.Depth; __state.Replaying = WorldActions.Replaying;
-                WorldActions.Depth = 0; WorldActions.Replaying = false;
+                __state.Host = true;
+                __state.Depth = WorldActions.Depth;
+                __state.Replaying = WorldActions.Replaying;
+                WorldActions.Depth = 0;
+                WorldActions.Replaying = false;
             }
             else
             {
@@ -219,7 +246,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (__state.Host) { WorldActions.Depth = __state.Depth + 1; WorldActions.Replaying = __state.Replaying; }
+            if (__state.Host)
+            {
+                WorldActions.Depth = __state.Depth + 1;
+                WorldActions.Replaying = __state.Replaying;
+            }
             if (!WorldActions.Outermost() || !WorldActions.Sharing || !BreakSync.Activated(__instance))
             {
                 return;

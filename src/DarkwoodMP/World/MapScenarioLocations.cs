@@ -81,9 +81,17 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Sight(string[] a, Result r)
         {
-            if (_dog == null) { r.Fail("no dog (loc-dog first)"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog (loc-dog first)");
+                yield break;
+            }
             var proxy = Joiner();
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             float health = _dog.health;
             float until = Time.realtimeSinceStartup + 8f;
             string first = null;
@@ -101,7 +109,11 @@ namespace DarkwoodMP.World
                     first = SightOf(_dog, proxy);
                 }
             }
-            if (_dog == null) { r.Fail("the dog is gone"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("the dog is gone");
+                yield break;
+            }
             r.Info = $"{_dog.name}: {Behaviour(_dog)}; first look: {first}; now: {SightOf(_dog, proxy)}";
             if (_dog.target != proxy.transform)
             {
@@ -116,14 +128,33 @@ namespace DarkwoodMP.World
         private static IEnumerator Save(string[] a, Result r)
         {
             // A forced save: only into a copy of the saves (the test world or --dwmp-sandbox), never the player's own.
-            if (!SaveRedirect.Active) { r.Fail("the saves aren't a test copy (--dwmp-sandbox or the test world)"); yield break; }
+            if (!SaveRedirect.Active)
+            {
+                r.Fail("the saves aren't a test copy (--dwmp-sandbox or the test world)");
+                yield break;
+            }
             var o = Singleton<OutsideLocations>.Instance;
             var proxy = Joiner();
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             var loc = proxy.InLocation;
-            if (o.playerInOutsideLocation) { r.Fail($"our player is in {Locations.Current()}: this checks a location kept only for the joiner"); yield break; }
-            try { Singleton<SaveManager>.Instance.Save(doJson: true, force: true); }
-            catch (Exception e) { r.Fail($"Save threw: {e.Message}"); yield break; }
+            if (o.playerInOutsideLocation)
+            {
+                r.Fail($"our player is in {Locations.Current()}: this checks a location kept only for the joiner");
+                yield break;
+            }
+            try
+            {
+                Singleton<SaveManager>.Instance.Save(doJson: true, force: true);
+            }
+            catch (Exception e)
+            {
+                r.Fail($"Save threw: {e.Message}");
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             var ls = new Location.SaveState(loc); // what the save writes for it (SaveManager.SavedObj: lS)
             var os = new OutsideLocations.SaveState(o);
@@ -150,7 +181,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Tame(string[] a, Result r)
         {
             var proxy = Joiner();
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             int n = 0;
             foreach (var c in LocationCharacters(proxy.InLocation))
             {
@@ -185,16 +220,29 @@ namespace DarkwoodMP.World
             var c = Object.FindObjectsOfType<Character>()
                 .Where(x => x.alive && x.sleeping && ne != null && ne.IsPuppet(x, out _) && !x.name.StartsWith("Dog"))
                 .OrderBy(x => StateDump.Flat(x.transform.position - p.transform.position)).FirstOrDefault();
-            if (c == null) { r.Fail("no sleeping copy of the host's enemies here"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no sleeping copy of the host's enemies here");
+                yield break;
+            }
             // Put beside it, not walked there: a walk across the location can cross its way out (see loc-hit).
             // In front of it (a character looks along its transform.up), so it sees us once it wakes. The location is
             // turned at random: from the side we came in, a sleeper could have its back to us, and wake only to listen.
-            var side = c.transform.up; side.y = 0f;
-            if (side.sqrMagnitude < 0.01f) { side = p.transform.position - c.transform.position; side.y = 0f; }
+            var side = c.transform.up;
+            side.y = 0f;
+            if (side.sqrMagnitude < 0.01f)
+            {
+                side = p.transform.position - c.transform.position;
+                side.y = 0f;
+            }
             var at = c.transform.position + (side.sqrMagnitude > 1e-4f ? side.normalized : Vector3.right) * 70f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false)) { r.Fail("our player left the location on the way to the sleeper"); yield break; }
+            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
+            {
+                r.Fail("our player left the location on the way to the sleeper");
+                yield break;
+            }
             ne.IsPuppet(c, out uint id);
             r.Info = $"by the host's sleeping {c.name} #{id} at {Fmt(c.transform.position)}, {StateDump.Flat(c.transform.position - p.transform.position):0} away";
         }
@@ -211,8 +259,14 @@ namespace DarkwoodMP.World
             for (; steps < 20 && (sleeper == null || sleeper.sleeping); steps++)
             {
                 PlayerNoisePatch.OwnNoise++;
-                try { Character.alertInArea(at, 350f, false, 1f); } // a running step (Player.checkFrameTrigger)
-                finally { PlayerNoisePatch.OwnNoise--; }
+                try
+                {
+                    Character.alertInArea(at, 350f, false, 1f); // a running step (Player.checkFrameTrigger)
+                }
+                finally
+                {
+                    PlayerNoisePatch.OwnNoise--;
+                }
                 yield return new WaitForSeconds(0.3f);
             }
             r.Info = $"ran on the spot at {Fmt(at)} for {steps} steps; the host's {(sleeper != null ? sleeper.name : "none")} asleep here: {(sleeper != null && sleeper.sleeping)}";
@@ -221,12 +275,20 @@ namespace DarkwoodMP.World
         private static IEnumerator Wake(string[] a, Result r)
         {
             var proxy = Joiner();
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             var ne = NetEnemies.Instance;
             var c = LocationCharacters(proxy.InLocation)
                 .Where(x => x.alive && x.gameObject.activeInHierarchy && !x.name.StartsWith("Dog") && ne.NetIdOf(x, out _))
                 .OrderBy(x => StateDump.Flat(x.transform.position - proxy.transform.position)).FirstOrDefault();
-            if (c == null) { r.Fail($"no enemy of {proxy.InLocation.name} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no enemy of {proxy.InLocation.name} here");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 12f;
             while (Time.realtimeSinceStartup < until && (c.sleeping || c.target != proxy.transform))
             {
@@ -247,7 +309,11 @@ namespace DarkwoodMP.World
         {
             var o = Singleton<OutsideLocations>.Instance;
             var loc = a.Length > 0 ? o.getLocation(a[0]) : null;
-            if (loc == null) { r.Fail("no such location here"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no such location here");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             int on = 0;
             while (Time.realtimeSinceStartup < until)
@@ -268,14 +334,26 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static IEnumerator Info(Result r, string info) { r.Info = info; yield break; }
+        private static IEnumerator Info(Result r, string info)
+        {
+            r.Info = info;
+            yield break;
+        }
 
         private static IEnumerator Go(string[] a, Result r)
         {
             var o = Singleton<OutsideLocations>.Instance;
-            if (o == null || a.Length < 1) { r.Fail("no OutsideLocations, or no location named"); yield break; }
+            if (o == null || a.Length < 1)
+            {
+                r.Fail("no OutsideLocations, or no location named");
+                yield break;
+            }
             string name = a[0];
-            if (o.playerInOutsideLocation) { r.Fail($"already in {Locations.Current()}"); yield break; }
+            if (o.playerInOutsideLocation)
+            {
+                r.Fail($"already in {Locations.Current()}");
+                yield break;
+            }
             AsPlayer(() => o.prepareLocation(name, null));
             while (!(o.playerInOutsideLocation && !o.loading && Locations.Current() == name))
             {
@@ -291,7 +369,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Back(string[] a, Result r)
         {
             var o = Singleton<OutsideLocations>.Instance;
-            if (o == null || !o.playerInOutsideLocation) { r.Fail("not in a separate location"); yield break; }
+            if (o == null || !o.playerInOutsideLocation)
+            {
+                r.Fail("not in a separate location");
+                yield break;
+            }
             string was = Locations.Current();
             AsPlayer(() => o.returnToWorld());
             while (o.playerInOutsideLocation || o.returningToWorld)
@@ -311,14 +393,22 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
                 proxy = Joiner();
             }
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             // 250 towards the location's middle: the joiner arrives by its way out, and the location is turned at random,
             // so a fixed direction could put the dog past the exit, and walking to it would leave the location.
             var inward = proxy.InLocation.transform.position - proxy.transform.position;
             inward.y = 0f;
             var at = proxy.transform.position + (inward.sqrMagnitude > 1f ? inward.normalized : Vector3.right) * 250f;
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(proxy.gameObject, at, 1f, "Dog", nocturnal: false, attackPlayer: false);
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             c.transform.position = at;
             if (proxy.InLocation.waypoints != null)
             {
@@ -349,14 +439,23 @@ namespace DarkwoodMP.World
             var dog = Object.FindObjectsOfType<Character>()
                 .Where(c => c.alive && c.name.StartsWith("Dog") && ne != null && ne.IsPuppet(c, out _))
                 .OrderBy(c => StateDump.Flat(c.transform.position - p.transform.position)).FirstOrDefault();
-            if (dog == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail("no copy of the host's dog here");
+                yield break;
+            }
             // Put our player beside it rather than walking there: the dog moves (it may have gone for us after
             // loc-sight), and a walk across the location can cross its way out (returnToWorld), which ends every step after.
-            var side = p.transform.position - dog.transform.position; side.y = 0f;
+            var side = p.transform.position - dog.transform.position;
+            side.y = 0f;
             var at = dog.transform.position + (side.sqrMagnitude > 1f ? side.normalized : Vector3.right) * 80f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false)) { r.Fail("our player left the location on the way to the dog"); yield break; }
+            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
+            {
+                r.Fail("our player left the location on the way to the dog");
+                yield break;
+            }
             AsPlayer(() => dog.getHit(5f, p.transform, false, true, false));
             yield return new WaitForSeconds(0.5f);
             ne.IsPuppet(dog, out uint id);
@@ -366,9 +465,17 @@ namespace DarkwoodMP.World
         /// <summary>"loc-dog-target" (host): the dog goes for the joiner who hit it (by threat).</summary>
         private static IEnumerator DogTarget(string[] a, Result r)
         {
-            if (_dog == null) { r.Fail("no dog (loc-dog first)"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog (loc-dog first)");
+                yield break;
+            }
             var proxy = Joiner();
-            if (proxy == null) { r.Fail("no joiner in a separate location we run"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no joiner in a separate location we run");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             while (Time.realtimeSinceStartup < until && _dog != null && _dog.target != proxy.transform)
             {
@@ -401,7 +508,11 @@ namespace DarkwoodMP.World
             }
             int ownActive = Object.FindObjectsOfType<Character>().Count(c => NetEnemies.Eligible(c) && c.enabled && !NetEnemies.Frozen.Contains(c)
                                                                                && StateDump.Flat(c.transform.position - me) < 3000f);
-            if (dog == null) { r.Fail($"no copy of the host's dog near our player in {Locations.Current()}"); yield break; }
+            if (dog == null)
+            {
+                r.Fail($"no copy of the host's dog near our player in {Locations.Current()}");
+                yield break;
+            }
             ne.NetIdOf(dog, out uint id);
             r.Info = $"the host's {dog.name} #{id} at {Fmt(dog.transform.position)}, alive {dog.alive}, {StateDump.Flat(dog.transform.position - me):0} from us; " +
                      $"characters of our own running here: {ownActive}";
@@ -419,7 +530,11 @@ namespace DarkwoodMP.World
         {
             bool woken = a.Length > 0 && a[0] == "woken";
             var c = woken ? _woken : _dog;
-            if (c == null) { r.Fail(woken ? "nothing woken (loc-wake first)" : "no dog (loc-dog first)"); yield break; }
+            if (c == null)
+            {
+                r.Fail(woken ? "nothing woken (loc-wake first)" : "no dog (loc-dog first)");
+                yield break;
+            }
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1f);
         }
 
@@ -434,11 +549,21 @@ namespace DarkwoodMP.World
             var loc = Object.FindObjectsOfType<Location>()
                 .Where(l => l != null && !l.isOutsideLocation && l.characters != null && !Core.withinLocation(p.transform.position, 0f, l))
                 .OrderBy(l => (l.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
-            if (loc == null) { r.Fail("no world location with a characters holder"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no world location with a characters holder");
+                yield break;
+            }
             var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), a.Length > 0 ? a[0] : "Villager");
-            if (c == null) { r.Fail("couldn't spawn the savage"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn the savage");
+                yield break;
+            }
             // One of the location's characters that chased someone out of it without being disconnected.
-            c.baseLocation = loc; c.baseCharacters = loc.characters; c.disconnectedFromLocation = false;
+            c.baseLocation = loc;
+            c.baseCharacters = loc.characters;
+            c.disconnectedFromLocation = false;
             c.transform.SetParent(loc.characters, true);
             if (!loc.charactersList.Contains(c))
             {
@@ -446,9 +571,17 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             string where = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, of {Core.getTrueLocationName(loc.name)} (entered {loc.entered}), on {c.gameObject.activeInHierarchy}";
-            if (!c.gameObject.activeInHierarchy) { r.Fail($"it's switched off before it died: {where}"); yield break; }
+            if (!c.gameObject.activeInHierarchy)
+            {
+                r.Fail($"it's switched off before it died: {where}");
+                yield break;
+            }
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1f);
-            if (c == null || c.alive) { r.Fail($"it didn't die: {where}"); yield break; }
+            if (c == null || c.alive)
+            {
+                r.Fail($"it didn't die: {where}");
+                yield break;
+            }
             yield return new WaitForSeconds(3f); // its death animation: the corpse becomes searchable
             int mark = MapScenarioIssues.LogMark();
             loc.activateCharacters(false);
@@ -487,7 +620,11 @@ namespace DarkwoodMP.World
             var c = Object.FindObjectsOfType<Character>()
                 .Where(x => x != null && !x.alive && x.name.StartsWith(a.Length > 0 ? a[0] : "Villager") && ne != null && ne.NetIdOf(x, out _))
                 .OrderBy(x => (x.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
-            if (c == null) { r.Fail("no corpse of the host's savage here"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no corpse of the host's savage here");
+                yield break;
+            }
             bool item = c.GetComponent<Item>() != null;
             r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, on {c.gameObject.activeInHierarchy}, searchable {item}, cuts the view [{string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()))}]";
             if (!c.gameObject.activeInHierarchy || !item)
@@ -502,7 +639,11 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             var p = Player.Instance;
             var from = Sync.ViewWatch.LightPos();
-            if (p == null || from == null) { r.Fail("no player view light"); yield break; }
+            if (p == null || from == null)
+            {
+                r.Fail("no player view light");
+                yield break;
+            }
             float y = from.Value.y;
             string kind = a.Length > 0 ? a[0] : "Villager";
             var corpse = Object.FindObjectsOfType<Character>().Where(x => x != null && !x.alive && x.name.StartsWith(kind))

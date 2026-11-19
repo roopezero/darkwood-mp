@@ -110,7 +110,10 @@ namespace DarkwoodMP.World
             w.W.Write(by);
             w.WriteStr(type);
             w.Write(pos);
-            w.W.Write(rot.x); w.W.Write(rot.y); w.W.Write(rot.z); w.W.Write(rot.w);
+            w.W.Write(rot.x);
+            w.W.Write(rot.y);
+            w.W.Write(rot.z);
+            w.W.Write(rot.w);
             w.Write(vel);
             w.Write(target);
             w.W.Write(distance);
@@ -152,7 +155,11 @@ namespace DarkwoodMP.World
             }
 
             var item = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
-            if (item == null || item.item == null) { Plugin.Log.LogWarning($"Someone threw a {type}, which this game doesn't know"); return; }
+            if (item == null || item.item == null)
+            {
+                Plugin.Log.LogWarning($"Someone threw a {type}, which this game doesn't know");
+                return;
+            }
 
             // Who threw it, as the game's code sees them: the host's proxy for them (the AI's view of that player,
             // so the host's enemies blame the right player), else their puppet.
@@ -168,8 +175,14 @@ namespace DarkwoodMP.World
 
             GameObject go;
             WorldActions.Replaying = true;
-            try { go = Core.AddPrefab(item.item, pos, rot, null); }
-            finally { WorldActions.Replaying = false; }
+            try
+            {
+                go = Core.AddPrefab(item.item, pos, rot, null);
+            }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
             if (go == null)
             {
                 return;
@@ -177,7 +190,11 @@ namespace DarkwoodMP.World
 
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
-            if (ti == null || rb == null) { Object.Destroy(go); return; }
+            if (ti == null || rb == null)
+            {
+                Object.Destroy(go);
+                return;
+            }
             var ren = go.GetComponent<Renderer>();
             if (ren != null)
             {
@@ -315,7 +332,13 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        public static void Clear() { Copies.Clear(); Spawned.Clear(); Depth = 0; CurrentFlame = null; }
+        public static void Clear()
+        {
+            Copies.Clear();
+            Spawned.Clear();
+            Depth = 0;
+            CurrentFlame = null;
+        }
     }
 
     [HarmonyPatch(typeof(ThrownItem), nameof(ThrownItem.onCollide))]

@@ -56,13 +56,21 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world] sent {what}");
             }
-            if (S.IsHost) { S.Broadcast(w, Channel.Control, reliable: true); return; }
+            if (S.IsHost)
+            {
+                S.Broadcast(w, Channel.Control, reliable: true);
+                return;
+            }
             string sound = option >= 0 && option < c.options.Count ? c.options[option].buildCompleteSound : null;
             Waiting.Add(c);
             Authority.Request(w, what, (ok, reason, _) =>
             {
                 Waiting.Remove(c);
-                if (!ok) { Plugin.Log.LogInfo($"[world] {what} not built here: the host refused it ({reason})"); return; }
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo($"[world] {what} not built here: the host refused it ({reason})");
+                    return;
+                }
                 if (c == null)
                 {
                     return;
@@ -81,8 +89,14 @@ namespace DarkwoodMP.World
                         Plugin.Log.LogInfo($"[world] {what}: the host agreed, built it here");
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {what}: {e.Message}"); }
-                finally { Confirming = false; }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't build {what}: {e.Message}");
+                }
+                finally
+                {
+                    Confirming = false;
+                }
             });
         }
 
@@ -116,7 +130,10 @@ namespace DarkwoodMP.World
                     ScriptedEvents.RunAs(s.IsHost ? ScriptedEvents.Part.HostAndShared : ScriptedEvents.Part.SharedOnly, replaying: true,
                         () => c.construct(manual: false, option));
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"Couldn't build {obj}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't build {obj}: {e.Message}");
+                }
             }
             if (s.IsHost)
             {
@@ -127,12 +144,28 @@ namespace DarkwoodMP.World
         /// <summary>Host: a joiner's build is one this world can still take, near them.</summary>
         private static bool Allowed(Constructible c, int option)
         {
-            if (c == null) { Authority.Refuse("there's nothing to build there (built already?)"); return false; }
-            if (option < 0 || option >= c.options.Count) { Authority.Refuse($"it has no option {option}"); return false; }
+            if (c == null)
+            {
+                Authority.Refuse("there's nothing to build there (built already?)");
+                return false;
+            }
+            if (option < 0 || option >= c.options.Count)
+            {
+                Authority.Refuse($"it has no option {option}");
+                return false;
+            }
             var item = c.GetComponent<Item>();
             bool broken = item != null && item.destroyed;
-            if (c.onlyWhenDestroyed && !broken) { Authority.Refuse("it isn't broken"); return false; }
-            if (c.constructed && !broken) { Authority.Refuse("it's built already"); return false; }
+            if (c.onlyWhenDestroyed && !broken)
+            {
+                Authority.Refuse("it isn't broken");
+                return false;
+            }
+            if (c.constructed && !broken)
+            {
+                Authority.Refuse("it's built already");
+                return false;
+            }
             return Authority.InReach(c.transform.position, WorldActions.Reach, c.name);
         }
     }

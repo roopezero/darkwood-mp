@@ -41,7 +41,12 @@ namespace DarkwoodMP.World
             Instance = this;
             _session = session;
             session.Register(MsgType.NpcPos, OnPos);
-            session.OnSessionEnded += () => { _sent.Clear(); _target.Clear(); _npcs.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _sent.Clear();
+                _target.Clear();
+                _npcs.Clear();
+            };
         }
 
         private static bool Movable(NPC npc, out Character c)
@@ -78,7 +83,11 @@ namespace DarkwoodMP.World
             }
             _nextMoved = Time.unscaledTime + MovedEvery;
             bool all = Time.unscaledTime >= _nextAll;
-            if (all) { _nextAll = Time.unscaledTime + AllEvery; FindNpcs(); }
+            if (all)
+            {
+                _nextAll = Time.unscaledTime + AllEvery;
+                FindNpcs();
+            }
             var list = new List<(int id, Vector2 p)>();
             foreach (var (id, npc) in _npcs)
             {
@@ -105,7 +114,12 @@ namespace DarkwoodMP.World
                 int n = Mathf.Min(200, list.Count - start);
                 var w = _session.Begin(MsgType.NpcPos);
                 w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++) { w.W.Write(list[i].id); w.W.Write(list[i].p.x); w.W.Write(list[i].p.y); }
+                for (int i = start; i < start + n; i++)
+                {
+                    w.W.Write(list[i].id);
+                    w.W.Write(list[i].p.x);
+                    w.W.Write(list[i].p.y);
+                }
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
         }
@@ -204,7 +218,11 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 var npc = so.GetComponent<NPC>();
-                if (!Movable(npc, out var c)) { _gone.Add(kv.Key); continue; }
+                if (!Movable(npc, out var c))
+                {
+                    _gone.Add(kv.Key);
+                    continue;
+                }
                 var t = c.transform;
                 var pos = t.position;
                 var to = new Vector3(kv.Value.x, pos.y, kv.Value.y);

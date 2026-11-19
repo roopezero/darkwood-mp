@@ -44,13 +44,21 @@ namespace DarkwoodMP.World
         private static IEnumerator RpDoor(string[] a, Result r)
         {
             _door = a.Length > 0 ? MapScenarioWorld.Nth<Door>(a[0]) : null;
-            if (_door == null) { r.Fail("usage: rp-door N (no such door)"); yield break; }
+            if (_door == null)
+            {
+                r.Fail("usage: rp-door N (no such door)");
+                yield break;
+            }
             r.Info = $"{DoorInfo} at {Fmt(_door.transform.position)}";
         }
 
         private static IEnumerator RpDoorBreak(string[] a, Result r)
         {
-            if (_door == null) { r.Fail("no door (rp-door first)"); yield break; }
+            if (_door == null)
+            {
+                r.Fail("no door (rp-door first)");
+                yield break;
+            }
             yield return Walk(_door.transform.position);
             if (!_door.destroyed)
             {
@@ -66,10 +74,22 @@ namespace DarkwoodMP.World
 
         private static IEnumerator RpDoorFix(string[] a, Result r)
         {
-            if (_door == null) { r.Fail("no door (rp-door first)"); yield break; }
+            if (_door == null)
+            {
+                r.Fail("no door (rp-door first)");
+                yield break;
+            }
             yield return Walk(_door.transform.position);
-            if (!_door.destroyed) { r.Fail($"{DoorInfo}: it isn't broken here"); yield break; }
-            for (int i = 0; i < 3 && _door != null && _door.destroyed; i++) { AsPlayer(() => _door.barricade(byPlayer: true)); yield return new WaitForSeconds(0.3f); }
+            if (!_door.destroyed)
+            {
+                r.Fail($"{DoorInfo}: it isn't broken here");
+                yield break;
+            }
+            for (int i = 0; i < 3 && _door != null && _door.destroyed; i++)
+            {
+                AsPlayer(() => _door.barricade(byPlayer: true));
+                yield return new WaitForSeconds(0.3f);
+            }
             yield return new WaitForSeconds(1.5f); // the host's answer
             r.Info = DoorInfo;
             if (_door == null || _door.destroyed)
@@ -84,7 +104,11 @@ namespace DarkwoodMP.World
             _item = Nearest(Object.FindObjectsOfType<Item>().Where(i => i.destructible && !i.hasInventory && i.GetComponent<Explodes>() == null
                 && i.GetComponent<Trigger>() == null && i.GetComponent<ProxyItem>() == null && ObjRef.Of(i.gameObject).Valid
                 && StateDump.Flat(i.transform.position - at) < 200f), at);
-            if (_item == null) { r.Fail("no breakable furniture there"); yield break; }
+            if (_item == null)
+            {
+                r.Fail("no breakable furniture there");
+                yield break;
+            }
             var c = _item.GetComponent<Constructible>();
             bool made = c == null;
             if (made)
@@ -99,7 +123,11 @@ namespace DarkwoodMP.World
 
         private static IEnumerator RpFurnitureBreak(string[] a, Result r)
         {
-            if (_item == null) { r.Fail("no furniture (rp-furniture first)"); yield break; }
+            if (_item == null)
+            {
+                r.Fail("no furniture (rp-furniture first)");
+                yield break;
+            }
             yield return Walk(_item.transform.position);
             if (!_item.destroyed)
             {
@@ -115,11 +143,23 @@ namespace DarkwoodMP.World
 
         private static IEnumerator RpFurnitureFix(string[] a, Result r)
         {
-            if (_item == null) { r.Fail("no furniture (rp-furniture first)"); yield break; }
+            if (_item == null)
+            {
+                r.Fail("no furniture (rp-furniture first)");
+                yield break;
+            }
             var c = _item.GetComponent<Constructible>();
-            if (c == null) { r.Fail($"{ItemInfo}: no construction menu"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"{ItemInfo}: no construction menu");
+                yield break;
+            }
             yield return Walk(_item.transform.position);
-            if (!_item.destroyed) { r.Fail($"{ItemInfo}: it isn't broken here"); yield break; }
+            if (!_item.destroyed)
+            {
+                r.Fail($"{ItemInfo}: it isn't broken here");
+                yield break;
+            }
             AsPlayer(() => c.construct(manual: false, 0));
             float until = Time.realtimeSinceStartup + 4f;
             while (_item != null && _item.destroyed && Time.realtimeSinceStartup < until)

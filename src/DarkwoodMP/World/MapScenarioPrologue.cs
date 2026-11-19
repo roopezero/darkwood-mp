@@ -76,7 +76,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator KeyTake(string[] a, Result r)
         {
-            InvSlot slot = null; Inventory inv = null;
+            InvSlot slot = null;
+            Inventory inv = null;
             foreach (var i in Here<Inventory>())
             {
                 if (i.invType != Inventory.InvType.itemInv || i == P.Inventory || i == P.Hotbar)
@@ -85,9 +86,18 @@ namespace DarkwoodMP.World
                 }
                 var s = i.slots.FirstOrDefault(x => x != null && !InvItemClass.isNull(x.invItem) && x.invItem.baseClass != null
                     && x.invItem.baseClass.GetComponent<KeyReference>() is KeyReference kr && KeyDoorOf(kr.type) != null);
-                if (s != null) { slot = s; inv = i; break; }
+                if (s != null)
+                {
+                    slot = s;
+                    inv = i;
+                    break;
+                }
             }
-            if (slot == null) { r.Fail($"no container here with the key to a door: {Locks()}"); yield break; }
+            if (slot == null)
+            {
+                r.Fail($"no container here with the key to a door: {Locks()}");
+                yield break;
+            }
             string key = slot.invItem.baseClass.GetComponent<KeyReference>().type;
             _keyItem = slot.invItem.type;
             yield return Walk(inv.transform.position);
@@ -146,7 +156,11 @@ namespace DarkwoodMP.World
         private static IEnumerator KeyDoor(string[] a, Result r)
         {
             var d = KeyDoorOf(a[0]);
-            if (d == null) { r.Fail($"no door here for {a[0]}: {Locks()}"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door here for {a[0]}: {Locks()}");
+                yield break;
+            }
             var l = d.GetComponent<Locked>();
             yield return Walk(d.transform.position);
             int refused = Authority.RolledBack;
@@ -185,7 +199,11 @@ namespace DarkwoodMP.World
         private static IEnumerator KeyDoorIs(string[] a, Result r)
         {
             var d = KeyDoorOf(a[0]);
-            if (d == null) { r.Fail($"no door here for {a[0]}"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door here for {a[0]}");
+                yield break;
+            }
             var l = d.GetComponent<Locked>();
             bool open = a.Length > 1 && a[1] == "open";
             float until = Time.realtimeSinceStartup + 8f;
@@ -208,16 +226,28 @@ namespace DarkwoodMP.World
         private static IEnumerator KeyReset(string[] a, Result r)
         {
             var d = KeyDoorOf(a[0]);
-            if (d == null || _keyItem == null) { r.Fail($"no door for {a[0]}, or no key taken here before"); yield break; }
+            if (d == null || _keyItem == null)
+            {
+                r.Fail($"no door for {a[0]}, or no key taken here before");
+                yield break;
+            }
             var inv = Nearest(Here<Inventory>().Where(i => i.invType == Inventory.InvType.itemInv && i != P.Inventory && i != P.Hotbar
                 && !i.name.StartsWith("DroppedItem") && !i.transform.IsChildOf(P.transform)), d.transform.position);
             yield return Walk(d.transform.position);
-            if (d.opened) { AsPlayer(() => d.close(P.transform)); yield return new WaitForSeconds(1f); }
+            if (d.opened)
+            {
+                AsPlayer(() => d.close(P.transform));
+                yield return new WaitForSeconds(1f);
+            }
             d.lockMe(a[0]);
             Singleton<UI>.Instance.journal.keysDict.Remove(a[0]);
             FlagsSync.Instance?.FlushNow();
             var free = inv.slots.FirstOrDefault(s => s != null && InvItemClass.isNull(s.invItem));
-            if (free == null) { r.Fail($"no free slot in {inv.name}"); yield break; }
+            if (free == null)
+            {
+                r.Fail($"no free slot in {inv.name}");
+                yield break;
+            }
             yield return Walk(inv.transform.position);
             P.openedItemInventory = inv;
             yield return new WaitForSeconds(0.6f);
@@ -292,13 +322,21 @@ namespace DarkwoodMP.World
         {
             var d = D;
             string stage = Prologue.Stage;
-            if (!Prologue.InStage) { r.Fail("not in a stage of the prologue"); yield break; }
+            if (!Prologue.InStage)
+            {
+                r.Fail("not in a stage of the prologue");
+                yield break;
+            }
             var outcomes = d.preset.outcomes.Where(o => o != null).ToList();
             bool last = stage == "dream_tutorial_01";
             var pick = outcomes.FirstOrDefault(o => o.name != "playerDeath"
                 && o.effects.Any(e => e.type == DreamPreset.Outcome.Effect.Type.transferToDream) != last);
             string names = string.Join(",", outcomes.Select(o => o.name));
-            if (pick == null) { r.Fail($"no outcome to {(last ? "the end" : "the next stage")} in {stage} ({names})"); yield break; }
+            if (pick == null)
+            {
+                r.Fail($"no outcome to {(last ? "the end" : "the next stage")} in {stage} ({names})");
+                yield break;
+            }
             d.outcome = pick.name;
             AsPlayer(() => d.initiateEndDreaming());
             float until = Time.realtimeSinceStartup + 100f;

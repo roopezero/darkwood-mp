@@ -36,7 +36,11 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[dice] set {l}");
                 }
                 uint h = 2166136261;
-                foreach (char c in string.Join("|", lines)) { h ^= c; h *= 16777619; }
+                foreach (char c in string.Join("|", lines))
+                {
+                    h ^= c;
+                    h *= 16777619;
+                }
                 r.Info = $"{lines.Count} locations with sets, digest {h:x8}";
                 return None();
             });
@@ -51,7 +55,13 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     Location loc = null;
-                    try { loc = ge.transform.GetLocation(); } catch { }
+                    try
+                    {
+                        loc = ge.transform.GetLocation();
+                    }
+                    catch
+                    {
+                    }
                     for (int i = 0; i < ge.events.Count; i++)
                     {
                         var e = ge.events[i];
@@ -63,7 +73,8 @@ namespace DarkwoodMP.World
                         if (e.type == GameEvent.Type.runFunction && !string.IsNullOrEmpty(e.Value))
                         {
                             functions++;
-                            names.TryGetValue(e.Value, out int n); names[e.Value] = n + 1;
+                            names.TryGetValue(e.Value, out int n);
+                            names[e.Value] = n + 1;
                         }
                         var gets = new List<Location.GetObject>();
                         if (e.locationObjects != null)
@@ -81,7 +92,16 @@ namespace DarkwoodMP.World
                                 continue;
                             }
                             int count = -1;
-                            if (loc != null) { try { count = loc.getObjects(g)?.Count ?? 0; } catch { } }
+                            if (loc != null)
+                            {
+                                try
+                                {
+                                    count = loc.getObjects(g)?.Count ?? 0;
+                                }
+                                catch
+                                {
+                                }
+                            }
                             if (count >= 0 && count < 2)
                             {
                                 continue;
@@ -112,7 +132,8 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     string k = $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}{(x.gameObject.scene.IsValid() ? "" : " (prefab)")}";
-                    blasts.TryGetValue(k, out int n); blasts[k] = n + 1;
+                    blasts.TryGetValue(k, out int n);
+                    blasts[k] = n + 1;
                 }
                 foreach (var b in blasts)
                 {

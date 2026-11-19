@@ -168,7 +168,11 @@ namespace DarkwoodMP.World
         /// <summary>Call every frame.</summary>
         public static void Update()
         {
-            if (S == null || !S.Active || !WorldShare.InWorld) { _firstPlaySet = false; return; }
+            if (S == null || !S.Active || !WorldShare.InWorld)
+            {
+                _firstPlaySet = false;
+                return;
+            }
             var d = D;
             string stage = InStage ? Stage : null;
             // Every game in a stage dreams it together with the others.

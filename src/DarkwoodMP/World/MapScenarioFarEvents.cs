@@ -124,13 +124,22 @@ namespace DarkwoodMP.World
         private static IEnumerator Jump(string[] a, Result r)
         {
             var p = Player.Instance;
-            if (p == null || a.Length == 0) { r.Fail("no player or no target"); yield break; }
+            if (p == null || a.Length == 0)
+            {
+                r.Fail("no player or no target");
+                yield break;
+            }
             string t = a[0];
-            Vector3 to; string what;
+            Vector3 to;
+            string what;
             if (t.StartsWith("loc:"))
             {
                 var l = t == "loc:auto" ? Auto() : WorldLocations().FirstOrDefault(x => Name(x) == t.Substring(4));
-                if (l == null) { r.Fail($"no location for {t}"); yield break; }
+                if (l == null)
+                {
+                    r.Fail($"no location for {t}");
+                    yield break;
+                }
                 to = l.transform.position + new Vector3(150f, 0f, 0f);
                 what = $"{Name(l)} ({EventCount(l)} enter/exit triggers)";
             }
@@ -143,21 +152,33 @@ namespace DarkwoodMP.World
             else if (t == "gen:far")
             {
                 var g = FuelSync.Generators.Where(x => x != null && !x.isSaw).OrderByDescending(x => StateDump.Flat(x.transform.position - Centre)).FirstOrDefault();
-                if (g == null) { r.Fail("no generator"); yield break; }
+                if (g == null)
+                {
+                    r.Fail("no generator");
+                    yield break;
+                }
                 to = g.transform.position + new Vector3(100f, 0f, 0f);
                 what = $"by {g.name}, {StateDump.Flat(g.transform.position - Centre):0} from the centre";
             }
             else if (t == "to-client")
             {
                 var j = Joiner();
-                if (j == null) { r.Fail("no joiner"); yield break; }
+                if (j == null)
+                {
+                    r.Fail("no joiner");
+                    yield break;
+                }
                 to = j.transform.position + new Vector3(150f, 0f, 0f);
                 what = $"beside {j.OwnerName}";
                 _hostArrived = Time.realtimeSinceStartup;
                 var l = NearestTo(j.transform.position, 2500f);
                 _shared = l != null ? Name(l) : null;
             }
-            else { r.Fail($"unknown target {t}"); yield break; }
+            else
+            {
+                r.Fail($"unknown target {t}");
+                yield break;
+            }
             WatchSteps = false; // our own player moves: what it sets off from here on is its own
             float jumped = StateDump.Flat(to - p.transform.position);
             Place(to);
@@ -173,7 +194,11 @@ namespace DarkwoodMP.World
         private static IEnumerator CheckHost(string[] a, Result r)
         {
             var j = Joiner();
-            if (j == null) { r.Fail("no joiner"); yield break; }
+            if (j == null)
+            {
+                r.Fail("no joiner");
+                yield break;
+            }
             Location l = null;
             float until = Time.realtimeSinceStartup + 10f;
             // The location by the client is entered, and its enter events have run.
@@ -186,7 +211,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.25f);
             }
-            if (l == null) { r.Fail($"no world location within 2500 of the client at {Fmt(j.transform.position)}"); yield break; }
+            if (l == null)
+            {
+                r.Fail($"no world location within 2500 of the client at {Fmt(j.transform.position)}");
+                yield break;
+            }
             var es = Since(FarEvents.Log, _since, Name(l));
             string info = $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}], our player's steps run [{string.Join(", ", PlayerStepsRun)}], dialogues {Dialogues}";
             if (!l.entered)
@@ -222,7 +251,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.25f);
             }
-            if (l == null) { r.Fail("no world location by our player"); yield break; }
+            if (l == null)
+            {
+                r.Fail("no world location by our player");
+                yield break;
+            }
             var es = Since(FarEvents.Log, _since, Name(l));
             r.Info = $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
             if (!es.Any(e => e.Kind == "enter" && e.Part == ScriptedEvents.Part.PlayerAndShared))
@@ -257,7 +290,11 @@ namespace DarkwoodMP.World
         {
             // The host watches round the client's stand-in; the client round its own player.
             Component j = Net.Session.Instance != null && Net.Session.Instance.IsHost ? (Component)Joiner() : Player.Instance;
-            if (j == null) { r.Fail("no joiner"); yield break; }
+            if (j == null)
+            {
+                r.Fail("no joiner");
+                yield break;
+            }
             float t0 = Time.realtimeSinceStartup;
             yield return new WaitForSeconds(5f);
             var near = new HashSet<string>(WorldLocations().Where(l => StateDump.Flat(l.transform.position - j.transform.position) <= 2000f).Select(Name));
@@ -278,7 +315,11 @@ namespace DarkwoodMP.World
 
         private static IEnumerator HostIn(string[] a, Result r)
         {
-            if (_shared == null) { r.Fail("no location by the client (fe-jump to-client first)"); yield break; }
+            if (_shared == null)
+            {
+                r.Fail("no location by the client (fe-jump to-client first)");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             List<FarEvents.Entry> es = null;
             while (Time.realtimeSinceStartup < until)
@@ -304,7 +345,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Stay(string[] a, Result r)
         {
             var l = WorldLocations().FirstOrDefault(x => Name(x) == _shared);
-            if (l == null) { r.Fail("no shared location"); yield break; }
+            if (l == null)
+            {
+                r.Fail("no shared location");
+                yield break;
+            }
             yield return new WaitForSeconds(2f);
             var es = Since(FarEvents.Log, _hostArrived, _shared);
             r.Info = $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
@@ -321,7 +366,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Left(string[] a, Result r)
         {
             var l = WorldLocations().FirstOrDefault(x => Name(x) == _shared);
-            if (l == null) { r.Fail("no shared location"); yield break; }
+            if (l == null)
+            {
+                r.Fail("no shared location");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 15f;
             while (l.entered && Time.realtimeSinceStartup < until)
             {
@@ -346,16 +395,26 @@ namespace DarkwoodMP.World
         private static IEnumerator GeneratorSkill(string[] a, Result r)
         {
             var j = Joiner();
-            if (j == null) { r.Fail("no joiner"); yield break; }
+            if (j == null)
+            {
+                r.Fail("no joiner");
+                yield break;
+            }
             var gen = FuelSync.Generators.Where(g => g != null && !g.isSaw)
                 .OrderBy(g => StateDump.Flat(g.transform.position - j.transform.position)).FirstOrDefault();
-            if (gen == null) { r.Info = "no generator in this world"; yield break; }
+            if (gen == null)
+            {
+                r.Info = "no generator in this world";
+                yield break;
+            }
             bool clientNearer = StateDump.Flat(gen.transform.position - j.transform.position) < StateDump.Flat(gen.transform.position - Player.Instance.transform.position);
             float fuel = gen.fuel;
             gen.drainFuel();
             float used = fuel - gen.fuel;
             gen.fuel = fuel;
-            gen.drainFuel(); gen.fuel = fuel; // the low-power state as it was
+            // the low-power state as it was
+            gen.drainFuel();
+            gen.fuel = fuel;
             var skill = Characters.Instance?.Electrician(j.Owner);
             r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {(skill.HasValue ? skill.Value.ToString() : "not known")})";
             if (clientNearer && skill.HasValue && GeneratorDrainSkillPatch.Last != null && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))

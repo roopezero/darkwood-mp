@@ -50,9 +50,17 @@ namespace DarkwoodMP.World
             {
                 var go = Resources.Load(path) as GameObject;
                 var inv = go != null ? go.GetComponent<Workbench>()?.normalInventory ?? go.GetComponent<Inventory>() : null;
-                if (inv != null && inv.slots != null && inv.slots.Count > 0) { n = inv.slots.Count; break; }
+                if (inv != null && inv.slots != null && inv.slots.Count > 0)
+                {
+                    n = inv.slots.Count;
+                    break;
+                }
             }
-            if (n == 0) { n = FallbackBase; Plugin.Log.LogWarning($"[workbench] no prefab for {wb.name} ('{name}'): its storage counts {n} slots at level {BaseLevel}"); }
+            if (n == 0)
+            {
+                n = FallbackBase;
+                Plugin.Log.LogWarning($"[workbench] no prefab for {wb.name} ('{name}'): its storage counts {n} slots at level {BaseLevel}");
+            }
             _base[name] = n;
             return n;
         }
@@ -65,7 +73,11 @@ namespace DarkwoodMP.World
         /// <summary>Every frame: once a world has loaded (again), or the level changed, give every workbench its rows.</summary>
         public static void Update()
         {
-            if (!WorldShare.WorldReady) { _appliedScene = -1; return; }
+            if (!WorldShare.WorldReady)
+            {
+                _appliedScene = -1;
+                return;
+            }
             int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             int level = Level;
             if (scene == _appliedScene && level == _appliedLevel)

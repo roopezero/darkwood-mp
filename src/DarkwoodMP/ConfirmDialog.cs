@@ -43,8 +43,11 @@ namespace DarkwoodMP
                 };
             }
             _win.Title = title ?? "";
-            _text = text; _yes = string.IsNullOrEmpty(yes) ? "Yes" : yes; _no = string.IsNullOrEmpty(no) ? "No" : no;
-            _onYes = onYes; _onNo = onNo;
+            _text = text;
+            _yes = string.IsNullOrEmpty(yes) ? "Yes" : yes;
+            _no = string.IsNullOrEmpty(no) ? "No" : no;
+            _onYes = onYes;
+            _onNo = onNo;
             _deadline = timeout > 0f ? Time.realtimeSinceStartup + timeout : 0f;
             _win.ResetPlace();
             _win.Show();
@@ -77,7 +80,12 @@ namespace DarkwoodMP
             var act = yes ? _onYes : _onNo;
             _onYes = _onNo = null;
             _deadline = 0f;
-            if (_win.Open) { _win.OnClose = null; _win.Close(); _win.OnClose = Closed; }
+            if (_win.Open)
+            {
+                _win.OnClose = null;
+                _win.Close();
+                _win.OnClose = Closed;
+            }
             _pending = act;
             Plugin.Log.LogInfo($"[confirm] answered {(yes ? "yes" : "no")}: {_win.Title}");
         }
@@ -85,15 +93,25 @@ namespace DarkwoodMP
         /// <summary>Every frame (Plugin.Update, after the game's buttons are let go): run the answer's action.</summary>
         public static void Update()
         {
-            if (Open && _deadline > 0f && Time.realtimeSinceStartup >= _deadline) { _deadline = 0f; Answer(false); }
+            if (Open && _deadline > 0f && Time.realtimeSinceStartup >= _deadline)
+            {
+                _deadline = 0f;
+                Answer(false);
+            }
             if (_pending == null)
             {
                 return;
             }
             var act = _pending;
             _pending = null;
-            try { act(); }
-            catch (Exception e) { Plugin.Log.LogWarning($"[confirm] the answer's action failed: {e.Message}"); }
+            try
+            {
+                act();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[confirm] the answer's action failed: {e.Message}");
+            }
         }
 
         /// <summary>Draw it (Plugin.OnGUI, with MenuSkin's skin, after every other window).</summary>
@@ -106,8 +124,18 @@ namespace DarkwoodMP
             var e = Event.current;
             if (e.type == EventType.KeyDown)
             {
-                if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) { e.Use(); Answer(true); return; }
-                if (e.keyCode == KeyCode.Escape) { e.Use(); Answer(false); return; }
+                if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)
+                {
+                    e.Use();
+                    Answer(true);
+                    return;
+                }
+                if (e.keyCode == KeyCode.Escape)
+                {
+                    e.Use();
+                    Answer(false);
+                    return;
+                }
             }
             // The screen behind it a little darker, so it reads as a question that has to be answered.
             if (e.type == EventType.Repaint)

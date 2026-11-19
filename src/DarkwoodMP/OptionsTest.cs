@@ -44,7 +44,12 @@ namespace DarkwoodMP
             Directory.CreateDirectory(dir);
             _fails = 0;
             string where = inWorld ? "pause" : "main";
-            if (!File.Exists(PrefsPath)) { Log($"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run"); Log("done"); yield break; }
+            if (!File.Exists(PrefsPath))
+            {
+                Log($"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run");
+                Log("done");
+                yield break;
+            }
             if (!inWorld)
             {
                 while (!WorldShare.MainMenuReady())
@@ -73,7 +78,8 @@ namespace DarkwoodMP
 
             // Through the menu's entry, as a click on it.
             bool took = MenuList.Click("Options");
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             Check(took && OptionsWindow.IsOpen, $"the menu's Options opens the window (entry taken {took}, open {OptionsWindow.IsOpen})");
             if (!OptionsWindow.IsOpen)
             {
@@ -102,7 +108,8 @@ namespace DarkwoodMP
 
             // A key: listened for and cancelled with Escape, then put on an action and stored.
             OptionsWindow.TestTab(3);
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             var rows = OptionsWindow.TestRows();
             string label = null;
             foreach (var r in rows)
@@ -117,14 +124,20 @@ namespace DarkwoodMP
                 foreach (var r in rows)
                 {
                     if (r.key != null)
-                    { label = r.label; break; }
+                    {
+                        label = r.label;
+                        break;
+                    }
                 }
             }
             KeyCode free = KeyCode.None;
             foreach (var k in new[] { KeyCode.F9, KeyCode.F10, KeyCode.F11, KeyCode.F8, KeyCode.Insert, KeyCode.Home })
             {
                 if (!OptionsWindow.TestKeyUsed(k))
-                { free = k; break; }
+                {
+                    free = k;
+                    break;
+                }
             }
             Log($"{rows.Count} keyboard rows; trying {label} with {free}");
             if (label != null && free != KeyCode.None)
@@ -194,7 +207,11 @@ namespace DarkwoodMP
                     OptionsWindow.TestEscape();
                 }
                 OptionsWindow.TestTab(0);
-                OptionsWindow.AskKeep($"The screen is now {Screen.width}x{Screen.height}, in a window.", () => { }, () => { });
+                OptionsWindow.AskKeep($"The screen is now {Screen.width}x{Screen.height}, in a window.", () =>
+                {
+                }, () =>
+                {
+                });
                 yield return Shot(P("video-keep"));
                 ConfirmDialog.Cancel();
                 OptionsWindow.TestTab(1);
@@ -202,7 +219,8 @@ namespace DarkwoodMP
                 OptionsWindow.RequestClose();
                 yield return Shot(P("audio-apply-question"));
                 ConfirmDialog.Choose(false); // Discard: the sound volume back, the window closed
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 Check(!OptionsWindow.IsOpen && !OptionsWindow.Pending, $"Discard closes the window with nothing left to apply (open {OptionsWindow.IsOpen})");
                 OptionsWindow.Open();
                 yield return null;
@@ -240,9 +258,31 @@ namespace DarkwoodMP
             }
             _before = null;
             Log("cut short: putting the settings back");
-            try { Screen.SetResolution(_sizeBefore.w, _sizeBefore.h, _sizeBefore.mode); } catch (Exception e) { Log($"couldn't put the screen size back: {e.Message}"); }
-            try { RestorePrefs(before); } catch (Exception e) { Log($"couldn't put the prefs back: {e.Message}"); }
-            try { OptionsWindow.Revert(); OptionsWindow.TestReloadControls(); } catch (Exception e) { Log($"couldn't reload the settings: {e.Message}"); }
+            try
+            {
+                Screen.SetResolution(_sizeBefore.w, _sizeBefore.h, _sizeBefore.mode);
+            }
+            catch (Exception e)
+            {
+                Log($"couldn't put the screen size back: {e.Message}");
+            }
+            try
+            {
+                RestorePrefs(before);
+            }
+            catch (Exception e)
+            {
+                Log($"couldn't put the prefs back: {e.Message}");
+            }
+            try
+            {
+                OptionsWindow.Revert();
+                OptionsWindow.TestReloadControls();
+            }
+            catch (Exception e)
+            {
+                Log($"couldn't reload the settings: {e.Message}");
+            }
         }
 
         private static IEnumerator Shot(string path)
@@ -284,18 +324,30 @@ namespace DarkwoodMP
                 {
                     switch (kv.Value.type)
                     {
-                        case "int": PlayerPrefs.SetInt(kv.Key, int.Parse(kv.Value.value, CultureInfo.InvariantCulture)); break;
-                        case "float": PlayerPrefs.SetFloat(kv.Key, float.Parse(kv.Value.value, CultureInfo.InvariantCulture)); break;
-                        default: PlayerPrefs.SetString(kv.Key, Encoding.UTF8.GetString(Convert.FromBase64String(kv.Value.value))); break;
+                        case "int":
+                            PlayerPrefs.SetInt(kv.Key, int.Parse(kv.Value.value, CultureInfo.InvariantCulture));
+                            break;
+                        case "float":
+                            PlayerPrefs.SetFloat(kv.Key, float.Parse(kv.Value.value, CultureInfo.InvariantCulture));
+                            break;
+                        default:
+                            PlayerPrefs.SetString(kv.Key, Encoding.UTF8.GetString(Convert.FromBase64String(kv.Value.value)));
+                            break;
                     }
                     Log($"put back {Short(kv.Key)}");
                 }
-                catch (Exception e) { Log($"couldn't put back {Short(kv.Key)}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Log($"couldn't put back {Short(kv.Key)}: {e.Message}");
+                }
             }
             foreach (var kv in now)
             {
                 if (!Unity(kv.Key) && !before.ContainsKey(kv.Key))
-                { PlayerPrefs.DeleteKey(kv.Key); Log($"deleted the test's {Short(kv.Key)}"); }
+                {
+                    PlayerPrefs.DeleteKey(kv.Key);
+                    Log($"deleted the test's {Short(kv.Key)}");
+                }
             }
             PlayerPrefs.Save();
         }

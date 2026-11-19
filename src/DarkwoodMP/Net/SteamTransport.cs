@@ -61,7 +61,11 @@ namespace DarkwoodMP.Net
         // Reliable messages Steam had no room for, per peer, in the order they were sent. Steam queues only about
         // 512 KiB per peer (its SendBufferSize) and refuses more with k_EResultLimitExceeded; what it refuses
         // waits here and goes out as room frees up.
-        private sealed class Pending { public byte[] Data; public int Channel; }
+        private sealed class Pending
+        {
+            public byte[] Data;
+            public int Channel;
+        }
         private readonly Dictionary<CSteamID, Queue<Pending>> _pending =
             new Dictionary<CSteamID, Queue<Pending>>();
         private readonly Dictionary<CSteamID, long> _pendingBytes = new Dictionary<CSteamID, long>();
@@ -97,7 +101,13 @@ namespace DarkwoodMP.Net
                 int head = off == 0 ? 5 : 1;
                 var piece = new byte[head + n];
                 piece[0] = (byte)MsgType.SteamPiece;
-                if (off == 0) { piece[1] = (byte)length; piece[2] = (byte)(length >> 8); piece[3] = (byte)(length >> 16); piece[4] = (byte)(length >> 24); }
+                if (off == 0)
+                {
+                    piece[1] = (byte)length;
+                    piece[2] = (byte)(length >> 8);
+                    piece[3] = (byte)(length >> 16);
+                    piece[4] = (byte)(length >> 24);
+                }
                 Buffer.BlockCopy(data, off, piece, head, n);
                 ok &= SendOne(to, piece, piece.Length, channel, reliable: true);
             }
@@ -105,7 +115,11 @@ namespace DarkwoodMP.Net
         }
 
         // A long message coming in as SteamPiece messages, per sender and channel.
-        private sealed class Joining { public byte[] Data; public int Got; }
+        private sealed class Joining
+        {
+            public byte[] Data;
+            public int Got;
+        }
         private readonly Dictionary<(CSteamID, int), Joining> _joining =
             new Dictionary<(CSteamID, int), Joining>();
 
@@ -171,8 +185,14 @@ namespace DarkwoodMP.Net
             int flags = (reliable ? Constants.k_nSteamNetworkingSend_Reliable : Constants.k_nSteamNetworkingSend_UnreliableNoDelay)
                         | Constants.k_nSteamNetworkingSend_AutoRestartBrokenSession;
             GCHandle h = GCHandle.Alloc(data, GCHandleType.Pinned);
-            try { return SteamNetworkingMessages.SendMessageToUser(ref ident, h.AddrOfPinnedObject(), (uint)length, flags, channel); }
-            finally { h.Free(); }
+            try
+            {
+                return SteamNetworkingMessages.SendMessageToUser(ref ident, h.AddrOfPinnedObject(), (uint)length, flags, channel);
+            }
+            finally
+            {
+                h.Free();
+            }
         }
 
         private bool Enqueue(CSteamID to, byte[] data, int length, int channel)
@@ -195,7 +215,13 @@ namespace DarkwoodMP.Net
         }
 
         /// <summary>Forget everything still waiting (we left the lobby).</summary>
-        public void ClearPending() { _pending.Clear(); _pendingBytes.Clear(); _joining.Clear(); _closing.Clear(); }
+        public void ClearPending()
+        {
+            _pending.Clear();
+            _pendingBytes.Clear();
+            _joining.Clear();
+            _closing.Clear();
+        }
 
         // Peers to close once what was sent to them has gone out (a refused joiner must get its Refused first).
         // The value is when to close: -1 while messages still wait in _pending, then CloseDelay seconds after
@@ -271,7 +297,10 @@ namespace DarkwoodMP.Net
             if (done != null)
             {
                 foreach (var id in done)
-                { _pending.Remove(id); _pendingBytes.Remove(id); }
+                {
+                    _pending.Remove(id);
+                    _pendingBytes.Remove(id);
+                }
             }
         }
 

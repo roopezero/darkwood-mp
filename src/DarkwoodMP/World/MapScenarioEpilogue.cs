@@ -88,7 +88,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Next(string[] a, Result r)
         {
             string from = D.preset != null ? D.preset.name : "";
-            if (D.preset == null || D.preset.outcomes.Count == 0) { r.Fail($"no outcomes: {Where()}"); yield break; }
+            if (D.preset == null || D.preset.outcomes.Count == 0)
+            {
+                r.Fail($"no outcomes: {Where()}");
+                yield break;
+            }
             D.outcome = D.preset.outcomes[0].name;
             string outcome = D.outcome;
             AsPlayer(() => D.initiateEndDreaming());
@@ -141,7 +145,11 @@ namespace DarkwoodMP.World
             bool credits = false;
             while (!WorldShare.MainMenuReady())
             {
-                if (!credits && SceneManager.GetActiveScene().name == "credits") { credits = true; yield return ExitCredits(); }
+                if (!credits && SceneManager.GetActiveScene().name == "credits")
+                {
+                    credits = true;
+                    yield return ExitCredits();
+                }
                 yield return new WaitForSeconds(0.5f);
             }
             r.Info = $"at the main menu (credits seen {credits}); session {Net.Session.Instance?.Active}";
@@ -183,12 +191,19 @@ namespace DarkwoodMP.World
             for (int hop = 0; hop < 5 && !(D.preset != null && D.preset.name.Contains(want)); hop++)
             {
                 string from = D.preset != null ? D.preset.name : "";
-                if (D.preset == null || D.preset.outcomes.Count == 0) { r.Fail($"no outcomes: {Where()}"); yield break; }
+                if (D.preset == null || D.preset.outcomes.Count == 0)
+                {
+                    r.Fail($"no outcomes: {Where()}");
+                    yield break;
+                }
                 var pick = D.preset.outcomes[0];
                 foreach (var o in D.preset.outcomes)
                 {
                     if (Dest(o).Contains(want))
-                    { pick = o; break; }
+                    {
+                        pick = o;
+                        break;
+                    }
                 }
                 D.outcome = pick.name;
                 path.Add($"{from} -{pick.name}-> {Dest(pick)}");
@@ -233,9 +248,16 @@ namespace DarkwoodMP.World
             foreach (var ge in Object.FindObjectsOfType<GameEvents>(true))
             {
                 if (ge != null && ge.name == EpilogueSync.BurnEvents)
-                { found = ge; break; }
+                {
+                    found = ge;
+                    break;
+                }
             }
-            if (found == null) { r.Fail($"no {EpilogueSync.BurnEvents} here: {Where()}"); yield break; }
+            if (found == null)
+            {
+                r.Fail($"no {EpilogueSync.BurnEvents} here: {Where()}");
+                yield break;
+            }
             AsPlayer(() => found.fire());
             yield return new WaitForSeconds(2f);
             r.Info = $"{EpilogueSync.BurnEvents} fired {found.fired}; shared {EpilogueSync.BurnShared}";
@@ -252,7 +274,10 @@ namespace DarkwoodMP.World
             foreach (var ge in Object.FindObjectsOfType<GameEvents>(true))
             {
                 if (ge != null && ge.name == EpilogueSync.BurnEvents)
-                { found = ge; break; }
+                {
+                    found = ge;
+                    break;
+                }
             }
             float until = Time.realtimeSinceStartup + 30f;
             while (Time.realtimeSinceStartup < until && !(found != null && found.fired))
@@ -286,7 +311,11 @@ namespace DarkwoodMP.World
                 P.performingAction = false;
                 P.crawling = true;
             }
-            if (!P.crawling) { r.Fail($"no crawl after the first death: startingCrawling {P.startingCrawling} dying {P.dying}"); yield break; }
+            if (!P.crawling)
+            {
+                r.Fail($"no crawl after the first death: startingCrawling {P.startingCrawling} dying {P.dying}");
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             P.die();
             yield return new WaitForSeconds(1f);

@@ -55,7 +55,10 @@ namespace DarkwoodMP.Sync
                 }
                 return false;
             }
-            catch { return true; }
+            catch
+            {
+                return true;
+            }
         }
 
         private static string Path(Transform t)

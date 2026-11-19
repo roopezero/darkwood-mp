@@ -45,7 +45,11 @@ namespace DarkwoodMP.World
         public static Vector3 Centre => _centre ?? StateDump.DefaultCentre();
         private static Vector3? _centre;
         public static void SetCentre(Vector3 at) => _centre = new Vector3(at.x, 0f, at.z);
-        public static void ResetCentre() { _centre = null; Home = null; }
+        public static void ResetCentre()
+        {
+            _centre = null;
+            Home = null;
+        }
         /// <summary>The first centre the driver gave this game (the host's test area), which mt-home returns to.</summary>
         public static Vector3? Home { get; private set; }
 
@@ -62,12 +66,23 @@ namespace DarkwoodMP.World
         /// </summary>
         public static IEnumerator Run(string name, string[] args, Action<string> reply)
         {
-            if (!_steps.TryGetValue(name, out var s)) { reply($"fail unknown step {name} (known: {string.Join(", ", _steps.Keys.OrderBy(k => k))})"); yield break; }
+            if (!_steps.TryGetValue(name, out var s))
+            {
+                reply($"fail unknown step {name} (known: {string.Join(", ", _steps.Keys.OrderBy(k => k))})");
+                yield break;
+            }
             var r = new Result();
             float until = Time.realtimeSinceStartup + s.timeout;
             IEnumerator e;
-            try { e = s.run(args, r); }
-            catch (Exception ex) { reply($"fail {ex.GetType().Name}: {ex.Message}"); yield break; }
+            try
+            {
+                e = s.run(args, r);
+            }
+            catch (Exception ex)
+            {
+                reply($"fail {ex.GetType().Name}: {ex.Message}");
+                yield break;
+            }
             var stack = new Stack<IEnumerator>();
             stack.Push(e);
             _running = stack;
@@ -78,8 +93,16 @@ namespace DarkwoodMP.World
                 {
                     var top = stack.Peek();
                     bool more;
-                    try { more = top.MoveNext(); }
-                    catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: {ex}"); r.Fail($"{ex.GetType().Name}: {ex.Message}"); break; }
+                    try
+                    {
+                        more = top.MoveNext();
+                    }
+                    catch (Exception ex)
+                    {
+                        Plugin.Log.LogWarning($"[map] {name}: {ex}");
+                        r.Fail($"{ex.GetType().Name}: {ex.Message}");
+                        break;
+                    }
                     if (r.Failure != null)
                     {
                         break;
@@ -93,8 +116,16 @@ namespace DarkwoodMP.World
                         }
                         continue;
                     }
-                    if (Time.realtimeSinceStartup > until) { r.Fail("timeout"); break; }
-                    if (top.Current is IEnumerator sub) { stack.Push(sub); continue; }
+                    if (Time.realtimeSinceStartup > until)
+                    {
+                        r.Fail("timeout");
+                        break;
+                    }
+                    if (top.Current is IEnumerator sub)
+                    {
+                        stack.Push(sub);
+                        continue;
+                    }
                     yield return top.Current;
                 }
             }
@@ -104,7 +135,11 @@ namespace DarkwoodMP.World
                 {
                     DisposeLevel(stack.Pop(), name);
                 }
-                if (_running == stack) { _running = null; _runningResult = null; }
+                if (_running == stack)
+                {
+                    _running = null;
+                    _runningResult = null;
+                }
             }
             WorldActions.TestAsPlayer = false;
             string line = r.Failure != null ? $"fail {r.Failure}" : r.Info != null ? $"done {r.Info}" : "done";
@@ -117,8 +152,14 @@ namespace DarkwoodMP.World
 
         private static void DisposeLevel(IEnumerator level, string name)
         {
-            try { (level as IDisposable)?.Dispose(); }
-            catch (Exception ex) { Plugin.Log.LogWarning($"[map] {name}: while ending it: {ex}"); }
+            try
+            {
+                (level as IDisposable)?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[map] {name}: while ending it: {ex}");
+            }
         }
 
         /// <summary>Plugin.StopTests: end the running step now (its finally blocks run); it replies "fail stopped".</summary>
@@ -134,7 +175,8 @@ namespace DarkwoodMP.World
             {
                 DisposeLevel(stack.Pop(), "stop");
             }
-            _running = null; _runningResult = null;
+            _running = null;
+            _runningResult = null;
         }
 
         // ---- helpers ----------------------------------------------------------------------------------------------
@@ -143,8 +185,14 @@ namespace DarkwoodMP.World
         public static void AsPlayer(Action a)
         {
             WorldActions.TestAsPlayer = true;
-            try { a(); }
-            finally { WorldActions.TestAsPlayer = false; }
+            try
+            {
+                a();
+            }
+            finally
+            {
+                WorldActions.TestAsPlayer = false;
+            }
         }
 
         public const float WalkSpeed = 600f; // under MoveCheck.MaxSpeed, so the host doesn't correct it
@@ -213,7 +261,9 @@ namespace DarkwoodMP.World
                 return null;
             }
             var dir = seg / len;
-            Trigger worst = null; float worstT = float.MaxValue; Vector3 side = Vector3.zero;
+            Trigger worst = null;
+            float worstT = float.MaxValue;
+            Vector3 side = Vector3.zero;
             foreach (var t in Object.FindObjectsOfType<Trigger>())
             {
                 if (t == null || !t.active || t.triggered)
@@ -236,7 +286,8 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                worst = t; worstT = along;
+                worst = t;
+                worstT = along;
                 side = perp.sqrMagnitude < 1f ? new Vector3(-dir.z, 0f, dir.x) : -perp.normalized; // to the side away from it
             }
             if (worst == null)
@@ -294,7 +345,11 @@ namespace DarkwoodMP.World
             // "centre X Z": pick things nearest to this spot from now on.
             Add("centre", (a, r) =>
             {
-                if (a.Length < 2) { r.Fail("usage: centre X Z"); return None(); }
+                if (a.Length < 2)
+                {
+                    r.Fail("usage: centre X Z");
+                    return None();
+                }
                 _centre = new Vector3(F(a[0]), 0f, F(a[1]));
                 if (Home == null)
                 {
@@ -354,16 +409,30 @@ namespace DarkwoodMP.World
             MapScenarioStory2.Register();
         }
 
-        internal static IEnumerator None() { yield break; }
-        internal static IEnumerator Info(Result r, string info) { r.Info = info; yield break; }
-        private static IEnumerator Wait(float s) { yield return new WaitForSeconds(s); }
+        internal static IEnumerator None()
+        {
+            yield break;
+        }
+        internal static IEnumerator Info(Result r, string info)
+        {
+            r.Info = info;
+            yield break;
+        }
+        private static IEnumerator Wait(float s)
+        {
+            yield return new WaitForSeconds(s);
+        }
 
         /// <summary>"toggle-door [open|close]": the door nearest the centre, opened or closed (toggled by default).</summary>
         private static IEnumerator ToggleDoor(string[] a, Result r)
         {
             var p = Player.Instance;
             var door = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), Centre);
-            if (door == null) { r.Fail("no door"); yield break; }
+            if (door == null)
+            {
+                r.Fail("no door");
+                yield break;
+            }
             yield return Walk(door.transform.position);
             bool open = a.Length > 0 ? a[0] == "open" : !door.opened;
             if (open != door.opened)
@@ -399,7 +468,11 @@ namespace DarkwoodMP.World
             bool Has(InvSlot s) => !InvItemClass.isNull(s.invItem) && (type == null || s.invItem.type == type);
             var inv = Nearest(Object.FindObjectsOfType<Inventory>().Where(i => i.invType == Inventory.InvType.itemInv && !i.isWorkbench
                 && !i.name.StartsWith("DroppedItem") && i.slots.Any(Has) && (locked || !(i.GetComponentInParent<Locked>() is Locked l && l.locked)) && i != p.Inventory && i != p.Hotbar && !i.transform.IsChildOf(p.transform)), Centre);
-            if (inv == null) { r.Fail($"no container with {type ?? "anything"} in it"); yield break; }
+            if (inv == null)
+            {
+                r.Fail($"no container with {type ?? "anything"} in it");
+                yield break;
+            }
             yield return Walk(inv.transform.position);
             var slot = inv.slots.First(Has);
             var item = new InvItemClass(slot.invItem);
@@ -407,7 +480,11 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.6f);
             int Count() => Carried(p).Where(i => i.type == item.type).Sum(i => i.amount);
             int before = Count();
-            AsPlayer(() => { slot.removeItem(); p.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true); });
+            AsPlayer(() =>
+            {
+                slot.removeItem();
+                p.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true);
+            });
             if (Count() <= before)
             {
                 r.Fail($"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
@@ -426,9 +503,17 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             string type = a.Length > 0 ? a[0] : _lastTaken;
             int amount = a.Length > 1 ? int.Parse(a[1]) : 1;
-            if (type == null) { r.Fail("nothing to drop (take-item first, or give a type)"); yield break; }
+            if (type == null)
+            {
+                r.Fail("nothing to drop (take-item first, or give a type)");
+                yield break;
+            }
             var carried = Carried(p).FirstOrDefault(i => i.type == type);
-            if (carried == null) { r.Fail($"not carrying {type}"); yield break; }
+            if (carried == null)
+            {
+                r.Fail($"not carrying {type}");
+                yield break;
+            }
             var item = new InvItemClass(carried) { amount = Math.Min(amount, carried.amount) };
             Transform dropped = null;
             AsPlayer(() =>
@@ -446,8 +531,16 @@ namespace DarkwoodMP.World
         private static IEnumerator Heal(string[] a, Result r)
         {
             var p = Player.Instance;
-            if (p == null) { r.Fail("no player"); yield break; }
-            if (!p.alive || p.health <= 0f) { r.Fail($"our player is dead (health {p.health:0})"); yield break; }
+            if (p == null)
+            {
+                r.Fail("no player");
+                yield break;
+            }
+            if (!p.alive || p.health <= 0f)
+            {
+                r.Fail($"our player is dead (health {p.health:0})");
+                yield break;
+            }
             float was = p.health;
             HealNow();
             yield return new WaitForSeconds(0.3f);
@@ -501,9 +594,17 @@ namespace DarkwoodMP.World
         private static IEnumerator Time_(string[] a, Result r)
         {
             var s = Net.Session.Instance;
-            if (s != null && s.IsClient) { r.Fail("the clock is the host's"); yield break; }
+            if (s != null && s.IsClient)
+            {
+                r.Fail("the clock is the host's");
+                yield break;
+            }
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null || a.Length < 1) { r.Fail("usage: time +H"); yield break; }
+            if (ctl == null || a.Length < 1)
+            {
+                r.Fail("usage: time +H");
+                yield break;
+            }
             float h = F(a[0].TrimStart('+'));
             TestWorld.SetTime(Mathf.Repeat(ctl.CurrentTime + h * 60f, 1440f));
             yield return new WaitForSeconds(1f);

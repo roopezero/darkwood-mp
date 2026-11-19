@@ -19,7 +19,8 @@ namespace DarkwoodMP.World
             Add("skills-give", Give);
             Add("skills-panel", Panel);
             Add("skills-learn", Learn);
-            Add("skills-learn-all", LearnAll, timeout: 60f);            Add("skills-reset", Reset, timeout: 40f);
+            Add("skills-learn-all", LearnAll, timeout: 60f);
+            Add("skills-reset", Reset, timeout: 40f);
         }
 
         /// <summary>"skills-give N": N more levels for our player (their points to spend, no skills chosen); a negative N takes levels away.</summary>
@@ -40,7 +41,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Panel(string[] a, Result r)
         {
             var fails = new List<string>();
-            if (P.Inventory.open) { P.getIntoInventory(); yield return new WaitForSecondsRealtime(1.5f); }
+            if (P.Inventory.open)
+            {
+                P.getIntoInventory();
+                yield return new WaitForSecondsRealtime(1.5f);
+            }
             SkillsPanel.TestPressKey();
             yield return new WaitForSecondsRealtime(2f);
             bool open = SkillsPanel.Open, bag = P.Inventory.open || P.gettingInventory;
@@ -69,14 +74,22 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         if (!SkillsPanel.TestRects(sk.name, out var icon, out var cell))
-                        { fails.Add($"{sk.name} not drawn"); continue; }
+                        {
+                            fails.Add($"{sk.name} not drawn");
+                            continue;
+                        }
                         skills++;
                         if (!(cell.xMin <= icon.xMin && cell.yMin <= icon.yMin && cell.xMax >= icon.xMax && cell.yMax >= icon.yMax))
                         {
                             fails.Add($"{sk.name}: cell {cell} doesn't cover icon {icon}");
                         }
                         if (first == null && k + 1 < list.Count && list[k + 1] != null)
-                        { first = sk.name; below = list[k + 1].name; firstIcon = icon; firstCell = cell; }
+                        {
+                            first = sk.name;
+                            below = list[k + 1].name;
+                            firstIcon = icon;
+                            firstCell = cell;
+                        }
                     }
                 }
             }
@@ -86,15 +99,18 @@ namespace DarkwoodMP.World
             {
                 // The icon's bottom right pixel, then the middle of the space between it and the icon below.
                 SkillsPanel.TestMouse = new Vector2(firstIcon.xMax - 1f, firstIcon.yMax - 1f);
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 atEdge = SkillsPanel.TestHover;
                 SkillsPanel.TestRects(below, out var belowIcon, out _);
                 SkillsPanel.TestMouse = new Vector2(firstIcon.center.x, (firstIcon.yMax + belowIcon.yMin) / 2f);
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 atGap = SkillsPanel.TestHover;
                 float hHover = SkillsPanel.TestWindow.height;
                 SkillsPanel.TestMouse = new Vector2(1f, 1f);
-                yield return null; yield return null;
+                yield return null;
+                yield return null;
                 outside = SkillsPanel.TestHover;
                 SkillsPanel.TestMouse = null;
                 if (atEdge != first)
@@ -127,7 +143,11 @@ namespace DarkwoodMP.World
             {
                 fails.Add($"backpack opened: panel {SkillsPanel.Open}, backpack {P.Inventory.open}");
             }
-            if (P.Inventory.open) { P.getIntoInventory(); yield return new WaitForSecondsRealtime(1.5f); }
+            if (P.Inventory.open)
+            {
+                P.getIntoInventory();
+                yield return new WaitForSecondsRealtime(1.5f);
+            }
             bool stillOpen = SkillsPanel.Open;
             if (!stillOpen)
             {
@@ -157,10 +177,18 @@ namespace DarkwoodMP.World
         {
             bool refused = a.Contains("--refused");
             var choice = SkillTree.AnyChoice(P);
-            if (choice == null) { r.Fail($"nothing to learn: {Progression.TestState()}"); yield break; }
+            if (choice == null)
+            {
+                r.Fail($"nothing to learn: {Progression.TestState()}");
+                yield break;
+            }
             int before = SkillTree.Points(P);
             string why = SkillsPanel.TestLearn(choice[0], choice[1]);
-            if (why != null) { r.Fail($"{choice[0]}: {why}"); yield break; }
+            if (why != null)
+            {
+                r.Fail($"{choice[0]}: {why}");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             while (SkillTree.Waiting && Time.realtimeSinceStartup < until)
             {
@@ -188,14 +216,22 @@ namespace DarkwoodMP.World
                 SkillsPanel.TestPressKey();
             }
             yield return new WaitForSecondsRealtime(1f);
-            if (!SkillsPanel.Open) { r.Fail("the panel didn't open"); yield break; }
+            if (!SkillsPanel.Open)
+            {
+                r.Fail("the panel didn't open");
+                yield break;
+            }
             int start = SkillTree.Points(P), n = 0;
             var learned = new List<string>();
             var log = new List<string>();
             while (SkillTree.Points(P) > 0 && n < 12)
             {
                 var choice = SkillTree.AnyChoice(P);
-                if (choice == null) { fails.Add($"{SkillTree.Points(P)} points but nothing to learn"); break; }
+                if (choice == null)
+                {
+                    fails.Add($"{SkillTree.Points(P)} points but nothing to learn");
+                    break;
+                }
                 // The Learn button takes a click once it's ready (not while a choice waits for the host).
                 float until = Time.realtimeSinceStartup + 8f;
                 while (!SkillsPanel.TestReady(choice[0], choice[1]) && Time.realtimeSinceStartup < until)
@@ -206,14 +242,22 @@ namespace DarkwoodMP.World
                 string why = SkillsPanel.TestLearn(choice[0], choice[1]);
                 n++;
                 log.Add($"{choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}: {why ?? "ok"} ({before} -> {SkillTree.Points(P)})");
-                if (why != null) { fails.Add($"choice {n} ({choice[0]}): {why}"); break; }
+                if (why != null)
+                {
+                    fails.Add($"choice {n} ({choice[0]}): {why}");
+                    break;
+                }
                 learned.Add(choice[0]);
                 if (choice[1] != null)
                 {
                     learned.Add(choice[1]);
                 }
                 yield return null;
-                if (!SkillsPanel.Open) { fails.Add($"the panel closed after choice {n}"); break; }
+                if (!SkillsPanel.Open)
+                {
+                    fails.Add($"the panel closed after choice {n}");
+                    break;
+                }
             }
             float end = Time.realtimeSinceStartup + 8f;
             while (SkillTree.Waiting && Time.realtimeSinceStartup < end)
@@ -270,7 +314,11 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (!Progression.TestCanReset) { r.Fail("the stove's menu didn't open"); yield break; }
+            if (!Progression.TestCanReset)
+            {
+                r.Fail("the stove's menu didn't open");
+                yield break;
+            }
             int had = SkillTree.Chosen(P).Count;
             Progression.TestReset();
             until = Time.realtimeSinceStartup + 8f;

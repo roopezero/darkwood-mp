@@ -44,12 +44,21 @@ namespace DarkwoodMP.Combat
         internal static bool EffectsForwarded(Character c) =>
             !_ours && c != null && c == _forwarded && Time.frameCount == _forwardedFrame;
 
-        private static bool Forwarded(Character c) { _forwarded = c; _forwardedFrame = Time.frameCount; return true; }
+        private static bool Forwarded(Character c)
+        {
+            _forwarded = c;
+            _forwardedFrame = Time.frameCount;
+            return true;
+        }
 
         /// <summary>Client: the melee hit is over (ClientHitEffectsPatch).</summary>
         internal static void EndHit() => _forwarded = null;
 
-        public static void Clear() { _running.Clear(); _dead.Clear(); }
+        public static void Clear()
+        {
+            _running.Clear();
+            _dead.Clear();
+        }
 
         // NPCs that died in this game while playing together. A corpse loses its NPC part (Character.destroyComponents),
         // so from then on it looks like any creature's: one the host runs and sends, and that a client freezes and
@@ -143,7 +152,8 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static Character OurCopy(string kind, Vector3 pos, Func<Character, bool> driven, Func<Character, string> kindOf)
         {
-            Character best = null; float bestD = 3000f * 3000f;
+            Character best = null;
+            float bestD = 3000f * 3000f;
             foreach (var c in Object.FindObjectsOfType<Character>())
             {
                 if (c == null || (c.npc == null && !_dead.Contains(c)) || driven(c) || kindOf(c) != kind)
@@ -151,7 +161,11 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 float d = (c.transform.position - pos).sqrMagnitude;
-                if (d < bestD) { best = c; bestD = d; }
+                if (d < bestD)
+                {
+                    best = c;
+                    bestD = d;
+                }
             }
             if (best != null)
             {
@@ -209,7 +223,11 @@ namespace DarkwoodMP.Combat
             Plugin.Log.LogInfo($"[npc] our hit on {c.name} for {damage:0} goes to the host");
             Authority.Request(w, $"hit on {c.name} for {damage:0}", (ok, reason, result) =>
             {
-                if (ok) { ScriptedEvents.HitApplied(c, result); return; }
+                if (ok)
+                {
+                    ScriptedEvents.HitApplied(c, result);
+                    return;
+                }
                 if (reason != NotHere || c == null || !c.alive || Player.Instance == null)
                 {
                     return;
@@ -227,7 +245,10 @@ namespace DarkwoodMP.Combat
                         }
                     }
                 }
-                finally { _ours = false; }
+                finally
+                {
+                    _ours = false;
+                }
             }, inventory: false);
             Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", c.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
             return Forwarded(c);
@@ -264,8 +285,14 @@ namespace DarkwoodMP.Combat
                     return;
                 }
                 _ours = true;
-                try { c.attackPlayer(); }
-                finally { _ours = false; }
+                try
+                {
+                    c.attackPlayer();
+                }
+                finally
+                {
+                    _ours = false;
+                }
             }, inventory: false);
             return true;
         }
@@ -276,10 +303,22 @@ namespace DarkwoodMP.Combat
         {
             proxy = null;
             var c = ObjRef.Resolve<Character>(obj);
-            if (c == null || c.npc == null) { Authority.Refuse(NotHere); return null; }
+            if (c == null || c.npc == null)
+            {
+                Authority.Refuse(NotHere);
+                return null;
+            }
             // Dead here (each player's NPC story is their own): there's nothing for us to run, so it's the client's.
-            if (!NetEnemies.InPlay(c)) { Authority.Refuse(NotHere); return null; }
-            if (!NetPlayerProxy.All.TryGetValue(from, out proxy) || proxy == null) { Authority.Refuse("no stand-in for that player yet"); return null; }
+            if (!NetEnemies.InPlay(c))
+            {
+                Authority.Refuse(NotHere);
+                return null;
+            }
+            if (!NetPlayerProxy.All.TryGetValue(from, out proxy) || proxy == null)
+            {
+                Authority.Refuse("no stand-in for that player yet");
+                return null;
+            }
             return c;
         }
 

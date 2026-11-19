@@ -88,9 +88,19 @@ namespace DarkwoodMP.World
         {
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
-            try { redraw(); Redraws++; }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[ui] couldn't redraw {what}: {e.Message}"); }
-            finally { WorldActions.Replaying = was; }
+            try
+            {
+                redraw();
+                Redraws++;
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[ui] couldn't redraw {what}: {e.Message}");
+            }
+            finally
+            {
+                WorldActions.Replaying = was;
+            }
         }
     }
 }

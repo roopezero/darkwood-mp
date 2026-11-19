@@ -141,7 +141,11 @@ namespace DarkwoodMP.World
             rb.isKinematic = true;
             Turn(d, signedAngle);
             rb.isKinematic = kinematic;
-            if (!kinematic) { rb.angularVelocity = Vector3.zero; rb.velocity = Vector3.zero; }
+            if (!kinematic)
+            {
+                rb.angularVelocity = Vector3.zero;
+                rb.velocity = Vector3.zero;
+            }
         }
 
         /// <summary>The leaf turned about its hinge to this signed angle from shut (within its limits), nothing else.</summary>
@@ -188,7 +192,11 @@ namespace DarkwoodMP.World
         private const float GlideRest = 0.25f;     // a leaf another game turned is let go this long after the last angle
 
         // leaves another game is turning, here: towards the newest angle heard
-        private sealed class Glide { public float Target, Heard; public bool WasKinematic; }
+        private sealed class Glide
+        {
+            public float Target, Heard;
+            public bool WasKinematic;
+        }
         private static readonly Dictionary<Door, Glide> _glides = new Dictionary<Door, Glide>();
         // client: angles we sent, oldest first, until the host passes each back
         private static readonly Dictionary<Door, List<float>> _unechoed = new Dictionary<Door, List<float>>();
@@ -217,7 +225,13 @@ namespace DarkwoodMP.World
         {
             _s = s;
             s.Register(MsgType.DoorLeaf, OnLeaf);
-            s.OnSessionEnded += () => { _watched.Clear(); DoorLeaf.Clear(); _unechoed.Clear(); EndGlides(); };
+            s.OnSessionEnded += () =>
+            {
+                _watched.Clear();
+                DoorLeaf.Clear();
+                _unechoed.Clear();
+                EndGlides();
+            };
         }
 
         public static void Update()
@@ -241,14 +255,21 @@ namespace DarkwoodMP.World
                 return;
             }
             var at = player.transform.position;
-            if (Time.unscaledTime >= _nextLook) { _nextLook = Time.unscaledTime + 1f; Look(at); }
+            if (Time.unscaledTime >= _nextLook)
+            {
+                _nextLook = Time.unscaledTime + 1f;
+                Look(at);
+            }
             List<Door> gone = null;
             foreach (var w in _watched.Values)
             {
                 var d = w.D;
                 if (d == null || !d.opened || d.destroyed || d.body == null || w.Rb == null || !d.body.gameObject.activeInHierarchy
                     || StateDump.Flat(d.body.position - at) > WatchRadius + 100f)
-                { (gone ?? (gone = new List<Door>())).Add(d); continue; }
+                {
+                    (gone ?? (gone = new List<Door>())).Add(d);
+                    continue;
+                }
                 if (w.Rb.isKinematic || _glides.ContainsKey(d))
                 {
                     continue;
@@ -279,7 +300,11 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (w.StillSince < 0f) { w.StillSince = Time.unscaledTime; continue; }
+                if (w.StillSince < 0f)
+                {
+                    w.StillSince = Time.unscaledTime;
+                    continue;
+                }
                 if (Time.unscaledTime - w.StillSince < RestTime || Time.unscaledTime < w.NextSend)
                 {
                     continue;
@@ -392,7 +417,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var pw = Write(r, angle);
-            if (_s.IsHost) { _s.Broadcast(pw, Channel.Control, reliable: true); return; }
+            if (_s.IsHost)
+            {
+                _s.Broadcast(pw, Channel.Control, reliable: true);
+                return;
+            }
             _s.SendToHost(pw, Channel.Control, reliable: true);
             if (!_unechoed.TryGetValue(d, out var sent))
             {
@@ -412,7 +441,11 @@ namespace DarkwoodMP.World
                 return false;
             }
             int i = sent.FindIndex(a => Mathf.Abs(a - angle) < 0.01f);
-            if (i < 0) { _unechoed.Remove(d); return false; }
+            if (i < 0)
+            {
+                _unechoed.Remove(d);
+                return false;
+            }
             sent.RemoveRange(0, i + 1);
             if (sent.Count == 0)
             {
@@ -434,7 +467,8 @@ namespace DarkwoodMP.World
                 _glides[d] = g = new Glide { WasKinematic = rb.isKinematic };
                 rb.isKinematic = true; // the physics doesn't fight the turn
             }
-            g.Target = angle; g.Heard = Time.unscaledTime;
+            g.Target = angle;
+            g.Heard = Time.unscaledTime;
         }
 
         private static void Glides()
@@ -443,8 +477,13 @@ namespace DarkwoodMP.World
             List<Door> done = null;
             foreach (var kv in _glides)
             {
-                var d = kv.Key; var g = kv.Value;
-                if (d == null || d.body == null || !d.opened || d.destroyed) { (done ??= new List<Door>()).Add(d); continue; } // shut: Door.close holds it
+                var d = kv.Key;
+                var g = kv.Value;
+                if (d == null || d.body == null || !d.opened || d.destroyed) // shut: Door.close holds it
+                {
+                    (done ??= new List<Door>()).Add(d);
+                    continue;
+                }
                 float now = DoorLeaf.Signed(d), off = Mathf.DeltaAngle(now, g.Target);
                 float since = Time.unscaledTime - g.Heard;
                 if (Mathf.Abs(off) < 0.5f && since > GlideRest || since > 1f)
@@ -455,7 +494,13 @@ namespace DarkwoodMP.World
                         rb.isKinematic = g.WasKinematic;
                     }
                     DoorLeaf.SetLeaf(d, g.Target);
-                    if (_watched.TryGetValue(d, out var w)) { w.Shared = g.Target; w.Moving = false; w.Touched = false; w.StillSince = -1f; }
+                    if (_watched.TryGetValue(d, out var w))
+                    {
+                        w.Shared = g.Target;
+                        w.Moving = false;
+                        w.Touched = false;
+                        w.StillSince = -1f;
+                    }
                     (done ??= new List<Door>()).Add(d);
                     continue;
                 }
@@ -541,7 +586,13 @@ namespace DarkwoodMP.World
                 return;
             }
             GlideTo(d, angle);
-            if (_watched.TryGetValue(d, out var w)) { w.Shared = angle; w.Moving = false; w.Touched = false; w.StillSince = -1f; }
+            if (_watched.TryGetValue(d, out var w))
+            {
+                w.Shared = angle;
+                w.Moving = false;
+                w.Touched = false;
+                w.StillSince = -1f;
+            }
         }
     }
 

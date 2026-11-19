@@ -134,7 +134,11 @@ namespace DarkwoodMP.Combat
         private static readonly Dictionary<WorldGrid.Grid, Coroutine> _running = new Dictionary<WorldGrid.Grid, Coroutine>();
         private static float _loadingRefreshAt;
 
-        private struct Centre { public Vector3 Pos; public int Dx, Dy; }
+        private struct Centre
+        {
+            public Vector3 Pos;
+            public int Dx, Dy;
+        }
 
         private static bool Prefix(WorldGrid __instance, Vector3 pos, bool instant, bool force)
         {
@@ -223,7 +227,10 @@ namespace DarkwoodMP.Combat
             for (int i = 0; i < nodes.Count; i++)
             {
                 if (!nodes[i].entered && Near(nodes[i].position, centres))
-                { nodes[i].enter(); yield return null; }
+                {
+                    nodes[i].enter();
+                    yield return null;
+                }
             }
         }
 
@@ -362,7 +369,11 @@ namespace DarkwoodMP.Combat
             {
                 if (Near(nodes[i].position, centres))
                 {
-                    if (force || !nodes[i].entered) { nodes[i].enter(force); yield return null; }
+                    if (force || !nodes[i].entered)
+                    {
+                        nodes[i].enter(force);
+                        yield return null;
+                    }
                 }
                 else
                 {
@@ -500,7 +511,10 @@ namespace DarkwoodMP.Combat
                     co.registerMe();
                     Plugin.Log.LogInfo($"[enemy] {c.name}'s corpse at {c.transform.position} lies outside {Core.getTrueLocationName(__instance.name)}: kept as that location is left");
                 }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't keep {c.name}'s corpse out of {__instance.name}: {e.Message}"); }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't keep {c.name}'s corpse out of {__instance.name}: {e.Message}");
+                }
             }
         }
     }
@@ -635,7 +649,8 @@ namespace DarkwoodMP.Combat
             {
                 var w = s.Begin(Net.MsgType.PlayerNoise);
                 w.Write(_pos);
-                w.W.Write(range); w.W.Write(volume);
+                w.W.Write(range);
+                w.W.Write(volume);
                 w.W.Write((byte)((dangerousSound ? 1 : 0) | (gunshot ? 2 : 0)));
                 s.SendToHost(w, Net.Channel.Control, reliable: true);
             }
@@ -693,8 +708,14 @@ namespace DarkwoodMP.Combat
             }
             var before = Threat.NoiseSource;
             Threat.NoiseSource = proxy;
-            try { Character.alertInArea(pos, range, (f & 1) != 0, volume, (f & 2) != 0); }
-            finally { Threat.NoiseSource = before; }
+            try
+            {
+                Character.alertInArea(pos, range, (f & 1) != 0, volume, (f & 2) != 0);
+            }
+            finally
+            {
+                Threat.NoiseSource = before;
+            }
         }
     }
 
@@ -725,9 +746,15 @@ namespace DarkwoodMP.Combat
             }
             switch (__instance)
             {
-                case Door _: __state = __args.Length > 0 && __args[__args.Length > 1 ? 1 : 0] is Transform t && t != null && t.GetComponent<Player>() != null; break;
-                case MeleeSensor m: __state = m.type == MeleeSensor.MeleeSensorType.player; break;
-                case ItemSounds _: __state = true; break; // it checks our player itself
+                case Door _:
+                    __state = __args.Length > 0 && __args[__args.Length > 1 ? 1 : 0] is Transform t && t != null && t.GetComponent<Player>() != null;
+                    break;
+                case MeleeSensor m:
+                    __state = m.type == MeleeSensor.MeleeSensorType.player;
+                    break;
+                case ItemSounds _:
+                    __state = true; // it checks our player itself
+                    break;
             }
             if (__state)
             {
@@ -767,8 +794,17 @@ namespace DarkwoodMP.Combat
                 NetEnemies.HitEffects = __instance.effects;
             }
         }
-        static void Postfix() { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); }
-        static System.Exception Finalizer(System.Exception __exception) { NetEnemies.HitEffects = null; HostileNpcs.EndHit(); return __exception; }
+        static void Postfix()
+        {
+            NetEnemies.HitEffects = null;
+            HostileNpcs.EndHit();
+        }
+        static System.Exception Finalizer(System.Exception __exception)
+        {
+            NetEnemies.HitEffects = null;
+            HostileNpcs.EndHit();
+            return __exception;
+        }
     }
 
     /// <summary>
@@ -808,7 +844,11 @@ namespace DarkwoodMP.Combat
             }
             // An NPC a joiner's event sends after "the player" (a dialogue's outcome, run here for them) goes for them.
             var requester = __instance.npc != null ? World.Authority.Requester : null;
-            if (requester != null) { HostileNpcs.SendAfter(__instance, requester); return false; }
+            if (requester != null)
+            {
+                HostileNpcs.SendAfter(__instance, requester);
+                return false;
+            }
             var best = Threat.BestPlayerFor(__instance);
             if (best == null || best is Player)
             {
@@ -924,14 +964,19 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
-            if (c.wantToDespawn) { c.runAway(Threat.FleeFrom(c)); return false; }
+            if (c.wantToDespawn)
+            {
+                c.runAway(Threat.FleeFrom(c));
+                return false;
+            }
             if (c.behaviour != Character.Behaviour.escaping)
             {
                 return false;
             }
             Vector3 me = c.transform.position;
             int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200); // the game's radius and layers
-            CharBase nearest = null; float best = float.MaxValue;
+            CharBase nearest = null;
+            float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
                 var cb = _near[i] != null ? _near[i].GetComponent<CharBase>() : null;
@@ -940,7 +985,11 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 float d = Core.trueDistance(cb.transform.position, me);
-                if (d < best) { best = d; nearest = cb; }
+                if (d < best)
+                {
+                    best = d;
+                    nearest = cb;
+                }
             }
             if (nearest != null)
             {

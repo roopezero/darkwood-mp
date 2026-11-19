@@ -36,7 +36,8 @@ namespace DarkwoodMP.World
         private static IEnumerator Push()
         {
             var me = Player.Instance.transform.position;
-            Item best = null; float bestD = 500f * 500f;
+            Item best = null;
+            float bestD = 500f * 500f;
             foreach (var it in Object.FindObjectsOfType<Item>())
             {
                 if (!it.draggable || it.isDroppedItem || !it.gameObject.activeInHierarchy)
@@ -49,13 +50,22 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 float d = (it.transform.position - me).sqrMagnitude;
-                if (d < bestD) { bestD = d; best = it; }
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = it;
+                }
             }
-            if (best == null) { Plugin.Log.LogInfo("--dwmp-test-away: no draggable object near the player to push"); yield break; }
+            if (best == null)
+            {
+                Plugin.Log.LogInfo("--dwmp-test-away: no draggable object near the player to push");
+                yield break;
+            }
             int sent = DragSync.PushesSent;
             var from = best.transform.position;
             var body = best.GetComponent<Rigidbody>();
-            var dir = from - me; dir.y = 0f;
+            var dir = from - me;
+            dir.y = 0f;
             body.WakeUp();
             body.velocity = (dir.sqrMagnitude > 1f ? dir.normalized : Vector3.right) * 150f;
             Plugin.Log.LogInfo($"--dwmp-test-away: knocked {best.name} at {from.x:0},{from.z:0} (sharing {WorldActions.Sharing})");
@@ -80,7 +90,11 @@ namespace DarkwoodMP.World
             var dummy = PlayerSync.Instance.Remotes[PlayerSync.DummyId];
             var o = Singleton<OutsideLocations>.Instance;
             var grid = Singleton<WorldGrid>.Instance;
-            if (o == null || grid == null || grid.currentGrid == null) { Plugin.Log.LogInfo("--dwmp-test-away: no world grid"); yield break; }
+            if (o == null || grid == null || grid.currentGrid == null)
+            {
+                Plugin.Log.LogInfo("--dwmp-test-away: no world grid");
+                yield break;
+            }
             Vector3 at = dummy.Root != null ? dummy.Root.transform.position : Vector3.zero;
             int before = ActiveNear(at);
             // What OutsideLocations.transportToLocation does to the world (leave every node of the world's grid,

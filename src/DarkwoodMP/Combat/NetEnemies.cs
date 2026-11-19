@@ -51,10 +51,29 @@ namespace DarkwoodMP.Combat
             session.Register(MsgType.PlayerCue, PlayerCues.OnCue);
             session.Register(MsgType.EnemyBlood, OnBlood);
             session.Register(MsgType.EnemyArmor, OnArmor);
-            session.OnPeerDisconnected += id => { _known.Remove(id); _corpseKnown.Remove(id); };
+            session.OnPeerDisconnected += id =>
+            {
+                _known.Remove(id);
+                _corpseKnown.Remove(id);
+            };
             session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
             session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
-            session.OnSessionEnded += () => { HostileNpcs.Clear(); _known.Clear(); _corpseKnown.Clear(); _byCharHost.Clear(); _byIdHost.Clear(); _puppets.Clear(); _byChar.Clear(); EnemyMotion.Reset(); _corpses.Clear(); _corpseIds.Clear(); Frozen.Clear(); Hidden.Clear(); _switchedOff.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                HostileNpcs.Clear();
+                _known.Clear();
+                _corpseKnown.Clear();
+                _byCharHost.Clear();
+                _byIdHost.Clear();
+                _puppets.Clear();
+                _byChar.Clear();
+                EnemyMotion.Reset();
+                _corpses.Clear();
+                _corpseIds.Clear();
+                Frozen.Clear();
+                Hidden.Clear();
+                _switchedOff.Clear();
+            };
         }
 
         /// <summary>
@@ -134,8 +153,18 @@ namespace DarkwoodMP.Combat
             }
             c.enabled = true; // its OnEnable hooks its animators back up
             ClientFreezeCharacterPatch.Starting = true;
-            try { c.Start(); } catch (System.Exception e) { Plugin.Log.LogWarning($"{c.name} didn't start cleanly: {e.Message}"); }
-            finally { ClientFreezeCharacterPatch.Starting = false; }
+            try
+            {
+                c.Start();
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"{c.name} didn't start cleanly: {e.Message}");
+            }
+            finally
+            {
+                ClientFreezeCharacterPatch.Starting = false;
+            }
             PlayIdleLoop(c);
         }
 
@@ -149,8 +178,14 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            try { c.sounds.playIdleLoop(c.sleeping ? c.sounds.sleeping : c.sounds.idleLoop); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't start {c.name}'s idle sound: {e.Message}"); }
+            try
+            {
+                c.sounds.playIdleLoop(c.sleeping ? c.sounds.sleeping : c.sounds.idleLoop);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't start {c.name}'s idle sound: {e.Message}");
+            }
         }
 
         public void Update()
@@ -159,7 +194,11 @@ namespace DarkwoodMP.Combat
             {
                 HostUpdate();
             }
-            if (ClientMode) { ClientSweep(); MovePuppets(); }
+            if (ClientMode)
+            {
+                ClientSweep();
+                MovePuppets();
+            }
         }
 
         /// <summary>
@@ -266,13 +305,21 @@ namespace DarkwoodMP.Combat
                 var gone = new List<Character>();
                 foreach (var kv in _byCharHost)
                 {
-                    if (kv.Key == null) { gone.Add(kv.Key); continue; }
+                    if (kv.Key == null)
+                    {
+                        gone.Add(kv.Key);
+                        continue;
+                    }
                     // An NPC that calmed down (and stayed calm a while) is each player's own again.
                     if (kv.Key.npc == null || !InPlay(kv.Key))
                     {
                         continue;
                     }
-                    if (HostileNpcs.StillHostile(kv.Key)) { kv.Value.CalmSince = -1f; continue; }
+                    if (HostileNpcs.StillHostile(kv.Key))
+                    {
+                        kv.Value.CalmSince = -1f;
+                        continue;
+                    }
                     if (kv.Value.CalmSince < 0f)
                     {
                         kv.Value.CalmSince = now;
@@ -289,12 +336,15 @@ namespace DarkwoodMP.Combat
                     {
                         HostileNpcs.HostStopped(g, id);
                     }
-                    Forget(id); _byCharHost.Remove(g); _byIdHost.Remove(id);
+                    Forget(id);
+                    _byCharHost.Remove(g);
+                    _byIdHost.Remove(id);
                 }
             }
             if (now >= _nextLoopCheck)
             {
-                _nextLoopCheck = now + LoopCheckInterval; LoopCheck(now);
+                _nextLoopCheck = now + LoopCheckInterval;
+                LoopCheck(now);
                 foreach (var t in _byCharHost.Values)
                 {
                     if (t.C != null && t.DiedAt < 0)
@@ -335,7 +385,8 @@ namespace DarkwoodMP.Combat
 
                 var w = _batch.Begin(MsgType.EnemyState);
                 w.W.Write(now); // the host's clock, which the client draws them by (EnemyMotion)
-                long countPos = w.Length; w.W.Write((ushort)0);
+                long countPos = w.Length;
+                w.W.Write((ushort)0);
                 int count = 0;
                 var drop = new List<(uint, bool)>();
                 foreach (var t in _byCharHost.Values)
@@ -359,7 +410,12 @@ namespace DarkwoodMP.Combat
                     if (corpseDone && !known.Contains(t.Id))
                     {
                         // A corpse it never saw settle: it gets it once it's near.
-                        if (near && corpsesSent < CorpsesPerPass) { SendCorpse(peer, t); corpses.Add(t.Id); corpsesSent++; }
+                        if (near && corpsesSent < CorpsesPerPass)
+                        {
+                            SendCorpse(peer, t);
+                            corpses.Add(t.Id);
+                            corpsesSent++;
+                        }
                         continue;
                     }
                     if (corpseDone || !near)
@@ -380,7 +436,8 @@ namespace DarkwoodMP.Combat
                 }
                 foreach (var (id, corpse) in drop)
                 {
-                    known.Remove(id); SendDespawn(peer, id, corpse);
+                    known.Remove(id);
+                    SendDespawn(peer, id, corpse);
                     if (corpse && corpses.Add(id))
                     {
                         SendCorpseLoot(peer, id);
@@ -391,7 +448,8 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 var buf = w.Buffer; // patch the count in
-                buf[countPos] = (byte)count; buf[countPos + 1] = (byte)(count >> 8);
+                buf[countPos] = (byte)count;
+                buf[countPos + 1] = (byte)(count >> 8);
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
@@ -614,7 +672,9 @@ namespace DarkwoodMP.Combat
             foreach (var peer in Knowing(t.Id))
             {
                 var w = _session.Begin(MsgType.EnemyBlood);
-                w.W.Write(t.Id); w.W.Write(yRot); w.W.Write((byte)(c.inWater ? 1 : 0));
+                w.W.Write(t.Id);
+                w.W.Write(yRot);
+                w.W.Write((byte)(c.inWater ? 1 : 0));
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
@@ -625,8 +685,14 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            uint id = r.R.ReadUInt32(); float y = r.R.ReadSingle(); bool water = r.R.ReadByte() != 0;
-            if (_predictedBlood.TryGetValue(id, out float at) && Time.realtimeSinceStartup - at < 1f) { _predictedBlood.Remove(id); return; } // shown already
+            uint id = r.R.ReadUInt32();
+            float y = r.R.ReadSingle();
+            bool water = r.R.ReadByte() != 0;
+            if (_predictedBlood.TryGetValue(id, out float at) && Time.realtimeSinceStartup - at < 1f) // shown already
+            {
+                _predictedBlood.Remove(id);
+                return;
+            }
             if (_puppets.TryGetValue(id, out var p) && p.C != null)
             {
                 Core.AddPrefab(water ? "FX/Bloodsplats/Shotsplat" : "FX/Bloodsplats/Shotsplat_stay", p.C.transform.position, Quaternion.Euler(90f, y, 0f), null);
@@ -696,8 +762,16 @@ namespace DarkwoodMP.Combat
             var effects = PlayerDamage.ReadEffects(r);
             string weaponJson = r.ReadStr();
             _byIdHost.TryGetValue(id, out var t);
-            if (t == null || t.C == null || !InPlay(t.C)) { World.Authority.Refuse("that enemy isn't alive here"); return; }
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null) { World.Authority.Refuse("no stand-in for that player yet"); return; }
+            if (t == null || t.C == null || !InPlay(t.C))
+            {
+                World.Authority.Refuse("that enemy isn't alive here");
+                return;
+            }
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null)
+            {
+                World.Authority.Refuse("no stand-in for that player yet");
+                return;
+            }
             ApplyHit(from, proxy, t.C, damage, f, effects, weaponJson);
         }
 
@@ -714,7 +788,11 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            if (!HitRateOk(from, weapon)) { World.Authority.Refuse($"more hits a second than {weapon?.type ?? "bare hands"} makes"); return; }
+            if (!HitRateOk(from, weapon))
+            {
+                World.Authority.Refuse($"more hits a second than {weapon?.type ?? "bare hands"} makes");
+                return;
+            }
             float cap = DamageCap(weapon);
             float applied = Mathf.Clamp(damage, 0f, cap);
             if (applied < damage)
@@ -737,7 +815,10 @@ namespace DarkwoodMP.Combat
                     left = ScriptedEvents.LeavingToActor(ScriptedEvents.HitTypes, () =>
                         c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true));
                 }
-                finally { World.ScriptedEvents.Cause = wasCause; }
+                finally
+                {
+                    World.ScriptedEvents.Cause = wasCause;
+                }
                 if (left > 0)
                 {
                     World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + ScriptedEvents.Attacked);
@@ -809,7 +890,11 @@ namespace DarkwoodMP.Combat
             foreach (var e in sent)
             {
                 int i = left.FindIndex(x => x.type == e.type);
-                if (i < 0) { Plugin.Log.LogInfo($"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped"); continue; }
+                if (i < 0)
+                {
+                    Plugin.Log.LogInfo($"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped");
+                    continue;
+                }
                 result.Add(left[i]);
                 left.RemoveAt(i);
             }
@@ -875,7 +960,10 @@ namespace DarkwoodMP.Combat
                 st.loadValues(it);
                 return InvItemClass.isNull(it) || it.baseClass == null ? null : it;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -1015,7 +1103,10 @@ namespace DarkwoodMP.Combat
                     c.gameObject.SetActive(false);
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't put {c.name} back into the culling: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't put {c.name} back into the culling: {e.Message}");
+            }
         }
 
         private readonly Dictionary<uint, Puppet> _puppets = new Dictionary<uint, Puppet>();
@@ -1034,8 +1125,16 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
-            if (_session.IsHost && _byCharHost.TryGetValue(c, out var t)) { id = t.Id; return true; }
-            if (_byChar.TryGetValue(c, out var p)) { id = p.Id; return true; }
+            if (_session.IsHost && _byCharHost.TryGetValue(c, out var t))
+            {
+                id = t.Id;
+                return true;
+            }
+            if (_byChar.TryGetValue(c, out var p))
+            {
+                id = p.Id;
+                return true;
+            }
             return _corpseIds.TryGetValue(c, out id);
         }
 
@@ -1074,7 +1173,11 @@ namespace DarkwoodMP.Combat
         public bool IsPuppet(Character c, out uint id)
         {
             id = 0;
-            if (c != null && _byChar.TryGetValue(c, out var p)) { id = p.Id; return true; }
+            if (c != null && _byChar.TryGetValue(c, out var p))
+            {
+                id = p.Id;
+                return true;
+            }
             return false;
         }
 
@@ -1098,13 +1201,25 @@ namespace DarkwoodMP.Combat
                 }
             }
             var rb = c.GetComponent<Rigidbody>();
-            if (rb != null) { rb.isKinematic = true; rb.velocity = Vector3.zero; }
-            foreach (var a in c.GetComponentsInChildren<tk2dSpriteAnimator>(true)) { a.AnimationEventTriggered = null; a.AnimationCompleted = null; }
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.velocity = Vector3.zero;
+            }
+            foreach (var a in c.GetComponentsInChildren<tk2dSpriteAnimator>(true))
+            {
+                a.AnimationEventTriggered = null;
+                a.AnimationCompleted = null;
+            }
             if (hide && Instance != null && Instance._corpseIds.ContainsKey(c))
             {
                 hide = false; // a corpse the host sent stays shown
             }
-            if (hide) { Hide(c); StopSounds(c, keepDeathSound: false); } // no barking from a dog that isn't shown
+            if (hide) // no barking from a dog that isn't shown
+            {
+                Hide(c);
+                StopSounds(c, keepDeathSound: false);
+            }
             Frozen.Add(c);
         }
 
@@ -1118,7 +1233,11 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static readonly HashSet<Character> Hidden = new HashSet<Character>();
 
-        private static void Hide(Character c) { SetVisible(c, false); Hidden.Add(c); }
+        private static void Hide(Character c)
+        {
+            SetVisible(c, false);
+            Hidden.Add(c);
+        }
 
         private static readonly System.Reflection.FieldInfo FovLightField = HarmonyLib.AccessTools.Field(typeof(Player), "FOVLight");
 
@@ -1186,12 +1305,18 @@ namespace DarkwoodMP.Combat
                 foreach (var r in c.GetComponentsInChildren<Renderer>(true))
                 {
                     if (r != null && r.enabled)
-                    { r.enabled = false; off.Add(r); }
+                    {
+                        r.enabled = false;
+                        off.Add(r);
+                    }
                 }
                 foreach (var col in c.GetComponentsInChildren<Collider>(true))
                 {
                     if (col != null && col.enabled)
-                    { col.enabled = false; off.Add(col); }
+                    {
+                        col.enabled = false;
+                        off.Add(col);
+                    }
                 }
                 return;
             }
@@ -1257,7 +1382,8 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            Character c = null; bool ours = false;
+            Character c = null;
+            bool ours = false;
             var sm = Singleton<SaveManager>.Instance;
             // Our copy of it from the save, when the host's save id names the same character here: only ids from
             // the save we loaded are the same in both games (SharedIds), and even then it has to be the same kind
@@ -1288,7 +1414,11 @@ namespace DarkwoodMP.Combat
                 foreach (var candidate in new[] { prefab, "Characters/" + name })
                 {
                     var res = Resources.Load("Prefabs/" + candidate);
-                    if (res != null) { go = Core.AddPrefab(res, pos, rot, null, worldSpace: true); break; }
+                    if (res != null)
+                    {
+                        go = Core.AddPrefab(res, pos, rot, null, worldSpace: true);
+                        break;
+                    }
                 }
                 c = go != null ? go.GetComponent<Character>() : null;
                 ours = c != null;
@@ -1375,7 +1505,10 @@ namespace DarkwoodMP.Combat
                     Plugin.Log.LogInfo($"[enemy] {c.name}: shadow armour gone");
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't change {c.name}'s shadow armour: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't change {c.name}'s shadow armour: {e.Message}");
+            }
         }
 
         /// <summary>Client: a ShadowArmor on a copy of the host's enemy, or on one of our own frozen characters.</summary>
@@ -1412,7 +1545,10 @@ namespace DarkwoodMP.Combat
                 _puppets.TryGetValue(id, out var p);
                 for (int k = 0; k < an; k++)
                 {
-                    int path = r.R.ReadInt32(); int clip = r.R.ReadInt32(); int frame = r.R.ReadUInt16(); bool playing = r.R.ReadByte() != 0;
+                    int path = r.R.ReadInt32();
+                    int clip = r.R.ReadInt32();
+                    int frame = r.R.ReadUInt16();
+                    bool playing = r.R.ReadByte() != 0;
                     if (p != null && !p.Settled && p.Animators.TryGetValue(path, out var a) && a != null)
                     {
                         ApplyAnim(a, clip, frame, playing);
@@ -1453,10 +1589,18 @@ namespace DarkwoodMP.Combat
                     {
                         p.C.health = Mathf.Min(p.C.health, Mathf.Clamp01(healthFraction) * p.C.maxHealth);
                     }
-                    p.C.alive = false; p.DiedAt = Time.unscaledTime;
+                    p.C.alive = false;
+                    p.DiedAt = Time.unscaledTime;
                     StopSounds(p.C, keepDeathSound: true);
                     // What's attached to it (the human spider's sound_loop) goes as it dies, as die2 does on the host.
-                    try { p.C.removeAttachedGameObjects(); } catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't remove what's attached to {p.C.name}: {e.Message}"); }
+                    try
+                    {
+                        p.C.removeAttachedGameObjects();
+                    }
+                    catch (System.Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't remove what's attached to {p.C.name}: {e.Message}");
+                    }
                     // The human spiders' sound_loop child (an Item with ItemSounds) is gone from the host's copy as it
                     // dies (seen in the map test, 0.5 s after); a copy's frozen scripts never remove it.
                     foreach (var it in p.C.GetComponentsInChildren<Item>(true))
@@ -1493,7 +1637,17 @@ namespace DarkwoodMP.Combat
                 return;
             }
             string death = c.sounds != null ? c.sounds.death : null;
-            if (c.sounds != null) { try { c.sounds.destroySounds(); } catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't stop {c.name}'s sounds: {e.Message}"); } }
+            if (c.sounds != null)
+            {
+                try
+                {
+                    c.sounds.destroySounds();
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't stop {c.name}'s sounds: {e.Message}");
+                }
+            }
             // Sounds played on it (the relayed ones and its own) are AudioObjects under it.
             foreach (var ao in c.GetComponentsInChildren<AudioObject>(true))
             {
@@ -1549,7 +1703,10 @@ namespace DarkwoodMP.Combat
                     bar.show(c.gameObject, onlyRefresh: true);
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't show {c.name}'s health bar: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't show {c.name}'s health bar: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -1577,7 +1734,10 @@ namespace DarkwoodMP.Combat
                     armor.die();
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't play {c.name}'s death here: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't play {c.name}'s death here: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -1646,7 +1806,11 @@ namespace DarkwoodMP.Combat
             StopSounds(c, keepDeathSound: true); // destroyComponents destroys CharacterSounds without stopping its loop
             SetVisible(c, true); // whatever a hide switched off (it's shown already; this only makes sure)
             DieBody(c);
-            if (p.Cut) { SettleCut(p); return; }
+            if (p.Cut)
+            {
+                SettleCut(p);
+                return;
+            }
             if (c.animator == null)
             {
                 // No sprite animation (the worms): the end of a death animation never comes in the host's game either,
@@ -1668,7 +1832,10 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                try { step.Invoke(c, null); }
+                try
+                {
+                    step.Invoke(c, null);
+                }
                 catch (System.Exception e)
                 {
                     if (step.Name == "setDeathCollider")
@@ -1724,9 +1891,16 @@ namespace DarkwoodMP.Combat
                         }
                     }
                 }
-                if (c.inSightOfPlayer != null) { Object.Destroy(c.inSightOfPlayer); c.inSightOfPlayer = null; }
+                if (c.inSightOfPlayer != null)
+                {
+                    Object.Destroy(c.inSightOfPlayer);
+                    c.inSightOfPlayer = null;
+                }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't settle {c.name}'s body as die2 does: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s body as die2 does: {e.Message}");
+            }
         }
 
         /// <summary>
@@ -1746,7 +1920,10 @@ namespace DarkwoodMP.Combat
                     }
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't play {c.name}'s cut here: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't play {c.name}'s cut here: {e.Message}");
+            }
         }
 
         // destroyComponents and destroyComponents2, without setDeathCollider.
@@ -1766,18 +1943,32 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                try { step.Invoke(c, null); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut ({step.Name}): {e.InnerException?.Message ?? e.Message}"); }
+                try
+                {
+                    step.Invoke(c, null);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut ({step.Name}): {e.InnerException?.Message ?? e.Message}");
+                }
             }
             try
             {
-                c.cuttingInHalf = true; c.cutInHalf = true;
-                var item = c.GetComponent<Item>(); if (item != null)
+                c.cuttingInHalf = true;
+                c.cutInHalf = true;
+                var item = c.GetComponent<Item>();
+                if (item != null)
                 {
                     Object.Destroy(item);
                 }
-                var inv = c.GetComponent<Inventory>(); if (inv != null) { World.Containers.CloseIfOpen(c.gameObject); Object.Destroy(inv); }
-                var sel = c.GetComponent<Selectable>(); if (sel != null)
+                var inv = c.GetComponent<Inventory>();
+                if (inv != null)
+                {
+                    World.Containers.CloseIfOpen(c.gameObject);
+                    Object.Destroy(inv);
+                }
+                var sel = c.GetComponent<Selectable>();
+                if (sel != null)
                 {
                     Object.Destroy(sel);
                 }
@@ -1792,7 +1983,10 @@ namespace DarkwoodMP.Combat
                 var t = c.transform;
                 t.localPosition = new Vector3(t.localPosition.x, -1f, t.localPosition.z);
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut: {e.Message}");
+            }
             Plugin.Log.LogInfo($"The host's {c.name} #{p.Id} was cut in half: its lower half is the host's, nothing to search here");
         }
 
@@ -1837,7 +2031,10 @@ namespace DarkwoodMP.Combat
                                    $"animator {(a != null ? "there" : "none")}, clip {clip ?? "none"}, collider {(c.collider != null ? "there" : "none")}, " +
                                    $"capsule {(c.capsuleCollider != null ? "there" : "none")}, death colliders {c.deathColliders?.Count ?? -1}; at {why.StackTrace?.Split('\n')[0]?.Trim()}); trigger now {(c.collider != null && c.collider.isTrigger)}");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse: {e.InnerException?.Message ?? e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse: {e.InnerException?.Message ?? e.Message}");
+            }
         }
 
         private static void ApplyAnim(tk2dSpriteAnimator a, int clipHash, int frame, bool playing)
@@ -1854,7 +2051,10 @@ namespace DarkwoodMP.Combat
                 foreach (var clip in a.Library.clips)
                 {
                     if (clip != null && StableHash.Of(clip.name) == clipHash)
-                    { a.PlayFromFrame(clip, Mathf.Clamp(frame, 0, Mathf.Max(0, clip.frames.Length - 1))); break; }
+                    {
+                        a.PlayFromFrame(clip, Mathf.Clamp(frame, 0, Mathf.Max(0, clip.frames.Length - 1)));
+                        break;
+                    }
                 }
             }
             // More than 2 frames off: move the copy's clip time to the host's frame. (SetFrame would change only the
@@ -1894,7 +2094,10 @@ namespace DarkwoodMP.Combat
                     c.tweenShadows(hide: f.eventInt == 0);
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't play a copy's TweenShadows: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't play a copy's TweenShadows: {e.Message}");
+            }
         }
 
         private void OnDespawn(ulong from, PacketReader r)
@@ -1931,7 +2134,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
             _byChar.Remove(p.C);
-            if (keepCorpse)
+            if (keepCorpse) // stays where it fell
             {
                 if (!p.Settled)
                 {
@@ -1941,16 +2144,24 @@ namespace DarkwoodMP.Combat
                 _corpseIds[p.C] = id;
                 Recull(p);
                 return;
-            } // stays where it fell
+            }
             StopSounds(p.C, keepDeathSound: false);
             // An NPC the host calmed down (or one out of our range): our copy of it is ours to run again.
-            if (p.C.npc != null && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours)) { Recull(p); return; }
+            if (p.C.npc != null && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours))
+            {
+                Recull(p);
+                return;
+            }
             World.Containers.CloseIfOpen(p.C.gameObject); // its window, if our player has its corpse open: gone or hidden, it is gone for us
             if (p.Ours)
             {
                 Object.Destroy(p.C.gameObject);
             }
-            else { Hide(p.C); Recull(p); }
+            else
+            {
+                Hide(p.C);
+                Recull(p);
+            }
         }
 
         private void OnSound(ulong from, PacketReader r)
@@ -1978,13 +2189,29 @@ namespace DarkwoodMP.Combat
             var snd = p.C.sounds;
             if (string.IsNullOrEmpty(audio))
             {
-                if (snd != null) { try { snd.playIdleLoop(""); } catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't stop {p.C.name}'s loop: {e.Message}"); } }
+                if (snd != null)
+                {
+                    try
+                    {
+                        snd.playIdleLoop("");
+                    }
+                    catch (System.Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Couldn't stop {p.C.name}'s loop: {e.Message}");
+                    }
+                }
                 return;
             }
             if (IsLoop(snd, audio))
             {
-                try { snd.playIdleLoop(audio); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't play {p.C.name}'s loop {audio}: {e.Message}"); }
+                try
+                {
+                    snd.playIdleLoop(audio);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't play {p.C.name}'s loop {audio}: {e.Message}");
+                }
                 return;
             }
             AudioController.Play(audio, p.C.transform, volume);
@@ -2049,7 +2276,13 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static void WriteRot(PacketWriter w, Quaternion q) { w.W.Write(q.x); w.W.Write(q.y); w.W.Write(q.z); w.W.Write(q.w); }
+        private static void WriteRot(PacketWriter w, Quaternion q)
+        {
+            w.W.Write(q.x);
+            w.W.Write(q.y);
+            w.W.Write(q.z);
+            w.W.Write(q.w);
+        }
         private static Quaternion ReadRot(PacketReader r) => new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
     }
 

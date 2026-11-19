@@ -127,18 +127,30 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(2f);
                 Core.forbidInputs = false;
-                if (!InVillage()) { r.Fail($"couldn't get into {Village}: {State()}"); yield break; }
+                if (!InVillage())
+                {
+                    r.Fail($"couldn't get into {Village}: {State()}");
+                    yield break;
+                }
             }
             var go = Find(hole);
             var to = Find(dest);
-            if (go == null || !go.activeInHierarchy) { r.Fail($"{hole} not here: {State()}"); yield break; }
+            if (go == null || !go.activeInHierarchy)
+            {
+                r.Fail($"{hole} not here: {State()}");
+                yield break;
+            }
             if (StateDump.Flat(p.transform.position - go.transform.position) > 200f)
             {
                 Place(go.transform.position + new Vector3(60f, 0f, 0f));
             }
             yield return new WaitForSeconds(1f);
             var et = go.GetComponent<EventTriggers>();
-            if (et == null) { r.Fail($"{hole} has no triggers"); yield break; }
+            if (et == null)
+            {
+                r.Fail($"{hole} has no triggers");
+                yield break;
+            }
             bool wasAway = o.playerInOutsideLocation;
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.onActivate));
             // Into the village: we're in the separate location, by its end of the trip once its scene is there.
@@ -163,7 +175,11 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             Core.forbidInputs = false; // the trip's fade gives the inputs back on its own; a test step doesn't wait for it
             float d = to != null ? StateDump.Flat(p.transform.position - to.transform.position) : -1f;
-            if (!Arrived()) { r.Fail($"not taken to {dest} ({(to == null ? "not here" : $"{d:0} from it")}, away={o.playerInOutsideLocation}): {State()}"); yield break; }
+            if (!Arrived())
+            {
+                r.Fail($"not taken to {dest} ({(to == null ? "not here" : $"{d:0} from it")}, away={o.playerInOutsideLocation}): {State()}");
+                yield break;
+            }
             r.Info = $"through {hole} to {Fmt(p.transform.position)}; {State()}";
         }
 
@@ -195,7 +211,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Reset(string[] a, Result r)
         {
             var ge = WorldEvent();
-            if (ge == null) { r.Fail("no world event " + Event); yield break; }
+            if (ge == null)
+            {
+                r.Fail("no world event " + Event);
+                yield break;
+            }
             WorldActions.Replaying = true; // put back here only, not shared
             try
             {
@@ -203,7 +223,10 @@ namespace DarkwoodMP.World
                 Find(In).setMeActive(false);
                 Find(Locked)?.setMeActive(true);
             }
-            finally { WorldActions.Replaying = false; }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
             yield return null;
             r.Info = State();
         }

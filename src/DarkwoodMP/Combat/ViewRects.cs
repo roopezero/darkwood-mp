@@ -20,7 +20,11 @@ namespace DarkwoodMP.Combat
         {
             s.Register(MsgType.ViewRect, OnRect);
             s.OnPeerDisconnected += id => Rects.Remove(id);
-            s.OnSessionEnded += () => { Rects.Clear(); _sent = default; };
+            s.OnSessionEnded += () =>
+            {
+                Rects.Clear();
+                _sent = default;
+            };
         }
 
         /// <summary>Client, every frame: send our cull rect when it's new or changed (checked every 2 s).</summary>
@@ -68,7 +72,11 @@ namespace DarkwoodMP.Combat
         /// <summary>Host: the half width and height to keep entered round this player.</summary>
         public static void For(ulong peer, out int dx, out int dy)
         {
-            if (Rects.TryGetValue(peer, out var rc)) { dx = rc.dx; dy = rc.dy; }
+            if (Rects.TryGetValue(peer, out var rc))
+            {
+                dx = rc.dx;
+                dy = rc.dy;
+            }
             else
             {
                 SharedCullingPatch.Distances(out dx, out dy);

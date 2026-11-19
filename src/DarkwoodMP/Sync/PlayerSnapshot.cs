@@ -101,7 +101,10 @@ namespace DarkwoodMP.Sync
                 pw.Write(s.Scale);
                 pw.Write(s.SpriteScale);
                 Color32 c = s.Color;
-                w.Write(c.r); w.Write(c.g); w.Write(c.b); w.Write(c.a);
+                w.Write(c.r);
+                w.Write(c.g);
+                w.Write(c.b);
+                w.Write(c.a);
             }
             w.Write((byte)((Away ? 1 : 0) | (AfterNight ? 2 : 0)));
             w.Write(Health);
@@ -159,15 +162,41 @@ namespace DarkwoodMP.Sync
             BeamBright = r.ReadSingle();
         }
 
-        private static void WriteRot(System.IO.BinaryWriter w, Quaternion q) { w.Write(q.x); w.Write(q.y); w.Write(q.z); w.Write(q.w); }
+        private static void WriteRot(System.IO.BinaryWriter w, Quaternion q)
+        {
+            w.Write(q.x);
+            w.Write(q.y);
+            w.Write(q.z);
+            w.Write(q.w);
+        }
         private static Quaternion ReadRot(System.IO.BinaryReader r) => new Quaternion(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
 
         public void CopyFrom(PlayerSnapshot o)
         {
-            Owner = o.Owner; Time = o.Time; Position = o.Position; Rotation = o.Rotation; Alive = o.Alive; Spectating = o.Spectating; Library = o.Library; HeldLight = o.HeldLight; HeldFlames = o.HeldFlames; Flashlight = o.Flashlight; Lantern = o.Lantern; BeamRadius = o.BeamRadius; BeamBright = o.BeamBright;
-            Invisible = o.Invisible; ShadowWard = o.ShadowWard; ForestSpiritWard = o.ForestSpiritWard; FriendOfTheForest = o.FriendOfTheForest; EnemyOfTheForest = o.EnemyOfTheForest;
-            Away = o.Away; AfterNight = o.AfterNight; Place = o.Place; Health = o.Health;
-            Sprites.Clear(); Sprites.AddRange(o.Sprites);
+            Owner = o.Owner;
+            Time = o.Time;
+            Position = o.Position;
+            Rotation = o.Rotation;
+            Alive = o.Alive;
+            Spectating = o.Spectating;
+            Library = o.Library;
+            HeldLight = o.HeldLight;
+            HeldFlames = o.HeldFlames;
+            Flashlight = o.Flashlight;
+            Lantern = o.Lantern;
+            BeamRadius = o.BeamRadius;
+            BeamBright = o.BeamBright;
+            Invisible = o.Invisible;
+            ShadowWard = o.ShadowWard;
+            ForestSpiritWard = o.ForestSpiritWard;
+            FriendOfTheForest = o.FriendOfTheForest;
+            EnemyOfTheForest = o.EnemyOfTheForest;
+            Away = o.Away;
+            AfterNight = o.AfterNight;
+            Place = o.Place;
+            Health = o.Health;
+            Sprites.Clear();
+            Sprites.AddRange(o.Sprites);
         }
     }
 
@@ -242,7 +271,11 @@ namespace DarkwoodMP.Sync
             var dot = player.lightDot;
             var ctl = Singleton<Controller>.Instance;
             snap.Lantern = dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot) ? dot.LightRadius : 0f;
-            if (_flashlight == null || _flashlightOf != player) { _flashlightOf = player; _flashlight = root.Find("Flashlight")?.gameObject; }
+            if (_flashlight == null || _flashlightOf != player)
+            {
+                _flashlightOf = player;
+                _flashlight = root.Find("Flashlight")?.gameObject;
+            }
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
             var beam = snap.Flashlight ? _flashlight.GetComponent<Light2D>() : null;
             snap.BeamRadius = beam != null ? beam.LightRadius : 0f;

@@ -40,7 +40,11 @@ namespace DarkwoodMP.World
         private static IEnumerator OwnDream(string[] a, Result r)
         {
             string name = a.Length > 0 ? a[0] : "dream_church_ruins_01";
-            if (DreamSync.Shared != null) { r.Fail($"already in the shared dream {DreamSync.Shared}"); yield break; }
+            if (DreamSync.Shared != null)
+            {
+                r.Fail($"already in the shared dream {DreamSync.Shared}");
+                yield break;
+            }
             DreamSync.TestOwnDream(name);
             float giveUp = Time.realtimeSinceStartup + 60f;
             while (!D.dreaming && Time.realtimeSinceStartup < giveUp)
@@ -66,7 +70,11 @@ namespace DarkwoodMP.World
         {
             var loc = D.dreamLocation;
             var et = loc != null ? loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned")) : null;
-            if (et == null) { r.Fail($"no burnt wardrobe in {loc?.name}"); yield break; }
+            if (et == null)
+            {
+                r.Fail($"no burnt wardrobe in {loc?.name}");
+                yield break;
+            }
             var item = et.GetComponent<Item>() ?? et.GetComponentInParent<Item>();
             int rolledBefore = Authority.RolledBack;
             yield return MoveNear(et.transform);
@@ -74,8 +82,15 @@ namespace DarkwoodMP.World
             string opened = "no container";
             if (item != null && item.GetComponent<Inventory>() != null)
             {
-                try { AsPlayer(() => item.openInventory()); opened = $"opened (searched {item.searched})"; }
-                catch (System.Exception e) { opened = "couldn't open: " + e.Message; }
+                try
+                {
+                    AsPlayer(() => item.openInventory());
+                    opened = $"opened (searched {item.searched})";
+                }
+                catch (System.Exception e)
+                {
+                    opened = "couldn't open: " + e.Message;
+                }
                 yield return new WaitForSeconds(1f); // Containers.Poll looks at it
                 var inv = item.GetComponent<Inventory>();
                 if (inv != null && inv.open)
@@ -107,12 +122,17 @@ namespace DarkwoodMP.World
             }
 
             // As a game without the fix sent it: a request about our wardrobe, which the host hasn't got.
-            bool? ok = null; string why = null;
+            bool? ok = null;
+            string why = null;
             if (item != null)
             {
                 var w = Net.Session.Instance.Begin(Net.MsgType.WorldAction);
                 WorldActions.WriteAction(w, WorldActions.Action.ItemSearched, ObjRef.Of(item.gameObject), 0f, 0f, false, false, "");
-                Authority.Request(w, $"forged ItemSearched {item.name} in our own dream", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
+                Authority.Request(w, $"forged ItemSearched {item.name} in our own dream", (o, reason, res) =>
+                {
+                    ok = o;
+                    why = reason;
+                }, inventory: false);
                 float giveUp = Time.realtimeSinceStartup + 8f;
                 while (ok == null && Time.realtimeSinceStartup < giveUp)
                 {
@@ -150,7 +170,8 @@ namespace DarkwoodMP.World
         private static IEnumerator MoveNear(Transform t)
         {
             var p = P;
-            var away = p.transform.position - t.position; away.y = 0f;
+            var away = p.transform.position - t.position;
+            away.y = 0f;
             var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.right;
             var at = t.position + dir * 250f;
             for (int i = 0; i < 16; i++)
@@ -195,7 +216,12 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
-            if (D.dreaming) { D.outcome = ""; D.initiateEndDreaming(); r.Info = "ended our own dream"; }
+            if (D.dreaming)
+            {
+                D.outcome = "";
+                D.initiateEndDreaming();
+                r.Info = "ended our own dream";
+            }
             while (InDream)
             {
                 yield return new WaitForSeconds(0.5f);
@@ -208,7 +234,11 @@ namespace DarkwoodMP.World
         private static IEnumerator LevelDream(string[] a, Result r)
         {
             string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
-            if (!D.allPresets.Any(x => x != null && x.name == name)) { r.Fail($"no dream {name}"); yield break; }
+            if (!D.allPresets.Any(x => x != null && x.name == name))
+            {
+                r.Fail($"no dream {name}");
+                yield break;
+            }
             DreamSync.TestLevelDream(name);
             while (!D.dreaming)
             {
@@ -253,7 +283,11 @@ namespace DarkwoodMP.World
         /// <summary>"end-level-dream" (host): our dream ends (its default outcome); wait until we're back.</summary>
         private static IEnumerator EndLevelDream(string[] a, Result r)
         {
-            if (!D.dreaming) { r.Fail("not dreaming"); yield break; }
+            if (!D.dreaming)
+            {
+                r.Fail("not dreaming");
+                yield break;
+            }
             D.outcome = "";
             AsPlayer(() => D.initiateEndDreaming());
             while (D.dreaming || D.switchingDream)
@@ -269,7 +303,11 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(a.Length > 0 ? float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture) : 1f);
             var loc = D.dreamLocation;
-            if (loc == null) { r.Fail("no dream location"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no dream location");
+                yield break;
+            }
             var ne = Combat.NetEnemies.Instance;
             var sb = new System.Text.StringBuilder();
             sb.Append($"dream {loc.name} at {Fmt(loc.transform.position)}, us at {Fmt(P.transform.position)}, hostRunsHere {Locations.HostRunsHere()}; ");
@@ -279,7 +317,8 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                uint id = 0; bool net = ne != null && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
+                uint id = 0;
+                bool net = ne != null && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
                 sb.Append($"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig {Combat.NetEnemies.Eligible(c)} act {c.gameObject.activeInHierarchy} en {c.enabled} alive {c.alive} " +
                           $"at {Fmt(c.transform.position)} tgt {(c.target != null ? c.target.name : "-")} net {net}#{id} aggr {c.aggressive} sleep {c.sleeping} " +
                           $"comps {string.Join(",", c.GetComponents<MonoBehaviour>().Select(m => m == null ? "?" : m.GetType().Name))}");
@@ -306,10 +345,15 @@ namespace DarkwoodMP.World
         {
             var loc = D.dreamLocation;
             var et = loc != null ? loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned")) : null;
-            if (et == null) { r.Fail($"no burnt wardrobe in {loc?.name}"); yield break; }
+            if (et == null)
+            {
+                r.Fail($"no burnt wardrobe in {loc?.name}");
+                yield break;
+            }
             var p = P;
             // Near it, on a spot with no loose thing (a bowl, the draggable wardrobe) our player would land on and push.
-            var away = p.transform.position - et.transform.position; away.y = 0f;
+            var away = p.transform.position - et.transform.position;
+            away.y = 0f;
             var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.right;
             var at = et.transform.position + dir * 250f;
             for (int i = 0; i < 16; i++)
@@ -364,7 +408,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.25f);
             }
-            if (c == null) { r.Fail("no chomper of the dream running here"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no chomper of the dream running here");
+                yield break;
+            }
             foreach (var s in c.sensorTypes)
             {
                 if (s != null)
@@ -440,7 +488,11 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(0.5f);
             var door = HomeDoorOf(Knocking());
-            if (door == null) { r.Fail($"no knocking area or door in {D.dreamLocation?.name}"); yield break; }
+            if (door == null)
+            {
+                r.Fail($"no knocking area or door in {D.dreamLocation?.name}");
+                yield break;
+            }
             var l = door.GetComponent<Locked>();
             bool locked = l != null && l.locked;
             r.Info = DoorInfo(door);
@@ -455,7 +507,11 @@ namespace DarkwoodMP.World
         private static IEnumerator HomeKnock(string[] a, Result r)
         {
             var et = Knocking();
-            if (et == null) { r.Fail($"no knocking area in {D.dreamLocation?.name}"); yield break; }
+            if (et == null)
+            {
+                r.Fail($"no knocking area in {D.dreamLocation?.name}");
+                yield break;
+            }
             var p = P;
             p.transform.position = new Vector3(et.transform.position.x, p.transform.position.y, et.transform.position.z);
             var rb = p.GetComponent<Rigidbody>();
@@ -474,7 +530,11 @@ namespace DarkwoodMP.World
         private static IEnumerator HomeOpen(string[] a, Result r)
         {
             var door = HomeDoorOf(Knocking());
-            if (door == null) { r.Fail($"no door in {D.dreamLocation?.name}"); yield break; }
+            if (door == null)
+            {
+                r.Fail($"no door in {D.dreamLocation?.name}");
+                yield break;
+            }
             var p = P;
             var to = door.transform.position + (p.transform.position - door.transform.position).normalized * 150f;
             p.transform.position = new Vector3(to.x, p.transform.position.y, to.z);
@@ -485,7 +545,11 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             var l = door.GetComponent<Locked>();
-            if ((l != null && l.locked) || door.blocked) { r.Fail($"we're locked in: {DoorInfo(door)}"); yield break; }
+            if ((l != null && l.locked) || door.blocked)
+            {
+                r.Fail($"we're locked in: {DoorInfo(door)}");
+                yield break;
+            }
             if (!door.opened)
             {
                 AsPlayer(() => door.open(p.transform.position, p.transform, 0f));

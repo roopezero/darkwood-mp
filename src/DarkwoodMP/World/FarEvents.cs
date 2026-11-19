@@ -31,7 +31,14 @@ namespace DarkwoodMP.World
     public static class FarEvents
     {
         /// <summary>For the map test: each enter or exit, with the part it ran in.</summary>
-        public sealed class Entry { public float At; public string Location; public string Kind; public ScriptedEvents.Part Part; public Vector3 Pos; }
+        public sealed class Entry
+        {
+            public float At;
+            public string Location;
+            public string Kind;
+            public ScriptedEvents.Part Part;
+            public Vector3 Pos;
+        }
         public static readonly List<Entry> Log = new List<Entry>();
         /// <summary>For the map test: Location.enter and leave calls (the location really switched), by location name.</summary>
         public static readonly List<Entry> Switches = new List<Entry>();
@@ -65,7 +72,8 @@ namespace DarkwoodMP.World
             }
             SharedCullingPatch.Distances(out int dx, out int dy);
             float m = was ? 600f : 0f;
-            var a = p.transform.position; var b = l.transform.position;
+            var a = p.transform.position;
+            var b = l.transform.position;
             return Mathf.Abs(a.x - b.x) <= dx + m && Mathf.Abs(a.z - b.z) <= dy + m;
         }
 
@@ -174,13 +182,21 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (!l.entered) { HostIn.Remove(l); continue; }
+                if (!l.entered)
+                {
+                    HostIn.Remove(l);
+                    continue;
+                }
                 if (!l.finishedLoading || l.activatingOverTime)
                 {
                     continue; // its enter events haven't run yet
                 }
                 bool was;
-                if (!HostIn.TryGetValue(l, out was)) { HostIn[l] = HostNear(l, false); continue; }
+                if (!HostIn.TryGetValue(l, out was))
+                {
+                    HostIn[l] = HostNear(l, false);
+                    continue;
+                }
                 bool now = HostNear(l, was);
                 if (now == was)
                 {
@@ -200,15 +216,24 @@ namespace DarkwoodMP.World
                         if (et != null)
                         {
                             try
-                            { Core.sendTriggerInfo(et.gameObject, type); }
-                            catch (Exception e) { Plugin.Log.LogWarning($"[farevents] {l.name}'s {type} on {et.name}: {e.Message}"); }
+                            {
+                                Core.sendTriggerInfo(et.gameObject, type);
+                            }
+                            catch (Exception e)
+                            {
+                                Plugin.Log.LogWarning($"[farevents] {l.name}'s {type} on {et.name}: {e.Message}");
+                            }
                         }
                     }
                 });
             }
         }
 
-        public static void Register(Session s) => s.OnSessionEnded += () => { HostIn.Clear(); _all = null; };
+        public static void Register(Session s) => s.OnSessionEnded += () =>
+        {
+            HostIn.Clear();
+            _all = null;
+        };
     }
 
     [HarmonyPatch(typeof(Location), "checkEnterEvents")]

@@ -73,7 +73,13 @@ namespace DarkwoodMP.World
             s.Register(MsgType.LevelTaken, OnLevelTaken);
             s.Register(MsgType.SkillReset, OnSkillReset);
             SkillTree.Register(s);
-            s.OnSessionEnded += () => { _known = false; _saved = null; _savedPath = null; _waitingReset = false; };
+            s.OnSessionEnded += () =>
+            {
+                _known = false;
+                _saved = null;
+                _savedPath = null;
+                _waitingReset = false;
+            };
         }
 
         // ---- levels ---------------------------------------------------------------------------------
@@ -132,7 +138,10 @@ namespace DarkwoodMP.World
                     menu.updateLiquid();
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[progress] couldn't refresh the stove: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[progress] couldn't refresh the stove: {e.Message}");
+            }
         }
 
         // ---- host -----------------------------------------------------------------------------------
@@ -173,21 +182,26 @@ namespace DarkwoodMP.World
                         _saved = JsonConvert.DeserializeObject<Saved>(File.ReadAllText(path));
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"[progress] couldn't read {path}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[progress] couldn't read {path}: {e.Message}");
+                }
                 if (_saved != null)
                 {
                     if (_saved.Resets == null)
                     {
                         _saved.Resets = new Dictionary<string, int>();
                     }
-                    SharedExp = _saved.Exp; SharedLevel = _saved.Level;
+                    SharedExp = _saved.Exp;
+                    SharedLevel = _saved.Level;
                     Plugin.Log.LogInfo($"[progress] this world's shared essence {SharedExp}, level {SharedLevel}");
                 }
             }
             if (_saved == null && start && (solo ? alone : s.Peers.Count > 0))
             {
                 _saved = new Saved { Exp = p.experience, Level = p.currentLevel };
-                SharedExp = _saved.Exp; SharedLevel = _saved.Level;
+                SharedExp = _saved.Exp;
+                SharedLevel = _saved.Level;
                 Plugin.Log.LogInfo($"[progress] shared progression starts from yours: essence {SharedExp}, level {SharedLevel}");
             }
             return _saved;
@@ -251,8 +265,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            try { File.WriteAllText(_savedPath, JsonConvert.SerializeObject(_saved)); }
-            catch (Exception e) { Plugin.Log.LogWarning($"[progress] couldn't write {_savedPath}: {e.Message}"); }
+            try
+            {
+                File.WriteAllText(_savedPath, JsonConvert.SerializeObject(_saved));
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[progress] couldn't write {_savedPath}: {e.Message}");
+            }
         }
 
         private static void OnEssence(ulong from, PacketReader r)
@@ -263,8 +283,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (amount <= 0 || amount > 100000) { SendState(from); Authority.Refuse($"implausible essence {amount}"); return; }
-            if (BarFull(p)) { SendState(from); Authority.Refuse("the shared essence bar is full: someone has to take the level at a stove"); return; }
+            if (amount <= 0 || amount > 100000)
+            {
+                SendState(from);
+                Authority.Refuse($"implausible essence {amount}");
+                return;
+            }
+            if (BarFull(p))
+            {
+                SendState(from);
+                Authority.Refuse("the shared essence bar is full: someone has to take the level at a stove");
+                return;
+            }
             SharedExp += amount;
             _saved.Exp = SharedExp;
             Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} cooked {amount} essence: shared {SharedExp}");
@@ -322,10 +352,22 @@ namespace DarkwoodMP.World
         private static bool TakeReset(string who, ulong peer, out string why)
         {
             why = null;
-            if (!InMorning(peer)) { why = NotMorning; return false; }
+            if (!InMorning(peer))
+            {
+                why = NotMorning;
+                return false;
+            }
             var saved = HostSaved(start: true, alone: who == "host");
-            if (saved == null) { why = "nobody shares the progression"; return false; }
-            if (saved.Resets.TryGetValue(who, out int day) && day == Today) { why = "you already reset your skills today"; return false; }
+            if (saved == null)
+            {
+                why = "nobody shares the progression";
+                return false;
+            }
+            if (saved.Resets.TryGetValue(who, out int day) && day == Today)
+            {
+                why = "you already reset your skills today";
+                return false;
+            }
             saved.Resets[who] = Today;
             return true;
         }
@@ -336,7 +378,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (!TakeReset(KeyHash(key), from, out string why)) { Authority.Refuse(why); return; }
+            if (!TakeReset(KeyHash(key), from, out string why))
+            {
+                Authority.Refuse(why);
+                return;
+            }
             Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} reset their skills (day {Today})");
         }
 
@@ -411,7 +457,11 @@ namespace DarkwoodMP.World
         internal static void LevelTaken()
         {
             var p = Player.Instance;
-            if (ClientActive) { SendLevel(p); Apply(p); }
+            if (ClientActive)
+            {
+                SendLevel(p);
+                Apply(p);
+            }
             else if (HostSide)
             {
                 HostSync();
@@ -428,7 +478,11 @@ namespace DarkwoodMP.World
             _nextSync = Time.unscaledTime + 1f;
             var s = S;
             // Back at the main menu: forget the world's file, so a reload (maybe of an older save) reads it again.
-            if (!WorldShare.InWorld && (s == null || !s.Active) && _savedPath != null) { _saved = null; _savedPath = null; }
+            if (!WorldShare.InWorld && (s == null || !s.Active) && _savedPath != null)
+            {
+                _saved = null;
+                _savedPath = null;
+            }
             if (s != null && s.IsHost && Hideouts.Together)
             {
                 HostSync();
@@ -471,15 +525,42 @@ namespace DarkwoodMP.World
             {
                 p.gainExp(0);
                 menu.resetLiquid();
-                try { AudioController.Play("UI_placeItem"); } catch { }
+                try
+                {
+                    AudioController.Play("UI_placeItem");
+                }
+                catch
+                {
+                }
                 if (d != null && !d.disabled)
                 {
                     int l = p.currentLevel;
-                    if (l == 2 && !d.hadDreamAtLvl2) { d.wantToDream = true; d.hadDreamAtLvl2 = true; d.startTransition.dreamToTransitionTo = "dream_bunker_underground_01"; }
-                    if (l == 3 && !d.hadDreamAtLvl3) { d.wantToDream = true; d.hadDreamAtLvl3 = true; }
-                    if (l == 5 && !d.hadDreamAtLvl5) { d.wantToDream = true; d.hadDreamAtLvl5 = true; }
-                    if (l == 6 && !d.hadDreamAtLvl6) { d.wantToDream = true; d.hadDreamAtLvl6 = true; }
-                    if (l == 7 && !d.hadDreamAtLvl7) { d.wantToDream = true; d.hadDreamAtLvl7 = true; }
+                    if (l == 2 && !d.hadDreamAtLvl2)
+                    {
+                        d.wantToDream = true;
+                        d.hadDreamAtLvl2 = true;
+                        d.startTransition.dreamToTransitionTo = "dream_bunker_underground_01";
+                    }
+                    if (l == 3 && !d.hadDreamAtLvl3)
+                    {
+                        d.wantToDream = true;
+                        d.hadDreamAtLvl3 = true;
+                    }
+                    if (l == 5 && !d.hadDreamAtLvl5)
+                    {
+                        d.wantToDream = true;
+                        d.hadDreamAtLvl5 = true;
+                    }
+                    if (l == 6 && !d.hadDreamAtLvl6)
+                    {
+                        d.wantToDream = true;
+                        d.hadDreamAtLvl6 = true;
+                    }
+                    if (l == 7 && !d.hadDreamAtLvl7)
+                    {
+                        d.wantToDream = true;
+                        d.hadDreamAtLvl7 = true;
+                    }
                 }
                 if (d != null && d.wantToDream && (!Core.randomGeneration || d.hasUnspawnedRandomPresetForChapter(Singleton<WorldGenerator>.Instance.chapterID)))
                 {
@@ -565,7 +646,10 @@ namespace DarkwoodMP.World
             foreach (var sk in all)
             {
                 if (sk.chosen)
-                { sk.initialize(destBool: false); n++; }
+                {
+                    sk.initialize(destBool: false);
+                    n++;
+                }
             }
             ps.skills.RemoveAll(sk => sk == null || all.Contains(sk));
             if (menu != null && menu.chosenSkills != null)
@@ -611,11 +695,20 @@ namespace DarkwoodMP.World
                     {
                         DoReset(Player.Instance);
                     }
-                    else { Player.Instance?.displayMessage(reason); Plugin.Log.LogInfo($"[progress] reset refused: {reason}"); }
+                    else
+                    {
+                        Player.Instance?.displayMessage(reason);
+                        Plugin.Log.LogInfo($"[progress] reset refused: {reason}");
+                    }
                 }, inventory: false);
                 return;
             }
-            if (!TakeReset("host", 0, out string why)) { p.displayMessage(why); Plugin.Log.LogInfo($"[progress] reset refused: {why}"); return; }
+            if (!TakeReset("host", 0, out string why))
+            {
+                p.displayMessage(why);
+                Plugin.Log.LogInfo($"[progress] reset refused: {why}");
+                return;
+            }
             DoReset(p);
         }
 
@@ -626,7 +719,11 @@ namespace DarkwoodMP.World
                 return;
             }
             ClearSkills(p, keepLevel: true);
-            if (NetEnemies.ClientMode) { SendLevel(p); Apply(p); }
+            if (NetEnemies.ClientMode)
+            {
+                SendLevel(p);
+                Apply(p);
+            }
             else
             {
                 HostSync();
@@ -674,7 +771,11 @@ namespace DarkwoodMP.World
             float x = Mathf.Round((Screen.width - w) / 2f), y = Mathf.Round(Screen.height - h - 40 * s);
             GUI.Box(new Rect(x, y, w, h), GUIContent.none, MenuSkin.Window);
             float ly = y + pad;
-            foreach (var l in lines) { Ui.Label(new Rect(x + pad, ly, w - 2 * pad, line), l, MenuSkin.Bright, TextAnchor.MiddleCenter); ly += line; }
+            foreach (var l in lines)
+            {
+                Ui.Label(new Rect(x + pad, ly, w - 2 * pad, line), l, MenuSkin.Bright, TextAnchor.MiddleCenter);
+                ly += line;
+            }
             if (morning)
             {
                 if (lines.Count > 0)
@@ -711,7 +812,10 @@ namespace DarkwoodMP.World
                     foreach (var sk in t.skills)
                     {
                         if (given < n && sk != null && !sk.chosen)
-                        { sk.initialize(destBool: true); given++; }
+                        {
+                            sk.initialize(destBool: true);
+                            given++;
+                        }
                     }
                 }
             }

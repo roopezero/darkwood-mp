@@ -27,7 +27,12 @@ namespace DarkwoodMP.Combat
     /// </summary>
     public static class EnemyMotion
     {
-        public struct Sample { public float T; public Vector3 Pos; public Quaternion Rot; }
+        public struct Sample
+        {
+            public float T;
+            public Vector3 Pos;
+            public Quaternion Rot;
+        }
 
         /// <summary>One enemy's states by the host's time, oldest first.</summary>
         public sealed class Track
@@ -53,7 +58,11 @@ namespace DarkwoodMP.Combat
 
         public static void Reset()
         {
-            _hasClock = false; _lastSent = -1f; _interval = NetEnemies.StateInterval; _jitter = 0f; _delay = 0f;
+            _hasClock = false;
+            _lastSent = -1f;
+            _interval = NetEnemies.StateInterval;
+            _jitter = 0f;
+            _delay = 0f;
             Stats.Reset();
         }
 
@@ -61,7 +70,12 @@ namespace DarkwoodMP.Combat
         public static void Arrived(float sent, float now)
         {
             float gap = now - sent;
-            if (!_hasClock || Mathf.Abs(gap - _offset) > 2f) { _offset = gap; _hasClock = true; _jitter = 0f; }
+            if (!_hasClock || Mathf.Abs(gap - _offset) > 2f)
+            {
+                _offset = gap;
+                _hasClock = true;
+                _jitter = 0f;
+            }
             else if (gap < _offset)
             {
                 _offset = gap;
@@ -104,7 +118,11 @@ namespace DarkwoodMP.Combat
                 {
                     s.Clear();
                 }
-                else if (sent <= last.T) { s[s.Count - 1] = new Sample { T = last.T, Pos = pos, Rot = rot }; return; } // the same moment again (a corpse's state)
+                else if (sent <= last.T) // the same moment again (a corpse's state)
+                {
+                    s[s.Count - 1] = new Sample { T = last.T, Pos = pos, Rot = rot };
+                    return;
+                }
             }
             if (s.Count == MaxSamples)
             {
@@ -117,7 +135,8 @@ namespace DarkwoodMP.Combat
         public static bool Where(Track t, float now, out Vector3 pos, out Quaternion rot)
         {
             var s = t.Samples;
-            pos = default; rot = Quaternion.identity;
+            pos = default;
+            rot = Quaternion.identity;
             if (s.Count == 0)
             {
                 return false;
@@ -128,18 +147,30 @@ namespace DarkwoodMP.Combat
                 s.RemoveAt(0); // keep the one before the moment drawn
             }
             var a = s[0];
-            if (s.Count == 1 || at <= a.T) { pos = a.Pos; rot = a.Rot; t.Speed = 0f; return true; }
+            if (s.Count == 1 || at <= a.T)
+            {
+                pos = a.Pos;
+                rot = a.Rot;
+                t.Speed = 0f;
+                return true;
+            }
             for (int i = 0; i + 1 < s.Count; i++)
             {
                 var b = s[i + 1];
-                if (at > b.T) { a = b; continue; }
+                if (at > b.T)
+                {
+                    a = b;
+                    continue;
+                }
                 float k = (at - a.T) / Mathf.Max(0.001f, b.T - a.T);
-                pos = Vector3.Lerp(a.Pos, b.Pos, k); rot = Quaternion.Slerp(a.Rot, b.Rot, k);
+                pos = Vector3.Lerp(a.Pos, b.Pos, k);
+                rot = Quaternion.Slerp(a.Rot, b.Rot, k);
                 t.Speed = Flat(b.Pos - a.Pos) / Mathf.Max(0.001f, b.T - a.T);
                 return true;
             }
             // Past the last state: on at its last speed for a moment.
-            var last = s[s.Count - 1]; var prev = s[s.Count - 2];
+            var last = s[s.Count - 1];
+            var prev = s[s.Count - 2];
             float span = last.T - prev.T;
             float ahead = Mathf.Min(at - last.T, MaxAhead);
             bool carry = span > 0.001f && span < 0.3f;
@@ -169,7 +200,8 @@ namespace DarkwoodMP.Combat
             {
                 Batches = Frames = Moving = Stalls = Jumps = LateGaps = 0;
                 MaxGap = MaxHostGap = MaxFrame = SumGap = SumErr = 0f;
-                _lastNow = _lastSent = -1f; _gaps.Clear();
+                _lastNow = _lastSent = -1f;
+                _gaps.Clear();
             }
 
             internal static void Batch(float sent, float now)
@@ -181,7 +213,9 @@ namespace DarkwoodMP.Combat
                 Batches++;
                 if (_lastNow >= 0f)
                 {
-                    float g = now - _lastNow; _gaps.Add(g); SumGap += g;
+                    float g = now - _lastNow;
+                    _gaps.Add(g);
+                    SumGap += g;
                     if (g > MaxGap)
                     {
                         MaxGap = g;
@@ -190,12 +224,14 @@ namespace DarkwoodMP.Combat
                     {
                         LateGaps++;
                     }
-                    float hg = sent - _lastSent; if (hg > MaxHostGap)
+                    float hg = sent - _lastSent;
+                    if (hg > MaxHostGap)
                     {
                         MaxHostGap = hg;
                     }
                 }
-                _lastNow = now; _lastSent = sent;
+                _lastNow = now;
+                _lastSent = sent;
             }
 
             internal static void Frame(float dt)
@@ -214,7 +250,11 @@ namespace DarkwoodMP.Combat
             /// <summary>An enemy was drawn this frame at pos.</summary>
             internal static void Drawn(Track t, Vector3 pos, float dt)
             {
-                if (!On) { t.HasDrawn = false; return; }
+                if (!On)
+                {
+                    t.HasDrawn = false;
+                    return;
+                }
                 if (t.HasDrawn && dt > 0.0001f)
                 {
                     float speed = t.Speed;
@@ -233,7 +273,8 @@ namespace DarkwoodMP.Combat
                         SumErr += Mathf.Min(3f, Mathf.Abs(got / want - 1f));
                     }
                 }
-                t.Drawn = pos; t.HasDrawn = true;
+                t.Drawn = pos;
+                t.HasDrawn = true;
             }
 
             public static string Summary()

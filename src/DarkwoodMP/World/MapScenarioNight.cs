@@ -64,13 +64,18 @@ namespace DarkwoodMP.World
             string name = Name(go);
             ctx.Set($"{name} {Mathf.Round(p.x / 10f) * 10f:0},{Mathf.Round(p.z / 10f) * 10f:0}", new Dictionary<string, object>
             {
-                ["name"] = name, ["pos"] = StateDump.Pos(p), ["listed"] = listed,
+                ["name"] = name,
+                ["pos"] = StateDump.Pos(p),
+                ["listed"] = listed,
             });
         }
 
         private static string Name(GameObject g) => g.name.Replace("(Clone)", "").Trim();
 
-        private static IEnumerator None() { yield break; }
+        private static IEnumerator None()
+        {
+            yield break;
+        }
 
         private static IEnumerable<CustomEvent> NightEvents(NightScenario sc) =>
             sc.customEvents.Concat(sc.customEventAndInts.Where(x => x != null).Select(x => x.customEvent)).Where(e => e != null).Distinct();
@@ -114,7 +119,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Inventory(string[] a, Result r)
         {
             var ns = Singleton<NightScenarios>.Instance;
-            if (ns == null) { r.Fail("no NightScenarios"); return None(); }
+            if (ns == null)
+            {
+                r.Fail("no NightScenarios");
+                return None();
+            }
             var kinds = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
             var seen = new HashSet<CustomEvent>();
             int events = 0;
@@ -132,7 +141,11 @@ namespace DarkwoodMP.World
                     }
                     events++;
                     var re = ce.theEvent;
-                    if (re == null) { Plugin.Log.LogInfo($"[night] {sc.name} / {ce.name}: no RandomEvent"); continue; }
+                    if (re == null)
+                    {
+                        Plugin.Log.LogInfo($"[night] {sc.name} / {ce.name}: no RandomEvent");
+                        continue;
+                    }
                     var steps = new List<string>();
                     if (re.type == RandomEvent.Type.locationEvent)
                     {
@@ -187,13 +200,27 @@ namespace DarkwoodMP.World
                 case GameEvent.Type.item:
                     k += " " + e.itemModifyType + (e.itemModifyType == GameEvent.ItemModify.light ? " " + e.lightModify : "");
                     break;
-                case GameEvent.Type.runFunction: k += " " + e.Value; break;
-                case GameEvent.Type.spawnCharacter: k += " " + e.Value + " " + e.spawnCharacterType; break;
-                case GameEvent.Type.modifyDoor: k += " " + e.doorModifyType; break;
-                case GameEvent.Type.modifyCharacter: k += " " + e.characterModifyType; break;
-                case GameEvent.Type.modifyMainScript: k += " " + e.Value; break;
-                case GameEvent.Type.switchItemOnOff: k += e.activeModifier ? " on" : " off"; break;
-                case GameEvent.Type.setSprite: k += " " + e.Value; break;
+                case GameEvent.Type.runFunction:
+                    k += " " + e.Value;
+                    break;
+                case GameEvent.Type.spawnCharacter:
+                    k += " " + e.Value + " " + e.spawnCharacterType;
+                    break;
+                case GameEvent.Type.modifyDoor:
+                    k += " " + e.doorModifyType;
+                    break;
+                case GameEvent.Type.modifyCharacter:
+                    k += " " + e.characterModifyType;
+                    break;
+                case GameEvent.Type.modifyMainScript:
+                    k += " " + e.Value;
+                    break;
+                case GameEvent.Type.switchItemOnOff:
+                    k += e.activeModifier ? " on" : " off";
+                    break;
+                case GameEvent.Type.setSprite:
+                    k += " " + e.Value;
+                    break;
             }
             var targets = e.locationObjects.Where(o => o != null).Select(o => o.type.ToString())
                 .Concat(e.targetGameObjects.Where(g => g != null).Select(g => g.name)).Distinct().Take(4).ToList();
@@ -215,7 +242,11 @@ namespace DarkwoodMP.World
         {
             var p = P;
             var ns = Singleton<NightScenarios>.Instance;
-            if (p == null || ns == null || a.Length < 1) { r.Fail("usage: nl-event NAME (host, in a world)"); yield break; }
+            if (p == null || ns == null || a.Length < 1)
+            {
+                r.Fail("usage: nl-event NAME (host, in a world)");
+                yield break;
+            }
             CustomEvent ev = null;
             foreach (var sc in ns.scenarios)
             {
@@ -225,15 +256,29 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
-            if (ev == null) { r.Fail($"no night event {a[0]}"); yield break; }
+            if (ev == null)
+            {
+                r.Fail($"no night event {a[0]}");
+                yield break;
+            }
             var loc = StateDump.All<Location>().Where(l => l.playerBase && !l.isSubLocation)
                 .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
-            if (loc == null) { r.Fail("no hideout"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no hideout");
+                yield break;
+            }
             int sent = NightObjects.SentCount;
             var was = p.whereAmI.location;
             p.whereAmI.location = loc;
-            try { ev.fire(force: true); }
-            finally { p.whereAmI.location = was; }
+            try
+            {
+                ev.fire(force: true);
+            }
+            finally
+            {
+                p.whereAmI.location = was;
+            }
             float until = Time.realtimeSinceStartup + 8f;
             while (Time.realtimeSinceStartup < until && NightObjects.SentCount == sent)
             {
@@ -260,7 +305,11 @@ namespace DarkwoodMP.World
             int n = a.Length > 0 ? int.Parse(a[0]) : 6;
             string kind = a.Length > 1 ? a[1] : "DogMutated";
             var proxy = ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
             for (int i = 0; i < n; i++)
             {
                 float ang = i * Mathf.PI * 2f / n;
@@ -274,7 +323,11 @@ namespace DarkwoodMP.World
                 _herd.Add(c);
             }
             yield return new WaitForSeconds(1f);
-            if (_herd.Count == 0) { r.Fail($"couldn't spawn {kind}"); yield break; }
+            if (_herd.Count == 0)
+            {
+                r.Fail($"couldn't spawn {kind}");
+                yield break;
+            }
             r.Info = $"{_herd.Count} {kind} by the client";
         }
 
@@ -284,7 +337,10 @@ namespace DarkwoodMP.World
             foreach (var c in _herd)
             {
                 if (c != null)
-                { Object.Destroy(c.gameObject); n++; }
+                {
+                    Object.Destroy(c.gameObject);
+                    n++;
+                }
             }
             _herd.Clear();
             yield return new WaitForSeconds(1.5f);
@@ -296,7 +352,11 @@ namespace DarkwoodMP.World
         {
             float secs = a.Length > 0 ? F(a[0]) : 20f;
             var p = P;
-            if (p == null) { r.Fail("no player"); yield break; }
+            if (p == null)
+            {
+                r.Fail("no player");
+                yield break;
+            }
             EnemyMotion.Stats.Reset();
             EnemyMotion.Stats.On = true;
             var centre = p.transform.position;
@@ -320,7 +380,10 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            finally { EnemyMotion.Stats.On = false; }
+            finally
+            {
+                EnemyMotion.Stats.On = false;
+            }
             p.health = p.maxHealth;
             string s = EnemyMotion.Stats.Summary();
             Plugin.Log.LogInfo($"[enemy motion] {s}");

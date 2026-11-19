@@ -24,7 +24,13 @@ namespace DarkwoodMP.Sync
         public const float Teleport = 3000f;
         private const float Window = 0.5f;
 
-        private sealed class Track { public Vector3 Good; public Vector3 WindowStart; public float WindowAt; public float LastCorrection = -10f; }
+        private sealed class Track
+        {
+            public Vector3 Good;
+            public Vector3 WindowStart;
+            public float WindowAt;
+            public float LastCorrection = -10f;
+        }
         private readonly Dictionary<ulong, Track> _tracks = new Dictionary<ulong, Track>();
         /// <summary>Trips the host agreed to, per player: where to, and until when (realtime).</summary>
         private readonly Dictionary<ulong, List<(Vector3 to, float until)>> _trips = new Dictionary<ulong, List<(Vector3, float)>>();
@@ -37,8 +43,16 @@ namespace DarkwoodMP.Sync
         public MoveCheck(Session session)
         {
             _session = session;
-            session.OnPeerDisconnected += id => { _tracks.Remove(id); _trips.Remove(id); };
-            session.OnSessionEnded += () => { _tracks.Clear(); _trips.Clear(); };
+            session.OnPeerDisconnected += id =>
+            {
+                _tracks.Remove(id);
+                _trips.Remove(id);
+            };
+            session.OnSessionEnded += () =>
+            {
+                _tracks.Clear();
+                _trips.Clear();
+            };
             session.Register(MsgType.PlayerCorrection, OnCorrection);
         }
 
@@ -118,11 +132,16 @@ namespace DarkwoodMP.Sync
                     w.Write(t.Good);
                     _session.SendTo(from, w, Channel.Control, reliable: true);
                 }
-                t.WindowStart = t.Good; t.WindowAt = now;
+                t.WindowStart = t.Good;
+                t.WindowAt = now;
                 return t.Good;
             }
             t.Good = pos;
-            if (dt >= Window) { t.WindowStart = pos; t.WindowAt = now; }
+            if (dt >= Window)
+            {
+                t.WindowStart = pos;
+                t.WindowAt = now;
+            }
             return pos;
         }
 
@@ -145,7 +164,11 @@ namespace DarkwoodMP.Sync
             Plugin.Log.LogInfo($"[authority] the host put our player back at {pos}");
             var body = p.GetComponent<Rigidbody>();
             p.transform.position = new Vector3(pos.x, p.transform.position.y, pos.z);
-            if (body != null) { body.position = p.transform.position; body.velocity = Vector3.zero; }
+            if (body != null)
+            {
+                body.position = p.transform.position;
+                body.velocity = Vector3.zero;
+            }
         }
     }
 }

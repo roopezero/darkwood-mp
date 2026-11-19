@@ -166,7 +166,12 @@ namespace DarkwoodMP
                 return;
             }
             var e = Event.current;
-            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !ConfirmDialog.Open) { e.Use(); Close(); return; }
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && !ConfirmDialog.Open)
+            {
+                e.Use();
+                Close();
+                return;
+            }
             _win.OnGUI();
         }
 
@@ -202,7 +207,11 @@ namespace DarkwoodMP
             if (_problem != null)
             {
                 Ui.Text(f, _problem, MenuSkin.Warn);
-                if (Ui.Button(f, "Open the game's profiles screen")) { Close(); Singleton<MainMenu>.Instance.displayProfilesMenu(); }
+                if (Ui.Button(f, "Open the game's profiles screen"))
+                {
+                    Close();
+                    Singleton<MainMenu>.Instance.displayProfilesMenu();
+                }
             }
             DrawList(f);
             if (_choice > 0)
@@ -361,7 +370,11 @@ namespace DarkwoodMP
                 var k = f.Row(Ui.RowH, 0, 0);
                 bool ns = Check(k[0], skip, "Skip the prologue", on);
                 bool nb = Check(k[1], backer, "Backer content", on);
-                if (on) { _skipPrologue = ns; _backer = nb; }
+                if (on)
+                {
+                    _skipPrologue = ns;
+                    _backer = nb;
+                }
             });
         }
 
@@ -443,9 +456,20 @@ namespace DarkwoodMP
         {
             bool enabled = GUI.enabled;
             var color = GUI.color;
-            if (!on) { GUI.enabled = false; GUI.color = new Color(color.r, color.g, color.b, color.a * 0.45f); }
-            try { draw(); }
-            finally { GUI.enabled = enabled; GUI.color = color; }
+            if (!on)
+            {
+                GUI.enabled = false;
+                GUI.color = new Color(color.r, color.g, color.b, color.a * 0.45f);
+            }
+            try
+            {
+                draw();
+            }
+            finally
+            {
+                GUI.enabled = enabled;
+                GUI.color = color;
+            }
         }
 
         /// <summary>One of a row of choices: the chosen one pressed in.</summary>
@@ -567,7 +591,11 @@ namespace DarkwoodMP
             if (sandbox != null)
             {
                 SaveRedirect.Begin(sandbox);
-                if (!WorldShare.RedirectWorks(sandbox)) { SaveRedirect.End(); yield break; }
+                if (!WorldShare.RedirectWorks(sandbox))
+                {
+                    SaveRedirect.End();
+                    yield break;
+                }
             }
             var w = Instance;
             MenuList.Click("Start Game");
@@ -606,7 +634,8 @@ namespace DarkwoodMP
                 yield return Shot("start-list");
                 w.Choose(0);
                 yield return Shot("start-new");
-                w._host = true; Plugin.Cfg.HostWith.Value = "direct";
+                w._host = true;
+                Plugin.Cfg.HostWith.Value = "direct";
                 yield return Shot("start-new-host");
                 if (firstSave > 0)
                 {

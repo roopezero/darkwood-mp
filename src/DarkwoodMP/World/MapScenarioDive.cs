@@ -57,9 +57,17 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator TankSetup(string[] a, Result r)
         {
-            if (a.Length < 3) { r.Fail("tank-setup ID DX DZ"); yield break; }
+            if (a.Length < 3)
+            {
+                r.Fail("tank-setup ID DX DZ");
+                yield break;
+            }
             var prefab = TankPrefab();
-            if (prefab == null) { r.Fail($"no item {SharedTank.Item}"); yield break; }
+            if (prefab == null)
+            {
+                r.Fail($"no item {SharedTank.Item}");
+                yield break;
+            }
             string id = a[0];
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Root("dwmp_tank_" + id, pos);
@@ -143,7 +151,11 @@ namespace DarkwoodMP.World
         /// <summary>"tank-fire ID YES NO": our player uses ID; its tank trigger must have run YES times for us in all, the no-tank one NO.</summary>
         private static IEnumerator TankFire(string[] a, Result r)
         {
-            if (a.Length < 3 || !_tanks.TryGetValue(a[0], out var m) || m.et == null) { r.Fail("tank-fire ID YES NO (tank-setup first)"); yield break; }
+            if (a.Length < 3 || !_tanks.TryGetValue(a[0], out var m) || m.et == null)
+            {
+                r.Fail("tank-fire ID YES NO (tank-setup first)");
+                yield break;
+            }
             int yes = int.Parse(a[1]), no = int.Parse(a[2]);
             yield return Walk(m.pos, 100f);
             yield return new WaitForSeconds(0.5f);
@@ -164,7 +176,11 @@ namespace DarkwoodMP.World
 
         // ---- a short scripted trip, which the host's movement check must let through ---------------------------
 
-        private sealed class Trip { public EventTriggers Et; public Transform To; }
+        private sealed class Trip
+        {
+            public EventTriggers Et;
+            public Transform To;
+        }
         private static readonly Dictionary<string, Trip> _trips = new Dictionary<string, Trip>();
 
         /// <summary>
@@ -174,7 +190,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator TripSetup(string[] a, Result r)
         {
-            if (a.Length < 5) { r.Fail("trip-setup ID DX DZ DX2 DZ2"); yield break; }
+            if (a.Length < 5)
+            {
+                r.Fail("trip-setup ID DX DZ DX2 DZ2");
+                yield break;
+            }
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Root("dwmp_trip_" + a[0], pos);
             var to = Root("dwmp_trip_to_" + a[0], Centre + new Vector3(F(a[3]), 0f, F(a[4]))).transform;
@@ -196,7 +216,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator TripGo(string[] a, Result r)
         {
-            if (a.Length < 1 || !_trips.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("trip-go ID (trip-setup first)"); yield break; }
+            if (a.Length < 1 || !_trips.TryGetValue(a[0], out var m) || m.Et == null)
+            {
+                r.Fail("trip-go ID (trip-setup first)");
+                yield break;
+            }
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(1f);
             int corrections = Sync.MoveCheck.Corrections;
@@ -226,7 +250,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
         }
 
-        private sealed class Made { public EventTriggers Et; public global::EventTrigger T; public LaterTestCounter C; }
+        private sealed class Made
+        {
+            public EventTriggers Et;
+            public global::EventTrigger T;
+            public LaterTestCounter C;
+        }
         private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
 
         private static PlayerStepCounter Counter()
@@ -254,7 +283,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator OwnSetup(string[] a, Result r)
         {
-            if (a.Length < 4) { r.Fail("own-setup ID DX DZ once|multi|eventsonce"); yield break; }
+            if (a.Length < 4)
+            {
+                r.Fail("own-setup ID DX DZ once|multi|eventsonce");
+                yield break;
+            }
             string id = a[0];
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             bool multi = a[3] != "once"; // eventsonce: the trigger fires each time, its GameEvents run once (the cellar's first dive)
@@ -280,7 +313,11 @@ namespace DarkwoodMP.World
         /// <summary>"own-fire ID OWN": our player walks to trigger ID and sets it off; OWN steps must act on our player (2, or 0).</summary>
         private static IEnumerator OwnFire(string[] a, Result r)
         {
-            if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.Et == null) { r.Fail("own-fire ID OWN (own-setup first)"); yield break; }
+            if (a.Length < 2 || !_made.TryGetValue(a[0], out var m) || m.Et == null)
+            {
+                r.Fail("own-fire ID OWN (own-setup first)");
+                yield break;
+            }
             int want = int.Parse(a[1]);
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
@@ -306,7 +343,11 @@ namespace DarkwoodMP.World
         /// <summary>"own-count ID OWN SHARED": in this game, OWN steps of ID acted on our player and its shared step ran SHARED times.</summary>
         private static IEnumerator OwnCount(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("own-count ID OWN SHARED (own-setup first)"); yield break; }
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null)
+            {
+                r.Fail("own-count ID OWN SHARED (own-setup first)");
+                yield break;
+            }
             int own = int.Parse(a[1]), shared = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 4f;
             while (m.C.N < shared && Time.realtimeSinceStartup < until)

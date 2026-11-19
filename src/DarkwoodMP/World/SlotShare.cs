@@ -61,7 +61,15 @@ namespace DarkwoodMP.World
             session.Register(MsgType.ContainerSlotsAsk, OnAsk);
             session.Register(MsgType.ContainerSlotsAll, OnContents);
             session.Register(MsgType.StorageSort, OnSort);
-            session.OnSessionEnded += () => { _watched.Clear(); _refs.Clear(); _isStorage.Clear(); _awaiting.Clear(); _askedScene = -1; _sent.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _watched.Clear();
+                _refs.Clear();
+                _isStorage.Clear();
+                _awaiting.Clear();
+                _askedScene = -1;
+                _sent.Clear();
+            };
         }
 
         /// <summary>Whether this container is a workbench's storage (shared slot by slot).</summary>
@@ -79,7 +87,10 @@ namespace DarkwoodMP.World
             foreach (var wb in Object.FindObjectsOfType<Workbench>())
             {
                 if (wb != null && wb.normalInventory == inv)
-                { yes = true; break; }
+                {
+                    yes = true;
+                    break;
+                }
             }
             _isStorage[inv] = yes;
             return yes;
@@ -276,8 +287,15 @@ namespace DarkwoodMP.World
                 return;
             }
             Inventory.SaveState state;
-            try { state = JsonConvert.DeserializeObject<Inventory.SaveState>(contents); }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[slots] {obj} bad contents from host: {e.Message}"); return; }
+            try
+            {
+                state = JsonConvert.DeserializeObject<Inventory.SaveState>(contents);
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[slots] {obj} bad contents from host: {e.Message}");
+                return;
+            }
             if (state == null)
             {
                 return;
@@ -294,8 +312,14 @@ namespace DarkwoodMP.World
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
             {
                 WorldActions.Replaying = true;
-                try { state.loadValues(inv); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    state.loadValues(inv);
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
                 Plugin.Log.LogInfo($"[slots] {obj} contents from host ({inv.slots.Count} slots): {state.invItems?.Count ?? 0} filled, loaded whole");
                 RemoveIfEmptied(inv);
                 return;
@@ -374,7 +398,11 @@ namespace DarkwoodMP.World
                 string now = Key(inv.slots[i]);
                 if (seen == null || i >= seen.Length || now == seen[i])
                 {
-                    if (now != hostKey) { Set(inv, i, host[i]); differed++; } // Set makes it the slot's starting point
+                    if (now != hostKey) // Set makes it the slot's starting point
+                    {
+                        Set(inv, i, host[i]);
+                        differed++;
+                    }
                     continue;
                 }
                 if (hostKey == seen[i] || RotOnly(inv.slots[i].invItem, hostKey, seen[i]))
@@ -387,7 +415,8 @@ namespace DarkwoodMP.World
                 Set(inv, i, host[i]);
                 Plugin.Log.LogInfo($"[authority] our change to slot {i} of {inv.name}: refused here (it had changed on the host before we opened it)");
                 Undo(oldKey, tried);
-                differed++; undone++;
+                differed++;
+                undone++;
             }
             Plugin.Log.LogInfo($"[slots] {what} ({slotCount} slots): {filled} filled, {differed} differed here, {undone} of our changes undone");
             if (differed > 0)
@@ -493,7 +522,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            var x = a.Split('|'); var y = b.Split('|');
+            var x = a.Split('|');
+            var y = b.Split('|');
             if (x.Length != 5 || y.Length != 5)
             {
                 return false;
@@ -632,7 +662,10 @@ namespace DarkwoodMP.World
                     slot.createItem(it, it.baseClass != null && it.baseClass.hasAmmo ? -1 : it.amount);
                 }
             }
-            finally { WorldActions.Replaying = false; }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
             if (_watched.TryGetValue(inv, out var keys) && i < keys.Length)
             {
                 keys[i] = Key(slot);
@@ -641,10 +674,20 @@ namespace DarkwoodMP.World
 
         // ---- messages ----------------------------------------------------------------------
 
-        private struct Change { public int Slot; public string Old, New; }
+        private struct Change
+        {
+            public int Slot;
+            public string Old, New;
+        }
 
         // Client: the batches of slot changes we sent lately, to undo one whole when the host refuses it.
-        private sealed class Sent { public string Obj; public List<Change> Changes; public float At; public bool Undone; }
+        private sealed class Sent
+        {
+            public string Obj;
+            public List<Change> Changes;
+            public float At;
+            public bool Undone;
+        }
         private readonly List<Sent> _sent = new List<Sent>();
         private const float SentKept = 15f;
 
@@ -703,7 +746,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (s.IsClient)
+            if (s.IsClient) // the host's word
             {
                 foreach (var c in changes)
                 {
@@ -712,7 +755,7 @@ namespace DarkwoodMP.World
                 UiRefresh.Changed(inv);
                 RemoveIfEmptied(inv);
                 return;
-            } // the host's word
+            }
 
             // Host: the player must be at the container, it must be open in the host's world (a locked crate not
             // picked open here isn't), and nobody else may have it open (but its storage).
@@ -745,13 +788,21 @@ namespace DarkwoodMP.World
                 foreach (var c in changes)
                 {
                     if (!StackSizes.Fits(Item(c.New)))
-                    { refusedAll = $"slot {c.Slot}: more than one stack holds"; break; }
+                    {
+                        refusedAll = $"slot {c.Slot}: more than one stack holds";
+                        break;
+                    }
                 }
             }
             var accepted = new List<Change>();
             foreach (var c in changes)
             {
-                if (refusedAll == null) { Set(inv, c.Slot, c.New); accepted.Add(c); continue; }
+                if (refusedAll == null)
+                {
+                    Set(inv, c.Slot, c.New);
+                    accepted.Add(c);
+                    continue;
+                }
                 Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({refusedAll})");
                 var w = s.Begin(MsgType.ContainerSlotRefused);
                 obj.Write(w);
@@ -808,7 +859,8 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[slots] {obj} slot {slot}: the host refused our change '{oldKey}' -> '{Key(Item(triedJson))}' (it holds '{Key(Item(hostJson))}' there)");
             // Something we changed in that slot after this change and haven't sent yet: Set replaces it too, so it's
             // undone as well. (A later change already sent is refused, and undone, by its own answer.)
-            InvItemClass unsent = null; string sentKey = null;
+            InvItemClass unsent = null;
+            string sentKey = null;
             if (inv != null && slot < inv.slots.Count && _watched.TryGetValue(inv, out var keys) && slot < keys.Length && keys[slot] != Key(inv.slots[slot]))
             {
                 sentKey = keys[slot];
@@ -909,8 +961,16 @@ namespace DarkwoodMP.World
                     {
                         int n = Mathf.Min(held.amount, left);
                         left -= n;
-                        if (n >= held.amount) { held.UIInvItem?.despawn(); ctl.pickedUpItem = null; }
-                        else { held.amount -= n; held.refresh(); }
+                        if (n >= held.amount)
+                        {
+                            held.UIInvItem?.despawn();
+                            ctl.pickedUpItem = null;
+                        }
+                        else
+                        {
+                            held.amount -= n;
+                            held.refresh();
+                        }
                     }
                     if (left > 0)
                     {
@@ -1032,7 +1092,11 @@ namespace DarkwoodMP.World
                 // An upgrade (CraftingRecipes.doCraft) raises the level by one, at an open workbench.
                 string refused = level != ctl.workbenchLevel + 1 ? $"level {level} isn't one above {ctl.workbenchLevel}"
                     : !AtWorkbench(from) ? "they aren't at a workbench" : null;
-                if (refused != null) { Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} raised the workbench level: refused ({refused})"); return; }
+                if (refused != null)
+                {
+                    Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} raised the workbench level: refused ({refused})");
+                    return;
+                }
                 var w = s.Begin(MsgType.WorkbenchLevel);
                 w.W.Write(level);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);

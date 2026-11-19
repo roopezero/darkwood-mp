@@ -54,7 +54,10 @@ namespace DarkwoodMP.World
             Add("spectate-end", SpectateEnd);
         }
 
-        private static IEnumerator Nothing() { yield break; }
+        private static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         /// <summary>
         /// "story-at-join" (host, before the join): once the joiner's snapshot is read, while the joiner downloads and
@@ -75,7 +78,11 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (FlagsSync.SnapshotNoted == noted) { Plugin.Log.LogWarning("[map] story-at-join: no snapshot was made"); yield break; }
+            if (FlagsSync.SnapshotNoted == noted)
+            {
+                Plugin.Log.LogWarning("[map] story-at-join: no snapshot was made");
+                yield break;
+            }
             yield return null; // after the frame the world was read in
             var f = Singleton<Flags>.Instance;
             var npc = f.npcStates.FirstOrDefault(n => n != null);
@@ -133,7 +140,11 @@ namespace DarkwoodMP.World
         private static IEnumerator LanSearch(string[] a, Result r)
         {
             var b = Plugin.Browser;
-            if (b == null) { r.Fail("no server browser"); yield break; }
+            if (b == null)
+            {
+                r.Fail("no server browser");
+                yield break;
+            }
             b.Refresh(Net.ServerBrowser.Tab.Lan);
             yield return null;
             float until = Time.realtimeSinceStartup + 25f;
@@ -164,7 +175,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DisarmCrouch(string[] a, Result r)
         {
             var t = FindTrap(a[0]);
-            if (t == null) { r.Fail($"no armed trap {a[0]}"); yield break; }
+            if (t == null)
+            {
+                r.Fail($"no armed trap {a[0]}");
+                yield break;
+            }
             yield return Walk(t.transform.position, 90f);
             var item = t.GetComponent<Item>();
             AsPlayer(() => P.doDisarm(item));
@@ -193,7 +208,11 @@ namespace DarkwoodMP.World
         private static IEnumerator PuppetCrouch(string[] a, Result r)
         {
             var rp = Other();
-            if (rp == null) { r.Fail("no other player"); yield break; }
+            if (rp == null)
+            {
+                r.Fail("no other player");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 4f;
             string seen = "";
             while (Time.realtimeSinceStartup < until)
@@ -224,7 +243,11 @@ namespace DarkwoodMP.World
                     }
                     int match = last.Sprites.Count(s => frames.Contains((s.CollectionHash, s.SpriteId)));
                     seen = $"library {last.Library} ({(lib != null ? "found" : "not found here")}), {match} of {last.Sprites.Count} sprites from the crouch, shown {rp.Root != null && rp.Root.activeInHierarchy}";
-                    if (match > 0 && rp.Root != null && rp.Root.activeInHierarchy) { r.Info = $"{rp.Name}: {seen}"; yield break; }
+                    if (match > 0 && rp.Root != null && rp.Root.activeInHierarchy)
+                    {
+                        r.Info = $"{rp.Name}: {seen}";
+                        yield break;
+                    }
                 }
                 yield return null;
             }
@@ -237,7 +260,11 @@ namespace DarkwoodMP.World
         {
             var t = FindTrap(a[0]);
             string what = t != null ? $"{t.name} at {Fmt(t.transform.position)}" : a[0];
-            if (P.progressBar == null || !P.disarmingTrap) { r.Fail($"not disarming {what} (bar {P.progressBar != null})"); yield break; }
+            if (P.progressBar == null || !P.disarmingTrap)
+            {
+                r.Fail($"not disarming {what} (bar {P.progressBar != null})");
+                yield break;
+            }
             WorldActions.TestAsPlayer = true; // the bar ends in its own Update, as the player's action
             P.progressBar.time = 0.01f;
             float until = Time.realtimeSinceStartup + 4f;
@@ -271,7 +298,11 @@ namespace DarkwoodMP.World
         /// still playing, we watch them instead of the permadeath screen.</summary>
         private static IEnumerator Permadeath(string[] a, Result r)
         {
-            if (Core.currentProfile == null) { r.Fail("no profile"); yield break; }
+            if (Core.currentProfile == null)
+            {
+                r.Fail("no profile");
+                yield break;
+            }
             var was = Core.currentProfile.difficulty;
             Core.currentProfile.difficulty = GameProfile.Difficulty.nightmare;
             P.die();
@@ -280,7 +311,12 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (!Spectator.Active) { Core.currentProfile.difficulty = was; r.Fail($"not spectating (alive {P.alive}, permadeath box {Singleton<UI>.Instance.permadeathBox != null})"); yield break; }
+            if (!Spectator.Active)
+            {
+                Core.currentProfile.difficulty = was;
+                r.Fail($"not spectating (alive {P.alive}, permadeath box {Singleton<UI>.Instance.permadeathBox != null})");
+                yield break;
+            }
             yield return new WaitForSeconds(2f);
             var cam = Singleton<CamMain>.Instance;
             var host = Other();
@@ -299,7 +335,11 @@ namespace DarkwoodMP.World
         /// DIR/spectator-view.png.</summary>
         private static IEnumerator SpectatorView(string[] a, Result r)
         {
-            if (!Spectator.Active) { r.Fail("not spectating"); yield break; }
+            if (!Spectator.Active)
+            {
+                r.Fail("not spectating");
+                yield break;
+            }
             var first = Spectator.ConeAngles();
             yield return new WaitForSeconds(2f);
             var later = Spectator.ConeAngles();
@@ -322,7 +362,11 @@ namespace DarkwoodMP.World
         /// and the view cone is back at the angles it had when it began (not 360).</summary>
         private static IEnumerator SpectateEnd(string[] a, Result r)
         {
-            if (!Spectator.Active) { r.Fail("not spectating"); yield break; }
+            if (!Spectator.Active)
+            {
+                r.Fail("not spectating");
+                yield break;
+            }
             var saved = Spectator.SavedCone;
             Spectator.TestEnd();
             yield return null;
@@ -341,7 +385,11 @@ namespace DarkwoodMP.World
             int from = MapScenarioIssues.LogMark();
             yield return new WaitForSeconds(3f);
             var rp = Other();
-            if (rp == null) { r.Fail("no other player"); yield break; }
+            if (rp == null)
+            {
+                r.Fail("no other player");
+                yield break;
+            }
             NetPlayerProxy.All.TryGetValue(rp.Owner, out var proxy);
             var col = proxy != null ? proxy.GetComponent<Collider>() : null;
             int corrections = MapScenarioIssues.LogLines().Skip(from).Count(l => l.Contains("put back"));

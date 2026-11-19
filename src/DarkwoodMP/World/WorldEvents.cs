@@ -49,7 +49,13 @@ namespace DarkwoodMP.World
             session.Register(MsgType.NightEvent, OnNightEvent);
             session.Register(MsgType.RandomObjects, OnRandomObjects);
             session.Register(MsgType.Weather, OnWeather);
-            session.OnSessionEnded += () => { _sentScenario = null; _sentWeather = null; _randomDue = -1f; Presentation = 0; };
+            session.OnSessionEnded += () =>
+            {
+                _sentScenario = null;
+                _sentWeather = null;
+                _randomDue = -1f;
+                Presentation = 0;
+            };
         }
 
         private static bool Away()
@@ -70,7 +76,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (_randomDue >= 0f && Time.unscaledTime >= _randomDue) { _randomDue = -1f; SendRandomObjects(); }
+            if (_randomDue >= 0f && Time.unscaledTime >= _randomDue)
+            {
+                _randomDue = -1f;
+                SendRandomObjects();
+            }
             if (Time.unscaledTime < _nextCheck)
             {
                 return;
@@ -128,13 +138,21 @@ namespace DarkwoodMP.World
                 return;
             }
             var sc = name.Length > 0 ? ns.getScenario(name) : null;
-            if (name.Length > 0 && sc == null) { Plugin.Log.LogWarning($"No night scenario {name} here"); return; }
+            if (name.Length > 0 && sc == null)
+            {
+                Plugin.Log.LogWarning($"No night scenario {name} here");
+                return;
+            }
             if (ns.currentScenario == sc)
             {
                 return;
             }
             ns.currentScenario = sc;
-            if (sc != null) { ns.previousScenarioName = sc.name; ns.previousScenarioDifficulty = sc.difficulty; }
+            if (sc != null)
+            {
+                ns.previousScenarioName = sc.name;
+                ns.previousScenarioDifficulty = sc.difficulty;
+            }
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] night scenario now '{name}' (the host's)");
@@ -215,7 +233,11 @@ namespace DarkwoodMP.World
                 var ns = Singleton<NightScenarios>.Instance;
                 var sc = ns != null ? ns.getScenario(scenario) : null;
                 var ev = sc != null ? FindEvent(sc, name) : null;
-                if (ev == null) { Plugin.Log.LogWarning($"No night event {scenario}/{name} here"); return; }
+                if (ev == null)
+                {
+                    Plugin.Log.LogWarning($"No night event {scenario}/{name} here");
+                    return;
+                }
                 var big = Player.Instance.whereAmI.bigLocation;
                 if (big == null)
                 {
@@ -228,8 +250,15 @@ namespace DarkwoodMP.World
                 ns.currentScenario = sc;
                 Presentation++;
                 WorldActions.Replaying = true;
-                try { ev.fire(force: true); }
-                finally { WorldActions.Replaying = false; Presentation--; }
+                try
+                {
+                    ev.fire(force: true);
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                    Presentation--;
+                }
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo($"[world] night event {name} (the host's, at {where}) played here at {big.name}");
@@ -237,17 +266,28 @@ namespace DarkwoodMP.World
             }
             else if (kind == ShadowLightsKind)
             {
-                var g = ObjRef.Read(r); var k = ObjRef.Read(r);
+                var g = ObjRef.Read(r);
+                var k = ObjRef.Read(r);
                 if (!Follows)
                 {
                     return;
                 }
                 var gen = ObjRef.Resolve<Generator>(g);
                 var keep = ObjRef.Resolve<Item>(k);
-                if (gen == null || keep == null) { Plugin.Log.LogWarning($"Shadow lights: no generator {g} or lamp {k} here"); return; }
+                if (gen == null || keep == null)
+                {
+                    Plugin.Log.LogWarning($"Shadow lights: no generator {g} or lamp {k} here");
+                    return;
+                }
                 WorldActions.Replaying = true;
-                try { ShadowLights(gen, keep); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    ShadowLights(gen, keep);
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo($"[world] shadow lights: {keep.name} stays on (the host's choice)");
@@ -349,7 +389,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        internal static IEnumerator Nothing() { yield break; }
+        internal static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         /// <summary>Runs a played event's step with Presentation and Replaying set, so what it fires later is filtered too.</summary>
         internal static IEnumerator AsPresentation(IEnumerator inner)
@@ -359,8 +402,15 @@ namespace DarkwoodMP.World
                 bool more, was = WorldActions.Replaying; // the first step runs at once, inside OnNightEvent's own replay
                 Presentation++;
                 WorldActions.Replaying = true;
-                try { more = inner.MoveNext(); }
-                finally { WorldActions.Replaying = was; Presentation--; }
+                try
+                {
+                    more = inner.MoveNext();
+                }
+                finally
+                {
+                    WorldActions.Replaying = was;
+                    Presentation--;
+                }
                 if (!more)
                 {
                     yield break;
@@ -536,7 +586,10 @@ namespace DarkwoodMP.World
                         made++;
                     }
                 }
-                finally { WorldActions.Replaying = false; }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo($"[world] made the host's {made} of {n} random objects of the dawn");
@@ -552,11 +605,21 @@ namespace DarkwoodMP.World
                     return;
                 }
                 var prefab = Singleton<SaveManager>.Instance?.getPrefab(name);
-                if (prefab == null) { Plugin.Log.LogWarning($"No night object {name} here"); return; }
+                if (prefab == null)
+                {
+                    Plugin.Log.LogWarning($"No night object {name} here");
+                    return;
+                }
                 GameObject go;
                 WorldActions.Replaying = true;
-                try { go = Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    go = Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
                 if (go == null)
                 {
                     return;
@@ -594,8 +657,16 @@ namespace DarkwoodMP.World
             _session.Broadcast(w, Channel.Control, reliable: true);
         }
 
-        private static void WriteTad(PacketWriter w, TimeAndDay t) { w.W.Write(t?.time ?? -1); w.W.Write(t?.day ?? -1); }
-        private static TimeAndDay ReadTad(PacketReader r) { int time = r.R.ReadInt32(), day = r.R.ReadInt32(); return time < 0 ? null : new TimeAndDay(time, day); }
+        private static void WriteTad(PacketWriter w, TimeAndDay t)
+        {
+            w.W.Write(t?.time ?? -1);
+            w.W.Write(t?.day ?? -1);
+        }
+        private static TimeAndDay ReadTad(PacketReader r)
+        {
+            int time = r.R.ReadInt32(), day = r.R.ReadInt32();
+            return time < 0 ? null : new TimeAndDay(time, day);
+        }
 
         private void OnWeather(ulong from, PacketReader r)
         {
@@ -605,7 +676,8 @@ namespace DarkwoodMP.World
             }
             byte f = r.R.ReadByte();
             float start = r.R.ReadSingle(), duration = r.R.ReadSingle(), pre = r.R.ReadSingle(), lightning = r.R.ReadSingle();
-            var fogIn = ReadTad(r); var fogOut = ReadTad(r);
+            var fogIn = ReadTad(r);
+            var fogOut = ReadTad(r);
             var rain = Singleton<Rain>.Instance;
             if (!NetEnemies.ClientMode || rain == null)
             {
@@ -637,17 +709,29 @@ namespace DarkwoodMP.World
     // ---- joiners don't roll -----------------------------------------------------------------
 
     [HarmonyPatch(typeof(NightScenarios), nameof(NightScenarios.setCurrentScenario))]
-    static class ScenarioChoicePatch { static bool Prefix() => !WorldEvents.Follows; }
+    static class ScenarioChoicePatch
+    {
+        static bool Prefix() => !WorldEvents.Follows;
+    }
 
     [HarmonyPatch(typeof(NightScenario), nameof(NightScenario.checkFrequencies))]
-    static class NightEventRollPatch { static bool Prefix() => !WorldEvents.Follows; }
+    static class NightEventRollPatch
+    {
+        static bool Prefix() => !WorldEvents.Follows;
+    }
 
     [HarmonyPatch(typeof(NightScenario), nameof(NightScenario.fireEvent))]
-    static class NightEventPickPatch { static bool Prefix() => !WorldEvents.Follows; }
+    static class NightEventPickPatch
+    {
+        static bool Prefix() => !WorldEvents.Follows;
+    }
 
     /// <summary>The day's random events (a redneck ambush, world events) at their random times.</summary>
     [HarmonyPatch(typeof(Events), "onUpdateTime")]
-    static class DayEventsPatch { static bool Prefix() => !WorldEvents.Follows; }
+    static class DayEventsPatch
+    {
+        static bool Prefix() => !WorldEvents.Follows;
+    }
 
     /// <summary>A joiner's own random events don't fire; a night event the host sent plays only its location events' presentation.</summary>
     [HarmonyPatch(typeof(RandomEvent), nameof(RandomEvent.fire), new[] { typeof(bool), typeof(bool) })]
@@ -722,7 +806,10 @@ namespace DarkwoodMP.World
     }
 
     [HarmonyPatch(typeof(WorldGenerator), nameof(WorldGenerator.despawnRandomObjects))]
-    static class RandomObjectsGonePatch { static bool Prefix() => !NetEnemies.ClientMode; }
+    static class RandomObjectsGonePatch
+    {
+        static bool Prefix() => !NetEnemies.ClientMode;
+    }
 
     /// <summary>Night mushrooms: made on the host and sent.</summary>
     [HarmonyPatch(typeof(WormsSpawner), nameof(WormsSpawner.spawn))]
@@ -776,10 +863,16 @@ namespace DarkwoodMP.World
     }
 
     [HarmonyPatch(typeof(Rain), nameof(Rain.setUpNextRain))]
-    static class RainNextPatch { static bool Prefix() => !NetEnemies.ClientMode; }
+    static class RainNextPatch
+    {
+        static bool Prefix() => !NetEnemies.ClientMode;
+    }
 
     [HarmonyPatch(typeof(Rain), nameof(Rain.setUpFog))]
-    static class FogPatch { static bool Prefix() => !NetEnemies.ClientMode; }
+    static class FogPatch
+    {
+        static bool Prefix() => !NetEnemies.ClientMode;
+    }
 
     /// <summary>
     /// Host: the day's redneck ambush (RandomEvent spawnRedneck) can be any player's. The game sends one redneck

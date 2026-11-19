@@ -11,7 +11,11 @@ namespace DarkwoodMP
     /// </summary>
     public static class PixelFont
     {
-        public enum Kind { Body, Title }
+        public enum Kind
+        {
+            Body,
+            Title
+        }
 
         private sealed class Face
         {
@@ -49,7 +53,11 @@ namespace DarkwoodMP
                     }
                     var face = new Face { Data = d, Texture = tex, LineHeight = d.lineHeight, CapTop = 0f, CapHeight = 8f };
                     var h = Glyph(face, 'H');
-                    if (h != null && h.p0.y > h.p1.y) { face.CapTop = h.p0.y; face.CapHeight = h.p0.y - h.p1.y; }
+                    if (h != null && h.p0.y > h.p1.y)
+                    {
+                        face.CapTop = h.p0.y;
+                        face.CapHeight = h.p0.y - h.p1.y;
+                    }
                     if (_body == null && f.name.StartsWith("tahoma_11px_light_AA") && !f.name.Contains("occluded"))
                     {
                         _body = face;
@@ -176,7 +184,11 @@ namespace DarkwoodMP
             foreach (char c in s)
             {
                 var g = Glyph(f, c);
-                if (g == null) { x += 3 * sc; continue; }
+                if (g == null)
+                {
+                    x += 3 * sc;
+                    continue;
+                }
                 float gw = (g.p1.x - g.p0.x) * sc, gh = (g.p0.y - g.p1.y) * sc;
                 if (gw > 0f && gh > 0f)
                 {
@@ -219,7 +231,11 @@ namespace DarkwoodMP
                 foreach (var word in para.Split(' '))
                 {
                     string tryLine = line.Length == 0 ? word : line + " " + word;
-                    if (line.Length > 0 && Width(tryLine, kind) > width) { lines.Add(line); line = word; }
+                    if (line.Length > 0 && Width(tryLine, kind) > width)
+                    {
+                        lines.Add(line);
+                        line = word;
+                    }
                     else
                     {
                         line = tryLine;

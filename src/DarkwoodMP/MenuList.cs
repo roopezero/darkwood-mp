@@ -52,7 +52,9 @@ namespace DarkwoodMP
                             return true;
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
                 return false;
             }
@@ -66,8 +68,14 @@ namespace DarkwoodMP
             }
             foreach (Action d in Draw.GetInvocationList())
             {
-                try { d(); }
-                catch (Exception e) { Plugin.Log.LogWarning($"A menu window failed to draw: {e.Message}"); }
+                try
+                {
+                    d();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"A menu window failed to draw: {e.Message}");
+                }
             }
         }
     }
@@ -123,9 +131,19 @@ namespace DarkwoodMP
             {
                 HideGameButtons(mm);
             }
-            if (!_shown) { _selected = -1; _pending = null; return; }
+            if (!_shown)
+            {
+                _selected = -1;
+                _pending = null;
+                return;
+            }
             bool pause = InWorldMenu();
-            if (pause != _pause || _entries.Count == 0) { _pause = pause; Build(); _selected = -1; }
+            if (pause != _pause || _entries.Count == 0)
+            {
+                _pause = pause;
+                Build();
+                _selected = -1;
+            }
 
             if (!MenuWindows.AnyOpen)
             {
@@ -135,8 +153,14 @@ namespace DarkwoodMP
             {
                 var act = _pending;
                 _pending = null;
-                try { act(); }
-                catch (Exception e) { Plugin.Log.LogWarning($"[menu] an entry failed: {e.Message}"); }
+                try
+                {
+                    act();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[menu] an entry failed: {e.Message}");
+                }
             }
         }
 
@@ -194,7 +218,11 @@ namespace DarkwoodMP
         private static void GameButton(GameObject go)
         {
             var b = go != null ? go.GetComponent<global::Button>() : null;
-            if (b == null) { Plugin.Log.LogWarning($"[menu] the game's {go?.name ?? "entry"} isn't there"); return; }
+            if (b == null)
+            {
+                Plugin.Log.LogWarning($"[menu] the game's {go?.name ?? "entry"} isn't there");
+                return;
+            }
             b.getClicked(force: true);
         }
 
@@ -214,7 +242,10 @@ namespace DarkwoodMP
                     string ago = since.TotalHours >= 1 ? $"{(int)since.TotalHours} h {since.Minutes} min" : since.TotalMinutes >= 1 ? $"{(int)since.TotalMinutes} min" : $"{Math.Max(0, since.Seconds)} s";
                     s = $"What you did since the last save ({ago} ago) will be lost.";
                 }
-                catch { s = "What you did since the last save will be lost."; }
+                catch
+                {
+                    s = "What you did since the last save will be lost.";
+                }
             }
             var session = Plugin.Instance?.Session;
             if (session != null && session.IsHost && session.Peers.Count > 0)
@@ -238,7 +269,13 @@ namespace DarkwoodMP
 
         private static void Quit()
         {
-            try { Singleton<Controller>.Instance?.fadeAudio(fadeOut: true, 0f, musicToo: true); } catch { }
+            try
+            {
+                Singleton<Controller>.Instance?.fadeAudio(fadeOut: true, 0f, musicToo: true);
+            }
+            catch
+            {
+            }
             Core.quitGame();
         }
 
@@ -361,7 +398,11 @@ namespace DarkwoodMP
                 if (pad != null)
                 {
                     float v = pad.GetAxisRaw("Dpad Vertical");
-                    if (Mathf.Abs(v) > 0.5f && Time.unscaledTime >= _nextPad) { dir = v > 0 ? -1 : 1; _nextPad = Time.unscaledTime + 0.25f; }
+                    if (Mathf.Abs(v) > 0.5f && Time.unscaledTime >= _nextPad)
+                    {
+                        dir = v > 0 ? -1 : 1;
+                        _nextPad = Time.unscaledTime + 0.25f;
+                    }
                     else if (Mathf.Abs(v) <= 0.5f)
                     {
                         _nextPad = 0f;
@@ -372,7 +413,9 @@ namespace DarkwoodMP
                     }
                 }
             }
-            catch { }
+            catch
+            {
+            }
             if (dir != 0 && _entries.Count > 0)
             {
                 _selected = _selected < 0 ? (dir > 0 ? 0 : _entries.Count - 1) : (_selected + dir + _entries.Count) % _entries.Count;
@@ -485,7 +528,10 @@ namespace DarkwoodMP
             foreach (var en in _entries)
             {
                 if (string.Equals(en.Label, label, StringComparison.OrdinalIgnoreCase))
-                { Fire(en); return true; }
+                {
+                    Fire(en);
+                    return true;
+                }
             }
             return false;
         }

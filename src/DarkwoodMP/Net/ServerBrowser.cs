@@ -25,7 +25,12 @@ namespace DarkwoodMP.Net
     /// </summary>
     public sealed class ServerBrowser
     {
-        public enum Tab { Favorites, History, Lan }
+        public enum Tab
+        {
+            Favorites,
+            History,
+            Lan
+        }
 
         public sealed class Entry
         {
@@ -57,9 +62,12 @@ namespace DarkwoodMP.Net
         {
             switch (tab)
             {
-                case Tab.Favorites: return Favorites;
-                case Tab.History: return History.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
-                default: return Lan;
+                case Tab.Favorites:
+                    return Favorites;
+                case Tab.History:
+                    return History.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+                default:
+                    return Lan;
             }
         }
 
@@ -138,7 +146,11 @@ namespace DarkwoodMP.Net
                     {
                         continue;
                     }
-                    if (line.StartsWith("[") && line.EndsWith("]")) { section = line.Substring(1, line.Length - 2).ToUpperInvariant(); continue; }
+                    if (line.StartsWith("[") && line.EndsWith("]"))
+                    {
+                        section = line.Substring(1, line.Length - 2).ToUpperInvariant();
+                        continue;
+                    }
                     int eq = line.IndexOf('=');
                     string key = (eq >= 0 ? line.Substring(0, eq) : line).Trim();
                     string val = eq >= 0 ? line.Substring(eq + 1).Trim() : "";
@@ -150,10 +162,17 @@ namespace DarkwoodMP.Net
                     {
                         Favorites.Add(key);
                     }
-                    else if (section == "HISTORY") { long.TryParse(val, out long t); History[key] = t; }
+                    else if (section == "HISTORY")
+                    {
+                        long.TryParse(val, out long t);
+                        History[key] = t;
+                    }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read {_path}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't read {_path}: {e.Message}");
+            }
         }
 
         private void Save()
@@ -173,14 +192,21 @@ namespace DarkwoodMP.Net
                 }
                 File.WriteAllText(_path, b.ToString());
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't write {_path}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't write {_path}: {e.Message}");
+            }
         }
 
         // ---- queries -------------------------------------------------------
 
         public void Refresh(Tab tab)
         {
-            if (tab == Tab.Lan) { SearchLan(); return; }
+            if (tab == Tab.Lan)
+            {
+                SearchLan();
+                return;
+            }
             foreach (var a in List(tab))
             {
                 Query(a);
@@ -198,7 +224,8 @@ namespace DarkwoodMP.Net
             e.Querying = true;
             ThreadPool.QueueUserWorkItem(_ =>
             {
-                ServerInfo info = null; int ping = 0;
+                ServerInfo info = null;
+                int ping = 0;
                 try
                 {
                     if (TcpBackend.TryParseAddress(addr, out string host, out int port))
@@ -219,7 +246,10 @@ namespace DarkwoodMP.Net
                         }
                     }
                 }
-                catch { /* no answer */ }
+                catch
+                {
+                    /* no answer */
+                }
                 _done.Enqueue(() =>
                 {
                     e.Querying = false;
@@ -288,7 +318,10 @@ namespace DarkwoodMP.Net
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't list the network adapters, searching by broadcast only: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't list the network adapters, searching by broadcast only: {e.Message}");
+            }
             list.AddRange(sweep);
             return list;
         }
@@ -315,17 +348,31 @@ namespace DarkwoodMP.Net
                         // address of each adapter's /24 is slow (each address with no machine behind it waits on
                         // ARP: 800 addresses took 9 s on Linux), and the broadcasts, sent first, are answered in
                         // milliseconds. The wait ends QueryTimeoutMs after the last query went.
-                        long sentAt = -1; int failed = 0;
+                        long sentAt = -1;
+                        int failed = 0;
                         var sender = new Thread(() =>
                         {
                             foreach (var to in targets)
                             {
-                                try { udp.Send(ServerInfo.Query, ServerInfo.Query.Length, to); }
-                                catch (SocketException) { failed++; } // an address this adapter can't reach
-                                catch (ObjectDisposedException) { return; }
+                                try
+                                {
+                                    udp.Send(ServerInfo.Query, ServerInfo.Query.Length, to);
+                                }
+                                catch (SocketException)
+                                {
+                                    failed++; // an address this adapter can't reach
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    return;
+                                }
                             }
                             Interlocked.Exchange(ref sentAt, sw.ElapsedMilliseconds);
-                        }) { IsBackground = true, Name = "DarkwoodMP LAN search" };
+                        })
+                        {
+                            IsBackground = true,
+                            Name = "DarkwoodMP LAN search"
+                        };
                         sender.Start();
                         while (true)
                         {
@@ -341,11 +388,17 @@ namespace DarkwoodMP.Net
                             udp.Client.ReceiveTimeout = done >= 0 ? (int)Math.Max(1, done + QueryTimeoutMs - sw.ElapsedMilliseconds) : 200;
                             var from = new IPEndPoint(IPAddress.Any, 0);
                             byte[] a;
-                            try { a = udp.Receive(ref from); }
+                            try
+                            {
+                                a = udp.Receive(ref from);
+                            }
                             // A machine that isn't hosting answers with ICMP "port unreachable", which the next Receive
                             // reports: ConnectionReset on Windows, ConnectionRefused on Linux. That's one address
                             // saying no: keep listening. A timed-out Receive also lands here; the deadline above decides.
-                            catch (SocketException) { continue; }
+                            catch (SocketException)
+                            {
+                                continue;
+                            }
 
                             var info = ServerInfo.Parse(a, a.Length);
                             if (info == null)
@@ -357,7 +410,9 @@ namespace DarkwoodMP.Net
                             _done.Enqueue(() =>
                             {
                                 var e = Get(addr);
-                                e.Info = info; e.Failed = false; e.PingMs = ping;
+                                e.Info = info;
+                                e.Failed = false;
+                                e.PingMs = ping;
                                 if (!Lan.Contains(addr))
                                 {
                                     Lan.Add(addr);
@@ -367,7 +422,10 @@ namespace DarkwoodMP.Net
                         Plugin.Log.LogInfo($"LAN search: asked {targets.Count} addresses ({failed} couldn't be sent), the last at {Interlocked.Read(ref sentAt)} ms");
                     }
                 }
-                catch (Exception ex) { Plugin.Log.LogWarning($"LAN search failed: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogWarning($"LAN search failed: {ex.Message}");
+                }
                 _done.Enqueue(() => SearchingLan = false);
             });
         }

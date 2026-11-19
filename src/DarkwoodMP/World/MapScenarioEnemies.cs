@@ -52,9 +52,17 @@ namespace DarkwoodMP.World
         private static IEnumerator Day(string[] a, Result r)
         {
             var s = Net.Session.Instance;
-            if (s != null && s.IsClient) { r.Fail("the clock is the host's"); yield break; }
+            if (s != null && s.IsClient)
+            {
+                r.Fail("the clock is the host's");
+                yield break;
+            }
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null) { r.Fail("no clock"); yield break; }
+            if (ctl == null)
+            {
+                r.Fail("no clock");
+                yield break;
+            }
             if (a.Length > 0 && a[0] == "off")
             {
                 _holdDay = false;
@@ -70,7 +78,11 @@ namespace DarkwoodMP.World
                     _baseline.Add(c.GetInstanceID());
                 }
             }
-            if (!_holdDay) { _holdDay = true; Plugin.Instance.StartCoroutine(HoldDay()); }
+            if (!_holdDay)
+            {
+                _holdDay = true;
+                Plugin.Instance.StartCoroutine(HoldDay());
+            }
             yield return new WaitForSeconds(1.5f);
             r.Info = $"day {ctl.day} {ctl.CurrentTime / 60f:0.00} h, held";
         }
@@ -81,7 +93,11 @@ namespace DarkwoodMP.World
             {
                 var ctl = Singleton<Controller>.Instance;
                 var s = Net.Session.Instance;
-                if (ctl == null || s == null || !s.IsHost) { _holdDay = false; break; }
+                if (ctl == null || s == null || !s.IsHost)
+                {
+                    _holdDay = false;
+                    break;
+                }
                 if (ctl.DoUpdateTime)
                 {
                     ctl.DoUpdateTime = false;
@@ -191,13 +207,26 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
-            if (a.Length < 1) { r.Fail("usage: ee-spawn KIND"); yield break; }
+            if (a.Length < 1)
+            {
+                r.Fail("usage: ee-spawn KIND");
+                yield break;
+            }
             string kind = a[0];
             TraceSpawns = true;
             var proxy = ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
-            if (Resources.Load("Prefabs/Characters/" + kind) == null) { r.Info = $"skip: no prefab Characters/{kind}"; yield break; }
-            var away = proxy.transform.position - P.transform.position; away.y = 0f;
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
+            if (Resources.Load("Prefabs/Characters/" + kind) == null)
+            {
+                r.Info = $"skip: no prefab Characters/{kind}";
+                yield break;
+            }
+            var away = proxy.transform.position - P.transform.position;
+            away.y = 0f;
             var spot = FreeSpot(proxy.transform.position + (away.sqrMagnitude > 1f ? away.normalized : Vector3.forward) * 450f);
             var w = new Watch { Kind = kind, SpawnedAt = Time.realtimeSinceStartup };
             foreach (var c0 in Object.FindObjectsOfType<Character>())
@@ -205,13 +234,31 @@ namespace DarkwoodMP.World
                 w.Before.Add(c0.GetInstanceID());
             }
             Character c;
-            try { c = SpawnAt(kind, spot, attack: true); }
-            catch (Exception e) { r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}"); yield break; }
-            if (c == null) { r.Fail($"couldn't spawn {kind}"); yield break; }
-            w.C = c; w.From = spot;
+            try
+            {
+                c = SpawnAt(kind, spot, attack: true);
+            }
+            catch (Exception e)
+            {
+                r.Fail($"spawning {kind}: {e.GetType().Name}: {e.Message}");
+                yield break;
+            }
+            if (c == null)
+            {
+                r.Fail($"couldn't spawn {kind}");
+                yield break;
+            }
+            w.C = c;
+            w.From = spot;
             w.Before.Add(c.GetInstanceID());
             _w = w;
-            if (c.npc != null) { r.Info = $"skip: {c.name} is an NPC here (runs in every game)"; Object.Destroy(c.gameObject); _w = null; yield break; }
+            if (c.npc != null)
+            {
+                r.Info = $"skip: {c.name} is an NPC here (runs in every game)";
+                Object.Destroy(c.gameObject);
+                _w = null;
+                yield break;
+            }
             Plugin.Instance.StartCoroutine(Monitor(w));
             yield return new WaitForSeconds(1f);
             NetEnemies.Instance.NetIdOf(c, out w.Id);
@@ -228,7 +275,11 @@ namespace DarkwoodMP.World
             string kind = a.Length > 0 ? a[0] : "Spider01";
             var spot = FreeSpot(P.transform.position + new Vector3(0f, 0f, -400f));
             var c = SpawnAt(kind, spot, attack: true);
-            if (c == null) { r.Fail($"couldn't spawn {kind}"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"couldn't spawn {kind}");
+                yield break;
+            }
             float lost = 0f, hp = P.health, until = Time.realtimeSinceStartup + 15f;
             while (Time.realtimeSinceStartup < until && lost <= 0f && c != null && c.alive)
             {
@@ -389,7 +440,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Check(string[] a, Result r)
         {
             var w = _w;
-            if (w == null) { r.Info = "nothing spawned (skipped)"; yield break; }
+            if (w == null)
+            {
+                r.Info = "nothing spawned (skipped)";
+                yield break;
+            }
             yield return new WaitForSeconds(0.5f);
             w.Done = true;
             var all = new List<Character> { w.C }.Concat(w.Minions).ToList();
@@ -427,7 +482,10 @@ namespace DarkwoodMP.World
                 foreach (var c in new List<Character> { w.C }.Concat(w.Minions))
                 {
                     if (c != null && gone.Add(c))
-                    { Object.Destroy(c.gameObject); n++; }
+                    {
+                        Object.Destroy(c.gameObject);
+                        n++;
+                    }
                 }
             }
             // And whatever else came while the fights went on (a banshee's babies, the world's own animals), near the
@@ -440,7 +498,11 @@ namespace DarkwoodMP.World
                 {
                     if (c != null && c.npc == null && !gone.Contains(c) && !_baseline.Contains(c.GetInstanceID())
                         && Core.trueDistance(c.transform.position, proxy.transform.position) < 3000f && gone.Add(c))
-                    { others.Add(c.name); Object.Destroy(c.gameObject); n++; }
+                    {
+                        others.Add(c.name);
+                        Object.Destroy(c.gameObject);
+                        n++;
+                    }
                 }
             }
             yield return new WaitForSeconds(1.5f);
@@ -481,7 +543,8 @@ namespace DarkwoodMP.World
             bool hurts = a.Contains("--hurts"), moves = a.Contains("--moves"), throws = a.Contains("--throws");
             int needHits = a.Contains("--twice") ? 2 : 1;
             int shown0 = EnemyLandings.Shown;
-            Character c = null; uint id = 0;
+            Character c = null;
+            uint id = 0;
             var earlier = new HashSet<uint>(HostEnemies().Where(e => !IsKind(e.c, kind)).Select(e => e.id)); // the world's own, here before it: not ours to fight
             float until = Time.realtimeSinceStartup + 8f;
             while (c == null && Time.realtimeSinceStartup < until)
@@ -489,14 +552,21 @@ namespace DarkwoodMP.World
                 foreach (var (o, i) in HostEnemies())
                 {
                     if (IsKind(o, kind) && NetEnemies.InPlay(o) && (c == null || Core.trueDistance(o.transform.position, p.transform.position) < Core.trueDistance(c.transform.position, p.transform.position)))
-                    { c = o; id = i; }
+                    {
+                        c = o;
+                        id = i;
+                    }
                 }
                 if (c == null)
                 {
                     yield return new WaitForSeconds(0.3f);
                 }
             }
-            if (c == null) { r.Fail($"no copy of the host's {kind} here"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no copy of the host's {kind} here");
+                yield break;
+            }
             _fought = id;
             Vector3 from = c.transform.position;
             float moved = 0f, lost = 0f, hp = p.health, closest = float.MaxValue;
@@ -507,9 +577,17 @@ namespace DarkwoodMP.World
             {
                 moved = Mathf.Max(moved, Core.trueDistance(c.transform.position, from));
                 closest = Mathf.Min(closest, Core.trueDistance(c.transform.position, p.transform.position));
-                if (p.health < hp) { lost += hp - p.health; hits++; }
+                if (p.health < hp)
+                {
+                    lost += hp - p.health;
+                    hits++;
+                }
                 hp = p.health;
-                if (p.health < p.maxHealth * 0.5f) { HealNow(); hp = p.health; }
+                if (p.health < p.maxHealth * 0.5f)
+                {
+                    HealNow();
+                    hp = p.health;
+                }
                 if (hurts && hits >= needHits && (!moves || moved > 30f) && (!throws || EnemyLandings.Shown > shown0))
                 {
                     break;
@@ -519,7 +597,11 @@ namespace DarkwoodMP.World
             int thrown = EnemyLandings.Shown - shown0;
             string came = $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, hurt us {hits} time(s) for {lost:0}, {thrown} projectile(s) shown (children here: {Children(c)})";
             string weapon = a.Contains("--cut") ? CutWeapon() : "pitchfork";
-            if (weapon == null) { r.Fail("no melee weapon in the game cuts in half"); yield break; }
+            if (weapon == null)
+            {
+                r.Fail("no melee weapon in the game cuts in half");
+                yield break;
+            }
             yield return TakeOut(p, weapon, r);
             if (r.Failure != null)
             {
@@ -538,7 +620,8 @@ namespace DarkwoodMP.World
             float giveUp = Time.realtimeSinceStartup + FightTime, lastSeen = Time.realtimeSinceStartup;
             while (Time.realtimeSinceStartup < giveUp)
             {
-                (Character c, uint id) best = default; float bestD = float.MaxValue;
+                (Character c, uint id) best = default;
+                float bestD = float.MaxValue;
                 foreach (var e in HostEnemies())
                 {
                     if (!NetEnemies.InPlay(e.c) || earlier.Contains(e.id))
@@ -551,7 +634,11 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     seen.Add(e.id);
-                    if (d < bestD) { bestD = d; best = e; }
+                    if (d < bestD)
+                    {
+                        bestD = d;
+                        best = e;
+                    }
                 }
                 if (best.c == null)
                 {
@@ -568,18 +655,31 @@ namespace DarkwoodMP.World
                 {
                     HealNow();
                 }
-                if (p.health < hp) { lost += hp - p.health; hits++; }
+                if (p.health < hp)
+                {
+                    lost += hp - p.health;
+                    hits++;
+                }
                 bool first = swung.Add(best.id);
                 if (bestD > (first ? 90f : 300f))
                 {
                     yield return Walk(best.c.transform.position, first ? 70f : 250f, detours: 0);
                 }
-                if (p.health < hp) { lost += hp - p.health; hits++; }
+                if (p.health < hp)
+                {
+                    lost += hp - p.health;
+                    hits++;
+                }
                 if (best.c == null || !NetEnemies.InPlay(best.c))
                 {
                     continue;
                 }
-                if (first || (cut && best.id == id)) { Swing(p, best.c.transform.position); swings++; yield return new WaitForSeconds(0.45f); }
+                if (first || (cut && best.id == id))
+                {
+                    Swing(p, best.c.transform.position);
+                    swings++;
+                    yield return new WaitForSeconds(0.45f);
+                }
                 else
                 {
                     var bc = best.c;
@@ -626,7 +726,13 @@ namespace DarkwoodMP.World
             foreach (var type in db.itemsDict.Keys.OrderBy(k => k, StringComparer.Ordinal))
             {
                 InvItem it = null;
-                try { it = db.getItem(type, instantiate: false); } catch { }
+                try
+                {
+                    it = db.getItem(type, instantiate: false);
+                }
+                catch
+                {
+                }
                 if (it != null && it.canCutInHalf && it.isMelee)
                 {
                     return type;
@@ -699,7 +805,8 @@ namespace DarkwoodMP.World
         private static readonly System.Reflection.MethodInfo AttackMethod = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
         private static void Swing(Player p, Vector3 at)
         {
-            var d = at - p.transform.position; d.y = 0f;
+            var d = at - p.transform.position;
+            d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
                 p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
@@ -712,12 +819,24 @@ namespace DarkwoodMP.World
         {
             var p = P;
             var c = NetEnemies.Instance?.CharacterOf(_fought);
-            if (c == null) { r.Info = $"#{_fought} is gone here (no corpse)"; yield break; }
-            if (NetEnemies.InPlay(c)) { r.Fail($"{c.name} #{_fought} is still alive here"); yield break; }
+            if (c == null)
+            {
+                r.Info = $"#{_fought} is gone here (no corpse)";
+                yield break;
+            }
+            if (NetEnemies.InPlay(c))
+            {
+                r.Fail($"{c.name} #{_fought} is still alive here");
+                yield break;
+            }
             yield return new WaitForSeconds(2.5f); // settled (NetEnemies.DeathAnimTime)
             var item = c.GetComponent<Item>();
             var inv = c.GetComponentInChildren<Inventory>(true);
-            if (item == null || inv == null) { r.Info = $"{c.name} #{_fought}: not searchable (Item {item != null}, Inventory {inv != null})"; yield break; }
+            if (item == null || inv == null)
+            {
+                r.Info = $"{c.name} #{_fought}: not searchable (Item {item != null}, Inventory {inv != null})";
+                yield break;
+            }
             yield return Walk(c.transform.position, 90f);
             int mark = MapScenarioIssues.LogMark();
             p.openedItemInventory = inv;
@@ -727,7 +846,11 @@ namespace DarkwoodMP.World
             if (slot != null)
             {
                 var it = new InvItemClass(slot.invItem);
-                AsPlayer(() => { slot.removeItem(); p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true); });
+                AsPlayer(() =>
+                {
+                    slot.removeItem();
+                    p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                });
                 took = $"took {it.type} x{it.amount}";
                 yield return new WaitForSeconds(0.8f);
             }
@@ -750,11 +873,20 @@ namespace DarkwoodMP.World
         private static IEnumerator ShadowSpawn(string[] a, Result r)
         {
             var proxy = ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
-            var away = proxy.transform.position - P.transform.position; away.y = 0f;
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
+            var away = proxy.transform.position - P.transform.position;
+            away.y = 0f;
             var spot = FreeSpot(proxy.transform.position + away.normalized * 300f);
             var c = SpawnAt("Dog", spot, attack: false);
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             c.immobile = true; // it stays where it is, for the client's beam to find it
             _armor = c.gameObject.AddComponent<ShadowArmor>();
             _beamLog = "";
@@ -795,7 +927,11 @@ namespace DarkwoodMP.World
                     {
                         inBox++;
                     }
-                    if (aside < best) { best = aside; closest = FormattableString.Invariant($"{ahead:0} ahead, {aside:0} aside; puppet yaw {rp.Root.transform.eulerAngles.y:0} rot {rp.Root.transform.eulerAngles.x:0}"); }
+                    if (aside < best)
+                    {
+                        best = aside;
+                        closest = FormattableString.Invariant($"{ahead:0} ahead, {aside:0} aside; puppet yaw {rp.Root.transform.eulerAngles.y:0} rot {rp.Root.transform.eulerAngles.x:0}");
+                    }
                 }
                 _beamLog = $"beam watch: {samples} samples, client's beam on in {on}, dog in its beam in {inBox}, lit in {lit}; nearest: {closest}";
                 yield return new WaitForSeconds(0.25f);
@@ -807,7 +943,11 @@ namespace DarkwoodMP.World
         {
             var p = P;
             var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog")).OrderBy(e => Core.trueDistance(e.c.transform.position, p.transform.position)).Select(e => e.c).FirstOrDefault();
-            if (dog == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail("no copy of the host's dog here");
+                yield break;
+            }
             yield return TakeOut(p, "flashlight", r);
             if (r.Failure != null)
             {
@@ -817,12 +957,14 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 6f;
             while (Time.realtimeSinceStartup < until)
             {
-                var d = dog.transform.position - p.transform.position; d.y = 0f;
+                var d = dog.transform.position - p.transform.position;
+                d.y = 0f;
                 if (d.magnitude > 250f)
                 {
                     yield return Walk(dog.transform.position, 160f, detours: 0);
                 }
-                d = dog.transform.position - p.transform.position; d.y = 0f;
+                d = dog.transform.position - p.transform.position;
+                d.y = 0f;
                 if (d.sqrMagnitude > 1f)
                 {
                     p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
@@ -844,7 +986,11 @@ namespace DarkwoodMP.World
         /// dog on the client. Then the dog is killed, unless "keep" (ee-armor-burn goes on with it).</summary>
         private static IEnumerator ShadowCheck(string[] a, Result r)
         {
-            if (_armor == null) { r.Fail("no shadow armour (ee-shadow-spawn first)"); yield break; }
+            if (_armor == null)
+            {
+                r.Fail("no shadow armour (ee-shadow-spawn first)");
+                yield break;
+            }
             var c = _armor.GetComponent<Character>();
             var target = c != null && c.target != null ? c.target.GetComponent<CharBase>() : null;
             r.Info = $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {(target is NetPlayerProxy np ? "client " + np.OwnerName : target is Player ? "host player" : target != null ? target.name : "nobody")}";
@@ -894,7 +1040,11 @@ namespace DarkwoodMP.World
             bool on = a.Length == 0 || a[0] == "on";
             var p = P;
             var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog")).OrderBy(e => Core.trueDistance(e.c.transform.position, p.transform.position)).Select(e => e.c).FirstOrDefault();
-            if (dog == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail("no copy of the host's dog here");
+                yield break;
+            }
             var dest = HarmonyLib.AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
             bool Ok()
             {
@@ -923,7 +1073,11 @@ namespace DarkwoodMP.World
         private static IEnumerator ArmorBurn(string[] a, Result r)
         {
             var c = _armoredDog;
-            if (c == null) { r.Fail("no shadow-armoured dog kept (ee-shadow-check keep first)"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no shadow-armoured dog kept (ee-shadow-check keep first)");
+                yield break;
+            }
             if (a.Length > 0 && a[0] == "done")
             {
                 _armoredDog = null;
@@ -936,7 +1090,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var sa = c.GetComponent<ShadowArmor>();
-            if (sa == null) { r.Fail("its shadow armour is gone already"); yield break; }
+            if (sa == null)
+            {
+                r.Fail("its shadow armour is gone already");
+                yield break;
+            }
             sa.damageMe(sa.maxHealth * sa.normalDamageMod * 2f);
             sa.health = Mathf.Min(sa.health, 1f); // its Update takes health down 9 a second; this ends it next frame
             float until = Time.realtimeSinceStartup + 5f;
@@ -960,12 +1118,21 @@ namespace DarkwoodMP.World
         private static IEnumerator FleeActivity(string[] a, Result r)
         {
             var proxy = ClientProxy();
-            if (proxy == null) { r.Fail("no client player"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no client player");
+                yield break;
+            }
             var host = P.transform.position;
-            var toClient = proxy.transform.position - host; toClient.y = 0f;
+            var toClient = proxy.transform.position - host;
+            toClient.y = 0f;
             var spot = FreeSpot(proxy.transform.position - toClient.normalized * 250f); // between the two players, nearer the client
             var c = SpawnAt("Chicken", spot, attack: false);
-            if (c == null) { r.Fail("couldn't spawn a chicken"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a chicken");
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             var act = new Character.Activity { type = Character.Activity.Type.runAway };
             act.run(c);

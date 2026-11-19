@@ -25,7 +25,11 @@ namespace DarkwoodMP.World
             Add("act-count", Count, timeout: 15f);
         }
 
-        private sealed class Made { public GameObject Thing; public LaterTestCounter C; }
+        private sealed class Made
+        {
+            public GameObject Thing;
+            public LaterTestCounter C;
+        }
         private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
 
         private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed = AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
@@ -79,10 +83,18 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Setup(string[] a, Result r)
         {
-            if (a.Length < 4) { r.Fail("act-setup ID THING TYPE once|multi"); yield break; }
+            if (a.Length < 4)
+            {
+                r.Fail("act-setup ID THING TYPE once|multi");
+                yield break;
+            }
             string id = a[0];
             var go = Thing(a[1]);
-            if (go == null) { r.Fail($"no {a[1]} here"); yield break; }
+            if (go == null)
+            {
+                r.Fail($"no {a[1]} here");
+                yield break;
+            }
             var type = (global::EventTrigger.Type)System.Enum.Parse(typeof(global::EventTrigger.Type), a[2]);
             bool multi = a[3] == "multi";
             // So nothing in the test area breaks it during the steps (the host doesn't open a broken door).
@@ -92,7 +104,11 @@ namespace DarkwoodMP.World
                 door.health = 100000;
             }
             var trap = go.GetComponent<Trigger>();
-            if (trap != null) { trap.staysAfterDisarming = true; go.GetComponent<Item>().disarmChance = 2f; }
+            if (trap != null)
+            {
+                trap.staysAfterDisarming = true;
+                go.GetComponent<Item>().disarmChance = 2f;
+            }
             var m = new Made { Thing = go };
             var old = GameObject.Find("dwmp_act_" + id);
             if (old != null)
@@ -122,7 +138,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Do(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.Thing == null) { r.Fail("act-do ID open|close|on|off|disarm OWN (act-setup first)"); yield break; }
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.Thing == null)
+            {
+                r.Fail("act-do ID open|close|on|off|disarm OWN (act-setup first)");
+                yield break;
+            }
             int want = int.Parse(a[2]);
             var p = Player.Instance;
             yield return Walk(m.Thing.transform.position, 90f);
@@ -134,74 +154,87 @@ namespace DarkwoodMP.World
             {
                 case "open":
                 case "close":
-                {
-                    var door = m.Thing.GetComponent<Door>();
-                    bool open = a[1] == "open";
-                    if (door.opened != open)
                     {
-                        AsPlayer(() =>
+                        var door = m.Thing.GetComponent<Door>();
+                        bool open = a[1] == "open";
+                        if (door.opened != open)
                         {
-                            if (open)
+                            AsPlayer(() =>
                             {
-                                door.open(p.transform.position, p.transform, 0f);
-                            }
-                            else
-                            {
-                                door.close(p.transform);
-                            }
-                        });
+                                if (open)
+                                {
+                                    door.open(p.transform.position, p.transform, 0f);
+                                }
+                                else
+                                {
+                                    door.close(p.transform);
+                                }
+                            });
+                        }
+                        yield return new WaitForSeconds(0.5f);
+                        state = $"open={door.opened} broken={door.destroyed} health={door.health}";
+                        if (door.opened != open)
+                        {
+                            r.Fail($"{m.Thing.name}: {state}");
+                            yield break;
+                        }
+                        break;
                     }
-                    yield return new WaitForSeconds(0.5f);
-                    state = $"open={door.opened} broken={door.destroyed} health={door.health}";
-                    if (door.opened != open) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
-                    break;
-                }
                 case "on":
                 case "off":
-                {
-                    var it = m.Thing.GetComponent<Item>();
-                    bool on = a[1] == "on";
-                    if (it.isOn != on)
                     {
+                        var it = m.Thing.GetComponent<Item>();
+                        bool on = a[1] == "on";
+                        if (it.isOn != on)
+                        {
+                            AsPlayer(() =>
+                            {
+                                if (on)
+                                {
+                                    it.turnOn();
+                                }
+                                else
+                                {
+                                    it.turnOff();
+                                }
+                            });
+                        }
+                        yield return new WaitForSeconds(0.5f);
+                        state = $"on={it.isOn}";
+                        if (it.isOn != on)
+                        {
+                            r.Fail($"{m.Thing.name}: {state}");
+                            yield break;
+                        }
+                        break;
+                    }
+                case "hit":
+                    {
+                        // A light hit by our player (a client's goes to the host, which applies it).
+                        var ch = m.Thing.GetComponent<Character>();
+                        AsPlayer(() => ch.getHit(1f, p.transform, false, true, false, true, false, false, false));
+                        state = $"alive={ch.alive}";
+                        break;
+                    }
+                default:
+                    {
+                        var it = m.Thing.GetComponent<Item>();
+                        var trap = m.Thing.GetComponent<Trigger>();
                         AsPlayer(() =>
                         {
-                            if (on)
-                            {
-                                it.turnOn();
-                            }
-                            else
-                            {
-                                it.turnOff();
-                            }
+                            p.disarmingTrap = true;
+                            TrapBeingDisarmed(p) = it;
+                            p.progressBarCompleted();
                         });
+                        float until0 = Time.realtimeSinceStartup + 4f;
+                        while (trap != null && !trap.triggered && Time.realtimeSinceStartup < until0)
+                        {
+                            yield return null;
+                        }
+                        p.hidingInventory = false;
+                        state = $"disarmed={trap != null && trap.triggered}";
+                        break;
                     }
-                    yield return new WaitForSeconds(0.5f);
-                    state = $"on={it.isOn}";
-                    if (it.isOn != on) { r.Fail($"{m.Thing.name}: {state}"); yield break; }
-                    break;
-                }
-                case "hit":
-                {
-                    // A light hit by our player (a client's goes to the host, which applies it).
-                    var ch = m.Thing.GetComponent<Character>();
-                    AsPlayer(() => ch.getHit(1f, p.transform, false, true, false, true, false, false, false));
-                    state = $"alive={ch.alive}";
-                    break;
-                }
-                default:
-                {
-                    var it = m.Thing.GetComponent<Item>();
-                    var trap = m.Thing.GetComponent<Trigger>();
-                    AsPlayer(() => { p.disarmingTrap = true; TrapBeingDisarmed(p) = it; p.progressBarCompleted(); });
-                    float until0 = Time.realtimeSinceStartup + 4f;
-                    while (trap != null && !trap.triggered && Time.realtimeSinceStartup < until0)
-                    {
-                        yield return null;
-                    }
-                    p.hidingInventory = false;
-                    state = $"disarmed={trap != null && trap.triggered}";
-                    break;
-                }
             }
             float until = Time.realtimeSinceStartup + 6f;
             while (Time.realtimeSinceStartup < until && c.Of(a[0]) - had < want)
@@ -221,7 +254,11 @@ namespace DarkwoodMP.World
         /// <summary>"act-count ID OWN SHARED": in this game, OWN steps of ID acted on our player and its shared step ran SHARED times.</summary>
         private static IEnumerator Count(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null) { r.Fail("act-count ID OWN SHARED (act-setup first)"); yield break; }
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null)
+            {
+                r.Fail("act-count ID OWN SHARED (act-setup first)");
+                yield break;
+            }
             int own = int.Parse(a[1]), shared = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 4f;
             while (m.C.N < shared && Time.realtimeSinceStartup < until)

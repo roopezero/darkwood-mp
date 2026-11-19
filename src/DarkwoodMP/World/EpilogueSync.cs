@@ -38,7 +38,13 @@ namespace DarkwoodMP.World
         private static Session S => Session.Instance;
 
         public const string PanEvent = "epilogue_cameraPanOverBurningForest";
-        internal enum Step : byte { Pan = 1, Outcomes = 2, Crawled = 3, Burn = 4 }
+        internal enum Step : byte
+        {
+            Pan = 1,
+            Outcomes = 2,
+            Crawled = 3,
+            Burn = 4
+        }
         /// <summary>The crater's events that set the Being on fire: the burned-forest ending, once they run.</summary>
         public const string BurnEvents = "Istota_lv1_events";
         /// <summary>Seconds after the first player crawled to their death before the pan runs anyway.</summary>
@@ -232,8 +238,14 @@ namespace DarkwoodMP.World
 
         private static IEnumerator ToMenu()
         {
-            try { yield return Chapters.ToMenuAfterEnding(); }
-            finally { _toMenu = false; }
+            try
+            {
+                yield return Chapters.ToMenuAfterEnding();
+            }
+            finally
+            {
+                _toMenu = false;
+            }
         }
 
         /// <summary>
@@ -271,7 +283,11 @@ namespace DarkwoodMP.World
             _deathAt = p.transform.position;
             Plugin.Log.LogInfo("[epilogue] our player crawled to their death in the burning forest");
             Plugin.Instance.StartCoroutine(WatchSoon());
-            if (s.IsHost) { Crawled(s.LocalId); return; }
+            if (s.IsHost)
+            {
+                Crawled(s.LocalId);
+                return;
+            }
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Crawled);
             w.WriteStr("");
@@ -397,8 +413,14 @@ namespace DarkwoodMP.World
                     fired = true;
                     if (!_ownPan)
                     {
-                        try { Singleton<Events>.Instance.fireWorldEvent(PanEvent); }
-                        catch (Exception e) { Plugin.Log.LogWarning($"[epilogue] couldn't run the pan: {e.Message}"); }
+                        try
+                        {
+                            Singleton<Events>.Instance.fireWorldEvent(PanEvent);
+                        }
+                        catch (Exception e)
+                        {
+                            Plugin.Log.LogWarning($"[epilogue] couldn't run the pan: {e.Message}");
+                        }
                     }
                 }
                 yield return null;
@@ -427,7 +449,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (s.IsHost) { SendOutcomes(o.burnedForest); return; }
+            if (s.IsHost)
+            {
+                SendOutcomes(o.burnedForest);
+                return;
+            }
             if (_hostBurned < 0 || o.burnedForest == (_hostBurned == 1))
             {
                 return;
@@ -523,8 +549,14 @@ namespace DarkwoodMP.World
             bool started = false;
             while (!started && Playing && Time.realtimeSinceStartup < until)
             {
-                try { started = StartHere(); }
-                catch (Exception e) { Plugin.Log.LogWarning($"[epilogue] couldn't start the epilogue: {e.Message}"); }
+                try
+                {
+                    started = StartHere();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[epilogue] couldn't start the epilogue: {e.Message}");
+                }
                 if (!started)
                 {
                     yield return new WaitForSecondsRealtime(1f);
@@ -611,7 +643,12 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                if (what == Step.Burn) { Plugin.Log.LogInfo($"[epilogue] {s.NameOf(from)} set the Being on fire"); Burned(from); return; }
+                if (what == Step.Burn)
+                {
+                    Plugin.Log.LogInfo($"[epilogue] {s.NameOf(from)} set the Being on fire");
+                    Burned(from);
+                    return;
+                }
                 if (what != Step.Crawled)
                 {
                     return;
@@ -624,8 +661,16 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (what == Step.Outcomes) { _hostBurned = value == "1" ? 1 : 0; return; }
-            if (what == Step.Burn) { Burned(r.R.ReadUInt64()); return; }
+            if (what == Step.Outcomes)
+            {
+                _hostBurned = value == "1" ? 1 : 0;
+                return;
+            }
+            if (what == Step.Burn)
+            {
+                Burned(r.R.ReadUInt64());
+                return;
+            }
             if (what != Step.Pan)
             {
                 return;
@@ -654,7 +699,11 @@ namespace DarkwoodMP.World
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Burn);
             w.WriteStr(BurnEvents);
-            if (s.IsHost) { w.W.Write(s.LocalId); s.Broadcast(w, Channel.Control, reliable: true); }
+            if (s.IsHost)
+            {
+                w.W.Write(s.LocalId);
+                s.Broadcast(w, Channel.Control, reliable: true);
+            }
             else
             {
                 s.SendToHost(w, Channel.Control, reliable: true);
@@ -683,18 +732,34 @@ namespace DarkwoodMP.World
             foreach (var ge in UnityEngine.Object.FindObjectsOfType<GameEvents>(true))
             {
                 if (ge != null && ge.name == BurnEvents)
-                { found = ge; break; }
+                {
+                    found = ge;
+                    break;
+                }
             }
-            if (found == null) { Plugin.Log.LogWarning("[epilogue] the Being burns in another game, but our part has no such events"); return; }
+            if (found == null)
+            {
+                Plugin.Log.LogWarning("[epilogue] the Being burns in another game, but our part has no such events");
+                return;
+            }
             if (found.fired && !found.multipleFire)
             {
                 return;
             }
             Plugin.Log.LogInfo($"[epilogue] {s.NameOf(who)} set the Being on fire: running {BurnEvents} here too");
             WorldActions.Replaying = true;
-            try { found.fire(); }
-            catch (Exception e) { Plugin.Log.LogWarning($"[epilogue] couldn't run {BurnEvents}: {e.Message}"); }
-            finally { WorldActions.Replaying = false; }
+            try
+            {
+                found.fire();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[epilogue] couldn't run {BurnEvents}: {e.Message}");
+            }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
         }
 
         // ---- for the tests ----

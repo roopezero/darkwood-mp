@@ -25,7 +25,14 @@ namespace DarkwoodMP
     /// </summary>
     public static class OptionsWindow
     {
-        private enum Tab { Video, Audio, Game, Controls, Multiplayer }
+        private enum Tab
+        {
+            Video,
+            Audio,
+            Game,
+            Controls,
+            Multiplayer
+        }
         private static readonly string[] TabNames = { "Video", "Audio", "Game", "Controls", "Multiplayer" };
 
         private static UiWindow _win;
@@ -94,7 +101,11 @@ namespace DarkwoodMP
                     {
                         CloseNow();
                     }
-                }, "Discard", () => { Revert(); CloseNow(); });
+                }, "Discard", () =>
+                {
+                    Revert();
+                    CloseNow();
+                });
             }
             else
             {
@@ -113,7 +124,11 @@ namespace DarkwoodMP
         private static void OnCloseBox()
         {
             // The close box has already closed it: open again to ask, if there's something to ask about.
-            if (Pending) { _win.Show(); RequestClose(); }
+            if (Pending)
+            {
+                _win.Show();
+                RequestClose();
+            }
             else
             {
                 Closed();
@@ -124,7 +139,11 @@ namespace DarkwoodMP
         {
             StopMapping(null);
             _drop = null;
-            if (_gammaChanged) { _gammaChanged = false; GameSettings.Save(); }
+            if (_gammaChanged)
+            {
+                _gammaChanged = false;
+                GameSettings.Save();
+            }
             Plugin.Log.LogInfo("[options] closed");
         }
 
@@ -160,8 +179,15 @@ namespace DarkwoodMP
             {
                 string lost = Singleton<WorldGenerator>.Instance != null ? " What you did since you last saved is lost." : "";
                 ConfirmDialog.Ask("Language", "The new language is used from when Darkwood starts again. Apply the changes and quit now?" + lost,
-                    "Quit", () => { ApplyNow(); Core.quitGame(); }, "Not now",
-                    () => { _lang = GameSettings.GetString("LanguageCode"); });
+                    "Quit", () =>
+                    {
+                        ApplyNow();
+                        Core.quitGame();
+                    }, "Not now",
+                    () =>
+                    {
+                        _lang = GameSettings.GetString("LanguageCode");
+                    });
                 return false;
             }
             ApplyNow();
@@ -175,7 +201,11 @@ namespace DarkwoodMP
             if (_postFx != GameSettings.GetInt("PostFXQuality"))
             {
                 GameSettings.SetInt("PostFXQuality", _postFx);
-                if (vm != null) { vm.postFXQuality = (VideoMenu.PostFXQuality)_postFx; vm.setPostFXQuality(); }
+                if (vm != null)
+                {
+                    vm.postFXQuality = (VideoMenu.PostFXQuality)_postFx;
+                    vm.setPostFXQuality();
+                }
                 if (cam != null)
                 {
                     cam.setRenderTargets();
@@ -293,7 +323,11 @@ namespace DarkwoodMP
         {
             int ow = GameSettings.GetInt("ScreenWidth"), oh = GameSettings.GetInt("ScreenHeight");
             bool ofull = GameSettings.GetInt("Fullscreen") == 1;
-            if (ow <= 0 || oh <= 0) { ow = Screen.width; oh = Screen.height; }
+            if (ow <= 0 || oh <= 0)
+            {
+                ow = Screen.width;
+                oh = Screen.height;
+            }
             Screen.SetResolution(w, h, full ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
             Plugin.Log.LogInfo($"[options] screen {w}x{h} {(full ? "full screen" : "window")}, asking to keep it");
             AskKeep($"The screen is now {w}x{h}, {(full ? "full screen" : "in a window")}.", () =>
@@ -381,11 +415,21 @@ namespace DarkwoodMP
             var inner = new Flow(new Rect(panel.x + 10 * S, panel.y + 8 * S, panel.width - 20 * S, panel.height - 16 * S));
             switch (_tab)
             {
-                case Tab.Video: DrawVideo(inner); break;
-                case Tab.Audio: DrawAudio(inner); break;
-                case Tab.Game: DrawGame(inner); break;
-                case Tab.Controls: DrawControls(inner); break;
-                case Tab.Multiplayer: DrawMultiplayer(inner); break;
+                case Tab.Video:
+                    DrawVideo(inner);
+                    break;
+                case Tab.Audio:
+                    DrawAudio(inner);
+                    break;
+                case Tab.Game:
+                    DrawGame(inner);
+                    break;
+                case Tab.Controls:
+                    DrawControls(inner);
+                    break;
+                case Tab.Multiplayer:
+                    DrawMultiplayer(inner);
+                    break;
             }
             f.Y = panel.yMax;
         }
@@ -421,7 +465,11 @@ namespace DarkwoodMP
                     cur = i;
                 }
             }
-            if (cur < 0) { names.Add($"{Screen.width}x{Screen.height}"); cur = names.Count - 1; }
+            if (cur < 0)
+            {
+                names.Add($"{Screen.width}x{Screen.height}");
+                cur = names.Count - 1;
+            }
             var c = Setting(f, "Resolution");
             Choice(Ui.Split(c[1], 160, 0)[0], "res", names.ToArray(), cur, i =>
             {
@@ -545,7 +593,11 @@ namespace DarkwoodMP
             Choice(Ui.Split(c[1], 220, 0)[0], "newchars", NewCharNames, Array.IndexOf(NewChars, cfg.NewCharacters.Value), i => cfg.NewCharacters.Value = NewChars[i]);
             c = Setting(f, "Stack size");
             var sizes = new List<int>(StackChoices);
-            if (!sizes.Contains(cfg.StackSize.Value)) { sizes.Add(cfg.StackSize.Value); sizes.Sort(); }
+            if (!sizes.Contains(cfg.StackSize.Value))
+            {
+                sizes.Add(cfg.StackSize.Value);
+                sizes.Sort();
+            }
             var sizeNames = sizes.ConvertAll(n => n == 0 ? "The game's own (2 to 50)" : $"{n} (bigger ones keep theirs)").ToArray();
             Choice(Ui.Split(c[1], 220, 0)[0], "stacksize", sizeNames, sizes.IndexOf(cfg.StackSize.Value), i => cfg.StackSize.Value = sizes[i]);
             c = Setting(f, "World to join");
@@ -590,13 +642,26 @@ namespace DarkwoodMP
             switch (e.GetTypeForControl(id))
             {
                 case EventType.MouseDown:
-                    if (e.button == 0 && r.Contains(e.mousePosition)) { GUIUtility.hotControl = id; v = From(e.mousePosition); e.Use(); }
+                    if (e.button == 0 && r.Contains(e.mousePosition))
+                    {
+                        GUIUtility.hotControl = id;
+                        v = From(e.mousePosition);
+                        e.Use();
+                    }
                     break;
                 case EventType.MouseDrag:
-                    if (GUIUtility.hotControl == id) { v = From(e.mousePosition); e.Use(); }
+                    if (GUIUtility.hotControl == id)
+                    {
+                        v = From(e.mousePosition);
+                        e.Use();
+                    }
                     break;
                 case EventType.MouseUp:
-                    if (GUIUtility.hotControl == id) { GUIUtility.hotControl = 0; e.Use(); }
+                    if (GUIUtility.hotControl == id)
+                    {
+                        GUIUtility.hotControl = 0;
+                        e.Use();
+                    }
                     break;
                 case EventType.Repaint:
                     // Held: follow the mouse itself, since slow movements send no MouseDrag (see UiWindow.MouseNow).
@@ -635,7 +700,11 @@ namespace DarkwoodMP
         {
             bool open = _drop != null && _drop.Key == key;
             bool testOpen = _testDropKey == key && Event.current.type == EventType.Repaint;
-            if (testOpen) { _testDropKey = null; open = false; }
+            if (testOpen)
+            {
+                _testDropKey = null;
+                open = false;
+            }
             if (Ui.Button(r, "") || testOpen)
             {
                 if (open)
@@ -707,48 +776,52 @@ namespace DarkwoodMP
             switch (e.type)
             {
                 case EventType.MouseDown:
-                {
-                    int i = Under(e.mousePosition);
-                    var pick = _drop.Pick;
-                    _drop = null;
-                    e.Use();
-                    if (i >= 0 && i < n)
                     {
-                        pick(i);
+                        int i = Under(e.mousePosition);
+                        var pick = _drop.Pick;
+                        _drop = null;
+                        e.Use();
+                        if (i >= 0 && i < n)
+                        {
+                            pick(i);
+                        }
+                        return;
                     }
-                    return;
-                }
                 case EventType.ScrollWheel:
-                    if (box.Contains(e.mousePosition)) { _drop.First += e.delta.y > 0 ? 1 : -1; e.Use(); }
+                    if (box.Contains(e.mousePosition))
+                    {
+                        _drop.First += e.delta.y > 0 ? 1 : -1;
+                        e.Use();
+                    }
                     return;
                 case EventType.Repaint:
-                {
-                    // Opaque, so the settings under it don't show through.
-                    var old = GUI.color;
-                    GUI.color = new Color(0.09f, 0.09f, 0.09f, 1f);
-                    GUI.DrawTexture(box, MenuSkin.White);
-                    GUI.color = old;
-                    GUI.Box(box, GUIContent.none, MenuSkin.Window);
-                    int hover = Under(e.mousePosition);
-                    for (int k = 0; k < vis && _drop.First + k < n; k++)
                     {
-                        int i = _drop.First + k;
-                        var rr = new Rect(box.x + 2 * S, box.y + 2 * S + k * rowH, box.width - 4 * S, rowH);
-                        if (i == hover)
+                        // Opaque, so the settings under it don't show through.
+                        var old = GUI.color;
+                        GUI.color = new Color(0.09f, 0.09f, 0.09f, 1f);
+                        GUI.DrawTexture(box, MenuSkin.White);
+                        GUI.color = old;
+                        GUI.Box(box, GUIContent.none, MenuSkin.Window);
+                        int hover = Under(e.mousePosition);
+                        for (int k = 0; k < vis && _drop.First + k < n; k++)
                         {
-                            GUI.Box(rr, GUIContent.none, MenuSkin.Selected);
+                            int i = _drop.First + k;
+                            var rr = new Rect(box.x + 2 * S, box.y + 2 * S + k * rowH, box.width - 4 * S, rowH);
+                            if (i == hover)
+                            {
+                                GUI.Box(rr, GUIContent.none, MenuSkin.Selected);
+                            }
+                            Ui.Label(new Rect(rr.x + 4 * S, rr.y, rr.width - 12 * S, rr.height), PixelFont.Fit(_drop.Options[i], rr.width - 14 * S),
+                                i == hover || i == _drop.Index ? MenuSkin.Bright : MenuSkin.Text);
                         }
-                        Ui.Label(new Rect(rr.x + 4 * S, rr.y, rr.width - 12 * S, rr.height), PixelFont.Fit(_drop.Options[i], rr.width - 14 * S),
-                            i == hover || i == _drop.Index ? MenuSkin.Bright : MenuSkin.Text);
+                        if (vis < n)
+                        {
+                            // Where the shown part is in the list: a thin bar along the right edge.
+                            float bh = (box.height - 4 * S) * vis / n, by = box.y + 2 * S + (box.height - 4 * S) * _drop.First / n;
+                            GUI.Box(new Rect(box.xMax - 5 * S, by, 3 * S, bh), GUIContent.none, MenuSkin.Line);
+                        }
+                        return;
                     }
-                    if (vis < n)
-                    {
-                        // Where the shown part is in the list: a thin bar along the right edge.
-                        float bh = (box.height - 4 * S) * vis / n, by = box.y + 2 * S + (box.height - 4 * S) * _drop.First / n;
-                        GUI.Box(new Rect(box.xMax - 5 * S, by, 3 * S, bh), GUIContent.none, MenuSkin.Line);
-                    }
-                    return;
-                }
             }
         }
 
@@ -855,10 +928,13 @@ namespace DarkwoodMP
         {
             switch (column)
             {
-                case 0: return name == "Move Horizontal" || name == "Move Vertical" || name == "Far Look" || name == "Player Menu" || name == "Effects Cycle";
-                case 1: return name == "Move Horizontal" || name == "Move Vertical" || name == "Move Left" || name == "Move Right" || name == "Far Look" ||
-                               name == "Player Menu" || name == "Effects Cycle" || name == "Move Up" || name == "Move Down";
-                default: return name == "Move Left" || name == "Move Right" || name == "Move Up" || name == "Move Down" || name == "Run";
+                case 0:
+                    return name == "Move Horizontal" || name == "Move Vertical" || name == "Far Look" || name == "Player Menu" || name == "Effects Cycle";
+                case 1:
+                    return name == "Move Horizontal" || name == "Move Vertical" || name == "Move Left" || name == "Move Right" || name == "Far Look" ||
+                           name == "Player Menu" || name == "Effects Cycle" || name == "Move Up" || name == "Move Down";
+                default:
+                    return name == "Move Left" || name == "Move Right" || name == "Move Up" || name == "Move Down" || name == "Run";
             }
         }
 
@@ -982,8 +1058,11 @@ namespace DarkwoodMP
         /// <summary>Start listening for a new key (once the mouse button that chose it is let go, so the click isn't taken).</summary>
         private static void BeginMapping(Binding b, int col)
         {
-            _mapRow = b; _mapCol = col; _startWhenReleased = true;
-            _status = null; _statusWarn = false;
+            _mapRow = b;
+            _mapCol = col;
+            _startWhenReleased = true;
+            _status = null;
+            _statusWarn = false;
             SetAssigning(true);
         }
 
@@ -1035,9 +1114,21 @@ namespace DarkwoodMP
             o.isElementAllowedCallback = info => !(info.controllerType == RW.ControllerType.Keyboard && info.keyboardKey == KeyCode.Escape);
             _mapper.InputMappedEvent += OnMapped;
             _mapper.ConflictFoundEvent += d => _conflict = d;
-            _mapper.TimedOutEvent += _ => { Plugin.Log.LogInfo("[options] the mapper timed out"); StopMapping("No key was pressed: nothing changed.", fromMapper: true); };
-            _mapper.CanceledEvent += d => { Plugin.Log.LogInfo($"[options] the mapper cancelled: {d.message}"); StopMapping(null, fromMapper: true); };
-            _mapper.ErrorEvent += d => { Plugin.Log.LogInfo($"[options] the mapper failed: {d.message}"); StopMapping($"Couldn't change it: {d.message}", warn: true, fromMapper: true); };
+            _mapper.TimedOutEvent += _ =>
+            {
+                Plugin.Log.LogInfo("[options] the mapper timed out");
+                StopMapping("No key was pressed: nothing changed.", fromMapper: true);
+            };
+            _mapper.CanceledEvent += d =>
+            {
+                Plugin.Log.LogInfo($"[options] the mapper cancelled: {d.message}");
+                StopMapping(null, fromMapper: true);
+            };
+            _mapper.ErrorEvent += d =>
+            {
+                Plugin.Log.LogInfo($"[options] the mapper failed: {d.message}");
+                StopMapping($"Couldn't change it: {d.message}", warn: true, fromMapper: true);
+            };
             _mapper.StoppedEvent += _ => StopMapping(null, fromMapper: true);
         }
 
@@ -1047,13 +1138,22 @@ namespace DarkwoodMP
             {
                 return;
             }
-            if (Input.GetKeyDown(KeyCode.Escape)) { _escTaken = Time.frameCount; StopMapping("Cancelled: nothing changed."); return; }
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                _escTaken = Time.frameCount;
+                StopMapping("Cancelled: nothing changed.");
+                return;
+            }
             if (_startWhenReleased && !Input.GetMouseButton(0) && !Input.GetMouseButton(1) && !Input.GetMouseButton(2))
             {
                 _startWhenReleased = false;
                 EnsureMapper();
                 var map = Map(ColumnTypes[_mapCol]);
-                if (map == null) { StopMapping("That controller isn't there.", warn: true); return; }
+                if (map == null)
+                {
+                    StopMapping("That controller isn't there.", warn: true);
+                    return;
+                }
                 bool started = _mapper.Start(new RW.InputMapper.Context
                 {
                     actionId = _mapRow.Action.id,
@@ -1080,7 +1180,11 @@ namespace DarkwoodMP
                     {
                         fixedOne = true;
                     }
-                    if (other == "") { other = c.action != null ? c.action.descriptiveName : "another action"; key = c.elementDisplayName; }
+                    if (other == "")
+                    {
+                        other = c.action != null ? c.action.descriptiveName : "another action";
+                        key = c.elementDisplayName;
+                    }
                 }
                 if (fixedOne)
                 {
@@ -1100,7 +1204,11 @@ namespace DarkwoodMP
         {
             string label = _mapRow != null ? _mapRow.Label : "";
             string key = d.actionElementMap != null ? d.actionElementMap.elementIdentifierName : "?";
-            if (_status == null || !_statusWarn) { _status = $"{label}: {key}."; _statusWarn = false; }
+            if (_status == null || !_statusWarn)
+            {
+                _status = $"{label}: {key}.";
+                _statusWarn = false;
+            }
             else
             {
                 _status = $"{label}: {key}. " + _status;
@@ -1131,7 +1239,11 @@ namespace DarkwoodMP
                 _mapRow = null;
                 _startWhenReleased = false;
                 _conflict = null;
-                if (status != null) { _status = status; _statusWarn = warn; }
+                if (status != null)
+                {
+                    _status = status;
+                    _statusWarn = warn;
+                }
                 if (!fromMapper && _mapper != null && _mapper.status != RW.InputMapper.Status.Idle)
                 {
                     _mapper.Stop();
@@ -1141,7 +1253,10 @@ namespace DarkwoodMP
                     SetAssigning(false);
                 }
             }
-            finally { _stopping = false; }
+            finally
+            {
+                _stopping = false;
+            }
         }
 
         /// <summary>The key maps into the game's store (ControlsMenu.Save), and the game's own copies of the maps refreshed.</summary>
@@ -1188,10 +1303,16 @@ namespace DarkwoodMP
 
         // ---- for the tests -------------------------------------------------------------------------
 
-        internal static void TestTab(int t) { SwitchTab((Tab)t); }
+        internal static void TestTab(int t)
+        {
+            SwitchTab((Tab)t);
+        }
         internal static string[] TestTabNames => TabNames;
         /// <summary>Open a dropdown as a click on it does ("res", "lang", ...), the next time it's drawn.</summary>
-        internal static void TestOpenDrop(string key) { _testDropKey = key; }
+        internal static void TestOpenDrop(string key)
+        {
+            _testDropKey = key;
+        }
         private static string _testDropKey;
         internal static bool TestMapping => _mapRow != null;
         internal static string TestMapperStatus => _mapper == null ? "none" : _mapper.status.ToString();
@@ -1229,7 +1350,11 @@ namespace DarkwoodMP
             return true;
         }
 
-        internal static void TestEscape() { _escTaken = Time.frameCount; StopMapping("Cancelled: nothing changed."); }
+        internal static void TestEscape()
+        {
+            _escTaken = Time.frameCount;
+            StopMapping("Cancelled: nothing changed.");
+        }
 
         /// <summary>
         /// Put <paramref name="key"/> on the keyboard row with this label as a finished mapping does (the element map

@@ -24,7 +24,11 @@ namespace DarkwoodMP.World
             MapScenario.Add("centre-me", (a, r) =>
             {
                 var p = Player.Instance;
-                if (p == null) { r.Fail("no player"); return None(); }
+                if (p == null)
+                {
+                    r.Fail("no player");
+                    return None();
+                }
                 MapScenario.SetCentre(p.transform.position);
                 r.Info = Fmt(p.transform.position);
                 return None();
@@ -42,13 +46,21 @@ namespace DarkwoodMP.World
         private static IEnumerator FarSpot(string[] a, MapScenario.Result r)
         {
             var p = Player.Instance;
-            if (p == null) { r.Fail("no player"); yield break; }
+            if (p == null)
+            {
+                r.Fail("no player");
+                yield break;
+            }
             float min = a.Length > 0 ? F(a[0]) : 6000f;
             int index = a.Length > 1 ? int.Parse(a[1]) : 0;
             var from = MapScenario.Centre;
             var grid = Singleton<WorldGrid>.Instance;
             var outside = grid?.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world) ?? grid?.currentGrid;
-            if (outside == null) { r.Fail("no world grid"); yield break; }
+            if (outside == null)
+            {
+                r.Fail("no world grid");
+                yield break;
+            }
             float half = grid.distance / 2f;
             bool InOutside(Vector3 pos) => outside.nodes.Any(n => Mathf.Abs(pos.x - n.position.x) <= half && Mathf.Abs(pos.z - n.position.y) <= half);
             bool Unlocked(Component c) => !(c.GetComponentInParent<Locked>() is Locked l && l.locked);
@@ -72,7 +84,11 @@ namespace DarkwoodMP.World
                     spots.Add(d);
                 }
             }
-            if (index >= spots.Count) { r.Fail($"only {spots.Count} spots {min:0} or more from {Fmt(from)}"); yield break; }
+            if (index >= spots.Count)
+            {
+                r.Fail($"only {spots.Count} spots {min:0} or more from {Fmt(from)}");
+                yield break;
+            }
             var door = spots[index];
             var at = door.transform.position;
             MapScenario.SetCentre(at);

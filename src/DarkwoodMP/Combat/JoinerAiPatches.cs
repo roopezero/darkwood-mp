@@ -95,7 +95,11 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void Test(Character c, NetPlayerProxy proxy)
         {
-            if (c == null || proxy == null) { Plugin.Log.LogInfo("[joiner ai test] nothing to test on"); return; }
+            if (c == null || proxy == null)
+            {
+                Plugin.Log.LogInfo("[joiner ai test] nothing to test on");
+                return;
+            }
             string T(Transform t) => t == null ? "nobody" : t == proxy.transform ? proxy.OwnerName : t.name;
             try
             {
@@ -117,10 +121,12 @@ namespace DarkwoodMP.Combat
                 Plugin.Log.LogInfo($"[joiner ai test] near the joiner: {near}, {Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
 
                 var onCollide = AccessTools.Method(typeof(Character), "onCollideWith");
-                c.sleeping = true; c.wakingUp = false;
+                c.sleeping = true;
+                c.wakingUp = false;
                 onCollide.Invoke(c, new object[] { proxy.GetComponent<Collider>() });
                 Plugin.Log.LogInfo($"[joiner ai test] bump on a sleeping {c.name}: waking up {c.wakingUp}");
-                c.sleeping = false; c.wakingUp = false;
+                c.sleeping = false;
+                c.wakingUp = false;
 
                 c.stopAttacking(proxy.transform);
                 c.cowardiness = Cowardiness.always;
@@ -131,7 +137,10 @@ namespace DarkwoodMP.Combat
                 AccessTools.Method(typeof(Character), "reactToCharacter").Invoke(c, new object[] { null, proxy.transform, true });
                 Plugin.Log.LogInfo($"[joiner ai test] hit by the joiner (cowardiness always): behaviour {c.behaviour}, target {T(c.target)}");
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[joiner ai test] failed: {e}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[joiner ai test] failed: {e}");
+            }
         }
 
         // ---- helpers the transpilers call ----
@@ -166,7 +175,11 @@ namespace DarkwoodMP.Combat
         public static void AttackWhoReacted(Character c, Transform attacker)
         {
             var proxy = ProxyOf(attacker);
-            if (proxy == null) { c.attackPlayer(); return; }
+            if (proxy == null)
+            {
+                c.attackPlayer();
+                return;
+            }
             // An NPC turns on the joiner here, and the host runs it as an enemy from then on (Combat.HostileNpcs).
             GoFor(c, proxy.transform);
             if (Threat.Debug)
@@ -345,7 +358,10 @@ namespace DarkwoodMP.Combat
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p != null && p.alive && !p.Away && Core.trueDistance(p.transform.position, me) < 1500f)
-                { __result = true; return; }
+                {
+                    __result = true;
+                    return;
+                }
             }
         }
     }
@@ -415,7 +431,11 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        static Exception Finalizer(Exception __exception) { Chased = null; return __exception; }
+        static Exception Finalizer(Exception __exception)
+        {
+            Chased = null;
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.gotoNextWaypoint))]
@@ -434,7 +454,8 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            Waypoint best = null; float bestDist = float.MaxValue;
+            Waypoint best = null;
+            float bestDist = float.MaxValue;
             Vector3 at = proxy.transform.position;
             foreach (var w in loc.waypointsInside)
             {
@@ -443,7 +464,11 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 float d = (w.transform.position - at).sqrMagnitude;
-                if (d < bestDist) { bestDist = d; best = w; }
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = w;
+                }
             }
             _waypoint = best;
         }

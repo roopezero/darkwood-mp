@@ -64,7 +64,11 @@ namespace DarkwoodMP.World
                 {
                     r.Fail("no egg");
                 }
-                else { e.gameObject.SetActive(a.Length > 1 && a[1] == "off"); r.Info = $"{a[0]} egg {ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}"; }
+                else
+                {
+                    e.gameObject.SetActive(a.Length > 1 && a[1] == "off");
+                    r.Info = $"{a[0]} egg {ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
+                }
                 return Nothing();
             });
             // "flags": the story flags here (to tell which one differs between the games).
@@ -113,7 +117,17 @@ namespace DarkwoodMP.World
         private static int _logStart;
 
         /// <summary>Test control's reset, before each test item: later LogLines start here.</summary>
-        internal static void MarkLogStart() { _logStart = 0; try { _logStart = Math.Max(0, AllLogLines().Count - 1); } catch { } }
+        internal static void MarkLogStart()
+        {
+            _logStart = 0;
+            try
+            {
+                _logStart = Math.Max(0, AllLogLines().Count - 1);
+            }
+            catch
+            {
+            }
+        }
 
         /// <summary>This game's BepInEx log since the last test reset, as written so far (the disk log is flushed every second or two).</summary>
         internal static List<string> LogLines()
@@ -138,7 +152,9 @@ namespace DarkwoodMP.World
                             disk.LogWriter.Flush();
                         }
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                 }
             }
             string path = Path.Combine(BepInEx.Paths.BepInExRootPath, "LogOutput.log");
@@ -174,7 +190,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        internal static int LogMark() { try { return LogLines().Count - 1; } catch { return 0; } }
+        internal static int LogMark()
+        {
+            try
+            {
+                return LogLines().Count - 1;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
 
         private static IEnumerable<InvItemClass> Carried(Player p) =>
             p.Inventory.slots.Concat(p.Hotbar.slots).Where(s => s != null && !InvItemClass.isNull(s.invItem)).Select(s => s.invItem);
@@ -205,7 +231,8 @@ namespace DarkwoodMP.World
         private static readonly System.Reflection.MethodInfo AttackMethod = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
         private static void Swing(Player p, Vector3 at)
         {
-            var d = at - p.transform.position; d.y = 0f;
+            var d = at - p.transform.position;
+            d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
                 p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
@@ -245,7 +272,11 @@ namespace DarkwoodMP.World
         private static IEnumerator JoinApart(string[] a, Result r)
         {
             var p = Player.Instance;
-            if (p == null) { r.Fail("no player"); yield break; }
+            if (p == null)
+            {
+                r.Fail("no player");
+                yield break;
+            }
             var ps = Sync.PlayerSync.Instance;
             float until = Time.realtimeSinceStartup + 5f;
             while ((ps == null || !ps.Remotes.Values.Any(x => x.Owner != Sync.PlayerSync.DummyId && x.Last != null)) && Time.realtimeSinceStartup < until)
@@ -379,7 +410,11 @@ namespace DarkwoodMP.World
         {
             // Clear of the stations: a dog among them walked into a trap and died before anyone hit it.
             var c = MapScenarioFixChecks.SpawnAt(Centre + new Vector3(0f, 0f, 1200f), a.Length > 0 ? a[0] : "Dog");
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             _dog = c;
             yield return new WaitForSeconds(1.5f);
             _dogHealth = c.health; // once it's set up (it starts at 0)
@@ -402,13 +437,21 @@ namespace DarkwoodMP.World
                 dog = Object.FindObjectsOfType<Character>().Where(c => c.alive && c.name.StartsWith("Dog") && ne != null && ne.NetIdOf(c, out _)
                                                                      && StateDump.Flat(c.transform.position - spot) < 400f)
                     .OrderBy(c => ne.MadeHere(c) ? 0 : 1)
-                    .ThenByDescending(c => { ne.NetIdOf(c, out uint id); return id; }).FirstOrDefault();
+                    .ThenByDescending(c =>
+                    {
+                        ne.NetIdOf(c, out uint id);
+                        return id;
+                    }).FirstOrDefault();
                 if (dog == null)
                 {
                     yield return new WaitForSeconds(0.3f);
                 }
             }
-            if (dog == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail("no copy of the host's dog here");
+                yield break;
+            }
             ne.NetIdOf(dog, out _dogId);
             _dogDeath = dog.sounds != null ? dog.sounds.death : null;
             // A copy has its own idle loop and the host's relayed sounds while it lives: the death check below
@@ -439,7 +482,11 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
-                if (InvItemClass.isNull(p.currentItem)) { r.Fail($"couldn't take the {type} out"); yield break; }
+                if (InvItemClass.isNull(p.currentItem))
+                {
+                    r.Fail($"couldn't take the {type} out");
+                    yield break;
+                }
             }
             int swings = 0;
             for (int i = 0; i < 6 && dog != null && dog.alive; i++)
@@ -456,7 +503,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DogHurt(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.5f);
-            if (_dog == null) { r.Fail("no dog (spawn-dog first)"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog (spawn-dog first)");
+                yield break;
+            }
             r.Info = $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
             if (!(_dog.health < _dogHealth))
             {
@@ -468,7 +519,11 @@ namespace DarkwoodMP.World
         private static IEnumerator KillDog(string[] a, Result r)
         {
             var p = Player.Instance;
-            if (_dog == null) { r.Fail("no dog"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             if (_dog.alive)
             {
                 AsPlayer(() => _dog.getHit(_dog.health + 500f, p.transform, false, true, false));
@@ -488,7 +543,11 @@ namespace DarkwoodMP.World
             yield return WaitLog(0, new[] { $@"\[enemy\] {_dogId} died: sounds stopped", $@"#{_dogId} died: its corpse can be searched here" }, 8f, missing);
             yield return new WaitForSeconds(2f); // past the death cry and any late sound from the host
             var dog = MapScenarioFixChecks.ById(_dogId);
-            if (dog == null) { r.Fail($"the dog #{_dogId} is gone here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail($"the dog #{_dogId} is gone here");
+                yield break;
+            }
             var snd = dog.GetComponent<CharacterSounds>();
             var loop = snd != null ? snd.idleAudioObject : null;
             var playing = dog.GetComponentsInChildren<AudioObject>(true).Where(ao => ao != null && ao.IsPlaying()).Select(ao => ao.audioID).ToList();
@@ -545,7 +604,10 @@ namespace DarkwoodMP.World
                 {
                     var s = (Resources.Load("Prefabs/Characters/" + k) as GameObject)?.GetComponent<CharacterSounds>();
                     if (s != null && !string.IsNullOrEmpty(s.idleLoop))
-                    { kind = k; break; }
+                    {
+                        kind = k;
+                        break;
+                    }
                 }
             }
             var res = Resources.Load("Prefabs/Characters/" + (kind ?? "Dog"));
@@ -565,7 +627,8 @@ namespace DarkwoodMP.World
             {
                 save.dontSave = true;
             }
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             bool hidden = NetEnemies.Hidden.Contains(mine);
 
             var toggled = new List<Character>();
@@ -594,7 +657,8 @@ namespace DarkwoodMP.World
             string idle = mine.sounds != null ? mine.sounds.idleLoop : null;
             r.Info = $"spawn point made {(spawned ? "a dog" : "nothing")}; our {mine.name} hidden {hidden}, idle loop {idle ?? "none"} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
-            NetEnemies.Hidden.Remove(mine); NetEnemies.Frozen.Remove(mine);
+            NetEnemies.Hidden.Remove(mine);
+            NetEnemies.Frozen.Remove(mine);
             Object.Destroy(mine.gameObject);
             if (spawned)
             {
@@ -619,10 +683,18 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var dog = MapScenarioFixChecks.ById(_dogId);
-            if (dog == null) { r.Fail($"the dog #{_dogId} is gone here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail($"the dog #{_dogId} is gone here");
+                yield break;
+            }
             var item = dog.GetComponent<Item>();
             var inv = dog.GetComponentInChildren<Inventory>(true);
-            if (item == null || inv == null) { r.Fail($"its corpse can't be searched here (Item {item != null}, Inventory {inv != null})"); yield break; }
+            if (item == null || inv == null)
+            {
+                r.Fail($"its corpse can't be searched here (Item {item != null}, Inventory {inv != null})");
+                yield break;
+            }
             yield return Walk(dog.transform.position, 90f);
             int mark = LogMark();
             p.openedItemInventory = inv;
@@ -632,7 +704,11 @@ namespace DarkwoodMP.World
             if (slot != null)
             {
                 var it = new InvItemClass(slot.invItem);
-                AsPlayer(() => { slot.removeItem(); p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true); });
+                AsPlayer(() =>
+                {
+                    slot.removeItem();
+                    p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                });
                 took = $"took {it.type} x{it.amount}";
                 yield return new WaitForSeconds(0.8f);
             }
@@ -660,14 +736,27 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
             yield return Walk(wb.transform.position);
             p.openedItemInventory2 = st;
             yield return new WaitForSeconds(0.6f);
             var free = Enumerable.Range(0, st.slots.Count).Where(i => InvItemClass.isNull(st.slots[i].invItem)).Take(WbItems.Length).ToList();
-            if (free.Count < WbItems.Length) { p.openedItemInventory2 = null; r.Fail($"only {free.Count} free storage slots"); yield break; }
-            for (int i = 0; i < WbItems.Length; i++) { st.slots[free[i]].inventory = st; st.slots[free[i]].createItem(WbItems[i], 3); }
+            if (free.Count < WbItems.Length)
+            {
+                p.openedItemInventory2 = null;
+                r.Fail($"only {free.Count} free storage slots");
+                yield break;
+            }
+            for (int i = 0; i < WbItems.Length; i++)
+            {
+                st.slots[free[i]].inventory = st;
+                st.slots[free[i]].createItem(WbItems[i], 3);
+            }
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
             Plugin.Instance.StartCoroutine(WbLateChange(wb, free));
@@ -692,7 +781,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.6f);
             st.slots[slots[1]].removeItem();                          // wire gone
             st.slots[slots[2]].removeItem();
-            st.slots[slots[2]].inventory = st; st.slots[slots[2]].createItem("rope", 5); // rope 3 -> 5
+            // rope 3 -> 5
+            st.slots[slots[2]].inventory = st;
+            st.slots[slots[2]].createItem("rope", 5);
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
             Plugin.Log.LogInfo($"[map] wb-fill: changed the storage while a player joins (slot {slots[1]} emptied, slot {slots[2]} rope x5)");
@@ -704,18 +795,29 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
             var sref = ObjRef.Of(st.gameObject);
             var missing = new List<string>();
             yield return WaitLog(0, new[] { Regex.Escape($"[slots] {sref} contents from host") }, 3f, missing);
-            if (missing.Count > 0) { r.Fail($"no '[slots] {sref} contents from host' in the log: the storage wasn't asked for after joining"); yield break; }
+            if (missing.Count > 0)
+            {
+                r.Fail($"no '[slots] {sref} contents from host' in the log: the storage wasn't asked for after joining");
+                yield break;
+            }
             string got = LogLines().Last(l => l.Contains($"[slots] {sref} contents from host"));
             got = got.Substring(got.IndexOf("[slots]", StringComparison.Ordinal));
             string Contents() => string.Join(",", st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}"));
             string before = Contents();
             if (st.slots.Any(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "wire") || !st.slots.Any(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "rope" && s.invItem.amount == 5))
-            { r.Fail($"the storage here isn't the host's after its late change (wire gone, rope x5): {before}; {got}"); yield break; }
+            {
+                r.Fail($"the storage here isn't the host's after its late change (wire gone, rope x5): {before}; {got}");
+                yield break;
+            }
 
             int dropped0 = Object.FindObjectsOfType<Inventory>().Count(i => i.name.StartsWith("DroppedItem", StringComparison.Ordinal));
             yield return Walk(wb.transform.position);
@@ -723,14 +825,22 @@ namespace DarkwoodMP.World
             int nails0 = Carried(p).Where(i => i.type == "nail").Sum(i => i.amount), bandages0 = Carried(p).Where(i => i.type == "bandages").Sum(i => i.amount);
             // Something of ours to put in (a new character has empty bags).
             var bag = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
-            if (bag == null) { r.Fail("no free slot in our bags"); yield break; }
+            if (bag == null)
+            {
+                r.Fail("no free slot in our bags");
+                yield break;
+            }
             bag.inventory = p.Inventory;
             bag.createItem("bandages", 2);
             yield return new WaitForSeconds(0.5f);
             int mark = LogMark();
             AsPlayer(() => wb.open());
             yield return new WaitForSeconds(SlotShare.AskTimeout + 0.5f); // it asks the host again as it opens; changes wait for the answer
-            if (p.openedItemInventory2 != st) { r.Fail("the workbench didn't open its storage"); yield break; }
+            if (p.openedItemInventory2 != st)
+            {
+                r.Fail("the workbench didn't open its storage");
+                yield break;
+            }
             AsPlayer(() => bag.transferItem());                         // shift-click into the storage
             yield return new WaitForSeconds(0.8f);
             var nails = st.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "nail");
@@ -739,7 +849,14 @@ namespace DarkwoodMP.World
                 AsPlayer(() => nails.transferItem());   // and one stack out
             }
             yield return new WaitForSeconds(0.8f);
-            try { p.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] wb-use: closeInventory: {e.Message}"); }
+            try
+            {
+                p.closeInventory();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[map] wb-use: closeInventory: {e.Message}");
+            }
             if (p.openedItemInventory2 == st)
             {
                 p.openedItemInventory2 = null;
@@ -775,7 +892,11 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(0.5f);
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             var st = wb.normalInventory;
             string contents = string.Join(",", st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}"));
             var refused = LogLines().Where(l => l.Contains($"of {st.name}: refused")).ToList();
@@ -800,7 +921,11 @@ namespace DarkwoodMP.World
             {
                 string prefab = kv.Key.StartsWith("egg") ? "Objects/larva_egg_big" : "Traps/infection_splat";
                 var go = Place(prefab, Centre + kv.Value);
-                if (go == null) { r.Fail($"couldn't place {prefab}"); yield break; }
+                if (go == null)
+                {
+                    r.Fail($"couldn't place {prefab}");
+                    yield break;
+                }
                 made.Add($"{kv.Key} {ObjRef.Of(go)} at {Fmt(go.transform.position)}");
             }
             yield return new WaitForSeconds(0.5f);
@@ -813,7 +938,11 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             string which = a.Length > 0 ? a[0] : "station";
             var egg = Egg(which);
-            if (egg == null) { r.Fail("no egg"); yield break; }
+            if (egg == null)
+            {
+                r.Fail("no egg");
+                yield break;
+            }
             var back = p.transform.position;
             yield return Walk(egg.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
@@ -824,7 +953,11 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.3f);
             }
             r.Info = $"{which} egg {egg.gameObject.name} {ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
-            if (!egg.destroyed) { r.Fail(r.Info); yield break; }
+            if (!egg.destroyed)
+            {
+                r.Fail(r.Info);
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             if (StateDump.Flat(back - p.transform.position) > 1000f)
             {
@@ -852,7 +985,11 @@ namespace DarkwoodMP.World
             foreach (var kv in eggs)
             {
                 var e = kv.Value;
-                if (e == null) { r.Fail($"no {kv.Key} egg here"); continue; }
+                if (e == null)
+                {
+                    r.Fail($"no {kv.Key} egg here");
+                    continue;
+                }
                 string rf = ObjRef.Of(e.gameObject).ToString();
                 var line = lines.LastOrDefault(l => l.Contains($"[world] egg {rf} destroyed"));
                 parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + (line != null ? $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'" : ""));
@@ -875,13 +1012,20 @@ namespace DarkwoodMP.World
         // ---- #6 infection --------------------------------------------------------------------------------------
 
         private static readonly Dictionary<string, Vector3> _noted = new Dictionary<string, Vector3>();
-        internal static IEnumerator Nothing() { yield break; }
+        internal static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         /// <summary>"burn-infection" (host): set the station's patch alight as fire does (a Burn on it, which clears every patch within 40).</summary>
         private static IEnumerator BurnInfection(string[] a, Result r)
         {
             var inf = Patch("station");
-            if (inf == null) { r.Fail("no infection"); yield break; }
+            if (inf == null)
+            {
+                r.Fail("no infection");
+                yield break;
+            }
             yield return Walk(inf.transform.position, 150f);
             var near = Object.FindObjectsOfType<Infection>().Where(i => !i.disappearing && StateDump.Flat(i.transform.position - inf.transform.position) <= 40f).ToList();
             AsPlayer(() => inf.gameObject.AddComponent<Burn>().burnTime = 5f);
@@ -901,7 +1045,11 @@ namespace DarkwoodMP.World
             var cameFrom = p.transform.position;
             string type = a.Length > 0 ? a[0] : "torch";
             var inf = Patch("infection:client");
-            if (inf == null) { r.Fail("no patch"); yield break; }
+            if (inf == null)
+            {
+                r.Fail("no patch");
+                yield break;
+            }
             string rf = ObjRef.Of(inf.gameObject).ToString(), infAt = Fmt(inf.transform.position);
             var free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0)
@@ -925,7 +1073,11 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) { r.Fail($"couldn't take the {type} out (holding {ItemName(p.currentItem)})"); yield break; }
+            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            {
+                r.Fail($"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
+                yield break;
+            }
             var sensor = p.currentItem.baseClass.meleeSensor;
             bool flaming = sensor != null && sensor is GameObject g && g.GetComponent<MeleeSensor>() is MeleeSensor ms && ms.flaming;
             int mark = LogMark();
@@ -943,12 +1095,14 @@ namespace DarkwoodMP.World
             {
                 foreach (var d in stand)
                 {
-                    var off = p.transform.position - inf.transform.position; off.y = 0f;
+                    var off = p.transform.position - inf.transform.position;
+                    off.y = 0f;
                     if (off.sqrMagnitude < 1f)
                     {
                         off = Vector3.right;
                     }
-                    var spot = inf.transform.position + off.normalized * d; spot.y = p.transform.position.y;
+                    var spot = inf.transform.position + off.normalized * d;
+                    spot.y = p.transform.position.y;
                     yield return Walk(spot, 4f);
                     bool sees = Core.canSeeAttack(p.transform, hitT);
                     if (i == 0)
@@ -1013,7 +1167,11 @@ namespace DarkwoodMP.World
             var parts = new List<string>();
             foreach (var w in which)
             {
-                if (!_noted.TryGetValue(w, out var at)) { r.Fail($"{w}'s patch wasn't noted (infection-note first)"); continue; }
+                if (!_noted.TryGetValue(w, out var at))
+                {
+                    r.Fail($"{w}'s patch wasn't noted (infection-note first)");
+                    continue;
+                }
                 var near = StateDump.All<Infection>().Where(i => !i.disappearing && StateDump.Flat(i.transform.position - at) <= 20f).ToList();
                 parts.Add($"{w}: {near.Count} left at {Fmt(at)}");
                 if (near.Count > 0)

@@ -21,7 +21,15 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class JoinScreen
     {
-        private enum Stage { None, Connecting, Downloading, Waiting, Loading, Game }
+        private enum Stage
+        {
+            None,
+            Connecting,
+            Downloading,
+            Waiting,
+            Loading,
+            Game
+        }
 
         private const float DownloadShare = 0.3f;
 
@@ -50,7 +58,11 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo("[join] loading screen shown");
                 Plugin.Instance?.SetPanel(false);
             }
-            if (_stage == Stage.Game) { _stage = Stage.None; _inGame = false; }
+            if (_stage == Stage.Game)
+            {
+                _stage = Stage.None;
+                _inGame = false;
+            }
             LoadingScreen.Show();
         }
 
@@ -147,7 +159,11 @@ namespace DarkwoodMP.World
             // Under the screen, the menu mustn't take clicks or Esc (InputScript.onPressEsc does nothing while
             // the buttons are off).
             var c = Singleton<Controller>.Instance;
-            if (Core.mainMenu && c != null && !c.buttonsDisabled) { c.buttonsDisabled = true; _buttonsOffOn = c; }
+            if (Core.mainMenu && c != null && !c.buttonsDisabled)
+            {
+                c.buttonsDisabled = true;
+                _buttonsOffOn = c;
+            }
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {

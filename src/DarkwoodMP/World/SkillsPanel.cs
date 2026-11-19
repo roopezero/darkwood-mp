@@ -62,19 +62,43 @@ namespace DarkwoodMP.World
         private static bool CanOpen(Player p, out string why)
         {
             why = null;
-            if (p == null || !WorldShare.InWorld || WorldShare.Loading || Core.mainMenu || Core.loadingGame) { why = "not in a world"; return false; }
-            if (Core.Paused || Core.forbidInputs || p.inMenu() || p.dying || p.health <= 0f) { why = "busy"; return false; }
-            if (Spectator.Active) { why = "watching"; return false; }
-            if (SkillTree.Tiers == null) { why = "no skills"; return false; }
+            if (p == null || !WorldShare.InWorld || WorldShare.Loading || Core.mainMenu || Core.loadingGame)
+            {
+                why = "not in a world";
+                return false;
+            }
+            if (Core.Paused || Core.forbidInputs || p.inMenu() || p.dying || p.health <= 0f)
+            {
+                why = "busy";
+                return false;
+            }
+            if (Spectator.Active)
+            {
+                why = "watching";
+                return false;
+            }
+            if (SkillTree.Tiers == null)
+            {
+                why = "no skills";
+                return false;
+            }
             return true;
         }
 
         /// <summary>Open it (with the backpack), or close it.</summary>
         public static void Toggle()
         {
-            if (Open) { Win.Close(); return; }
+            if (Open)
+            {
+                Win.Close();
+                return;
+            }
             var p = Player.Instance;
-            if (!CanOpen(p, out string why)) { Plugin.Log.LogInfo($"[skills] the panel can't open now ({why})"); return; }
+            if (!CanOpen(p, out string why))
+            {
+                Plugin.Log.LogInfo($"[skills] the panel can't open now ({why})");
+                return;
+            }
             _good = _negative = _message = null;
             _rects.Clear();
             Win.ResetPlace();
@@ -132,7 +156,11 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             var tiers = SkillTree.Tiers;
-            if (p == null || tiers == null) { Ui.Text(f, "No skills here."); return; }
+            if (p == null || tiers == null)
+            {
+                Ui.Text(f, "No skills here.");
+                return;
+            }
             var chosen = SkillTree.Chosen(p);
             int level = p.currentLevel, points = SkillTree.Points(level, chosen);
             bool needNeg = _good != null && SkillTree.NeedsNegative(chosen, _good);
@@ -148,7 +176,11 @@ namespace DarkwoodMP.World
 
             // The four tiers side by side, as the game's skill choice shows them: good skills, then the negative ones.
             int n = tiers.Count, rows = 0, negRows = 0;
-            foreach (var t in tiers) { rows = Math.Max(rows, t.skills.Count); negRows = Math.Max(negRows, t.negativeSkills.Count); }
+            foreach (var t in tiers)
+            {
+                rows = Math.Max(rows, t.skills.Count);
+                negRows = Math.Max(negRows, t.negativeSkills.Count);
+            }
             float colW = f.Width / Math.Max(1, n), icon = Mathf.Min(Icon, colW - 8 * UiWindow.S), gap = 6 * UiWindow.S;
             var head = f.Next(PixelFont.Line * 2 + 2 * UiWindow.S);
             for (int i = 0; i < n; i++)
@@ -304,7 +336,10 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             bool needNeg = p != null && _good != null && SkillTree.NeedsNegative(SkillTree.Chosen(p), _good);
-            if (SkillTree.Learn(_good, needNeg ? _negative : null, out string why)) { _good = _negative = _message = null; }
+            if (SkillTree.Learn(_good, needNeg ? _negative : null, out string why))
+            {
+                _good = _negative = _message = null;
+            }
             else
             {
                 _message = Capital(why);
@@ -390,7 +425,13 @@ namespace DarkwoodMP.World
                 {
                     _negative = null;
                 }
-                try { AudioController.Play("UI_click"); } catch { }
+                try
+                {
+                    AudioController.Play("UI_click");
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -445,8 +486,14 @@ namespace DarkwoodMP.World
             {
                 return s;
             }
-            try { s = global::Language.HasKey(key, "Skills") ? global::Language.Get(key, "Skills") : fallback; }
-            catch { s = fallback; }
+            try
+            {
+                s = global::Language.HasKey(key, "Skills") ? global::Language.Get(key, "Skills") : fallback;
+            }
+            catch
+            {
+                s = fallback;
+            }
             s = Clean(s ?? fallback);
             cache[key] = s;
             return s;
@@ -476,7 +523,9 @@ namespace DarkwoodMP.World
         /// <summary>For tests: choose and learn on the panel, as the clicks do; the result (null: learned).</summary>
         internal static string TestLearn(string good, string negative)
         {
-            _good = good; _negative = negative; _message = null;
+            _good = good;
+            _negative = negative;
+            _message = null;
             LearnChosen();
             return _message;
         }
@@ -495,7 +544,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>For tests: show this skill's details as if the mouse were over it.</summary>
-        internal static void TestPick(string good, string negative) { _good = good; _negative = negative; }
+        internal static void TestPick(string good, string negative)
+        {
+            _good = good;
+            _negative = negative;
+        }
 
         /// <summary>For tests: the mouse as the panel sees it (screen pixels from the top left); null: the real mouse.</summary>
         internal static Vector2? TestMouse;
@@ -514,7 +567,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            icon = rs[0]; cell = rs[1];
+            icon = rs[0];
+            cell = rs[1];
             return true;
         }
 
@@ -526,11 +580,14 @@ namespace DarkwoodMP.World
         internal static System.Collections.IEnumerator TestHoverSweep(Action<int> done)
         {
             TestMouse = new Vector2(-100, -100);
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             var skills = new List<string>(_rects.Keys);
             string first = skills.Count > 0 ? skills[0] : null;
             Rect firstCell = first != null ? _rects[first][1] : default;
-            Rect win = Win.Rect; bool scrolls = Win.TestScrolls; float content = Win.TestContentHeight;
+            Rect win = Win.Rect;
+            bool scrolls = Win.TestScrolls;
+            float content = Win.TestContentHeight;
             Plugin.Log.LogInfo($"[skills] hover sweep over {skills.Count} skills: window {win.width}x{win.height}, scrolls {scrolls}, content {content}");
             int bad = 0, frames = 0;
             foreach (var sk in skills)
@@ -573,7 +630,11 @@ namespace DarkwoodMP.World
             {
                 n++;
                 var choice = SkillTree.AnyChoice(p);
-                if (choice == null) { fails.Add($"{SkillTree.Points(p)} points but nothing to learn"); break; }
+                if (choice == null)
+                {
+                    fails.Add($"{SkillTree.Points(p)} points but nothing to learn");
+                    break;
+                }
                 int before = SkillTree.Points(p);
                 foreach (var sk in new[] { choice[0], choice[1] })
                 {
@@ -581,7 +642,11 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    if (!_rects.TryGetValue(sk, out var rs)) { fails.Add($"{sk} not drawn"); continue; }
+                    if (!_rects.TryGetValue(sk, out var rs))
+                    {
+                        fails.Add($"{sk} not drawn");
+                        continue;
+                    }
                     bool reached = false;
                     yield return RealMouse.MoveTo(rs[1].center, ok => reached = ok);
                     yield return RealMouse.Click();
@@ -605,7 +670,11 @@ namespace DarkwoodMP.World
                 var have = SkillTree.Chosen(p);
                 bool ok2 = have.Contains(choice[0]) && (choice[1] == null || have.Contains(choice[1]));
                 Plugin.Log.LogInfo($"[skills] real click {n} on Learn (mouse {RealMouse.Now}, button {_learnRect}): {(ok2 ? "learned" : "NOT learned")} {choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}, points {before} -> {SkillTree.Points(p)}, panel open {Open}, chosen {_good ?? "nothing"}, message {_message ?? "none"}");
-                if (!ok2) { fails.Add($"choice {n} ({choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}"); break; }
+                if (!ok2)
+                {
+                    fails.Add($"choice {n} ({choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
+                    break;
+                }
             }
             if (!Open)
             {
@@ -744,7 +813,10 @@ namespace DarkwoodMP.World
                         Plugin.Log.LogWarning("[skills] no skill icons (UISkill's sprites): names only");
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"[skills] no skill icons: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[skills] no skill icons: {e.Message}");
+                }
             }
             if (_coll == null)
             {
@@ -776,7 +848,13 @@ namespace DarkwoodMP.World
                 return false;
             }
             float u0 = float.MaxValue, v0 = float.MaxValue, u1 = float.MinValue, v1 = float.MinValue;
-            foreach (var uv in def.uvs) { u0 = Mathf.Min(u0, uv.x); v0 = Mathf.Min(v0, uv.y); u1 = Mathf.Max(u1, uv.x); v1 = Mathf.Max(v1, uv.y); }
+            foreach (var uv in def.uvs)
+            {
+                u0 = Mathf.Min(u0, uv.x);
+                v0 = Mathf.Min(v0, uv.y);
+                u1 = Mathf.Max(u1, uv.x);
+                v1 = Mathf.Max(v1, uv.y);
+            }
             var old = GUI.color;
             GUI.color = tint * old;
             if (def.flipped == tk2dSpriteDefinition.FlipMode.None)

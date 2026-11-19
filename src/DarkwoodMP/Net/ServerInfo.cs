@@ -36,7 +36,11 @@ namespace DarkwoodMP.Net
             var b = new List<byte>(64);
             b.AddRange(Encoding.UTF8.GetBytes(name));
             b.Add(Sep);
-            foreach (var f in fields) { b.AddRange(Encoding.UTF8.GetBytes(f)); b.Add(Sep); }
+            foreach (var f in fields)
+            {
+                b.AddRange(Encoding.UTF8.GetBytes(f));
+                b.Add(Sep);
+            }
             b.Add(End);
             return b.ToArray();
         }
@@ -79,8 +83,12 @@ namespace DarkwoodMP.Net
             }
             var info = new ServerInfo
             {
-                Name = parts[1], Players = players, MaxPlayers = max,
-                Password = parts[4] == "1", LocalChars = parts[5] == "1", Version = parts[6],
+                Name = parts[1],
+                Players = players,
+                MaxPlayers = max,
+                Password = parts[4] == "1",
+                LocalChars = parts[5] == "1",
+                Version = parts[6],
             };
             for (int i = 7; i < parts.Length; i++)
             {

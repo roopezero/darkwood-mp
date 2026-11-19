@@ -30,11 +30,18 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             string type = a.Length > 0 ? a[0] : "fists";
-            if (type != "fists") { yield return MapScenarioEnemies.TakeOut(p, type, r); }
+            if (type != "fists")
+            {
+                yield return MapScenarioEnemies.TakeOut(p, type, r);
+            }
             else
             {
                 var slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? p.Hotbar.slots.FirstOrDefault(s => !s.selected);
-                if (slot == null) { r.Fail("no hotbar slot"); yield break; }
+                if (slot == null)
+                {
+                    r.Fail("no hotbar slot");
+                    yield break;
+                }
                 slot.inventory = p.Hotbar;
                 if (!InvItemClass.isNull(slot.invItem))
                 {
@@ -76,8 +83,12 @@ namespace DarkwoodMP.World
                 bool any(System.Func<Sync.RemotePlayer, bool> f) => puppets.Any(f);
                 switch (what)
                 {
-                    case "torch": ok = any(x => Drawn(x.HeldLightShown)); break;
-                    case "lantern": ok = any(x => x.LanternLight != null && x.LanternLight.LightRadius > 130f && Drawn(x.LanternLight)); break;
+                    case "torch":
+                        ok = any(x => Drawn(x.HeldLightShown));
+                        break;
+                    case "lantern":
+                        ok = any(x => x.LanternLight != null && x.LanternLight.LightRadius > 130f && Drawn(x.LanternLight));
+                        break;
                     case "flashlight":
                         ok = any(x =>
                         {
@@ -85,7 +96,9 @@ namespace DarkwoodMP.World
                             return l != null && x.Last != null && x.Last.BeamRadius > 0f && Mathf.Abs(l.LightRadius - x.Last.BeamRadius) < 1f && Drawn(l);
                         });
                         break;
-                    default: ok = !any(x => Drawn(x.HeldLightShown) || x.LanternLight != null || (x.Beam != null && x.Beam.activeSelf)); break;
+                    default:
+                        ok = !any(x => Drawn(x.HeldLightShown) || x.LanternLight != null || (x.Beam != null && x.Beam.activeSelf));
+                        break;
                 }
                 shared = SharedMeshes();
                 if ((ok && shared == "") || Time.realtimeSinceStartup > until)
@@ -195,7 +208,11 @@ namespace DarkwoodMP.World
             bool ours = true;
             foreach (var (name, l) in new[] { ("cone", FovLight(p)), ("dot", FovDot(p)), ("light dot", p.lightDot) })
             {
-                if (l == null) { parts.Add($"{name} missing"); continue; }
+                if (l == null)
+                {
+                    parts.Add($"{name} missing");
+                    continue;
+                }
                 bool onUs = l.transform.IsChildOf(p.transform);
                 var f = l.GetComponent<MeshFilter>();
                 bool own = l._mesh == null || (f != null && f.sharedMesh == l._mesh);

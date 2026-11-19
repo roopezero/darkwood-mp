@@ -38,10 +38,18 @@ namespace DarkwoodMP.World
             Add("ui-trader-check", TraderCheck);
             Add("ui-trader-hide", TraderHide);
             Add("ui-pause", Pause, timeout: 20f);
-            Add("ui-refresh", (a, r) => { UiRefresh.Enabled = a.Length == 0 || a[0] != "off"; r.Info = $"UiRefresh {(UiRefresh.Enabled ? "on" : "off")}"; return Nothing(); });
+            Add("ui-refresh", (a, r) =>
+            {
+                UiRefresh.Enabled = a.Length == 0 || a[0] != "off";
+                r.Info = $"UiRefresh {(UiRefresh.Enabled ? "on" : "off")}";
+                return Nothing();
+            });
         }
 
-        private static IEnumerator Nothing() { yield break; }
+        private static IEnumerator Nothing()
+        {
+            yield break;
+        }
 
         private static Workbench Bench() => Nearest(Object.FindObjectsOfType<Workbench>().Where(w => w.normalInventory != null), Centre);
 
@@ -111,7 +119,11 @@ namespace DarkwoodMP.World
                 }
                 filled++;
                 var ui = s.invItem.UIInvItem;
-                if (ui == null || !ui.gameObject.activeInHierarchy) { bad.Add($"slot {i} ({Slot(s)}): no icon drawn"); continue; }
+                if (ui == null || !ui.gameObject.activeInHierarchy)
+                {
+                    bad.Add($"slot {i} ({Slot(s)}): no icon drawn");
+                    continue;
+                }
                 string want = s.invItem.baseClass != null ? s.invItem.baseClass.iconType : null;
                 string got = ui.sprite != null && ui.sprite.CurrentSprite != null ? ui.sprite.CurrentSprite.name : null;
                 if (want != null && got != want)
@@ -140,7 +152,8 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static string Recipes(Workbench wb, out int met, out int total)
         {
-            met = 0; total = 0;
+            met = 0;
+            total = 0;
             var inv = wb.workbenchInventory;
             if (inv == null || !inv.open)
             {
@@ -182,8 +195,13 @@ namespace DarkwoodMP.World
                     met++;
                 }
                 var ui = s.invItem.UIInvItem;
-                if (ui == null || ui.sprite == null) { bad.Add($"{s.invItem.type}: not drawn"); continue; }
-                var c = ui.sprite.color; var red = Red(ui);
+                if (ui == null || ui.sprite == null)
+                {
+                    bad.Add($"{s.invItem.type}: not drawn");
+                    continue;
+                }
+                var c = ui.sprite.color;
+                var red = Red(ui);
                 bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f && Mathf.Abs(c.g - red.g) < 0.02f && Mathf.Abs(c.b - red.b) < 0.02f;
                 if (drawnRed == can)
                 {
@@ -207,9 +225,17 @@ namespace DarkwoodMP.World
         {
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
-            if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
+            if (st == null || P.openedItemInventory2 != st)
+            {
+                r.Fail("the workbench isn't open here");
+                yield break;
+            }
             string before = PauseHud.Shown();
-            if (!before.Contains("container2")) { r.Fail($"the storage's window isn't shown before: {before}"); yield break; }
+            if (!before.Contains("container2"))
+            {
+                r.Fail($"the storage's window isn't shown before: {before}");
+                yield break;
+            }
             Core.showHidePauseMenu();
             yield return new WaitForSecondsRealtime(1f);
             string under = PauseHud.Shown();
@@ -250,7 +276,11 @@ namespace DarkwoodMP.World
         private static IEnumerator WbOpen(string[] a, Result r)
         {
             var wb = Bench();
-            if (wb == null) { r.Fail("no workbench"); yield break; }
+            if (wb == null)
+            {
+                r.Fail("no workbench");
+                yield break;
+            }
             yield return Walk(wb.transform.position);
             if (P.openedItemInventory2 != wb.normalInventory)
             {
@@ -259,7 +289,11 @@ namespace DarkwoodMP.World
             // A client asks the host for the storage as it opens it, and its window takes the answer.
             yield return new WaitForSeconds(Net.Session.Instance != null && Net.Session.Instance.IsClient ? SlotShare.AskTimeout + 0.5f : 1f);
             var st = wb.normalInventory;
-            if (P.openedItemInventory2 != st || !st.open) { r.Fail("the workbench's storage didn't open"); yield break; }
+            if (P.openedItemInventory2 != st || !st.open)
+            {
+                r.Fail("the workbench's storage didn't open");
+                yield break;
+            }
             string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
             var known = wb.workbenchInventory.slots.Where(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.GetComponent<CraftingRecipes>() != null)
                 .Select(s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
@@ -277,7 +311,14 @@ namespace DarkwoodMP.World
         /// <summary>"ui-wb-close": close it as the player does.</summary>
         private static IEnumerator WbClose(string[] a, Result r)
         {
-            try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] ui-wb-close: {e.Message}"); }
+            try
+            {
+                P.closeInventory();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[map] ui-wb-close: {e.Message}");
+            }
             yield return new WaitForSeconds(0.8f);
             var wb = Bench();
             if (wb != null && P.openedItemInventory2 == wb.normalInventory)
@@ -294,10 +335,18 @@ namespace DarkwoodMP.World
             var args = a.ToList();
             int at = args.IndexOf("--at");
             double epoch = 0;
-            if (at >= 0) { epoch = double.Parse(args[at + 1], CultureInfo.InvariantCulture); args.RemoveRange(at, 2); }
+            if (at >= 0)
+            {
+                epoch = double.Parse(args[at + 1], CultureInfo.InvariantCulture);
+                args.RemoveRange(at, 2);
+            }
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
-            if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
+            if (st == null || P.openedItemInventory2 != st)
+            {
+                r.Fail("the workbench isn't open here");
+                yield break;
+            }
             while (epoch > 0 && MapScenarioSavage.Now < epoch)
             {
                 yield return null;
@@ -327,7 +376,11 @@ namespace DarkwoodMP.World
         {
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
-            if (st == null || P.openedItemInventory2 != st) { r.Fail("the workbench isn't open here"); yield break; }
+            if (st == null || P.openedItemInventory2 != st)
+            {
+                r.Fail("the workbench isn't open here");
+                yield break;
+            }
             int i = Index(st, a[0]), n = int.Parse(a[2], CultureInfo.InvariantCulture);
             for (int k = 1; k <= n; k++)
             {
@@ -348,10 +401,18 @@ namespace DarkwoodMP.World
             var args = a.ToList();
             int mk = args.IndexOf("--makeable");
             int wantMakeable = -1;
-            if (mk >= 0) { wantMakeable = int.Parse(args[mk + 1], CultureInfo.InvariantCulture); args.RemoveRange(mk, 2); }
+            if (mk >= 0)
+            {
+                wantMakeable = int.Parse(args[mk + 1], CultureInfo.InvariantCulture);
+                args.RemoveRange(mk, 2);
+            }
             var wb = Bench();
             var st = wb != null ? wb.normalInventory : null;
-            if (st == null || P.openedItemInventory2 != st || !st.open) { r.Fail("the workbench isn't open here"); yield break; }
+            if (st == null || P.openedItemInventory2 != st || !st.open)
+            {
+                r.Fail("the workbench isn't open here");
+                yield break;
+            }
             var want = new List<(int i, string type, int n)>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
@@ -363,7 +424,9 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            yield return null; yield return null; // icons removed this frame are destroyed at its end
+            // icons removed this frame are destroyed at its end
+            yield return null;
+            yield return null;
             string slots = string.Join(", ", want.Select(w => $"{w.i}={Slot(st.slots[w.i])}"));
             var wrong = want.Where(w => !Matches(st.slots[w.i], w.type, w.n)).Select(w => $"slot {w.i} is {Slot(st.slots[w.i])}, not {(w.type == "-" ? "empty" : $"{w.type}x{w.n}")}").ToList();
             string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
@@ -394,14 +457,26 @@ namespace DarkwoodMP.World
         private static IEnumerator SawOpen(string[] a, Result r)
         {
             var saw = MapScenarioWorld.Find<Saw>(a[0]);
-            if (saw == null) { r.Fail($"no saw {a[0]}"); yield break; }
+            if (saw == null)
+            {
+                r.Fail($"no saw {a[0]}");
+                yield break;
+            }
             var item = saw.GetComponent<Item>();
             var inv = saw.GetComponent<Inventory>();
-            if (item == null || inv == null) { r.Fail($"{saw.name} has no Item or Inventory"); yield break; }
+            if (item == null || inv == null)
+            {
+                r.Fail($"{saw.name} has no Item or Inventory");
+                yield break;
+            }
             yield return Walk(saw.transform.position);
             AsPlayer(() => item.openInventory());
             yield return new WaitForSeconds(1.5f);
-            if (!inv.open) { r.Fail($"{saw.name}'s window didn't open"); yield break; }
+            if (!inv.open)
+            {
+                r.Fail($"{saw.name}'s window didn't open");
+                yield break;
+            }
             _saw = saw;
             r.Info = $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
         }
@@ -414,7 +489,11 @@ namespace DarkwoodMP.World
         {
             var saw = _saw;
             var inv = saw != null ? saw.GetComponent<Inventory>() : null;
-            if (inv == null || !inv.open) { r.Fail("the saw's window isn't open here"); yield break; }
+            if (inv == null || !inv.open)
+            {
+                r.Fail("the saw's window isn't open here");
+                yield break;
+            }
             float min = a.Length > 0 ? F(a[0]) : 0f;
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
@@ -442,7 +521,14 @@ namespace DarkwoodMP.World
 
         private static IEnumerator SawClose(string[] a, Result r)
         {
-            try { P.closeInventory(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] ui-saw-close: {e.Message}"); }
+            try
+            {
+                P.closeInventory();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[map] ui-saw-close: {e.Message}");
+            }
             yield return new WaitForSeconds(0.8f);
             var inv = _saw != null ? _saw.GetComponent<Inventory>() : null;
             if (inv != null && inv.open)
@@ -462,7 +548,11 @@ namespace DarkwoodMP.World
         private static IEnumerator TraderShow(string[] a, Result r)
         {
             var npc = MapScenarioWorld.Trader();
-            if (npc == null) { r.Fail("no trader here"); yield break; }
+            if (npc == null)
+            {
+                r.Fail("no trader here");
+                yield break;
+            }
             yield return Walk(npc.transform.position, 150f);
             P.inShop = true;
             P.talkedToNPC = npc;
@@ -482,7 +572,11 @@ namespace DarkwoodMP.World
         private static IEnumerator TraderCheck(string[] a, Result r)
         {
             var npc = _trader;
-            if (npc == null || npc.inventory == null) { r.Fail("no trader shown"); yield break; }
+            if (npc == null || npc.inventory == null)
+            {
+                r.Fail("no trader shown");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 6f;
             string line = null;
             while (line == null && Time.realtimeSinceStartup < until)
@@ -493,7 +587,8 @@ namespace DarkwoodMP.World
                     yield return new WaitForSecondsRealtime(0.5f);
                 }
             }
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             string drawn = Drawn(npc.inventory);
             r.Info = $"{npc.name}: {npc.inventory.getAllItems().Count} items, open={npc.inventory.open}; {line}";
             if (line == null)

@@ -119,7 +119,11 @@ namespace DarkwoodMP.World
             }
             var c = ne.PuppetCharacters().Where(x => x != null && x.name.StartsWith("Dog"))
                 .OrderBy(x => StateDump.Flat(x.transform.position - Spot(name))).FirstOrDefault();
-            if (c != null && StateDump.Flat(c.transform.position - Spot(name)) < 600f && ne.NetIdOf(c, out id)) { _dogIds[name] = id; return c; }
+            if (c != null && StateDump.Flat(c.transform.position - Spot(name)) < 600f && ne.NetIdOf(c, out id))
+            {
+                _dogIds[name] = id;
+                return c;
+            }
             return null;
         }
 
@@ -136,7 +140,8 @@ namespace DarkwoodMP.World
 
         private static void Face(Vector3 at)
         {
-            var d = at - P.transform.position; d.y = 0f;
+            var d = at - P.transform.position;
+            d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
                 P.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
@@ -146,7 +151,8 @@ namespace DarkwoodMP.World
         /// <summary>A spot `dist` from `target` on the side of the centre (where we come from).</summary>
         private static Vector3 Stand(Vector3 target, float dist)
         {
-            var d = Centre - target; d.y = 0f;
+            var d = Centre - target;
+            d.y = 0f;
             if (d.sqrMagnitude < 1f)
             {
                 d = Vector3.back;
@@ -167,7 +173,11 @@ namespace DarkwoodMP.World
             var p = P;
             // A world bear trap on the way here holds our player and no item comes out until it's freed (as
             // HealNow frees it).
-            if (p.inBearTrap) { p.stopAllPerformingActionAnims(); yield return new WaitForSeconds(0.3f); }
+            if (p.inBearTrap)
+            {
+                p.stopAllPerformingActionAnims();
+                yield return new WaitForSeconds(0.3f);
+            }
             int free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0)
             {
@@ -175,7 +185,11 @@ namespace DarkwoodMP.World
             }
             var slot = p.Hotbar.slots[free];
             slot.inventory = p.Hotbar;
-            if (!InvItemClass.isNull(slot.invItem)) { _hotbarWas = (slot, new InvItemClass(slot.invItem)); slot.removeItem(); }
+            if (!InvItemClass.isNull(slot.invItem))
+            {
+                _hotbarWas = (slot, new InvItemClass(slot.invItem));
+                slot.removeItem();
+            }
             slot.createItem(type, 1);
             made?.Invoke(slot.invItem);
             foreach (var s in p.Hotbar.slots)
@@ -200,7 +214,11 @@ namespace DarkwoodMP.World
             var p = P;
             var slot = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? p.Inventory.slots.Last();
             slot.inventory = p.Inventory;
-            if (!InvItemClass.isNull(slot.invItem)) { _bagWas = (slot, new InvItemClass(slot.invItem)); slot.removeItem(); }
+            if (!InvItemClass.isNull(slot.invItem))
+            {
+                _bagWas = (slot, new InvItemClass(slot.invItem));
+                slot.removeItem();
+            }
             slot.createItem(type, n);
             _bagSlot = slot;
         }
@@ -250,11 +268,19 @@ namespace DarkwoodMP.World
             string name = a.Length > 0 ? a[0] : "gun";
             var spot = MapScenarioEnemies.FreeSpot(Spot(name));
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             c.transform.position = spot;
             _dogs[name] = c;
             yield return new WaitForSeconds(1.5f); // it's set up (its health is 0 until then)
-            if (a.Length > 1) { c.maxHealth = F(a[1]); c.health = F(a[1]); }
+            if (a.Length > 1)
+            {
+                c.maxHealth = F(a[1]);
+                c.health = F(a[1]);
+            }
             if (hungry)
             {
                 c.veryHungry = true;
@@ -290,7 +316,11 @@ namespace DarkwoodMP.World
             string name = a.Length > 0 ? a[0] : "gun";
             yield return new WaitForSeconds(1f);
             var d = DogOf(name);
-            if (d == null) { r.Fail($"no {name} dog"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no {name} dog");
+                yield break;
+            }
             float was = _noted.TryGetValue(name, out float h) ? h : d.maxHealth;
             var refused = LogSince(_mark, @"refused EnemyHit");
             var capped = LogSince(_mark, @"\[authority\] .*'s hit on .* is more than");
@@ -327,7 +357,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Kill(string[] a, Result r)
         {
             var d = DogOf(a.Length > 0 ? a[0] : "gun");
-            if (d == null) { r.Info = "no dog (gone already)"; yield break; }
+            if (d == null)
+            {
+                r.Info = "no dog (gone already)";
+                yield break;
+            }
             yield return KillAsPlayer(d, r, 1.5f);
         }
 
@@ -365,7 +399,11 @@ namespace DarkwoodMP.World
             int shots = a.Length > 2 ? int.Parse(a[2]) : 3;
             Character dog = null;
             yield return WaitDog(name, c => dog = c);
-            if (dog == null) { r.Fail($"no {name} dog here"); yield break; }
+            if (dog == null)
+            {
+                r.Fail($"no {name} dog here");
+                yield break;
+            }
             int mark = MapScenarioIssues.LogMark();
             try
             {
@@ -376,7 +414,11 @@ namespace DarkwoodMP.World
                 }
                 var gun = p.currentItem;
                 var b = gun.baseClass;
-                if (!b.isFirearm) { r.Fail($"a {type} isn't a firearm"); yield break; }
+                if (!b.isFirearm)
+                {
+                    r.Fail($"a {type} isn't a firearm");
+                    yield break;
+                }
                 GiveBag(b.ammoType, b.clipSize * 2 + 4);
                 string loads = "";
                 IEnumerator Reload()
@@ -436,7 +478,8 @@ namespace DarkwoodMP.World
                     // A wall between us and the dog takes every shot: step round the dog until the line of fire is
                     // clear, as a player would.
                     string first = LineOfFire(p, dog, out bool clear);
-                    var round = p.transform.position - at; round.y = 0f;
+                    var round = p.transform.position - at;
+                    round.y = 0f;
                     for (int k = 1; k < 6 && !clear && dog != null; k++)
                     {
                         moved++;
@@ -512,7 +555,15 @@ namespace DarkwoodMP.World
             var p = P;
             string type = a[0], at = a.Length > 1 ? a[1] : "fire";
             Character dog = null;
-            if (at == "meat" || at == "gun") { yield return WaitDog(at, c => dog = c); if (dog == null) { r.Fail($"no {at} dog here"); yield break; } }
+            if (at == "meat" || at == "gun")
+            {
+                yield return WaitDog(at, c => dog = c);
+                if (dog == null)
+                {
+                    r.Fail($"no {at} dog here");
+                    yield break;
+                }
+            }
             var target = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
             yield return Walk(Stand(target, type == "gasBomb" ? 340f : 250f), 30f); // (out of a gas cloud's reach)
             if (dog != null)
@@ -526,7 +577,11 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
-                if (!p.currentItem.baseClass.isThrowable) { r.Fail($"a {type} isn't throwable"); yield break; }
+                if (!p.currentItem.baseClass.isThrowable)
+                {
+                    r.Fail($"a {type} isn't throwable");
+                    yield break;
+                }
                 // As Player's aim does for a throwable (the held item, hidden, not hitting us). A bite as we aim
                 // puts the held item away (Player.hideHeldItem destroys it) and nothing is thrown: aim again.
                 GameObject held = null;
@@ -542,8 +597,13 @@ namespace DarkwoodMP.World
                         }
                     }
                     held = Core.AddPrefab(p.currentItem.baseClass.item, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), p.gameObject);
-                    if (held == null) { r.Fail($"couldn't make a held {type}"); yield break; }
-                    var ren = held.GetComponent<Renderer>(); if (ren != null)
+                    if (held == null)
+                    {
+                        r.Fail($"couldn't make a held {type}");
+                        yield break;
+                    }
+                    var ren = held.GetComponent<Renderer>();
+                    if (ren != null)
                     {
                         ren.enabled = false;
                     }
@@ -558,12 +618,24 @@ namespace DarkwoodMP.World
                     AimAt = target;
                     Face(target);
                     yield return new WaitForSeconds(0.3f);
-                    if (dog != null) { target = dog.transform.position; AimAt = target; }
+                    if (dog != null)
+                    {
+                        target = dog.transform.position;
+                        AimAt = target;
+                    }
                     Face(target);
-                    if (held == null || HeldItem(p) != held) { yield return new WaitForSeconds(0.5f); continue; } // put away by a bite
+                    if (held == null || HeldItem(p) != held) // put away by a bite
+                    {
+                        yield return new WaitForSeconds(0.5f);
+                        continue;
+                    }
                     int had = p.currentItem.amount;
                     AsPlayer(() => AttackM.Invoke(p, new object[] { 1f }));
-                    if (HeldItem(p) != null) { r.Fail($"the {type} wasn't thrown (still held)"); yield break; }
+                    if (HeldItem(p) != null)
+                    {
+                        r.Fail($"the {type} wasn't thrown (still held)");
+                        yield break;
+                    }
                     threw = InvItemClass.isNull(p.currentItem) || p.currentItem.amount < had;
                     if (!threw)
                     {
@@ -574,7 +646,11 @@ namespace DarkwoodMP.World
                         yield return new WaitForSeconds(0.5f);
                     }
                 }
-                if (!threw) { r.Fail($"the {type} was never thrown (put away by bites each time)"); yield break; }
+                if (!threw)
+                {
+                    r.Fail($"the {type} was never thrown (put away by bites each time)");
+                    yield break;
+                }
                 _thrown = held;
                 // A gas bomb thrown at a dog right beside us can break on it at once: gone before we look.
                 var ti = held != null ? held.GetComponent<ThrownItem>() : null;
@@ -586,7 +662,11 @@ namespace DarkwoodMP.World
                 r.Info = $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: "
                        + (held == null ? "gone on landing" : $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}");
             }
-            finally { AimAt = null; Restore(); }
+            finally
+            {
+                AimAt = null;
+                Restore();
+            }
             yield return new WaitForSeconds(1f);
         }
 
@@ -600,7 +680,11 @@ namespace DarkwoodMP.World
         {
             string type = a[0], at = a.Length > 1 ? a[1] : "fire", want = a.Length > 2 ? a[2] : "lands";
             var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
-            if (it == null || it.item == null) { r.Fail($"no {type} in the database"); yield break; }
+            if (it == null || it.item == null)
+            {
+                r.Fail($"no {type} in the database");
+                yield break;
+            }
             string prefab = it.item.name;
             var dog = at == "meat" || at == "gun" ? DogOf(at) : null;
             var near = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
@@ -620,7 +704,11 @@ namespace DarkwoodMP.World
                 // It may have been and gone already (a gas bomb or a molotov is destroyed as it breaks): the log says
                 // it came; what it left is looked for where it was thrown.
                 var came = LogSince(_mark, $@"\[world\] .* threw {Regex.Escape(type)}\s*$");
-                if (came.Count == 0) { r.Fail($"no copy of the other player's {type} here (none since i2-note)"); yield break; }
+                if (came.Count == 0)
+                {
+                    r.Fail($"no copy of the other player's {type} here (none since i2-note)");
+                    yield break;
+                }
                 gone = true;
             }
             else
@@ -634,8 +722,16 @@ namespace DarkwoodMP.World
             until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until)
             {
-                if (copy != null) { last = copy.transform.position; landed |= ti != null && ti.onGround; off |= ex != null && ExplodesActivated(ex); }
-                else { landed = off = true; }
+                if (copy != null)
+                {
+                    last = copy.transform.position;
+                    landed |= ti != null && ti.onGround;
+                    off |= ex != null && ExplodesActivated(ex);
+                }
+                else
+                {
+                    landed = off = true;
+                }
                 // (new since i2-note: what earlier throws left there doesn't count)
                 fire = ThrownHits.Spawned.Any(g => g != null && !_spawnedAtNote.Contains(g) && StateDump.Flat(g.transform.position - last) < 400f)
                     || Object.FindObjectsOfType<Burn>().Any(b => b != null && !_burnsAtNote.Contains(b) && b.GetComponent<Player>() == null && StateDump.Flat(b.transform.position - last) < 400f);
@@ -680,7 +776,11 @@ namespace DarkwoodMP.World
         private static IEnumerator HeardStep(string[] a, Result r)
         {
             var d = DogOf(a.Length > 0 ? a[0] : "meat");
-            if (d == null) { r.Fail("no dog"); yield break; }
+            if (d == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             float until = Time.realtimeSinceStartup + 6f;
             while (!Heard.Any(h => h.c == d && !h.dangerous) && Time.realtimeSinceStartup < until)
             {
@@ -699,15 +799,24 @@ namespace DarkwoodMP.World
         private static IEnumerator Eats(string[] a, Result r)
         {
             var d = DogOf(a.Length > 0 ? a[0] : "meat");
-            if (d == null) { r.Fail("no dog"); yield break; }
+            if (d == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             var lure = Object.FindObjectsOfType<Lure>().Where(l => l != null).OrderBy(l => StateDump.Flat(l.transform.position - d.transform.position)).FirstOrDefault();
-            if (lure == null) { r.Fail("no lure here"); yield break; }
+            if (lure == null)
+            {
+                r.Fail("no lure here");
+                yield break;
+            }
             string lname = lure.name;
             bool went = false, ate = false;
             float until = Time.realtimeSinceStartup + 30f;
             while (lure != null && !ate && Time.realtimeSinceStartup < until)
             {
-                went |= d.headingForLure; ate |= d.eating;
+                went |= d.headingForLure;
+                ate |= d.eating;
                 yield return new WaitForSeconds(0.2f);
             }
             // A piece of meat lasts the game a long while (its health is in the thousands, one bite a frame of the
@@ -752,7 +861,11 @@ namespace DarkwoodMP.World
         {
             string name = a.Length > 0 ? a[0] : "meat";
             var d = DogOf(name);
-            if (d == null) { r.Fail("no dog"); yield break; }
+            if (d == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             float was = _noted.TryGetValue(name, out float h) ? h : d.maxHealth;
             bool gas = false;
             float until = Time.realtimeSinceStartup + 6f;
@@ -782,14 +895,30 @@ namespace DarkwoodMP.World
             {
                 // A free slot, else the last one not in hand (its item put back when the lantern comes off).
                 slot = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected) ?? p.Hotbar.slots.LastOrDefault(s => !s.selected);
-                if (slot == null) { r.Fail("no hotbar slot"); yield break; }
+                if (slot == null)
+                {
+                    r.Fail("no hotbar slot");
+                    yield break;
+                }
                 slot.inventory = p.Hotbar;
-                if (!InvItemClass.isNull(slot.invItem)) { _lanternWas = (slot, new InvItemClass(slot.invItem)); slot.removeItem(); }
-                AsPlayer(() => { slot.createItem("lantern", 1); slot.invItem.checkForActiveSwitches(); });
+                if (!InvItemClass.isNull(slot.invItem))
+                {
+                    _lanternWas = (slot, new InvItemClass(slot.invItem));
+                    slot.removeItem();
+                }
+                AsPlayer(() =>
+                {
+                    slot.createItem("lantern", 1);
+                    slot.invItem.checkForActiveSwitches();
+                });
             }
             else if (!on && slot != null)
             {
-                AsPlayer(() => { slot.invItem.deactivateSwitches("lantern"); slot.removeItem(); });
+                AsPlayer(() =>
+                {
+                    slot.invItem.deactivateSwitches("lantern");
+                    slot.removeItem();
+                });
                 if (_lanternWas.slot == slot && _lanternWas.was != null)
                 {
                     slot.createItem(_lanternWas.was);
@@ -863,20 +992,38 @@ namespace DarkwoodMP.World
         private static IEnumerator MapPick(string[] a, Result r)
         {
             var j = Singleton<UI>.Instance.journal;
-            _map = Maps.FirstOrDefault(m => { var ls = PlacesOf(m); return ls.Count > 0 && ls.All(l => !j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name))); });
-            if (_map == null) { r.Fail("every map's places are in the journal already"); yield break; }
+            _map = Maps.FirstOrDefault(m =>
+            {
+                var ls = PlacesOf(m);
+                return ls.Count > 0 && ls.All(l => !j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name)));
+            });
+            if (_map == null)
+            {
+                r.Fail("every map's places are in the journal already");
+                yield break;
+            }
             r.Info = $"{_map}: {string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
         }
 
         /// <summary>"i2-map-use": read the picked map (InvItemClass.use: its places in the journal and on the map).</summary>
         private static IEnumerator MapUse(string[] a, Result r)
         {
-            if (_map == null) { r.Fail("no map picked"); yield break; }
+            if (_map == null)
+            {
+                r.Fail("no map picked");
+                yield break;
+            }
             // In our bags, as a map is read from there (use() takes it out of its slot).
             GiveBag(_map, 1);
             var item = _bagSlot.invItem;
-            try { AsPlayer(() => item.use()); }
-            finally { Restore(); }
+            try
+            {
+                AsPlayer(() => item.use());
+            }
+            finally
+            {
+                Restore();
+            }
             yield return new WaitForSeconds(0.5f);
             var ls = PlacesOf(_map);
             r.Info = $"{_map}: " + string.Join(", ", ls.Select(l => $"{l.name} {(Shown(l) ? "shown" : "hidden")}"));
@@ -889,7 +1036,11 @@ namespace DarkwoodMP.World
         /// <summary>"i2-map-check": the other player's picked map's places are in our journal and shown on our map.</summary>
         private static IEnumerator MapCheck(string[] a, Result r)
         {
-            if (_map == null) { r.Fail("no map picked"); yield break; }
+            if (_map == null)
+            {
+                r.Fail("no map picked");
+                yield break;
+            }
             var ls = PlacesOf(_map);
             float until = Time.realtimeSinceStartup + 12f; // the story state goes out every couple of seconds
             while (!ls.All(Shown) && Time.realtimeSinceStartup < until)

@@ -25,7 +25,10 @@ namespace DarkwoodMP
                     p.WaitForExit(3000);
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[mouse] ydotool {args}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[mouse] ydotool {args}: {e.Message}");
+            }
         }
 
         /// <summary>Where the game sees the mouse, in screen pixels from the top left (as IMGUI's screen points).</summary>
@@ -37,11 +40,19 @@ namespace DarkwoodMP
             for (int i = 0; i < 30; i++)
             {
                 var d = target - Now;
-                if (d.magnitude <= 1.5f) { done?.Invoke(true); yield break; }
+                if (d.magnitude <= 1.5f)
+                {
+                    done?.Invoke(true);
+                    yield break;
+                }
                 // Accelerated moves overshoot the long way: go half of it, then the rest in small steps.
                 float k = d.magnitude > 40f ? 0.5f : 1f;
                 int dx = Mathf.RoundToInt(d.x * k), dy = Mathf.RoundToInt(d.y * k);
-                if (dx == 0 && dy == 0) { dx = (int)Mathf.Sign(d.x); dy = (int)Mathf.Sign(d.y); }
+                if (dx == 0 && dy == 0)
+                {
+                    dx = (int)Mathf.Sign(d.x);
+                    dy = (int)Mathf.Sign(d.y);
+                }
                 Run($"mousemove -x {dx} -y {dy}");
                 yield return new WaitForSecondsRealtime(0.12f);
                 if (i < 3 || i % 10 == 9)
@@ -58,9 +69,13 @@ namespace DarkwoodMP
         public static IEnumerator Click()
         {
             Run("click 0x40");
-            yield return null; yield return null; yield return null;
+            yield return null;
+            yield return null;
+            yield return null;
             Run("click 0x80");
-            yield return null; yield return null; yield return null;
+            yield return null;
+            yield return null;
+            yield return null;
         }
     }
 }

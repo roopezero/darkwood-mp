@@ -96,8 +96,15 @@ namespace DarkwoodMP.World
                     }
                     a.Result = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(a.Text);
                 }
-                catch { a.Result = null; } // encrypted, or something that needs the main thread: Load parses it
-            }) { IsBackground = true, Name = "DarkwoodMP save parse" };
+                catch
+                {
+                    a.Result = null; // encrypted, or something that needs the main thread: Load parses it
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "DarkwoodMP save parse"
+            };
             a.Thread.Start();
             return a;
         }
@@ -107,11 +114,17 @@ namespace DarkwoodMP.World
 
         private static T Take<T>(ref Ahead<T> slot, string text) where T : class
         {
-            var a = slot; slot = null; // each parse is used once: a later Load (the backup file) parses itself
+            // each parse is used once: a later Load (the backup file) parses itself
+            var a = slot;
+            slot = null;
             if (a != null)
             {
                 a.Thread.Join();
-                if (a.Result != null && string.Equals(a.Text, text, StringComparison.Ordinal)) { AheadUsed++; return a.Result; }
+                if (a.Result != null && string.Equals(a.Text, text, StringComparison.Ordinal))
+                {
+                    AheadUsed++;
+                    return a.Result;
+                }
                 AheadMissed++;
             }
             return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(text);
@@ -126,11 +139,19 @@ namespace DarkwoodMP.World
         internal static UnityEngine.Object Prefab(string path)
         {
             PrefabLookups++;
-            if (!_prefabs.TryGetValue(path, out var o) || o == null) { _prefabs[path] = o = Resources.Load("Prefabs/" + path); PrefabLoads++; }
+            if (!_prefabs.TryGetValue(path, out var o) || o == null)
+            {
+                _prefabs[path] = o = Resources.Load("Prefabs/" + path);
+                PrefabLoads++;
+            }
             return o;
         }
 
-        internal static void LoadStarted() { Loading = true; PrefabLookups = PrefabLoads = 0; }
+        internal static void LoadStarted()
+        {
+            Loading = true;
+            PrefabLookups = PrefabLoads = 0;
+        }
 
         internal static void LoadEnded()
         {
@@ -152,8 +173,18 @@ namespace DarkwoodMP.World
         private static Dictionary<long, List<int>> _cells;
         private static float _cell;
 
-        internal static void BeginBatch() { Batch = true; _grid = null; }
-        internal static void EndBatch() { Batch = false; _grid = null; _listed = null; _cells = null; }
+        internal static void BeginBatch()
+        {
+            Batch = true;
+            _grid = null;
+        }
+        internal static void EndBatch()
+        {
+            Batch = false;
+            _grid = null;
+            _listed = null;
+            _cells = null;
+        }
 
         private static CullableObject CullableOf(GameObject go)
         {
@@ -263,7 +294,11 @@ namespace DarkwoodMP.World
                     for (int i = 0; i < across * down; i++)
                     {
                         float px = corner.x + d * (i % across), pz = corner.z + d * (i / across);
-                        if (Mathf.Abs(px - np.x) <= half && Mathf.Abs(pz - np.y) <= half) { expected.Add(n); break; }
+                        if (Mathf.Abs(px - np.x) <= half && Mathf.Abs(pz - np.y) <= half)
+                        {
+                            expected.Add(n);
+                            break;
+                        }
                     }
                 }
                 Checked++;
@@ -301,11 +336,16 @@ namespace DarkwoodMP.World
             }
             Vector3 pos = GO.transform.position;
             var at = new Vector2(pos.x, pos.z);
-            int index = 0; float best = 10000f;
+            int index = 0;
+            float best = 10000f;
             for (int i = 0; i < nodes.Count; i++)
             {
                 float dist = Vector2.Distance(at, nodes[i].position);
-                if (dist < best) { best = dist; index = i; }
+                if (dist < best)
+                {
+                    best = dist;
+                    index = i;
+                }
             }
             nodes[index].cullables.Add(new WorldGrid.Cullable(GO));
             return false;
@@ -377,7 +417,11 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < _grid.nodes.Count; i++)
                 {
                     var np = _grid.nodes[i].position;
-                    if (Mathf.Abs(pos.x - np.x) <= half && Mathf.Abs(pos.z - np.y) <= half) { expected = i; break; }
+                    if (Mathf.Abs(pos.x - np.x) <= half && Mathf.Abs(pos.z - np.y) <= half)
+                    {
+                        expected = i;
+                        break;
+                    }
                 }
                 Checked++;
                 if (expected != best)
@@ -432,8 +476,16 @@ namespace DarkwoodMP.World
                              && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string))
                     {
                         var t = m.GetGenericArguments()[0];
-                        if (t == typeof(SaveManager.DynamicSave)) { ins.operand = dyn; parses++; }
-                        else if (t == typeof(SaveManager.StaticSave)) { ins.operand = stat; parses++; }
+                        if (t == typeof(SaveManager.DynamicSave))
+                        {
+                            ins.operand = dyn;
+                            parses++;
+                        }
+                        else if (t == typeof(SaveManager.StaticSave))
+                        {
+                            ins.operand = stat;
+                            parses++;
+                        }
                     }
                 }
                 yield return ins;
@@ -497,7 +549,11 @@ namespace DarkwoodMP.World
     static class GridRegisterBatchPatch
     {
         static void Prefix() => LoadSpeed.BeginBatch();
-        static Exception Finalizer(Exception __exception) { LoadSpeed.EndBatch(); return __exception; }
+        static Exception Finalizer(Exception __exception)
+        {
+            LoadSpeed.EndBatch();
+            return __exception;
+        }
     }
 
     [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToNodes), new[] { typeof(GameObject), typeof(Vector2), typeof(WorldGrid.Cullable.Type) })]
@@ -509,8 +565,16 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            try { return LoadSpeed.RegisterToNodes(__instance, GO, size, type); }
-            catch (Exception e) { Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNodes instead"); LoadSpeed.EndBatch(); return true; }
+            try
+            {
+                return LoadSpeed.RegisterToNodes(__instance, GO, size, type);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNodes instead");
+                LoadSpeed.EndBatch();
+                return true;
+            }
         }
     }
 
@@ -529,8 +593,16 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            try { return LoadSpeed.RegisterToNode(__instance, GO, type); }
-            catch (Exception e) { Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNode instead"); LoadSpeed.EndBatch(); return true; }
+            try
+            {
+                return LoadSpeed.RegisterToNode(__instance, GO, type);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNode instead");
+                LoadSpeed.EndBatch();
+                return true;
+            }
         }
     }
 }

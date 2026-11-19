@@ -105,8 +105,10 @@ namespace DarkwoodMP.Combat
         /// <summary>Whether a spot is in the beam of a flashlight held by a player standing as `root` (players are rotated Euler(90, yaw, 0): local up is ahead).</summary>
         internal static bool InBeam(Transform root, Vector3 pos, out float ahead, out float aside)
         {
-            Vector3 fwd = root.TransformDirection(Vector3.up); fwd.y = 0f;
-            Vector3 rel = pos - root.position; rel.y = 0f;
+            Vector3 fwd = root.TransformDirection(Vector3.up);
+            fwd.y = 0f;
+            Vector3 rel = pos - root.position;
+            rel.y = 0f;
             ahead = aside = 0f;
             if (fwd.sqrMagnitude < 0.01f)
             {

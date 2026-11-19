@@ -35,7 +35,13 @@ namespace DarkwoodMP.Combat
 
         public static void Register(Session s) => s.Register(MsgType.EnemyExplosion, OnExplosion);
 
-        public static void Clear() { EnemySpawned.Clear(); PlayerSpawned.Clear(); EnemyDepth = 0; PlayerDepth = 0; }
+        public static void Clear()
+        {
+            EnemySpawned.Clear();
+            PlayerSpawned.Clear();
+            EnemyDepth = 0;
+            PlayerDepth = 0;
+        }
 
         private static bool Hosting => Proxies.Any && (Session.Instance == null || !Session.Instance.IsClient);
 
@@ -218,8 +224,15 @@ namespace DarkwoodMP.Combat
             // Only the look: anything in it that could hurt counts as part of an explosion (the host already dealt it).
             WorldActions.Replaying = true;
             ThrownHits.Depth++;
-            try { Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true); }
-            finally { ThrownHits.Depth--; WorldActions.Replaying = false; }
+            try
+            {
+                Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
+            }
+            finally
+            {
+                ThrownHits.Depth--;
+                WorldActions.Replaying = false;
+            }
         }
 
         /// <summary>An explosion prefab by name, among the assets this game has loaded (the enemy that throws it is here too).</summary>
@@ -237,7 +250,10 @@ namespace DarkwoodMP.Combat
             foreach (var g in Resources.FindObjectsOfTypeAll<GameObject>())
             {
                 if (g != null && g.name == name && !g.scene.IsValid() && g.transform.parent == null)
-                { go = g; break; }
+                {
+                    go = g;
+                    break;
+                }
             }
             if (go == null)
             {
@@ -396,10 +412,14 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                ex.explosionPrefab = real.explosionPrefab; ex.explodeSound = real.explodeSound;
+                ex.explosionPrefab = real.explosionPrefab;
+                ex.explodeSound = real.explodeSound;
                 break;
             }
-            ex.radius = 300f; ex.damage = 30f; ex.affectsPlayer = true; ex.effect = new InvItemEffect();
+            ex.radius = 300f;
+            ex.damage = 30f;
+            ex.affectsPlayer = true;
+            ex.effect = new InvItemEffect();
             EnemyAreaHits.MarkEnemy(go);
             Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({(ex.explosionPrefab != null ? ex.explosionPrefab.name : "no flash")}) beside {p.OwnerName}");
             ex.onActivate();
@@ -410,13 +430,23 @@ namespace DarkwoodMP.Combat
             var c = NearestEnemy(at);
             if (c != null)
             {
-                string name = c.name; int dmg = c.aroundMeDamage; float range = c.aroundMeDamageRange;
+                string name = c.name;
+                int dmg = c.aroundMeDamage;
+                float range = c.aroundMeDamageRange;
                 c.name = "DarkwoodMP_TestAura";
                 c.aroundMeDamage = 6;
                 c.aroundMeDamageRange = 2f * Core.trueDistance(c.transform.position, p.transform.position) + 200f;
                 Plugin.Log.LogInfo($"--dwmp-test-blast: {name}'s damage aura");
-                try { AuraTick.Invoke(c, null); }
-                finally { c.name = name; c.aroundMeDamage = dmg; c.aroundMeDamageRange = range; }
+                try
+                {
+                    AuraTick.Invoke(c, null);
+                }
+                finally
+                {
+                    c.name = name;
+                    c.aroundMeDamage = dmg;
+                    c.aroundMeDamageRange = range;
+                }
             }
             else
             {

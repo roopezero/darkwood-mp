@@ -52,7 +52,12 @@ namespace DarkwoodMP.World
                     _talkers.Remove(k);
                 }
             };
-            s.OnSessionEnded += () => { _talkers.Clear(); _released.Clear(); _ours = null; };
+            s.OnSessionEnded += () =>
+            {
+                _talkers.Clear();
+                _released.Clear();
+                _ours = null;
+            };
             // The world unloaded during our dialogue (a death, a reload, a dialogue that ends the chapter): the window's
             // close never ran, so let the NPC go, or every other player would be told we're still talking to them.
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ =>
@@ -121,8 +126,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            _ours = npc; _oursRef = r; _oursName = UniqueName(npc);
-            if (S.IsHost) { _talkers[Key(r, _oursName)] = S.LocalId; return; }
+            _ours = npc;
+            _oursRef = r;
+            _oursName = UniqueName(npc);
+            if (S.IsHost)
+            {
+                _talkers[Key(r, _oursName)] = S.LocalId;
+                return;
+            }
             var w = S.Begin(MsgType.TalkLock);
             r.Write(w);
             w.W.Write((byte)1);
@@ -145,7 +156,9 @@ namespace DarkwoodMP.World
             }
             var r = _oursRef;
             string name = _oursName;
-            _ours = null; _oursRef = default; _oursName = "";
+            _ours = null;
+            _oursRef = default;
+            _oursName = "";
             var s = S;
             if (s == null || !r.Valid)
             {
@@ -153,7 +166,11 @@ namespace DarkwoodMP.World
             }
             // What the dialogue did goes first, so it's there before the NPC is free for the next player.
             FlagsSync.Instance?.FlushNow();
-            if (s.IsHost) { Release(Key(r, name), s.LocalId); return; }
+            if (s.IsHost)
+            {
+                Release(Key(r, name), s.LocalId);
+                return;
+            }
             if (!Combat.NetEnemies.ClientMode)
             {
                 return;
@@ -168,7 +185,12 @@ namespace DarkwoodMP.World
         /// <summary>Joiner: the host said someone else talks to them: close our dialogue (once it has finished opening).</summary>
         private static void Refused(NPC npc, string reason)
         {
-            if (_ours == npc) { _ours = null; _oursRef = default; _oursName = ""; } // nothing of ours to let go
+            if (_ours == npc) // nothing of ours to let go
+            {
+                _ours = null;
+                _oursRef = default;
+                _oursName = "";
+            }
             Player.Instance?.displayMessage(reason);
             CloseWhenReady(npc, 40);
         }
@@ -211,9 +233,17 @@ namespace DarkwoodMP.World
             var obj = ObjRef.Read(r);
             bool talking = r.R.ReadByte() != 0;
             string key = Key(obj, r.ReadStr());
-            if (!talking) { Release(key, from); return; }
+            if (!talking)
+            {
+                Release(key, from);
+                return;
+            }
             string other = TalkingOther(key, from);
-            if (other != null) { Authority.Refuse($"{other} is talking to them"); return; }
+            if (other != null)
+            {
+                Authority.Refuse($"{other} is talking to them");
+                return;
+            }
             if (_released.TryGetValue(key, out var rel) && rel.Key != from && UnityEngine.Time.unscaledTime - rel.Value < Grace)
             {
                 Authority.Refuse($"{s.NameOf(rel.Key)} just talked to them: try again in a moment");

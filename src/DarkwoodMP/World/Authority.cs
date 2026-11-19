@@ -70,8 +70,14 @@ namespace DarkwoodMP.World
             _bareWarned.Clear();
             foreach (var p in left)
             {
-                try { p.Done?.Invoke(false, "the session ended", ""); }
-                catch (Exception e) { Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}"); }
+                try
+                {
+                    p.Done?.Invoke(false, "the session ended", "");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}");
+                }
             }
             InventoryWatch.Reset();
         }
@@ -116,7 +122,11 @@ namespace DarkwoodMP.World
                 return;
             }
             int n = message.Length;
-            if (n > _copy.Length) { Plugin.Log.LogWarning($"Request too long: {what}"); return; }
+            if (n > _copy.Length)
+            {
+                Plugin.Log.LogWarning($"Request too long: {what}");
+                return;
+            }
             Buffer.BlockCopy(message.Buffer, 0, _copy, 0, n);
             uint seq = ++_seq;
             _pending[seq] = new Pending { What = what, At = Time.realtimeSinceStartup, Inventory = inventory ? InventoryWatch.TakeChange() : null, Done = done };
@@ -156,8 +166,14 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[authority] {p.What}: ok{(result.Length > 0 ? " (" + result + ")" : "")} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
             }
-            try { p.Done?.Invoke(ok, reason, result); }
-            catch (Exception e) { Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}"); }
+            try
+            {
+                p.Done?.Invoke(ok, reason, result);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[authority] after {p.What}: {e.Message}");
+            }
         }
 
         // ---- host -----------------------------------------------------------------------------------
@@ -195,7 +211,10 @@ namespace DarkwoodMP.World
             }
             uint seq = r.R.ReadUInt32();
             byte[] inner = r.R.ReadBytes(1 << 16);
-            Handling = true; From = from; _refusal = null; _result = "";
+            Handling = true;
+            From = from;
+            _refusal = null;
+            _result = "";
             try
             {
                 if (inner.Length == 0 || (MsgType)inner[0] == MsgType.Request)
@@ -207,8 +226,14 @@ namespace DarkwoodMP.World
                     s.Handle(from, inner, inner.Length);
                 }
             }
-            catch (Exception e) { Refuse("error: " + e.Message); }
-            finally { Handling = false; }
+            catch (Exception e)
+            {
+                Refuse("error: " + e.Message);
+            }
+            finally
+            {
+                Handling = false;
+            }
             var w = s.Begin(MsgType.Verdict);
             w.W.Write(seq);
             w.W.Write((byte)(_refusal == null ? 1 : 0));
@@ -302,7 +327,11 @@ namespace DarkwoodMP.World
         /// <summary>Every frame (late): remember what the player carries now.</summary>
         public static void LateUpdate()
         {
-            if (!NetEnemies.ClientMode || !WorldShare.InWorld) { _base = null; return; }
+            if (!NetEnemies.ClientMode || !WorldShare.InWorld)
+            {
+                _base = null;
+                return;
+            }
             _base = Count();
         }
 
@@ -310,7 +339,11 @@ namespace DarkwoodMP.World
         public static Dictionary<string, int> TakeChange()
         {
             var now = Count();
-            if (now == null || _base == null) { _base = now; return null; }
+            if (now == null || _base == null)
+            {
+                _base = now;
+                return null;
+            }
             var change = new Dictionary<string, int>();
             foreach (var kv in now)
             {
@@ -353,7 +386,10 @@ namespace DarkwoodMP.World
                     }
                     Plugin.Log.LogInfo($"[authority] {(kv.Value < 0 ? "gave back" : "took back")} {Math.Abs(kv.Value)} {kv.Key}");
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"[authority] couldn't undo {kv.Value} {kv.Key}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[authority] couldn't undo {kv.Value} {kv.Key}: {e.Message}");
+                }
             }
             _base = Count();
         }

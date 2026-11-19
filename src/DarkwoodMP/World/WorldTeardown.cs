@@ -37,13 +37,22 @@ namespace DarkwoodMP.World
     }
 
     [HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
-    static class TeardownMenuPatch { static void Prefix() => WorldTeardown.Begin(); }
+    static class TeardownMenuPatch
+    {
+        static void Prefix() => WorldTeardown.Begin();
+    }
 
     [HarmonyPatch(typeof(Core), nameof(Core.restartGame))]
-    static class TeardownRestartPatch { static void Prefix() => WorldTeardown.Begin(); }
+    static class TeardownRestartPatch
+    {
+        static void Prefix() => WorldTeardown.Begin();
+    }
 
     [HarmonyPatch(typeof(Controller), nameof(Controller.generateChapter))]
-    static class TeardownChapterPatch { static void Prefix() => WorldTeardown.Begin(); }
+    static class TeardownChapterPatch
+    {
+        static void Prefix() => WorldTeardown.Begin();
+    }
 
     /// <summary>
     /// A character destroyed with its world does only what outlives the world (a static flag, sounds the

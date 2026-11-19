@@ -515,7 +515,10 @@ namespace DarkwoodMP.Net
         private readonly MemoryStream _ms = new MemoryStream(1024);
         private readonly BinaryWriter _w;
 
-        public PacketWriter() { _w = new BinaryWriter(_ms, Encoding.UTF8); }
+        public PacketWriter()
+        {
+            _w = new BinaryWriter(_ms, Encoding.UTF8);
+        }
 
         public PacketWriter Begin(MsgType type)
         {
@@ -528,7 +531,12 @@ namespace DarkwoodMP.Net
         public byte[] Buffer => _ms.GetBuffer();
         public int Length => (int)_ms.Length;
 
-        public void Write(Vector3 v) { _w.Write(v.x); _w.Write(v.y); _w.Write(v.z); }
+        public void Write(Vector3 v)
+        {
+            _w.Write(v.x);
+            _w.Write(v.y);
+            _w.Write(v.z);
+        }
 
         /// <summary>str: u16 length, then that many UTF-8 bytes. Longer text is cut (and logged): use WriteBigStr for JSON.</summary>
         public void WriteStr(string s)
@@ -602,7 +610,11 @@ namespace DarkwoodMP.Net
             unchecked
             {
                 uint h = 2166136261;
-                for (int i = 0; i < s.Length; i++) { h ^= s[i]; h *= 16777619; }
+                for (int i = 0; i < s.Length; i++)
+                {
+                    h ^= s[i];
+                    h *= 16777619;
+                }
                 return (int)h;
             }
         }

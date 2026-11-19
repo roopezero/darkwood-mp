@@ -195,7 +195,11 @@ namespace DarkwoodMP.Net
 
         private void Received(ulong from, byte[] data, int length)
         {
-            if (LagSecs <= 0f) { Dispatch(from, data, length); return; }
+            if (LagSecs <= 0f)
+            {
+                Dispatch(from, data, length);
+                return;
+            }
             var copy = new byte[length];
             Buffer.BlockCopy(data, 0, copy, 0, length);
             _late.Enqueue((UnityEngine.Time.unscaledTime + LagSecs, from, copy));
@@ -307,7 +311,9 @@ namespace DarkwoodMP.Net
                 Plugin.Log.LogInfo($"{NameOf(from)} sent Hello again: joining them anew");
                 OnPeerLost(from);
             }
-            ushort version; string game, key, password, modVersion, name; byte[] worldHash;
+            ushort version;
+            string game, key, password, modVersion, name;
+            byte[] worldHash;
             try
             {
                 version = r.R.ReadUInt16();
@@ -331,14 +337,21 @@ namespace DarkwoodMP.Net
                 : key.Length < 32 ? "Bad player key."
                 : Keys.TryGetValue(LocalId, out var hostKey) && hostKey == key ? "You're already playing on this server."
                 : null;
-            if (why != null) { Refuse(from, why); return; }
+            if (why != null)
+            {
+                Refuse(from, why);
+                return;
+            }
             // The same player on a new connection: their old one broke without closing (Wi-Fi dropped, a crash).
             // The new one wins, so they don't wait for the old one to time out.
             ulong old = 0;
             foreach (var kv in Keys)
             {
                 if (kv.Value == key && kv.Key != from)
-                { old = kv.Key; break; }
+                {
+                    old = kv.Key;
+                    break;
+                }
             }
             if (old != 0)
             {
@@ -346,7 +359,11 @@ namespace DarkwoodMP.Net
                 Backend.Kick(old);
                 OnPeerLost(old);
             }
-            if (PlayerCount >= Backend.MaxPlayers) { Refuse(from, "The server is full."); return; }
+            if (PlayerCount >= Backend.MaxPlayers)
+            {
+                Refuse(from, "The server is full.");
+                return;
+            }
             // Tell everyone at once that someone is on the way in: getting the world to them can take a while.
             if (!_joining.ContainsKey(from))
             {
@@ -489,8 +506,14 @@ namespace DarkwoodMP.Net
         private void Dispatch(ulong from, byte[] data, int length)
         {
             PacketReader r;
-            try { r = new PacketReader(data, length); }
-            catch { return; }
+            try
+            {
+                r = new PacketReader(data, length);
+            }
+            catch
+            {
+                return;
+            }
             // Only the handshake (and fetching the world it offers) may come from someone not yet admitted.
             if (IsHost && r.Type != MsgType.Hello && r.Type != MsgType.NeedSave && !Peers.Contains(from))
             {
@@ -500,11 +523,21 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
-            if (!IsHost && from == HostId) { _helloAt = -1f; _heardHostAt = Now; } // anything from the host answers our Hello
+            if (!IsHost && from == HostId) // anything from the host answers our Hello
+            {
+                _helloAt = -1f;
+                _heardHostAt = Now;
+            }
             if (_handlers.TryGetValue(r.Type, out var h))
             {
-                try { h(from, r); }
-                catch (Exception e) { Plugin.Log.LogError($"Error handling {r.Type} from #{from}: {e}"); }
+                try
+                {
+                    h(from, r);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError($"Error handling {r.Type} from #{from}: {e}");
+                }
             }
             else
             {

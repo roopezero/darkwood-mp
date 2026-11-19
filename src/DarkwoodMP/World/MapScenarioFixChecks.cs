@@ -119,7 +119,12 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The enemy's net id, or 0 if it has none.</summary>
-        internal static uint IdOf(Character c) { uint id = 0; NetEnemies.Instance?.NetIdOf(c, out id); return id; }
+        internal static uint IdOf(Character c)
+        {
+            uint id = 0;
+            NetEnemies.Instance?.NetIdOf(c, out id);
+            return id;
+        }
 
         /// <summary>A character of this type (not nocturnal, not sent at the player) on the free spot nearest `at`.</summary>
         internal static Character SpawnAt(Vector3 at, string type = "Dog")
@@ -177,10 +182,18 @@ namespace DarkwoodMP.World
         private static IEnumerator FxSpawn(string[] a, Result r)
         {
             var c = SpawnAt(Spot("fx"));
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             _fx = c;
             yield return new WaitForSeconds(1.5f);
-            if (a.Contains("predeath")) { c.hasPreDeath = true; c.preDeathMaxHealth = 40f; }
+            if (a.Contains("predeath"))
+            {
+                c.hasPreDeath = true;
+                c.preDeathMaxHealth = 40f;
+            }
             _fxHealth = c.health;
             r.Info = $"{c.name} #{IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}/{c.maxHealth}, preDeath {c.hasPreDeath}";
         }
@@ -200,7 +213,11 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(0.3f);
                 }
             }
-            if (c == null) { r.Fail("no copy of the host's dog here"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no copy of the host's dog here");
+                yield break;
+            }
             _fxId = IdOf(c);
             yield return Walk(c.transform.position, 90f);
             float before = c.health;
@@ -243,7 +260,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FxHurt(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.3f);
-            if (_fx == null) { r.Fail("no dog (fx-spawn first)"); yield break; }
+            if (_fx == null)
+            {
+                r.Fail("no dog (fx-spawn first)");
+                yield break;
+            }
             var bar = Singleton<UI>.Instance.enemyHealthBar;
             r.Info = $"{_fx.name}: health {_fxHealth:0} -> {_fx.health:0}, our bar on it {bar.currentObj == _fx.gameObject}";
             if (!(_fx.health < _fxHealth))
@@ -259,7 +280,11 @@ namespace DarkwoodMP.World
         /// <summary>"fx-predeath" (host): our player brings the dog down to its pre-death stage (43): not alive, still in play.</summary>
         private static IEnumerator FxPreDeath(string[] a, Result r)
         {
-            if (_fx == null) { r.Fail("no dog"); yield break; }
+            if (_fx == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             var c = _fx;
             AsPlayer(() => c.getHit(c.health + 5f, P.transform, false, true, false, true, false, false, false));
             yield return new WaitForSeconds(1f);
@@ -281,11 +306,19 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             yield return new WaitForSeconds(1f);
             var c = ById(_fxId);
-            if (c == null) { r.Fail($"no copy of the dog #{_fxId} here (fx-hit first)"); yield break; }
+            if (c == null)
+            {
+                r.Fail($"no copy of the dog #{_fxId} here (fx-hit first)");
+                yield break;
+            }
             uint id = IdOf(c);
             bool settled = MapScenarioIssues.LogLines().Skip(mark).Any(l => l.Contains($"#{id} died"));
             string crawl = $"{c.name} #{id}: alive {c.alive}, health {c.health:0} of {c.maxHealth:0}, settled {settled}";
-            if (!c.alive || settled) { r.Fail($"it's a corpse here while it crawls on the host: {crawl}"); yield break; }
+            if (!c.alive || settled)
+            {
+                r.Fail($"it's a corpse here while it crawls on the host: {crawl}");
+                yield break;
+            }
             int hits = 0;
             while (c != null && c.alive && hits < 12)
             {
@@ -306,7 +339,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FxDead(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.5f);
-            if (_fx == null) { r.Fail("no dog"); yield break; }
+            if (_fx == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             r.Info = $"{_fx.name}: alive {_fx.alive}, health {_fx.health:0}, in play {NetEnemies.InPlay(_fx)}";
             if (NetEnemies.InPlay(_fx))
             {
@@ -328,7 +365,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.5f);
             }
-            if (c == null || c.alive) { r.Fail($"the dog #{_fxId} isn't dead here"); yield break; }
+            if (c == null || c.alive)
+            {
+                r.Fail($"the dog #{_fxId} isn't dead here");
+                yield break;
+            }
             yield return new WaitForSeconds(1.5f); // the shadow's fade takes a second
             var sp = c.shadow != null ? c.shadow.GetComponent<tk2dBaseSprite>() : null;
             int emitting = c.GetComponentsInChildren<ParticleSystem>().Count(ps => ps != null && ps.isEmitting);
@@ -368,9 +409,17 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
-            if (host == null) { r.Fail($"none of {string.Join(", ", SwitchHosts)} here"); yield break; }
+            if (host == null)
+            {
+                r.Fail($"none of {string.Join(", ", SwitchHosts)} here");
+                yield break;
+            }
             var tex = Resources.LoadAll<Texture2D>("InteractiveItems/Textures");
-            if (tex == null || tex.Length == 0) { r.Fail("no InteractiveItems textures"); yield break; }
+            if (tex == null || tex.Length == 0)
+            {
+                r.Fail("no InteractiveItems textures");
+                yield break;
+            }
             var ii = host.GetComponent<InteractiveItem>() ?? host.gameObject.AddComponent<InteractiveItem>();
             ii.textureOn = tex[0].name;
             ii.textureOff = tex[tex.Length > 1 ? 1 : 0].name;
@@ -406,11 +455,20 @@ namespace DarkwoodMP.World
         /// <summary>"ii-switch on|off": our player switches it (InteractiveItem.switchMe from its window); its trigger fires here.</summary>
         private static IEnumerator IiSwitch(string[] a, Result r)
         {
-            if (_ii == null) { r.Fail("no switch (ii-setup first)"); yield break; }
+            if (_ii == null)
+            {
+                r.Fail("no switch (ii-setup first)");
+                yield break;
+            }
             bool on = a.Length == 0 || a[0] == "on";
             yield return Walk(_ii.transform.position);
-            if (_ii.isOn == on) { r.Fail($"it's already {(on ? "on" : "off")} here"); yield break; }
-            _onT.fired = false; _offT.fired = false;
+            if (_ii.isOn == on)
+            {
+                r.Fail($"it's already {(on ? "on" : "off")} here");
+                yield break;
+            }
+            _onT.fired = false;
+            _offT.fired = false;
             AsPlayer(() => _ii.switchMe());
             HideSwitchWindow();
             yield return new WaitForSeconds(1f);
@@ -430,7 +488,11 @@ namespace DarkwoodMP.World
         /// <summary>"ii-check on|off [--fired|--not-fired]": the other player's switch reached us; whether its trigger fired here.</summary>
         private static IEnumerator IiCheck(string[] a, Result r)
         {
-            if (_ii == null) { r.Fail("no switch (ii-setup first)"); yield break; }
+            if (_ii == null)
+            {
+                r.Fail("no switch (ii-setup first)");
+                yield break;
+            }
             bool on = a.Length == 0 || a[0] == "on";
             float until = Time.realtimeSinceStartup + 4f;
             while (_ii.isOn != on && Time.realtimeSinceStartup < until)
@@ -452,7 +514,8 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"its events ran here too: {r.Info}");
             }
-            _onT.fired = false; _offT.fired = false;
+            _onT.fired = false;
+            _offT.fired = false;
         }
 
         // ---- 40: a held throwable dropped -------------------------------------------------------------------------------
@@ -489,16 +552,30 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) { r.Fail($"couldn't take the {type} out"); yield break; }
-            if (!p.currentItem.baseClass.isThrowable) { r.Fail($"a {type} isn't throwable"); yield break; }
+            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            {
+                r.Fail($"couldn't take the {type} out");
+                yield break;
+            }
+            if (!p.currentItem.baseClass.isThrowable)
+            {
+                r.Fail($"a {type} isn't throwable");
+                yield break;
+            }
             // As Player's aim does for a throwable.
             var held = Core.AddPrefab(p.currentItem.baseClass.item, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), p.gameObject);
-            if (held == null) { r.Fail($"couldn't make a held {type}"); yield break; }
-            var ren = held.GetComponent<Renderer>(); if (ren != null)
+            if (held == null)
+            {
+                r.Fail($"couldn't make a held {type}");
+                yield break;
+            }
+            var ren = held.GetComponent<Renderer>();
+            if (ren != null)
             {
                 ren.enabled = false;
             }
-            var hc = held.GetComponent<Collider>(); var pc = p.GetComponent<Collider>();
+            var hc = held.GetComponent<Collider>();
+            var pc = p.GetComponent<Collider>();
             if (hc != null && pc != null)
             {
                 Physics.IgnoreCollision(hc, pc);
@@ -521,7 +598,11 @@ namespace DarkwoodMP.World
         {
             string type = a.Length > 0 ? a[0] : "flare";
             var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
-            if (it == null || it.item == null) { r.Fail($"no {type} in the database"); yield break; }
+            if (it == null || it.item == null)
+            {
+                r.Fail($"no {type} in the database");
+                yield break;
+            }
             string prefab = it.item.name;
             GameObject found = null;
             float until = Time.realtimeSinceStartup + 4f;
@@ -534,7 +615,11 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(0.3f);
                 }
             }
-            if (found == null) { r.Fail($"no copy of a dropped {type} ({prefab}) by the drop spot here"); yield break; }
+            if (found == null)
+            {
+                r.Fail($"no copy of a dropped {type} ({prefab}) by the drop spot here");
+                yield break;
+            }
             var ti = found.GetComponent<ThrownItem>();
             var rb = found.GetComponent<Rigidbody>();
             r.Info = $"{found.name} at {Fmt(found.transform.position)}: on the ground {(ti != null && ti.onGround)}, speed {(rb != null ? rb.velocity.magnitude : 0f):0}";
@@ -552,10 +637,18 @@ namespace DarkwoodMP.World
         private static IEnumerator NearJoiner(string[] a, Result r)
         {
             var other = Other();
-            if (other == null) { r.Fail("no proxy for the client"); yield break; }
+            if (other == null)
+            {
+                r.Fail("no proxy for the client");
+                yield break;
+            }
             var near = SpawnAt(Spot("near"));
             var far = SpawnAt(Spot("far"));
-            if (near == null || far == null) { r.Fail("couldn't spawn the dogs"); yield break; }
+            if (near == null || far == null)
+            {
+                r.Fail("couldn't spawn the dogs");
+                yield break;
+            }
             yield return new WaitForSeconds(1f);
             float dn = Core.trueDistance(other.position, near.transform.position), df = Core.trueDistance(other.position, far.transform.position);
             float hn = Core.trueDistance(P.transform.position, near.transform.position), hf = Core.trueDistance(P.transform.position, far.transform.position);
@@ -583,7 +676,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FxInside(string[] a, Result r)
         {
             var spot = Inside();
-            if (!spot.HasValue) { r.Fail("no inside ground near the centre"); yield break; }
+            if (!spot.HasValue)
+            {
+                r.Fail("no inside ground near the centre");
+                yield break;
+            }
             yield return Walk(spot.Value, 20f);
             yield return new WaitForSeconds(1f);
             r.Info = $"at {Fmt(P.transform.position)}: inside {P.isInside} (ground there {JoinerAi.InsideAt(P.transform.position)})";
@@ -595,7 +692,8 @@ namespace DarkwoodMP.World
 
         private static Vector3? Inside()
         {
-            Vector3? best = null; float bd = float.MaxValue;
+            Vector3? best = null;
+            float bd = float.MaxValue;
             foreach (var g in Object.FindObjectsOfType<Ground>())
             {
                 if (g == null || !g.isInside)
@@ -607,9 +705,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                var c = col.bounds.center; c.y = P.transform.position.y;
+                var c = col.bounds.center;
+                c.y = P.transform.position.y;
                 float d = StateDump.Flat(c - Centre);
-                if (d < bd && JoinerAi.InsideAt(c)) { bd = d; best = c; }
+                if (d < bd && JoinerAi.InsideAt(c))
+                {
+                    bd = d;
+                    best = c;
+                }
             }
             return best;
         }
@@ -622,9 +725,17 @@ namespace DarkwoodMP.World
         {
             bool leaves = a.Length == 0 || a[0] == "leaves";
             NetPlayerProxy proxy = NetPlayerProxy.All.Values.FirstOrDefault(x => x != null);
-            if (proxy == null) { r.Fail("no proxy"); yield break; }
+            if (proxy == null)
+            {
+                r.Fail("no proxy");
+                yield break;
+            }
             var c = SpawnAt(Spot("spirit"));
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             yield return new WaitForSeconds(1.5f);
             bool clientInside = JoinerAi.InsideAt(proxy.transform.position);
             string state = $"client inside {clientInside}, we inside {P.isInside}";
@@ -668,7 +779,11 @@ namespace DarkwoodMP.World
             var ctl = Singleton<Controller>.Instance;
             ctl.StartCoroutine(ctl.alterTimeScale(2f, 0.2f));
             float until = Time.realtimeSinceStartup + 1f;
-            while (Time.realtimeSinceStartup < until) { min = Mathf.Min(min, Time.timeScale); yield return null; }
+            while (Time.realtimeSinceStartup < until)
+            {
+                min = Mathf.Min(min, Time.timeScale);
+                yield return null;
+            }
             parts.Add(FormattableString.Invariant($"alterTimeScale: lowest {min:0.00}"));
             var wheel = Singleton<UI>.Instance.activeSkillsMenu;
             // The wheel opens only with a skill to pick: lend it one of the game's while it's open.
@@ -685,7 +800,11 @@ namespace DarkwoodMP.World
             {
                 wheel.show();
                 until = Time.realtimeSinceStartup + 1f;
-                while (Time.realtimeSinceStartup < until) { min = Mathf.Min(min, Time.timeScale); yield return null; }
+                while (Time.realtimeSinceStartup < until)
+                {
+                    min = Mathf.Min(min, Time.timeScale);
+                    yield return null;
+                }
                 parts.Add(FormattableString.Invariant($"the wheel open {wheel.opened}: {Time.timeScale:0.00}"));
                 if (wheel.opened)
                 {
@@ -717,7 +836,11 @@ namespace DarkwoodMP.World
         private static IEnumerator KillTrader(string[] a, Result r)
         {
             var t = Nearest(Object.FindObjectsOfType<Character>().Where(c => c.isNightTrader && c.alive), Centre);
-            if (t == null) { r.Fail("no living night trader here"); yield break; }
+            if (t == null)
+            {
+                r.Fail("no living night trader here");
+                yield break;
+            }
             string what = $"{t.name} {ObjRef.Of(t.gameObject)}";
             int hits = 0;
             while (t != null && t.alive && hits < 30)

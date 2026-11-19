@@ -49,9 +49,17 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
-            if (host == null) { r.Fail($"none of {string.Join(", ", Hosts)} here"); yield break; }
+            if (host == null)
+            {
+                r.Fail($"none of {string.Join(", ", Hosts)} here");
+                yield break;
+            }
             _sound = a.Length > 0 ? a[0] : Fallback;
-            if (AudioController.GetAudioItem(_sound) == null) { r.Fail($"no audio item {_sound}"); yield break; }
+            if (AudioController.GetAudioItem(_sound) == null)
+            {
+                r.Fail($"no audio item {_sound}");
+                yield break;
+            }
 
             var go = new GameObject("dwmp_whisper_area");
             go.transform.SetParent(host.transform, false);
@@ -77,7 +85,11 @@ namespace DarkwoodMP.World
         /// <summary>"whisper-enter": our player walks into the area (as EventTriggers.OnTriggerEnter does); the whispers play here.</summary>
         private static IEnumerator Enter(string[] a, Result r)
         {
-            if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
+            if (_et == null)
+            {
+                r.Fail("no area (whisper-setup first)");
+                yield break;
+            }
             yield return Walk(_et.transform.position, 150f);
             AsPlayer(() => _et.fireEventTrigger(global::EventTrigger.Type.area));
             _et.entered++;
@@ -96,7 +108,11 @@ namespace DarkwoodMP.World
         /// <summary>"whisper-leave": our player walks out of the area (as EventTriggers.OnTriggerExit does); the whispers stop here.</summary>
         private static IEnumerator Leave(string[] a, Result r)
         {
-            if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
+            if (_et == null)
+            {
+                r.Fail("no area (whisper-setup first)");
+                yield break;
+            }
             _et.exited++;
             AsPlayer(() => _et.fireEventTriggerExit(global::EventTrigger.Type.area));
             float until = Time.realtimeSinceStartup + 4f;
@@ -114,7 +130,11 @@ namespace DarkwoodMP.World
         /// <summary>"whisper-check playing|stopped": what the other player's entering or leaving did to the whispers here.</summary>
         private static IEnumerator Check(string[] a, Result r)
         {
-            if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
+            if (_et == null)
+            {
+                r.Fail("no area (whisper-setup first)");
+                yield break;
+            }
             bool want = a.Length == 0 || a[0] == "playing";
             float until = Time.realtimeSinceStartup + 5f;
             while (Playing() != want && Time.realtimeSinceStartup < until)
@@ -135,10 +155,15 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Stand(string[] a, Result r)
         {
-            if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
+            if (_et == null)
+            {
+                r.Fail("no area (whisper-setup first)");
+                yield break;
+            }
             // From outside it, as a player walks in (OnTriggerEnter counts a player in only from its edge once it has been entered before).
             yield return Walk(_et.transform.position + new Vector3(0f, 0f, -700f), 80f);
-            _et.entered = 0; _et.exited = 0;
+            _et.entered = 0;
+            _et.exited = 0;
             var box = _et.gameObject.GetComponent<BoxCollider>() ?? _et.gameObject.AddComponent<BoxCollider>();
             box.isTrigger = true;
             // A cube, as the object it's on is turned (the game's sprites lie at 90 degrees) and may be scaled.
@@ -164,7 +189,11 @@ namespace DarkwoodMP.World
         /// <summary>"whisper-out": walk our player out of the real collider (the game's own OnTriggerExit); the whispers stop here.</summary>
         private static IEnumerator Out(string[] a, Result r)
         {
-            if (_et == null) { r.Fail("no area (whisper-setup first)"); yield break; }
+            if (_et == null)
+            {
+                r.Fail("no area (whisper-setup first)");
+                yield break;
+            }
             yield return Walk(_et.transform.position + new Vector3(0f, 0f, -700f), 80f);
             float until = Time.realtimeSinceStartup + 5f;
             while ((ScriptedEvents.OurPlayerInside(_et) || Playing()) && Time.realtimeSinceStartup < until)

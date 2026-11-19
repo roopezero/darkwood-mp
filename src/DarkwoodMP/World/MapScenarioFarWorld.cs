@@ -79,7 +79,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FarDoor(string[] a, Result r)
         {
             var door = DoorAt(Spot(a[0]));
-            if (door == null) { r.Fail("no door"); yield break; }
+            if (door == null)
+            {
+                r.Fail("no door");
+                yield break;
+            }
             yield return Walk(door.transform.position);
             bool open = a.Length < 2 || a[1] == "open";
             if (open != door.opened)
@@ -111,7 +115,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FarDoorCheck(string[] a, Result r)
         {
             var door = DoorAt(Spot(a[0]));
-            if (door == null) { r.Fail("no door"); yield break; }
+            if (door == null)
+            {
+                r.Fail("no door");
+                yield break;
+            }
             bool open = a.Length < 2 || a[1] == "open";
             yield return Walk(door.transform.position);
             for (float t = 0f; t < 5f && (!door.gameObject.activeInHierarchy || DoorLeaf.Turned(door) != open); t += 0.25f)
@@ -141,12 +149,17 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator FarDrag(string[] a, Result r)
         {
-            var from = Spot(a[0]); var to = Spot(a[1]);
+            var from = Spot(a[0]);
+            var to = Spot(a[1]);
             // One on the culling grid (a node of its own), not one switched on and off with its location's objects.
             var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i => i.draggable && i.GetComponent<Rigidbody>() != null
                 && i.GetComponent<CullableObject>()?.node != null
                 && ObjRef.Of(i.gameObject).Valid && StateDump.Flat(i.transform.position - from) < 2500f), from);
-            if (it == null) { r.Fail($"nothing draggable within 2500 of {Fmt(from)}"); yield break; }
+            if (it == null)
+            {
+                r.Fail($"nothing draggable within 2500 of {Fmt(from)}");
+                yield break;
+            }
             yield return Walk(it.transform.position, 80f);
             var start = it.transform.position;
             var by = new Vector3(to.x - start.x, 0f, to.z - start.z);
@@ -155,7 +168,11 @@ namespace DarkwoodMP.World
             const float secs = 4f;
             for (float t = 0f; t < secs; t += Time.deltaTime)
             {
-                if (P.itemBeingDragged != it) { r.Fail($"{it.name}: our drag was let go of (another player has it)"); yield break; }
+                if (P.itemBeingDragged != it)
+                {
+                    r.Fail($"{it.name}: our drag was let go of (another player has it)");
+                    yield break;
+                }
                 var at = start + by * (t / secs);
                 it.transform.position = at;
                 if (rb != null)
@@ -166,7 +183,11 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             it.transform.position = start + by;
-            if (rb != null) { rb.position = start + by; rb.velocity = Vector3.zero; }
+            if (rb != null)
+            {
+                rb.position = start + by;
+                rb.velocity = Vector3.zero;
+            }
             yield return new WaitForSeconds(0.3f);
             P.itemBeingDragged = null;
             yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
@@ -184,7 +205,11 @@ namespace DarkwoodMP.World
             yield return Walk(at, 150f);
             yield return new WaitForSeconds(3f); // the culling enters a node a frame, every half second
             var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i => i.draggable && i.GetComponent<Rigidbody>() != null), at);
-            if (it == null) { r.Fail("nothing draggable"); yield break; }
+            if (it == null)
+            {
+                r.Fail("nothing draggable");
+                yield break;
+            }
             var co = it.GetComponent<CullableObject>();
             var node = co != null ? co.node : null;
             r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}"
@@ -214,7 +239,8 @@ namespace DarkwoodMP.World
             {
                 spot.y = _dog.transform.position.y;
                 _dog.transform.position = spot;
-                var body = _dog.GetComponent<Rigidbody>(); if (body != null)
+                var body = _dog.GetComponent<Rigidbody>();
+                if (body != null)
                 {
                     body.position = spot;
                 }
@@ -223,7 +249,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
-            if (c == null) { r.Fail("couldn't spawn a dog"); yield break; }
+            if (c == null)
+            {
+                r.Fail("couldn't spawn a dog");
+                yield break;
+            }
             c.transform.position = spot;
             _dog = c;
             yield return new WaitForSeconds(1.5f);
@@ -273,7 +303,11 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.5f);
             }
-            if (far.Length == 0) { r.Fail("no copy of the host's enemies outside our culling's rect"); yield break; }
+            if (far.Length == 0)
+            {
+                r.Fail("no copy of the host's enemies outside our culling's rect");
+                yield break;
+            }
             var hidden = far.Where(c => !Shown(c)).ToArray();
             r.Info = $"{far.Length} outside our rect, {hidden.Length} not shown; e.g. {Describe(hidden.FirstOrDefault() ?? far[0])}";
             if (hidden.Length > 0)
@@ -285,18 +319,28 @@ namespace DarkwoodMP.World
         /// <summary>"far-dog-to-client" (host): put the dog 250 from the client's player (its proxy here).</summary>
         private static IEnumerator FarDogToClient(string[] a, Result r)
         {
-            if (_dog == null) { r.Fail("no dog (far-dog first)"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog (far-dog first)");
+                yield break;
+            }
             var other = NetPlayerProxy.All.Values.FirstOrDefault(p => p != null);
-            if (other == null) { r.Fail("no other player here"); yield break; }
+            if (other == null)
+            {
+                r.Fail("no other player here");
+                yield break;
+            }
             // It goes for a player by itself, and the test world has bear traps on the way (Saved:21368, 21369). A bear
             // trap kills a character outright (Trigger.checkCollision calls die()), so health doesn't save it: it died
             // there twice before the client could look for it. The step is about it being shown, not about the fight,
             // so it's held on its spot until far-dog-gone (or 30 s).
-            _dog.maxHealth = 100000f; _dog.health = 100000f;
+            _dog.maxHealth = 100000f;
+            _dog.health = 100000f;
             var to = other.transform.position + new Vector3(250f, 0f, 0f);
             to.y = _dog.transform.position.y;
             _dog.transform.position = to;
-            var rb = _dog.GetComponent<Rigidbody>(); if (rb != null)
+            var rb = _dog.GetComponent<Rigidbody>();
+            if (rb != null)
             {
                 rb.position = to;
             }
@@ -311,7 +355,12 @@ namespace DarkwoodMP.World
             for (float t = 0f; t < 30f && dog != null && dog == _dog && dog.alive; t += Time.deltaTime)
             {
                 dog.transform.position = at;
-                var rb = dog.GetComponent<Rigidbody>(); if (rb != null) { rb.position = at; rb.velocity = Vector3.zero; }
+                var rb = dog.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.position = at;
+                    rb.velocity = Vector3.zero;
+                }
                 yield return null;
             }
         }
@@ -324,7 +373,11 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
-            if (c == null) { r.Fail("no copy of the host's enemy within 500"); yield break; }
+            if (c == null)
+            {
+                r.Fail("no copy of the host's enemy within 500");
+                yield break;
+            }
             _copy = c;
             r.Info = Describe(c);
             if (!Shown(c))
@@ -336,10 +389,21 @@ namespace DarkwoodMP.World
         /// <summary>"far-dog-gone" (host): the dog removed (the client is told to despawn its copy).</summary>
         private static IEnumerator FarDogGone(string[] a, Result r)
         {
-            if (_dog == null) { r.Fail("no dog"); yield break; }
+            if (_dog == null)
+            {
+                r.Fail("no dog");
+                yield break;
+            }
             r.Info = $"{_dog.name} removed";
             var go = _dog.gameObject;
-            try { _dog.removeMe(); } catch (Exception e) { Plugin.Log.LogWarning($"[map] removeMe: {e.Message}"); }
+            try
+            {
+                _dog.removeMe();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[map] removeMe: {e.Message}");
+            }
             if (go != null)
             {
                 Object.Destroy(go);
@@ -351,11 +415,19 @@ namespace DarkwoodMP.World
         /// <summary>"far-dog-hidden" (client): our copy is no longer shown, and no longer the host's.</summary>
         private static IEnumerator FarDogHidden(string[] a, Result r)
         {
-            if (_copy == null) { r.Info = "the copy was made from its prefab and is gone"; yield break; }
+            if (_copy == null)
+            {
+                r.Info = "the copy was made from its prefab and is gone";
+                yield break;
+            }
             for (float t = 0f; t < 10f && (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _)); t += 0.5f)
             {
                 yield return new WaitForSeconds(0.5f);
-                if (_copy == null) { r.Info = "the copy was made from its prefab and is gone"; yield break; }
+                if (_copy == null)
+                {
+                    r.Info = "the copy was made from its prefab and is gone";
+                    yield break;
+                }
             }
             r.Info = Describe(_copy);
             if (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _))

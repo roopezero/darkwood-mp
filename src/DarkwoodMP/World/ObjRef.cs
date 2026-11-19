@@ -27,7 +27,14 @@ namespace DarkwoodMP.World
     /// </summary>
     public struct ObjRef
     {
-        public enum Kind : byte { None = 0, Saved = 1, Spawned = 2, Enemy = 3, Placed = 4 }
+        public enum Kind : byte
+        {
+            None = 0,
+            Saved = 1,
+            Spawned = 2,
+            Enemy = 3,
+            Placed = 4
+        }
 
         public Kind K;
         public long Id;
@@ -35,7 +42,11 @@ namespace DarkwoodMP.World
         public bool Valid => K != Kind.None;
         public override string ToString() => $"{K}:{Id}";
 
-        public void Write(PacketWriter w) { w.W.Write((byte)K); w.W.Write(Id); }
+        public void Write(PacketWriter w)
+        {
+            w.W.Write((byte)K);
+            w.W.Write(Id);
+        }
         public static ObjRef Read(PacketReader r) => new ObjRef { K = (Kind)r.R.ReadByte(), Id = r.R.ReadInt64() };
 
         /// <summary>Objects made while playing together, by id, in every game.</summary>
@@ -50,8 +61,14 @@ namespace DarkwoodMP.World
 
         public static void ClearSpawned()
         {
-            Spawned.Clear(); _spawnedIds.Clear(); _placed.Clear(); _pinned.Clear(); _pinnedIds.Clear();
-            _shared.Clear(); _sharedIds.Clear(); _announced.Clear();
+            Spawned.Clear();
+            _spawnedIds.Clear();
+            _placed.Clear();
+            _pinned.Clear();
+            _pinnedIds.Clear();
+            _shared.Clear();
+            _sharedIds.Clear();
+            _announced.Clear();
         }
 
         // Ids the host gave to what the world made by itself (HostIds), kept apart from Spawned so code that looks
@@ -163,7 +180,11 @@ namespace DarkwoodMP.World
         public static ObjRef Pin(GameObject go)
         {
             var r = Of(go);
-            if (r.K == Kind.Placed && !_pinnedIds.ContainsKey(go)) { _pinned[r.Id] = go; _pinnedIds[go] = r.Id; }
+            if (r.K == Kind.Placed && !_pinnedIds.ContainsKey(go))
+            {
+                _pinned[r.Id] = go;
+                _pinnedIds[go] = r.Id;
+            }
             return r;
         }
 
@@ -219,7 +240,11 @@ namespace DarkwoodMP.World
         // PlacedRescan seconds. There's one table per component type: when a scan for one type replaced the only
         // table, a trap (Trigger) asked for just after a scripted event (EventTriggers) wasn't found for up to a
         // second, and the host refused a client's trap as gone while its own copy stood there.
-        private class PlacedScan { public readonly Dictionary<int, List<GameObject>> ByName = new Dictionary<int, List<GameObject>>(); public float At = -999f; }
+        private class PlacedScan
+        {
+            public readonly Dictionary<int, List<GameObject>> ByName = new Dictionary<int, List<GameObject>>();
+            public float At = -999f;
+        }
         private static readonly Dictionary<System.Type, PlacedScan> _placed = new Dictionary<System.Type, PlacedScan>();
         private const float PlacedRescan = 0.25f;
 
@@ -232,7 +257,8 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            GameObject best = null; float bestD = PlacedSlack * PlacedSlack;
+            GameObject best = null;
+            float bestD = PlacedSlack * PlacedSlack;
             foreach (var go in list)
             {
                 if (go == null)
@@ -241,7 +267,11 @@ namespace DarkwoodMP.World
                 }
                 var p = go.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
-                if (d <= bestD) { bestD = d; best = go; }
+                if (d <= bestD)
+                {
+                    bestD = d;
+                    best = go;
+                }
             }
             exact = best != null && bestD <= 1f;
             return best;

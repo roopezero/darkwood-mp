@@ -96,6 +96,9 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        private static System.Collections.IEnumerator Nothing() { yield break; }
+        private static System.Collections.IEnumerator Nothing()
+        {
+            yield break;
+        }
     }
 }

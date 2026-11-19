@@ -45,7 +45,10 @@ namespace DarkwoodMP.World
                 __instance.FlushWorkItems();
                 Plugin.Log.LogInfo("[pathfinding] finished the pending graph updates before a scan");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[pathfinding] couldn't finish the graph updates before a scan: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[pathfinding] couldn't finish the graph updates before a scan: {e.Message}");
+            }
         }
     }
 }

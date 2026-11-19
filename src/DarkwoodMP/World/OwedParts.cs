@@ -65,7 +65,11 @@ namespace DarkwoodMP.World
         private static HashSet<global::EventTrigger> Ours()
         {
             int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-            if (scene != _oursScene) { OursHad.Clear(); _oursScene = scene; }
+            if (scene != _oursScene)
+            {
+                OursHad.Clear();
+                _oursScene = scene;
+            }
             return OursHad;
         }
 
@@ -104,7 +108,10 @@ namespace DarkwoodMP.World
                     return d;
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't read who is owed their part of fired events in {dir}: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't read who is owed their part of fired events in {dir}: {e.Message}");
+            }
             return new FileData();
         }
 
@@ -113,7 +120,12 @@ namespace DarkwoodMP.World
         {
             string dir = ProfileDir();
             int scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-            if (_data == null || dir != _dir) { _data = Read(dir); _dir = dir; _owedScene = scene; }
+            if (_data == null || dir != _dir)
+            {
+                _data = Read(dir);
+                _dir = dir;
+                _owedScene = scene;
+            }
             else if (scene != _owedScene)
             {
                 // The world was loaded again (a reload, a new chapter): our player is where the save has them, and so
@@ -144,7 +156,10 @@ namespace DarkwoodMP.World
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(Path.Combine(dir, "darkwoodmp_later.json"), JsonConvert.SerializeObject(_data));
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"Couldn't write who is owed their part of fired events: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't write who is owed their part of fired events: {e.Message}");
+            }
         }
 
         // ---- what ScriptedEvents asks -------------------------------------------------------------------
@@ -157,7 +172,11 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            if (s.IsHost) { string id = IdOf(t); return id != null && Data().HostOwed.Contains(id); }
+            if (s.IsHost)
+            {
+                string id = IdOf(t);
+                return id != null && Data().HostOwed.Contains(id);
+            }
             if (t.thisEventTriggers == null || WorldActions.OursAlone(t.thisEventTriggers.gameObject))
             {
                 return false;
@@ -181,7 +200,11 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            if (s.IsHost) { string id = IdOf(t); return id != null && Data().HostOwed.Remove(id); }
+            if (s.IsHost)
+            {
+                string id = IdOf(t);
+                return id != null && Data().HostOwed.Remove(id);
+            }
             return Ours().Add(t);
         }
 

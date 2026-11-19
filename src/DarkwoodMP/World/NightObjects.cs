@@ -30,9 +30,24 @@ namespace DarkwoodMP.World
     public static class NightObjects
     {
         private const byte Made = 1, Gone = 2, MadeBefore = 3;
-        private sealed class Tag { public string Scenario, Event; public int Group, Step; public byte Armed = 255; }
+        private sealed class Tag
+        {
+            public string Scenario, Event;
+            public int Group, Step;
+            public byte Armed = 255;
+        }
         private static readonly ConditionalWeakTable<GameEvent, Tag> _tags = new ConditionalWeakTable<GameEvent, Tag>();
-        private sealed class Live { public long Id; public GameObject Go; public string Name; public Tag Tag; public Vector3 Pos; public Quaternion Rot; public ObjRef Parent; public byte Armed = 255; }
+        private sealed class Live
+        {
+            public long Id;
+            public GameObject Go;
+            public string Name;
+            public Tag Tag;
+            public Vector3 Pos;
+            public Quaternion Rot;
+            public ObjRef Parent;
+            public byte Armed = 255;
+        }
         private static readonly List<Live> _live = new List<Live>();
         private static readonly List<(byte kind, long id, Tag tag, Vector3 pos, Quaternion rot, ObjRef parent)> _incoming = new List<(byte, long, Tag, Vector3, Quaternion, ObjRef)>();
         private static readonly List<(GameObject go, byte armed, float at)> _rearm = new List<(GameObject, byte, float)>();
@@ -51,7 +66,14 @@ namespace DarkwoodMP.World
             _session = s;
             s.Register(MsgType.NightObject, OnMessage);
             s.OnPeerConnected += SendLiveTo;
-            s.OnSessionEnded += () => { _live.Clear(); _incoming.Clear(); _rearm.Clear(); Firing = null; Steps.Clear(); };
+            s.OnSessionEnded += () =>
+            {
+                _live.Clear();
+                _incoming.Clear();
+                _rearm.Clear();
+                Firing = null;
+                Steps.Clear();
+            };
         }
 
         private static bool HostSharing => _session != null && _session.IsHost && WorldActions.Sharing;
@@ -80,7 +102,10 @@ namespace DarkwoodMP.World
                     for (int s = 0; s < ge.events.Count; s++)
                     {
                         if (ge.events[s] != null)
-                        { _tags.Remove(ge.events[s]); _tags.Add(ge.events[s], new Tag { Scenario = sc, Event = Firing.gameObject.name, Group = g, Step = s }); }
+                        {
+                            _tags.Remove(ge.events[s]);
+                            _tags.Add(ge.events[s], new Tag { Scenario = sc, Event = Firing.gameObject.name, Group = g, Step = s });
+                        }
                     }
                     return;
                 }
@@ -125,10 +150,15 @@ namespace DarkwoodMP.World
             w.W.Write(l.Id);
             if (kind != Gone)
             {
-                w.WriteStr(l.Tag.Scenario); w.WriteStr(l.Tag.Event);
-                w.W.Write((byte)l.Tag.Group); w.W.Write((byte)l.Tag.Step);
+                w.WriteStr(l.Tag.Scenario);
+                w.WriteStr(l.Tag.Event);
+                w.W.Write((byte)l.Tag.Group);
+                w.W.Write((byte)l.Tag.Step);
                 w.Write(l.Pos);
-                w.W.Write(l.Rot.x); w.W.Write(l.Rot.y); w.W.Write(l.Rot.z); w.W.Write(l.Rot.w);
+                w.W.Write(l.Rot.x);
+                w.W.Write(l.Rot.y);
+                w.W.Write(l.Rot.z);
+                w.W.Write(l.Rot.w);
                 l.Parent.Write(w);
                 l.Armed = ArmedOf(l.Go);
                 w.W.Write(l.Armed);
@@ -238,7 +268,10 @@ namespace DarkwoodMP.World
             }
             byte kind = r.R.ReadByte();
             long id = r.R.ReadInt64();
-            Tag tag = null; Vector3 pos = default; Quaternion rot = Quaternion.identity; ObjRef parent = default;
+            Tag tag = null;
+            Vector3 pos = default;
+            Quaternion rot = Quaternion.identity;
+            ObjRef parent = default;
             if (kind != Gone)
             {
                 tag = new Tag { Scenario = r.ReadStr(), Event = r.ReadStr(), Group = r.R.ReadByte(), Step = r.R.ReadByte() };
@@ -266,8 +299,14 @@ namespace DarkwoodMP.World
                 if (have != null)
                 {
                     WorldActions.Replaying = true;
-                    try { Object.Destroy(have); }
-                    finally { WorldActions.Replaying = false; }
+                    try
+                    {
+                        Object.Destroy(have);
+                    }
+                    finally
+                    {
+                        WorldActions.Replaying = false;
+                    }
                 }
                 if (WorldActions.Debug)
                 {
@@ -275,14 +314,23 @@ namespace DarkwoodMP.World
                 }
                 return;
             }
-            if (have != null) { Arm(have, tag.Armed); return; } // made already: only its trap's state
+            if (have != null) // made already: only its trap's state
+            {
+                Arm(have, tag.Armed);
+                return;
+            }
             var prefab = Prefab(tag);
-            if (prefab == null) { Plugin.Log.LogWarning($"No night event step {tag.Scenario}/{tag.Event} {tag.Group}/{tag.Step} here to make its object"); return; }
+            if (prefab == null)
+            {
+                Plugin.Log.LogWarning($"No night event step {tag.Scenario}/{tag.Event} {tag.Group}/{tag.Step} here to make its object");
+                return;
+            }
             if (kind == MadeBefore)
             {
                 // Saved with the world we loaded: ours from the save, by name and place.
                 var sm = Singleton<SaveManager>.Instance;
-                GameObject best = null; float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
+                GameObject best = null;
+                float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
                 if (sm != null)
                 {
                     foreach (var t in sm.dynamicObjects)
@@ -293,7 +341,10 @@ namespace DarkwoodMP.World
                         }
                         float d = (t.position - pos).sqrMagnitude;
                         if (d < bestD)
-                        { bestD = d; best = t.gameObject; }
+                        {
+                            bestD = d;
+                            best = t.gameObject;
+                        }
                     }
                 }
                 if (best != null)
@@ -328,7 +379,10 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            finally { WorldActions.Replaying = false; }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
             if (go == null)
             {
                 return;
@@ -394,7 +448,11 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(CustomEvent), nameof(CustomEvent.fire))]
     static class NightObjectsFiringPatch
     {
-        static void Prefix(CustomEvent __instance, out CustomEvent __state) { __state = NightObjects.Firing; NightObjects.Firing = __instance; }
+        static void Prefix(CustomEvent __instance, out CustomEvent __state)
+        {
+            __state = NightObjects.Firing;
+            NightObjects.Firing = __instance;
+        }
         static void Finalizer(CustomEvent __state) => NightObjects.Firing = __state;
     }
 
@@ -413,7 +471,10 @@ namespace DarkwoodMP.World
                     var m = AccessTools.Method(t, "MoveNext");
                     var f = AccessTools.Field(t, "<>4__this");
                     if (m != null && f != null)
-                    { _this[t] = f; yield return m; }
+                    {
+                        _this[t] = f;
+                        yield return m;
+                    }
                 }
             }
         }

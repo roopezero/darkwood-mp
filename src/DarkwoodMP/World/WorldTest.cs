@@ -21,8 +21,14 @@ namespace DarkwoodMP.World
         private static void AsPlayer(System.Action a)
         {
             WorldActions.TestAsPlayer = true;
-            try { a(); }
-            finally { WorldActions.TestAsPlayer = false; }
+            try
+            {
+                a();
+            }
+            finally
+            {
+                WorldActions.TestAsPlayer = false;
+            }
         }
 
         /// <summary>Every item in the game's database, by key (one that fails to load is skipped).</summary>
@@ -36,7 +42,13 @@ namespace DarkwoodMP.World
             foreach (var k in db.itemsDict.Keys.ToList())
             {
                 InvItem it = null;
-                try { it = db.getItem(k, instantiate: false); } catch { }
+                try
+                {
+                    it = db.getItem(k, instantiate: false);
+                }
+                catch
+                {
+                }
                 if (it != null)
                 {
                     yield return (k, it);
@@ -48,8 +60,14 @@ namespace DarkwoodMP.World
         private static GameObject PlaceShared(string prefab, Vector3 at)
         {
             Containers.Placing = true;
-            try { return Core.AddPrefab(prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true); }
-            finally { Containers.Placing = false; }
+            try
+            {
+                return Core.AddPrefab(prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
+            }
+            finally
+            {
+                Containers.Placing = false;
+            }
         }
 
         /// <summary>Logs the items that place something when used (InvItem.placeOnUse), which nothing shares.</summary>
@@ -70,7 +88,11 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             // The test kills an NPC, burns a door, flips story flags and more: only ever on a copy of the saves.
-            if (!SaveRedirect.Active) { Plugin.Log.LogError("[world test] FAIL: not in a sandbox or the test world (add --dwmp-sandbox DIR)"); yield break; }
+            if (!SaveRedirect.Active)
+            {
+                Plugin.Log.LogError("[world test] FAIL: not in a sandbox or the test world (add --dwmp-sandbox DIR)");
+                yield break;
+            }
             while (Net.Session.Instance == null || Net.Session.Instance.Peers.Count == 0)
             {
                 yield return null;
@@ -107,7 +129,11 @@ namespace DarkwoodMP.World
 
             var inv = Nearest(Object.FindObjectsOfType<Inventory>()
                 .Where(i => i.invType == Inventory.InvType.itemInv && !i.isWorkbench && i.slots.Any(s => !InvItemClass.isNull(s.invItem))), at);
-            if (inv == null) { Plugin.Log.LogInfo("[world test] no container with items found"); yield break; }
+            if (inv == null)
+            {
+                Plugin.Log.LogInfo("[world test] no container with items found");
+                yield break;
+            }
             var slot = inv.slots.First(s => !InvItemClass.isNull(s.invItem));
             var item = new InvItemClass(slot.invItem);
             Plugin.Log.LogInfo($"[world test] looting {item.type} x{item.amount} from {inv.name} at {inv.transform.position}");
@@ -125,9 +151,17 @@ namespace DarkwoodMP.World
             var flags = Singleton<Flags>.Instance;
             var dict = HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(flags);
             var flag = dict.Values.FirstOrDefault(f => f != null);
-            if (flag != null) { flags.setFlag(flag.name, !flag.isTrue); Plugin.Log.LogInfo($"[world test] flag {flag.name} -> {flag.isTrue}"); }
+            if (flag != null)
+            {
+                flags.setFlag(flag.name, !flag.isTrue);
+                Plugin.Log.LogInfo($"[world test] flag {flag.name} -> {flag.isTrue}");
+            }
             var npc = flags.npcStates.FirstOrDefault(n => n != null);
-            if (npc != null) { npc.reputation += 1; Plugin.Log.LogInfo($"[world test] {npc.name}'s reputation -> {npc.reputation}"); }
+            if (npc != null)
+            {
+                npc.reputation += 1;
+                Plugin.Log.LogInfo($"[world test] {npc.name}'s reputation -> {npc.reputation}");
+            }
             // The journal: a story entry and a note the host hasn't got yet, as the game adds them.
             var journal = Singleton<UI>.Instance.journal;
             var jdb = Singleton<JournalDatabase>.Instance;
@@ -138,8 +172,16 @@ namespace DarkwoodMP.World
             string entry = jdb?.journalEntriesDict.Keys.FirstOrDefault(k => !journal.journalEntriesDict.ContainsKey(k));
             string note = jdb?.notesDict.Keys.FirstOrDefault(k => !journal.notesDict.ContainsKey(k));
             Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {jdb?.journalEntriesDict.Count} and {jdb?.notesDict.Count}");
-            if (entry != null) { journal.addJournalEntry(entry); Plugin.Log.LogInfo($"[world test] journal entry {entry}"); }
-            if (note != null) { journal.addNote(new Journal.Note { type = note }); Plugin.Log.LogInfo($"[world test] journal note {note}"); }
+            if (entry != null)
+            {
+                journal.addJournalEntry(entry);
+                Plugin.Log.LogInfo($"[world test] journal entry {entry}");
+            }
+            if (note != null)
+            {
+                journal.addNote(new Journal.Note { type = note });
+                Plugin.Log.LogInfo($"[world test] journal note {note}");
+            }
             yield return new WaitForSeconds(3f);
 
             // A trap going off.
@@ -211,7 +253,8 @@ namespace DarkwoodMP.World
                     drag.startDragging();
                     bool stopped = DragStartPatch.Blocked > blocked && !drag.beingDragged && player.itemBeingDragged != drag;
                     player.itemBeingDragged = drag; // as a script takes hold of it
-                    yield return null; yield return null;
+                    yield return null;
+                    yield return null;
                     bool letGo = player.itemBeingDragged != drag && DragSync.Cancelled > cancelled;
                     Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {(stopped ? "not started" : "started")}, ours {(letGo ? "let go" : "kept")}: {(stopped && letGo ? "PASS" : "FAIL")}");
                     if (player.itemBeingDragged == drag)
@@ -257,7 +300,8 @@ namespace DarkwoodMP.World
                     ti.thrown = true;
                     ti.objectThatSpawnedMe = player.transform;
                     ti.setFallSpeed(300f);
-                    var r = go.GetComponent<Renderer>(); if (r != null)
+                    var r = go.GetComponent<Renderer>();
+                    if (r != null)
                     {
                         r.enabled = true;
                     }
@@ -289,7 +333,11 @@ namespace DarkwoodMP.World
             var loaded = new HashSet<string>(Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().Select(l => l.name));
             foreach (var libName in new[] { "PlayerTorchAnims", "PlayerFlashlightAnims", "PlayerPitchforkAnims", "PlayerShotgunAnims" })
             {
-                if (loaded.Contains(libName)) { Plugin.Log.LogInfo($"[world test] look: {libName} already loaded here"); continue; }
+                if (loaded.Contains(libName))
+                {
+                    Plugin.Log.LogInfo($"[world test] look: {libName} already loaded here");
+                    continue;
+                }
                 // A sprite from a collection not loaded here, from a player whose body uses libName: that loads it.
                 Sync.SpriteCollections.Get(Net.StableHash.Of("not loaded here"), libName);
                 var lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == libName);
@@ -331,8 +379,16 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world test] generator {gen.name} at {gen.transform.position}: fuel {gen.fuel:0.0} of {gen.maxFuel}, on={gen.isOn}");
                 var genItem = gen.GetComponent<Item>();
-                if (gen.isOn) { genItem?.turnOff(); yield return new WaitForSeconds(1f); }
-                for (int i = 0; i < 20; i++) { gen.addFuel(1f); yield return new WaitForSeconds(0.05f); }
+                if (gen.isOn)
+                {
+                    genItem?.turnOff();
+                    yield return new WaitForSeconds(1f);
+                }
+                for (int i = 0; i < 20; i++)
+                {
+                    gen.addFuel(1f);
+                    yield return new WaitForSeconds(0.05f);
+                }
                 if (genItem != null)
                 {
                     genItem.turnOn();
@@ -390,8 +446,10 @@ namespace DarkwoodMP.World
                         player.openedItemInventory2 = storage;
                         yield return new WaitForSeconds(0.6f);
                         int s1 = frees[0], s2 = frees[frees.Count - 1];
-                        storage.slots[s1].inventory = storage; storage.slots[s1].createItem(stackType, 2);
-                        storage.slots[s2].inventory = storage; storage.slots[s2].createItem(stackType, 1);
+                        storage.slots[s1].inventory = storage;
+                        storage.slots[s1].createItem(stackType, 2);
+                        storage.slots[s2].inventory = storage;
+                        storage.slots[s2].createItem(stackType, 1);
                         yield return new WaitForSeconds(0.8f);
                         int Filled() => storage.slots.Count(sl => !InvItemClass.isNull(sl.invItem));
                         int stacksBefore = storage.slots.Count(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == stackType), filledBefore = Filled();
@@ -420,7 +478,13 @@ namespace DarkwoodMP.World
             if (lck == null)
             {
                 var near = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), at);
-                if (near != null) { near.lockMe(""); lck = near.GetComponent<Locked>(); Plugin.Log.LogInfo($"[world test] nothing locked found: locked {near.name}"); yield return new WaitForSeconds(1f); }
+                if (near != null)
+                {
+                    near.lockMe("");
+                    lck = near.GetComponent<Locked>();
+                    Plugin.Log.LogInfo($"[world test] nothing locked found: locked {near.name}");
+                    yield return new WaitForSeconds(1f);
+                }
             }
             if (lck != null)
             {
@@ -492,10 +556,17 @@ namespace DarkwoodMP.World
                 foreach (var prefab in new[] { "Furnitures/Cottage/chair_1", "Furnitures/Cottage/table_1", "Furnitures/Cottage/shelf", "Furnitures/Cottage/crate_movable_01", "Furnitures/Cottage/Wardrobe_Big_1" })
                 {
                     var made = PlaceShared(prefab, at + new Vector3(250f, 0f, 0f));
-                    yield return null; yield return null; // its health is set in Start
+                    // its health is set in Start
+                    yield return null;
+                    yield return null;
                     var it = made != null ? made.GetComponent<Item>() : null;
                     Plugin.Log.LogInfo($"[world test] placed {prefab}: {(it == null ? "no item" : $"destructible={it.destructible}, health {it.health} of {it.maxHealth}")}");
-                    if (it != null && it.destructible && !it.destroyed && it.health > 1) { furniture = it; Plugin.Log.LogInfo($"[world test] none in this save: placed {prefab}"); break; }
+                    if (it != null && it.destructible && !it.destroyed && it.health > 1)
+                    {
+                        furniture = it;
+                        Plugin.Log.LogInfo($"[world test] none in this save: placed {prefab}");
+                        break;
+                    }
                     if (made != null)
                     {
                         Object.Destroy(made);
@@ -630,7 +701,10 @@ namespace DarkwoodMP.World
                 foreach (var sl in storage.slots)
                 {
                     if (!InvItemClass.isNull(sl.invItem) && sl.invItem.type == "nail")
-                    { sl.inventory = storage; sl.removeItem(); }
+                    {
+                        sl.inventory = storage;
+                        sl.removeItem();
+                    }
                 }
             }
             if (storage != null)
@@ -660,7 +734,12 @@ namespace DarkwoodMP.World
                     }
                 }
                 int[] amounts = { 3, 3, 40 };
-                for (int j = 0; j < 3; j++) { var sl = storage.slots[frees[j * (frees.Count - 1) / 2]]; sl.inventory = storage; sl.createItem("nail", amounts[j]); }
+                for (int j = 0; j < 3; j++)
+                {
+                    var sl = storage.slots[frees[j * (frees.Count - 1) / 2]];
+                    sl.inventory = storage;
+                    sl.createItem("nail", amounts[j]);
+                }
                 yield return new WaitForSeconds(0.8f);
                 SlotShare.Instance?.SortPressed(storage);
                 yield return new WaitForSeconds(0.8f);
@@ -678,7 +757,10 @@ namespace DarkwoodMP.World
                         foreach (var sl in storage.slots)
                         {
                             if (!InvItemClass.isNull(sl.invItem) && sl.invItem.type == gas)
-                            { sl.inventory = storage; sl.removeItem(); }
+                            {
+                                sl.inventory = storage;
+                                sl.removeItem();
+                            }
                         }
                     }
                     ClearGas();
@@ -694,8 +776,10 @@ namespace DarkwoodMP.World
                     for (int j = 0; j < 3; j++)
                     {
                         var sl = storage.slots[frees[j * (frees.Count - 1) / 2]];
-                        sl.inventory = storage; sl.createItem(gas, 1);
-                        sl.invItem.durability = max * parts[j]; sl.invItem.refresh();
+                        sl.inventory = storage;
+                        sl.createItem(gas, 1);
+                        sl.invItem.durability = max * parts[j];
+                        sl.invItem.refresh();
                     }
                     yield return new WaitForSeconds(0.8f);
                     SlotShare.Instance?.SortPressed(storage);
@@ -808,7 +892,8 @@ namespace DarkwoodMP.World
             InvItem lureItem = null;
             if (Singleton<ItemsDatabase>.Instance != null)
             {
-                var drops = new List<string>(); var lures = new List<string>();
+                var drops = new List<string>();
+                var lures = new List<string>();
                 foreach (var (k, it) in DbItems())
                 {
                     if (it.dropOnReleaseAim)
@@ -903,7 +988,8 @@ namespace DarkwoodMP.World
                 {
                     feeder.enable(); // as building it does (Scripted builds it first, shared as Construct)
                 }
-                feeder.makeActive(); feeder.activate();
+                feeder.makeActive();
+                feeder.activate();
                 yield return new WaitForSeconds(1f);
             }
             else
@@ -938,8 +1024,14 @@ namespace DarkwoodMP.World
                 float before = saw.fuel;
                 if (saw.canConvert())
                 {
-                    try { saw.convert(); }
-                    catch (System.NullReferenceException) { } // Saw.refresh wants the saw's window open; the fuel is taken before it
+                    try
+                    {
+                        saw.convert();
+                    }
+                    catch (System.NullReferenceException)
+                    {
+                        // Saw.refresh wants the saw's window open; the fuel is taken before it
+                    }
                 }
                 Plugin.Log.LogInfo($"[world test] saw {saw.name} {ObjRef.Of(saw.gameObject)}: fuel {before:0.0} -> {saw.fuel:0.0}");
                 yield return new WaitForSeconds(1f);
@@ -1101,8 +1193,14 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world test] the world sets off {wt.t.type} {wt.et.name} {ObjRef.Of(wt.et.gameObject)} #{wt.i}: {Steps(wt.t.gameEvents)}");
                 // Started as fireEventTrigger would, also for one whose object is culled (inactive) here.
-                try { Singleton<Controller>.Instance.StartCoroutine(wt.t.fire(wt.t.type, "", wt.et)); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"[world test] {e.Message}"); }
+                try
+                {
+                    Singleton<Controller>.Instance.StartCoroutine(wt.t.fire(wt.t.type, "", wt.et));
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"[world test] {e.Message}");
+                }
                 yield return new WaitForSeconds(wt.t.delay + 1.5f);
                 Plugin.Log.LogInfo($"[world test] world trigger #{wt.i} fired={wt.t.fired}");
             }
@@ -1127,9 +1225,14 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             var door = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), p.transform.position);
             float best = door != null ? Vector3.Distance(door.transform.position, p.transform.position) : 0f;
-            if (door == null || best >= 2500f) { Plugin.Log.LogInfo("[client test] no door near"); yield break; }
+            if (door == null || best >= 2500f)
+            {
+                Plugin.Log.LogInfo("[client test] no door near");
+                yield break;
+            }
             p.Inventory.addItemTypeToPlayer("rope", 2);
-            yield return null; yield return null;
+            yield return null;
+            yield return null;
             int Ropes()
             {
                 int n = 0;

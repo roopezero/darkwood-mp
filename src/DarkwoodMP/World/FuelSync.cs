@@ -52,7 +52,11 @@ namespace DarkwoodMP.World
             Instance = this;
             _session = session;
             session.Register(MsgType.Fuel, OnFuel);
-            session.OnSessionEnded += () => { _pending.Clear(); _sent.Clear(); };
+            session.OnSessionEnded += () =>
+            {
+                _pending.Clear();
+                _sent.Clear();
+            };
         }
 
         /// <summary>
@@ -72,12 +76,20 @@ namespace DarkwoodMP.World
             }
             p.Amount += delta;
             var can = Player.Instance != null ? Player.Instance.currentItem : null;
-            if (delta > 0f && !InvItemClass.isNull(can) && can.type == "gasoline") { p.Can = can; p.Drained += 1f; }
+            if (delta > 0f && !InvItemClass.isNull(can) && can.type == "gasoline")
+            {
+                p.Can = can;
+                p.Drained += 1f;
+            }
         }
 
         public void Update()
         {
-            if (!WorldActions.Sharing) { _pending.Clear(); return; }
+            if (!WorldActions.Sharing)
+            {
+                _pending.Clear();
+                return;
+            }
             if (_pending.Count > 0 && Time.unscaledTime >= _nextSend)
             {
                 Flush();
@@ -134,7 +146,9 @@ namespace DarkwoodMP.World
                     return it.maxDurability;
                 }
             }
-            catch (System.Exception) { }
+            catch (System.Exception)
+            {
+            }
             return FallbackCan;
         }
 
@@ -183,7 +197,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (can == null) { Plugin.Log.LogInfo($"[authority] {amount:0.0} fuel for {to} wasn't from a can: nothing to give back"); return; }
+            if (can == null)
+            {
+                Plugin.Log.LogInfo($"[authority] {amount:0.0} fuel for {to} wasn't from a can: nothing to give back");
+                return;
+            }
             try
             {
                 if (can.amount <= 0)
@@ -198,7 +216,10 @@ namespace DarkwoodMP.World
                 can.refresh();
                 Plugin.Log.LogInfo($"[authority] gave back {amount:0.0} fuel to the gasoline can ({to} didn't take it)");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[authority] couldn't give the fuel back: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[authority] couldn't give the fuel back: {e.Message}");
+            }
         }
 
         private void Send(Component c, ulong except, ulong to = 0)
@@ -368,7 +389,10 @@ namespace DarkwoodMP.World
                     ((Saw)c).fuel = fuel;
                 }
             }
-            finally { WorldActions.Replaying = false; }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
             UiRefresh.FuelChanged(c); // an open saw's "Fuel" label, the fuel bar under the cursor
             if (WorldActions.Debug)
             {
@@ -471,7 +495,11 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 float d = StateDump.Flat(x.transform.position - at);
-                if (d < best) { best = d; nearest = x; }
+                if (d < best)
+                {
+                    best = d;
+                    nearest = x;
+                }
             }
             var has = nearest != null ? Characters.Instance.Electrician(nearest.Owner) : null;
             Last = $"{__instance.name}: {(nearest != null ? nearest.OwnerName : "ours")}'s skill, {(has.HasValue ? (has.Value ? 0.5f : 1f) : p.electricityModifier)}";

@@ -43,7 +43,9 @@ namespace DarkwoodMP
 
         public DirectPanel(TcpBackend tcp, ServerBrowser browser, Session session)
         {
-            _tcp = tcp; _browser = browser; _session = session;
+            _tcp = tcp;
+            _browser = browser;
+            _session = session;
             float S() => PixelFont.Scale;
             _browserWin = new UiWindow(0x0D3B, "Servers")
             {
@@ -55,7 +57,8 @@ namespace DarkwoodMP
             };
             _addressWin = new UiWindow(0x0D3C, "Connect to address")
             {
-                MinSize = new Vector2(280, 150), FitContent = true,
+                MinSize = new Vector2(280, 150),
+                FitContent = true,
                 DefaultRect = () => UiWindow.RightSide(330 * S(), 170 * S()),
                 Body = DrawAddress,
                 Footer = AddressButtons,
@@ -63,7 +66,8 @@ namespace DarkwoodMP
             };
             _passwordWin = new UiWindow(0x0D3D, "Password")
             {
-                MinSize = new Vector2(260, 120), FitContent = true,
+                MinSize = new Vector2(260, 120),
+                FitContent = true,
                 DefaultRect = () => UiWindow.RightSide(300 * S(), 130 * S()),
                 Body = DrawPassword,
                 Footer = PasswordButtons,
@@ -83,7 +87,11 @@ namespace DarkwoodMP
 
         public void CloseAll()
         {
-            if (_shotRow != null) { _browser.Favorites.Remove(_shotRow); _shotRow = null; }
+            if (_shotRow != null)
+            {
+                _browser.Favorites.Remove(_shotRow);
+                _shotRow = null;
+            }
             CloseWindows();
         }
 
@@ -98,7 +106,12 @@ namespace DarkwoodMP
         internal void ShowForShots(bool address)
         {
             // A row to show, kept out of the saved list (nothing answers on it).
-            if (_browser.Favorites.Count == 0) { _shotRow = "127.0.0.1:27799"; _browser.Favorites.Add(_shotRow); _browser.Query(_shotRow); }
+            if (_browser.Favorites.Count == 0)
+            {
+                _shotRow = "127.0.0.1:27799";
+                _browser.Favorites.Add(_shotRow);
+                _browser.Query(_shotRow);
+            }
             OpenServerBrowser();
             if (address)
             {
@@ -119,7 +132,11 @@ namespace DarkwoodMP
                 }
                 return;
             }
-            if (_tcp.InSession) { DrawInSession(f); return; }
+            if (_tcp.InSession)
+            {
+                DrawInSession(f);
+                return;
+            }
 
             if (_session.LastRefusal != null)
             {
@@ -252,8 +269,14 @@ namespace DarkwoodMP
                         }
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"Public IP lookup failed: {e.Message}"); }
-                finally { _lookingUp = false; }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Public IP lookup failed: {e.Message}");
+                }
+                finally
+                {
+                    _lookingUp = false;
+                }
             });
         }
 
@@ -262,7 +285,12 @@ namespace DarkwoodMP
         /// <summary>Opens the server browser (also the main menu's Join Game); the first time, it asks the Favorites and History servers.</summary>
         public void OpenServerBrowser()
         {
-            if (!_refreshedOnce) { _refreshedOnce = true; _browser.Refresh(ServerBrowser.Tab.Favorites); _browser.Refresh(ServerBrowser.Tab.History); }
+            if (!_refreshedOnce)
+            {
+                _refreshedOnce = true;
+                _browser.Refresh(ServerBrowser.Tab.Favorites);
+                _browser.Refresh(ServerBrowser.Tab.History);
+            }
             _browserWin.Show();
         }
 
@@ -317,7 +345,10 @@ namespace DarkwoodMP
                         _sortDown = !_sortDown;
                     }
                     else
-                    { _sortColumn = c; _sortDown = false; }
+                    {
+                        _sortColumn = c;
+                        _sortDown = false;
+                    }
                 }
                 string name = Columns[c] + (_sortColumn == c && c > 0 ? (_sortDown ? "  v" : "  ^") : "");
                 Ui.Label(new Rect(r.x + 4 * s, r.y, r.width - 6 * s, r.height), name, r.Contains(Event.current.mousePosition) ? MenuSkin.Bright : MenuSkin.Text);
@@ -349,7 +380,9 @@ namespace DarkwoodMP
                 if (ev.type == EventType.MouseDown && ev.button == 0 && row.Contains(ev.mousePosition))
                 {
                     bool twice = _lastClicked == addr && Time.unscaledTime - _lastClick < 0.4f;
-                    _selected = addr; _lastClicked = addr; _lastClick = Time.unscaledTime;
+                    _selected = addr;
+                    _lastClicked = addr;
+                    _lastClick = Time.unscaledTime;
                     ev.Use();
                     if (twice)
                     {
@@ -406,7 +439,8 @@ namespace DarkwoodMP
             }
             float s = PixelFont.Scale;
             float x = Mathf.Round(r.x + 1 * s), y = Mathf.Round(r.y + (r.height - 9 * s) / 2f);
-            var old = GUI.color; GUI.color = c * old;
+            var old = GUI.color;
+            GUI.color = c * old;
             var t = MenuSkin.White;
             GUI.DrawTexture(new Rect(x + 1 * s, y, 5 * s, s), t);
             GUI.DrawTexture(new Rect(x + 1 * s, y, s, 4 * s), t);
@@ -423,14 +457,20 @@ namespace DarkwoodMP
             }
             IComparable Key(string a)
             {
-                var e = _browser.Get(a); var i = e.Info;
+                var e = _browser.Get(a);
+                var i = e.Info;
                 switch (_sortColumn)
                 {
-                    case 0: return i?.Password == true ? 1 : 0;
-                    case 1: return (i?.Name ?? a).ToLowerInvariant();
-                    case 2: return i?.Players ?? -1;
-                    case 3: return i != null && i.Fields.TryGetValue("world", out var w) ? w : "";
-                    default: return i != null ? e.PingMs : int.MaxValue;
+                    case 0:
+                        return i?.Password == true ? 1 : 0;
+                    case 1:
+                        return (i?.Name ?? a).ToLowerInvariant();
+                    case 2:
+                        return i?.Players ?? -1;
+                    case 3:
+                        return i != null && i.Fields.TryGetValue("world", out var w) ? w : "";
+                    default:
+                        return i != null ? e.PingMs : int.MaxValue;
                 }
             }
             var sorted = list.OrderBy(Key);
@@ -495,7 +535,9 @@ namespace DarkwoodMP
             }
             if (password == null && _browser.Get(addr).Info?.Password == true)
             {
-                _passwordFor = addr; _password = ""; _focusField = true;
+                _passwordFor = addr;
+                _password = "";
+                _focusField = true;
                 _passwordWin.Show();
                 return;
             }
@@ -504,7 +546,11 @@ namespace DarkwoodMP
             {
                 return;
             }
-            if (_session.Active) { Plugin.Log.LogInfo($"Joining {addr}: leaving the game we're in first"); _session.Backend.Leave(); }
+            if (_session.Active)
+            {
+                Plugin.Log.LogInfo($"Joining {addr}: leaving the game we're in first");
+                _session.Backend.Leave();
+            }
             if (_tcp.InSession)
             {
                 _tcp.Leave(); // still connecting, not in yet
@@ -532,7 +578,11 @@ namespace DarkwoodMP
             _address = Ui.Field(f, "Address", _address, 64, name: "dwmp-address");
             Ui.Text(f, $"host or host:port (port {TcpBackend.DefaultPort} if you leave it out)", MenuSkin.Dim);
             _addressPassword = Ui.Field(f, "Password", _addressPassword, 32, password: true);
-            if (_focusField) { _focusField = false; GUI.FocusControl("dwmp-address"); }
+            if (_focusField)
+            {
+                _focusField = false;
+                GUI.FocusControl("dwmp-address");
+            }
             if (Ui.EnterPressed())
             {
                 ConnectToAddress();
@@ -576,7 +626,11 @@ namespace DarkwoodMP
             Ui.Text(f, $"{Name(_passwordFor)} needs a password.");
             var c = f.Row(Ui.RowH, 0);
             _password = Ui.Field(c[0], _password, 32, password: true, name: "dwmp-password");
-            if (_focusField) { _focusField = false; GUI.FocusControl("dwmp-password"); }
+            if (_focusField)
+            {
+                _focusField = false;
+                GUI.FocusControl("dwmp-password");
+            }
             if (Ui.EnterPressed())
             {
                 Connect(_passwordFor, _password ?? "");

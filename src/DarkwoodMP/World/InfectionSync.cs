@@ -27,7 +27,11 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
 
-        private struct Patch { public ObjRef Ref; public float X, Z; }
+        private struct Patch
+        {
+            public ObjRef Ref;
+            public float X, Z;
+        }
         private static readonly List<Patch> _cleared = new List<Patch>();
 
         /// <summary>Host: inside spawnInfection or a spider laying: a new patch made now is sent.</summary>
@@ -37,7 +41,11 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.InfectionCleared, OnCleared);
             s.Register(MsgType.InfectionSpawned, OnSpawned);
-            s.OnSessionEnded += () => { _cleared.Clear(); Growing = 0; };
+            s.OnSessionEnded += () =>
+            {
+                _cleared.Clear();
+                Growing = 0;
+            };
         }
 
         /// <summary>A patch was cleared in this game, by something that's ours to send.</summary>
@@ -59,7 +67,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (!WorldActions.Sharing) { _cleared.Clear(); return; }
+            if (!WorldActions.Sharing)
+            {
+                _cleared.Clear();
+                return;
+            }
             var w = S.Begin(MsgType.InfectionCleared);
             Write(w, _cleared);
             string what = $"infection cleared: {_cleared.Count}";
@@ -78,7 +90,12 @@ namespace DarkwoodMP.World
         private static void Write(PacketWriter w, List<Patch> patches)
         {
             w.W.Write((ushort)patches.Count);
-            foreach (var p in patches) { p.Ref.Write(w); w.W.Write(p.X); w.W.Write(p.Z); }
+            foreach (var p in patches)
+            {
+                p.Ref.Write(w);
+                w.W.Write(p.X);
+                w.W.Write(p.Z);
+            }
         }
 
         private static void OnCleared(ulong from, PacketReader r)
@@ -108,13 +125,26 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 WorldActions.Replaying = true;
-                try { Clear(inf); }
-                catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't clear infection {p.Ref}: {e.Message}"); }
-                finally { WorldActions.Replaying = false; }
+                try
+                {
+                    Clear(inf);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning($"Couldn't clear infection {p.Ref}: {e.Message}");
+                }
+                finally
+                {
+                    WorldActions.Replaying = false;
+                }
                 done.Add(p);
             }
             Plugin.Log.LogInfo($"[world] infection cleared: {done.Count} (from {s.NameOf(from)})" + (done.Count < n ? $", {n - done.Count} not here, already gone or out of reach" : ""));
-            if (s.IsHost && done.Count == 0 && n > 0) { Authority.Refuse("none of that infection is within their reach"); return; }
+            if (s.IsHost && done.Count == 0 && n > 0)
+            {
+                Authority.Refuse("none of that infection is within their reach");
+                return;
+            }
             if (s.IsHost && done.Count > 0)
             {
                 var w = s.Begin(MsgType.InfectionCleared);
@@ -130,7 +160,11 @@ namespace DarkwoodMP.World
             {
                 inf.disappear();
             }
-            else { inf.disappearing = true; Object.Destroy(inf.gameObject); }
+            else
+            {
+                inf.disappearing = true;
+                Object.Destroy(inf.gameObject);
+            }
         }
 
         /// <summary>The patch by its name across games, or else the one nearest where it was (patches are 70 apart).</summary>
@@ -141,7 +175,8 @@ namespace DarkwoodMP.World
             {
                 return inf;
             }
-            Infection best = null; float bestD = 20f * 20f;
+            Infection best = null;
+            float bestD = 20f * 20f;
             foreach (var i in Resources.FindObjectsOfTypeAll<Infection>())
             {
                 if (i == null || !i.gameObject.scene.IsValid() || i.disappearing)
@@ -150,7 +185,11 @@ namespace DarkwoodMP.World
                 }
                 var pos = i.transform.position;
                 float d = (pos.x - p.X) * (pos.x - p.X) + (pos.z - p.Z) * (pos.z - p.Z);
-                if (d <= bestD) { bestD = d; best = i; }
+                if (d <= bestD)
+                {
+                    bestD = d;
+                    best = i;
+                }
             }
             if (best == null && WorldActions.Debug)
             {
@@ -211,8 +250,14 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[world] got infection spawned Spawned:{id} at {pos}");
                 }
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"Couldn't make the host's infection: {e.Message}"); }
-            finally { WorldActions.Replaying = false; }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"Couldn't make the host's infection: {e.Message}");
+            }
+            finally
+            {
+                WorldActions.Replaying = false;
+            }
         }
     }
 

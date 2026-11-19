@@ -48,7 +48,11 @@ namespace DarkwoodMP
         private bool _userSized;
         private float _fitHeight;
 
-        public UiWindow(int id, string title) { Id = id; Title = title; }
+        public UiWindow(int id, string title)
+        {
+            Id = id;
+            Title = title;
+        }
 
         /// <summary>For tests: whether the body scrolls this frame, and how tall its content was.</summary>
         internal bool TestScrolls => _scrolls;
@@ -60,7 +64,8 @@ namespace DarkwoodMP
         /// </summary>
         public static Rect RightSide(float w, float h, float top = -1f)
         {
-            w = Mathf.Min(w, Screen.width - 32); h = Mathf.Min(h, Screen.height - 32);
+            w = Mathf.Min(w, Screen.width - 32);
+            h = Mathf.Min(h, Screen.height - 32);
             float margin = Mathf.Max(16f, Screen.width * 0.04f);
             float y = top < 0f ? (Screen.height - h) / 2f : Screen.height * top;
             return new Rect(Mathf.Max(16f, Screen.width - w - margin), Mathf.Clamp(y, 16f, Mathf.Max(16f, Screen.height - h - 16f)), w, h);
@@ -71,7 +76,13 @@ namespace DarkwoodMP
         private static float Pad => 8 * S;
         private static float Grip => 12 * S;
 
-        public void Show() { Open = true; _focusNext = true; _dragging = false; _resizing = false; }
+        public void Show()
+        {
+            Open = true;
+            _focusNext = true;
+            _dragging = false;
+            _resizing = false;
+        }
 
         public void Close()
         {
@@ -93,7 +104,14 @@ namespace DarkwoodMP
                 return;
             }
             var screen = new Vector2Int(Screen.width, Screen.height);
-            if (_placedFor != screen) { Rect = DefaultRect(); _placedFor = screen; _scroll = Vector2.zero; _userSized = false; _fitHeight = 0; }
+            if (_placedFor != screen)
+            {
+                Rect = DefaultRect();
+                _placedFor = screen;
+                _scroll = Vector2.zero;
+                _userSized = false;
+                _fitHeight = 0;
+            }
             if (FitContent && !_userSized && _fitHeight > 0 && Event.current.type == EventType.Layout)
             {
                 Rect.height = Mathf.Min(_fitHeight, Screen.height - 16 * S);
@@ -102,7 +120,12 @@ namespace DarkwoodMP
             HandleDrag();
             Rect = Modal ? GUI.ModalWindow(Id, Rect, Draw, GUIContent.none, MenuSkin.Window) : GUI.Window(Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
             Clamp();
-            if (_focusNext) { _focusNext = false; GUI.FocusWindow(Id); GUI.BringWindowToFront(Id); }
+            if (_focusNext)
+            {
+                _focusNext = false;
+                GUI.FocusWindow(Id);
+                GUI.BringWindowToFront(Id);
+            }
         }
 
         /// <summary>
@@ -124,7 +147,10 @@ namespace DarkwoodMP
             var grip = new Rect(Rect.xMax - Grip, Rect.yMax - Grip, Grip, Grip);
             if (e.type == EventType.MouseDown && e.button == 0 && grip.Contains(e.mousePosition))
             {
-                _resizing = true; _userSized = true; _resizeFrom = MouseNow(); _sizeFrom = Rect.size;
+                _resizing = true;
+                _userSized = true;
+                _resizeFrom = MouseNow();
+                _sizeFrom = Rect.size;
                 e.Use();
                 return;
             }
@@ -156,7 +182,12 @@ namespace DarkwoodMP
         /// place at the start plus how far the mouse is from where it was then, so no movement is lost however slowly
         /// it moves. It replaces Unity's GUI.DragWindow, with which slow drags felt stuck (issue #18). DragTest checks it.
         /// </summary>
-        internal void BeginDrag() { _dragging = true; _placeFrom = Rect.position; _dragFrom = MouseNow(); }
+        internal void BeginDrag()
+        {
+            _dragging = true;
+            _placeFrom = Rect.position;
+            _dragFrom = MouseNow();
+        }
 
         private void HandleDrag()
         {
@@ -267,7 +298,11 @@ namespace DarkwoodMP
         public float Y;
         public float Gap => 4 * UiWindow.S;
 
-        public Flow(Rect area) { Area = area; Y = area.y; }
+        public Flow(Rect area)
+        {
+            Area = area;
+            Y = area.y;
+        }
 
         public float Width => Area.width;
 
@@ -295,7 +330,8 @@ namespace DarkwoodMP
 
         public static Rect[] Split(Rect r, params float[] widths)
         {
-            float gap = 4 * S, fixedW = 0; int flex = 0;
+            float gap = 4 * S, fixedW = 0;
+            int flex = 0;
             foreach (var w in widths)
             {
                 if (w > 0)
@@ -354,7 +390,11 @@ namespace DarkwoodMP
             {
                 clicked = GUI.Button(r, GUIContent.none, MenuSkin.Button);
             }
-            else { GUI.Box(r, GUIContent.none, MenuSkin.Button); clicked = false; }
+            else
+            {
+                GUI.Box(r, GUIContent.none, MenuSkin.Button);
+                clicked = false;
+            }
             bool down = enabled && GUIUtility.hotControl != 0 && hover && Input.GetMouseButton(0);
             var tr = down ? new Rect(r.x + S, r.y + S, r.width, r.height) : r;
             PixelFont.Draw(tr, text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text, TextAnchor.MiddleCenter);
@@ -367,7 +407,10 @@ namespace DarkwoodMP
         public static bool Tab(Rect r, string text, bool chosen)
         {
             bool hover = r.Contains(Event.current.mousePosition);
-            if (chosen) { GUI.Box(new Rect(r.x, r.y, r.width, r.height + 2 * S), GUIContent.none, MenuSkin.Button); }
+            if (chosen)
+            {
+                GUI.Box(new Rect(r.x, r.y, r.width, r.height + 2 * S), GUIContent.none, MenuSkin.Button);
+            }
             bool clicked = !chosen && GUI.Button(new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S), GUIContent.none, MenuSkin.Pressed);
             PixelFont.Draw(chosen ? r : new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S), text, chosen || hover ? MenuSkin.Bright : MenuSkin.Text, TextAnchor.MiddleCenter);
             return clicked;
@@ -413,7 +456,11 @@ namespace DarkwoodMP
         public static bool EnterPressed()
         {
             var e = Event.current;
-            if (e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)) { e.Use(); return true; }
+            if (e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter))
+            {
+                e.Use();
+                return true;
+            }
             return false;
         }
     }

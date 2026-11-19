@@ -37,7 +37,9 @@ namespace DarkwoodMP.Net
         /// <summary>The router's external address is private or shared (CGNAT, a second router): forwarding won't reach us.</summary>
         public volatile bool BehindAnotherNat;
         /// <summary>The TCP port the router forwards to us (NAT-PMP may give another than asked), or 0.</summary>
-        public int ExternalPort { get
+        public int ExternalPort
+        {
+            get
             {
                 lock (_lock)
                 {
@@ -45,7 +47,9 @@ namespace DarkwoodMP.Net
                 }
             }
         }
-        public bool Mapped { get
+        public bool Mapped
+        {
+            get
             {
                 lock (_lock)
                 {
@@ -79,7 +83,9 @@ namespace DarkwoodMP.Net
                 gen = ++_generation;
             }
             Status = "Asking your router to open the port (UPnP)...";
-            ExternalIp = null; BehindAnotherNat = false; _refused = null;
+            ExternalIp = null;
+            BehindAnotherNat = false;
+            _refused = null;
             var t = new Thread(() => Run(port, gen)) { IsBackground = true, Name = "DarkwoodMP port mapping" };
             t.Start();
         }
@@ -91,7 +97,12 @@ namespace DarkwoodMP.Net
         public void Stop(bool wait = false)
         {
             Mapping m;
-            lock (_lock) { _generation++; m = _mapped; _mapped = null; }
+            lock (_lock)
+            {
+                _generation++;
+                m = _mapped;
+                _mapped = null;
+            }
             Status = "";
             if (m == null)
             {
@@ -139,7 +150,10 @@ namespace DarkwoodMP.Net
                 }
                 lock (_lock)
                 {
-                    if (gen != _generation) { m = null; }
+                    if (gen != _generation)
+                    {
+                        m = null;
+                    }
                     else
                     {
                         _mapped = m;
@@ -225,7 +239,10 @@ namespace DarkwoodMP.Net
                 }
                 Plugin.Log.LogInfo($"[port mapping] removed {(m.Upnp ? "UPnP" : "NAT-PMP")} mapping of port {m.Port}");
             }
-            catch (Exception e) { Plugin.Log.LogWarning("[port mapping] couldn't remove the mapping: " + e.Message); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("[port mapping] couldn't remove the mapping: " + e.Message);
+            }
         }
 
         /// <summary>100.64/10 (carrier-grade NAT), the RFC 1918 ranges, link-local, loopback and 0.0.0.0.</summary>
@@ -282,7 +299,10 @@ namespace DarkwoodMP.Net
                             ExternalIp = ext;
                         }
                     }
-                    catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] GetExternalIPAddress at {control}: {e.Message}"); }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogInfo($"[port mapping] GetExternalIPAddress at {control}: {e.Message}");
+                    }
                     if (!AddUpnp(m, "TCP", LeaseSeconds, out string why))
                     {
                         Plugin.Log.LogInfo($"[port mapping] UPnP router at {loc} refused TCP {port}: {why}");
@@ -300,7 +320,10 @@ namespace DarkwoodMP.Net
                     }
                     return m;
                 }
-                catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] UPnP device at {loc}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogInfo($"[port mapping] UPnP device at {loc}: {e.Message}");
+                }
             }
             return null;
         }
@@ -331,7 +354,11 @@ namespace DarkwoodMP.Net
                         u.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastTimeToLive, 2);
                         socks.Add(u);
                     }
-                    catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] SSDP from {ip}: {e.Message}"); continue; }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogInfo($"[port mapping] SSDP from {ip}: {e.Message}");
+                        continue;
+                    }
                     foreach (IPEndPoint to in targets)
                     {
                         try
@@ -342,7 +369,10 @@ namespace DarkwoodMP.Net
                                 u.Send(q, q.Length, to);
                             }
                         }
-                        catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] SSDP from {ip} to {to}: {e.Message}"); }
+                        catch (Exception e)
+                        {
+                            Plugin.Log.LogInfo($"[port mapping] SSDP from {ip} to {to}: {e.Message}");
+                        }
                     }
                 }
                 int until = Environment.TickCount + 2500;
@@ -360,7 +390,14 @@ namespace DarkwoodMP.Net
                         EndPoint ep = from;
                         var buf = new byte[2048];
                         int n;
-                        try { n = s.ReceiveFrom(buf, ref ep); } catch { continue; }
+                        try
+                        {
+                            n = s.ReceiveFrom(buf, ref ep);
+                        }
+                        catch
+                        {
+                            continue;
+                        }
                         foreach (string line in Encoding.ASCII.GetString(buf, 0, n).Split('\n'))
                         {
                             int colon = line.IndexOf(':');
@@ -387,8 +424,12 @@ namespace DarkwoodMP.Net
                 foreach (var u in socks)
                 {
                     try
-                    { u.Close(); }
-                    catch { }
+                    {
+                        u.Close();
+                    }
+                    catch
+                    {
+                    }
                 }
             }
             Plugin.Log.LogInfo($"[port mapping] SSDP: {found.Count} answer(s){(found.Count > 0 ? ": " + string.Join(", ", found) : "")}");
@@ -456,7 +497,11 @@ namespace DarkwoodMP.Net
                 return true;
             }
             // 725 OnlyPermanentLeasesSupported: some routers take only 0, which never expires (removed when we stop).
-            if (why.StartsWith("725") && !m.Permanent && Soap(m, "AddPortMapping", args(0), out why) != null) { m.Permanent = true; return true; }
+            if (why.StartsWith("725") && !m.Permanent && Soap(m, "AddPortMapping", args(0), out why) != null)
+            {
+                m.Permanent = true;
+                return true;
+            }
             return false;
         }
 
@@ -476,7 +521,14 @@ namespace DarkwoodMP.Net
                 $"<s:Body><u:{action} xmlns:u=\"{m.ServiceType}\">{args}</u:{action}></s:Body></s:Envelope>";
             string text = Http("POST", m.ControlUrl, body, $"\"{m.ServiceType}#{action}\"", out int status);
             var doc = new XmlDocument { XmlResolver = null };
-            try { doc.LoadXml(text); } catch { doc = null; }
+            try
+            {
+                doc.LoadXml(text);
+            }
+            catch
+            {
+                doc = null;
+            }
             if (status == 200 && doc != null)
             {
                 error = null;
@@ -528,8 +580,14 @@ namespace DarkwoodMP.Net
                 }
             }
             HttpWebResponse resp;
-            try { resp = (HttpWebResponse)req.GetResponse(); }
-            catch (WebException e) when (e.Response is HttpWebResponse r) { resp = r; } // a SOAP fault comes as HTTP 500
+            try
+            {
+                resp = (HttpWebResponse)req.GetResponse();
+            }
+            catch (WebException e) when (e.Response is HttpWebResponse r)
+            {
+                resp = r; // a SOAP fault comes as HTTP 500
+            }
             using (resp)
             {
                 using (var rd = new StreamReader(resp.GetResponseStream()))
@@ -551,7 +609,11 @@ namespace DarkwoodMP.Net
                     return ((IPEndPoint)s.LocalEndPoint).Address.ToString();
                 }
             }
-            catch (Exception e) { Plugin.Log.LogInfo($"[port mapping] no route to {host}: {e.Message}"); return null; }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo($"[port mapping] no route to {host}: {e.Message}");
+                return null;
+            }
         }
 
         // ---- NAT-PMP (RFC 6886) --------------------------------------------
@@ -569,7 +631,11 @@ namespace DarkwoodMP.Net
                 ExternalIp = new IPAddress(new[] { r[8], r[9], r[10], r[11] }).ToString();
                 var m = new Mapping { Gateway = gw, Port = port, InternalIp = LocalAddressToward(gw.Address.ToString(), gw.Port) };
                 m.ExternalTcp = PmpMap(gw, 2, port, port, LeaseSeconds);
-                if (m.ExternalTcp <= 0) { Plugin.Log.LogInfo($"[port mapping] NAT-PMP at {gw} refused TCP {port}"); continue; }
+                if (m.ExternalTcp <= 0)
+                {
+                    Plugin.Log.LogInfo($"[port mapping] NAT-PMP at {gw} refused TCP {port}");
+                    continue;
+                }
                 m.ExternalUdp = Math.Max(0, PmpMap(gw, 1, port, port, LeaseSeconds));
                 return m;
             }
@@ -581,9 +647,14 @@ namespace DarkwoodMP.Net
         {
             var q = new byte[12];
             q[1] = op;
-            q[4] = (byte)(internalPort >> 8); q[5] = (byte)internalPort;
-            q[6] = (byte)(externalPort >> 8); q[7] = (byte)externalPort;
-            q[8] = (byte)(lifetime >> 24); q[9] = (byte)(lifetime >> 16); q[10] = (byte)(lifetime >> 8); q[11] = (byte)lifetime;
+            q[4] = (byte)(internalPort >> 8);
+            q[5] = (byte)internalPort;
+            q[6] = (byte)(externalPort >> 8);
+            q[7] = (byte)externalPort;
+            q[8] = (byte)(lifetime >> 24);
+            q[9] = (byte)(lifetime >> 16);
+            q[10] = (byte)(lifetime >> 8);
+            q[11] = (byte)lifetime;
             byte[] r = PmpAsk(gw, q, 16, tries);
             if (r == null || r[1] != 128 + op || (r[2] << 8 | r[3]) != 0)
             {
@@ -611,7 +682,9 @@ namespace DarkwoodMP.Net
                             return r;
                         }
                     }
-                    catch (SocketException) { }
+                    catch (SocketException)
+                    {
+                    }
                 }
             }
             return null;
@@ -652,7 +725,10 @@ namespace DarkwoodMP.Net
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogInfo("[port mapping] couldn't list gateways: " + e.Message); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("[port mapping] couldn't list gateways: " + e.Message);
+            }
             if (list.Count == 0 && File.Exists("/proc/net/route"))
             {
                 try
@@ -671,7 +747,9 @@ namespace DarkwoodMP.Net
                         }
                     }
                 }
-                catch { }
+                catch
+                {
+                }
             }
             return list;
         }

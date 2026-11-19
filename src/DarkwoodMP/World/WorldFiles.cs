@@ -142,8 +142,14 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            try { return string.Equals(Full(a), Full(b), PathCase); }
-            catch { return a == b; }
+            try
+            {
+                return string.Equals(Full(a), Full(b), PathCase);
+            }
+            catch
+            {
+                return a == b;
+            }
         }
 
         /// <summary>Whether path is dir or inside it.</summary>
@@ -158,7 +164,10 @@ namespace DarkwoodMP.World
                 string p = Full(path), d = Full(dir);
                 return string.Equals(p, d, PathCase) || p.StartsWith(d + Path.DirectorySeparatorChar, PathCase);
             }
-            catch { return false; }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool StrictlyUnder(string full, string dir) => !SamePath(full, dir) && IsUnder(full, dir);
@@ -179,7 +188,14 @@ namespace DarkwoodMP.World
             {
                 return "the path isn't absolute";
             }
-            try { full = Full(path); } catch (Exception e) { return $"the path isn't valid ({e.Message})"; }
+            try
+            {
+                full = Full(path);
+            }
+            catch (Exception e)
+            {
+                return $"the path isn't valid ({e.Message})";
+            }
             if (full.Length == 0 || Path.GetDirectoryName(full) == null || string.IsNullOrEmpty(Path.GetFileName(full)))
             {
                 return "it's a filesystem root";
@@ -262,7 +278,11 @@ namespace DarkwoodMP.World
                     why = "it isn't prof<N>/darkwoodmp_players in the save folder";
                 }
             }
-            if (why != null) { Plugin.Log.LogWarning($"Not deleting {dir ?? baseDir ?? "(null)"}: {why}"); return false; }
+            if (why != null)
+            {
+                Plugin.Log.LogWarning($"Not deleting {dir ?? baseDir ?? "(null)"}: {why}");
+                return false;
+            }
             if (!Exists(full))
             {
                 return false;
@@ -273,8 +293,14 @@ namespace DarkwoodMP.World
 
         private static bool IsLink(string p)
         {
-            try { return (System.IO.File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0; }
-            catch { return false; }
+            try
+            {
+                return (System.IO.File.GetAttributes(p) & FileAttributes.ReparsePoint) != 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool Exists(string p) => Directory.Exists(p) || System.IO.File.Exists(p) || IsLink(p);
@@ -286,13 +312,23 @@ namespace DarkwoodMP.World
             {
                 // A link to a folder: Windows removes a junction or folder link with RemoveDirectory, Unix a symlink with
                 // unlink (rmdir refuses one). Neither goes into the folder it points at.
-                try { Directory.Delete(p, false); }
-                catch (Exception) { System.IO.File.Delete(p); }
+                try
+                {
+                    Directory.Delete(p, false);
+                }
+                catch (Exception)
+                {
+                    System.IO.File.Delete(p);
+                }
                 return;
             }
             if (!Directory.Exists(p))
             {
-                if (System.IO.File.Exists(p)) { System.IO.File.SetAttributes(p, FileAttributes.Normal); System.IO.File.Delete(p); }
+                if (System.IO.File.Exists(p))
+                {
+                    System.IO.File.SetAttributes(p, FileAttributes.Normal);
+                    System.IO.File.Delete(p);
+                }
                 return;
             }
             foreach (var e in Directory.GetFileSystemEntries(p))

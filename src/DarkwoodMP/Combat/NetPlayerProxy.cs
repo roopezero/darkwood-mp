@@ -170,15 +170,20 @@ namespace DarkwoodMP.Combat
             {
                 case CapsuleCollider c:
                     var cc = dst.AddComponent<CapsuleCollider>();
-                    cc.center = c.center; cc.radius = c.radius; cc.height = c.height; cc.direction = c.direction;
+                    cc.center = c.center;
+                    cc.radius = c.radius;
+                    cc.height = c.height;
+                    cc.direction = c.direction;
                     break;
                 case SphereCollider s:
                     var sc = dst.AddComponent<SphereCollider>();
-                    sc.center = s.center; sc.radius = s.radius;
+                    sc.center = s.center;
+                    sc.radius = s.radius;
                     break;
                 case BoxCollider b:
                     var bc = dst.AddComponent<BoxCollider>();
-                    bc.center = b.center; bc.size = b.size;
+                    bc.center = b.center;
+                    bc.size = b.size;
                     break;
                 default:
                     dst.AddComponent<SphereCollider>().radius = 15f;
@@ -195,7 +200,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>Hits on a proxy go to its player (CombatPatches routes enemies' sensors here).</summary>
-        public override void getHit(float damage) { }
+        public override void getHit(float damage)
+        {
+        }
         public override void getHit(float damage, Transform attackerTransform, bool CanCutInHalf, bool byPlayer, bool canInterrupt,
             bool normalHit = true, bool showRedScreen = false, bool force = false, bool dontShowHealthBar = false)
         {
@@ -206,7 +213,9 @@ namespace DarkwoodMP.Combat
             PlayerDamage.Send(Owner, damage, attackerTransform, shadow: false, effects: null);
         }
 
-        public override void updateHealthBar() { }
+        public override void updateHealthBar()
+        {
+        }
         public override CharacterMessage displayMessage(string message, bool verticallyCentered = false, bool isEpilogueMessage = false) => null;
     }
 
@@ -313,8 +322,15 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
-                    try { c.stopAttacking(t); stopped++; }
-                    catch (System.Exception e) { Plugin.Log.LogWarning($"{c.name} couldn't stop attacking {proxy.OwnerName}: {e.Message}"); }
+                    try
+                    {
+                        c.stopAttacking(t);
+                        stopped++;
+                    }
+                    catch (System.Exception e)
+                    {
+                        Plugin.Log.LogWarning($"{c.name} couldn't stop attacking {proxy.OwnerName}: {e.Message}");
+                    }
                 }
             }
             if (changed && Threat.Debug)

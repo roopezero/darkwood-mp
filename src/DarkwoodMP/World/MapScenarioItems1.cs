@@ -64,7 +64,11 @@ namespace DarkwoodMP.World
             if (slot < 0)
             {
                 slot = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
-                if (slot < 0) { slot = 0; p.Hotbar.slots[0].removeItem(); }
+                if (slot < 0)
+                {
+                    slot = 0;
+                    p.Hotbar.slots[0].removeItem();
+                }
                 p.Hotbar.slots[slot].inventory = p.Hotbar;
                 p.Hotbar.slots[slot].createItem(type, 1);
             }
@@ -95,7 +99,11 @@ namespace DarkwoodMP.World
         internal static IEnumerator PlaceReal(string prefab, Vector3 at, Result r, Action<GameObject> made)
         {
             string type = PlaceableType(prefab);
-            if (type == null) { r.Fail($"no item places {prefab}"); yield break; }
+            if (type == null)
+            {
+                r.Fail($"no item places {prefab}");
+                yield break;
+            }
             yield return HoldItem(type, r);
             if (r.Failure != null)
             {
@@ -108,8 +116,14 @@ namespace DarkwoodMP.World
                 ShowProxyItem.Invoke(p, new object[] { p.currentItem.baseClass.item });
                 p.proxyItem.transform.localPosition = at;
                 p.placingItem = true;
-                try { p.progressBarCompleted(); }
-                finally { p.placingItem = false; }
+                try
+                {
+                    p.progressBarCompleted();
+                }
+                finally
+                {
+                    p.placingItem = false;
+                }
             });
             var id = ObjRef.Spawned.Keys.FirstOrDefault(k => !before.Contains(k));
             made(id != 0 && ObjRef.Spawned.TryGetValue(id, out var go) ? go : null);
@@ -123,7 +137,11 @@ namespace DarkwoodMP.World
         {
             string prefab = a.Length > 0 ? a[0] : "beartrap";
             string type = PlaceableType(prefab);
-            if (type == null) { r.Fail($"no item places {prefab}"); yield break; }
+            if (type == null)
+            {
+                r.Fail($"no item places {prefab}");
+                yield break;
+            }
             yield return HoldItem(type, r);
             if (r.Failure != null)
             {
@@ -137,7 +155,11 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            if (go == null) { r.Fail("placed, but it isn't shared (no ObjRef.Spawned entry)"); yield break; }
+            if (go == null)
+            {
+                r.Fail("placed, but it isn't shared (no ObjRef.Spawned entry)");
+                yield break;
+            }
             int after = MapScenarioWorld.CarriedOf(type);
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
@@ -168,12 +190,20 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator PlaceForged(string[] a, Result r)
         {
-            if (S == null || !S.IsClient) { r.Fail("a client's step"); yield break; }
+            if (S == null || !S.IsClient)
+            {
+                r.Fail("a client's step");
+                yield break;
+            }
             if (a.Contains("--none"))
             {
                 string path = a[0];
                 var types = Containers.PlacedWith(path);
-                if (types == null) { r.Fail($"no item places {path}"); yield break; }
+                if (types == null)
+                {
+                    r.Fail($"no item places {path}");
+                    yield break;
+                }
                 foreach (var type in types)
                 {
                     int n = MapScenarioWorld.CarriedOf(type);
@@ -191,7 +221,11 @@ namespace DarkwoodMP.World
                 }
                 yield return null;
                 int left = types.Sum(t => MapScenarioWorld.CarriedOf(t));
-                if (left > 0) { r.Fail($"still carrying {left} that place {path}"); yield break; }
+                if (left > 0)
+                {
+                    r.Fail($"still carrying {left} that place {path}");
+                    yield break;
+                }
                 Characters.Instance?.SaveNow();
             }
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
@@ -202,11 +236,19 @@ namespace DarkwoodMP.World
             w.WriteStr(a[0]);
             w.Write(at);
             var rot = Quaternion.Euler(90f, 0f, 0f);
-            w.W.Write(rot.x); w.W.Write(rot.y); w.W.Write(rot.z); w.W.Write(rot.w);
+            w.W.Write(rot.x);
+            w.W.Write(rot.y);
+            w.W.Write(rot.z);
+            w.W.Write(rot.w);
             w.WriteBigStr("");
             w.W.Write(0);
-            bool? ok = null; string why = null;
-            Authority.Request(w, $"forged {a[0]}", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
+            bool? ok = null;
+            string why = null;
+            Authority.Request(w, $"forged {a[0]}", (o, reason, res) =>
+            {
+                ok = o;
+                why = reason;
+            }, inventory: false);
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (ok == null && Time.realtimeSinceStartup < giveUp)
             {
@@ -229,12 +271,24 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorLockKey(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door {a[0]}");
+                yield break;
+            }
             var j = Singleton<UI>.Instance.journal;
             string key = Singleton<JournalDatabase>.Instance.keysDict.Keys.Where(k => !string.IsNullOrEmpty(k) && !j.keysDict.ContainsKey(k))
                 .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
-            if (key == null) { r.Fail("no key our journal hasn't got"); yield break; }
-            if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
+            if (key == null)
+            {
+                r.Fail("no key our journal hasn't got");
+                yield break;
+            }
+            if (d.opened)
+            {
+                d.close(P.transform);
+                yield return new WaitForSeconds(0.5f);
+            }
             d.lockMe(key);
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
@@ -254,13 +308,21 @@ namespace DarkwoodMP.World
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
             var l = d != null ? d.GetComponent<Locked>() : null;
-            if (l == null || !l.locked) { r.Fail($"door {a[0]} isn't locked here"); yield break; }
+            if (l == null || !l.locked)
+            {
+                r.Fail($"door {a[0]} isn't locked here");
+                yield break;
+            }
             yield return Walk(d.transform.position);
             var j = Singleton<UI>.Instance.journal;
             int refused = Authority.RolledBack;
             if (a.Contains("--forged"))
             {
-                if (j.keysDict.ContainsKey(l.keyType)) { r.Fail($"our journal has {l.keyType} already"); yield break; }
+                if (j.keysDict.ContainsKey(l.keyType))
+                {
+                    r.Fail($"our journal has {l.keyType} already");
+                    yield break;
+                }
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
                 while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
@@ -321,10 +383,22 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorBlock(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door {a[0]}");
+                yield break;
+            }
             var l = d.GetComponent<Locked>();
-            if (d.destroyed || d.barricaded || (l != null && l.locked)) { r.Fail($"door {a[0]} ({d.name}) is broken, barricaded or locked"); yield break; }
-            if (d.opened) { d.close(P.transform); yield return new WaitForSeconds(0.5f); }
+            if (d.destroyed || d.barricaded || (l != null && l.locked))
+            {
+                r.Fail($"door {a[0]} ({d.name}) is broken, barricaded or locked");
+                yield break;
+            }
+            if (d.opened)
+            {
+                d.close(P.transform);
+                yield return new WaitForSeconds(0.5f);
+            }
             d.blocked = true;
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
             if (d.opened)
@@ -340,8 +414,16 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorStoryUnblock(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
-            if (!d.blocked) { r.Fail($"door {a[0]} isn't blocked here"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door {a[0]}");
+                yield break;
+            }
+            if (!d.blocked)
+            {
+                r.Fail($"door {a[0]} isn't blocked here");
+                yield break;
+            }
             var ge = new GameEvent
             {
                 type = GameEvent.Type.modifyDoor,
@@ -382,10 +464,22 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorUse(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            if (d == null) { r.Fail($"no door {a[0]}"); yield break; }
+            if (d == null)
+            {
+                r.Fail($"no door {a[0]}");
+                yield break;
+            }
             yield return Walk(d.transform.position);
-            if (d.blocked) { r.Fail($"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it"); yield break; }
-            if (d.opened) { r.Fail($"{d.name} is open already"); yield break; }
+            if (d.blocked)
+            {
+                r.Fail($"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it");
+                yield break;
+            }
+            if (d.opened)
+            {
+                r.Fail($"{d.name} is open already");
+                yield break;
+            }
             int refused = Authority.RolledBack;
             AsPlayer(() => P.openCloseDoor(d, false));
             yield return new WaitForSeconds(2f); // a refusal would close it again
@@ -434,7 +528,11 @@ namespace DarkwoodMP.World
         private static IEnumerator PorterReady(string[] a, Result r)
         {
             var loc = PorterPlace();
-            if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no place for the porter near the test area");
+                yield break;
+            }
             var flags = Singleton<Flags>.Instance;
             if (!Core.isDay())
             {
@@ -444,7 +542,11 @@ namespace DarkwoodMP.World
             {
                 flags.setFlag("porter_inTransit", activeModifier: false);
             }
-            if (loc.porter != null) { Object.Destroy(loc.porter); loc.porter = null; }
+            if (loc.porter != null)
+            {
+                Object.Destroy(loc.porter);
+                loc.porter = null;
+            }
             yield return new WaitForSeconds(1f);
             r.Info = $"{loc.name} porter at {Fmt(loc.porterPosition.transform.position)}; day={Core.isDay()} killed={flags.isFlagTrue("porter_killed")}";
             if (!Core.isDay() || flags.isFlagTrue("porter_killed"))
@@ -457,11 +559,23 @@ namespace DarkwoodMP.World
         private static IEnumerator Whistle(string[] a, Result r)
         {
             var loc = PorterPlace();
-            if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no place for the porter near the test area");
+                yield break;
+            }
             yield return Walk(loc.porterPosition.transform.position, 150f);
             P.whereAmI.checkWhereAmI();
-            if (P.whereAmI.bigLocation != loc) { r.Fail($"we're in {P.whereAmI.bigLocation?.name ?? "no big location"}, not {loc.name}"); yield break; }
-            if (PorterThere(loc)) { r.Fail("the porter is there already"); yield break; }
+            if (P.whereAmI.bigLocation != loc)
+            {
+                r.Fail($"we're in {P.whereAmI.bigLocation?.name ?? "no big location"}, not {loc.name}");
+                yield break;
+            }
+            if (PorterThere(loc))
+            {
+                r.Fail("the porter is there already");
+                yield break;
+            }
             int refused = Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
@@ -484,7 +598,11 @@ namespace DarkwoodMP.World
         private static IEnumerator PorterCame(string[] a, Result r)
         {
             var loc = PorterPlace();
-            if (loc == null) { r.Fail("no place for the porter near the test area"); yield break; }
+            if (loc == null)
+            {
+                r.Fail("no place for the porter near the test area");
+                yield break;
+            }
             float giveUp = Time.realtimeSinceStartup + 10f;
             while (!PorterThere(loc) && Time.realtimeSinceStartup < giveUp)
             {
@@ -503,11 +621,20 @@ namespace DarkwoodMP.World
             var near = PorterPlace();
             var far = Object.FindObjectsOfType<Location>().Where(l => l != null && l.porterPosition != null && !l.isSubLocation && l != near)
                 .OrderByDescending(l => StateDump.Flat(l.porterPosition.transform.position - P.transform.position)).FirstOrDefault();
-            if (far == null) { r.Fail("only one place for the porter"); yield break; }
+            if (far == null)
+            {
+                r.Fail("only one place for the porter");
+                yield break;
+            }
             var w = S.Begin(MsgType.PorterCalled);
             w.Write(far.porterPosition.transform.position);
-            bool? ok = null; string why = null;
-            Authority.Request(w, $"forged porter call at {far.name}", (o, reason, res) => { ok = o; why = reason; }, inventory: false);
+            bool? ok = null;
+            string why = null;
+            Authority.Request(w, $"forged porter call at {far.name}", (o, reason, res) =>
+            {
+                ok = o;
+                why = reason;
+            }, inventory: false);
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (ok == null && Time.realtimeSinceStartup < giveUp)
             {

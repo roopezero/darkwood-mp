@@ -34,7 +34,10 @@ namespace DarkwoodMP.World
         /// <summary>Item types that need no text, with why.</summary>
         internal static readonly Dictionary<string, string> Skip = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        static Tooltips() { Load(); }
+        static Tooltips()
+        {
+            Load();
+        }
 
         private static void Load()
         {
@@ -42,7 +45,11 @@ namespace DarkwoodMP.World
             {
                 using (var s = typeof(Tooltips).Assembly.GetManifestResourceStream("DarkwoodMP.Tooltips.tsv"))
                 {
-                    if (s == null) { Plugin.Log.LogWarning("[tooltips] no Tooltips.tsv in the mod"); return; }
+                    if (s == null)
+                    {
+                        Plugin.Log.LogWarning("[tooltips] no Tooltips.tsv in the mod");
+                        return;
+                    }
                     using (var r = new StreamReader(s))
                     {
                         string line;
@@ -69,7 +76,10 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            catch (Exception e) { Plugin.Log.LogWarning($"[tooltips] couldn't read Tooltips.tsv: {e.Message}"); }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"[tooltips] couldn't read Tooltips.tsv: {e.Message}");
+            }
         }
 
         /// <summary>The mod's line for an item description key ("type_desc"), or null.</summary>
@@ -87,7 +97,11 @@ namespace DarkwoodMP.World
                 return text;
             }
             var lang = global::Language.CurrentLanguage();
-            if (lang != _resolvedFor) { _resolved.Clear(); _resolvedFor = lang; }
+            if (lang != _resolvedFor)
+            {
+                _resolved.Clear();
+                _resolvedFor = lang;
+            }
             if (_resolved.TryGetValue(text, out var done))
             {
                 return done;
@@ -97,7 +111,11 @@ namespace DarkwoodMP.World
             while (i < text.Length)
             {
                 int a = text.IndexOf('{', i), b = a < 0 ? -1 : text.IndexOf('}', a);
-                if (a < 0 || b < 0) { sb.Append(text, i, text.Length - i); break; }
+                if (a < 0 || b < 0)
+                {
+                    sb.Append(text, i, text.Length - i);
+                    break;
+                }
                 sb.Append(text, i, a - i);
                 string tag = text.Substring(a + 1, b - a - 1);
                 if (tag.StartsWith("item:", StringComparison.Ordinal))
@@ -210,27 +228,47 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(2f);
             int fails = 0;
-            void Fail(string what) { fails++; Plugin.Log.LogInfo($"[tooltips] FAIL {what}"); }
+            void Fail(string what)
+            {
+                fails++;
+                Plugin.Log.LogInfo($"[tooltips] FAIL {what}");
+            }
             Plugin.Log.LogInfo($"[tooltips] table: {Items.Count} items, {Skip.Count} skipped, {Locations.Count} locations");
 
             var idb = Singleton<ItemsDatabase>.Instance;
             var map = Singleton<Map>.Instance;
-            if (idb == null || map == null) { Fail("no ItemsDatabase or Map"); Plugin.Log.LogInfo("[tooltips] done: failed"); yield break; }
+            if (idb == null || map == null)
+            {
+                Fail("no ItemsDatabase or Map");
+                Plugin.Log.LogInfo("[tooltips] done: failed");
+                yield break;
+            }
             try
             {
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(Path.Combine(dir, "tooltips_dump.json"), Dump(idb, map).ToString());
                 Plugin.Log.LogInfo($"[tooltips] dump written to {Path.Combine(dir, "tooltips_dump.json")}");
             }
-            catch (Exception e) { Fail($"dump: {e}"); }
+            catch (Exception e)
+            {
+                Fail($"dump: {e}");
+            }
 
             int game = 0, mod = 0, skipped = 0;
             var missing = new List<string>();
             foreach (var kv in idb.itemsDict)
             {
                 string k = kv.Key, raw = RawDesc(k);
-                if (!string.IsNullOrEmpty(raw)) { game++; continue; }
-                if (Skip.ContainsKey(k)) { skipped++; continue; }
+                if (!string.IsNullOrEmpty(raw))
+                {
+                    game++;
+                    continue;
+                }
+                if (Skip.ContainsKey(k))
+                {
+                    skipped++;
+                    continue;
+                }
                 // Through the game's own calls, as the popup does.
                 if (global::Language.HasKey(k + DescEnd, ItemsSheet) && !string.IsNullOrEmpty(global::Language.Get(k + DescEnd, ItemsSheet)))
                 {
@@ -289,8 +327,14 @@ namespace DarkwoodMP.World
 
             // Tubular magazine's popup, as the inventory shows it.
             string popupText = null;
-            try { popupText = PopupDescription("firecraft_tubularMagazine"); }
-            catch (Exception e) { Fail($"popup: {e.Message}"); }
+            try
+            {
+                popupText = PopupDescription("firecraft_tubularMagazine");
+            }
+            catch (Exception e)
+            {
+                Fail($"popup: {e.Message}");
+            }
             if (!string.IsNullOrEmpty(popupText))
             {
                 Plugin.Log.LogInfo($"[tooltips] PASS Tubular magazine's popup: \"{popupText}\"");
@@ -324,7 +368,10 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
-            catch (Exception e) { Fail($"map popup: {e.Message}"); }
+            catch (Exception e)
+            {
+                Fail($"map popup: {e.Message}");
+            }
 
             Plugin.Log.LogInfo(fails == 0 ? "[tooltips] done: all passed" : $"[tooltips] done: {fails} failed");
         }
@@ -354,7 +401,11 @@ namespace DarkwoodMP.World
                 popup.show(slot, Inventory.InvType.playerInv);
                 return popup.itemDescription;
             }
-            finally { popup.hide(); slot.removeItem(); }
+            finally
+            {
+                popup.hide();
+                slot.removeItem();
+            }
         }
 
         private static IEnumerable<MapElement> MapElements(Map map)
@@ -390,7 +441,13 @@ namespace DarkwoodMP.World
             foreach (var kv in idb.recipesDict)
             {
                 CraftingRecipes rec = null;
-                try { rec = idb.getRecipes(kv.Key, instantiate: false); } catch { }
+                try
+                {
+                    rec = idb.getRecipes(kv.Key, instantiate: false);
+                }
+                catch
+                {
+                }
                 if (rec?.recipes == null)
                 {
                     continue;
@@ -429,11 +486,18 @@ namespace DarkwoodMP.World
                 o["name"] = global::Language.Get(kv.Key + "_name", ItemsSheet);
                 o["gameDesc"] = !string.IsNullOrEmpty(RawDesc(kv.Key));
                 InvItem it = null;
-                try { it = idb.getItem(kv.Key, instantiate: false); } catch { }
+                try
+                {
+                    it = idb.getItem(kv.Key, instantiate: false);
+                }
+                catch
+                {
+                }
                 if (it != null)
                 {
                     o["fields"] = Fields(it);
-                    var cats = new JArray(); foreach (var c in it.categories)
+                    var cats = new JArray();
+                    foreach (var c in it.categories)
                     {
                         cats.Add(c.ToString());
                     }
@@ -447,7 +511,8 @@ namespace DarkwoodMP.World
                         }
                     }
                     o["effects"] = fx;
-                    var after = new JArray(); foreach (var a in it.itemsAfterUsing)
+                    var after = new JArray();
+                    foreach (var a in it.itemsAfterUsing)
                     {
                         if (a?.item != null)
                         {
@@ -455,7 +520,8 @@ namespace DarkwoodMP.World
                         }
                     }
                     o["itemsAfterUsing"] = after;
-                    var ups = new JArray(); foreach (var u in it.upgrades)
+                    var ups = new JArray();
+                    foreach (var u in it.upgrades)
                     {
                         if (u != null)
                         {
@@ -465,7 +531,8 @@ namespace DarkwoodMP.World
                     o["upgrades"] = ups;
                     o["rottenItem"] = it.rottenItem != null ? it.rottenItem.type : null;
                     o["locations"] = new JArray(it.locations.ToArray());
-                    var locUi = new JArray(); foreach (var l in it.locations)
+                    var locUi = new JArray();
+                    foreach (var l in it.locations)
                     {
                         locUi.Add(global::Language.Get(l, "UI"));
                     }
@@ -487,16 +554,24 @@ namespace DarkwoodMP.World
             {
                 var o = new JObject
                 {
-                    ["elementName"] = e.elementName, ["object"] = e.gameObject.name, ["selectable"] = e.selectable,
-                    ["isWorldChunk"] = e.isWorldChunk, ["isDeathDrop"] = e.isDeathDrop, ["isOnMap"] = e.isOnMap,
+                    ["elementName"] = e.elementName,
+                    ["object"] = e.gameObject.name,
+                    ["selectable"] = e.selectable,
+                    ["isWorldChunk"] = e.isWorldChunk,
+                    ["isDeathDrop"] = e.isDeathDrop,
+                    ["isOnMap"] = e.isOnMap,
                     ["ui"] = string.IsNullOrEmpty(e.elementName) ? "" : global::Language.Get(e.elementName, "UI"),
-                    ["x"] = e.transform.position.x, ["z"] = e.transform.position.z,
+                    ["x"] = e.transform.position.x,
+                    ["z"] = e.transform.position.z,
                 };
                 string type = null;
                 foreach (var t in map.types)
                 {
                     if (t?.elements != null && t.elements.Contains(e))
-                    { type = t.name; break; }
+                    {
+                        type = t.name;
+                        break;
+                    }
                 }
                 o["mapType"] = type;
                 var loc = e.GetComponent<Location>();
@@ -504,7 +579,14 @@ namespace DarkwoodMP.World
                 {
                     o["location"] = Fields(loc);
                 }
-                try { var b = Biome.getBiomeAtPos(e.transform.position); o["biome"] = b != null ? b.type.ToString() : null; } catch { }
+                try
+                {
+                    var b = Biome.getBiomeAtPos(e.transform.position);
+                    o["biome"] = b != null ? b.type.ToString() : null;
+                }
+                catch
+                {
+                }
                 elements.Add(o);
             }
             return new JObject { ["items"] = items, ["mapElements"] = elements };
@@ -518,9 +600,20 @@ namespace DarkwoodMP.World
             foreach (var f in c.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance))
             {
                 object v;
-                try { v = f.GetValue(c); } catch { continue; }
+                try
+                {
+                    v = f.GetValue(c);
+                }
+                catch
+                {
+                    continue;
+                }
                 var ft = f.FieldType;
-                if (v == null) { o[f.Name] = null; continue; }
+                if (v == null)
+                {
+                    o[f.Name] = null;
+                    continue;
+                }
                 if (ft.IsEnum)
                 {
                     o[f.Name] = v.ToString();

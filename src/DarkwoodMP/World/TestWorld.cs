@@ -33,7 +33,11 @@ namespace DarkwoodMP.World
         public static bool Active => SaveRedirect.Active && SaveRedirect.Dir == Dir;
         public static string Status { get; private set; }
 
-        private sealed class Station { public string Prefab, Label; public bool Draggable; }
+        private sealed class Station
+        {
+            public string Prefab, Label;
+            public bool Draggable;
+        }
 
         // What's built, in rows: each with what to try. The label is drawn over it while in the test world.
         private static readonly Station[] Stations =
@@ -88,21 +92,35 @@ namespace DarkwoodMP.World
             if (reset || !Exists)
             {
                 string mine = Singleton<SaveManager>.Instance.baseSaveDirectory; // no redirect in the main menu: your own
-                if (SaveRedirect.Active || string.IsNullOrEmpty(mine) || !Directory.Exists(mine)) { Status = "No saves of yours to copy: play a world once first."; yield break; }
+                if (SaveRedirect.Active || string.IsNullOrEmpty(mine) || !Directory.Exists(mine))
+                {
+                    Status = "No saves of yours to copy: play a world once first.";
+                    yield break;
+                }
                 try
                 {
                     WorldShare.RemoveDir(Dir);
                     Copy(mine, Dir);
                     Characters.Instance?.Forget("the test world reset");
                 }
-                catch (Exception e) { Status = $"Couldn't copy your saves: {e.Message}"; Plugin.Log.LogError(Status); yield break; }
+                catch (Exception e)
+                {
+                    Status = $"Couldn't copy your saves: {e.Message}";
+                    Plugin.Log.LogError(Status);
+                    yield break;
+                }
                 Plugin.Log.LogInfo($"Test world: a fresh copy of your saves in {Dir}");
             }
             // A living profile in the copy (the first one).
             SaveRedirect.Begin(Dir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
             var profile = state?.profiles?.Where(p => p != null && p.Active).OrderBy(p => p.dead).ThenBy(p => p.id).FirstOrDefault();
-            if (profile == null) { SaveRedirect.End(); Status = "The test world has no profile to load: reset it after playing a world."; yield break; }
+            if (profile == null)
+            {
+                SaveRedirect.End();
+                Status = "The test world has no profile to load: reset it after playing a world.";
+                yield break;
+            }
             Plugin.Log.LogInfo($"Test world: loading profile {profile.id} (day {profile.day})");
             yield return world.ContinueOwnProfile(profile.id, Dir);
         }
@@ -128,7 +146,12 @@ namespace DarkwoodMP.World
 
         public static void Update()
         {
-            if (!Active || !WorldShare.WorldReady) { _checked = false; _labels.Clear(); return; }
+            if (!Active || !WorldShare.WorldReady)
+            {
+                _checked = false;
+                _labels.Clear();
+                return;
+            }
             if (!_checked && Player.Instance != null)
             {
                 // Built before, and saved since? If none of it is here (the world wasn't saved after), build it again.
@@ -170,7 +193,10 @@ namespace DarkwoodMP.World
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
                 return new Vector3(float.Parse(xz[0], inv), 0f, float.Parse(xz[1], inv));
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         /// <summary>The chapter the area was built in (0: not noted, as files written before it was).</summary>
@@ -181,7 +207,10 @@ namespace DarkwoodMP.World
                 var xz = File.Exists(AreaFile) ? File.ReadAllText(AreaFile).Split(' ') : new string[0];
                 return xz.Length > 2 && int.TryParse(xz[2], out int c) ? c : 0;
             }
-            catch { return 0; }
+            catch
+            {
+                return 0;
+            }
         }
 
         private static void Build(Vector3 at)
@@ -196,7 +225,11 @@ namespace DarkwoodMP.World
                 try
                 {
                     var go = Core.AddPrefab(st.Prefab, spots[i], Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
-                    if (go == null) { Plugin.Log.LogWarning($"Test world: no {st.Prefab}"); continue; }
+                    if (go == null)
+                    {
+                        Plugin.Log.LogWarning($"Test world: no {st.Prefab}");
+                        continue;
+                    }
                     Core.addToSaveable(go, isDynamic: true, assignID: true);
                     built++;
                     if (go.GetComponent<Generator>() is Generator g && !g.isSaw)
@@ -208,7 +241,10 @@ namespace DarkwoodMP.World
                         lamps.Add(lamp);
                     }
                 }
-                catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't place {st.Prefab}: {e.Message}"); }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Test world: couldn't place {st.Prefab}: {e.Message}");
+                }
             }
             if (gen != null)
             {
@@ -220,8 +256,14 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            try { File.WriteAllText(AreaFile, FormattableString.Invariant($"{at.x:0} {at.z:0} {Chapters.HostChapter}")); }
-            catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't note where the area is: {e.Message}"); }
+            try
+            {
+                File.WriteAllText(AreaFile, FormattableString.Invariant($"{at.x:0} {at.z:0} {Chapters.HostChapter}"));
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Test world: couldn't note where the area is: {e.Message}");
+            }
             GiveKit();
             Plugin.Log.LogInfo($"Test world: built {built} of {Stations.Length} test stations around {at}");
             Plugin.Notice("Test area built around you: each thing is labelled with what to try.");
@@ -268,8 +310,14 @@ namespace DarkwoodMP.World
             }
             foreach (var (type, amount) in Kit)
             {
-                try { inv.addItemTypeToPlayer(type, amount, dropIfNoRoom: true); }
-                catch (Exception e) { Plugin.Log.LogWarning($"Test world: couldn't give {type}: {e.Message}"); }
+                try
+                {
+                    inv.addItemTypeToPlayer(type, amount, dropIfNoRoom: true);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Test world: couldn't give {type}: {e.Message}");
+                }
             }
             Plugin.Log.LogInfo("Test world: kit handed out");
         }

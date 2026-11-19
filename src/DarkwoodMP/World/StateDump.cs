@@ -59,7 +59,8 @@ namespace DarkwoodMP.World
             /// <summary>An entry under this key (made unique with "#2", "#3"... if it's taken).</summary>
             public void Set(string key, object entry)
             {
-                string k = key; int n = 1;
+                string k = key;
+                int n = 1;
                 while (Entries.ContainsKey(k))
                 {
                     k = $"{key}#{++n}";
@@ -68,7 +69,11 @@ namespace DarkwoodMP.World
             }
         }
 
-        private sealed class Section { public string Name; public Action<Ctx> Fill; }
+        private sealed class Section
+        {
+            public string Name;
+            public Action<Ctx> Fill;
+        }
         private static readonly List<Section> _sections = new List<Section>();
         private static readonly List<Section> _local = new List<Section>();
 
@@ -113,8 +118,15 @@ namespace DarkwoodMP.World
             foreach (var s in list)
             {
                 var ctx = new Ctx { Centre = c, Radius = radius };
-                try { s.Fill(ctx); }
-                catch (Exception e) { ctx.Entries["error"] = e.GetType().Name + ": " + e.Message; Plugin.Log.LogWarning($"[dump] {s.Name}: {e}"); }
+                try
+                {
+                    s.Fill(ctx);
+                }
+                catch (Exception e)
+                {
+                    ctx.Entries["error"] = e.GetType().Name + ": " + e.Message;
+                    Plugin.Log.LogWarning($"[dump] {s.Name}: {e}");
+                }
                 all[s.Name] = ctx.Entries;
             }
             return all;
@@ -134,9 +146,15 @@ namespace DarkwoodMP.World
                     }
                     var l = d.GetComponent<Locked>();
                     var e = ctx.Add(d.gameObject);
-                    e["open"] = d.opened; e["locked"] = l != null && l.locked; e["health"] = d.health; e["broken"] = d.destroyed; e["blocked"] = d.blocked;
+                    e["open"] = d.opened;
+                    e["locked"] = l != null && l.locked;
+                    e["health"] = d.health;
+                    e["broken"] = d.destroyed;
+                    e["blocked"] = d.blocked;
                     e["leafTurned"] = !d.destroyed && DoorLeaf.Turned(d); // drawn open (Door.open pushes the leaf; lost on a switched-off door)
-                    e["barricaded"] = d.barricaded; e["barricadeHealth"] = d.barricadeHealth; e["burning"] = d.GetComponent<Burn>() != null;
+                    e["barricaded"] = d.barricaded;
+                    e["barricadeHealth"] = d.barricadeHealth;
+                    e["burning"] = d.GetComponent<Burn>() != null;
                 }
             });
             AddSection("windows", ctx =>
@@ -148,7 +166,9 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(w.gameObject);
-                    e["barricaded"] = w.barricaded; e["barricadeHealth"] = w.barricadeHealth; e["burning"] = w.GetComponent<Burn>() != null;
+                    e["barricaded"] = w.barricaded;
+                    e["barricadeHealth"] = w.barricadeHealth;
+                    e["burning"] = w.GetComponent<Burn>() != null;
                 }
             });
             AddSection("containers", ctx =>
@@ -202,7 +222,8 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(it.gameObject);
-                    e["health"] = it.health; e["broken"] = it.destroyed;
+                    e["health"] = it.health;
+                    e["broken"] = it.destroyed;
                     if (it.switchable)
                     {
                         e["on"] = it.isOn;
@@ -233,7 +254,8 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(t.gameObject);
-                    e["armed"] = t.active; e["triggered"] = t.triggered;
+                    e["armed"] = t.active;
+                    e["triggered"] = t.triggered;
                 }
             });
             AddSection("power", ctx =>
@@ -245,7 +267,9 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(g.gameObject);
-                    e["on"] = g.isOn; e["fuel"] = R(g.fuel, 1f); e["saw"] = g.isSaw;
+                    e["on"] = g.isOn;
+                    e["fuel"] = R(g.fuel, 1f);
+                    e["saw"] = g.isSaw;
                 }
             });
             AddSection("saw", ctx =>
@@ -271,7 +295,8 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(c.gameObject);
-                    e["constructed"] = c.constructed; e["option"] = c.chosenOption;
+                    e["constructed"] = c.constructed;
+                    e["option"] = c.chosenOption;
                 }
                 foreach (var ii in All<InteractiveItem>())
                 {
@@ -503,7 +528,11 @@ namespace DarkwoodMP.World
             var list = new List<object>();
             foreach (var s in inv.slots)
             {
-                if (s == null || InvItemClass.isNull(s.invItem)) { list.Add(null); continue; }
+                if (s == null || InvItemClass.isNull(s.invItem))
+                {
+                    list.Add(null);
+                    continue;
+                }
                 var it = s.invItem;
                 // A gun's count is its ammo (InvItemClass.SaveState saves that, not its amount, which means nothing for it).
                 int amount = it.baseClass != null && it.baseClass.hasAmmo ? it.ammo : it.amount;
@@ -535,58 +564,84 @@ namespace DarkwoodMP.World
         {
             switch (v)
             {
-                case null: sb.Append("null"); break;
-                case bool b: sb.Append(b ? "true" : "false"); break;
-                case string s: Str(sb, s); break;
-                case int i: sb.Append(i); break;
-                case uint u: sb.Append(u); break;
-                case long l: sb.Append(l); break;
-                case float f: sb.Append(((double)f).ToString("R", CultureInfo.InvariantCulture)); break;
-                case double d: sb.Append(d.ToString("R", CultureInfo.InvariantCulture)); break;
+                case null:
+                    sb.Append("null");
+                    break;
+                case bool b:
+                    sb.Append(b ? "true" : "false");
+                    break;
+                case string s:
+                    Str(sb, s);
+                    break;
+                case int i:
+                    sb.Append(i);
+                    break;
+                case uint u:
+                    sb.Append(u);
+                    break;
+                case long l:
+                    sb.Append(l);
+                    break;
+                case float f:
+                    sb.Append(((double)f).ToString("R", CultureInfo.InvariantCulture));
+                    break;
+                case double d:
+                    sb.Append(d.ToString("R", CultureInfo.InvariantCulture));
+                    break;
                 case System.Collections.IDictionary dict:
-                {
-                    var keys = dict.Keys.Cast<string>().OrderBy(k => k, StringComparer.Ordinal).ToList();
-                    if (keys.Count == 0) { sb.Append("{}"); break; }
-                    bool flat = indent >= 3; // entries' fields on one line
-                    sb.Append('{');
-                    for (int k = 0; k < keys.Count; k++)
                     {
-                        if (k > 0)
+                        var keys = dict.Keys.Cast<string>().OrderBy(k => k, StringComparer.Ordinal).ToList();
+                        if (keys.Count == 0)
                         {
-                            sb.Append(',');
+                            sb.Append("{}");
+                            break;
                         }
-                        if (flat)
+                        bool flat = indent >= 3; // entries' fields on one line
+                        sb.Append('{');
+                        for (int k = 0; k < keys.Count; k++)
                         {
-                            sb.Append(k > 0 ? " " : "");
+                            if (k > 0)
+                            {
+                                sb.Append(',');
+                            }
+                            if (flat)
+                            {
+                                sb.Append(k > 0 ? " " : "");
+                            }
+                            else
+                            {
+                                sb.Append('\n').Append(' ', 2 * (indent + 1));
+                            }
+                            Str(sb, keys[k]);
+                            sb.Append(": ");
+                            Json(sb, dict[keys[k]], indent + 1);
                         }
-                        else { sb.Append('\n').Append(' ', 2 * (indent + 1)); }
-                        Str(sb, keys[k]); sb.Append(": ");
-                        Json(sb, dict[keys[k]], indent + 1);
+                        if (!flat)
+                        {
+                            sb.Append('\n').Append(' ', 2 * indent);
+                        }
+                        sb.Append('}');
+                        break;
                     }
-                    if (!flat)
-                    {
-                        sb.Append('\n').Append(' ', 2 * indent);
-                    }
-                    sb.Append('}');
-                    break;
-                }
                 case System.Collections.IEnumerable list:
-                {
-                    sb.Append('[');
-                    bool first = true;
-                    foreach (var x in list)
                     {
-                        if (!first)
+                        sb.Append('[');
+                        bool first = true;
+                        foreach (var x in list)
                         {
-                            sb.Append(", ");
+                            if (!first)
+                            {
+                                sb.Append(", ");
+                            }
+                            first = false;
+                            Json(sb, x, Math.Max(indent + 1, 3));
                         }
-                        first = false;
-                        Json(sb, x, Math.Max(indent + 1, 3));
+                        sb.Append(']');
+                        break;
                     }
-                    sb.Append(']');
+                default:
+                    Str(sb, v.ToString());
                     break;
-                }
-                default: Str(sb, v.ToString()); break;
             }
         }
 

@@ -54,9 +54,17 @@ namespace DarkwoodMP.World
             if (s.IsClient && WorldShare.InWorld)
             {
                 var r = ObjRef.Of(inv.gameObject);
-                if (!r.Valid) { Plugin.Log.LogWarning($"[slots] can't sort {inv.name}: no name for it in the host's world"); return; }
+                if (!r.Valid)
+                {
+                    Plugin.Log.LogWarning($"[slots] can't sort {inv.name}: no name for it in the host's world");
+                    return;
+                }
                 // The host's contents must be our starting point, and what we changed before pressing goes first.
-                if (_awaiting.ContainsKey(inv)) { Plugin.Log.LogInfo($"[slots] sort of {inv.name}: still waiting for the host's contents"); return; }
+                if (_awaiting.ContainsKey(inv))
+                {
+                    Plugin.Log.LogInfo($"[slots] sort of {inv.name}: still waiting for the host's contents");
+                    return;
+                }
                 if (_watched.ContainsKey(inv))
                 {
                     Check(inv);
@@ -90,7 +98,11 @@ namespace DarkwoodMP.World
             }
             var obj = ObjRef.Read(r);
             var inv = ObjRef.Resolve<Inventory>(obj);
-            if (inv == null || !Is(inv)) { Authority.Refuse("no such workbench storage here"); return; }
+            if (inv == null || !Is(inv))
+            {
+                Authority.Refuse("no such workbench storage here");
+                return;
+            }
             var before = Keys(inv);
             string why = Containers.Refusal(from, inv);
             var ctl = Singleton<Controller>.Instance;
@@ -132,7 +144,12 @@ namespace DarkwoodMP.World
                 var w = s.Begin(MsgType.ContainerSlots);
                 obj.Write(w);
                 w.W.Write((byte)n);
-                for (int k = at; k < at + n; k++) { w.W.Write((ushort)changes[k].Slot); w.WriteStr(changes[k].Old); w.WriteStr(changes[k].New); }
+                for (int k = at; k < at + n; k++)
+                {
+                    w.W.Write((ushort)changes[k].Slot);
+                    w.WriteStr(changes[k].Old);
+                    w.WriteStr(changes[k].New);
+                }
                 if (toOnly)
                 {
                     s.SendTo(peer, w, Channel.Control, reliable: true);
@@ -255,7 +272,11 @@ namespace DarkwoodMP.World
             for (int i = 0; i < inv.slots.Count; i++)
             {
                 string json = "";
-                if (i < stacks.Count) { stacks[i].State.slotId = i; json = JsonConvert.SerializeObject(stacks[i].State); }
+                if (i < stacks.Count)
+                {
+                    stacks[i].State.slotId = i;
+                    json = JsonConvert.SerializeObject(stacks[i].State);
+                }
                 if (json == Json(inv, i))
                 {
                     continue;
@@ -300,7 +321,11 @@ namespace DarkwoodMP.World
                 }
                 var button = go.GetComponent<global::Button>();
                 var text = button != null && button.textMesh != null ? button.textMesh : go.GetComponentInChildren<tk2dTextMesh>(true);
-                if (text != null) { text.text = "SORT & STACK"; text.Commit(); }
+                if (text != null)
+                {
+                    text.text = "SORT & STACK";
+                    text.Commit();
+                }
                 if (button != null)
                 {
                     button.function = "";
@@ -324,7 +349,10 @@ namespace DarkwoodMP.World
                 }
                 Plugin.Log.LogInfo($"[slots] Sort & Stack button added to {inv.name} at {at}");
             }
-            catch (System.Exception e) { Plugin.Log.LogWarning($"[slots] couldn't add the Sort & Stack button: {e.Message}"); }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[slots] couldn't add the Sort & Stack button: {e.Message}");
+            }
         }
     }
 

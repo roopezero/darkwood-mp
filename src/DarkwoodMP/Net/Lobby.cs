@@ -199,12 +199,20 @@ namespace DarkwoodMP.Net
                 Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} left the lobby");
                 OnMemberLeft?.Invoke(who);
                 // Host left: lobby ownership moves in Steam, but the game world can't; end the session.
-                if (!_iAmHost && who == _hostId) { HostLost = true; Status = "Host left the game"; Leave(); return; }
+                if (!_iAmHost && who == _hostId)
+                {
+                    HostLost = true;
+                    Status = "Host left the game";
+                    Leave();
+                    return;
+                }
             }
             // Steam made this joiner the owner (the host is gone and we missed it): it isn't a host either.
             if (InLobby && !_iAmHost && SteamMatchmaking.GetLobbyOwner(Id) == SteamUser.GetSteamID())
             {
-                HostLost = true; Status = "Host left the game"; Leave();
+                HostLost = true;
+                Status = "Host left the game";
+                Leave();
             }
         }
 
