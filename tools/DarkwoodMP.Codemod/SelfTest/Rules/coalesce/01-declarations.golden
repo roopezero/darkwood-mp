@@ -1,0 +1,125 @@
+A declaration whose type is the type of the ?? becomes the temporary
+itself: a reference value fills it while it is null, a chain one if per
+value, and a throw becomes a throw statement. A Nullable first value is
+tested with HasValue, through a temporary when it is a field, and a literal
+last value starts the variable. A first value "r?.m" is opened, its
+receiver read once through a temporary when it is a property. The comment
+behind the statement goes above the new code. A declared type other than
+the ?? type keeps the ?? in a temporary of its own type in front.
+=== input
+using System;
+
+namespace N
+{
+    public class Node
+    {
+        public string Name;
+        public int Count;
+        public Node Next;
+    }
+
+    public class C
+    {
+        int? _limit;
+        string _title;
+
+        Node Head { get; set; }
+
+        public string Run(string a, string b, int? n, Node node)
+        {
+            string first = a ?? b; // the name to show
+            var second = a ?? b ?? "none";
+            string third = a ?? throw new ArgumentException("no name");
+            int count = n ?? 5;
+            int limit = _limit ?? Math.Max(1, count);
+            var size = node?.Count ?? 0;
+            string name = Head?.Name ?? _title;
+            object shown = a ?? "none";
+            return first + second + third + count + limit + size + name
+                + shown;
+        }
+    }
+}
+=== output
+using System;
+
+namespace N
+{
+    public class Node
+    {
+        public string Name;
+        public int Count;
+        public Node Next;
+    }
+
+    public class C
+    {
+        int? _limit;
+        string _title;
+
+        Node Head { get; set; }
+
+        public string Run(string a, string b, int? n, Node node)
+        {
+            // the name to show
+            string first = a;
+            if (first == null)
+            {
+                first = b;
+            }
+            string second = a;
+            if (second == null)
+            {
+                second = b;
+            }
+            if (second == null)
+            {
+                second = "none";
+            }
+            string third = a;
+            if (third == null)
+            {
+                throw new ArgumentException("no name");
+            }
+            int count = 5;
+            if (n.HasValue)
+            {
+                count = n.Value;
+            }
+            int? limit2 = _limit;
+            int limit;
+            if (limit2.HasValue)
+            {
+                limit = limit2.Value;
+            }
+            else
+            {
+                limit = Math.Max(1, count);
+            }
+            int size = 0;
+            if (node != null)
+            {
+                size = node.Count;
+            }
+            Node head = Head;
+            string name = null;
+            if (head != null)
+            {
+                name = head.Name;
+            }
+            if (name == null)
+            {
+                name = _title;
+            }
+            string a2 = a;
+            if (a2 == null)
+            {
+                a2 = "none";
+            }
+            object shown = a2;
+            return first + second + third + count + limit + size + name
+                + shown;
+        }
+    }
+}
+=== queue

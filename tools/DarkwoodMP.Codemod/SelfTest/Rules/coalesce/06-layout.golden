@@ -1,0 +1,61 @@
+A value written over several lines, such as a lambda's block, starts its
+store where the statement started, so its later lines keep their place
+under it. A delegate's == is a reference check against null, as string's
+is, so a delegate is rewritten.
+=== input
+using System;
+
+namespace N
+{
+    public class C
+    {
+        Func<int> _make;
+
+        public int Run(Func<int> make, string text)
+        {
+            Func<int> chosen = make ?? (() =>
+            {
+                return 1;
+            });
+            _make = _make ?? (() =>
+            {
+                return 2;
+            });
+            return chosen() + _make() + (text?.Length ?? 0);
+        }
+    }
+}
+=== output
+using System;
+
+namespace N
+{
+    public class C
+    {
+        Func<int> _make;
+
+        public int Run(Func<int> make, string text)
+        {
+            Func<int> chosen = make;
+            if (chosen == null)
+            {
+                chosen = () =>
+                {
+                    return 1;
+                };
+            }
+            Func<int> make2 = _make;
+            if (make2 == null)
+            {
+                make2 = () =>
+                {
+                    return 2;
+                };
+            }
+            _make = make2;
+            return chosen() + _make() + (text?.Length ?? 0);
+        }
+    }
+}
+=== queue
+19: a call runs earlier in the statement: chosen() + _make()

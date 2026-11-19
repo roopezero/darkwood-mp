@@ -1,0 +1,280 @@
+=== declaration, the right side runs only for a null left side
+public static object Run(string a, string b)
+{
+    string x = Log("a", a) ?? Log("b", b);
+    return x;
+}
+=== declaration of a chain ending in a literal
+public static object Run(string a, string b)
+{
+    var x = Log("a", a) ?? Log("b", b) ?? "none";
+    return x;
+}
+=== declaration whose last value throws
+public static object Run(string a)
+{
+    string x = Log("a", a) ?? throw new ArgumentException("no " + a);
+    return x.Length;
+}
+=== Nullable left with a literal and with a call last
+static int s_calls;
+
+static int Next()
+{
+    s_calls++;
+    return Log("next", s_calls);
+}
+
+public static object Run(int? n, int? m)
+{
+    int x = Log("n", n) ?? 5;
+    int y = m ?? Next();
+    return (x, y, s_calls);
+}
+=== Nullable field left goes through a temporary
+static int? s_limit;
+
+public static object Run(int? n, int i)
+{
+    s_limit = n;
+    int x = s_limit ?? Log("i", i);
+    return x;
+}
+=== Nullable left of another type keeps the natural type double
+public static object Run(int? n)
+{
+    object o = Log("n", n) ?? 2.5;
+    return o.GetType().Name + " " + o;
+}
+=== both Nullable, filled by a nullable conversion
+public static object Run(int? n, long? m)
+{
+    long? x = Log("n", n) ?? Log("m", m);
+    return x;
+}
+=== assignment to a field is written once, with the final value
+static string s_name;
+
+static string Fallback()
+{
+    Log("seen", s_name);
+    return "fallback";
+}
+
+public static object Run(string a, string first)
+{
+    s_name = first;
+    s_name = Log("a", a) ?? Fallback();
+    return s_name;
+}
+=== assignment to a local that is the first value
+public static object Run(string a, string b)
+{
+    a = a ?? Log("b", b);
+    return a;
+}
+=== a field that is its own first value is read once
+static string s_text;
+
+public static object Run(string a)
+{
+    s_text = a;
+    s_text = s_text ?? Log("made", "made");
+    return s_text;
+}
+=== return of a ?? and of a chain
+public static object Run(bool c, string a, string b)
+{
+    if (c)
+    {
+        return Log("a", a) ?? Log("b", b);
+    }
+    return a ?? b ?? Log("last", "last");
+}
+=== a ?. of a value type with a literal last
+public static object Run(UnityObject u, string s)
+{
+    int count = s?.Length ?? -1;
+    return count;
+}
+=== a ?. of a reference with a call last
+static string Name()
+{
+    return Log("name", "named");
+}
+
+public static object Run(string s)
+{
+    string trimmed = s?.Trim() ?? Name();
+    return trimmed;
+}
+=== a ?. whose receiver is read once through a temporary
+static int s_reads;
+static string s_value;
+
+static string Value
+{
+    get
+    {
+        s_reads++;
+        return s_value;
+    }
+}
+
+public static object Run(string s, string b)
+{
+    s_value = s;
+    var length = Value?.Length ?? Log("b", b).Length;
+    return (length, s_reads);
+}
+=== a ?. of a value type into a Nullable
+public static object Run(string s, int? m)
+{
+    int? length = s?.Length ?? m;
+    return length;
+}
+=== a ??= statement on a local, a field and a Nullable
+static string s_cache;
+static int? s_limit;
+
+public static object Run(string a, string b, int? n)
+{
+    s_cache = b;
+    a ??= Log("a made", "made");
+    s_cache ??= Log("cache made", "cache");
+    s_limit = n;
+    s_limit ??= Log("limit", 8);
+    return (a, s_cache, s_limit);
+}
+=== a nested ??= on a local and on a field
+static List<int> s_items;
+
+public static object Run(bool has, int i, bool reset)
+{
+    List<int> given = null;
+    if (has)
+    {
+        given = new List<int> { 7 };
+    }
+    if (reset)
+    {
+        s_items = null;
+    }
+    (given ??= new List<int>()).Add(Log("i", i));
+    (s_items ??= new List<int>()).Add(i);
+    return (given, s_items);
+}
+=== a nested ??= on a property is read and written once
+static int s_gets;
+static int s_sets;
+static List<int> s_backing;
+
+static List<int> Items
+{
+    get
+    {
+        s_gets++;
+        return s_backing;
+    }
+    set
+    {
+        s_sets++;
+        s_backing = value;
+    }
+}
+
+public static object Run(bool has, int i)
+{
+    s_backing = null;
+    if (has)
+    {
+        s_backing = new List<int> { 7 };
+    }
+    (Items ??= new List<int>()).Add(i);
+    return (s_gets, s_sets, s_backing);
+}
+=== arguments and holes move in the order they run
+static string Join(string a, string b)
+{
+    return a + "|" + b;
+}
+
+public static object Run(string a, string b, int? n)
+{
+    var both = Join(Log("a", a) ?? "x", Log("b", b) ?? "y");
+    var text = $"{Log("a2", a) ?? "none",6}:{n ?? 0:0.0}";
+    return both + text;
+}
+=== a ?? in an if condition and a foreach source
+public static object Run(string a, bool has)
+{
+    List<int> list = null;
+    if (has)
+    {
+        list = new List<int> { 2, 3 };
+    }
+    int total = 0;
+    if ((Log("a", a) ?? "").Length > 0)
+    {
+        total++;
+    }
+    foreach (var item in Log("list", list) ?? new List<int>())
+    {
+        total += item;
+    }
+    return total;
+}
+=== a call earlier in the statement stays, the site after it moves
+static int s_n;
+
+static int Bump()
+{
+    s_n++;
+    return s_n;
+}
+
+static int Sum(int a, int b)
+{
+    return a + b;
+}
+
+public static object Run(int? n, string a)
+{
+    s_n = 10;
+    var kept = Sum(s_n, n ?? Bump());
+    var moved = (Log("a", a) ?? "z").Length;
+    return (kept, moved, s_n);
+}
+=== an object with an == of its own stays as written
+public static object Run(UnityObject u, UnityObject v, string a)
+{
+    var near = u ?? v;
+    var name = a ?? "none";
+    return (near, name);
+}
+=== a derived type fills a temporary of its base type
+public static object Run(string s, object o)
+{
+    object x = Log("s", s) ?? Log("o", o);
+    return x;
+}
+=== a delegate's null check is a reference check
+public static object Run(bool c, int i)
+{
+    Func<int> given = null;
+    if (c)
+    {
+        given = () => i;
+    }
+    Func<int> make = given ?? (() =>
+    {
+        return Log("default", -1);
+    });
+    return make();
+}
+=== a ?: on the right runs only when the left side is null
+public static object Run(bool c, string a, string b)
+{
+    var pick = Log("a", a) ?? (Log("c", c) ? b : "c");
+    return pick;
+}

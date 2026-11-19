@@ -252,6 +252,61 @@ A getter declared in the plugin that does nothing but read a field
 (`KnownPure.FieldOf`), as an auto-property does, and as stable when the
 field is readonly.
 
+### coalesce (stage 5)
+
+A `??` chain or a `??=` whose null check is by reference becomes ifs
+(codemod.md section 7.2, `Rules/Coalesce*.cs`). The right side of `??` runs
+only when everything before it was null, so it always stays inside the if
+that tests for that:
+
+- a declaration whose type is the type of the `??` itself:
+  `T x = a; if (x == null) { x = b; }`, one if per value of a chain
+  (`var` is spelled out), and a throw last becomes a throw statement;
+- `x = x ?? b;` for a local or a parameter: `if (x == null) { x = b; }`;
+- anywhere else, an assignment, a return, an argument, an operand, a hole, an
+  `if` condition or a `foreach` source: the `??` moves into a temporary of
+  its natural type in front of its statement, with the hazard checks of
+  ternary-hoist (`HoistPath`, `HoistHazards`). An assignment to a field
+  becomes `T t = a; if (t == null) { t = b; } _f = t;`, so the field is
+  written once, with the final value, and no other thread sees one between;
+- a `Nullable<U>` first value whose result is another type:
+  `U x; if (a.HasValue) { x = a.Value; } else { x = b; }`, or
+  `U x = k; if (a.HasValue) { x = a.Value; }` for a literal `k`, with a
+  temporary for `a` unless it is a local or a parameter. A Nullable result
+  is filled with `if (!x.HasValue)`;
+- a first value `r?.m` of one link, on a receiver checked by reference and
+  a member that isn't a Nullable, is opened, and that `?.` site goes with
+  the `??`: `T x = null; if (r != null) { x = r.m; } if (x == null) { x = c; }`,
+  or `int n = 0; if (r != null) { n = r.Count; }` for `r?.Count ?? 0`.
+  A receiver other than a local, a parameter or `this` is read once,
+  through a temporary. Any other `?.` stays as written in the first value,
+  for stage 6 or 7;
+- `x ??= v;`: `if (x == null) { x = v; }`. Used as a value,
+  `(x ??= v).Add(i)` becomes the same in front of its statement and then
+  `x.Add(i)` for a local or a parameter, and for a field or a property
+  `T t = x; if (t == null) { t = v; x = t; }` and then `t.Add(i)`, so it is
+  read once and written once as before.
+
+The left side's static type decides (codemod.md section 6). A tested value
+or a result that is a Unity object is left for stage 7 (`unity-null`), not
+queued, and so is a `?.` on a Unity receiver. A type with an `==` of its own
+goes to the queue; string's and a delegate's count as reference checks
+against null, and a value type is never tested with `==`. Each tested value
+must go into the temporary by an identity, a reference or a nullable
+conversion, which keep a null a null and run no code; otherwise a single
+`??` with a Nullable first value is unwrapped, and anything else is queued.
+
+The queue gets: what ternary-hoist's hazards refuse (a call earlier in the
+statement, a mutable value read earlier when the `??` has effects, code
+that may not run, an expression body, an initializer, an `await` in the
+statement), a `??` or `??=` inside another one, a variable declared inside
+the `??`, a directive or a comment inside it, `dynamic`, a type with an
+`==` of its own, a left side that converts by more than a reference
+conversion, a chain whose first values would have to be unwrapped, a
+`??=` target whose parts would run twice (an element, a member of anything
+but `this`, a type, a local or a parameter), and a `??=` of a Nullable used
+as a value, whose value is the unwrapped one.
+
 The proof of a rule's commit:
 
 ```bash

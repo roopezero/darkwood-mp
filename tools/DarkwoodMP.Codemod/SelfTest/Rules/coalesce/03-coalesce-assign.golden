@@ -1,0 +1,92 @@
+A ??= statement becomes an if that writes the target only when it was
+null, with HasValue for a Nullable. Used as a value, the ??= goes in front
+of its statement: a local then stands for its value, and a field or a
+property goes through a temporary, so it is read once and written once as
+before. A target whose parts would run twice, a nested ??= of a Nullable
+and a ??= inside a lambda's expression body go to the queue.
+=== input
+using System.Collections.Generic;
+
+namespace N
+{
+    public class C
+    {
+        List<int> _items;
+        Dictionary<string, string> _names;
+        int? _limit;
+
+        List<int> Cache { get; set; }
+
+        public int Run(int i, List<int> given, string[] keys)
+        {
+            _names ??= new Dictionary<string, string>(); // made on first use
+            _limit ??= 8;
+            given ??= new List<int>();
+            (_items ??= new List<int>()).Add(i);
+            (given ??= new List<int>()).Add(i);
+            (Cache ??= new List<int>()).Add(i);
+            keys[i] ??= "key";
+            int limit = (_limit ??= 4) + 1;
+            System.Func<List<int>> make = () => _items ??= new List<int>();
+            return limit + given.Count + make().Count;
+        }
+    }
+}
+=== output
+using System.Collections.Generic;
+
+namespace N
+{
+    public class C
+    {
+        List<int> _items;
+        Dictionary<string, string> _names;
+        int? _limit;
+
+        List<int> Cache { get; set; }
+
+        public int Run(int i, List<int> given, string[] keys)
+        {
+            // made on first use
+            if (_names == null)
+            {
+                _names = new Dictionary<string, string>();
+            }
+            if (!_limit.HasValue)
+            {
+                _limit = 8;
+            }
+            if (given == null)
+            {
+                given = new List<int>();
+            }
+            List<int> items = _items;
+            if (items == null)
+            {
+                items = new List<int>();
+                _items = items;
+            }
+            items.Add(i);
+            if (given == null)
+            {
+                given = new List<int>();
+            }
+            given.Add(i);
+            List<int> cache = Cache;
+            if (cache == null)
+            {
+                cache = new List<int>();
+                Cache = cache;
+            }
+            cache.Add(i);
+            keys[i] ??= "key";
+            int limit = (_limit ??= 4) + 1;
+            System.Func<List<int>> make = () => _items ??= new List<int>();
+            return limit + given.Count + make().Count;
+        }
+    }
+}
+=== queue
+21: a target whose parts would run twice: keys[i]
+22: a ??= of a Nullable used as a value, which is the unwrapped value
+23: conditionally evaluated: a lambda body

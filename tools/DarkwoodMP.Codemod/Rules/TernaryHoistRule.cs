@@ -431,7 +431,8 @@ sealed partial class HoistPlanner
 
     /// The ?: with the parentheses around it, as far as they are inside the
     /// part it is in: "{(c ? x : y):0.0}" becomes "{t:0.0}".
-    static ExpressionSyntax Replaced(ExpressionSyntax site, SyntaxNode part)
+    internal static ExpressionSyntax Replaced(
+        ExpressionSyntax site, SyntaxNode part)
     {
         var node = site;
         while (node != part
@@ -507,7 +508,7 @@ sealed partial class HoistPlanner
 
     /// Statements whose expression variables are in scope in the whole
     /// block around them, as those of an if condition in front of them are.
-    static bool KeepsScope(StatementSyntax statement)
+    internal static bool KeepsScope(StatementSyntax statement)
     {
         return statement is ExpressionStatementSyntax
             || statement is LocalDeclarationStatementSyntax
@@ -518,7 +519,7 @@ sealed partial class HoistPlanner
 
     /// The expression declares a variable (out var, a pattern), apart from
     /// one in a lambda or local function in it.
-    static bool Declares(ExpressionSyntax expression)
+    internal static bool Declares(ExpressionSyntax expression)
     {
         return expression
             .DescendantNodesAndSelf(node =>
@@ -529,7 +530,7 @@ sealed partial class HoistPlanner
     }
 
     /// An await in the statement, outside a lambda, in an async member.
-    static bool AwaitsIn(StatementSyntax statement)
+    internal static bool AwaitsIn(StatementSyntax statement)
     {
         return statement
             .DescendantNodes(node =>

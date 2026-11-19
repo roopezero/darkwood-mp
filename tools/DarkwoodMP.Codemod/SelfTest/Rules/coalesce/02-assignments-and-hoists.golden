@@ -1,0 +1,140 @@
+An assignment to a local that is the first value fills the local itself.
+Any other assignment, a return, an argument, an operand or a hole moves the
+?? into a temporary in front of its statement: a field is then written once,
+with the final value. A hole keeps its format, and two sites of a statement
+move in the order they run. A call earlier in the statement, or a mutable
+value read earlier when the ?? has effects, keeps the site in the queue.
+=== input
+using System;
+
+namespace N
+{
+    public class C
+    {
+        string _name;
+        int _count;
+
+        static string Pick(string text)
+        {
+            return text;
+        }
+
+        static string Join(string a, string b)
+        {
+            return a + b;
+        }
+
+        string Load()
+        {
+            _count++;
+            return "loaded";
+        }
+
+        public string Run(string a, string b, int? n)
+        {
+            b = b ?? "b";
+            _name = a ?? b;
+            var shown = Pick(a ?? "none").Length;
+            var both = Join(a ?? "x", b ?? "y");
+            var text = $"{a ?? "none",8} and {n ?? 0:0.0}";
+            var late = Join(Pick(b), a ?? "z");
+            var counted = Join(_count.ToString(), a ?? Load());
+            return (a ?? b) + shown + both + text + late + counted;
+        }
+
+        public int Size(string a)
+        {
+            return a?.Length ?? -1;
+        }
+    }
+}
+=== output
+using System;
+
+namespace N
+{
+    public class C
+    {
+        string _name;
+        int _count;
+
+        static string Pick(string text)
+        {
+            return text;
+        }
+
+        static string Join(string a, string b)
+        {
+            return a + b;
+        }
+
+        string Load()
+        {
+            _count++;
+            return "loaded";
+        }
+
+        public string Run(string a, string b, int? n)
+        {
+            if (b == null)
+            {
+                b = "b";
+            }
+            string name = a;
+            if (name == null)
+            {
+                name = b;
+            }
+            _name = name;
+            string text2 = a;
+            if (text2 == null)
+            {
+                text2 = "none";
+            }
+            var shown = Pick(text2).Length;
+            string a2 = a;
+            if (a2 == null)
+            {
+                a2 = "x";
+            }
+            string b2 = b;
+            if (b2 == null)
+            {
+                b2 = "y";
+            }
+            var both = Join(a2, b2);
+            string a3 = a;
+            if (a3 == null)
+            {
+                a3 = "none";
+            }
+            int n2 = 0;
+            if (n.HasValue)
+            {
+                n2 = n.Value;
+            }
+            var text = $"{a3,8} and {n2:0.0}";
+            var late = Join(Pick(b), a ?? "z");
+            var counted = Join(_count.ToString(), a ?? Load());
+            string a4 = a;
+            if (a4 == null)
+            {
+                a4 = b;
+            }
+            return a4 + shown + both + text + late + counted;
+        }
+
+        public int Size(string a)
+        {
+            int length = -1;
+            if (a != null)
+            {
+                length = a.Length;
+            }
+            return length;
+        }
+    }
+}
+=== queue
+33: a call runs earlier in the statement: Pick(b)
+34: the hoisted code has effects and a mutable value is read earlier: _count.ToString()
