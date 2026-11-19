@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -7,11 +8,15 @@ namespace DarkwoodMP.Codemod.Rules;
 
 /// Names for temporaries in one member. A name comes from what the value is
 /// (codemod.md section 7.4) and is unique across the whole member: every
-/// identifier in it counts as taken, in all switch sections and lambdas, so a
-/// new local can never clash with or shadow anything there.
+/// identifier in it counts as taken, in all switch sections and lambdas and
+/// in code an #if leaves out, so a new local can never clash with or shadow
+/// anything there, in any build. A keyword is never a name.
 sealed class TempNames
 {
     const string Fallback = "value";
+
+    /// Anything in disabled text that could be an identifier.
+    static readonly Regex Word = new Regex(@"[\p{L}_][\p{L}\p{Nd}_]*");
 
     readonly HashSet<string> _taken = new();
 
@@ -22,6 +27,17 @@ sealed class TempNames
             if (token.IsKind(SyntaxKind.IdentifierToken))
             {
                 _taken.Add(token.ValueText);
+            }
+        }
+        // The parser keeps code that an #if leaves out as text, not tokens.
+        foreach (var trivia in member.DescendantTrivia())
+        {
+            if (trivia.IsKind(SyntaxKind.DisabledTextTrivia))
+            {
+                foreach (Match word in Word.Matches(trivia.ToString()))
+                {
+                    _taken.Add(word.Value);
+                }
             }
         }
         foreach (var node in member.AncestorsAndSelf())
@@ -44,12 +60,17 @@ sealed class TempNames
     public string Unique(string hint)
     {
         var name = hint;
-        for (int i = 2; _taken.Contains(name); i++)
+        for (int i = 2; _taken.Contains(name) || IsKeyword(name); i++)
         {
             name = hint + i;
         }
         _taken.Add(name);
         return name;
+    }
+
+    static bool IsKeyword(string name)
+    {
+        return SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None;
     }
 
     /// The name the value suggests: the parameter it is passed to, "text" in

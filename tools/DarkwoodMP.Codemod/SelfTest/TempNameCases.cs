@@ -38,13 +38,18 @@ static class TempNameCases
                             Action<int> a = text2 => { int inner = 1; };
                             int sum = _foo + Holder.Instance.Size + Get();
                             break;
+                        case 2:
+        #if NEVER_DEFINED
+                            int hidden = 3;
+        #endif
+                            break;
                     }
                 }
             }
         }
         """;
 
-    public const int Count = 9;
+    public const int Count = 11;
 
     public static List<string> Failures()
     {
@@ -86,6 +91,11 @@ static class TempNameCases
         Expect(problems, "taken in a lambda", "inner2", names.Unique("inner"));
         Expect(problems, "free", "fresh", names.Unique("fresh"));
         Expect(problems, "second temp", "fresh2", names.Unique("fresh"));
+        // A build with the symbol defined would declare it.
+        Expect(problems, "declared only in disabled code", "hidden2",
+            names.Unique("hidden"));
+        // From an @object parameter: "object" wouldn't compile.
+        Expect(problems, "a keyword", "object2", names.Unique("object"));
         return problems;
     }
 
