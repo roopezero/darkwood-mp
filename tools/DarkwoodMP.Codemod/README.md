@@ -32,7 +32,7 @@ not in the default place.
 | `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
 | `ildiff <a.dll> <b.dll> [--manifest touched.json]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. |
-| `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. |
+| `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
 | `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
 `Prototype/Wrap.cs` is the prototype's width pass for stage 10. It compiles, but

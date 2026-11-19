@@ -15,7 +15,21 @@ static class DiffHarnessCases
         }
         """;
 
-    public const int Count = 9;
+    /// Case files that would test nothing. Reading each must stop.
+    static readonly (string What, string Text)[] Unreadable =
+    {
+        ("an empty file", ""),
+        ("a blank file", "\n  \n"),
+        ("a mistyped header", "== name\npublic static int Run()\n{\n"
+            + "    return 1;\n}\n"),
+        ("a header with no method before the next",
+            "=== a\n\n=== b\npublic static int Run()\n{\n"
+            + "    return 1;\n}\n"),
+        ("a header with no method at the end",
+            "=== a\npublic static int Run()\n{\n    return 1;\n}\n=== b\n"),
+    };
+
+    public const int Count = 9 + 5;
 
     public static List<string> Failures()
     {
@@ -52,7 +66,32 @@ static class DiffHarnessCases
             new ProbeUnityRule("probe-unity"));
         ExpectCaught(problems, "a reference check under unity-null", unity,
             new ProbeUnityRule("unity-null", checksReference: true));
+        foreach (var (what, text) in Unreadable)
+        {
+            ExpectUnreadable(problems, what, text);
+        }
         return problems;
+    }
+
+    static void ExpectUnreadable(
+        List<string> problems, string what, string text)
+    {
+        var folder = Directory.CreateTempSubdirectory("dwmp-codemod-").FullName;
+        try
+        {
+            var file = Path.Combine(folder, "rule.cases");
+            File.WriteAllText(file, text);
+            var cases = DiffCase.Read(file);
+            problems.Add($"  {what}: read as {cases.Count} cases, not refused");
+        }
+        catch (Stop)
+        {
+            // The file was refused, as it should be.
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
     }
 
     static void ExpectCaught(
