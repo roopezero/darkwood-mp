@@ -22,6 +22,9 @@ static class PurityCases
                 public int Value;
                 public static int Shared;
                 public static Mod operator +(Mod a, Mod b) { return a; }
+                readonly int _held = 4;
+                public int Held => _held;
+                public int Reads { get { return Value; } }
             }
 
             public class C
@@ -30,6 +33,8 @@ static class PurityCases
                 readonly int _fixed = 1;
                 readonly List<int> _list = new List<int>();
                 readonly Mod _mod = new Mod();
+                Mod Kept => _mod;
+                int Loose => _n;
                 int Bump() { return ++_n; }
                 int F(int a, int b) { return a + b; }
                 void M(bool c, int local, Mod other)
@@ -53,6 +58,12 @@ static class PurityCases
         ("F(_list.Count, c ? 2 : 3);", Ok),
         ("F(_mod.Auto, c ? 2 : 3);", Ok),
         ("F(_mod.Computed, c ? 2 : 3);", Purity.CallEarlier),
+        // A getter that does nothing but read a field has no effects, and
+        // one that reads a readonly field can't change either.
+        ("F(other.Reads, c ? 2 : 3);", Ok),
+        ("F(Loose, c ? Bump() : 0);", Purity.ReadEarlier),
+        ("F(Kept.Held, c ? Bump() : 0);", Ok),
+        ("F(other.Held, c ? Bump() : 0);", Ok),
         ("F(_mod[1], c ? 2 : 3);", Purity.CallEarlier),
         ("F((other + other).Value, c ? 2 : 3);", Purity.CallEarlier),
         ("bool b = c && (c ? true : false);", Purity.MayNotRun),

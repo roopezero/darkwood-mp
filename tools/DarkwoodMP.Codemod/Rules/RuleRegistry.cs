@@ -12,11 +12,14 @@ static class RuleRegistry
                 return new ProbeReturnRule(ProbeForm.Correct);
             case "ternary-direct":
                 return new TernaryDirectRule();
+            case "ternary-hoist":
+                return new TernaryHoistRule();
             default:
                 return null;
         }
     }
 
     public static string Names =>
-        "ternary-direct, probe-return (the tool's own test rule)";
+        "ternary-direct, ternary-hoist, probe-return (the tool's own test "
+            + "rule)";
 }

@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace DarkwoodMP.Codemod.Rules;
@@ -50,19 +51,117 @@ static class KnownPure
         {
             return false;
         }
-        var original = type.OriginalDefinition.ToDisplayString(FullName);
-        if (PureTypes.Contains(original))
+        if (IsPureType(type))
         {
             return true;
         }
+        var original = type.OriginalDefinition.ToDisplayString(FullName);
         return PureMethods.Contains(original + "." + method.Name);
     }
 
+    /// A type every method of which is free of effects.
+    public static bool IsPureType(ITypeSymbol type)
+    {
+        var original = type.OriginalDefinition.ToDisplayString(FullName);
+        return PureTypes.Contains(original);
+    }
+
     /// .NET's and Unity's getters and indexers have no effects, and neither
-    /// do this mod's auto-properties. Every other getter is a call.
+    /// do this mod's auto-properties or getters that only read a field.
+    /// Every other getter is a call.
     public static bool IsPureGetter(IPropertySymbol property)
     {
-        return IsFramework(property) || IsAutoProperty(property);
+        return IsFramework(property) || IsAutoProperty(property)
+            || FieldOf(property) != null;
+    }
+
+    /// The field a getter declared here does nothing but read, as
+    /// "W => _w" or "get { return _w; }", or null for any other getter.
+    /// Such a getter is an auto-property written out: reading it has no
+    /// effects, and its value can change only when the field's can.
+    public static IFieldSymbol FieldOf(IPropertySymbol property)
+    {
+        if (property.IsIndexer)
+        {
+            return null;
+        }
+        foreach (var reference in property.DeclaringSyntaxReferences)
+        {
+            var declaration =
+                reference.GetSyntax() as PropertyDeclarationSyntax;
+            if (declaration == null)
+            {
+                continue;
+            }
+            var name = FieldName(GetterValue(declaration));
+            if (name == null)
+            {
+                continue;
+            }
+            // A simple name in a member's body binds to a member of its own
+            // type first, so a field of that name is what the getter reads.
+            foreach (var member in property.ContainingType.GetMembers(name))
+            {
+                if (member is IFieldSymbol field)
+                {
+                    return field;
+                }
+            }
+        }
+        return null;
+    }
+
+    /// What a property's getter returns, when its whole body is that one
+    /// value; otherwise null.
+    static ExpressionSyntax GetterValue(PropertyDeclarationSyntax declaration)
+    {
+        if (declaration.ExpressionBody != null)
+        {
+            return declaration.ExpressionBody.Expression;
+        }
+        if (declaration.AccessorList == null)
+        {
+            return null;
+        }
+        foreach (var accessor in declaration.AccessorList.Accessors)
+        {
+            if (!accessor.IsKind(SyntaxKind.GetAccessorDeclaration))
+            {
+                continue;
+            }
+            if (accessor.ExpressionBody != null)
+            {
+                return accessor.ExpressionBody.Expression;
+            }
+            if (accessor.Body != null
+                && accessor.Body.Statements.Count == 1
+                && accessor.Body.Statements[0] is ReturnStatementSyntax
+                {
+                    Expression: not null,
+                } only)
+            {
+                return only.Expression;
+            }
+        }
+        return null;
+    }
+
+    /// "_w" or "this._w" as a name, or null for anything else.
+    static string FieldName(ExpressionSyntax value)
+    {
+        switch (value)
+        {
+            case IdentifierNameSyntax name:
+                return name.Identifier.ValueText;
+            case MemberAccessExpressionSyntax
+            {
+                Expression: ThisExpressionSyntax,
+                Name: IdentifierNameSyntax name,
+            }:
+                return name.Identifier.ValueText;
+            default:
+                return null;
+        }
     }
 
     /// Operators and conversions defined by .NET or Unity.

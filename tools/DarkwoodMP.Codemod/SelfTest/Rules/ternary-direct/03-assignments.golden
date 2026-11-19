@@ -33,7 +33,7 @@ namespace N
         {
             get
             {
-                return _other;
+                return Get();
             }
         }
 
@@ -110,7 +110,7 @@ namespace N
         {
             get
             {
-                return _other;
+                return Get();
             }
         }
 

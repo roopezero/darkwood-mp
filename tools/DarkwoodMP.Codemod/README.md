@@ -180,6 +180,75 @@ operator or a lambda, an expression tree, an assignment that is its body's
 value, `else if`, loop and `for` conditions, switch expression arms and field
 or property initializers.
 
+### ternary-hoist (stage 4)
+
+A `?:` in an argument, an operand or an interpolation hole moves into a
+temporary of its natural type in front of its statement (codemod.md section
+7.1): `F(x, c ? a : b);` becomes `T t; if (c) { t = a; } else { t = b; }
+F(x, t);`, or `T t = k; if (c) { t = a; }` when the last value is a literal.
+A hole keeps its alignment and format, `{(c ? x : y):0.0}` becoming
+`{t:0.0}`, and an object argument still gets the double the `?:` made. The
+statement can be an expression statement, a declaration (after the
+declarators before it), a `return`, `yield return` or `throw`, an `if`
+condition, a `foreach` source, a `switch`, `lock` or `using`, in a block,
+a switch section or a lambda's block. The temporary is named after the
+parameter it is passed to, or after what both branches have in common. A
+`?:` that is the whole value of its context is ternary-direct's: the rule
+leaves it, so the sites ternary-direct queued aren't queued twice.
+
+`Rules/HoistPath.cs` walks from the `?:` up to its statement and collects
+what runs before it there: earlier operands and arguments, the receiver of
+a call or the delegate it invokes, an assignment's target parts, earlier
+holes and declarators. A parent it doesn't know sends the site to the
+queue. `Rules/HoistHazards.cs` then allows the move only when nothing can
+notice it (guide section 4.6): the `?:` has no effects and nothing before
+it has any, or it has effects and everything before it is a literal,
+`this`, a readonly field, a getter that only reads one, or a local or
+parameter it doesn't write and no lambda captures. On top of `Purity`, it
+counts as a call the `ToString` that making a value into text runs (an
+earlier hole, a string `+`, string's `Format`, `Concat` and `Join`), unless
+the value is plain text (`Rules/Formatting.cs`: a string, a number, a bool,
+a char, an enum, a date or a .NET or Unity value type `KnownPure` lists),
+because a handler or a `+` of strings runs it before later values; a
+user-defined conversion the compiler applies to an earlier operand; and a
+volatile read, which keeps later reads behind it. When the `?:` has
+effects, a member read through an object that may be null stays in front
+of it too, because it would throw only after those effects. When it has
+none, nothing is checked about exceptions: if both the `?:` and something
+before it throw, the one that comes out first can change, such as an
+`InvalidCastException` in the `?:` before an `IndexOutOfRangeException`
+in an earlier operand (guide section 4.6 doesn't cover this either).
+Several sites in one statement move in the order they run, and a `?:` that
+moved no longer counts as running in the operand that held it.
+
+A `?:` inside a branch of one that moves goes in front of that branch's
+statement (its store, or the throw a throw branch becomes), one in the
+first condition in front of the whole `if`, with the hazards of that new
+statement, so a second run finds nothing more to do. Wire flags,
+`(a ? 1 : 0) | (b ? 2 : 0)` with constant whole numbers, become
+`int flags = 0; if (a) { flags |= 1; } if (b) { flags |= 2; }` inside the
+cast that was around the chain (`Rules/HoistFlags.cs`); another operand is
+or-ed in where it was, or starts the flags. The statement keeps the column
+it starts at, so the lines that continue it stay where they were.
+
+The queue gets: a call earlier in the statement (hazard 4), a mutable value
+read earlier when the `?:` has effects (hazard 8), a read that can throw,
+a value made into text by code that isn't plain, an earlier conversion,
+a volatile read, code that may not run (the right side of `&&`, `||`, `??`
+and `??=`, a branch of another `?:`, after `?.`, a lambda body, an object or
+collection initializer, a switch expression arm, a `when` clause, an
+`else if`, loop or `for` header), an expression body, `checked()`, a
+deconstruction, a statement inside an interpolation hole, a `foreach`
+source or other header whose `?:` declares a variable, an `await` in the
+statement, a `const` declaration, a constant condition, every branch a
+throw, an anonymous type, and the checks every rewrite makes (a comment on
+`?` or `:`, a directive, a site that doesn't compile).
+
+A getter declared in the plugin that does nothing but read a field
+(`W => _w`, `get { return _w; }`) counts as free of effects for every rule
+(`KnownPure.FieldOf`), as an auto-property does, and as stable when the
+field is readonly.
+
 The proof of a rule's commit:
 
 ```bash

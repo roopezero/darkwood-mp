@@ -1,0 +1,123 @@
+Interpolation holes. A hole's ?: moves into a temporary of its natural type
+and the hole keeps its alignment and format: {(c ? x : y):0.0} becomes
+{t:0.0}. Several holes move in order. A ?: in a branch of one that moves
+moves too, in front of that branch's store, so a second run has nothing
+left to do. An earlier hole holding a call stays in front of a ?: (hazard
+4), and so does one whose value isn't plain text, because making it into
+text can run the game's or the mod's code before the ?: does; a string,
+a number or an enum is plain.
+=== input
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public enum Mode
+    {
+        Off,
+        On,
+    }
+
+    public class C
+    {
+        object _thing = new object();
+        int _count;
+
+        static string Name(int i)
+        {
+            return "n" + i;
+        }
+
+        public string Run(bool c, bool d, int i, double x, Mode mode, string s)
+        {
+            string a = $"{i} items, {(c ? x : 0.5):0.00} each, {(d ? "kept" : "sold"),8}";
+            string b = $@"{mode} {s} {(c ? "on" : "off")}";
+            string e = $"seen {(c ? (d ? "twice" : "once") : "never")}";
+            string f = $"{(c ? $"held {(d ? "tight" : "loose")}" : "free")}";
+            string g = $"{Name(i)} {(c ? "yes" : "no")}";
+            string h = $"{_thing} {(c ? "yes" : "no")}";
+            FormattableString j = $"{i} {(d ? 1 : 2)}";
+            return a + b + e + f + g + h + j;
+        }
+    }
+}
+=== output
+using System;
+using System.Collections.Generic;
+
+namespace N
+{
+    public enum Mode
+    {
+        Off,
+        On,
+    }
+
+    public class C
+    {
+        object _thing = new object();
+        int _count;
+
+        static string Name(int i)
+        {
+            return "n" + i;
+        }
+
+        public string Run(bool c, bool d, int i, double x, Mode mode, string s)
+        {
+            double text = 0.5;
+            if (c)
+            {
+                text = x;
+            }
+            string text2 = "sold";
+            if (d)
+            {
+                text2 = "kept";
+            }
+            string a = $"{i} items, {text:0.00} each, {text2,8}";
+            string text3 = "off";
+            if (c)
+            {
+                text3 = "on";
+            }
+            string b = $@"{mode} {s} {text3}";
+            string text4 = "never";
+            if (c)
+            {
+                if (d)
+                {
+                    text4 = "twice";
+                }
+                else
+                {
+                    text4 = "once";
+                }
+            }
+            string e = $"seen {text4}";
+            string text5 = "free";
+            if (c)
+            {
+                string text6 = "loose";
+                if (d)
+                {
+                    text6 = "tight";
+                }
+                text5 = $"held {text6}";
+            }
+            string f = $"{text5}";
+            string g = $"{Name(i)} {(c ? "yes" : "no")}";
+            string h = $"{_thing} {(c ? "yes" : "no")}";
+            int text7 = 2;
+            if (d)
+            {
+                text7 = 1;
+            }
+            FormattableString j = $"{i} {text7}";
+            return a + b + e + f + g + h + j;
+        }
+    }
+}
+=== queue
+28: a call runs earlier in the statement: Name(i)
+29: a call runs earlier in the statement: making _thing into text

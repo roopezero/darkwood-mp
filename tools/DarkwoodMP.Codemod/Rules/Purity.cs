@@ -298,12 +298,22 @@ sealed class Purity
     /// the game or the mod, new of their types.
     public bool HasEffects(ExpressionSyntax expression)
     {
+        return HasEffects(expression, Array.Empty<SyntaxNode>());
+    }
+
+    /// The same for what is left of the expression once the parts in moved
+    /// have gone into temporaries in front of its statement. What moved
+    /// counts no more, but a conversion the compiler applies to its value
+    /// still runs where it was.
+    public bool HasEffects(
+        ExpressionSyntax expression, ICollection<SyntaxNode> moved)
+    {
         if (IsTypeName(expression))
         {
             return false;
         }
         var operation = _model.GetOperation(expression);
-        return operation == null || Effects(operation);
+        return operation == null || Effects(operation, moved);
     }
 
     /// The type in front of a static member, as Math in Math.Max(a, b) or
@@ -317,8 +327,13 @@ sealed class Purity
         return _model.GetSymbolInfo(expression).Symbol is INamespaceOrTypeSymbol;
     }
 
-    bool Effects(IOperation operation)
+    bool Effects(IOperation operation, ICollection<SyntaxNode> moved)
     {
+        if (operation is not IConversionOperation
+            && moved.Contains(operation.Syntax))
+        {
+            return false;
+        }
         if (!Inert.Contains(operation.Kind))
         {
             return true;
@@ -368,7 +383,7 @@ sealed class Purity
         }
         foreach (var child in operation.ChildOperations)
         {
-            if (Effects(child))
+            if (Effects(child, moved))
             {
                 return true;
             }
@@ -415,8 +430,9 @@ sealed class Purity
     }
 
     /// True for a value the hoisted code can't change or observe being read
-    /// later: a literal, this, a readonly field, or a local or parameter that
-    /// the hoisted code doesn't write and no closure captures.
+    /// later: a literal, this, a readonly field, a getter that only reads a
+    /// readonly field (KnownPure.FieldOf), or a local or parameter that the
+    /// hoisted code doesn't write and no closure captures.
     public bool IsStable(ExpressionSyntax operand, ExpressionSyntax hoisted)
     {
         while (operand is ParenthesizedExpressionSyntax wrapped)
@@ -439,14 +455,23 @@ sealed class Purity
                 return parameter.RefKind == RefKind.None
                     && Quiet(parameter, hoisted);
             case IFieldSymbol field when field.IsReadOnly || field.IsConst:
-                if (operand is MemberAccessExpressionSyntax member)
-                {
-                    return IsStable(member.Expression, hoisted);
-                }
-                return true;
+                return ReceiverIsStable(operand, hoisted);
+            case IPropertySymbol property
+                    when KnownPure.FieldOf(property) is { IsReadOnly: true }:
+                return ReceiverIsStable(operand, hoisted);
             default:
                 return false;
         }
+    }
+
+    /// The object a member is read from, when the source names one.
+    bool ReceiverIsStable(ExpressionSyntax operand, ExpressionSyntax hoisted)
+    {
+        if (operand is MemberAccessExpressionSyntax member)
+        {
+            return IsStable(member.Expression, hoisted);
+        }
+        return true;
     }
 
     /// Not written by the hoisted code and captured by no closure.

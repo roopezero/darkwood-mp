@@ -176,12 +176,25 @@ sealed class TernaryText
     /// branch's statement, or null.
     readonly TakenComment _comment;
 
+    /// What goes in front of a branch's statement, or null.
+    readonly Func<ExpressionSyntax, string> _before;
+
     public TernaryText(
         EditText text, Casts casts, TakenComment comment = null)
     {
         _text = text;
         _casts = casts;
         _comment = comment;
+    }
+
+    /// Statements that go in front of each branch's statement, such as the
+    /// temporaries of a ?: inside the branch: before gets the branch as
+    /// written.
+    public TernaryText(
+        EditText text, Casts casts, Func<ExpressionSyntax, string> before)
+        : this(text, casts)
+    {
+        _before = before;
     }
 
     /// "if (c) { x = a; } else if (d) { x = e; } else { x = f; }", where
@@ -207,8 +220,16 @@ sealed class TernaryText
     public string StoresBeforeLast(
         ConditionalExpressionSyntax site, Func<string, string> store)
     {
+        return StoresBeforeLast(site, (branch, value) => store(value));
+    }
+
+    /// The same, with a store that also sees the branch the value is from.
+    public string StoresBeforeLast(
+        ConditionalExpressionSyntax site,
+        Func<ExpressionSyntax, string, string> store)
+    {
         var output = new StringBuilder();
-        Store(site, (branch, value) => store(value), false, output);
+        Store(site, store, false, output);
         return output.ToString();
     }
 
@@ -291,6 +312,10 @@ sealed class TernaryText
         if (_comment != null && _comment.Branch == branch)
         {
             statement = statement.TrimEnd('\n') + " " + _comment.Text + "\n";
+        }
+        if (_before != null)
+        {
+            statement = _before(branch) + statement;
         }
         return statement;
     }
