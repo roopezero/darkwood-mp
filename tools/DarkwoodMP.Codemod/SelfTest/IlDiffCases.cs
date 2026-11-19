@@ -38,6 +38,11 @@ static class IlDiffCases
                 public int LocOver(string s) { int In(int y) { return y + 5; } return In(s.Length); }
             }
             public struct P { public int A; public int B; }
+            public class Ops
+            {
+                public static implicit operator int(Ops c) { return 41; }
+                public static implicit operator long(Ops c) { return 42; }
+            }
             public class Q { public int X1; public int X2; }
             public class Gen
             {
@@ -53,6 +58,7 @@ static class IlDiffCases
         """;
 
     const string Foo = "N.C::Foo(System.Int32)";
+    const string ToInt = "N.Ops::op_Implicit(N.Ops):System.Int32";
     const string FooBody = "public int Foo(int x) { return x + 1; }";
     /// The lambda that "a lambda added to a listed member" adds to Foo.
     const string FooLambda =
@@ -162,6 +168,13 @@ static class IlDiffCases
             new[] { LocOver }, None, null, ""),
         ("a local function of another overload fails", "y + 5", "y + 7",
             new[] { LocOver }, None, null, "changed outside the manifest"),
+        // Two conversion operators of a type differ only in what they return,
+        // so each is a member of its own.
+        ("a listed conversion operator passes", "return 41;", "return 43;",
+            new[] { ToInt }, None, null, ""),
+        ("a conversion operator to another type fails", "return 42;",
+            "return 44;", new[] { ToInt }, None, null,
+            "changed outside the manifest"),
         ("reordered fields of a struct fail", "public int A; public int B;",
             "public int B; public int A;", None, None, null, "field order changed"),
         ("reordered fields of a class pass", "public int X1; public int X2;",

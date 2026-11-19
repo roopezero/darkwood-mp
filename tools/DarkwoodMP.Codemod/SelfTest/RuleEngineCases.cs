@@ -289,6 +289,8 @@ static class RuleEngineCases
                     }
                     public int this[int i] { get { return i; } set { } }
                     public static implicit operator int(Outer<T> o) { return 1; }
+                    public static implicit operator long(Outer<T> o) { return 2; }
+                    public static explicit operator string(Outer<T> o) { return ""; }
                     public int P => 1;
                     public int Q { get { return 2; } }
                     public event Action E { add { } remove { } }
@@ -319,9 +321,17 @@ static class RuleEngineCases
                 manifest.Members.Add(MemberKeys.Of(node, model));
             }
         }
-        if (manifest.Members.Count < 14)
+        if (manifest.Members.Count < 16)
         {
             return "only found " + manifest.Members.Count + " members";
+        }
+        // Two conversion operators can differ only in what they return.
+        var twice = manifest.Members
+            .GroupBy(m => m)
+            .FirstOrDefault(g => g.Count() > 1);
+        if (twice != null)
+        {
+            return "two members share the key " + twice.Key;
         }
         try
         {

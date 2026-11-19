@@ -45,11 +45,19 @@ static class MemberKeys
         return TypeKey(member.ContainingType) + "::" + name;
     }
 
+    /// A conversion operator also carries its return type, as in
+    /// "T::op_Implicit(T):System.Int32": two of them can differ in nothing
+    /// else. IlDiff.MemberKey spells it the same way.
     public static string Key(IMethodSymbol method)
     {
         var parameters = method.Parameters.Select(ParameterType);
-        return TypeKey(method.ContainingType) + "::" + method.MetadataName
+        var key = TypeKey(method.ContainingType) + "::" + method.MetadataName
             + "(" + string.Join(",", parameters) + ")";
+        if (method.MetadataName is "op_Implicit" or "op_Explicit")
+        {
+            key += ":" + TypeName(method.ReturnType);
+        }
+        return key;
     }
 
     static string ParameterType(IParameterSymbol parameter)

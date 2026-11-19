@@ -134,7 +134,9 @@ go unless the manifest allows it, the fields of a struct keep their order, param
 and constants stay as they were, and a manifest member's string constants may
 only change if the rule recorded a reason for that member. Each overload is a
 member of its own: a record for one overload covers only that overload, a
-record for a name every overload of it.
+record for a name every overload of it. Two conversion operators of a type can
+differ only in what they return, so their keys carry the return type as well:
+`N.T::op_Implicit(N.T):System.Int32`.
 
 ## Differential tests
 

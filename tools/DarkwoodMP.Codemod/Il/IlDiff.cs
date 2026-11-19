@@ -58,12 +58,19 @@ sealed class IlDiff
         return new IlDiff(first, second, manifest).Run(first, second);
     }
 
-    /// The key of a method written in source, as the manifest spells it.
+    /// The key of a method written in source, as the manifest spells it. A
+    /// conversion operator also carries its return type, because two of them
+    /// can differ in nothing else: "T::op_Implicit(T):System.Int32".
     public static string MemberKey(MethodDefinition m)
     {
         var types = m.Parameters.Select(p => p.ParameterType.FullName);
-        return m.DeclaringType.FullName + "::" + m.Name
+        var key = m.DeclaringType.FullName + "::" + m.Name
             + "(" + string.Join(",", types) + ")";
+        if (m.Name is "op_Implicit" or "op_Explicit")
+        {
+            key += ":" + m.ReturnType.FullName;
+        }
+        return key;
     }
 
     IlDiffReport Run(ModuleDefinition a, ModuleDefinition b)
