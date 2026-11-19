@@ -32,15 +32,36 @@ namespace DarkwoodMP.World
         private static readonly Action<DialogueWindow> TweenClose =
             AccessTools.MethodDelegate<Action<DialogueWindow>>(AccessTools.Method(typeof(DialogueWindow), "onTweenClose"));
 
-        private static DialogueWindow Window => Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
+        private static DialogueWindow Window
+        {
+            get
+            {
+                if (Singleton<UI>.Instance != null)
+                {
+                    return Singleton<UI>.Instance.dialogueWindow;
+                }
+                return null;
+            }
+        }
 
         /// <summary>The window's NPC was destroyed (Unity's null, not a cleared field).</summary>
         internal static bool NpcDestroyed(DialogueWindow w) => w != null && !ReferenceEquals(w.npc, null) && w.npc == null;
 
         internal static void OpenedTrade(DialogueWindow w)
         {
-            var inv = w != null && w.npc != null ? w.npc.GetComponent<Inventory>() : null;
-            _shopUI = inv != null ? inv.thisUI : null;
+            Inventory inv = null;
+            if (w != null && w.npc != null)
+            {
+                inv = w.npc.GetComponent<Inventory>();
+            }
+            if (inv != null)
+            {
+                _shopUI = inv.thisUI;
+            }
+            else
+            {
+                _shopUI = null;
+            }
         }
 
         /// <summary>Every frame: close a dialogue whose NPC is gone or switched off.</summary>

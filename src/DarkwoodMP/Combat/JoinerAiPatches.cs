@@ -23,7 +23,15 @@ namespace DarkwoodMP.Combat
         public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, Func<List<CodeInstruction>, int, int> match,
                                                         MethodInfo helper, string where, int expected = 1, int arg = 0, string none = null)
         {
-            var load = arg == 0 ? OpCodes.Ldarg_0 : OpCodes.Ldarg_1;
+            OpCode load;
+            if (arg == 0)
+            {
+                load = OpCodes.Ldarg_0;
+            }
+            else
+            {
+                load = OpCodes.Ldarg_1;
+            }
             var list = new List<CodeInstruction>(instructions);
             int swapped = 0;
             for (int i = 0; i < list.Count; i++)
@@ -63,18 +71,43 @@ namespace DarkwoodMP.Combat
         {
             var whereAmI = AccessTools.Field(typeof(Player), nameof(Player.whereAmI));
             var big = AccessTools.PropertyGetter(typeof(WhereAmI), nameof(WhereAmI.bigLocation));
-            return i + 2 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(whereAmI) && l[i + 2].Calls(big) ? 3 : 0;
+            if (i + 2 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(whereAmI) && l[i + 2].Calls(big))
+            {
+                return 3;
+            }
+            return 0;
         }
 
         /// <summary>Player.Instance.&lt;getter&gt;</summary>
         public static Func<List<CodeInstruction>, int, int> HostThen(MethodInfo getter) =>
-            (l, i) => i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].Calls(getter) ? 2 : 0;
+            (l, i) =>
+            {
+                if (i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].Calls(getter))
+                {
+                    return 2;
+                }
+                return 0;
+            };
 
         /// <summary>Player.Instance.&lt;field&gt;</summary>
         public static Func<List<CodeInstruction>, int, int> HostField(FieldInfo field) =>
-            (l, i) => i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(field) ? 2 : 0;
+            (l, i) =>
+            {
+                if (i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(field))
+                {
+                    return 2;
+                }
+                return 0;
+            };
 
-        public static NetPlayerProxy ProxyOf(Transform t) => t != null && Threat.Enabled ? t.GetComponent<NetPlayerProxy>() : null;
+        public static NetPlayerProxy ProxyOf(Transform t)
+        {
+            if (t != null && Threat.Enabled)
+            {
+                return t.GetComponent<NetPlayerProxy>();
+            }
+            return null;
+        }
 
         private static readonly RaycastHit[] _hit = new RaycastHit[1];
 
@@ -85,7 +118,11 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
-            var g = hit.collider != null ? hit.collider.GetComponent<Ground>() : null;
+            Ground g = null;
+            if (hit.collider != null)
+            {
+                g = hit.collider.GetComponent<Ground>();
+            }
             return g != null && g.isInside;
         }
 
@@ -100,7 +137,18 @@ namespace DarkwoodMP.Combat
                 Plugin.Log.LogInfo("[joiner ai test] nothing to test on");
                 return;
             }
-            string T(Transform t) => t == null ? "nobody" : t == proxy.transform ? proxy.OwnerName : t.name;
+            string T(Transform t)
+            {
+                if (t == null)
+                {
+                    return "nobody";
+                }
+                if (t == proxy.transform)
+                {
+                    return proxy.OwnerName;
+                }
+                return t.name;
+            }
             try
             {
                 foreach (var a in c.activities)
@@ -111,7 +159,11 @@ namespace DarkwoodMP.Combat
                     }
                     a.thisCharacter = c;
                     a.assignTarget();
-                    var loc = a.target != null ? NightSpawns.BigLocationAt(a.target.transform.position) : null;
+                    Location loc = null;
+                    if (a.target != null)
+                    {
+                        loc = NightSpawns.BigLocationAt(a.target.transform.position);
+                    }
                     Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {(a.target != null ? a.target.name : "none")}, in {(loc != null ? loc.name : "no location")}");
                 }
                 Plugin.Log.LogInfo($"[joiner ai test] {c.name} has {c.activities.Count} activities");
@@ -201,7 +253,11 @@ namespace DarkwoodMP.Combat
         private static Location HostLocation()
         {
             var w = Player.Instance.whereAmI;
-            return w != null ? w.bigLocation : null;
+            if (w != null)
+            {
+                return w.bigLocation;
+            }
+            return null;
         }
 
         /// <summary>A hatching spider's location: the host's, unless a joiner is the nearest player; then where it is.</summary>
@@ -212,7 +268,11 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
-            return Threat.NearestPlayerPos(c) == Player.Instance.transform.position ? hostLoc : null; // null: the game uses transform.GetLocation()
+            if (Threat.NearestPlayerPos(c) == Player.Instance.transform.position)
+            {
+                return hostLoc;
+            }
+            return null; // null: the game uses transform.GetLocation()
         }
 
         /// <summary>
@@ -255,7 +315,11 @@ namespace DarkwoodMP.Combat
                 return proxy.gameObject;
             }
             var best = Threat.BestPlayerFor(c);
-            return best != null ? best.gameObject : Player.Instance.gameObject;
+            if (best != null)
+            {
+                return best.gameObject;
+            }
+            return Player.Instance.gameObject;
         }
     }
 
@@ -326,7 +390,15 @@ namespace DarkwoodMP.Combat
             var list = new List<CodeInstruction>(instructions);
             int test = list.FindIndex(ci => ci.operand is MethodInfo m && m.Name == "GetComponent" && m.IsGenericMethod
                                             && m.GetGenericArguments()[0] == typeof(Player));
-            int call = test < 0 ? -1 : list.FindIndex(test, ci => ci.Calls(attackPlayer));
+            int call;
+            if (test < 0)
+            {
+                call = -1;
+            }
+            else
+            {
+                call = list.FindIndex(test, ci => ci.Calls(attackPlayer));
+            }
             if (test < 0 || call < 0)
             {
                 Plugin.Log.LogWarning("ReactToJoinerPatch: no GetComponent<Player>() / attackPlayer() in reactToCharacter (game changed?); a joiner's hit still rolls cowardice");
@@ -485,7 +557,11 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
-            float max = Player.Instance != null ? Player.Instance.maxHealth : 100f;
+            float max = 100f;
+            if (Player.Instance != null)
+            {
+                max = Player.Instance.maxHealth;
+            }
             if (proxy.HealthPercent / 100f * max < 20f && __instance.attacks.Count >= 3)
             {
                 __instance.attacks[0].disabled = true;

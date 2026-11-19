@@ -109,7 +109,11 @@ namespace DarkwoodMP.World
         /// <summary>The body has a collider the player's body bumps into (not a trigger, on a layer that collides with the player's), switched on or off.</summary>
         private static bool Solid(Rigidbody b)
         {
-            int pl = P != null ? P.gameObject.layer : 0;
+            int pl = 0;
+            if (P != null)
+            {
+                pl = P.gameObject.layer;
+            }
             foreach (var c in b.GetComponentsInChildren<Collider>(true))
             {
                 if (c.GetComponentInParent<Rigidbody>(true) == b && !c.isTrigger && !Physics.GetIgnoreLayerCollision(pl, c.gameObject.layer))
@@ -127,7 +131,11 @@ namespace DarkwoodMP.World
 
         private static IEnumerator List(string[] a, Result r)
         {
-            float radius = a.Length > 0 && a[0] != "new" ? F(a[0]) : 400f;
+            float radius = 400f;
+            if (a.Length > 0 && a[0] != "new")
+            {
+                radius = F(a[0]);
+            }
             var things = new List<Item>();
             var unwatched = new List<string>();
             foreach (var b in Bodies(radius).OrderBy(b => Math.Round(StateDump.Flat(b.position - Centre))).ThenBy(b => ObjRef.Of(b.gameObject).ToString(), StringComparer.Ordinal))
@@ -147,7 +155,11 @@ namespace DarkwoodMP.World
                 }
                 else if (Movable(b, out var it))
                 {
-                    string w = DragSync.Instance != null ? DragSync.Instance.WatchInfo(b) : "no DragSync";
+                    string w = "no DragSync";
+                    if (DragSync.Instance != null)
+                    {
+                        w = DragSync.Instance.WatchInfo(b);
+                    }
                     what = $"{(it.draggable ? "draggable" : "loose")}, {w}";
                     things.Add(it);
                     if (w == "not watched" || w == "no body")
@@ -181,7 +193,11 @@ namespace DarkwoodMP.World
 
         private static Item ByIndex(string[] a, Result r)
         {
-            int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
+            int k = 0;
+            if (a.Length > 0)
+            {
+                k = int.Parse(a[0], CultureInfo.InvariantCulture);
+            }
             if (k < 0 || k >= _order.Count)
             {
                 r.Fail($"no thing {k} (ps-list found {_order.Count})");
@@ -293,8 +309,16 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            float dist = !lean && a.Length > 2 ? F(a[2]) : 60f;
-            float hold = lean && a.Length > 2 ? F(a[2]) : 5f;
+            float dist = 60f;
+            if (!lean && a.Length > 2)
+            {
+                dist = F(a[2]);
+            }
+            float hold = 5f;
+            if (lean && a.Length > 2)
+            {
+                hold = F(a[2]);
+            }
             var start = it.transform.position;
             float back = Size(it) + 60f;
             var dir = ClearWay(it, a.Length > 1 ? F(a[1]) : 0f, back, lean ? 0f : dist + 20f);

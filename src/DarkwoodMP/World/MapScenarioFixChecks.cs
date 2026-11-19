@@ -29,7 +29,14 @@ namespace DarkwoodMP.World
             ["spirit"] = new Vector3(0f, 0f, -600f),
             ["drop"] = new Vector3(400f, 0f, 700f),       // clear of the stations, for a dropped match or flare
         };
-        private static Vector3 Spot(string which) => Spots.TryGetValue(which, out var off) ? Centre + off : Centre;
+        private static Vector3 Spot(string which)
+        {
+            if (Spots.TryGetValue(which, out var off))
+            {
+                return Centre + off;
+            }
+            return Centre;
+        }
 
         public static void Register()
         {
@@ -83,12 +90,34 @@ namespace DarkwoodMP.World
                     e["inPlay"] = NetEnemies.InPlay(c); // a copy is alive while the host's is in play
                     if (NetEnemies.InPlay(c))
                     {
-                        e["health"] = c.maxHealth > 0f ? Mathf.RoundToInt(Mathf.Clamp01(c.health / c.maxHealth) * 100f) : -1;
+                        if (c.maxHealth > 0f)
+                        {
+                            e["health"] = Mathf.RoundToInt(Mathf.Clamp01(c.health / c.maxHealth) * 100f);
+                        }
+                        else
+                        {
+                            e["health"] = -1;
+                        }
                     }
                     else
                     {
-                        var sp = c.shadow != null ? c.shadow.GetComponent<tk2dBaseSprite>() : null;
-                        e["shadow"] = sp == null ? "none" : sp.color.a < 0.1f ? "faded" : "shown";
+                        tk2dBaseSprite sp = null;
+                        if (c.shadow != null)
+                        {
+                            sp = c.shadow.GetComponent<tk2dBaseSprite>();
+                        }
+                        if (sp == null)
+                        {
+                            e["shadow"] = "none";
+                        }
+                        else if (sp.color.a < 0.1f)
+                        {
+                            e["shadow"] = "faded";
+                        }
+                        else
+                        {
+                            e["shadow"] = "shown";
+                        }
                         e["particles"] = c.GetComponentsInChildren<ParticleSystem>().Count(ps => ps != null && ps.isEmitting);
                     }
                 }
@@ -163,7 +192,14 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        private static float BarFraction(EnemyHealthBar bar) => bar != null && bar.full != null ? bar.full.clipTopRight.x : -1f;
+        private static float BarFraction(EnemyHealthBar bar)
+        {
+            if (bar != null && bar.full != null)
+            {
+                return bar.full.clipTopRight.x;
+            }
+            return -1f;
+        }
 
         // ---- 43-45: a copy's health bar, looks and pre-death stage ---------------------------------------------------
 
@@ -175,7 +211,11 @@ namespace DarkwoodMP.World
         internal static Character ById(uint id)
         {
             var ne = NetEnemies.Instance;
-            return ne == null ? null : Object.FindObjectsOfType<Character>().FirstOrDefault(c => c != null && ne.NetIdOf(c, out uint i) && i == id);
+            if (ne == null)
+            {
+                return null;
+            }
+            return Object.FindObjectsOfType<Character>().FirstOrDefault(c => c != null && ne.NetIdOf(c, out uint i) && i == id);
         }
 
         /// <summary>"fx-spawn [predeath]" (host): a Dog at the "fx" spot (with a pre-death stage of 40 health).</summary>
@@ -202,7 +242,11 @@ namespace DarkwoodMP.World
         /// health (44); its shadow lies as the game places it (45).</summary>
         private static IEnumerator FxHit(string[] a, Result r)
         {
-            float dmg = a.Length > 0 ? F(a[0]) : 20f;
+            float dmg = 20f;
+            if (a.Length > 0)
+            {
+                dmg = F(a[0]);
+            }
             Character c = null;
             float until = Time.realtimeSinceStartup + 6f;
             while (c == null && Time.realtimeSinceStartup < until)
@@ -225,7 +269,11 @@ namespace DarkwoodMP.World
             var bar = Singleton<UI>.Instance.enemyHealthBar;
             bool shownAtOnce = bar.currentObj == c.gameObject;
             yield return new WaitForSeconds(1.5f); // the host's next states
-            float frac = c.maxHealth > 0f ? c.health / c.maxHealth : -1f;
+            float frac = -1f;
+            if (c.maxHealth > 0f)
+            {
+                frac = c.health / c.maxHealth;
+            }
             r.Info = FormattableString.Invariant($"{c.name} #{IdOf(c)}: health {before:0} -> {c.health:0} of {c.maxHealth:0}; bar on it {bar.currentObj == c.gameObject} (at once {shownAtOnce}), bar {BarFraction(bar):0.00}");
             if (!shownAtOnce)
             {
@@ -371,7 +419,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return new WaitForSeconds(1.5f); // the shadow's fade takes a second
-            var sp = c.shadow != null ? c.shadow.GetComponent<tk2dBaseSprite>() : null;
+            tk2dBaseSprite sp = null;
+            if (c.shadow != null)
+            {
+                sp = c.shadow.GetComponent<tk2dBaseSprite>();
+            }
             int emitting = c.GetComponentsInChildren<ParticleSystem>().Count(ps => ps != null && ps.isEmitting);
             r.Info = FormattableString.Invariant($"{c.name} #{IdOf(c)}: searchable {c.GetComponent<Item>() != null}, shadow alpha {(sp != null ? sp.color.a : -1f):0.00}, emitting particles {emitting}");
             if (c.GetComponent<Item>() == null)
@@ -472,7 +524,15 @@ namespace DarkwoodMP.World
             AsPlayer(() => _ii.switchMe());
             HideSwitchWindow();
             yield return new WaitForSeconds(1f);
-            var mine = on ? _onT : _offT;
+            global::EventTrigger mine;
+            if (on)
+            {
+                mine = _onT;
+            }
+            else
+            {
+                mine = _offT;
+            }
             r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired {mine.fired}";
             if (_ii.isOn != on)
             {
@@ -500,7 +560,15 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             yield return new WaitForSeconds(0.5f);
-            var t = on ? _onT : _offT;
+            global::EventTrigger t;
+            if (on)
+            {
+                t = _onT;
+            }
+            else
+            {
+                t = _offT;
+            }
             r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired here {t.fired}";
             if (_ii.isOn != on)
             {
@@ -528,7 +596,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DropHeld(string[] a, Result r)
         {
             var p = P;
-            string type = a.Length > 0 ? a[0] : "flare";
+            string type = "flare";
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
             yield return Walk(MapScenarioEnemies.FreeSpot(Spot("drop")), 40f);
             int free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0)
@@ -583,7 +655,11 @@ namespace DarkwoodMP.World
             HeldItem(p) = held;
             yield return new WaitForSeconds(0.3f);
             AsPlayer(() => DropItemM.Invoke(p, new object[] { true }));
-            var ti = held != null ? held.GetComponent<ThrownItem>() : null;
+            ThrownItem ti = null;
+            if (held != null)
+            {
+                ti = held.GetComponent<ThrownItem>();
+            }
             r.Info = $"{type} ({held?.name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
             if (HeldItem(p) != null)
             {
@@ -596,7 +672,11 @@ namespace DarkwoodMP.World
         /// <summary>"expect-dropped TYPE": the other player's dropped TYPE lies here by them, dropped (ThrownItem.dropMe).</summary>
         private static IEnumerator ExpectDropped(string[] a, Result r)
         {
-            string type = a.Length > 0 ? a[0] : "flare";
+            string type = "flare";
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
             var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
             if (it == null || it.item == null)
             {

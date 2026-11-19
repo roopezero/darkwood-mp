@@ -25,7 +25,11 @@ namespace DarkwoodMP.Sync
                 return null;
             }
             var t = CurrentType(map);
-            return t != null && t.name == "World" ? t : null;
+            if (t != null && t.name == "World")
+            {
+                return t;
+            }
+            return null;
         }
 
         /// <summary>Whether this player is shown on the world's map: in the main world, and not spectating.</summary>

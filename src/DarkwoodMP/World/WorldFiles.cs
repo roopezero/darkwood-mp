@@ -266,7 +266,15 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool DeletePlayersFolder(string baseDir, int slot)
         {
-            string why = slot < 1 || slot > 99 ? $"slot {slot} isn't a save slot" : NeverDelete(baseDir, out _);
+            string why;
+            if (slot < 1 || slot > 99)
+            {
+                why = $"slot {slot} isn't a save slot";
+            }
+            else
+            {
+                why = NeverDelete(baseDir, out _);
+            }
             string dir = null, full = null;
             if (why == null)
             {

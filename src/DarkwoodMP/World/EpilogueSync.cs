@@ -143,7 +143,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Host: why a new player can't join now (null: they can).</summary>
-        internal static string JoinRefusal() => Playing && S != null && S.IsHost ? "The host is playing the ending." : null;
+        internal static string JoinRefusal()
+        {
+            if (Playing && S != null && S.IsHost)
+            {
+                return "The host is playing the ending.";
+            }
+            return null;
+        }
 
         private static PacketWriter GameEnd(byte phase)
         {
@@ -384,7 +391,15 @@ namespace DarkwoodMP.World
                 return;
             }
             Core.forbidInputs = true;
-            Vector3 from = _ownDeath ? _deathAt : p.transform.position;
+            Vector3 from;
+            if (_ownDeath)
+            {
+                from = _deathAt;
+            }
+            else
+            {
+                from = p.transform.position;
+            }
             if (_ownDeath)
             {
                 p._transform.position = from - new Vector3(0f, 10f, 0f); // where the game keeps a dead player
@@ -663,7 +678,14 @@ namespace DarkwoodMP.World
             }
             if (what == Step.Outcomes)
             {
-                _hostBurned = value == "1" ? 1 : 0;
+                if (value == "1")
+                {
+                    _hostBurned = 1;
+                }
+                else
+                {
+                    _hostBurned = 0;
+                }
                 return;
             }
             if (what == Step.Burn)

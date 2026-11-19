@@ -83,7 +83,11 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} in this world");
                 yield break;
             }
-            float dist = a.Length > 1 ? F(a[1]) : 250f;
+            float dist = 250f;
+            if (a.Length > 1)
+            {
+                dist = F(a[1]);
+            }
             var to = c.transform.position;
             yield return Walk(to, dist);
             yield return new WaitForSeconds(2f);
@@ -108,7 +112,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.4f);
             }
             yield return new WaitForSecondsRealtime(4f); // a client settles the corpse 2 s after it dies
-            r.Info = c != null ? $"{hits} hits: {Props(c)}" : $"{hits} hits: gone";
+            if (c != null)
+            {
+                r.Info = $"{hits} hits: {Props(c)}";
+            }
+            else
+            {
+                r.Info = $"{hits} hits: gone";
+            }
             if (c == null || c.alive)
             {
                 r.Fail($"not dead: {r.Info}");
@@ -408,7 +419,19 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(0.25f);
                 }
             }
-            string opened = ReferenceEquals(P.openedItemInventory, null) ? "null" : P.openedItemInventory == null ? "a destroyed object" : P.openedItemInventory.name;
+            string opened;
+            if (ReferenceEquals(P.openedItemInventory, null))
+            {
+                opened = "null";
+            }
+            else if (P.openedItemInventory == null)
+            {
+                opened = "a destroyed object";
+            }
+            else
+            {
+                opened = P.openedItemInventory.name;
+            }
             r.Info = $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], " +
                      $"openedItemInventory {opened}, openedItemInventory2 {(ReferenceEquals(P.openedItemInventory2, null) ? "null" : "set")}";
             if (!ok)

@@ -90,15 +90,27 @@ namespace DarkwoodMP.World
                 return;
             }
             // RandomEvent.fire's copy of one of the firing night event's GameEvents: tag its steps.
-            var re = Firing != null ? Firing.theEvent : null;
+            RandomEvent re = null;
+            if (Firing != null)
+            {
+                re = Firing.theEvent;
+            }
             if (re != null && re.type == RandomEvent.Type.locationEvent)
             {
                 int g = re.gameEvents.FindIndex(x => x != null && (Object)x.gameObject == prefab);
-                var ge = g >= 0 ? go.GetComponent<GameEvents>() : null;
+                GameEvents ge = null;
+                if (g >= 0)
+                {
+                    ge = go.GetComponent<GameEvents>();
+                }
                 if (ge != null)
                 {
                     var ns = Singleton<NightScenarios>.Instance;
-                    string sc = ns != null && ns.currentScenario != null ? ns.currentScenario.name : "";
+                    string sc = "";
+                    if (ns != null && ns.currentScenario != null)
+                    {
+                        sc = ns.currentScenario.name;
+                    }
                     for (int s = 0; s < ge.events.Count; s++)
                     {
                         if (ge.events[s] != null)
@@ -236,7 +248,11 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                var trap = _rearm[i].go != null ? _rearm[i].go.GetComponent<Trigger>() : null;
+                Trigger trap = null;
+                if (_rearm[i].go != null)
+                {
+                    trap = _rearm[i].go.GetComponent<Trigger>();
+                }
                 if (trap != null && trap.active != (_rearm[i].armed == 1))
                 {
                     if (WorldActions.Debug)
@@ -358,7 +374,11 @@ namespace DarkwoodMP.World
                     return;
                 }
             }
-            var under = parent.K != ObjRef.Kind.None ? ObjRef.Resolve<Transform>(parent) : null;
+            Transform under = null;
+            if (parent.K != ObjRef.Kind.None)
+            {
+                under = ObjRef.Resolve<Transform>(parent);
+            }
             GameObject go;
             WorldActions.Replaying = true;
             try
@@ -368,7 +388,11 @@ namespace DarkwoodMP.World
                 {
                     ObjRef.RegisterSpawned(id, go);
                     Arm(go, tag.Armed);
-                    var loc = under != null ? go.transform.GetLocation() : null;
+                    Location loc = null;
+                    if (under != null)
+                    {
+                        loc = go.transform.GetLocation();
+                    }
                     if (loc != null)
                     {
                         loc.addToObjects(go); // as GameEvent.fire does
@@ -396,13 +420,21 @@ namespace DarkwoodMP.World
         /// <summary>Whether its Trigger (a mushroom is one) is armed: 1 yes, 0 no, 255 it has none.</summary>
         private static byte ArmedOf(GameObject go)
         {
-            var trap = go != null ? go.GetComponent<Trigger>() : null;
+            Trigger trap = null;
+            if (go != null)
+            {
+                trap = go.GetComponent<Trigger>();
+            }
             return (byte)(trap == null ? 255 : trap.active ? 1 : 0);
         }
 
         private static void Arm(GameObject go, byte armed)
         {
-            var trap = armed != 255 ? go.GetComponent<Trigger>() : null;
+            Trigger trap = null;
+            if (armed != 255)
+            {
+                trap = go.GetComponent<Trigger>();
+            }
             if (trap == null)
             {
                 return;
@@ -417,20 +449,39 @@ namespace DarkwoodMP.World
         private static GameObject Prefab(Tag tag)
         {
             var ns = Singleton<NightScenarios>.Instance;
-            var sc = ns != null ? ns.getScenario(tag.Scenario) : null;
-            var ev = sc != null ? WorldEvents.FindEvent(sc, tag.Event) : null;
+            NightScenario sc = null;
+            if (ns != null)
+            {
+                sc = ns.getScenario(tag.Scenario);
+            }
+            CustomEvent ev = null;
+            if (sc != null)
+            {
+                ev = WorldEvents.FindEvent(sc, tag.Event);
+            }
             if (ev == null && ns != null)
             {
                 foreach (var other in ns.scenarios)
                 {
-                    ev = other != null ? WorldEvents.FindEvent(other, tag.Event) : null;
+                    if (other != null)
+                    {
+                        ev = WorldEvents.FindEvent(other, tag.Event);
+                    }
+                    else
+                    {
+                        ev = null;
+                    }
                     if (ev != null)
                     {
                         break;
                     }
                 }
             }
-            var re = ev != null ? ev.theEvent : null;
+            RandomEvent re = null;
+            if (ev != null)
+            {
+                re = ev.theEvent;
+            }
             if (re == null || tag.Group >= re.gameEvents.Count || re.gameEvents[tag.Group] == null)
             {
                 return null;

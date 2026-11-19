@@ -29,7 +29,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Hold(string[] a, Result r)
         {
             var p = Player.Instance;
-            string type = a.Length > 0 ? a[0] : "fists";
+            string type = "fists";
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
             if (type != "fists")
             {
                 yield return MapScenarioEnemies.TakeOut(p, type, r);
@@ -72,7 +76,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Check(string[] a, Result r)
         {
-            string what = a.Length > 0 ? a[0] : "none";
+            string what = "none";
+            if (a.Length > 0)
+            {
+                what = a[0];
+            }
             float until = Time.realtimeSinceStartup + 8f;
             string seen = "", shared = "";
             bool ok = false;
@@ -92,7 +100,11 @@ namespace DarkwoodMP.World
                     case "flashlight":
                         ok = any(x =>
                         {
-                            var l = x.Beam != null && x.Beam.activeSelf ? x.Beam.GetComponent<Light2D>() : null;
+                            Light2D l = null;
+                            if (x.Beam != null && x.Beam.activeSelf)
+                            {
+                                l = x.Beam.GetComponent<Light2D>();
+                            }
                             return l != null && x.Last != null && x.Last.BeamRadius > 0f && Mathf.Abs(l.LightRadius - x.Last.BeamRadius) < 1f && Drawn(l);
                         });
                         break;

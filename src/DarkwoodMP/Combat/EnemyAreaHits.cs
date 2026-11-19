@@ -179,7 +179,11 @@ namespace DarkwoodMP.Combat
                 return;
             }
             string sound = ex.explodeSound ?? "";
-            string fx = ex.explosionPrefab != null ? ex.explosionPrefab.name : "";
+            string fx = "";
+            if (ex.explosionPrefab != null)
+            {
+                fx = ex.explosionPrefab.name;
+            }
             if (sound.Length == 0 && fx.Length == 0)
             {
                 return;
@@ -290,9 +294,21 @@ namespace DarkwoodMP.Combat
         /// <summary>Flier.Update's "Player.Instance.getHit(5)": hits whoever the flier dove at.</summary>
         public static void FlierHit(Flier flier, float damage)
         {
-            var c = flier != null ? flier.GetComponent<Character>() : null;
-            var target = c != null ? c.target : null;
-            var proxy = target != null ? target.GetComponent<NetPlayerProxy>() : null;
+            Character c = null;
+            if (flier != null)
+            {
+                c = flier.GetComponent<Character>();
+            }
+            Transform target = null;
+            if (c != null)
+            {
+                target = c.target;
+            }
+            NetPlayerProxy proxy = null;
+            if (target != null)
+            {
+                proxy = target.GetComponent<NetPlayerProxy>();
+            }
             if (proxy != null)
             {
                 PlayerDamage.Send(proxy.Owner, damage, flier.transform, shadow: false, effects: null);
@@ -332,7 +348,11 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            var p = col != null ? col.transform.GetComponent<NetPlayerProxy>() : null;
+            NetPlayerProxy p = null;
+            if (col != null)
+            {
+                p = col.transform.GetComponent<NetPlayerProxy>();
+            }
             if (p == null && t != null)
             {
                 p = t.GetComponent<NetPlayerProxy>();
@@ -404,10 +424,23 @@ namespace DarkwoodMP.Combat
             go.transform.position = at + new Vector3(10f, 0f, 0f);
             var ex = go.AddComponent<Explodes>();
             var db = Singleton<ItemsDatabase>.Instance;
-            foreach (var key in db != null ? db.itemsDict.Keys : (IEnumerable<string>)new string[0])
+            IEnumerable<string> keys;
+            if (db != null)
+            {
+                keys = db.itemsDict.Keys;
+            }
+            else
+            {
+                keys = (IEnumerable<string>)new string[0];
+            }
+            foreach (var key in keys)
             {
                 var item = db.getItem(key, instantiate: false);
-                var real = item != null && item.item is GameObject g ? g.GetComponent<Explodes>() : null;
+                Explodes real = null;
+                if (item != null && item.item is GameObject g)
+                {
+                    real = g.GetComponent<Explodes>();
+                }
                 if (real == null || real.explosionPrefab == null)
                 {
                     continue;

@@ -205,7 +205,11 @@ namespace DarkwoodMP.World
         {
             long id = HostIds.NewId();
             ObjRef.RegisterSpawned(id, inf.gameObject);
-            var parent = inf.transform.parent != null ? ObjRef.Of(inf.transform.parent.gameObject) : default;
+            ObjRef parent = default;
+            if (inf.transform.parent != null)
+            {
+                parent = ObjRef.Of(inf.transform.parent.gameObject);
+            }
             var p = inf.transform.position;
             var w = S.Begin(MsgType.InfectionSpawned);
             w.W.Write(id);
@@ -232,12 +236,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var parent = parentRef.Valid ? ObjRef.Resolve<Transform>(parentRef) : null;
+            Transform parent = null;
+            if (parentRef.Valid)
+            {
+                parent = ObjRef.Resolve<Transform>(parentRef);
+            }
             WorldActions.Replaying = true;
             try
             {
                 var go = Core.AddPrefab("Traps/infection_splat", pos, Quaternion.Euler(90f, 0f, 0f), parent != null ? parent.gameObject : Core.ItemContainer, worldSpace: true);
-                var inf = go != null ? go.GetComponent<Infection>() : null;
+                Infection inf = null;
+                if (go != null)
+                {
+                    inf = go.GetComponent<Infection>();
+                }
                 if (inf == null)
                 {
                     return;

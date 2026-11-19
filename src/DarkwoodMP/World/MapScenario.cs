@@ -142,7 +142,15 @@ namespace DarkwoodMP.World
                 }
             }
             WorldActions.TestAsPlayer = false;
-            string line = r.Failure != null ? $"fail {r.Failure}" : r.Info != null ? $"done {r.Info}" : "done";
+            string line = "done";
+            if (r.Failure != null)
+            {
+                line = $"fail {r.Failure}";
+            }
+            else if (r.Info != null)
+            {
+                line = $"done {r.Info}";
+            }
             // One line: the driver reads one reply per step, and an exception's message can hold a line break
             // (ArgumentNullException's "Parameter name: ..."), which put every later reply one step behind.
             line = line.Replace("\r", " ").Replace("\n", " ");
@@ -217,7 +225,11 @@ namespace DarkwoodMP.World
             }
             // Round the armed traps on the way (not one by where we're going): walking through the station's chain
             // trap caught the host, which then couldn't get anywhere, and sprang a trap a later step was to use.
-            var detour = detours > 0 ? Detour(p.transform.position, to, within) : null;
+            Vector3? detour = null;
+            if (detours > 0)
+            {
+                detour = Detour(p.transform.position, to, within);
+            }
             if (detour.HasValue)
             {
                 yield return Walk(detour.Value, 20f, detours - 1);
@@ -288,7 +300,15 @@ namespace DarkwoodMP.World
                 }
                 worst = t;
                 worstT = along;
-                side = perp.sqrMagnitude < 1f ? new Vector3(-dir.z, 0f, dir.x) : -perp.normalized; // to the side away from it
+                // to the side away from it
+                if (perp.sqrMagnitude < 1f)
+                {
+                    side = new Vector3(-dir.z, 0f, dir.x);
+                }
+                else
+                {
+                    side = -perp.normalized;
+                }
             }
             if (worst == null)
             {
@@ -434,7 +454,15 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return Walk(door.transform.position);
-            bool open = a.Length > 0 ? a[0] == "open" : !door.opened;
+            bool open;
+            if (a.Length > 0)
+            {
+                open = a[0] == "open";
+            }
+            else
+            {
+                open = !door.opened;
+            }
             if (open != door.opened)
             {
                 AsPlayer(() =>
@@ -464,7 +492,11 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             bool locked = a.Contains("--locked"); // a locked one too (the host should refuse it)
             a = a.Where(x => x != "--locked").ToArray();
-            string type = a.Length > 0 ? a[0] : null;
+            string type = null;
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
             bool Has(InvSlot s) => !InvItemClass.isNull(s.invItem) && (type == null || s.invItem.type == type);
             var inv = Nearest(Object.FindObjectsOfType<Inventory>().Where(i => i.invType == Inventory.InvType.itemInv && !i.isWorkbench
                 && !i.name.StartsWith("DroppedItem") && i.slots.Any(Has) && (locked || !(i.GetComponentInParent<Locked>() is Locked l && l.locked)) && i != p.Inventory && i != p.Hotbar && !i.transform.IsChildOf(p.transform)), Centre);
@@ -501,8 +533,20 @@ namespace DarkwoodMP.World
         private static IEnumerator DropItem(string[] a, Result r)
         {
             var p = Player.Instance;
-            string type = a.Length > 0 ? a[0] : _lastTaken;
-            int amount = a.Length > 1 ? int.Parse(a[1]) : 1;
+            string type;
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
+            else
+            {
+                type = _lastTaken;
+            }
+            int amount = 1;
+            if (a.Length > 1)
+            {
+                amount = int.Parse(a[1]);
+            }
             if (type == null)
             {
                 r.Fail("nothing to drop (take-item first, or give a type)");

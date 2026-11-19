@@ -87,7 +87,14 @@ namespace DarkwoodMP.World
         private static readonly AccessTools.FieldRef<ShadowArmor, float> ShadowHealthField = AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
 
         /// <summary>The health a shadow-covered item's shadow is going down to (a hit lowers it, not the item's health); -1 without one.</summary>
-        public static float ShadowHealth(Item i) => i.shadowArmor != null ? ShadowHealthField(i.shadowArmor) : -1f;
+        public static float ShadowHealth(Item i)
+        {
+            if (i.shadowArmor != null)
+            {
+                return ShadowHealthField(i.shadowArmor);
+            }
+            return -1f;
+        }
 
         /// <summary>An item's health, whether it's broken, and its shadow's health: a hit on a shadow-covered item changes only the last.</summary>
         public struct ItemState

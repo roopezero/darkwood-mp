@@ -189,7 +189,11 @@ namespace DarkwoodMP.World
         private static CullableObject CullableOf(GameObject go)
         {
             var co = go.GetComponent<CullableObject>();
-            return co != null ? co : go.AddComponent<CullableObject>();
+            if (co != null)
+            {
+                return co;
+            }
+            return go.AddComponent<CullableObject>();
         }
 
         private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
@@ -452,7 +456,11 @@ namespace DarkwoodMP.World
         static MethodBase TargetMethod()
         {
             var t = typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic).FirstOrDefault(n => n.Name.StartsWith("<Load>d__"));
-            return t == null ? null : AccessTools.Method(t, "MoveNext");
+            if (t == null)
+            {
+                return null;
+            }
+            return AccessTools.Method(t, "MoveNext");
         }
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)

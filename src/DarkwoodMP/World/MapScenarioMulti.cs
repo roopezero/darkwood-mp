@@ -152,11 +152,26 @@ namespace DarkwoodMP.World
                 return "host";
             }
             var px = t.GetComponent<NetPlayerProxy>();
-            return px != null ? px.OwnerName : t.name;
+            if (px != null)
+            {
+                return px.OwnerName;
+            }
+            return t.name;
         }
 
         /// <summary>The name a client game's player goes by on the host ("c2" is Client2, as tools/setup-client-game.sh names them).</summary>
-        private static string PlayerName(string who) => who == "host" ? "host" : who.StartsWith("c") ? "Client" + who.Substring(1) : who;
+        private static string PlayerName(string who)
+        {
+            if (who == "host")
+            {
+                return "host";
+            }
+            if (who.StartsWith("c"))
+            {
+                return "Client" + who.Substring(1);
+            }
+            return who;
+        }
 
         private static IEnumerator WatchEnemy(Character c)
         {
@@ -194,8 +209,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string ThreatText(Character c) =>
-            c == null ? "-" : string.Join(", ", Threat.Of(c).Values.Where(kv => kv.Key != null).Select(kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
+        private static string ThreatText(Character c)
+        {
+            if (c == null)
+            {
+                return "-";
+            }
+            return string.Join(", ", Threat.Of(c).Values.Where(kv => kv.Key != null).Select(kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
+        }
 
         /// <summary>"mt-spawn KIND DX DZ" (host): an enemy at the centre plus (DX, DZ), not set on anyone; from now on
         /// who it goes after is recorded.</summary>
@@ -293,9 +314,17 @@ namespace DarkwoodMP.World
                 yield break;
             }
             string want = PlayerName(a[0]);
-            float secs = a.Length > 1 && !a[1].StartsWith("--") ? F(a[1]) : 15f;
+            float secs = 15f;
+            if (a.Length > 1 && !a[1].StartsWith("--"))
+            {
+                secs = F(a[1]);
+            }
             int ni = Array.IndexOf(a, "--nearer");
-            string nearer = ni >= 0 ? PlayerName(a[ni + 1]) : null;
+            string nearer = null;
+            if (ni >= 0)
+            {
+                nearer = PlayerName(a[ni + 1]);
+            }
             float until = Time.realtimeSinceStartup + secs;
             while (c != null && c.alive && NameOf(c.target) != want && Time.realtimeSinceStartup < until)
             {
@@ -372,7 +401,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Corpse(string[] a, Result r)
         {
             var c = HostEnemy(false);
-            var inv = c != null ? c.GetComponentInChildren<Inventory>(true) : null;
+            Inventory inv = null;
+            if (c != null)
+            {
+                inv = c.GetComponentInChildren<Inventory>(true);
+            }
             if (c == null || inv == null || c.GetComponent<Item>() == null)
             {
                 r.Fail($"no searchable corpse near us ({(c != null ? c.name : "none")})");
@@ -482,7 +515,11 @@ namespace DarkwoodMP.World
         /// <summary>"mt-locks" (host): how many containers someone has open (each released once its player closed or left).</summary>
         private static IEnumerator Locks(string[] a, Result r)
         {
-            int n = Containers.Instance != null ? Containers.Instance.LockCount : -1;
+            int n = -1;
+            if (Containers.Instance != null)
+            {
+                n = Containers.Instance.LockCount;
+            }
             r.Info = $"{n} container(s) held open";
             if (a.Length > 0 && n != int.Parse(a[0]))
             {
@@ -633,7 +670,11 @@ namespace DarkwoodMP.World
                 r.Fail("night attackers are the host's");
                 yield break;
             }
-            int n = a.Length > 0 ? int.Parse(a[0]) : 3;
+            int n = 3;
+            if (a.Length > 0)
+            {
+                n = int.Parse(a[0]);
+            }
             var spawner = Singleton<CharacterSpawner>.Instance;
             var call = HarmonyLib.AccessTools.Method(typeof(CharacterSpawner), "spawnNightChar");
             P.whereAmI.checkWhereAmI();
@@ -658,9 +699,24 @@ namespace DarkwoodMP.World
             {
                 sc.setCurrentScenario();
             }
-            string budget = sc.currentScenario == null ? "no scenario" :
-                sc.currentScenario.name + ": " + string.Join(", ", sc.currentScenario.characters.Where(x => x != null).Select(x => $"{x.characterName} x{x.amount}"));
-            int max = sc.currentScenario == null ? 0 : sc.currentScenario.characters.Where(x => x != null && !string.IsNullOrEmpty(x.characterName)).Sum(x => Math.Max(0, x.amount));
+            string budget;
+            if (sc.currentScenario == null)
+            {
+                budget = "no scenario";
+            }
+            else
+            {
+                budget = sc.currentScenario.name + ": " + string.Join(", ", sc.currentScenario.characters.Where(x => x != null).Select(x => $"{x.characterName} x{x.amount}"));
+            }
+            int max;
+            if (sc.currentScenario == null)
+            {
+                max = 0;
+            }
+            else
+            {
+                max = sc.currentScenario.characters.Where(x => x != null && !string.IsNullOrEmpty(x.characterName)).Sum(x => Math.Max(0, x.amount));
+            }
             int from = NightSpawns.SentLog.Count;
             bool was = spawner.spawnNocturnalCharacters;
             // Put back in a finally: left on, night attackers would spawn in the daytime of every later step.
@@ -684,7 +740,11 @@ namespace DarkwoodMP.World
             int want = Math.Min(n, max);
             foreach (var h in hideouts)
             {
-                int got = per.TryGetValue(h, out var l) ? l.Count : 0;
+                int got = 0;
+                if (per.TryGetValue(h, out var l))
+                {
+                    got = l.Count;
+                }
                 if (got != want)
                 {
                     r.Fail($"{r.Info}: {h} got {got} attackers from {n} spawns, wanted {want}");
@@ -712,6 +772,13 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
         }
 
-        private static string Name(Location l) => l != null ? l.name + (l.playerBase ? " (hideout)" : "") : "none";
+        private static string Name(Location l)
+        {
+            if (l != null)
+            {
+                return l.name + (l.playerBase ? " (hideout)" : "");
+            }
+            return "none";
+        }
     }
 }

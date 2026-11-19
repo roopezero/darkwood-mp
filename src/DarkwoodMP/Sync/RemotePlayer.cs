@@ -19,7 +19,17 @@ namespace DarkwoodMP.Sync
         /// <summary>In a separate location or a dream.</summary>
         public bool Away => _hasLast && _last.Away;
         /// <summary>The latest snapshot (its state bits: invisible, wards, forest skills), or null before the first.</summary>
-        public PlayerSnapshot Last => _hasLast ? _last : null;
+        public PlayerSnapshot Last
+        {
+            get
+            {
+                if (_hasLast)
+                {
+                    return _last;
+                }
+                return null;
+            }
+        }
 
         private readonly PlayerSnapshot _prev = new PlayerSnapshot();
         private readonly PlayerSnapshot _last = new PlayerSnapshot();
@@ -74,7 +84,17 @@ namespace DarkwoodMP.Sync
         /// <summary>For the tests: the puppet's lantern light (null when there's none).</summary>
         internal Light2D LanternLight => _lantern;
         /// <summary>For the tests: the light of the torch or lamp in the puppet's hand (null when there's none).</summary>
-        internal Light2D HeldLightShown => _heldLight != null ? _heldLight.GetComponent<Light2D>() : null;
+        internal Light2D HeldLightShown
+        {
+            get
+            {
+                if (_heldLight != null)
+                {
+                    return _heldLight.GetComponent<Light2D>();
+                }
+                return null;
+            }
+        }
         private bool _flamesLogged;
 
         private void ApplyLights()
@@ -83,7 +103,11 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
-            string want = _last.Alive && !_last.Spectating ? _last.HeldLight ?? "" : "";
+            string want = "";
+            if (_last.Alive && !_last.Spectating)
+            {
+                want = _last.HeldLight ?? "";
+            }
             if (want != _heldShown || (want != "" && _heldLight == null))
             {
                 RemoveHeld();
@@ -125,7 +149,11 @@ namespace DarkwoodMP.Sync
             bool beam = _last.Flashlight && _last.Alive && !_last.Spectating;
             if (beam && _beam == null)
             {
-                var own = Player.Instance != null ? Player.Instance.transform.Find("Flashlight") : null;
+                Transform own = null;
+                if (Player.Instance != null)
+                {
+                    own = Player.Instance.transform.Find("Flashlight");
+                }
                 if (own != null)
                 {
                     _beam = CopyLight(own.gameObject, Root.transform, "Flashlight");
@@ -138,7 +166,11 @@ namespace DarkwoodMP.Sync
             }
             // The copy keeps the radius and colour our own beam had when it was copied (the prefab's, if we never used
             // one); their game sets them each frame from where their mouse is (Player.processFlashlight).
-            var beamLight = beam && _beam != null ? _beam.GetComponent<Light2D>() : null;
+            Light2D beamLight = null;
+            if (beam && _beam != null)
+            {
+                beamLight = _beam.GetComponent<Light2D>();
+            }
             if (beamLight != null && _last.BeamRadius > 0f)
             {
                 if (beamLight.LightRadius != _last.BeamRadius)
@@ -161,11 +193,25 @@ namespace DarkwoodMP.Sync
         private Light2D _lantern;
 
         /// <summary>The radius of the lantern light shown on the puppet (0: none).</summary>
-        public float LanternShown => _lantern != null ? _lantern.LightRadius : 0f;
+        public float LanternShown
+        {
+            get
+            {
+                if (_lantern != null)
+                {
+                    return _lantern.LightRadius;
+                }
+                return 0f;
+            }
+        }
 
         private void ApplyLantern()
         {
-            float want = _last.Alive && !_last.Spectating && !_last.Away ? _last.Lantern : 0f;
+            float want = 0f;
+            if (_last.Alive && !_last.Spectating && !_last.Away)
+            {
+                want = _last.Lantern;
+            }
             if (want <= 0f)
             {
                 RemoveLantern();
@@ -174,7 +220,11 @@ namespace DarkwoodMP.Sync
             var ctl = Singleton<Controller>.Instance;
             if (_lantern == null)
             {
-                var own = Player.Instance != null ? Player.Instance.lightDot : null;
+                Light2D own = null;
+                if (Player.Instance != null)
+                {
+                    own = Player.Instance.lightDot;
+                }
                 if (own == null || ctl == null)
                 {
                     return;
@@ -507,7 +557,15 @@ namespace DarkwoodMP.Sync
                         continue;
                     }
                     // A collection prefab may have a platform-specific inst; prefer the inst.
-                    var inst = col.inst != null ? col.inst : col;
+                    tk2dSpriteCollectionData inst;
+                    if (col.inst != null)
+                    {
+                        inst = col.inst;
+                    }
+                    else
+                    {
+                        inst = col;
+                    }
                     _byHash[StableHash.Of(col.spriteCollectionName)] = inst;
                 }
                 if (_byHash.TryGetValue(hash, out c))

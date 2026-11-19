@@ -217,7 +217,11 @@ namespace DarkwoodMP
         /// <summary>Click one of the game's own (hidden) entries, as a mouse click on it does (Button.getClicked).</summary>
         private static void GameButton(GameObject go)
         {
-            var b = go != null ? go.GetComponent<global::Button>() : null;
+            global::Button b = null;
+            if (go != null)
+            {
+                b = go.GetComponent<global::Button>();
+            }
             if (b == null)
             {
                 Plugin.Log.LogWarning($"[menu] the game's {go?.name ?? "entry"} isn't there");
@@ -239,7 +243,19 @@ namespace DarkwoodMP
                 try
                 {
                     var since = DateTime.Now - Singleton<SaveManager>.Instance.lastTimeSaved;
-                    string ago = since.TotalHours >= 1 ? $"{(int)since.TotalHours} h {since.Minutes} min" : since.TotalMinutes >= 1 ? $"{(int)since.TotalMinutes} min" : $"{Math.Max(0, since.Seconds)} s";
+                    string ago;
+                    if (since.TotalHours >= 1)
+                    {
+                        ago = $"{(int)since.TotalHours} h {since.Minutes} min";
+                    }
+                    else if (since.TotalMinutes >= 1)
+                    {
+                        ago = $"{(int)since.TotalMinutes} min";
+                    }
+                    else
+                    {
+                        ago = $"{Math.Max(0, since.Seconds)} s";
+                    }
                     s = $"What you did since the last save ({ago} ago) will be lost.";
                 }
                 catch
@@ -306,7 +322,11 @@ namespace DarkwoodMP
                 alpha = Mathf.Min(alpha, logo.color.a);
             }
             var ui = Singleton<UI>.Instance;
-            var black = ui != null && ui.blackScreenTop != null && ui.blackScreenTop.activeInHierarchy ? ui.blackScreenTop.GetComponent<tk2dSprite>() : null;
+            tk2dSprite black = null;
+            if (ui != null && ui.blackScreenTop != null && ui.blackScreenTop.activeInHierarchy)
+            {
+                black = ui.blackScreenTop.GetComponent<tk2dSprite>();
+            }
             if (black != null)
             {
                 alpha = Mathf.Min(alpha, 1f - black.color.a);
@@ -332,7 +352,14 @@ namespace DarkwoodMP
         private static GameObject[] GameEntries(MainMenu mm) =>
             new[] { mm.playBtn, mm.optionsBtn, mm.creditsBtn, mm.quitBtn, mm.mainMenuBtn, Go(mm.ResumeBtn), Go(mm.HelpBtn) };
 
-        private static GameObject Go(Component c) => c != null ? c.gameObject : null;
+        private static GameObject Go(Component c)
+        {
+            if (c != null)
+            {
+                return c.gameObject;
+            }
+            return null;
+        }
 
         private static bool IsMenu0List(MainMenu mm)
         {
@@ -400,7 +427,14 @@ namespace DarkwoodMP
                     float v = pad.GetAxisRaw("Dpad Vertical");
                     if (Mathf.Abs(v) > 0.5f && Time.unscaledTime >= _nextPad)
                     {
-                        dir = v > 0 ? -1 : 1;
+                        if (v > 0)
+                        {
+                            dir = -1;
+                        }
+                        else
+                        {
+                            dir = 1;
+                        }
                         _nextPad = Time.unscaledTime + 0.25f;
                     }
                     else if (Mathf.Abs(v) <= 0.5f)
@@ -418,7 +452,21 @@ namespace DarkwoodMP
             }
             if (dir != 0 && _entries.Count > 0)
             {
-                _selected = _selected < 0 ? (dir > 0 ? 0 : _entries.Count - 1) : (_selected + dir + _entries.Count) % _entries.Count;
+                if (_selected < 0)
+                {
+                    if (dir > 0)
+                    {
+                        _selected = 0;
+                    }
+                    else
+                    {
+                        _selected = _entries.Count - 1;
+                    }
+                }
+                else
+                {
+                    _selected = (_selected + dir + _entries.Count) % _entries.Count;
+                }
             }
             if (run && _selected >= 0 && _selected < _entries.Count)
             {
@@ -466,7 +514,19 @@ namespace DarkwoodMP
                 {
                     Fire(en);
                 }
-                var c = hover ? MenuSkin.Bright : active ? MenuSkin.Text : MenuSkin.Dim;
+                Color c;
+                if (hover)
+                {
+                    c = MenuSkin.Bright;
+                }
+                else if (active)
+                {
+                    c = MenuSkin.Text;
+                }
+                else
+                {
+                    c = MenuSkin.Dim;
+                }
                 c.a *= _alpha;
                 PixelFont.Draw(new Rect(x, y, w + 2 * sc, line), en.Label, c, TextAnchor.MiddleLeft, PixelFont.Kind.Title, sc);
                 y += step;

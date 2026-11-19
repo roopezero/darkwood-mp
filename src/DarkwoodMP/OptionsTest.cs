@@ -43,7 +43,11 @@ namespace DarkwoodMP
         {
             Directory.CreateDirectory(dir);
             _fails = 0;
-            string where = inWorld ? "pause" : "main";
+            string where = "main";
+            if (inWorld)
+            {
+                where = "pause";
+            }
             if (!File.Exists(PrefsPath))
             {
                 Log($"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run");
@@ -90,7 +94,15 @@ namespace DarkwoodMP
             OptionsWindow.TestTab(1);
             yield return null;
             float m0 = GameSettings.GetFloat("MusicVolume");
-            float m1 = m0 > 0.5f ? m0 - 0.3f : m0 + 0.3f;
+            float m1;
+            if (m0 > 0.5f)
+            {
+                m1 = m0 - 0.3f;
+            }
+            else
+            {
+                m1 = m0 + 0.3f;
+            }
             OptionsWindow.SetVolume(music: true, m1);
             bool pending = OptionsWindow.Pending;
             var slider = Singleton<MainMenu>.Instance.AudioMenu.musicSlider;
@@ -98,7 +110,11 @@ namespace DarkwoodMP
             bool applied = OptionsWindow.Apply();
             yield return null;
             var after = ReadPrefs();
-            float onDisk = after.TryGetValue("MusicVolume", out var mv) && float.TryParse(mv.value, NumberStyles.Float, CultureInfo.InvariantCulture, out float d) ? d : -1f;
+            float onDisk = -1f;
+            if (after.TryGetValue("MusicVolume", out var mv) && float.TryParse(mv.value, NumberStyles.Float, CultureInfo.InvariantCulture, out float d))
+            {
+                onDisk = d;
+            }
             Check(pending && heard && applied && Mathf.Abs(GameSettings.GetFloat("MusicVolume") - m1) < 0.001f && Mathf.Abs(onDisk - m1) < 0.001f,
                 $"music volume {m0:0.00} -> {m1:0.00}: waited for Apply {pending}, the game's slider at it {heard}, stored {GameSettings.GetFloat("MusicVolume"):0.00}, in the file {onDisk:0.00}");
             // Back at once, so nothing after this can leave the player's volume changed.
@@ -372,6 +388,13 @@ namespace DarkwoodMP
             return diffs;
         }
 
-        private static string Short(string key) => key.Length > 70 ? key.Substring(0, 70) + "..." : key;
+        private static string Short(string key)
+        {
+            if (key.Length > 70)
+            {
+                return key.Substring(0, 70) + "...";
+            }
+            return key;
+        }
     }
 }

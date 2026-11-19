@@ -102,7 +102,11 @@ namespace DarkwoodMP
             int count = Math.Max(5, state?.profiles?.Count ?? 0);
             for (int i = 0; i < count; i++)
             {
-                var p = state?.profiles != null && i < state.profiles.Count ? state.profiles[i] : null;
+                GameProfile p = null;
+                if (state?.profiles != null && i < state.profiles.Count)
+                {
+                    p = state.profiles[i];
+                }
                 bool used = p != null && p.Active && !p.dead;
                 _profiles.Add(used ? p : new GameProfile(i + 1, _Active: false, 0));
                 var slot = new Slot { Id = i + 1, Profile = used ? p : null };
@@ -126,9 +130,26 @@ namespace DarkwoodMP
             LoadName();
         }
 
-        private static DateTime SavedAt(GameProfile p) => DateTime.TryParse(p?.timeSaved, out var t) ? t : DateTime.MinValue;
+        private static DateTime SavedAt(GameProfile p)
+        {
+            if (DateTime.TryParse(p?.timeSaved, out var t))
+            {
+                return t;
+            }
+            return DateTime.MinValue;
+        }
 
-        private Slot Chosen => _choice > 0 ? _slots.FirstOrDefault(s => s.Id == _choice) : null;
+        private Slot Chosen
+        {
+            get
+            {
+                if (_choice > 0)
+                {
+                    return _slots.FirstOrDefault(s => s.Id == _choice);
+                }
+                return null;
+            }
+        }
         private Slot FreeSlot => _slots.FirstOrDefault(s => s.Free);
         /// <summary>The slot a new game goes in: the first free one, or the one chosen to overwrite.</summary>
         private int NewSlot => FreeSlot?.Id ?? _overwrite;
@@ -145,7 +166,14 @@ namespace DarkwoodMP
         private void LoadName()
         {
             _nameFor = _choice;
-            _name = _choice > 0 ? SaveBook.NameOf(_choice) : "";
+            if (_choice > 0)
+            {
+                _name = SaveBook.NameOf(_choice);
+            }
+            else
+            {
+                _name = "";
+            }
         }
 
         /// <summary>A save's new name is written when it's left (another choice, Start, closing the window).</summary>
@@ -177,8 +205,18 @@ namespace DarkwoodMP
 
         private static float S => PixelFont.Scale;
 
-        private static string Difficulty(GameProfile.Difficulty d) =>
-            d == GameProfile.Difficulty.hard ? "Hard" : d == GameProfile.Difficulty.nightmare ? "Nightmare" : "Normal";
+        private static string Difficulty(GameProfile.Difficulty d)
+        {
+            if (d == GameProfile.Difficulty.hard)
+            {
+                return "Hard";
+            }
+            if (d == GameProfile.Difficulty.nightmare)
+            {
+                return "Nightmare";
+            }
+            return "Normal";
+        }
 
         private static string Summary(GameProfile p)
         {
@@ -194,12 +232,26 @@ namespace DarkwoodMP
         private static string Line(Slot s)
         {
             string name = SaveBook.NameOf(s.Id);
-            string with = s.PlayedWith.Count == 0 ? "single-player" : "with " + string.Join(", ", s.PlayedWith);
+            string with;
+            if (s.PlayedWith.Count == 0)
+            {
+                with = "single-player";
+            }
+            else
+            {
+                with = "with " + string.Join(", ", s.PlayedWith);
+            }
             return $"Slot {s.Id}" + (name != "" ? $": {name}" : "") + $"  -  {Summary(s.Profile)}  -  {with}";
         }
 
-        private string NewGameLine() =>
-            FreeSlot != null ? $"New Game  (in slot {FreeSlot.Id})" : $"New Game  (every slot is in use: overwrite one)";
+        private string NewGameLine()
+        {
+            if (FreeSlot != null)
+            {
+                return $"New Game  (in slot {FreeSlot.Id})";
+            }
+            return $"New Game  (every slot is in use: overwrite one)";
+        }
 
         private void DrawBody(Flow f)
         {
@@ -246,7 +298,15 @@ namespace DarkwoodMP
             {
                 _listOpen = !_listOpen;
             }
-            string text = _choice > 0 && Chosen != null ? Line(Chosen) : NewGameLine();
+            string text;
+            if (_choice > 0 && Chosen != null)
+            {
+                text = Line(Chosen);
+            }
+            else
+            {
+                text = NewGameLine();
+            }
             float pad = 6 * S, arrow = 14 * S;
             Ui.Label(new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height), PixelFont.Fit(text, r.width - 2 * pad - arrow), hover ? MenuSkin.Bright : MenuSkin.Text);
             Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), _listOpen ? "^" : "v", MenuSkin.Bright, TextAnchor.MiddleCenter);
@@ -349,9 +409,33 @@ namespace DarkwoodMP
         {
             // For a save: what it was started with, greyed out.
             var p = Chosen?.Profile;
-            var diff = on || p == null ? _difficulty : p.difficulty;
-            bool skip = on || p == null ? _skipPrologue : p.skippedPrologue;
-            bool backer = on || p == null ? _backer : p.backerOnlyContent;
+            GameProfile.Difficulty diff;
+            if (on || p == null)
+            {
+                diff = _difficulty;
+            }
+            else
+            {
+                diff = p.difficulty;
+            }
+            bool skip;
+            if (on || p == null)
+            {
+                skip = _skipPrologue;
+            }
+            else
+            {
+                skip = p.skippedPrologue;
+            }
+            bool backer;
+            if (on || p == null)
+            {
+                backer = _backer;
+            }
+            else
+            {
+                backer = p.backerOnlyContent;
+            }
             Fade(on, () =>
             {
                 var c = f.Row(Ui.RowH, 90, 0, 0, 0);
@@ -363,9 +447,15 @@ namespace DarkwoodMP
                         _difficulty = d;
                     }
                 }
-                string about = diff == GameProfile.Difficulty.hard ? "A few lives; when they're gone, so is the save."
-                    : diff == GameProfile.Difficulty.nightmare ? "One life: dying deletes the save."
-                    : "Dying costs you some of what you carried, and the game goes on.";
+                string about = "Dying costs you some of what you carried, and the game goes on.";
+                if (diff == GameProfile.Difficulty.hard)
+                {
+                    about = "A few lives; when they're gone, so is the save.";
+                }
+                else if (diff == GameProfile.Difficulty.nightmare)
+                {
+                    about = "One life: dying deletes the save.";
+                }
                 Ui.Text(f, about, MenuSkin.Dim);
                 var k = f.Row(Ui.RowH, 0, 0);
                 bool ns = Check(k[0], skip, "Skip the prologue", on);
@@ -513,9 +603,21 @@ namespace DarkwoodMP
             }
             if (_choice > 0)
             {
-                return Chosen?.Profile == null ? "No save in that slot." : Chosen.Profile.isCompatible == false ? "This save needs the game's profiles screen." : null;
+                if (Chosen?.Profile == null)
+                {
+                    return "No save in that slot.";
+                }
+                if (Chosen.Profile.isCompatible == false)
+                {
+                    return "This save needs the game's profiles screen.";
+                }
+                return null;
             }
-            return NewSlot > 0 ? null : "Choose a save to overwrite.";
+            if (NewSlot > 0)
+            {
+                return null;
+            }
+            return "Choose a save to overwrite.";
         }
 
         // ---- starting ----------------------------------------------------------------------------------------
@@ -658,7 +760,15 @@ namespace DarkwoodMP
                 Plugin.Log.LogInfo("[start window] done");
                 yield break;
             }
-            int slot = start == "new" ? 0 : int.Parse(start);
+            int slot;
+            if (start == "new")
+            {
+                slot = 0;
+            }
+            else
+            {
+                slot = int.Parse(start);
+            }
             w.Choose(slot);
             if (name != null)
             {

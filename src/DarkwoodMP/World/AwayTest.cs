@@ -70,7 +70,15 @@ namespace DarkwoodMP.World
             body.velocity = (dir.sqrMagnitude > 1f ? dir.normalized : Vector3.right) * 150f;
             Plugin.Log.LogInfo($"--dwmp-test-away: knocked {best.name} at {from.x:0},{from.z:0} (sharing {WorldActions.Sharing})");
             yield return new WaitForSeconds(4f);
-            var to = best != null ? best.transform.position : from;
+            Vector3 to;
+            if (best != null)
+            {
+                to = best.transform.position;
+            }
+            else
+            {
+                to = from;
+            }
             Plugin.Log.LogInfo($"--dwmp-test-away: {(best != null ? best.name : "it")} moved {(to - from).magnitude:0} units to {to.x:0},{to.z:0}; pushes sent: {DragSync.PushesSent - sent}");
         }
 
@@ -95,7 +103,15 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo("--dwmp-test-away: no world grid");
                 yield break;
             }
-            Vector3 at = dummy.Root != null ? dummy.Root.transform.position : Vector3.zero;
+            Vector3 at;
+            if (dummy.Root != null)
+            {
+                at = dummy.Root.transform.position;
+            }
+            else
+            {
+                at = Vector3.zero;
+            }
             int before = ActiveNear(at);
             // What OutsideLocations.transportToLocation does to the world (leave every node of the world's grid,
             // switch to the location's grid, refresh) and to the player's state, on an empty stand-in grid: a real

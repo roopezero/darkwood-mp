@@ -62,10 +62,18 @@ namespace DarkwoodMP.World
                 return;
             }
             var saw = c as Saw;
-            var inv = saw != null ? c.GetComponent<Inventory>() : null;
+            Inventory inv = null;
+            if (saw != null)
+            {
+                inv = c.GetComponent<Inventory>();
+            }
             bool sawOpen = inv != null && inv.open;
             var ui = Singleton<UI>.Instance;
-            var bar = ui != null ? ui.enemyHealthBar : null;
+            EnemyHealthBar bar = null;
+            if (ui != null)
+            {
+                bar = ui.enemyHealthBar;
+            }
             bool barShown = bar != null && bar.currentObj == c.gameObject && bar.gameObject.activeInHierarchy;
             if (!sawOpen && !barShown)
             {

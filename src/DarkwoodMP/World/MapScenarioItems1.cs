@@ -135,7 +135,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator TrapPlaceFar(string[] a, Result r)
         {
-            string prefab = a.Length > 0 ? a[0] : "beartrap";
+            string prefab = "beartrap";
+            if (a.Length > 0)
+            {
+                prefab = a[0];
+            }
             string type = PlaceableType(prefab);
             if (type == null)
             {
@@ -307,7 +311,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorKey(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            var l = d != null ? d.GetComponent<Locked>() : null;
+            Locked l = null;
+            if (d != null)
+            {
+                l = d.GetComponent<Locked>();
+            }
             if (l == null || !l.locked)
             {
                 r.Fail($"door {a[0]} isn't locked here");
@@ -360,14 +368,25 @@ namespace DarkwoodMP.World
         private static IEnumerator DoorLocked(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
-            var l = d != null ? d.GetComponent<Locked>() : null;
+            Locked l = null;
+            if (d != null)
+            {
+                l = d.GetComponent<Locked>();
+            }
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
             while ((l != null && l.locked) != want && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
-            r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
+            if (d == null)
+            {
+                r.Info = "no such door";
+            }
+            else
+            {
+                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
+            }
             if ((l != null && l.locked) != want)
             {
                 r.Fail($"{r.Info}, not {(want ? "locked" : "open")}");
@@ -449,7 +468,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
+            if (d == null)
+            {
+                r.Info = "no such door";
+            }
+            else
+            {
+                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
+            }
             if (d == null || d.blocked != want)
             {
                 r.Fail($"{r.Info}, not {(want ? "blocked" : "clear")}");
@@ -504,7 +530,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            r.Info = d == null ? "no such door" : $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
+            if (d == null)
+            {
+                r.Info = "no such door";
+            }
+            else
+            {
+                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
+            }
             if (d == null || d.opened != want)
             {
                 r.Fail($"{r.Info}, not {(want ? "open" : "closed")}");

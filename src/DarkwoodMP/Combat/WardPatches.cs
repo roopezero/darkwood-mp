@@ -33,7 +33,11 @@ namespace DarkwoodMP.Combat
             var p = TargetProxy(c);
             if (p != null)
             {
-                return type == CharacterEffectType.shadowWard ? p.ShadowWard : type == CharacterEffectType.forestSpiritWard && p.ForestSpiritWard;
+                if (type == CharacterEffectType.shadowWard)
+                {
+                    return p.ShadowWard;
+                }
+                return type == CharacterEffectType.forestSpiritWard && p.ForestSpiritWard;
             }
             var host = Player.Instance;
             return host != null && host.effects != null && host.effects.hasEffectType(type);
@@ -43,19 +47,31 @@ namespace DarkwoodMP.Combat
         public static Transform PlayerTarget(Character c)
         {
             var p = TargetProxy(c);
-            return p != null ? p.transform : Player.Instance._transform;
+            if (p != null)
+            {
+                return p.transform;
+            }
+            return Player.Instance._transform;
         }
 
         public static bool FriendOfTheForest(Character c)
         {
             var p = TargetProxy(c);
-            return p != null ? p.FriendOfTheForest : Player.Instance.skills.FriendOfTheForest;
+            if (p != null)
+            {
+                return p.FriendOfTheForest;
+            }
+            return Player.Instance.skills.FriendOfTheForest;
         }
 
         public static bool EnemyOfTheForest(Character c)
         {
             var p = TargetProxy(c);
-            return p != null ? p.EnemyOfTheForest : Player.Instance.skills.EnemyOfTheForest;
+            if (p != null)
+            {
+                return p.EnemyOfTheForest;
+            }
+            return Player.Instance.skills.EnemyOfTheForest;
         }
 
         private static MethodInfo GetInstance => AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));

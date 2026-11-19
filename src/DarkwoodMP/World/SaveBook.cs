@@ -86,7 +86,15 @@ namespace DarkwoodMP.World
                 return null;
             }
             // Read again when the file changed or went away underneath (a test's fresh copy of the saves).
-            DateTime stamp = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
+            DateTime stamp;
+            if (File.Exists(path))
+            {
+                stamp = File.GetLastWriteTimeUtc(path);
+            }
+            else
+            {
+                stamp = DateTime.MinValue;
+            }
             if (_data != null && _loadedFrom == path && _stamp == stamp)
             {
                 return _data;
@@ -141,7 +149,11 @@ namespace DarkwoodMP.World
         private static Record Get(int slot)
         {
             var d = Data();
-            return d != null && d.Slots.TryGetValue(slot.ToString(), out var r) ? r : null;
+            if (d != null && d.Slots.TryGetValue(slot.ToString(), out var r))
+            {
+                return r;
+            }
+            return null;
         }
 
         private static Record GetOrAdd(int slot)
@@ -196,7 +208,15 @@ namespace DarkwoodMP.World
             try
             {
                 var sm = Singleton<SaveManager>.Instance;
-                string dir = sm == null ? null : PlayersDir(sm.baseSaveDirectory, slot);
+                string dir;
+                if (sm == null)
+                {
+                    dir = null;
+                }
+                else
+                {
+                    dir = PlayersDir(sm.baseSaveDirectory, slot);
+                }
                 if (FilePath != null && dir != null && Directory.Exists(dir))
                 {
                     foreach (var f in Directory.GetFiles(dir, "*.json").OrderByDescending(File.GetLastWriteTimeUtc))
@@ -223,7 +243,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var p = r.Players.FirstOrDefault(x => key != "" ? x.Key == key : x.Name == name);
+            var p = r.Players.FirstOrDefault(x =>
+            {
+                if (key != "")
+                {
+                    return x.Key == key;
+                }
+                return x.Name == name;
+            });
             if (p == null)
             {
                 r.Players.Add(p = new Player { Key = key });

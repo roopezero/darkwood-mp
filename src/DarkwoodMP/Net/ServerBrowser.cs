@@ -153,7 +153,11 @@ namespace DarkwoodMP.Net
                     }
                     int eq = line.IndexOf('=');
                     string key = (eq >= 0 ? line.Substring(0, eq) : line).Trim();
-                    string val = eq >= 0 ? line.Substring(eq + 1).Trim() : "";
+                    string val = "";
+                    if (eq >= 0)
+                    {
+                        val = line.Substring(eq + 1).Trim();
+                    }
                     if (key.Length == 0)
                     {
                         continue;
@@ -385,7 +389,14 @@ namespace DarkwoodMP.Net
                             {
                                 break; // the sends never finished
                             }
-                            udp.Client.ReceiveTimeout = done >= 0 ? (int)Math.Max(1, done + QueryTimeoutMs - sw.ElapsedMilliseconds) : 200;
+                            if (done >= 0)
+                            {
+                                udp.Client.ReceiveTimeout = (int)Math.Max(1, done + QueryTimeoutMs - sw.ElapsedMilliseconds);
+                            }
+                            else
+                            {
+                                udp.Client.ReceiveTimeout = 200;
+                            }
                             var from = new IPEndPoint(IPAddress.Any, 0);
                             byte[] a;
                             try

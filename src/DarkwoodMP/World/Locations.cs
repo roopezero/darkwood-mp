@@ -138,7 +138,11 @@ namespace DarkwoodMP.World
                 return null;
             }
             var d = pos - loc.transform.position;
-            return d.x * d.x + d.z * d.z < LocationReach * LocationReach ? loc : null;
+            if (d.x * d.x + d.z * d.z < LocationReach * LocationReach)
+            {
+                return loc;
+            }
+            return null;
         }
 
         /// <summary>Kept locations whose loose objects DragSync has noted (once each time it starts being kept).</summary>
@@ -291,7 +295,11 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return d.preset != null && d.preset.name == DreamSync.Shared ? d.dreamLocation : null;
+            if (d.preset != null && d.preset.name == DreamSync.Shared)
+            {
+                return d.dreamLocation;
+            }
+            return null;
         }
 
         // ---- where a player is ------------------------------------------------------------------
@@ -310,7 +318,11 @@ namespace DarkwoodMP.World
                 return "";
             }
             string g = Singleton<WorldGrid>.Instance?.currentGrid?.name ?? "?";
-            return dream ? "dream:" + g : g;
+            if (dream)
+            {
+                return "dream:" + g;
+            }
+            return g;
         }
 
         /// <summary>Whether a player who is away (or not) at this place is in the same place as our player.</summary>
@@ -351,7 +363,15 @@ namespace DarkwoodMP.World
                     extra = 0;
                 }
                 int row = extra / 7, col = extra % 7;
-                float z = row % 2 == 0 ? 80000f + 30000f * (row / 2) : -110000f - 30000f * (row / 2);
+                float z;
+                if (row % 2 == 0)
+                {
+                    z = 80000f + 30000f * (row / 2);
+                }
+                else
+                {
+                    z = -110000f - 30000f * (row / 2);
+                }
                 list.Add(new Vector3(-75000f + 25000f * col, 0f, z));
             }
         }
@@ -448,8 +468,16 @@ namespace DarkwoodMP.World
             {
                 if (o.spawnedLocations.TryGetValue(_spawning, out var loc))
                 {
-                    string at = loc != null ? $"at {loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}" : "(gone)";
-                    string promised = _slots.TryGetValue(_spawning, out var slot) ? $"{slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}" : "nothing";
+                    string at = "(gone)";
+                    if (loc != null)
+                    {
+                        at = $"at {loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}";
+                    }
+                    string promised = "nothing";
+                    if (_slots.TryGetValue(_spawning, out var slot))
+                    {
+                        promised = $"{slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}";
+                    }
                     // A location that keeps its own turn (dontRotate) or takes another's (getRotationFromLocation)
                     // does so in every game alike; the promise is kept for the record.
                     Plugin.Log.LogInfo($"[locations] loaded {_spawning} for the others {at} (promised {promised})");
@@ -491,7 +519,11 @@ namespace DarkwoodMP.World
             try
             {
                 var astar = AstarPath.active;
-                var graph = astar != null ? astar.astarData.GetGraph(name) : null;
+                Pathfinding.NavGraph graph = null;
+                if (astar != null)
+                {
+                    graph = astar.astarData.GetGraph(name);
+                }
                 if (graph == null)
                 {
                     Plugin.Log.LogInfo($"[locations] {name} has no pathfinding graph to scan");
@@ -624,7 +656,11 @@ namespace DarkwoodMP.World
         {
             int rolled = Core.getRandomHalfRotation();
             var s = S;
-            string name = m != null ? m.locationName : null;
+            string name = null;
+            if (m != null)
+            {
+                name = m.locationName;
+            }
             if (s == null || !s.Active || name == null)
             {
                 return rolled;

@@ -43,7 +43,14 @@ namespace DarkwoodMP.Combat
         {
             var player = Player.Instance;
             var go = new GameObject($"DarkwoodMP_Proxy_{name}");
-            go.layer = player != null ? player.gameObject.layer : 0;
+            if (player != null)
+            {
+                go.layer = player.gameObject.layer;
+            }
+            else
+            {
+                go.layer = 0;
+            }
             CopyCollider(player != null ? player.GetComponent<Collider>() : null, go);
             var rb = go.AddComponent<Rigidbody>();
             rb.isKinematic = true; // moved by the network, not physics; still gets trigger hits
@@ -88,7 +95,17 @@ namespace DarkwoodMP.Combat
         // collides with, by collider instance id.
         private readonly HashSet<int> _ignored = new HashSet<int>();
         private Collider _body;
-        private Collider Body => _body != null ? _body : (_body = GetComponent<Collider>());
+        private Collider Body
+        {
+            get
+            {
+                if (_body != null)
+                {
+                    return _body;
+                }
+                return _body = GetComponent<Collider>();
+            }
+        }
         private static readonly Collider[] Near = new Collider[128];
         private const float LooseRadius = 150f; // more than a stand-in moves in a frame, and its own size
 
@@ -272,7 +289,11 @@ namespace DarkwoodMP.Combat
                 // isn't in the host's world at all (their own game runs that area), so they count as not there, as dead
                 // ones do. One in a location we have at the same spot, or in the shared dream with our player, is in our world: our enemies there go for them.
                 var snap = r.Last;
-                var loc = hosting && r.Away && snap != null ? World.Locations.HostRunsAt(snap.Place, t.position) : null;
+                Location loc = null;
+                if (hosting && r.Away && snap != null)
+                {
+                    loc = World.Locations.HostRunsAt(snap.Place, t.position);
+                }
                 bool away = r.Away && loc == null;
                 bool here = r.Alive && !away;
                 if (proxy.Away != away || proxy.InLocation != loc)

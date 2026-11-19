@@ -358,7 +358,11 @@ namespace DarkwoodMP
             string Arg(string name)
             {
                 int i = Array.IndexOf(args, name);
-                return i >= 0 && i + 1 < args.Length ? args[i + 1] : null;
+                if (i >= 0 && i + 1 < args.Length)
+                {
+                    return args[i + 1];
+                }
+                return null;
             }
             bool Has(string name) => Array.IndexOf(args, name) >= 0;
             foreach (var a in args)
@@ -419,7 +423,14 @@ namespace DarkwoodMP
             }
             if (Has("--dwmp-host"))
             {
-                TcpBackend.TestMaxPlayers = int.TryParse(Arg("--dwmp-max-players"), out int mp) ? mp : 0;
+                if (int.TryParse(Arg("--dwmp-max-players"), out int mp))
+                {
+                    TcpBackend.TestMaxPlayers = mp;
+                }
+                else
+                {
+                    TcpBackend.TestMaxPlayers = 0;
+                }
                 HostDirect(Arg("--dwmp-password"), TcpBackend.TestMaxPlayers);
             }
             // "--dwmp-continue N": load your own profile N once the main menu is up; "--dwmp-sandbox DIR": a copy of the saves in DIR.
@@ -810,7 +821,11 @@ namespace DarkwoodMP
             yield return new WaitForSecondsRealtime(1f);
 
             // The game's keys: which actions K and N are on (the Skills panel's key must be free).
-            var controls = Singleton<MainMenu>.Instance != null ? Singleton<MainMenu>.Instance.ControlsMenu : null;
+            ControlsMenu controls = null;
+            if (Singleton<MainMenu>.Instance != null)
+            {
+                controls = Singleton<MainMenu>.Instance.ControlsMenu;
+            }
             if (controls != null)
             {
                 var keys = new List<string>();
@@ -1136,7 +1151,14 @@ namespace DarkwoodMP
             {
                 return;
             }
-            var comps = string.Join(",", Array.ConvertAll(t.GetComponents<Component>(), c => c == null ? "?" : c.GetType().Name));
+            var comps = string.Join(",", Array.ConvertAll(t.GetComponents<Component>(), c =>
+            {
+                if (c == null)
+                {
+                    return "?";
+                }
+                return c.GetType().Name;
+            }));
             string extra = "";
             var tm = t.GetComponent<tk2dTextMesh>();
             if (tm != null)
@@ -1177,7 +1199,15 @@ namespace DarkwoodMP
             // "--dwmp-spawn TYPE": an enemy (a CharacterType name) between you and the dummy, after it.
             NetPlayerProxy.All.TryGetValue(PlayerSync.DummyId, out var dummy);
             // With an offset, spawnCharacterAround puts it at offset * distance: here, north of the point between you two.
-            Vector3 mid = dummy != null ? (dummy.transform.position + Player.Instance.transform.position) / 2f : Player.Instance.transform.position;
+            Vector3 mid;
+            if (dummy != null)
+            {
+                mid = (dummy.transform.position + Player.Instance.transform.position) / 2f;
+            }
+            else
+            {
+                mid = Player.Instance.transform.position;
+            }
             Vector3 spot = mid + new Vector3(0f, 0f, 250f);
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(Player.Instance.gameObject, spot, 1f, _spawnType, nocturnal: false, attackPlayer: false);
             Log.LogInfo(c != null ? $"--dwmp-spawn: {c.name} at {c.transform.position}" : $"--dwmp-spawn: couldn't spawn {_spawnType}");
@@ -1670,7 +1700,14 @@ namespace DarkwoodMP
             {
                 name = Environment.UserName;
             }
-            _session.LocalName = string.IsNullOrWhiteSpace(name) ? "Player" : name.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                _session.LocalName = "Player";
+            }
+            else
+            {
+                _session.LocalName = name.Trim();
+            }
         }
 
         private void OnGUI()
@@ -1787,7 +1824,15 @@ namespace DarkwoodMP
             if (_session.Active && _session.Names.Count > 0)
             {
                 Ui.Heading(f, "Players");
-                ulong hostId = _session.IsHost ? _session.LocalId : _session.HostId;
+                ulong hostId;
+                if (_session.IsHost)
+                {
+                    hostId = _session.LocalId;
+                }
+                else
+                {
+                    hostId = _session.HostId;
+                }
                 foreach (var kv in _session.Names)
                 {
                     string tags = (kv.Key == hostId ? "  (host)" : "") + (kv.Key == _session.LocalId ? "  (you)" : "");
@@ -1878,7 +1923,11 @@ namespace DarkwoodMP
                     return "";
                 }
                 var (day, chapter) = DayAndChapter();
-                return chapter > 0 ? $"Day {day}, chapter {chapter}" : $"Day {day}";
+                if (chapter > 0)
+                {
+                    return $"Day {day}, chapter {chapter}";
+                }
+                return $"Day {day}";
             }
             catch
             {

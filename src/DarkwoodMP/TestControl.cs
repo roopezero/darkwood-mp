@@ -149,7 +149,14 @@ namespace DarkwoodMP
             switch (words[0])
             {
                 case "title":
-                    Title = words.Length > 1 ? string.Join(" ", words, 1, words.Length - 1) : null;
+                    if (words.Length > 1)
+                    {
+                        Title = string.Join(" ", words, 1, words.Length - 1);
+                    }
+                    else
+                    {
+                        Title = null;
+                    }
                     reply.WriteLine("ok");
                     break;
                 case "reset":

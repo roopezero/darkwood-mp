@@ -51,7 +51,11 @@ namespace DarkwoodMP.World
                     return null;
                 }
                 string name = Core.getTrueLocationName(d.preset.name);
-                return IsStage(name) ? name : null;
+                if (IsStage(name))
+                {
+                    return name;
+                }
+                return null;
             }
         }
 
@@ -138,7 +142,11 @@ namespace DarkwoodMP.World
             // Made afresh, the place takes the next free slot of the far-off grid (OutsideLocations.locationPositions);
             // give it the slot it has here, so the players stand in the same place in both games.
             var o = Singleton<OutsideLocations>.Instance;
-            var slots = o != null ? Traverse.Create(o).Field("locationPositions").GetValue<System.Collections.Generic.List<Vector3>>() : null;
+            System.Collections.Generic.List<Vector3> slots = null;
+            if (o != null)
+            {
+                slots = Traverse.Create(o).Field("locationPositions").GetValue<System.Collections.Generic.List<Vector3>>();
+            }
             if (slots == null || d.dreamLocation == null)
             {
                 return;
@@ -174,7 +182,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var d = D;
-            string stage = InStage ? Stage : null;
+            string stage = null;
+            if (InStage)
+            {
+                stage = Stage;
+            }
             // Every game in a stage dreams it together with the others.
             if (stage != null && DreamSync.Shared != stage)
             {
@@ -240,7 +252,11 @@ namespace DarkwoodMP.World
             }
             var p = Player.Instance;
             var gen = Singleton<WorldGenerator>.Instance;
-            var spawn = gen != null && gen.playerBase != null ? gen.playerBase.GetComponent<Location>()?.playerSpawn : null;
+            GameObject spawn = null;
+            if (gen != null && gen.playerBase != null)
+            {
+                spawn = gen.playerBase.GetComponent<Location>()?.playerSpawn;
+            }
             if (p != null && spawn != null)
             {
                 Characters.PlaceFree(p, spawn.transform.position);
@@ -263,8 +279,17 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
     static class PrologueEndPatch
     {
-        static void Prefix(Dreams __instance, out string __state) =>
-            __state = __instance.dreaming && __instance.preset != null ? Core.getTrueLocationName(__instance.preset.name) : null;
+        static void Prefix(Dreams __instance, out string __state)
+        {
+            if (__instance.dreaming && __instance.preset != null)
+            {
+                __state = Core.getTrueLocationName(__instance.preset.name);
+            }
+            else
+            {
+                __state = null;
+            }
+        }
 
         static void Postfix(Dreams __instance, string __state) => Prologue.AfterEnd(__instance, __state);
     }

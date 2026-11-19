@@ -60,7 +60,11 @@ namespace DarkwoodMP.Combat
             float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
-                var loc = _near[i] != null ? _near[i].GetComponent<Location>() : null;
+                Location loc = null;
+                if (_near[i] != null)
+                {
+                    loc = _near[i].GetComponent<Location>();
+                }
                 if (loc == null)
                 {
                     continue;
@@ -77,7 +81,11 @@ namespace DarkwoodMP.Combat
                 return closest;
             }
             var t = closest.transform;
-            return t.parent != null && t.parent.parent != null ? t.parent.parent.GetComponent<Location>() : null;
+            if (t.parent != null && t.parent.parent != null)
+            {
+                return t.parent.parent.GetComponent<Location>();
+            }
+            return null;
         }
 
         public static bool AtHideout(Vector3 pos, out Location loc)
@@ -108,8 +116,14 @@ namespace DarkwoodMP.Combat
             new System.Runtime.CompilerServices.ConditionalWeakTable<Character, Spent>();
 
         /// <summary>The attackers of a kind out at a hideout now (counted against its budget).</summary>
-        public static int OutAt(Location loc, string kind) =>
-            loc != null && _out.TryGetValue(loc, out var k) && k.TryGetValue(kind, out int n) ? n : 0;
+        public static int OutAt(Location loc, string kind)
+        {
+            if (loc != null && _out.TryGetValue(loc, out var k) && k.TryGetValue(kind, out int n))
+            {
+                return n;
+            }
+            return 0;
+        }
 
         /// <summary>Every attacker sent while playing together since the day began: its hideout's name, who it was aimed at (for the map test).</summary>
         public static readonly List<(string Hideout, string At, Character C)> SentLog = new List<(string, string, Character)>();
@@ -127,7 +141,11 @@ namespace DarkwoodMP.Combat
             var hideouts = new List<(Location Loc, NetPlayerProxy Proxy)>();
             var host = Player.Instance;
             // The host's player as the game checks it (the game sends nobody while the host is in an outside location).
-            var hostLoc = host != null && host.whereAmI != null ? host.whereAmI.bigLocation : null;
+            Location hostLoc = null;
+            if (host != null && host.whereAmI != null)
+            {
+                hostLoc = host.whereAmI.bigLocation;
+            }
             if (!Singleton<OutsideLocations>.Instance.playerInOutsideLocation && hostLoc != null && hostLoc.playerBase)
             {
                 hideouts.Add((hostLoc, null));
@@ -164,7 +182,15 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                var at = proxy != null ? proxy.gameObject : Player.Instance.gameObject;
+                GameObject at;
+                if (proxy != null)
+                {
+                    at = proxy.gameObject;
+                }
+                else
+                {
+                    at = Player.Instance.gameObject;
+                }
                 var c = spawner.spawnCharacterAround(at, Vector3.zero, 1500f, toSpawn.characterName, nocturnal: true);
                 if (c == null)
                 {
@@ -196,7 +222,11 @@ namespace DarkwoodMP.Combat
                     _spent.Remove(c);
                     _spent.Add(c, new Spent { Loc = loc, Kind = toSpawn.characterName });
                 }
-                string who = proxy != null ? proxy.OwnerName : "the host";
+                string who = "the host";
+                if (proxy != null)
+                {
+                    who = proxy.OwnerName;
+                }
                 SentLog.Add((loc != null ? loc.name : "-", who, c));
                 Plugin.Log.LogInfo($"[night] {c.name} sent at {who}'s hideout {(loc != null ? loc.name : "-")} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
                                    $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
@@ -233,7 +263,11 @@ namespace DarkwoodMP.Combat
                 return Singleton<WorldGenerator>.Instance.chapterID > 1;
             }
             var scene = GameObject.Find(Helpers.GetSceneName());
-            var l = scene != null ? scene.GetComponent<Location>() : null;
+            Location l = null;
+            if (scene != null)
+            {
+                l = scene.GetComponent<Location>();
+            }
             return l != null && l.chapterId > 1;
         }
 
@@ -282,10 +316,22 @@ namespace DarkwoodMP.Combat
         /// <summary>A night worm around a proxy (or the host's player, when null), going for them.</summary>
         public static Character SpawnWorm(CharacterSpawner spawner, NetPlayerProxy proxy)
         {
-            Vector3 around = proxy != null ? proxy.transform.position : Player.Instance._transform.position;
+            Vector3 around;
+            if (proxy != null)
+            {
+                around = proxy.transform.position;
+            }
+            else
+            {
+                around = Player.Instance._transform.position;
+            }
             Vector3 pos = Core.randomPosAround(around, 1500f, 2000f, canBeInside: true, mustBeInsideGraph: false);
             var go = Core.AddPrefab("characters/fakechars/NightWorms_01", pos, Quaternion.Euler(90f, Random.Range(0, 360), 0f), null);
-            var c = go != null ? go.GetComponent<Character>() : null;
+            Character c = null;
+            if (go != null)
+            {
+                c = go.GetComponent<Character>();
+            }
             if (c == null)
             {
                 return null;

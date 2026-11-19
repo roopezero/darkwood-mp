@@ -139,7 +139,15 @@ namespace DarkwoodMP.Combat
                 return "nobody";
             }
             var proxy = t.GetComponent<NetPlayerProxy>();
-            return proxy != null ? proxy.OwnerName : t.GetComponent<Player>() != null ? "the host's player" : t.name;
+            if (proxy != null)
+            {
+                return proxy.OwnerName;
+            }
+            if (t.GetComponent<Player>() != null)
+            {
+                return "the host's player";
+            }
+            return t.name;
         }
 
         /// <summary>
@@ -217,9 +225,17 @@ namespace DarkwoodMP.Combat
             w.W.Write(damage);
             w.W.Write((byte)((cut ? 1 : 0) | 2 | (interrupt ? 4 : 0) | (normal ? 8 : 0)));
             PlayerDamage.WriteEffects(w, effects);
-            var item = Player.Instance != null ? Player.Instance.currentItem : null;
+            InvItemClass item = null;
+            if (Player.Instance != null)
+            {
+                item = Player.Instance.currentItem;
+            }
             w.WriteStr(InvItemClass.isNull(item) ? "" : Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0)));
-            var mine = effects != null ? new List<InvItemEffect>(effects) : null;
+            List<InvItemEffect> mine = null;
+            if (effects != null)
+            {
+                mine = new List<InvItemEffect>(effects);
+            }
             Plugin.Log.LogInfo($"[npc] our hit on {c.name} for {damage:0} goes to the host");
             Authority.Request(w, $"hit on {c.name} for {damage:0}", (ok, reason, result) =>
             {

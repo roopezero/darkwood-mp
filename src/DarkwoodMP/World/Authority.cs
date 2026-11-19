@@ -247,8 +247,17 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Host: the proxy (the host's stand-in) of the player whose request is being handled.</summary>
-        public static NetPlayerProxy Requester =>
-            Handling && NetPlayerProxy.All.TryGetValue(From, out var p) ? p : null;
+        public static NetPlayerProxy Requester
+        {
+            get
+            {
+                if (Handling && NetPlayerProxy.All.TryGetValue(From, out var p))
+                {
+                    return p;
+                }
+                return null;
+            }
+        }
 
         /// <summary>
         /// Host, in a request's handler: the requesting player is somewhere the host's game doesn't run (their
@@ -361,7 +370,11 @@ namespace DarkwoodMP.World
                 }
             }
             _base = now;
-            return change.Count > 0 ? change : null;
+            if (change.Count > 0)
+            {
+                return change;
+            }
+            return null;
         }
 
         /// <summary>Give back what was used up, take away what was gained.</summary>

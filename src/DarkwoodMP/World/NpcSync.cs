@@ -51,7 +51,14 @@ namespace DarkwoodMP.World
 
         private static bool Movable(NPC npc, out Character c)
         {
-            c = npc != null ? npc.GetComponent<Character>() : null;
+            if (npc != null)
+            {
+                c = npc.GetComponent<Character>();
+            }
+            else
+            {
+                c = null;
+            }
             if (c == null || !c.alive)
             {
                 return false;

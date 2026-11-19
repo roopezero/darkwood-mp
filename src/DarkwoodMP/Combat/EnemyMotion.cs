@@ -174,8 +174,22 @@ namespace DarkwoodMP.Combat
             float span = last.T - prev.T;
             float ahead = Mathf.Min(at - last.T, MaxAhead);
             bool carry = span > 0.001f && span < 0.3f;
-            pos = carry ? last.Pos + (last.Pos - prev.Pos) * (ahead / span) : last.Pos;
-            t.Speed = carry && at - last.T < MaxAhead ? Flat(last.Pos - prev.Pos) / span : 0f;
+            if (carry)
+            {
+                pos = last.Pos + (last.Pos - prev.Pos) * (ahead / span);
+            }
+            else
+            {
+                pos = last.Pos;
+            }
+            if (carry && at - last.T < MaxAhead)
+            {
+                t.Speed = Flat(last.Pos - prev.Pos) / span;
+            }
+            else
+            {
+                t.Speed = 0f;
+            }
             rot = last.Rot;
             return true;
         }
@@ -280,14 +294,25 @@ namespace DarkwoodMP.Combat
             public static string Summary()
             {
                 _gaps.Sort();
-                float p95 = _gaps.Count > 0 ? _gaps[Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))] : 0f;
+                float p95 = 0f;
+                if (_gaps.Count > 0)
+                {
+                    p95 = _gaps[Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))];
+                }
                 return FormattableString.Invariant(
                     $"{Batches} batches, gap avg {(_gaps.Count > 0 ? SumGap / _gaps.Count * 1000f : 0f):0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ") + FormattableString.Invariant(
                     $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; moving enemy frames {Moving}: stalls {Stalls} ({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ") + FormattableString.Invariant(
                     $"speed error avg {(Moving > 0 ? SumErr / Moving * 100f : 0f):0}%; delay {_delay * 1000f:0} ms (interval {_interval * 1000f:0}, jitter {_jitter * 1000f:0})");
             }
 
-            private static string Pct(int n) => Moving > 0 ? FormattableString.Invariant($"{n * 100f / Moving:0.0}%") : "-";
+            private static string Pct(int n)
+            {
+                if (Moving > 0)
+                {
+                    return FormattableString.Invariant($"{n * 100f / Moving:0.0}%");
+                }
+                return "-";
+            }
         }
     }
 }

@@ -58,7 +58,11 @@ namespace DarkwoodMP.World
         private static IEnumerator FollowRecruit(string[] a, Result r)
         {
             var npc = Shared(a[0], Centre);
-            var c = npc != null ? npc.GetComponent<Character>() : null;
+            Character c = null;
+            if (npc != null)
+            {
+                c = npc.GetComponent<Character>();
+            }
             var proxy = MapScenarioNight.ClientProxy();
             if (c == null)
             {
@@ -143,14 +147,28 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 npc = Shared(a[0], Player.Instance.transform.position);
-                d = npc != null ? StateDump.Flat(npc.transform.position - Player.Instance.transform.position) : -1f;
+                if (npc != null)
+                {
+                    d = StateDump.Flat(npc.transform.position - Player.Instance.transform.position);
+                }
+                else
+                {
+                    d = -1f;
+                }
                 if (npc != null && d < 500f)
                 {
                     break;
                 }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            r.Info = npc != null ? $"{npc.name} at {Fmt(npc.transform.position)}, {d:0} from us at {Fmt(Player.Instance.transform.position)}" : $"no {a[0]} here";
+            if (npc != null)
+            {
+                r.Info = $"{npc.name} at {Fmt(npc.transform.position)}, {d:0} from us at {Fmt(Player.Instance.transform.position)}";
+            }
+            else
+            {
+                r.Info = $"no {a[0]} here";
+            }
             if (npc == null || d >= 500f)
             {
                 r.Fail(r.Info);
@@ -203,8 +221,16 @@ namespace DarkwoodMP.World
 
         private static int SharedId(NPC n)
         {
-            var s = n != null ? n.GetComponent<SaveableObject>() : null;
-            return s != null && s.uniqueId > 0 && s.uniqueId < SharedIds.ResolveLimit ? s.uniqueId : 0;
+            SaveableObject s = null;
+            if (n != null)
+            {
+                s = n.GetComponent<SaveableObject>();
+            }
+            if (s != null && s.uniqueId > 0 && s.uniqueId < SharedIds.ResolveLimit)
+            {
+                return s.uniqueId;
+            }
+            return 0;
         }
 
         /// <summary>The living NPC of that name (any part of it, any case) that every game has, nearest to `near`.</summary>
@@ -227,7 +253,14 @@ namespace DarkwoodMP.World
                 }
                 _moved.Remove(a[0]);
                 var sm = Singleton<SaveManager>.Instance;
-                npc = sm.uniqueIdDict.TryGetValue(m.id, out var t) && t != null ? t.GetComponent<NPC>() : null;
+                if (sm.uniqueIdDict.TryGetValue(m.id, out var t) && t != null)
+                {
+                    npc = t.GetComponent<NPC>();
+                }
+                else
+                {
+                    npc = null;
+                }
                 to = m.was;
             }
             else
@@ -313,7 +346,16 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             r.Info = $"{npc.name}: {(npc.disabled ? "switched off" : "can be talked to")}, the event {(ge.fired ? "ran" : "didn't run")} here";
-            if (run ? npc.disabled || !ge.fired : !npc.disabled || ge.fired)
+            bool condition;
+            if (run)
+            {
+                condition = npc.disabled || !ge.fired;
+            }
+            else
+            {
+                condition = !npc.disabled || ge.fired;
+            }
+            if (condition)
             {
                 r.Fail(r.Info);
             }
@@ -434,8 +476,19 @@ namespace DarkwoodMP.World
             bool has = false;
             while (Time.realtimeSinceStartup < until)
             {
-                npc = l.trader != null ? l.trader.GetComponent<NPC>() : null;
-                var ch = npc != null ? npc.GetComponent<Character>() : null;
+                if (l.trader != null)
+                {
+                    npc = l.trader.GetComponent<NPC>();
+                }
+                else
+                {
+                    npc = null;
+                }
+                Character ch = null;
+                if (npc != null)
+                {
+                    ch = npc.GetComponent<Character>();
+                }
                 has = ch != null && ch.alive && npc.inventory != null && npc.inventory.getAllItems().Count > 0;
                 if (has == want)
                 {
@@ -463,7 +516,15 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(2f);
             var l = MapScenarioGaps.Hideout(Player.Instance);
-            var spot = l != null && l.traderPosition != null ? l.traderPosition.transform.position : Centre;
+            Vector3 spot;
+            if (l != null && l.traderPosition != null)
+            {
+                spot = l.traderPosition.transform.position;
+            }
+            else
+            {
+                spot = Centre;
+            }
             var lines = MapScenarioIssues.LogLines().Skip(Math.Max(0, _copyMark)).ToList();
             var refused = lines.Where(x => x.Contains("[authority] refused") && (x.Contains("NPC") || x.Contains("state of") || x.IndexOf("trader", StringComparison.OrdinalIgnoreCase) >= 0)).ToList();
             bool got = lines.Any(x => x.Contains("got NpcDied") && x.IndexOf("trader", StringComparison.OrdinalIgnoreCase) >= 0);

@@ -263,23 +263,69 @@ namespace DarkwoodMP.Sync
             snap.Rotation = root.rotation;
             snap.Alive = player.alive && !player.dying;
             snap.Spectating = World.Spectator.Active;
-            snap.Library = player.torsoAnimator != null && player.torsoAnimator.Library != null ? player.torsoAnimator.Library.name : "";
+            if (player.torsoAnimator != null && player.torsoAnimator.Library != null)
+            {
+                snap.Library = player.torsoAnimator.Library.name;
+            }
+            else
+            {
+                snap.Library = "";
+            }
             var held = player.currentItem;
-            snap.HeldLight = player.itemLightEmitter != null && !InvItemClass.isNull(held) && held.baseClass != null ? held.type ?? "" : "";
+            if (player.itemLightEmitter != null && !InvItemClass.isNull(held) && held.baseClass != null)
+            {
+                snap.HeldLight = held.type ?? "";
+            }
+            else
+            {
+                snap.HeldLight = "";
+            }
             var flames = player.itemParticleEmitter;
-            snap.HeldFlames = snap.HeldLight != "" && flames != null ? invRot * (flames.position - root.position) : Vector3.zero;
+            if (snap.HeldLight != "" && flames != null)
+            {
+                snap.HeldFlames = invRot * (flames.position - root.position);
+            }
+            else
+            {
+                snap.HeldFlames = Vector3.zero;
+            }
             var dot = player.lightDot;
             var ctl = Singleton<Controller>.Instance;
-            snap.Lantern = dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot) ? dot.LightRadius : 0f;
+            if (dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot))
+            {
+                snap.Lantern = dot.LightRadius;
+            }
+            else
+            {
+                snap.Lantern = 0f;
+            }
             if (_flashlight == null || _flashlightOf != player)
             {
                 _flashlightOf = player;
                 _flashlight = root.Find("Flashlight")?.gameObject;
             }
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
-            var beam = snap.Flashlight ? _flashlight.GetComponent<Light2D>() : null;
-            snap.BeamRadius = beam != null ? beam.LightRadius : 0f;
-            snap.BeamBright = beam != null ? beam.LightColor.r : 0f;
+            Light2D beam = null;
+            if (snap.Flashlight)
+            {
+                beam = _flashlight.GetComponent<Light2D>();
+            }
+            if (beam != null)
+            {
+                snap.BeamRadius = beam.LightRadius;
+            }
+            else
+            {
+                snap.BeamRadius = 0f;
+            }
+            if (beam != null)
+            {
+                snap.BeamBright = beam.LightColor.r;
+            }
+            else
+            {
+                snap.BeamBright = 0f;
+            }
             snap.Invisible = player.invisible;
             var fx = player.effects;
             snap.ShadowWard = fx != null && fx.hasEffectType(CharacterEffectType.shadowWard);

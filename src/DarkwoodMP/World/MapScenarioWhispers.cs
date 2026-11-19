@@ -54,7 +54,14 @@ namespace DarkwoodMP.World
                 r.Fail($"none of {string.Join(", ", Hosts)} here");
                 yield break;
             }
-            _sound = a.Length > 0 ? a[0] : Fallback;
+            if (a.Length > 0)
+            {
+                _sound = a[0];
+            }
+            else
+            {
+                _sound = Fallback;
+            }
             if (AudioController.GetAudioItem(_sound) == null)
             {
                 r.Fail($"no audio item {_sound}");

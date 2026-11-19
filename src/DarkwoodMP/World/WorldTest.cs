@@ -284,7 +284,11 @@ namespace DarkwoodMP.World
             // A molotov thrown a little way off: it flies, lands and burns, in every game.
             var db = Singleton<ItemsDatabase>.Instance;
             string molotov = db?.itemsDict.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("molotov"));
-            var mi = molotov != null ? db.getItem(molotov, instantiate: false) : null;
+            InvItem mi = null;
+            if (molotov != null)
+            {
+                mi = db.getItem(molotov, instantiate: false);
+            }
             if (mi != null && mi.item != null)
             {
                 var from = player.transform.position;
@@ -356,7 +360,11 @@ namespace DarkwoodMP.World
             var late = saveables.Where(o => o.uniqueId >= SharedIds.SendLimit).ToList();
             int lateSaved = late.Count(o => ObjRef.Of(o.gameObject).K == ObjRef.Kind.Saved);
             int sharedSaved = saveables.Count(o => o.uniqueId > 0 && o.uniqueId < SharedIds.SendLimit && ObjRef.Of(o.gameObject).K == ObjRef.Kind.Saved);
-            var lateHit = late.Count > 0 ? ObjRef.Resolve<SaveableObject>(new ObjRef { K = ObjRef.Kind.Saved, Id = late[0].uniqueId }) : null;
+            SaveableObject lateHit = null;
+            if (late.Count > 0)
+            {
+                lateHit = ObjRef.Resolve<SaveableObject>(new ObjRef { K = ObjRef.Kind.Saved, Id = late[0].uniqueId });
+            }
             bool lateOk = lateSaved == 0 && (late.Count == 0 || late[0].uniqueId < SharedIds.ResolveLimit || lateHit == null);
             Plugin.Log.LogInfo($"[world test] save ids: shared below {SharedIds.SendLimit} (resolved below {SharedIds.ResolveLimit}); {sharedSaved} named by save id, {late.Count} given out later, {lateSaved} of those named by save id: {(lateOk ? "ok" : "FAIL")}");
             var placed = Object.FindObjectsOfType<Item>().Where(i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Placed).Take(20).ToList();
@@ -508,7 +516,15 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] padlock {pad.name} {ObjRef.Of(pad.gameObject)} at {pad.transform.position}, code {pad.combination}");
                 pad.activate();
                 yield return new WaitForSecondsRealtime(0.5f);
-                var numbers = Singleton<UI>.Instance.padlock != null ? Singleton<UI>.Instance.padlock.GetComponentsInChildren<PadlockNumber>() : new PadlockNumber[0];
+                PadlockNumber[] numbers;
+                if (Singleton<UI>.Instance.padlock != null)
+                {
+                    numbers = Singleton<UI>.Instance.padlock.GetComponentsInChildren<PadlockNumber>();
+                }
+                else
+                {
+                    numbers = new PadlockNumber[0];
+                }
                 for (int i = 0; i < numbers.Length && i < pad.combination.Length; i++)
                 {
                     numbers[i].number = pad.combination[i] - '0';
@@ -559,7 +575,11 @@ namespace DarkwoodMP.World
                     // its health is set in Start
                     yield return null;
                     yield return null;
-                    var it = made != null ? made.GetComponent<Item>() : null;
+                    Item it = null;
+                    if (made != null)
+                    {
+                        it = made.GetComponent<Item>();
+                    }
                     Plugin.Log.LogInfo($"[world test] placed {prefab}: {(it == null ? "no item" : $"destructible={it.destructible}, health {it.health} of {it.maxHealth}")}");
                     if (it != null && it.destructible && !it.destroyed && it.health > 1)
                     {
@@ -601,7 +621,14 @@ namespace DarkwoodMP.World
             if (barrel == null)
             {
                 var go = PlaceShared("Traps/barrelExploding", at + new Vector3(0f, 0f, 900f));
-                barrel = go != null ? go.GetComponentInChildren<Explodes>() : null;
+                if (go != null)
+                {
+                    barrel = go.GetComponentInChildren<Explodes>();
+                }
+                else
+                {
+                    barrel = null;
+                }
                 if (barrel != null)
                 {
                     Plugin.Log.LogInfo("[world test] none in this save: placed one");
@@ -694,7 +721,11 @@ namespace DarkwoodMP.World
 
             // Sort & Stack in the workbench's storage: 3 + 3 + 40 nails -> 46.
             var wb = Nearest(Object.FindObjectsOfType<Workbench>(), at);
-            var storage = wb != null ? wb.normalInventory : null;
+            Inventory storage = null;
+            if (wb != null)
+            {
+                storage = wb.normalInventory;
+            }
             var frees = new List<int>();
             void ClearNails()
             {
@@ -851,10 +882,25 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] porter asked at the hideout to take from: {before} items there before, {ItemsIn(here)} after");
             }
             var src = hideouts.FirstOrDefault(l => l != here);
-            var dest = here != null && here.playerBase && here.hideoutId > 0 ? here : hideouts.FirstOrDefault(l => l != src);
+            Location dest;
+            if (here != null && here.playerBase && here.hideoutId > 0)
+            {
+                dest = here;
+            }
+            else
+            {
+                dest = hideouts.FirstOrDefault(l => l != src);
+            }
             if (src != null && dest != null && dest.porterDeliveryPosition != null)
             {
-                var chest = src.inventoriesList.Select(i => i != null ? i.GetComponent<Inventory>() : null).FirstOrDefault(i => i != null && !i.transform.isLocked());
+                var chest = src.inventoriesList.Select(i =>
+                {
+                    if (i != null)
+                    {
+                        return i.GetComponent<Inventory>();
+                    }
+                    return null;
+                }).FirstOrDefault(i => i != null && !i.transform.isLocked());
                 chest?.addItemType("bottle", 1);
                 Plugin.Log.LogInfo($"[world test] porter from {src.name} ({ItemsIn(src)} items) to {dest.name}");
                 Hideouts.Deliver(src, dest);
@@ -868,10 +914,23 @@ namespace DarkwoodMP.World
         }
 
         private static int ItemsIn(Location l) =>
-            l.inventoriesList.Sum(i => i != null && i.GetComponent<Inventory>() != null && !i.transform.isLocked() ? i.GetComponent<Inventory>().getAllItems().Count : 0);
+            l.inventoriesList.Sum(i =>
+            {
+                if (i != null && i.GetComponent<Inventory>() != null && !i.transform.isLocked())
+                {
+                    return i.GetComponent<Inventory>().getAllItems().Count;
+                }
+                return 0;
+            });
 
-        private static string Parts(GameObject go) =>
-            go == null ? "none" : string.Join(",", go.GetComponents<Component>().Select(c => c.GetType().Name));
+        private static string Parts(GameObject go)
+        {
+            if (go == null)
+            {
+                return "none";
+            }
+            return string.Join(",", go.GetComponents<Component>().Select(c => c.GetType().Name));
+        }
 
         /// <summary>
         /// Smaller world objects (World.ObjectActions and friends): what some prefabs are made of; a dropped item
@@ -885,8 +944,16 @@ namespace DarkwoodMP.World
             foreach (var name in new[] { "Items/GasolineTrail", "Items/Gasoline", "Items/DroppedItem", "Objects/_Unique/deathDrop" })
             {
                 var pf = Resources.Load("Prefabs/" + name) as GameObject;
-                var pinv = pf != null ? pf.GetComponent<Inventory>() : null;
-                var pitem = pf != null ? pf.GetComponent<Item>() : null;
+                Inventory pinv = null;
+                if (pf != null)
+                {
+                    pinv = pf.GetComponent<Inventory>();
+                }
+                Item pitem = null;
+                if (pf != null)
+                {
+                    pitem = pf.GetComponent<Item>();
+                }
                 Plugin.Log.LogInfo($"[world test] prefab {name}: {Parts(pf)}; removeWhenEmpty={(pinv != null ? pinv.removeWhenEmpty.ToString() : "-")}, isDroppedItem={(pitem != null ? pitem.isDroppedItem.ToString() : "-")}");
             }
             InvItem lureItem = null;
@@ -915,7 +982,11 @@ namespace DarkwoodMP.World
             // A dropped item picked up again with a click (Item.getDroppedItem).
             var dropped = player.spawnDroppedInvItem(new InvItemClass(item));
             yield return new WaitForSeconds(2.5f); // shared once at rest
-            var di = dropped != null ? dropped.GetComponent<Item>() : null;
+            Item di = null;
+            if (dropped != null)
+            {
+                di = dropped.GetComponent<Item>();
+            }
             if (di != null)
             {
                 Plugin.Log.LogInfo($"[world test] clicking dropped {item.type} {ObjRef.Of(di.gameObject)}");
@@ -1001,7 +1072,11 @@ namespace DarkwoodMP.World
             if (lureItem != null)
             {
                 var lureGo = Core.AddPrefab(lureItem.item, at + new Vector3(60f, 0f, 60f), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
-                var lure = lureGo != null ? lureGo.GetComponent<Lure>() : null;
+                Lure lure = null;
+                if (lureGo != null)
+                {
+                    lure = lureGo.GetComponent<Lure>();
+                }
                 if (lure != null)
                 {
                     yield return new WaitForSeconds(0.5f);
@@ -1084,7 +1159,14 @@ namespace DarkwoodMP.World
                 gen.despawnRandomObjects();
                 gen.spawnRandomObjects();
                 var rwo = Singleton<RandomWorldObjects>.Instance;
-                int made = gen.worldChunks.Sum(c => c != null ? c.GetComponentsInChildren<SaveableObject>().Count(o => rwo != null && rwo.objects.Any(r => r?.prefab != null && r.prefab.name == o.name)) : 0);
+                int made = gen.worldChunks.Sum(c =>
+                {
+                    if (c != null)
+                    {
+                        return c.GetComponentsInChildren<SaveableObject>().Count(o => rwo != null && rwo.objects.Any(r => r?.prefab != null && r.prefab.name == o.name));
+                    }
+                    return 0;
+                });
                 Plugin.Log.LogInfo($"[world test] random objects respawned in {gen.worldChunks.Count} chunks: {(rwo != null ? rwo.objects.Count : -1)} kinds, {made} in the chunks now");
             }
             bool lights = WorldEvents.Instance != null && WorldEvents.Instance.HostShadowLights(player, anyTime: true);
@@ -1224,7 +1306,11 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(3f);
             var p = Player.Instance;
             var door = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), p.transform.position);
-            float best = door != null ? Vector3.Distance(door.transform.position, p.transform.position) : 0f;
+            float best = 0f;
+            if (door != null)
+            {
+                best = Vector3.Distance(door.transform.position, p.transform.position);
+            }
             if (door == null || best >= 2500f)
             {
                 Plugin.Log.LogInfo("[client test] no door near");

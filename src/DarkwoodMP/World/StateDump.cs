@@ -108,7 +108,14 @@ namespace DarkwoodMP.World
             Json(sb, root, 0);
             sb.Append('\n');
             File.WriteAllText(path, sb.ToString());
-            int n = ((SortedDictionary<string, object>)root["sections"]).Values.Sum(s => s is SortedDictionary<string, object> d ? d.Count : 0);
+            int n = ((SortedDictionary<string, object>)root["sections"]).Values.Sum(s =>
+            {
+                if (s is SortedDictionary<string, object> d)
+                {
+                    return d.Count;
+                }
+                return 0;
+            });
             return $"{n} entries";
         }
 
@@ -334,8 +341,16 @@ namespace DarkwoodMP.World
                 // Where the NPCs that every game has (a shared save id) stand: the host's place them all (NpcSync).
                 foreach (var n in All<NPC>())
                 {
-                    var ch = n != null ? n.GetComponent<Character>() : null;
-                    var save = n != null ? n.GetComponent<SaveableObject>() : null;
+                    Character ch = null;
+                    if (n != null)
+                    {
+                        ch = n.GetComponent<Character>();
+                    }
+                    SaveableObject save = null;
+                    if (n != null)
+                    {
+                        save = n.GetComponent<SaveableObject>();
+                    }
                     if (ch == null || !ch.alive || save == null || save.uniqueId <= 0 || save.uniqueId >= SharedIds.ResolveLimit)
                     {
                         continue;
@@ -349,7 +364,11 @@ namespace DarkwoodMP.World
             });
             AddSection("journal", ctx =>
             {
-                var j = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.journal : null;
+                Journal j = null;
+                if (Singleton<UI>.Instance != null)
+                {
+                    j = Singleton<UI>.Instance.journal;
+                }
                 if (j == null)
                 {
                     return;
@@ -393,8 +412,19 @@ namespace DarkwoodMP.World
                         e["health"] = Mathf.Round(c.health);
                     }
                     var snd = c.GetComponent<CharacterSounds>();
-                    var loop = snd != null ? snd.idleAudioObject : null;
-                    e["loopSound"] = loop != null && loop.IsPlaying() ? loop.audioID : "";
+                    AudioObject loop = null;
+                    if (snd != null)
+                    {
+                        loop = snd.idleAudioObject;
+                    }
+                    if (loop != null && loop.IsPlaying())
+                    {
+                        e["loopSound"] = loop.audioID;
+                    }
+                    else
+                    {
+                        e["loopSound"] = "";
+                    }
                     if (!c.alive)
                     {
                         // A corpse can be searched in every game (the host's loot came with it).
@@ -535,7 +565,15 @@ namespace DarkwoodMP.World
                 }
                 var it = s.invItem;
                 // A gun's count is its ammo (InvItemClass.SaveState saves that, not its amount, which means nothing for it).
-                int amount = it.baseClass != null && it.baseClass.hasAmmo ? it.ammo : it.amount;
+                int amount;
+                if (it.baseClass != null && it.baseClass.hasAmmo)
+                {
+                    amount = it.ammo;
+                }
+                else
+                {
+                    amount = it.amount;
+                }
                 list.Add(new Dictionary<string, object> { ["type"] = it.type, ["amount"] = amount, ["durability"] = R(it.durability, 0.05f) });
             }
             // Trailing empty slots don't matter (a workbench's level adds some).
@@ -548,7 +586,14 @@ namespace DarkwoodMP.World
 
         /// <summary>A trader's stock as one string ("type x amount" per slot), for ordering traders.</summary>
         private static string StockKey(Inventory inv) =>
-            string.Join(",", inv.slots.Select(s => s == null || InvItemClass.isNull(s.invItem) ? "" : s.invItem.type + "x" + s.invItem.amount));
+            string.Join(",", inv.slots.Select(s =>
+            {
+                if (s == null || InvItemClass.isNull(s.invItem))
+                {
+                    return "";
+                }
+                return s.invItem.type + "x" + s.invItem.amount;
+            }));
 
         private static string Hash(List<string> lines)
         {

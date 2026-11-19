@@ -564,7 +564,11 @@ namespace DarkwoodMP.World
         private static void LightHere(ExperienceMachine lit)
         {
             var p = Player.Instance;
-            var mine = p != null ? p.experienceMachine : null;
+            ExperienceMachine mine = null;
+            if (p != null)
+            {
+                mine = p.experienceMachine;
+            }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -659,7 +663,11 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            var src = ge.sourceTransform != null ? ge.sourceTransform.GetComponent<Inventory>() : null;
+            Inventory src = null;
+            if (ge.sourceTransform != null)
+            {
+                src = ge.sourceTransform.GetComponent<Inventory>();
+            }
             if (src != null)
             {
                 Containers.Instance.SendContents(src);

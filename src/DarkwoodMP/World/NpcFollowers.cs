@@ -54,7 +54,11 @@ namespace DarkwoodMP.World
         /// <summary>Host: note that this joiner recruited this character, if it's a follower now or about to be.</summary>
         internal static void Recruited(GameObject go, ulong by)
         {
-            var c = go != null ? go.GetComponent<Character>() : null;
+            Character c = null;
+            if (go != null)
+            {
+                c = go.GetComponent<Character>();
+            }
             if (c == null || c.npc == null)
             {
                 return;
@@ -67,8 +71,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string NameOf(ulong id) =>
-            NetPlayerProxy.All.TryGetValue(id, out var p) && p != null ? p.OwnerName : id.ToString();
+        private static string NameOf(ulong id)
+        {
+            if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
+            {
+                return p.OwnerName;
+            }
+            return id.ToString();
+        }
 
         /// <summary>Host: the stand-in of the joiner a follower follows, or null (it follows the host's player).</summary>
         public static NetPlayerProxy LeaderOf(Character c)
@@ -81,7 +91,11 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return NetPlayerProxy.All.TryGetValue(id, out var p) && p != null && p.alive ? p : null;
+            if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null && p.alive)
+            {
+                return p;
+            }
+            return null;
         }
 
         /// <summary>
@@ -97,7 +111,11 @@ namespace DarkwoodMP.World
             }
             c.charactersInViewRange.RemoveAll(col =>
             {
-                var cb = col != null ? col.GetComponent<CharBase>() : null;
+                CharBase cb = null;
+                if (col != null)
+                {
+                    cb = col.GetComponent<CharBase>();
+                }
                 return cb != null && cb != leader && Proxies.IsPlayer(cb);
             });
             if (c.target == null || c.target != leader.transform && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))

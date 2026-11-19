@@ -29,7 +29,17 @@ namespace DarkwoodMP
         private static float _nextLook;
         private static GUIStyle _fallback;
 
-        public static int Scale => Screen.height >= 1000 ? 2 : 1;
+        public static int Scale
+        {
+            get
+            {
+                if (Screen.height >= 1000)
+                {
+                    return 2;
+                }
+                return 1;
+            }
+        }
 
         /// <summary>The height of a line of text, in screen pixels.</summary>
         public static float Line => LineAt(Scale);
@@ -46,7 +56,11 @@ namespace DarkwoodMP
                         continue;
                     }
                     var d = f.inst;
-                    var tex = d?.material != null ? d.material.mainTexture : null;
+                    Texture tex = null;
+                    if (d?.material != null)
+                    {
+                        tex = d.material.mainTexture;
+                    }
                     if (tex == null)
                     {
                         continue;
@@ -72,7 +86,11 @@ namespace DarkwoodMP
                     Plugin.Log.LogInfo($"Co-op windows use the game's fonts: line {_body.LineHeight}, H {_body.CapTop}/{_body.CapHeight}");
                 }
             }
-            return kind == Kind.Title ? _title ?? _body : _body ?? _title;
+            if (kind == Kind.Title)
+            {
+                return _title ?? _body;
+            }
+            return _body ?? _title;
         }
 
         private static tk2dFontChar Glyph(Face f, char c)
@@ -84,9 +102,17 @@ namespace DarkwoodMP
                 {
                     d.InitDictionary();
                 }
-                return d.charDict != null && d.charDict.TryGetValue(c, out var g) ? g : null;
+                if (d.charDict != null && d.charDict.TryGetValue(c, out var g))
+                {
+                    return g;
+                }
+                return null;
             }
-            return d.chars != null && c < d.chars.Length ? d.chars[c] : null;
+            if (d.chars != null && c < d.chars.Length)
+            {
+                return d.chars[c];
+            }
+            return null;
         }
 
         private static bool CanDraw(Face f, string s)
@@ -131,7 +157,15 @@ namespace DarkwoodMP
             {
                 return 0f;
             }
-            int sc = scale > 0 ? scale : Scale;
+            int sc;
+            if (scale > 0)
+            {
+                sc = scale;
+            }
+            else
+            {
+                sc = Scale;
+            }
             var f = Get(kind);
             if (!CanDraw(f, s))
             {
@@ -141,7 +175,14 @@ namespace DarkwoodMP
             foreach (char c in s)
             {
                 var g = Glyph(f, c);
-                w += g != null ? g.advance : 3f;
+                if (g != null)
+                {
+                    w += g.advance;
+                }
+                else
+                {
+                    w += 3f;
+                }
             }
             return w * sc;
         }
@@ -153,7 +194,15 @@ namespace DarkwoodMP
             {
                 return;
             }
-            int sc = scale > 0 ? scale : Scale;
+            int sc;
+            if (scale > 0)
+            {
+                sc = scale;
+            }
+            else
+            {
+                sc = Scale;
+            }
             float lineH = LineAt(sc);
             float w = Width(s, kind, sc);
             float x = r.x;
@@ -230,7 +279,15 @@ namespace DarkwoodMP
                 string line = "";
                 foreach (var word in para.Split(' '))
                 {
-                    string tryLine = line.Length == 0 ? word : line + " " + word;
+                    string tryLine;
+                    if (line.Length == 0)
+                    {
+                        tryLine = word;
+                    }
+                    else
+                    {
+                        tryLine = line + " " + word;
+                    }
                     if (line.Length > 0 && Width(tryLine, kind) > width)
                     {
                         lines.Add(line);

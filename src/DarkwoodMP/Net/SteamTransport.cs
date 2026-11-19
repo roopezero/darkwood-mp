@@ -98,7 +98,11 @@ namespace DarkwoodMP.Net
             for (int off = 0; off < length; off += PieceSize)
             {
                 int n = Math.Min(PieceSize, length - off);
-                int head = off == 0 ? 5 : 1;
+                int head = 1;
+                if (off == 0)
+                {
+                    head = 5;
+                }
                 var piece = new byte[head + n];
                 piece[0] = (byte)MsgType.SteamPiece;
                 if (off == 0)
@@ -129,7 +133,11 @@ namespace DarkwoodMP.Net
             var key = (from, channel);
             if (!_joining.TryGetValue(key, out var j))
             {
-                int total = len >= 5 ? buf[1] | buf[2] << 8 | buf[3] << 16 | buf[4] << 24 : -1;
+                int total = -1;
+                if (len >= 5)
+                {
+                    total = buf[1] | buf[2] << 8 | buf[3] << 16 | buf[4] << 24;
+                }
                 if (total <= 0 || total > Protocol.MaxMessage)
                 {
                     Plugin.Log.LogWarning($"Dropped a piece from {from}: a message of {total} bytes");

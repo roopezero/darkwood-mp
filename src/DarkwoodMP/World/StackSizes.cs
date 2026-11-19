@@ -33,7 +33,17 @@ namespace DarkwoodMP.World
         private static int _hostSize = -1; // client: the host's size, -1 when not in a session
 
         /// <summary>The size in use now: the host's in a session as a client, otherwise our own setting.</summary>
-        public static int Current => _hostSize >= 0 ? _hostSize : Mathf.Max(0, Plugin.Cfg.StackSize.Value);
+        public static int Current
+        {
+            get
+            {
+                if (_hostSize >= 0)
+                {
+                    return _hostSize;
+                }
+                return Mathf.Max(0, Plugin.Cfg.StackSize.Value);
+            }
+        }
 
         public static void Register(Session s)
         {
@@ -143,7 +153,15 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 eligible++;
-                int max = size > 0 ? Mathf.Max(orig, size) : orig;
+                int max;
+                if (size > 0)
+                {
+                    max = Mathf.Max(orig, size);
+                }
+                else
+                {
+                    max = orig;
+                }
                 if (max != orig)
                 {
                     changed++;
@@ -167,7 +185,15 @@ namespace DarkwoodMP.World
         internal static int OriginalOf(string type)
         {
             var it = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
-            return it == null ? 0 : Original.TryGetValue(it, out int o) ? o : it.maxAmount;
+            if (it == null)
+            {
+                return 0;
+            }
+            if (Original.TryGetValue(it, out int o))
+            {
+                return o;
+            }
+            return it.maxAmount;
         }
 
         /// <summary>The items database is made with each world (and the main menu's): set the sizes on it.</summary>

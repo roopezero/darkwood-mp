@@ -17,7 +17,17 @@ namespace DarkwoodMP.Net
         public bool InLobby => Id != CSteamID.Nil;
         // The host is whoever owned the lobby when we entered it. Steam hands ownership to another member when the
         // owner leaves or crashes, but the game world can't move with it, so the live owner is never trusted after that.
-        public CSteamID Owner => InLobby ? _hostId : CSteamID.Nil;
+        public CSteamID Owner
+        {
+            get
+            {
+                if (InLobby)
+                {
+                    return _hostId;
+                }
+                return CSteamID.Nil;
+            }
+        }
         public bool IsHost => InLobby && _iAmHost;
         private CSteamID _hostId = CSteamID.Nil;
         private bool _iAmHost;
@@ -177,7 +187,14 @@ namespace DarkwoodMP.Net
             Id = id;
             _hostId = SteamMatchmaking.GetLobbyOwner(id);
             _iAmHost = _hostId == SteamUser.GetSteamID();
-            Status = IsHost ? "Hosting" : $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
+            if (IsHost)
+            {
+                Status = "Hosting";
+            }
+            else
+            {
+                Status = $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
+            }
             Plugin.Log.LogInfo($"Entered lobby {id}, host={IsHost}");
             OnEntered?.Invoke();
         }

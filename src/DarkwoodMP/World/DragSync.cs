@@ -173,7 +173,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var player = Player.Instance;
-            var now = player != null ? player.itemBeingDragged : null;
+            Item now = null;
+            if (player != null)
+            {
+                now = player.itemBeingDragged;
+            }
 
             if (now != _dragging)
             {
@@ -351,7 +355,11 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Hit(Item item)
         {
-            var b = item != null ? item.GetComponent<Rigidbody>() : null;
+            Rigidbody b = null;
+            if (item != null)
+            {
+                b = item.GetComponent<Rigidbody>();
+            }
             if (b == null)
             {
                 return;
@@ -613,7 +621,11 @@ namespace DarkwoodMP.World
         /// <summary>This object is where every game is told (or told by another) it is.</summary>
         private void Rebase(GameObject go)
         {
-            var b = go != null ? go.GetComponent<Rigidbody>() : null;
+            Rigidbody b = null;
+            if (go != null)
+            {
+                b = go.GetComponent<Rigidbody>();
+            }
             if (b != null && _loose.TryGetValue(b, out var p) && p.Item != null)
             {
                 Rebase(p);
@@ -633,7 +645,15 @@ namespace DarkwoodMP.World
                 Rebase(item.gameObject);
                 Recell(item.gameObject);
             }
-            int ch = last ? Channel.Control : Channel.State;
+            int ch;
+            if (last)
+            {
+                ch = Channel.Control;
+            }
+            else
+            {
+                ch = Channel.State;
+            }
             if (_session.IsHost)
             {
                 _session.Broadcast(w, ch, reliable: last);
@@ -1244,7 +1264,11 @@ namespace DarkwoodMP.World
             }
             var co = go.GetComponent<CullableObject>();
             var grid = Singleton<WorldGrid>.Instance;
-            var old = co != null ? co.node : null;
+            WorldGrid.Node old = null;
+            if (co != null)
+            {
+                old = co.node;
+            }
             if (old == null || grid == null || grid.currentGrid == null)
             {
                 return;

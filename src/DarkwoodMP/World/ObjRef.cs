@@ -298,7 +298,14 @@ namespace DarkwoodMP.World
                     if (_announced.TryGetValue(r.Id, out long key))
                     {
                         var found = Resolve<T>(new ObjRef { K = Kind.Placed, Id = key });
-                        go = found != null ? found.gameObject : null;
+                        if (found != null)
+                        {
+                            go = found.gameObject;
+                        }
+                        else
+                        {
+                            go = null;
+                        }
                         if (go != null && !_sharedIds.ContainsKey(go) && BindShared(r.Id, go))
                         {
                             HostIds.Place(r.Id, go);
@@ -307,7 +314,14 @@ namespace DarkwoodMP.World
                     break;
                 case Kind.Enemy:
                     var c = NetEnemies.Instance?.CharacterOf((uint)r.Id);
-                    go = c != null ? c.gameObject : null;
+                    if (c != null)
+                    {
+                        go = c.gameObject;
+                    }
+                    else
+                    {
+                        go = null;
+                    }
                     break;
                 case Kind.Saved:
                     if (r.Id >= SharedIds.ResolveLimit)
@@ -358,7 +372,11 @@ namespace DarkwoodMP.World
                     }
                     break;
             }
-            return go != null ? go.GetComponent<T>() : null;
+            if (go != null)
+            {
+                return go.GetComponent<T>();
+            }
+            return null;
         }
     }
 }

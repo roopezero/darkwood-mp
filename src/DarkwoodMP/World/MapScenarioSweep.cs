@@ -78,8 +78,16 @@ namespace DarkwoodMP.World
 
         private static string LoopOf(Character c)
         {
-            var loop = c.sounds != null ? c.sounds.idleAudioObject : null;
-            return loop != null && loop.IsPlaying() ? loop.audioID : "";
+            AudioObject loop = null;
+            if (c.sounds != null)
+            {
+                loop = c.sounds.idleAudioObject;
+            }
+            if (loop != null && loop.IsPlaying())
+            {
+                return loop.audioID;
+            }
+            return "";
         }
 
         /// <summary>"sweep-loop-stop": the host's enemy nearest to us stops its loop by destroySounds (no playIdleLoop).</summary>
@@ -157,7 +165,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator PushDoor(string[] a, Result r)
         {
-            float target = a.Length > 0 ? F(a[0]) : 40f;
+            float target = 40f;
+            if (a.Length > 0)
+            {
+                target = F(a[0]);
+            }
             var d = DoorAtCentre();
             if (d == null)
             {
@@ -249,7 +261,11 @@ namespace DarkwoodMP.World
         /// <summary>"sweep-door-leaf ANGLE": the leaf of the door nearest the centre is ANGLE degrees (within 5) from shut here, within the timeout.</summary>
         private static IEnumerator DoorLeafIs(string[] a, Result r)
         {
-            float want = a.Length > 0 ? F(a[0]) : 40f;
+            float want = 40f;
+            if (a.Length > 0)
+            {
+                want = F(a[0]);
+            }
             var d = DoorAtCentre();
             if (d == null)
             {

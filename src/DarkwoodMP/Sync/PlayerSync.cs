@@ -124,7 +124,15 @@ namespace DarkwoodMP.Sync
             }
             var w = _session.Begin(MsgType.PlayerState);
             _snap.Write(w);
-            var ch = reliable ? Channel.Control : Channel.State;
+            int ch;
+            if (reliable)
+            {
+                ch = Channel.Control;
+            }
+            else
+            {
+                ch = Channel.State;
+            }
             if (_session.IsHost)
             {
                 _session.Broadcast(w, ch, reliable);

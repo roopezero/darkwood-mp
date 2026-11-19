@@ -88,7 +88,11 @@ namespace DarkwoodMP.World
             _nextCheck = Time.unscaledTime + 1f;
 
             var ns = Singleton<NightScenarios>.Instance;
-            string scenario = ns != null && ns.currentScenario != null ? ns.currentScenario.name : "";
+            string scenario = "";
+            if (ns != null && ns.currentScenario != null)
+            {
+                scenario = ns.currentScenario.name;
+            }
             if (scenario != _sentScenario || Time.unscaledTime >= _nextScenarioSend)
             {
                 if (WorldActions.Debug && scenario != _sentScenario)
@@ -137,7 +141,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var sc = name.Length > 0 ? ns.getScenario(name) : null;
+            NightScenario sc = null;
+            if (name.Length > 0)
+            {
+                sc = ns.getScenario(name);
+            }
             if (name.Length > 0 && sc == null)
             {
                 Plugin.Log.LogWarning($"No night scenario {name} here");
@@ -171,7 +179,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var ns = Singleton<NightScenarios>.Instance;
-            var big = Player.Instance != null ? Player.Instance.whereAmI.bigLocation : null;
+            Location big = null;
+            if (Player.Instance != null)
+            {
+                big = Player.Instance.whereAmI.bigLocation;
+            }
             var w = _session.Begin(MsgType.NightEvent);
             w.W.Write(EventFired);
             w.WriteStr(ns != null && ns.currentScenario != null ? ns.currentScenario.name : "");
@@ -231,8 +243,16 @@ namespace DarkwoodMP.World
                     return;
                 }
                 var ns = Singleton<NightScenarios>.Instance;
-                var sc = ns != null ? ns.getScenario(scenario) : null;
-                var ev = sc != null ? FindEvent(sc, name) : null;
+                NightScenario sc = null;
+                if (ns != null)
+                {
+                    sc = ns.getScenario(scenario);
+                }
+                CustomEvent ev = null;
+                if (sc != null)
+                {
+                    ev = FindEvent(sc, name);
+                }
                 if (ev == null)
                 {
                     Plugin.Log.LogWarning($"No night event {scenario}/{name} here");
@@ -305,7 +325,11 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            var gen = p.whereAmI.bigLocation != null ? p.whereAmI.bigLocation.generator : null;
+            Generator gen = null;
+            if (p.whereAmI.bigLocation != null)
+            {
+                gen = p.whereAmI.bigLocation.generator;
+            }
             if (gen == null)
             {
                 return false;
@@ -464,7 +488,15 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var r = ObjRef.Of(go);
-                    long id = r.K == ObjRef.Kind.Spawned ? r.Id : NewId();
+                    long id;
+                    if (r.K == ObjRef.Kind.Spawned)
+                    {
+                        id = r.Id;
+                    }
+                    else
+                    {
+                        id = NewId();
+                    }
                     if (r.K != ObjRef.Kind.Spawned)
                     {
                         ObjRef.RegisterSpawned(id, go);
@@ -642,7 +674,14 @@ namespace DarkwoodMP.World
         private static string WeatherKey(Rain r) =>
             $"rain {(r.rainToday ? 1 : 0)} at {r.timeToStart:0} for {r.duration:0}, lightning {(r.preRainLightning ? 1 : 0)} {r.preRainLightningTime:0} {r.lightningTime:0}, " +
             $"fog {Tad(r.timeToFadeInFog)}-{Tad(r.timeToFadeOutFog)}";
-        private static string Tad(TimeAndDay t) => t == null ? "none" : $"{t.day}/{t.time}";
+        private static string Tad(TimeAndDay t)
+        {
+            if (t == null)
+            {
+                return "none";
+            }
+            return $"{t.day}/{t.time}";
+        }
 
         private void SendWeather(Rain r)
         {
@@ -665,7 +704,11 @@ namespace DarkwoodMP.World
         private static TimeAndDay ReadTad(PacketReader r)
         {
             int time = r.R.ReadInt32(), day = r.R.ReadInt32();
-            return time < 0 ? null : new TimeAndDay(time, day);
+            if (time < 0)
+            {
+                return null;
+            }
+            return new TimeAndDay(time, day);
         }
 
         private void OnWeather(ulong from, PacketReader r)
@@ -823,7 +866,12 @@ namespace DarkwoodMP.World
                 return false;
             }
             var p = Player.Instance;
-            var chunk = p != null ? WorldChunk.getChunkAtPos(p._transform.position) : null; // where the game lists it
+            // where the game lists it
+            WorldChunk chunk = null;
+            if (p != null)
+            {
+                chunk = WorldChunk.getChunkAtPos(p._transform.position);
+            }
             if (chunk != null)
             {
                 __state = (chunk, chunk.nightSpawnedObjects.Count);

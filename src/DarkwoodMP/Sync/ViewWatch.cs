@@ -25,8 +25,16 @@ namespace DarkwoodMP.Sync
         public static Vector3? LightPos()
         {
             var p = Player.Instance;
-            var l = p != null ? FovLight(p) : null;
-            return l != null ? l.transform.position : (Vector3?)null;
+            Light2D l = null;
+            if (p != null)
+            {
+                l = FovLight(p);
+            }
+            if (l != null)
+            {
+                return l.transform.position;
+            }
+            return (Vector3?)null;
         }
 
         private static float _next, _loggedAt;

@@ -941,8 +941,14 @@ namespace DarkwoodMP.World
         internal static float FlatSq(Vector3 a, Vector3 b) => (a.x - b.x) * (a.x - b.x) + (a.z - b.z) * (a.z - b.z);
 
         /// <summary>A crate whose lock is picked with the progress bar (Item.disarm without a Trigger), or null.</summary>
-        public static Item Crate(Item item) =>
-            item != null && item.disarmTime > 0f && item.GetComponent<Inventory>() != null && item.GetComponent<Trigger>() == null ? item : null;
+        public static Item Crate(Item item)
+        {
+            if (item != null && item.disarmTime > 0f && item.GetComponent<Inventory>() != null && item.GetComponent<Trigger>() == null)
+            {
+                return item;
+            }
+            return null;
+        }
 
         // ---- the state to roll back to ----------------------------------------------------
 
@@ -978,11 +984,31 @@ namespace DarkwoodMP.World
             }
             var w = S.Begin(MsgType.ObjState);
             obj.Write(w);
-            Door door = go != null ? go.GetComponent<Door>() : null;
-            Window window = go != null ? go.GetComponent<Window>() : null;
-            Trigger trap = go != null ? go.GetComponent<Trigger>() : null;
-            Item item = go != null ? go.GetComponent<Item>() : null;
-            Padlock pad = padlock && go != null ? go.GetComponent<Padlock>() : null;
+            Door door = null;
+            if (go != null)
+            {
+                door = go.GetComponent<Door>();
+            }
+            Window window = null;
+            if (go != null)
+            {
+                window = go.GetComponent<Window>();
+            }
+            Trigger trap = null;
+            if (go != null)
+            {
+                trap = go.GetComponent<Trigger>();
+            }
+            Item item = null;
+            if (go != null)
+            {
+                item = go.GetComponent<Item>();
+            }
+            Padlock pad = null;
+            if (padlock && go != null)
+            {
+                pad = go.GetComponent<Padlock>();
+            }
             if (pad != null)
             {
                 w.W.Write((byte)Kind.Padlock);
@@ -1076,7 +1102,11 @@ namespace DarkwoodMP.World
                             byte f = r.R.ReadByte();
                             int health = r.R.ReadInt32(), barricade = r.R.ReadInt32();
                             string key = r.ReadStr();
-                            var door = go != null ? go.GetComponent<Door>() : null;
+                            Door door = null;
+                            if (go != null)
+                            {
+                                door = go.GetComponent<Door>();
+                            }
                             if (door == null)
                             {
                                 break;
@@ -1125,7 +1155,11 @@ namespace DarkwoodMP.World
                         {
                             bool barricaded = (r.R.ReadByte() & 1) != 0;
                             int barricade = r.R.ReadInt32();
-                            var window = go != null ? go.GetComponent<Window>() : null;
+                            Window window = null;
+                            if (go != null)
+                            {
+                                window = go.GetComponent<Window>();
+                            }
                             if (window == null)
                             {
                                 break;
@@ -1145,7 +1179,11 @@ namespace DarkwoodMP.World
                     case Kind.Trap:
                         {
                             bool armed = (r.R.ReadByte() & 1) != 0;
-                            var trap = go != null ? go.GetComponent<Trigger>() : null;
+                            Trigger trap = null;
+                            if (go != null)
+                            {
+                                trap = go.GetComponent<Trigger>();
+                            }
                             if (trap != null && trap.active != armed)
                             {
                                 trap.active = armed;
@@ -1157,7 +1195,11 @@ namespace DarkwoodMP.World
                             byte f = r.R.ReadByte();
                             int health = r.R.ReadInt32();
                             bool on = (f & 1) != 0, broken = (f & 8) != 0;
-                            var item = go != null ? go.GetComponent<Item>() : null;
+                            Item item = null;
+                            if (go != null)
+                            {
+                                item = go.GetComponent<Item>();
+                            }
                             if (item == null)
                             {
                                 break;
@@ -1215,7 +1257,11 @@ namespace DarkwoodMP.World
                     case Kind.Padlock:
                         {
                             bool locked = (r.R.ReadByte() & 1) != 0;
-                            var pad = go != null ? go.GetComponent<Padlock>() : null;
+                            Padlock pad = null;
+                            if (go != null)
+                            {
+                                pad = go.GetComponent<Padlock>();
+                            }
                             if (pad != null && pad.locked != locked)
                             {
                                 pad.locked = locked;
@@ -1316,7 +1362,15 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var at = openerTransform != null ? openerTransform.position : openerPosition;
+            Vector3 at;
+            if (openerTransform != null)
+            {
+                at = openerTransform.position;
+            }
+            else
+            {
+                at = openerPosition;
+            }
             WorldActions.Send(WorldActions.Action.DoorOpen, __instance.gameObject, at.x, at.z);
         }
     }
@@ -1655,18 +1709,34 @@ namespace DarkwoodMP.World
                 return;
             }
             string key = r.ToString();
-            var held = __state == null ? null : new Held
+            Held held;
+            if (__state == null)
             {
-                Prefab = __state,
-                At = __instance.transform.position + new Vector3(0f, 1f, 0f),
-                Target = __instance.isChainTrap && doConnectChain && other != null ? other.gameObject : null,
-            };
+                held = null;
+            }
+            else
+            {
+                held = new Held
+                {
+                    Prefab = __state,
+                    At = __instance.transform.position + new Vector3(0f, 1f, 0f),
+                    Target = __instance.isChainTrap && doConnectChain && other != null ? other.gameObject : null,
+                };
+            }
             if (held != null)
             {
                 _held[key] = held;
             }
-            var player = other != null ? other.GetComponent<Player>() : null;
-            float lost = player != null && healthBefore > 0f ? healthBefore - player.health : 0f;
+            Player player = null;
+            if (other != null)
+            {
+                player = other.GetComponent<Player>();
+            }
+            float lost = 0f;
+            if (player != null && healthBefore > 0f)
+            {
+                lost = healthBefore - player.health;
+            }
             bool bearHold = player != null && __instance.isBearTrap;
 
             var w = s.Begin(MsgType.WorldAction);

@@ -170,7 +170,11 @@ namespace DarkwoodMP.World
                         {
                             cp.health = y + x;
                         }
-                        var vine = cp.lastChainSegment != null ? cp.lastChainSegment.GetComponent<Vine>() : null;
+                        Vine vine = null;
+                        if (cp.lastChainSegment != null)
+                        {
+                            vine = cp.lastChainSegment.GetComponent<Vine>();
+                        }
                         if (vine == null)
                         {
                             vine = cp.GetComponentInChildren<Vine>();

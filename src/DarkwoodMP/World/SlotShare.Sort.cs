@@ -110,7 +110,15 @@ namespace DarkwoodMP.World
             {
                 why = "the host is moving an item in it";
             }
-            List<Change> done = why == null ? Sort(inv) : new List<Change>();
+            List<Change> done;
+            if (why == null)
+            {
+                done = Sort(inv);
+            }
+            else
+            {
+                done = new List<Change>();
+            }
             // The requester gets every slot: what to keep if its prediction was right, what to take if not.
             var all = new List<Change>(before.Length);
             for (int i = 0; i < before.Length && i < inv.slots.Count; i++)
@@ -287,7 +295,14 @@ namespace DarkwoodMP.World
             return changes;
         }
 
-        private static int Category(Stack s) => s.Base != null && s.Base.categories != null && s.Base.categories.Count > 0 ? (int)s.Base.categories[0] : 10000;
+        private static int Category(Stack s)
+        {
+            if (s.Base != null && s.Base.categories != null && s.Base.categories.Count > 0)
+            {
+                return (int)s.Base.categories[0];
+            }
+            return 10000;
+        }
 
         internal const string ButtonName = "DarkwoodMP_SortStack";
 
@@ -320,7 +335,15 @@ namespace DarkwoodMP.World
                     Object.DestroyImmediate(loc);
                 }
                 var button = go.GetComponent<global::Button>();
-                var text = button != null && button.textMesh != null ? button.textMesh : go.GetComponentInChildren<tk2dTextMesh>(true);
+                tk2dTextMesh text;
+                if (button != null && button.textMesh != null)
+                {
+                    text = button.textMesh;
+                }
+                else
+                {
+                    text = go.GetComponentInChildren<tk2dTextMesh>(true);
+                }
                 if (text != null)
                 {
                     text.text = "SORT & STACK";

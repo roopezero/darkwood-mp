@@ -71,15 +71,34 @@ namespace DarkwoodMP.World
 
         /// <summary>The name an NPC is locked by if they're the same NPC in every game wherever they stand, else "".
         /// One from the shared save goes by his ref instead: a new chapter-1 world has three "wolfman" traders.</summary>
-        private static string UniqueName(NPC npc) =>
-            npc != null && npc.name != null && (npc.trader || npc.name.IndexOf("wolf", StringComparison.OrdinalIgnoreCase) >= 0)
-            && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved ? npc.name : "";
+        private static string UniqueName(NPC npc)
+        {
+            if (npc != null && npc.name != null && (npc.trader || npc.name.IndexOf("wolf", StringComparison.OrdinalIgnoreCase) >= 0)
+                        && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved)
+            {
+                return npc.name;
+            }
+            return "";
+        }
 
-        private static string Key(ObjRef r, string name) => name.Length > 0 ? "npc:" + name : r.ToString();
+        private static string Key(ObjRef r, string name)
+        {
+            if (name.Length > 0)
+            {
+                return "npc:" + name;
+            }
+            return r.ToString();
+        }
 
         /// <summary>Host: who other than this player talks to the NPC, or null.</summary>
-        private static string TalkingOther(string key, ulong who) =>
-            _talkers.TryGetValue(key, out var holder) && holder != who ? S.NameOf(holder) : null;
+        private static string TalkingOther(string key, ulong who)
+        {
+            if (_talkers.TryGetValue(key, out var holder) && holder != who)
+            {
+                return S.NameOf(holder);
+            }
+            return null;
+        }
 
         /// <summary>Host: we let go of the NPC (ours or a joiner's dialogue closed).</summary>
         private static void Release(string key, ulong who)

@@ -308,7 +308,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Stopped(string[] a, Result r)
         {
             var o = Singleton<OutsideLocations>.Instance;
-            var loc = a.Length > 0 ? o.getLocation(a[0]) : null;
+            Location loc = null;
+            if (a.Length > 0)
+            {
+                loc = o.getLocation(a[0]);
+            }
             if (loc == null)
             {
                 r.Fail("no such location here");
@@ -529,7 +533,15 @@ namespace DarkwoodMP.World
         private static IEnumerator Kill(string[] a, Result r)
         {
             bool woken = a.Length > 0 && a[0] == "woken";
-            var c = woken ? _woken : _dog;
+            Character c;
+            if (woken)
+            {
+                c = _woken;
+            }
+            else
+            {
+                c = _dog;
+            }
             if (c == null)
             {
                 r.Fail(woken ? "nothing woken (loc-wake first)" : "no dog (loc-dog first)");
@@ -645,7 +657,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             float y = from.Value.y;
-            string kind = a.Length > 0 ? a[0] : "Villager";
+            string kind = "Villager";
+            if (a.Length > 0)
+            {
+                kind = a[0];
+            }
             var corpse = Object.FindObjectsOfType<Character>().Where(x => x != null && !x.alive && x.name.StartsWith(kind))
                 .OrderBy(x => (x.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
             var centres = new List<(string, Vector3)> { ("our player", p.transform.position) };
@@ -682,7 +698,14 @@ namespace DarkwoodMP.World
                             var t = h.collider.transform;
                             string path = Sync.ViewWatch.Path(t);
                             string key = $"{path} [layer {h.collider.gameObject.layer}{(h.collider.isTrigger ? ", trigger" : "")}]";
-                            hiders[key] = hiders.TryGetValue(key, out int n) ? n + 1 : 1;
+                            if (hiders.TryGetValue(key, out int n))
+                            {
+                                hiders[key] = n + 1;
+                            }
+                            else
+                            {
+                                hiders[key] = 1;
+                            }
                             bool ours = path.StartsWith("DarkwoodMP_") || t.GetComponentInParent<Character>() != null;
                             if (ours && !bad.Contains(key))
                             {

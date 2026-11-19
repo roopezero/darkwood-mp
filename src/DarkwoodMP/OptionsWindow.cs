@@ -177,7 +177,11 @@ namespace DarkwoodMP
         {
             if (_lang != GameSettings.GetString("LanguageCode"))
             {
-                string lost = Singleton<WorldGenerator>.Instance != null ? " What you did since you last saved is lost." : "";
+                string lost = "";
+                if (Singleton<WorldGenerator>.Instance != null)
+                {
+                    lost = " What you did since you last saved is lost.";
+                }
                 ConfirmDialog.Ask("Language", "The new language is used from when Darkwood starts again. Apply the changes and quit now?" + lost,
                     "Quit", () =>
                     {
@@ -196,7 +200,11 @@ namespace DarkwoodMP
 
         private static void ApplyNow()
         {
-            var vm = Menu != null ? Menu.VideoMenu : null;
+            VideoMenu vm = null;
+            if (Menu != null)
+            {
+                vm = Menu.VideoMenu;
+            }
             var cam = Singleton<CamMain>.Instance;
             if (_postFx != GameSettings.GetInt("PostFXQuality"))
             {
@@ -273,8 +281,24 @@ namespace DarkwoodMP
         /// <summary>A volume, heard at once (the game's slider, which sets the mixer); stored on Apply.</summary>
         internal static void SetVolume(bool music, float v)
         {
-            var am = Menu != null ? Menu.AudioMenu : null;
-            var slider = am == null ? null : music ? am.musicSlider : am.soundSlider;
+            AudioMenu am = null;
+            if (Menu != null)
+            {
+                am = Menu.AudioMenu;
+            }
+            OptionsSlider slider;
+            if (am == null)
+            {
+                slider = null;
+            }
+            else if (music)
+            {
+                slider = am.musicSlider;
+            }
+            else
+            {
+                slider = am.soundSlider;
+            }
             if (slider != null)
             {
                 v = Mathf.Clamp(v, slider.minValue, slider.maxValue);
@@ -306,7 +330,11 @@ namespace DarkwoodMP
 
         private static void SetGamma(float v)
         {
-            var g = Menu != null ? Menu.gammaSlider : null;
+            OptionsSlider g = null;
+            if (Menu != null)
+            {
+                g = Menu.gammaSlider;
+            }
             if (g != null)
             {
                 g.Magnitude = v; // VideoMenu.setGamma: the picture and GameSettings' "Gamma"
@@ -485,7 +513,11 @@ namespace DarkwoodMP
                 ChangeScreen(Screen.width, Screen.height, !full);
             }
             c = Setting(f, "Brightness");
-            var g = Menu != null ? Menu.gammaSlider : null;
+            OptionsSlider g = null;
+            if (Menu != null)
+            {
+                g = Menu.gammaSlider;
+            }
             float gmin = g != null ? g.minValue : 0.2f, gmax = g != null ? g.maxValue : 1.2f;
             float gamma = GameSettings.GetFloat("Gamma");
             var gc = Ui.Split(c[1], 0, 44);
@@ -502,20 +534,51 @@ namespace DarkwoodMP
             c = Setting(f, "Light quality");
             Choice(Ui.Split(c[1], 160, 0)[0], "light", LowHigh, _light, i => _light = i);
             c = Setting(f, "V-Sync");
-            _vsync = Ui.Check(Ui.Split(c[1], 24, 0)[0], _vsync == 1, "") ? 1 : 0;
+            if (Ui.Check(Ui.Split(c[1], 24, 0)[0], _vsync == 1, ""))
+            {
+                _vsync = 1;
+            }
+            else
+            {
+                _vsync = 0;
+            }
             f.Space(6);
             Ui.Text(f, "Resolution, full screen and brightness change at once. The others wait for Apply.", MenuSkin.Dim);
         }
 
         private static void DrawAudio(Flow f)
         {
-            var am = Menu != null ? Menu.AudioMenu : null;
+            AudioMenu am = null;
+            if (Menu != null)
+            {
+                am = Menu.AudioMenu;
+            }
             for (int k = 0; k < 2; k++)
             {
                 bool music = k == 0;
-                var slider = am == null ? null : music ? am.musicSlider : am.soundSlider;
+                OptionsSlider slider;
+                if (am == null)
+                {
+                    slider = null;
+                }
+                else if (music)
+                {
+                    slider = am.musicSlider;
+                }
+                else
+                {
+                    slider = am.soundSlider;
+                }
                 float min = slider != null ? slider.minValue : 0f, max = slider != null ? slider.maxValue : 1f;
-                float v = music ? _music : _sound;
+                float v;
+                if (music)
+                {
+                    v = _music;
+                }
+                else
+                {
+                    v = _sound;
+                }
                 var c = Setting(f, music ? "Music volume" : "Sound volume");
                 var cc = Ui.Split(c[1], 0, 44);
                 float nv = Slider(cc[0], v, min, max);
@@ -535,7 +598,14 @@ namespace DarkwoodMP
             int li = Array.IndexOf(LangCodes, _lang);
             Choice(Ui.Split(c[1], 200, 0)[0], "lang", LangNames, li, i => _lang = LangCodes[i]);
             c = Setting(f, "Camera zoom");
-            _zoom = Ui.Check(c[1], _zoom == 1, "Closer view (always on above 1920 pixels wide)") ? 1 : 0;
+            if (Ui.Check(c[1], _zoom == 1, "Closer view (always on above 1920 pixels wide)"))
+            {
+                _zoom = 1;
+            }
+            else
+            {
+                _zoom = 0;
+            }
             f.Space(6);
             var cfg = Plugin.Cfg;
             c = Setting(f, "Studio logo");
@@ -547,7 +617,11 @@ namespace DarkwoodMP
         private static void DrawMultiplayer(Flow f)
         {
             var cfg = Plugin.Cfg;
-            var session = Plugin.Instance != null ? Plugin.Instance.Session : null;
+            Net.Session session = null;
+            if (Plugin.Instance != null)
+            {
+                session = Plugin.Instance.Session;
+            }
             bool inGame = session != null && session.Active;
             var c = Setting(f, "Your name");
             if (inGame)
@@ -562,7 +636,11 @@ namespace DarkwoodMP
                     Plugin.Instance.SetPlayerName(n);
                 }
             }
-            string shown = session != null ? session.LocalName : "";
+            string shown = "";
+            if (session != null)
+            {
+                shown = session.LocalName;
+            }
             Ui.Text(f, inGame ? "You can change it when you're in no game." : $"Others see you as {shown}. Left empty, it's your Steam name, or your computer's user name.", MenuSkin.Dim);
 
             Ui.Heading(f, "Hosting");
@@ -598,7 +676,14 @@ namespace DarkwoodMP
                 sizes.Add(cfg.StackSize.Value);
                 sizes.Sort();
             }
-            var sizeNames = sizes.ConvertAll(n => n == 0 ? "The game's own (2 to 50)" : $"{n} (bigger ones keep theirs)").ToArray();
+            var sizeNames = sizes.ConvertAll(n =>
+            {
+                if (n == 0)
+                {
+                    return "The game's own (2 to 50)";
+                }
+                return $"{n} (bigger ones keep theirs)";
+            }).ToArray();
             Choice(Ui.Split(c[1], 220, 0)[0], "stacksize", sizeNames, sizes.IndexOf(cfg.StackSize.Value), i => cfg.StackSize.Value = sizes[i]);
             c = Setting(f, "World to join");
             cfg.LiveWorld.Value = Ui.Check(c[1], cfg.LiveWorld.Value, "As it is now (off: as you last saved it)");
@@ -725,7 +810,11 @@ namespace DarkwoodMP
                     };
                 }
             }
-            string text = index >= 0 && index < options.Length ? options[index] : "";
+            string text = "";
+            if (index >= 0 && index < options.Length)
+            {
+                text = options[index];
+            }
             bool hover = r.Contains(Event.current.mousePosition);
             Ui.Label(new Rect(r.x + 6 * S, r.y, r.width - 20 * S, r.height), PixelFont.Fit(text, r.width - 22 * S), hover || open ? MenuSkin.Bright : MenuSkin.Text);
             DrawArrow(new Rect(r.xMax - 14 * S, r.y, 9 * S, r.height), hover || open ? MenuSkin.Bright : MenuSkin.Text);
@@ -771,7 +860,14 @@ namespace DarkwoodMP
                 _drop.First = Mathf.Clamp(_drop.Index - vis / 2, 0, Mathf.Max(0, n - vis));
             }
             _drop.First = Mathf.Clamp(_drop.First, 0, Mathf.Max(0, n - vis));
-            int Under(Vector2 m) => box.Contains(m) ? _drop.First + Mathf.FloorToInt((m.y - box.y - 2 * S) / rowH) : -1;
+            int Under(Vector2 m)
+            {
+                if (box.Contains(m))
+                {
+                    return _drop.First + Mathf.FloorToInt((m.y - box.y - 2 * S) / rowH);
+                }
+                return -1;
+            }
 
             switch (e.type)
             {
@@ -790,7 +886,14 @@ namespace DarkwoodMP
                 case EventType.ScrollWheel:
                     if (box.Contains(e.mousePosition))
                     {
-                        _drop.First += e.delta.y > 0 ? 1 : -1;
+                        if (e.delta.y > 0)
+                        {
+                            _drop.First += 1;
+                        }
+                        else
+                        {
+                            _drop.First -= 1;
+                        }
                         e.Use();
                     }
                     return;
@@ -854,7 +957,11 @@ namespace DarkwoodMP
         /// <summary>The player's map for a kind of controller, as ControlsMenu.GetControllerMap.</summary>
         private static RW.ControllerMap Map(RW.ControllerType type)
         {
-            var p = Singleton<InputScript>.Instance != null ? Singleton<InputScript>.Instance.rewiredPlayer : null;
+            RW.Player p = null;
+            if (Singleton<InputScript>.Instance != null)
+            {
+                p = Singleton<InputScript>.Instance.rewiredPlayer;
+            }
             if (p == null)
             {
                 return null;
@@ -901,7 +1008,19 @@ namespace DarkwoodMP
             {
                 return;
             }
-            string name = range == RW.AxisRange.Full ? a.descriptiveName : range == RW.AxisRange.Positive ? a.positiveDescriptiveName : a.negativeDescriptiveName;
+            string name;
+            if (range == RW.AxisRange.Full)
+            {
+                name = a.descriptiveName;
+            }
+            else if (range == RW.AxisRange.Positive)
+            {
+                name = a.positiveDescriptiveName;
+            }
+            else
+            {
+                name = a.negativeDescriptiveName;
+            }
             var row = new Binding { Action = a, Range = range, Label = label };
             for (int c = 0; c < 3; c++)
             {
@@ -964,7 +1083,11 @@ namespace DarkwoodMP
             if (Ui.Check(c[0], noPad, "Turn the controller off") != noPad)
             {
                 SetSetting("DisableControllerMode", noPad ? 0 : 1);
-                var pad = Menu != null ? Menu.ControlsMenu.gamepadMap : null;
+                RW.ControllerMap pad = null;
+                if (Menu != null)
+                {
+                    pad = Menu.ControlsMenu.gamepadMap;
+                }
                 if (pad != null)
                 {
                     pad.enabled = noPad; // on again when it was off
@@ -1032,7 +1155,22 @@ namespace DarkwoodMP
                         continue;
                     }
                     bool active = mappingThis && _mapCol == col;
-                    string text = active ? (col == 0 ? "Press a key" : "Press a button") : b.Keys[col] ?? "-";
+                    string text;
+                    if (active)
+                    {
+                        if (col == 0)
+                        {
+                            text = "Press a key";
+                        }
+                        else
+                        {
+                            text = "Press a button";
+                        }
+                    }
+                    else
+                    {
+                        text = b.Keys[col] ?? "-";
+                    }
                     if (Ui.Button(cell, PixelFont.Fit(text, cell.width - 6 * S)) && _mapRow == null)
                     {
                         BeginMapping(b, col);
@@ -1044,7 +1182,11 @@ namespace DarkwoodMP
             string status = _status;
             if (_mapRow != null)
             {
-                float left = _mapper != null && _mapper.status == RW.InputMapper.Status.Listening ? _mapper.timeRemaining : 0f;
+                float left = 0f;
+                if (_mapper != null && _mapper.status == RW.InputMapper.Status.Listening)
+                {
+                    left = _mapper.timeRemaining;
+                }
                 status = $"{(_mapCol == 0 ? "Press the new key" : "Click the new mouse button")} for {_mapRow.Label}{(left > 0 ? $" ({Mathf.CeilToInt(left)} s)" : "")}. Escape cancels.";
             }
             if (status == null)
@@ -1072,7 +1214,11 @@ namespace DarkwoodMP
         /// </summary>
         private static void SetAssigning(bool on)
         {
-            var cm = Menu != null ? Menu.ControlsMenu : null;
+            ControlsMenu cm = null;
+            if (Menu != null)
+            {
+                cm = Menu.ControlsMenu;
+            }
             if (cm == null)
             {
                 return;
@@ -1182,7 +1328,14 @@ namespace DarkwoodMP
                     }
                     if (other == "")
                     {
-                        other = c.action != null ? c.action.descriptiveName : "another action";
+                        if (c.action != null)
+                        {
+                            other = c.action.descriptiveName;
+                        }
+                        else
+                        {
+                            other = "another action";
+                        }
                         key = c.elementDisplayName;
                     }
                 }
@@ -1202,8 +1355,16 @@ namespace DarkwoodMP
 
         private static void OnMapped(RW.InputMapper.InputMappedEventData d)
         {
-            string label = _mapRow != null ? _mapRow.Label : "";
-            string key = d.actionElementMap != null ? d.actionElementMap.elementIdentifierName : "?";
+            string label = "";
+            if (_mapRow != null)
+            {
+                label = _mapRow.Label;
+            }
+            string key = "?";
+            if (d.actionElementMap != null)
+            {
+                key = d.actionElementMap.elementIdentifierName;
+            }
             if (_status == null || !_statusWarn)
             {
                 _status = $"{label}: {key}.";
@@ -1274,7 +1435,11 @@ namespace DarkwoodMP
         private static void ResetControls()
         {
             StopMapping(null);
-            var cm = Menu != null ? Menu.ControlsMenu : null;
+            ControlsMenu cm = null;
+            if (Menu != null)
+            {
+                cm = Menu.ControlsMenu;
+            }
             if (cm != null)
             {
                 cm.revertControls();
@@ -1315,7 +1480,17 @@ namespace DarkwoodMP
         }
         private static string _testDropKey;
         internal static bool TestMapping => _mapRow != null;
-        internal static string TestMapperStatus => _mapper == null ? "none" : _mapper.status.ToString();
+        internal static string TestMapperStatus
+        {
+            get
+            {
+                if (_mapper == null)
+                {
+                    return "none";
+                }
+                return _mapper.status.ToString();
+            }
+        }
 
         /// <summary>The keyboard rows (label, key) as the window lists them.</summary>
         internal static List<(string label, string key, int actionId, int range)> TestRows()
@@ -1389,8 +1564,16 @@ namespace DarkwoodMP
             BuildRows();
             var b = KeyboardRow(label);
             var map = Map(RW.ControllerType.Keyboard);
-            var em = b != null && map != null && b.MapIds[0] >= 0 ? map.GetElementMap(b.MapIds[0]) : null;
-            return em != null ? em.keyCode : KeyCode.None;
+            RW.ActionElementMap em = null;
+            if (b != null && map != null && b.MapIds[0] >= 0)
+            {
+                em = map.GetElementMap(b.MapIds[0]);
+            }
+            if (em != null)
+            {
+                return em.keyCode;
+            }
+            return KeyCode.None;
         }
 
         /// <summary>Some action in the keyboard map has this key.</summary>

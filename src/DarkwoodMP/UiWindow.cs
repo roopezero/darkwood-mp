@@ -67,7 +67,15 @@ namespace DarkwoodMP
             w = Mathf.Min(w, Screen.width - 32);
             h = Mathf.Min(h, Screen.height - 32);
             float margin = Mathf.Max(16f, Screen.width * 0.04f);
-            float y = top < 0f ? (Screen.height - h) / 2f : Screen.height * top;
+            float y;
+            if (top < 0f)
+            {
+                y = (Screen.height - h) / 2f;
+            }
+            else
+            {
+                y = Screen.height * top;
+            }
             return new Rect(Mathf.Max(16f, Screen.width - w - margin), Mathf.Clamp(y, 16f, Mathf.Max(16f, Screen.height - h - 16f)), w, h);
         }
 
@@ -118,7 +126,14 @@ namespace DarkwoodMP
             }
             HandleResize();
             HandleDrag();
-            Rect = Modal ? GUI.ModalWindow(Id, Rect, Draw, GUIContent.none, MenuSkin.Window) : GUI.Window(Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
+            if (Modal)
+            {
+                Rect = GUI.ModalWindow(Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
+            }
+            else
+            {
+                Rect = GUI.Window(Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
+            }
             Clamp();
             if (_focusNext)
             {
@@ -136,7 +151,14 @@ namespace DarkwoodMP
         /// DragTest puts its made-up mouse here.
         /// </summary>
         internal static Func<Vector2> TestMouse;
-        private static Vector2 MouseNow() => TestMouse != null ? TestMouse() : new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        private static Vector2 MouseNow()
+        {
+            if (TestMouse != null)
+            {
+                return TestMouse();
+            }
+            return new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+        }
         /// <summary>The button let go somewhere the window didn't get the MouseUp (outside the game's window, say).</summary>
         private static bool Released() => TestMouse == null && !Input.GetMouseButton(0);
 
@@ -248,7 +270,11 @@ namespace DarkwoodMP
                 ev.Use();
             }
 
-            float footer = Footer != null ? FooterHeight * S : 0f;
+            float footer = 0f;
+            if (Footer != null)
+            {
+                footer = FooterHeight * S;
+            }
             var body = new Rect(Pad, bar.yMax + Pad, w - 2 * Pad, h - bar.yMax - 2 * Pad - (footer > 0 ? footer + Pad : 0));
             // Whether it scrolls is decided once a frame, on Layout, so the Repaint after it can't differ: a scrollbar
             // that came and went within a frame narrowed the body, re-wrapped its text and pushed everything aside.
@@ -343,12 +369,24 @@ namespace DarkwoodMP
                     flex++;
                 }
             }
-            float flexW = flex > 0 ? Mathf.Max(0, (r.width - fixedW - gap * (widths.Length - 1)) / flex) : 0;
+            float flexW = 0;
+            if (flex > 0)
+            {
+                flexW = Mathf.Max(0, (r.width - fixedW - gap * (widths.Length - 1)) / flex);
+            }
             var rects = new Rect[widths.Length];
             float x = r.x;
             for (int i = 0; i < widths.Length; i++)
             {
-                float w = widths[i] > 0 ? widths[i] * S : flexW;
+                float w;
+                if (widths[i] > 0)
+                {
+                    w = widths[i] * S;
+                }
+                else
+                {
+                    w = flexW;
+                }
                 rects[i] = new Rect(x, r.y, w, r.height);
                 x += w + gap;
             }
@@ -396,7 +434,15 @@ namespace DarkwoodMP
                 clicked = false;
             }
             bool down = enabled && GUIUtility.hotControl != 0 && hover && Input.GetMouseButton(0);
-            var tr = down ? new Rect(r.x + S, r.y + S, r.width, r.height) : r;
+            Rect tr;
+            if (down)
+            {
+                tr = new Rect(r.x + S, r.y + S, r.width, r.height);
+            }
+            else
+            {
+                tr = r;
+            }
             PixelFont.Draw(tr, text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text, TextAnchor.MiddleCenter);
             return clicked;
         }
@@ -422,7 +468,11 @@ namespace DarkwoodMP
             {
                 GUI.SetNextControlName(name);
             }
-            return password ? GUI.PasswordField(r, value ?? "", '*', max, MenuSkin.Field) : GUI.TextField(r, value ?? "", max, MenuSkin.Field);
+            if (password)
+            {
+                return GUI.PasswordField(r, value ?? "", '*', max, MenuSkin.Field);
+            }
+            return GUI.TextField(r, value ?? "", max, MenuSkin.Field);
         }
 
         /// <summary>A label on the left and a field beside it, on one row.</summary>

@@ -44,11 +44,32 @@ namespace DarkwoodMP
             }
             _win.Title = title ?? "";
             _text = text;
-            _yes = string.IsNullOrEmpty(yes) ? "Yes" : yes;
-            _no = string.IsNullOrEmpty(no) ? "No" : no;
+            if (string.IsNullOrEmpty(yes))
+            {
+                _yes = "Yes";
+            }
+            else
+            {
+                _yes = yes;
+            }
+            if (string.IsNullOrEmpty(no))
+            {
+                _no = "No";
+            }
+            else
+            {
+                _no = no;
+            }
             _onYes = onYes;
             _onNo = onNo;
-            _deadline = timeout > 0f ? Time.realtimeSinceStartup + timeout : 0f;
+            if (timeout > 0f)
+            {
+                _deadline = Time.realtimeSinceStartup + timeout;
+            }
+            else
+            {
+                _deadline = 0f;
+            }
             _win.ResetPlace();
             _win.Show();
             Plugin.Log.LogInfo($"[confirm] asked: {title}");
@@ -77,7 +98,15 @@ namespace DarkwoodMP
 
         private static void Answer(bool yes)
         {
-            var act = yes ? _onYes : _onNo;
+            Action act;
+            if (yes)
+            {
+                act = _onYes;
+            }
+            else
+            {
+                act = _onNo;
+            }
             _onYes = _onNo = null;
             _deadline = 0f;
             if (_win.Open)

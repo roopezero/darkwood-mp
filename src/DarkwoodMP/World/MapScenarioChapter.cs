@@ -53,7 +53,14 @@ namespace DarkwoodMP.World
         }
 
         internal static string Hotbar(Player p) =>
-            string.Join(",", p.Hotbar.slots.Select(s => InvItemClass.isNull(s.invItem) ? "-" : $"{s.invItem.type}x{s.invItem.amount}"));
+            string.Join(",", p.Hotbar.slots.Select(s =>
+            {
+                if (InvItemClass.isNull(s.invItem))
+                {
+                    return "-";
+                }
+                return $"{s.invItem.type}x{s.invItem.amount}";
+            }));
 
         private static string Types(string hotbar) => string.Join(",", hotbar.Split(',').Select(s => s.Split('x')[0]));
 
@@ -64,7 +71,11 @@ namespace DarkwoodMP.World
             _logFrom = MapScenarioIssues.LogMark();
             var p = P;
             // A second argument: that many hotbar slots, taken as the game's hotbar upgrade item gives one.
-            int want = a.Length > 1 ? int.Parse(a[1]) : 0;
+            int want = 0;
+            if (a.Length > 1)
+            {
+                want = int.Parse(a[1]);
+            }
             while (want > 0 && p.Hotbar.slots.Count < want)
             {
                 p.upgradeHotbar();
@@ -75,7 +86,11 @@ namespace DarkwoodMP.World
                 r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
                 yield break;
             }
-            int n = a.Length > 0 ? int.Parse(a[0]) : 0;
+            int n = 0;
+            if (a.Length > 0)
+            {
+                n = int.Parse(a[0]);
+            }
             var slots = p.Hotbar.slots;
             foreach (var s in slots)
             {
@@ -195,7 +210,11 @@ namespace DarkwoodMP.World
             var p = P;
             string hot = Hotbar(p);
             var host = Host();
-            float d = host.HasValue ? StateDump.Flat(p.transform.position - host.Value) : -1f;
+            float d = -1f;
+            if (host.HasValue)
+            {
+                d = StateDump.Flat(p.transform.position - host.Value);
+            }
             string ui = HotbarUi(p);
             int told = Count("[notice] The host is starting chapter 2");
             r.Info = $"told {told}x; chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(p)}, host {(host.HasValue ? $"{d:0} away" : "not seen")}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
@@ -231,7 +250,11 @@ namespace DarkwoodMP.World
         private static IEnumerator OwnDream(string[] a, Result r)
         {
             // A dream of our own only (as the epilogue's startDream step starts one, not a level's: that one is shared).
-            string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
+            string name = "dream_bunker_underground_01";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             Core.forbidInputs = true;
             P.halt();
             D.wantToDream = true;
@@ -310,9 +333,15 @@ namespace DarkwoodMP.World
             System.Collections.Generic.List<string> seen = null;
             while (Time.realtimeSinceStartup < until)
             {
-                seen = ps == null ? new System.Collections.Generic.List<string>() :
-                    ps.Remotes.Values.Where(rp => rp.Root != null && rp.Root.activeInHierarchy && StateDump.Flat(rp.Root.transform.position - P.transform.position) < 800f)
-                        .Select(rp => Pos(rp.Root.transform)).ToList();
+                if (ps == null)
+                {
+                    seen = new System.Collections.Generic.List<string>();
+                }
+                else
+                {
+                    seen = ps.Remotes.Values.Where(rp => rp.Root != null && rp.Root.activeInHierarchy && StateDump.Flat(rp.Root.transform.position - P.transform.position) < 800f)
+                                            .Select(rp => Pos(rp.Root.transform)).ToList();
+                }
                 if (seen.Count >= want)
                 {
                     break;
@@ -354,7 +383,11 @@ namespace DarkwoodMP.World
             }
             int shown = bar.thisUI.GetComponentsInChildren<UIInvSlot>(false).Length;
             int without = bar.slots.Count(s => s.UIInvSlot == null || !s.UIInvSlot.gameObject.activeInHierarchy);
-            return shown == bar.slots.Count && without == 0 ? $"ui ok {shown}" : $"ui {shown} shown for {bar.slots.Count} slots, {without} slots not shown";
+            if (shown == bar.slots.Count && without == 0)
+            {
+                return $"ui ok {shown}";
+            }
+            return $"ui {shown} shown for {bar.slots.Count} slots, {without} slots not shown";
         }
 
         /// <summary>Where the host's player is shown in our game (the remote player nearest us).</summary>
@@ -366,7 +399,11 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return ps.Remotes.TryGetValue(s.HostId, out var rp) && rp.Root != null && rp.Root.activeInHierarchy ? rp.Root.transform.position : (Vector3?)null;
+            if (ps.Remotes.TryGetValue(s.HostId, out var rp) && rp.Root != null && rp.Root.activeInHierarchy)
+            {
+                return rp.Root.transform.position;
+            }
+            return (Vector3?)null;
         }
 
         /// <summary>The ground under the player: a world chunk there (WorldChunk.getChunkAtPos), or on the map's chunks by their places.</summary>
@@ -381,7 +418,14 @@ namespace DarkwoodMP.World
             return n.Length == h.Length && h.Select((t, i) => t == "-" || t == n[i]).All(ok => ok);
         }
 
-        private static string Pos(Player p) => p == null ? "(no player)" : Pos(p.transform);
+        private static string Pos(Player p)
+        {
+            if (p == null)
+            {
+                return "(no player)";
+            }
+            return Pos(p.transform);
+        }
         private static string Pos(Transform t) => $"({t.position.x:0}, {t.position.z:0})";
     }
 }

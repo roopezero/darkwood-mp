@@ -27,8 +27,16 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
-            float fov = host != null ? Fov(host) : 90f;
-            float light = host != null && host.FOVDot != null ? host.FOVDot.LightRadius : 0f;
+            float fov = 90f;
+            if (host != null)
+            {
+                fov = Fov(host);
+            }
+            float light = 0f;
+            if (host != null && host.FOVDot != null)
+            {
+                light = host.FOVDot.LightRadius;
+            }
             if (Vector3.Angle(t.position - p.transform.position, p.transform.up) >= fov / 2f && d >= light)
             {
                 return false;
@@ -54,7 +62,15 @@ namespace DarkwoodMP.Combat
 
         public static float NearestPlayer(Transform t)
         {
-            float best = Player.Instance != null ? Core.trueDistance(Player.Instance._transform.position, t.position) : float.MaxValue;
+            float best;
+            if (Player.Instance != null)
+            {
+                best = Core.trueDistance(Player.Instance._transform.position, t.position);
+            }
+            else
+            {
+                best = float.MaxValue;
+            }
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p != null && p.alive)

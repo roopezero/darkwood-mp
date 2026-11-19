@@ -62,7 +62,14 @@ namespace DarkwoodMP.World
                             var f = line.Split('\t');
                             if (f[0] == "skip" && f.Length >= 2)
                             {
-                                Skip[f[1]] = f.Length > 2 ? f[2] : "";
+                                if (f.Length > 2)
+                                {
+                                    Skip[f[1]] = f[2];
+                                }
+                                else
+                                {
+                                    Skip[f[1]] = "";
+                                }
                             }
                             else if (f.Length >= 4 && f[0] == "item")
                             {
@@ -83,7 +90,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The mod's line for an item description key ("type_desc"), or null.</summary>
-        internal static string ItemText(string descKey) => descKey != null && Items.TryGetValue(descKey, out var t) ? Resolve(t) : null;
+        internal static string ItemText(string descKey)
+        {
+            if (descKey != null && Items.TryGetValue(descKey, out var t))
+            {
+                return Resolve(t);
+            }
+            return null;
+        }
 
         // Names in the lines are the game's own, in the current language: "{item:TYPE}" is that item's name and
         // "{ui:KEY}" the UI sheet's KEY (a location's name). Each line is resolved once per language.
@@ -206,7 +220,14 @@ namespace DarkwoodMP.World
             {
                 if (LocationText(_name) is string t)
                 {
-                    descText = string.IsNullOrEmpty(descText) ? t : t + "\n" + descText;
+                    if (string.IsNullOrEmpty(descText))
+                    {
+                        descText = t;
+                    }
+                    else
+                    {
+                        descText = t + "\n" + descText;
+                    }
                 }
             }
         }
@@ -380,7 +401,11 @@ namespace DarkwoodMP.World
         private static string RawDesc(string type)
         {
             var sheet = global::Language.GetAllKeysForSheet(ItemsSheet);
-            return sheet != null && sheet.TryGetValue(type + DescEnd, out var v) ? v : null;
+            if (sheet != null && sheet.TryGetValue(type + DescEnd, out var v))
+            {
+                return v;
+            }
+            return null;
         }
 
         /// <summary>Puts one of the item in a free backpack slot, shows its popup as the inventory does, and takes it
@@ -529,7 +554,14 @@ namespace DarkwoodMP.World
                         }
                     }
                     o["upgrades"] = ups;
-                    o["rottenItem"] = it.rottenItem != null ? it.rottenItem.type : null;
+                    if (it.rottenItem != null)
+                    {
+                        o["rottenItem"] = it.rottenItem.type;
+                    }
+                    else
+                    {
+                        o["rottenItem"] = (string)null;
+                    }
                     o["locations"] = new JArray(it.locations.ToArray());
                     var locUi = new JArray();
                     foreach (var l in it.locations)
@@ -582,7 +614,14 @@ namespace DarkwoodMP.World
                 try
                 {
                     var b = Biome.getBiomeAtPos(e.transform.position);
-                    o["biome"] = b != null ? b.type.ToString() : null;
+                    if (b != null)
+                    {
+                        o["biome"] = b.type.ToString();
+                    }
+                    else
+                    {
+                        o["biome"] = (string)null;
+                    }
                 }
                 catch
                 {
@@ -624,7 +663,14 @@ namespace DarkwoodMP.World
                 }
                 else if (v is UnityEngine.Object uo)
                 {
-                    o[f.Name] = uo != null ? uo.name : null;
+                    if (uo != null)
+                    {
+                        o[f.Name] = uo.name;
+                    }
+                    else
+                    {
+                        o[f.Name] = (string)null;
+                    }
                 }
                 else if (v is ICollection col)
                 {

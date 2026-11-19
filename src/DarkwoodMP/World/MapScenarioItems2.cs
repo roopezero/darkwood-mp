@@ -29,10 +29,24 @@ namespace DarkwoodMP.World
             ["fire"] = new Vector3(0f, 0f, -1300f),    // open ground for a molotov
             ["dark"] = new Vector3(-1300f, 0f, -600f), // away from the stations' lamps, for the lantern
         };
-        private static Vector3 Spot(string which) => Spots.TryGetValue(which, out var off) ? Centre + off : Centre;
+        private static Vector3 Spot(string which)
+        {
+            if (Spots.TryGetValue(which, out var off))
+            {
+                return Centre + off;
+            }
+            return Centre;
+        }
 
         private static Player P => Player.Instance;
-        private static string ItemName(InvItemClass i) => InvItemClass.isNull(i) ? "nothing" : i.type;
+        private static string ItemName(InvItemClass i)
+        {
+            if (InvItemClass.isNull(i))
+            {
+                return "nothing";
+            }
+            return i.type;
+        }
 
         private static readonly System.Reflection.MethodInfo AttackM = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
         private static readonly System.Reflection.MethodInfo ReloadM = AccessTools.Method(typeof(Player), "reload", Type.EmptyTypes);
@@ -102,7 +116,11 @@ namespace DarkwoodMP.World
             var ne = NetEnemies.Instance;
             if (s == null || !s.IsClient)
             {
-                return _dogs.TryGetValue(name, out var d) && d != null ? d : null;
+                if (_dogs.TryGetValue(name, out var d) && d != null)
+                {
+                    return d;
+                }
+                return null;
             }
             if (ne == null)
             {
@@ -265,7 +283,11 @@ namespace DarkwoodMP.World
         {
             bool hungry = System.Array.IndexOf(a, "--hungry") >= 0;
             a = System.Array.FindAll(a, s => s != "--hungry");
-            string name = a.Length > 0 ? a[0] : "gun";
+            string name = "gun";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             var spot = MapScenarioEnemies.FreeSpot(Spot(name));
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
             if (c == null)
@@ -313,7 +335,11 @@ namespace DarkwoodMP.World
         /// <summary>"i2-hurt NAME" (host): the dog lost health since i2-note, and no hit on it was refused.</summary>
         private static IEnumerator Hurt(string[] a, Result r)
         {
-            string name = a.Length > 0 ? a[0] : "gun";
+            string name = "gun";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             yield return new WaitForSeconds(1f);
             var d = DogOf(name);
             if (d == null)
@@ -321,7 +347,15 @@ namespace DarkwoodMP.World
                 r.Fail($"no {name} dog");
                 yield break;
             }
-            float was = _noted.TryGetValue(name, out float h) ? h : d.maxHealth;
+            float was;
+            if (_noted.TryGetValue(name, out float h))
+            {
+                was = h;
+            }
+            else
+            {
+                was = d.maxHealth;
+            }
             var refused = LogSince(_mark, @"refused EnemyHit");
             var capped = LogSince(_mark, @"\[authority\] .*'s hit on .* is more than");
             r.Info = $"{d.name}: health {was:0} -> {d.health:0}, alive {d.alive}; {refused.Count} hit(s) refused, {capped.Count} capped";
@@ -339,7 +373,11 @@ namespace DarkwoodMP.World
         /// <summary>"i2-shots-seen MIN": at least MIN of the other player's shots were shown on their puppet since i2-note.</summary>
         private static IEnumerator ShotsSeen(string[] a, Result r)
         {
-            int want = a.Length > 0 ? int.Parse(a[0]) : 1;
+            int want = 1;
+            if (a.Length > 0)
+            {
+                want = int.Parse(a[0]);
+            }
             float until = Time.realtimeSinceStartup + 5f;
             while (Sync.PlayerFx.ShotsSeen - _shotsNoted < want && Time.realtimeSinceStartup < until)
             {
@@ -396,7 +434,11 @@ namespace DarkwoodMP.World
             bool loaded = System.Array.IndexOf(a, "--loaded") >= 0;
             a = System.Array.FindAll(a, s => s != "--loaded");
             string type = a[0], name = a.Length > 1 ? a[1] : "gun";
-            int shots = a.Length > 2 ? int.Parse(a[2]) : 3;
+            int shots = 3;
+            if (a.Length > 2)
+            {
+                shots = int.Parse(a[2]);
+            }
             Character dog = null;
             yield return WaitDog(name, c => dog = c);
             if (dog == null)
@@ -407,7 +449,17 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             try
             {
-                yield return TakeOut(type, r, it => it.ammo = loaded ? it.baseClass.clipSize : 0);
+                yield return TakeOut(type, r, it =>
+                {
+                    if (loaded)
+                    {
+                        it.ammo = it.baseClass.clipSize;
+                    }
+                    else
+                    {
+                        it.ammo = 0;
+                    }
+                });
                 if (r.Failure != null)
                 {
                     yield break;
@@ -564,7 +616,15 @@ namespace DarkwoodMP.World
                     yield break;
                 }
             }
-            var target = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
+            Vector3 target;
+            if (dog != null)
+            {
+                target = dog.transform.position;
+            }
+            else
+            {
+                target = MapScenarioEnemies.FreeSpot(Spot(at));
+            }
             yield return Walk(Stand(target, type == "gasBomb" ? 340f : 250f), 30f); // (out of a gas cloud's reach)
             if (dog != null)
             {
@@ -653,7 +713,11 @@ namespace DarkwoodMP.World
                 }
                 _thrown = held;
                 // A gas bomb thrown at a dog right beside us can break on it at once: gone before we look.
-                var ti = held != null ? held.GetComponent<ThrownItem>() : null;
+                ThrownItem ti = null;
+                if (held != null)
+                {
+                    ti = held.GetComponent<ThrownItem>();
+                }
                 float until = Time.realtimeSinceStartup + 6f;
                 while (held != null && ti != null && !ti.onGround && Time.realtimeSinceStartup < until)
                 {
@@ -686,8 +750,20 @@ namespace DarkwoodMP.World
                 yield break;
             }
             string prefab = it.item.name;
-            var dog = at == "meat" || at == "gun" ? DogOf(at) : null;
-            var near = dog != null ? dog.transform.position : MapScenarioEnemies.FreeSpot(Spot(at));
+            Character dog = null;
+            if (at == "meat" || at == "gun")
+            {
+                dog = DogOf(at);
+            }
+            Vector3 near;
+            if (dog != null)
+            {
+                near = dog.transform.position;
+            }
+            else
+            {
+                near = MapScenarioEnemies.FreeSpot(Spot(at));
+            }
             GameObject copy = null;
             float until = Time.realtimeSinceStartup + 8f;
             while (copy == null && Time.realtimeSinceStartup < until)
@@ -715,9 +791,25 @@ namespace DarkwoodMP.World
             {
                 _seenBefore.Add(copy);
             }
-            var ti = copy != null ? copy.GetComponent<ThrownItem>() : null;
-            var ex = copy != null ? copy.GetComponent<Explodes>() : null;
-            Vector3 last = copy != null ? copy.transform.position : near;
+            ThrownItem ti = null;
+            if (copy != null)
+            {
+                ti = copy.GetComponent<ThrownItem>();
+            }
+            Explodes ex = null;
+            if (copy != null)
+            {
+                ex = copy.GetComponent<Explodes>();
+            }
+            Vector3 last;
+            if (copy != null)
+            {
+                last = copy.transform.position;
+            }
+            else
+            {
+                last = near;
+            }
             bool landed = gone, off = gone, fire = false;
             until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until)
@@ -735,7 +827,20 @@ namespace DarkwoodMP.World
                 // (new since i2-note: what earlier throws left there doesn't count)
                 fire = ThrownHits.Spawned.Any(g => g != null && !_spawnedAtNote.Contains(g) && StateDump.Flat(g.transform.position - last) < 400f)
                     || Object.FindObjectsOfType<Burn>().Any(b => b != null && !_burnsAtNote.Contains(b) && b.GetComponent<Player>() == null && StateDump.Flat(b.transform.position - last) < 400f);
-                if (want == "lands" ? landed : want == "off" ? off : fire)
+                bool condition;
+                if (want == "lands")
+                {
+                    condition = landed;
+                }
+                else if (want == "off")
+                {
+                    condition = off;
+                }
+                else
+                {
+                    condition = fire;
+                }
+                if (condition)
                 {
                     break;
                 }
@@ -743,7 +848,19 @@ namespace DarkwoodMP.World
             }
             float d = StateDump.Flat(last - near);
             r.Info = $"{(copy != null ? copy.name : prefab + (gone ? " (gone already)" : ""))} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
-            bool ok = want == "lands" ? landed : want == "off" ? off : fire;
+            bool ok;
+            if (want == "lands")
+            {
+                ok = landed;
+            }
+            else if (want == "off")
+            {
+                ok = off;
+            }
+            else
+            {
+                ok = fire;
+            }
             if (!ok)
             {
                 r.Fail($"it didn't {(want == "lands" ? "land" : want == "off" ? "go off" : "leave fire")}: {r.Info}");
@@ -849,7 +966,14 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
-            r.Info = _thrown == null ? "gone" : $"{_thrown.name} still at {Fmt(_thrown.transform.position)}";
+            if (_thrown == null)
+            {
+                r.Info = "gone";
+            }
+            else
+            {
+                r.Info = $"{_thrown.name} still at {Fmt(_thrown.transform.position)}";
+            }
             if (_thrown != null)
             {
                 r.Fail(r.Info);
@@ -859,14 +983,26 @@ namespace DarkwoodMP.World
         /// <summary>"i2-gassed NAME" (host): the NAME dog was caught in the gas (the effect on it, or health lost since i2-note).</summary>
         private static IEnumerator Gassed(string[] a, Result r)
         {
-            string name = a.Length > 0 ? a[0] : "meat";
+            string name = "meat";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             var d = DogOf(name);
             if (d == null)
             {
                 r.Fail("no dog");
                 yield break;
             }
-            float was = _noted.TryGetValue(name, out float h) ? h : d.maxHealth;
+            float was;
+            if (_noted.TryGetValue(name, out float h))
+            {
+                was = h;
+            }
+            else
+            {
+                was = d.maxHealth;
+            }
             bool gas = false;
             float until = Time.realtimeSinceStartup + 6f;
             while (!(gas = d.effects != null && d.effects.hasEffectType(CharacterEffectType.gas)) && d.health >= was && Time.realtimeSinceStartup < until)
@@ -951,7 +1087,15 @@ namespace DarkwoodMP.World
                     NetPlayerProxy.All.TryGetValue(rp.Owner, out proxy);
                 }
                 shown = rp != null && rp.LanternShown > 0f;
-                var pos = proxy != null ? proxy.transform.position : rp?.Last?.Position ?? Vector3.zero;
+                Vector3 pos;
+                if (proxy != null)
+                {
+                    pos = proxy.transform.position;
+                }
+                else
+                {
+                    pos = rp?.Last?.Position ?? Vector3.zero;
+                }
                 inLight = rp != null && Core.isInLight(pos, mustBeWalkable: false);
                 if ((shown == want && inLight == want) || Time.realtimeSinceStartup > until)
                 {

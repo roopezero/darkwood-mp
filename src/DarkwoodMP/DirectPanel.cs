@@ -249,9 +249,14 @@ namespace DarkwoodMP
         }
 
         /// <summary>What the host's friends connect on, and what the host has to do for internet play.</summary>
-        public static string PortHint(int port, bool openPort) => openPort
-            ? $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Your router is asked to forward both; if it can't, the window says so: forward them by hand, or use a VPN (Tailscale, ZeroTier)."
-            : $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Over the internet, forward both, or use a VPN (Tailscale, ZeroTier).";
+        public static string PortHint(int port, bool openPort)
+        {
+            if (openPort)
+            {
+                return $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Your router is asked to forward both; if it can't, the window says so: forward them by hand, or use a VPN (Tailscale, ZeroTier).";
+            }
+            return $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Over the internet, forward both, or use a VPN (Tailscale, ZeroTier).";
+        }
 
         private void LookUpPublicIp()
         {
@@ -361,8 +366,22 @@ namespace DarkwoodMP
             _scroll = GUI.BeginScrollView(listArea, _scroll, view, false, rows.Count * rowH > listArea.height, GUIStyle.none, GUI.skin.verticalScrollbar);
             if (rows.Count == 0)
             {
-                string empty = _tab == ServerBrowser.Tab.Lan ? (_browser.SearchingLan ? "Searching the LAN..." : "No servers found on the LAN.")
-                    : _tab == ServerBrowser.Tab.Favorites ? "No favorites yet: Add server puts one here." : "You haven't joined any servers yet.";
+                string empty = "You haven't joined any servers yet.";
+                if (_tab == ServerBrowser.Tab.Lan)
+                {
+                    if (_browser.SearchingLan)
+                    {
+                        empty = "Searching the LAN...";
+                    }
+                    else
+                    {
+                        empty = "No servers found on the LAN.";
+                    }
+                }
+                else if (_tab == ServerBrowser.Tab.Favorites)
+                {
+                    empty = "No favorites yet: Add server puts one here.";
+                }
                 Ui.Label(new Rect(6 * s, 4 * s, view.width - 12 * s, rowH), empty, MenuSkin.Dim);
             }
             var rc = Ui.Split(new Rect(0, 0, view.width, rowH), ColumnWidths);
@@ -391,17 +410,56 @@ namespace DarkwoodMP
                 }
                 var info = e.Info;
                 bool ok = CanJoin(addr);
-                Color col = !ok || (info == null && !e.Querying) ? MenuSkin.Dim : sel ? MenuSkin.Bright : MenuSkin.Text;
+                Color col;
+                if (!ok || (info == null && !e.Querying))
+                {
+                    col = MenuSkin.Dim;
+                }
+                else if (sel)
+                {
+                    col = MenuSkin.Bright;
+                }
+                else
+                {
+                    col = MenuSkin.Text;
+                }
                 float y = row.y;
                 Rect C(int c) => new Rect(rc[c].x + 4 * s, y, rc[c].width - 4 * s, rowH);
                 if (info?.Password == true)
                 {
                     DrawLock(C(0), col);
                 }
-                string name = info != null ? info.Name : addr;
+                string name;
+                if (info != null)
+                {
+                    name = info.Name;
+                }
+                else
+                {
+                    name = addr;
+                }
                 Ui.Label(C(1), PixelFont.Fit(name, C(1).width), col);
                 Ui.Label(C(2), info != null ? $"{info.Players}/{info.MaxPlayers}" : "", col);
-                string world = info == null ? (e.Querying ? "..." : "no answer") : info.Incompatibility != null ? "other version" : info.Fields.TryGetValue("world", out var wl) ? wl : "";
+                string world = "";
+                if (info == null)
+                {
+                    if (e.Querying)
+                    {
+                        world = "...";
+                    }
+                    else
+                    {
+                        world = "no answer";
+                    }
+                }
+                else if (info.Incompatibility != null)
+                {
+                    world = "other version";
+                }
+                else if (info.Fields.TryGetValue("world", out var wl))
+                {
+                    world = wl;
+                }
                 Ui.Label(C(3), PixelFont.Fit(world, C(3).width), col);
                 Ui.Label(C(4), info != null ? e.PingMs.ToString() : "", col);
             }
@@ -417,10 +475,25 @@ namespace DarkwoodMP
             }
             else
             {
-                status = _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching the LAN..." : $"{rows.Count} server{(rows.Count == 1 ? "" : "s")}";
+                if (_tab == ServerBrowser.Tab.Lan && _browser.SearchingLan)
+                {
+                    status = "Searching the LAN...";
+                }
+                else
+                {
+                    status = $"{rows.Count} server{(rows.Count == 1 ? "" : "s")}";
+                }
             }
             // Beside it, while no name is set (the Steam or OS user name is used), where to set one.
-            string hint = _session.Active || !string.IsNullOrWhiteSpace(Plugin.Cfg.PlayerName.Value) ? null : $"You're {_session.LocalName}: set a name in Options";
+            string hint;
+            if (_session.Active || !string.IsNullOrWhiteSpace(Plugin.Cfg.PlayerName.Value))
+            {
+                hint = null;
+            }
+            else
+            {
+                hint = $"You're {_session.LocalName}: set a name in Options";
+            }
             float hintW = hint != null ? Mathf.Min(PixelFont.Width(hint) + 8 * s, f.Width * 0.6f) : 0f, statusW = f.Width - hintW - (hint != null ? 8 * s : 0f);
             Ui.Label(new Rect(f.Area.x + 2 * s, f.Y, statusW, statusH), PixelFont.Fit(status, statusW), MenuSkin.Dim);
             if (hint != null)
@@ -462,15 +535,27 @@ namespace DarkwoodMP
                 switch (_sortColumn)
                 {
                     case 0:
-                        return i?.Password == true ? 1 : 0;
+                        if (i?.Password == true)
+                        {
+                            return 1;
+                        }
+                        return 0;
                     case 1:
                         return (i?.Name ?? a).ToLowerInvariant();
                     case 2:
                         return i?.Players ?? -1;
                     case 3:
-                        return i != null && i.Fields.TryGetValue("world", out var w) ? w : "";
+                        if (i != null && i.Fields.TryGetValue("world", out var w))
+                        {
+                            return w;
+                        }
+                        return "";
                     default:
-                        return i != null ? e.PingMs : int.MaxValue;
+                        if (i != null)
+                        {
+                            return e.PingMs;
+                        }
+                        return int.MaxValue;
                 }
             }
             var sorted = list.OrderBy(Key);
@@ -650,6 +735,17 @@ namespace DarkwoodMP
             }
         }
 
-        private string Name(string addr) => addr == null ? "" : _browser.Get(addr).Info?.Name is string n && n.Length > 0 ? n : addr;
+        private string Name(string addr)
+        {
+            if (addr == null)
+            {
+                return "";
+            }
+            if (_browser.Get(addr).Info?.Name is string n && n.Length > 0)
+            {
+                return n;
+            }
+            return addr;
+        }
     }
 }

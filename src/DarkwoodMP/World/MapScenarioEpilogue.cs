@@ -87,7 +87,11 @@ namespace DarkwoodMP.World
         /// <summary>"epilogue-next" (client): our part ends (its first outcome, as its endDream step does); we go on to the next.</summary>
         private static IEnumerator Next(string[] a, Result r)
         {
-            string from = D.preset != null ? D.preset.name : "";
+            string from = "";
+            if (D.preset != null)
+            {
+                from = D.preset.name;
+            }
             if (D.preset == null || D.preset.outcomes.Count == 0)
             {
                 r.Fail($"no outcomes: {Where()}");
@@ -112,7 +116,15 @@ namespace DarkwoodMP.World
         /// <summary>"epilogue-moved FROM" (host): the client's end of a part took us on too, out of FROM.</summary>
         private static IEnumerator Moved(string[] a, Result r)
         {
-            string from = a.Length > 0 ? a[0] : Chapters.EpilogueDream;
+            string from;
+            if (a.Length > 0)
+            {
+                from = a[0];
+            }
+            else
+            {
+                from = Chapters.EpilogueDream;
+            }
             float until = Time.realtimeSinceStartup + 90f;
             while (Time.realtimeSinceStartup < until && !(D.dreaming && !D.switchingDream && D.preset != null && D.preset.name != from))
             {
@@ -186,11 +198,19 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Onward(string[] a, Result r)
         {
-            string want = a.Length > 0 ? a[0] : "crater";
+            string want = "crater";
+            if (a.Length > 0)
+            {
+                want = a[0];
+            }
             var path = new System.Collections.Generic.List<string>();
             for (int hop = 0; hop < 5 && !(D.preset != null && D.preset.name.Contains(want)); hop++)
             {
-                string from = D.preset != null ? D.preset.name : "";
+                string from = "";
+                if (D.preset != null)
+                {
+                    from = D.preset.name;
+                }
                 if (D.preset == null || D.preset.outcomes.Count == 0)
                 {
                     r.Fail($"no outcomes: {Where()}");
@@ -225,7 +245,11 @@ namespace DarkwoodMP.World
         /// <summary>"epilogue-at PART" (host): the client's ends took us to PART too.</summary>
         private static IEnumerator At(string[] a, Result r)
         {
-            string want = a.Length > 0 ? a[0] : "crater";
+            string want = "crater";
+            if (a.Length > 0)
+            {
+                want = a[0];
+            }
             float until = Time.realtimeSinceStartup + 300f;
             while (Time.realtimeSinceStartup < until && !InPartLike(want))
             {

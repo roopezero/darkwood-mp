@@ -88,7 +88,14 @@ namespace DarkwoodMP.World
             return parts.Count + " enemies: " + string.Join("; ", parts.Take(30));
         }
 
-        internal static string Id(Character c) => NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint id) ? id.ToString() : "i" + c.GetInstanceID();
+        internal static string Id(Character c)
+        {
+            if (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint id))
+            {
+                return id.ToString();
+            }
+            return "i" + c.GetInstanceID();
+        }
 
         internal static string Rel(Vector3 p)
         {
@@ -125,7 +132,11 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                string t = m.DeclaringType != null ? m.DeclaringType.Name : "?";
+                string t = "?";
+                if (m.DeclaringType != null)
+                {
+                    t = m.DeclaringType.Name;
+                }
                 if (t.Contains("Patch") || t == "MapScenarioDogWatch")
                 {
                     continue;
@@ -313,7 +324,17 @@ namespace DarkwoodMP.World
         [HarmonyPatch(typeof(Character), nameof(Character.heardSound), new[] { typeof(Vector3), typeof(float), typeof(bool), typeof(float), typeof(bool) })]
         static class HearPatch
         {
-            static void Prefix(Character __instance, out float __state) => __state = __instance != null ? __instance.hearingCounter : 0f;
+            static void Prefix(Character __instance, out float __state)
+            {
+                if (__instance != null)
+                {
+                    __state = __instance.hearingCounter;
+                }
+                else
+                {
+                    __state = 0f;
+                }
+            }
 
             static void Postfix(Character __instance, Vector3 Position, float soundRange, bool dangerousSound, float volume, float __state)
             {

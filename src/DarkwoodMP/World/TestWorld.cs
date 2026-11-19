@@ -204,8 +204,20 @@ namespace DarkwoodMP.World
         {
             try
             {
-                var xz = File.Exists(AreaFile) ? File.ReadAllText(AreaFile).Split(' ') : new string[0];
-                return xz.Length > 2 && int.TryParse(xz[2], out int c) ? c : 0;
+                string[] xz;
+                if (File.Exists(AreaFile))
+                {
+                    xz = File.ReadAllText(AreaFile).Split(' ');
+                }
+                else
+                {
+                    xz = new string[0];
+                }
+                if (xz.Length > 2 && int.TryParse(xz[2], out int c))
+                {
+                    return c;
+                }
+                return 0;
             }
             catch
             {

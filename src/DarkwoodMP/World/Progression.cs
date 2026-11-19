@@ -109,10 +109,27 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The most levels a player can have now: the shared level, or what the shared essence allows.</summary>
-        internal static int MostLevels(Player p) => p == null ? SharedLevel : Math.Max(SharedLevel, Allowed(p));
+        internal static int MostLevels(Player p)
+        {
+            if (p == null)
+            {
+                return SharedLevel;
+            }
+            return Math.Max(SharedLevel, Allowed(p));
+        }
 
         /// <summary>The stove's menu (LevelingMenu), or null.</summary>
-        private static LevelingMenu StoveMenu => Singleton<UI>.Instance != null ? Singleton<UI>.Instance.LevelingMenu : null;
+        private static LevelingMenu StoveMenu
+        {
+            get
+            {
+                if (Singleton<UI>.Instance != null)
+                {
+                    return Singleton<UI>.Instance.LevelingMenu;
+                }
+                return null;
+            }
+        }
 
         private static bool BarFull(Player p) => SharedLevel > 7 || SharedExp >= Req(p, SharedLevel);
 
@@ -333,7 +350,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static int Today => Singleton<Controller>.Instance != null ? Singleton<Controller>.Instance.day : 0;
+        private static int Today
+        {
+            get
+            {
+                if (Singleton<Controller>.Instance != null)
+                {
+                    return Singleton<Controller>.Instance.day;
+                }
+                return 0;
+            }
+        }
 
         public const string NotMorning = "Skills can only be reset in the morning, before you leave your hideout";
 
@@ -740,7 +767,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            int waiting = (Hideouts.Together || Solo) ? Math.Max(0, SharedLevel - p.currentLevel) : 0;
+            int waiting = 0;
+            if (Hideouts.Together || Solo)
+            {
+                waiting = Math.Max(0, SharedLevel - p.currentLevel);
+            }
             int points = SkillTree.Points(p);
             bool morning = InMorning(0);
             var lines = new List<string>(2);
@@ -761,7 +792,11 @@ namespace DarkwoodMP.World
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
             float s = Ui.S, pad = 6 * s, line = PixelFont.Line + 2 * s;
-            string button = _waitingReset ? "Asking the host..." : "Reset skills (mornings, once a day)";
+            string button = "Reset skills (mornings, once a day)";
+            if (_waitingReset)
+            {
+                button = "Asking the host...";
+            }
             float w = PixelFont.Width("Reset skills (mornings, once a day)") + 24 * s;
             foreach (var l in lines)
             {
@@ -867,7 +902,17 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.consumeExp))]
     static class ConsumeExpPatch
     {
-        static void Prefix(out int __state) => __state = Player.Instance != null ? Player.Instance.experience : 0;
+        static void Prefix(out int __state)
+        {
+            if (Player.Instance != null)
+            {
+                __state = Player.Instance.experience;
+            }
+            else
+            {
+                __state = 0;
+            }
+        }
         static void Postfix(int __state)
         {
             if (Player.Instance == null || WorldActions.Replaying)

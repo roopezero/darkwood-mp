@@ -78,7 +78,14 @@ namespace DarkwoodMP.World
             _told.Clear();
         }
 
-        private static string NameOf(Session s, ulong id) => s.Names.TryGetValue(id, out var n) ? n : id.ToString();
+        private static string NameOf(Session s, ulong id)
+        {
+            if (s.Names.TryGetValue(id, out var n))
+            {
+                return n;
+            }
+            return id.ToString();
+        }
 
         /// <summary>Host, every frame: run the clock during our after-night while a joiner is out of their hideout.</summary>
         public static void Update()
@@ -298,7 +305,11 @@ namespace DarkwoodMP.World
         private static bool TalkingToMorningVisitor()
         {
             var p = Player.Instance;
-            var w = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
+            DialogueWindow w = null;
+            if (Singleton<UI>.Instance != null)
+            {
+                w = Singleton<UI>.Instance.dialogueWindow;
+            }
             if (p == null || w == null || w.npc == null || !p.inDialogue)
             {
                 return false;
@@ -332,7 +343,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var c = Singleton<Controller>.Instance;
-            var w = Singleton<UI>.Instance != null ? Singleton<UI>.Instance.dialogueWindow : null;
+            DialogueWindow w = null;
+            if (Singleton<UI>.Instance != null)
+            {
+                w = Singleton<UI>.Instance.dialogueWindow;
+            }
             if (c == null || w == null || Player.Instance == null || !WorldShare.InWorld)
             {
                 _endPending = false;

@@ -55,7 +55,11 @@ namespace DarkwoodMP.World
 
         private static Item ByIndex(string[] a, Result r)
         {
-            int k = a.Length > 0 ? int.Parse(a[0], CultureInfo.InvariantCulture) : 0;
+            int k = 0;
+            if (a.Length > 0)
+            {
+                k = int.Parse(a[0], CultureInfo.InvariantCulture);
+            }
             if (k < 0 || k >= _order.Count)
             {
                 r.Fail($"no item {k} (kn-info found {_order.Count})");
@@ -73,7 +77,11 @@ namespace DarkwoodMP.World
         {
             var sb = new StringBuilder();
             var inv = i.GetComponent<Inventory>();
-            string type = inv != null && inv.slots.Count > 0 && !InvItemClass.isNull(inv.slots[0].invItem) ? inv.slots[0].invItem.type : "?";
+            string type = "?";
+            if (inv != null && inv.slots.Count > 0 && !InvItemClass.isNull(inv.slots[0].invItem))
+            {
+                type = inv.slots[0].invItem.type;
+            }
             var b = i.GetComponent<Rigidbody>();
             sb.Append(FormattableString.Invariant($"{Ref(i)} {type} at {i.transform.position.x:0.0} {i.transform.position.y:0.0} {i.transform.position.z:0.0} active={i.gameObject.activeInHierarchy}"));
             if (b == null)
@@ -102,7 +110,11 @@ namespace DarkwoodMP.World
 
         private static IEnumerator InfoStep(string[] a, Result r)
         {
-            float radius = a.Length > 0 ? float.Parse(a[0], CultureInfo.InvariantCulture) : 250f;
+            float radius = 250f;
+            if (a.Length > 0)
+            {
+                radius = float.Parse(a[0], CultureInfo.InvariantCulture);
+            }
             var list = Dropped(radius).OrderBy(i => StateDump.Flat(i.transform.position - Centre)).ToList();
             if (_order.Count == 0)
             {
@@ -130,7 +142,14 @@ namespace DarkwoodMP.World
             var start = it.transform.position;
             var dir = start - P.transform.position;
             dir.y = 0f;
-            dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.forward;
+            if (dir.sqrMagnitude > 1f)
+            {
+                dir = dir.normalized;
+            }
+            else
+            {
+                dir = Vector3.forward;
+            }
             yield return Walk(start - dir * 90f, 10f, detours: 0);
             yield return Walk(start + dir * 80f, 5f, detours: 0);
             yield return new WaitForSeconds(3f); // at rest, and sent
@@ -139,10 +158,18 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Slide(string[] a, Result r)
         {
-            string type = a.Length > 0 ? a[0] : "rope";
+            string type = "rope";
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
             float since = Time.unscaledTime;
             var t = P.spawnDroppedInvItemm(false, type, 1);
-            var b = t != null ? t.GetComponent<Rigidbody>() : null;
+            Rigidbody b = null;
+            if (t != null)
+            {
+                b = t.GetComponent<Rigidbody>();
+            }
             if (b == null)
             {
                 r.Fail($"couldn't drop {type}");
@@ -186,11 +213,22 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            string kind = a.Length > 1 ? a[1] : "Dog";
+            string kind = "Dog";
+            if (a.Length > 1)
+            {
+                kind = a[1];
+            }
             var start = it.transform.position;
             var dir = start - P.transform.position;
             dir.y = 0f;
-            dir = dir.sqrMagnitude > 1f ? dir.normalized : Vector3.forward;
+            if (dir.sqrMagnitude > 1f)
+            {
+                dir = dir.normalized;
+            }
+            else
+            {
+                dir = Vector3.forward;
+            }
             dir = Quaternion.Euler(0f, 90f, 0f) * dir; // across, not from our player's side
             var from = start - dir * 150f;
             var to = start + dir * 150f;

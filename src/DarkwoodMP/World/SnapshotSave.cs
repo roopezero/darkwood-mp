@@ -81,7 +81,15 @@ namespace DarkwoodMP.World
             }
 
             // Private in the game; it sets it to None on start (SaveManager.Awake).
-            var formatting = HarmonyLib.Traverse.Create(sm).Field("formatting").GetValue() is Formatting f ? f : Formatting.None;
+            Formatting formatting;
+            if (HarmonyLib.Traverse.Create(sm).Field("formatting").GetValue() is Formatting f)
+            {
+                formatting = f;
+            }
+            else
+            {
+                formatting = Formatting.None;
+            }
             return Task.Run(() => Write(d, file, formatting));
         }
 

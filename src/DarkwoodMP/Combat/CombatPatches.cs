@@ -71,7 +71,15 @@ namespace DarkwoodMP.Combat
             // The game splats blood for a normal hit that took health (not the night trader); show it to the clients too.
             if (normalHit && dealt > 0f && !__instance.isNightTrader && Net.Session.Instance != null && Net.Session.Instance.IsHost)
             {
-                float y = attackerTransform != null ? (attackerTransform.rotation * Quaternion.Euler(90f, 180f, 0f)).eulerAngles.y : __instance.transform.eulerAngles.y;
+                float y;
+                if (attackerTransform != null)
+                {
+                    y = (attackerTransform.rotation * Quaternion.Euler(90f, 180f, 0f)).eulerAngles.y;
+                }
+                else
+                {
+                    y = __instance.transform.eulerAngles.y;
+                }
                 NetEnemies.Instance?.HostBlood(__instance, y);
             }
             if (!Threat.Enabled || attackerTransform == null)
@@ -317,8 +325,18 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>The grid a player is in: their separate location's, the world's, or none (away in a place the host doesn't run).</summary>
-        private static WorldGrid.Grid GridOf(WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p) =>
-            p.InLocation != null ? wg.getGrid(Core.getTrueLocationName(p.InLocation.name)) : p.Away ? null : world;
+        private static WorldGrid.Grid GridOf(WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p)
+        {
+            if (p.InLocation != null)
+            {
+                return wg.getGrid(Core.getTrueLocationName(p.InLocation.name));
+            }
+            if (p.Away)
+            {
+                return null;
+            }
+            return world;
+        }
 
         /// <summary>Another player's centre, with the rect their own game keeps running (ViewRects).</summary>
         private static Centre Of(NetPlayerProxy p)
@@ -843,7 +861,11 @@ namespace DarkwoodMP.Combat
                 return true;
             }
             // An NPC a joiner's event sends after "the player" (a dialogue's outcome, run here for them) goes for them.
-            var requester = __instance.npc != null ? World.Authority.Requester : null;
+            NetPlayerProxy requester = null;
+            if (__instance.npc != null)
+            {
+                requester = World.Authority.Requester;
+            }
             if (requester != null)
             {
                 HostileNpcs.SendAfter(__instance, requester);
@@ -898,8 +920,14 @@ namespace DarkwoodMP.Combat
         private static readonly System.Reflection.MethodInfo GetPosition = AccessTools.PropertyGetter(typeof(Transform), nameof(Transform.position));
 
         /// <summary>Player.Instance._transform.position</summary>
-        private static int HostPosition(List<CodeInstruction> l, int i) =>
-            i + 2 < l.Count && l[i].Calls(JoinerAi.GetInstance) && l[i + 1].LoadsField(PlayerTransform) && l[i + 2].Calls(GetPosition) ? 3 : 0;
+        private static int HostPosition(List<CodeInstruction> l, int i)
+        {
+            if (i + 2 < l.Count && l[i].Calls(JoinerAi.GetInstance) && l[i + 1].LoadsField(PlayerTransform) && l[i + 2].Calls(GetPosition))
+            {
+                return 3;
+            }
+            return 0;
+        }
 
         public static System.Reflection.MethodInfo Nearest => AccessTools.Method(typeof(Threat), nameof(Threat.NearestPlayerPos));
         public static System.Reflection.MethodInfo Flee => AccessTools.Method(typeof(Threat), nameof(Threat.FleeFrom));
@@ -979,7 +1007,11 @@ namespace DarkwoodMP.Combat
             float best = float.MaxValue;
             for (int i = 0; i < n; i++)
             {
-                var cb = _near[i] != null ? _near[i].GetComponent<CharBase>() : null;
+                CharBase cb = null;
+                if (_near[i] != null)
+                {
+                    cb = _near[i].GetComponent<CharBase>();
+                }
                 if (!Proxies.IsPlayer(cb) || (cb is NetPlayerProxy && !cb.alive))
                 {
                     continue;

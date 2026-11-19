@@ -134,7 +134,14 @@ namespace DarkwoodMP.World
         /// <summary>Where the fights are: away from the stations (the host stays at the centre, out of the way).</summary>
         private static Vector3 ArenaSpot => FreeSpot(Centre + new Vector3(0f, 0f, 1500f));
 
-        private static string Short(string kind) => kind.Contains('/') ? kind.Substring(kind.LastIndexOf('/') + 1) : kind;
+        private static string Short(string kind)
+        {
+            if (kind.Contains('/'))
+            {
+                return kind.Substring(kind.LastIndexOf('/') + 1);
+            }
+            return kind;
+        }
         private static bool IsKind(Character c, string kind) => c != null && c.name.Replace("(Clone)", "").Trim().Equals(Short(kind), StringComparison.OrdinalIgnoreCase);
 
         internal static Vector3 FreeSpot(Vector3 at)
@@ -272,7 +279,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Solo(string[] a, Result r)
         {
-            string kind = a.Length > 0 ? a[0] : "Spider01";
+            string kind = "Spider01";
+            if (a.Length > 0)
+            {
+                kind = a[0];
+            }
             var spot = FreeSpot(P.transform.position + new Vector3(0f, 0f, -400f));
             var c = SpawnAt(kind, spot, attack: true);
             if (c == null)
@@ -314,7 +325,11 @@ namespace DarkwoodMP.World
                     l.Add($"{it.name}{(it.gameObject.activeInHierarchy ? "" : " (off)")} [{string.Join("/", it.GetComponents<MonoBehaviour>().Where(m => m != null).Select(m => m.GetType().Name + (m.enabled ? "" : "-off")))}]");
                 }
             }
-            return l.Count == 0 ? "no items" : string.Join(", ", l);
+            if (l.Count == 0)
+            {
+                return "no items";
+            }
+            return string.Join(", ", l);
         }
 
         /// <summary>What's special about a character (the components and flags behind its special behaviours).</summary>
@@ -403,7 +418,19 @@ namespace DarkwoodMP.World
                     if (c.target != null)
                     {
                         var cb = c.target.GetComponent<CharBase>();
-                        string who = cb is NetPlayerProxy np ? "client " + np.OwnerName : cb is Player ? "host player" : c.target.name;
+                        string who;
+                        if (cb is NetPlayerProxy np)
+                        {
+                            who = "client " + np.OwnerName;
+                        }
+                        else if (cb is Player)
+                        {
+                            who = "host player";
+                        }
+                        else
+                        {
+                            who = c.target.name;
+                        }
                         w.Targets.Add(who);
                         if (who != w.LastTarget)
                         {
@@ -449,7 +476,22 @@ namespace DarkwoodMP.World
             w.Done = true;
             var all = new List<Character> { w.C }.Concat(w.Minions).ToList();
             var alive = all.Where(c => c != null && NetEnemies.InPlay(c)).ToList();
-            string minions = w.Minions.Count == 0 ? "none" : string.Join(", ", w.Minions.Select(m => m == null ? "(gone)" : $"{m.name}{(NetEnemies.Instance.NetIdOf(m, out uint i) ? " #" + i : "")} {(NetEnemies.InPlay(m) ? "alive" : "dead")}"));
+            string minions;
+            if (w.Minions.Count == 0)
+            {
+                minions = "none";
+            }
+            else
+            {
+                minions = string.Join(", ", w.Minions.Select(m =>
+                {
+                    if (m == null)
+                    {
+                        return "(gone)";
+                    }
+                    return $"{m.name}{(NetEnemies.Instance.NetIdOf(m, out uint i) ? " #" + i : "")} {(NetEnemies.InPlay(m) ? "alive" : "dead")}";
+                }));
+            }
             r.Info = $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, " +
                      (w.C == null ? "gone" : $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}");
             if (w.Timeline.Count > 1)
@@ -539,9 +581,17 @@ namespace DarkwoodMP.World
         private static IEnumerator Fight(string[] a, Result r)
         {
             var p = P;
-            string kind = a.Length > 0 ? a[0] : "";
+            string kind = "";
+            if (a.Length > 0)
+            {
+                kind = a[0];
+            }
             bool hurts = a.Contains("--hurts"), moves = a.Contains("--moves"), throws = a.Contains("--throws");
-            int needHits = a.Contains("--twice") ? 2 : 1;
+            int needHits = 1;
+            if (a.Contains("--twice"))
+            {
+                needHits = 2;
+            }
             int shown0 = EnemyLandings.Shown;
             Character c = null;
             uint id = 0;
@@ -596,7 +646,11 @@ namespace DarkwoodMP.World
             }
             int thrown = EnemyLandings.Shown - shown0;
             string came = $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, hurt us {hits} time(s) for {lost:0}, {thrown} projectile(s) shown (children here: {Children(c)})";
-            string weapon = a.Contains("--cut") ? CutWeapon() : "pitchfork";
+            string weapon = "pitchfork";
+            if (a.Contains("--cut"))
+            {
+                weapon = CutWeapon();
+            }
             if (weapon == null)
             {
                 r.Fail("no melee weapon in the game cuts in half");
@@ -798,7 +852,14 @@ namespace DarkwoodMP.World
             if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
             {
                 r.Fail($"couldn't take the {type} out (holding {(InvItemClass.isNull(p.currentItem) ? "nothing" : p.currentItem.type)}, switching {p.switchingItem}; hotbar: " +
-                       string.Join(", ", p.Hotbar.slots.Select(s => InvItemClass.isNull(s.invItem) ? "-" : $"{s.invItem.type} ({s.invItem.durability:0}){(s.selected ? " selected" : "")}")) + ")");
+                       string.Join(", ", p.Hotbar.slots.Select(s =>
+                       {
+                           if (InvItemClass.isNull(s.invItem))
+                           {
+                               return "-";
+                           }
+                           return $"{s.invItem.type} ({s.invItem.durability:0}){(s.selected ? " selected" : "")}";
+                       })) + ")");
             }
         }
 
@@ -992,12 +1053,23 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var c = _armor.GetComponent<Character>();
-            var target = c != null && c.target != null ? c.target.GetComponent<CharBase>() : null;
+            CharBase target = null;
+            if (c != null && c.target != null)
+            {
+                target = c.target.GetComponent<CharBase>();
+            }
             r.Info = $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {(target is NetPlayerProxy np ? "client " + np.OwnerName : target is Player ? "host player" : target != null ? target.name : "nobody")}";
             bool hurt = _armor.health < _armorHealth;
             r.Info += "; " + _beamLog;
             bool keep = a.Length > 0 && a[0] == "keep";
-            _armoredDog = keep ? c : null;
+            if (keep)
+            {
+                _armoredDog = c;
+            }
+            else
+            {
+                _armoredDog = null;
+            }
             _armor = null;
             if (keep)
             {
@@ -1061,7 +1133,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             var s = dog.GetComponent<ShadowArmor>();
-            r.Info = s == null ? $"{dog.name}: no shadow armour" : $"{dog.name}: shadow armour {s.health:0.#} (going to {dest(s):0.#}) of {s.maxHealth:0}, effect {(s.effectGO != null ? "shown" : "none")}";
+            if (s == null)
+            {
+                r.Info = $"{dog.name}: no shadow armour";
+            }
+            else
+            {
+                r.Info = $"{dog.name}: shadow armour {s.health:0.#} (going to {dest(s):0.#}) of {s.maxHealth:0}, effect {(s.effectGO != null ? "shown" : "none")}";
+            }
             if (!Ok())
             {
                 r.Fail(r.Info);

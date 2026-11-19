@@ -51,7 +51,11 @@ namespace DarkwoodMP
 
         private static void SetZoom(Transform t, float zoom)
         {
-            var tk = t != null ? t.GetComponent<tk2dCamera>() : null;
+            tk2dCamera tk = null;
+            if (t != null)
+            {
+                tk = t.GetComponent<tk2dCamera>();
+            }
             if (tk != null)
             {
                 tk.ZoomFactor = zoom;

@@ -14,7 +14,15 @@ namespace DarkwoodMP
         public static void LateUpdate(bool panelOpen)
         {
             bool playing = WorldShare.InWorld && !Core.mainMenu && !Core.loadingGame && !panelOpen;
-            var want = playing ? CursorLockMode.Confined : CursorLockMode.None;
+            CursorLockMode want;
+            if (playing)
+            {
+                want = CursorLockMode.Confined;
+            }
+            else
+            {
+                want = CursorLockMode.None;
+            }
             if (UnityEngine.Cursor.lockState != want)
             {
                 UnityEngine.Cursor.lockState = want;

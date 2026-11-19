@@ -33,7 +33,14 @@ namespace DarkwoodMP.World
 
         private static int Level => Singleton<Controller>.Instance.workbenchLevel;
 
-        private static string Slot(InvSlot s) => InvItemClass.isNull(s.invItem) ? "-" : $"{s.invItem.type}x{s.invItem.amount}";
+        private static string Slot(InvSlot s)
+        {
+            if (InvItemClass.isNull(s.invItem))
+            {
+                return "-";
+            }
+            return $"{s.invItem.type}x{s.invItem.amount}";
+        }
 
         /// <summary>
         /// "wb-rows-check [--level L] [--grown N] [--slot IDX TYPE AMOUNT] [--shot DIR]": the storage has the slot
@@ -48,10 +55,22 @@ namespace DarkwoodMP.World
             string Opt(string name, int k = 1)
             {
                 int i = args.IndexOf(name);
-                return i >= 0 && i + k < args.Count ? args[i + k] : null;
+                if (i >= 0 && i + k < args.Count)
+                {
+                    return args[i + k];
+                }
+                return null;
             }
-            int wantLevel = Opt("--level") != null ? int.Parse(Opt("--level")) : -1;
-            int grown = Opt("--grown") != null ? int.Parse(Opt("--grown")) : -1;
+            int wantLevel = -1;
+            if (Opt("--level") != null)
+            {
+                wantLevel = int.Parse(Opt("--level"));
+            }
+            int grown = -1;
+            if (Opt("--grown") != null)
+            {
+                grown = int.Parse(Opt("--grown"));
+            }
             if (args.Contains("--after-reload"))
             {
                 float by = Time.realtimeSinceStartup + 220f;
@@ -113,7 +132,15 @@ namespace DarkwoodMP.World
                 string type = Opt("--slot", 2);
                 int amount = int.Parse(Opt("--slot", 3));
                 var s = st.slots[i];
-                bool ok = type == "-" ? InvItemClass.isNull(s.invItem) : !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
+                bool ok;
+                if (type == "-")
+                {
+                    ok = InvItemClass.isNull(s.invItem);
+                }
+                else
+                {
+                    ok = !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
+                }
                 r.Info += $"; slot {i}: {Slot(s)}";
                 if (!ok)
                 {
@@ -148,7 +175,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static string Layout(Inventory st)
         {
-            var cam = Core.CamUI != null ? Core.CamUI.GetComponent<Camera>() : null;
+            Camera cam = null;
+            if (Core.CamUI != null)
+            {
+                cam = Core.CamUI.GetComponent<Camera>();
+            }
             var at = new List<Vector3>();
             for (int i = 0; i < st.slots.Count; i++)
             {
@@ -223,7 +254,11 @@ namespace DarkwoodMP.World
             for (int n = 0; n < (max ? 50 : 1); n++)
             {
                 int level = Level;
-                var up = level - 1 < wb.levels.Count ? wb.levels[level - 1].upgradeRecipe : null;
+                CraftingRecipes up = null;
+                if (level - 1 < wb.levels.Count)
+                {
+                    up = wb.levels[level - 1].upgradeRecipe;
+                }
                 if (up == null || up.recipes.Count == 0)
                 {
                     if (n == 0)
@@ -330,7 +365,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             st = wb.normalInventory;
-            string after = i < st.slots.Count ? Slot(st.slots[i]) : "(no such slot)";
+            string after = "(no such slot)";
+            if (i < st.slots.Count)
+            {
+                after = Slot(st.slots[i]);
+            }
             r.Info = $"before: level {level}, {count} slots, slot {i} {before}; after: level {Level}, {st.slots.Count} slots, slot {i} {after}";
             bool ok = a.Length >= 3 && after == (a[1] == "-" ? "-" : $"{a[1]}x{a[2]}");
             if (Level != level || st.slots.Count != count || after != before || !ok)

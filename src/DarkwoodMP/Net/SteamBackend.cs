@@ -141,8 +141,16 @@ namespace DarkwoodMP.Net
         /// </summary>
         public void SetPresence(string status, int players)
         {
-            string group = _lobby.InLobby ? _lobby.Id.m_SteamID.ToString() : "";
-            string size = _lobby.InLobby ? players.ToString() : "";
+            string group = "";
+            if (_lobby.InLobby)
+            {
+                group = _lobby.Id.m_SteamID.ToString();
+            }
+            string size = "";
+            if (_lobby.InLobby)
+            {
+                size = players.ToString();
+            }
             if (status != _presStatus)
             {
                 SteamFriends.SetRichPresence("status", status);

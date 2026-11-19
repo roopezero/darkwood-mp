@@ -210,7 +210,11 @@ namespace DarkwoodMP.Combat
             }
             string name = r.ReadStr();
             var pos = r.ReadVector3();
-            float rotY = kind == 1 ? r.R.ReadSingle() : 0f;
+            float rotY = 0f;
+            if (kind == 1)
+            {
+                rotY = r.R.ReadSingle();
+            }
             var me = Player.Instance;
             if (me == null || EnemyAreaHits.PlayerAway() || Core.trueDistance(me.transform.position, pos) > 4000f)
             {

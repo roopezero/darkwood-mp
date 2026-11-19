@@ -212,7 +212,16 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info = $"{d.name} {ObjRef.Of(d.gameObject)}: locked {l.locked}, open {d.opened}";
-            if (open ? l.locked || !d.opened : !l.locked || d.opened)
+            bool condition;
+            if (open)
+            {
+                condition = l.locked || !d.opened;
+            }
+            else
+            {
+                condition = !l.locked || d.opened;
+            }
+            if (condition)
             {
                 r.Fail($"{r.Info}, wanted {(open ? "unlocked and open" : "locked and shut")}");
             }
@@ -287,13 +296,21 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            return names.Count == 0 ? "nothing" : string.Join(",", names);
+            if (names.Count == 0)
+            {
+                return "nothing";
+            }
+            return string.Join(",", names);
         }
 
         /// <summary>"prologue-in STAGE" (either): we're in that stage of the prologue, dreamt together, a first play, and we see the other player.</summary>
         private static IEnumerator In(string[] a, Result r)
         {
-            string stage = a.Length > 0 ? a[0] : "dream_tutorial_00";
+            string stage = "dream_tutorial_00";
+            if (a.Length > 0)
+            {
+                stage = a[0];
+            }
             float until = Time.realtimeSinceStartup + 90f;
             while (!(Prologue.InStage && Prologue.Stage == stage && DreamSync.Shared == stage && WorldShare.WorldReady && FriendSeen())
                    && Time.realtimeSinceStartup < until)

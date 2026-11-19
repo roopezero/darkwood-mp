@@ -124,7 +124,11 @@ namespace DarkwoodMP.World
                 return door.gameObject;
             }
             var window = col.GetComponent<Window>();
-            return window != null ? window.gameObject : null;
+            if (window != null)
+            {
+                return window.gameObject;
+            }
+            return null;
         }
 
         /// <summary>Client: our player's flame set this alight here; ask the host to light its copy (put ours out if it says no).</summary>
@@ -185,7 +189,15 @@ namespace DarkwoodMP.World
                 Authority.Refuse("players only light things");
                 return;
             }
-            Component c = what == What.Enemy ? null : Resolve(obj, what);
+            Component c;
+            if (what == What.Enemy)
+            {
+                c = null;
+            }
+            else
+            {
+                c = Resolve(obj, what);
+            }
             if (c == null)
             {
                 Authority.Refuse("there's no such thing here to burn");

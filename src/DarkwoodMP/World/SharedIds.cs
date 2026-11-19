@@ -36,13 +36,44 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Save ids below this are named as Saved in refs this game sends.</summary>
-        public static int SendLimit => _session != null && _session.IsHost ? (_hostMax == 0 ? 0 : _hostMin) : _loaded;
+        public static int SendLimit
+        {
+            get
+            {
+                if (_session != null && _session.IsHost)
+                {
+                    if (_hostMax == 0)
+                    {
+                        return 0;
+                    }
+                    return _hostMin;
+                }
+                return _loaded;
+            }
+        }
 
         /// <summary>Saved refs that come in with an id below this are looked up; others are dropped.</summary>
-        public static int ResolveLimit => _session != null && _session.IsHost ? _hostMax : _loaded;
+        public static int ResolveLimit
+        {
+            get
+            {
+                if (_session != null && _session.IsHost)
+                {
+                    return _hostMax;
+                }
+                return _loaded;
+            }
+        }
 
         /// <summary>Host: the counter in a snapshot it's about to offer, or in its own save on disk (fromSnapshot false).</summary>
-        public static int CounterOf(bool fromSnapshot) => fromSnapshot ? _snapshot : _saved;
+        public static int CounterOf(bool fromSnapshot)
+        {
+            if (fromSnapshot)
+            {
+                return _snapshot;
+            }
+            return _saved;
+        }
 
         /// <summary>Host: a joiner was let in with a world whose counter is n.</summary>
         public static void Joined(ulong peer, int n)

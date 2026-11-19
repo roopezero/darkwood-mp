@@ -95,8 +95,16 @@ namespace DarkwoodMP.World
                 else if (a[i] == "item")
                 {
                     var db = Singleton<ItemsDatabase>.Instance;
-                    var prefab = db != null && db.itemsDict.TryGetValue(Item, out var path) ? Resources.Load(path) as GameObject : null;
-                    var inv = prefab != null ? prefab.GetComponent<InvItem>() : null;
+                    GameObject prefab = null;
+                    if (db != null && db.itemsDict.TryGetValue(Item, out var path))
+                    {
+                        prefab = Resources.Load(path) as GameObject;
+                    }
+                    InvItem inv = null;
+                    if (prefab != null)
+                    {
+                        inv = prefab.GetComponent<InvItem>();
+                    }
                     if (inv == null)
                     {
                         r.Fail($"no item prefab {Item}");

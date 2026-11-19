@@ -503,7 +503,11 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({(haveStatic ? $"static part copied from your save in {copied} ms" : "static part saved too: your save hasn't got one")}{(newLocation ? ", with a new location's static part" : "")})");
                 _lastSnapshot = Time.realtimeSinceStartup;
                 _lastSnapshotScene = ActiveScene;
-                return File.Exists(Path.Combine(profDir, "sav.dat")) ? profDir : null;
+                if (File.Exists(Path.Combine(profDir, "sav.dat")))
+                {
+                    return profDir;
+                }
+                return null;
             }
             catch (Exception e)
             {
@@ -541,14 +545,22 @@ namespace DarkwoodMP.World
             }
             if (Plugin.Cfg.LiveWorld.Value)
             {
-                return Time.realtimeSinceStartup - w.MadeAt < SnapshotReuse ? w : null;
+                if (Time.realtimeSinceStartup - w.MadeAt < SnapshotReuse)
+                {
+                    return w;
+                }
+                return null;
             }
             var sm = Singleton<SaveManager>.Instance;
             if (sm == null || Core.currentProfile == null)
             {
                 return null;
             }
-            return WorldFiles.Stamp(ProfDir(sm.baseSaveDirectory, Core.currentProfile.id)) == w.Stamp ? w : null;
+            if (WorldFiles.Stamp(ProfDir(sm.baseSaveDirectory, Core.currentProfile.id)) == w.Stamp)
+            {
+                return w;
+            }
+            return null;
         }
 
         /// <summary>
@@ -580,7 +592,16 @@ namespace DarkwoodMP.World
                         FlagsSync.ForgetSnapshot();
                     }
                     string profDir = snapDir ?? (Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id));
-                    string stamp = profDir == null || !InWorld ? "" : WorldFiles.Stamp(profDir); // left the world meanwhile: nothing to offer
+                    // left the world meanwhile: nothing to offer
+                    string stamp;
+                    if (profDir == null || !InWorld)
+                    {
+                        stamp = "";
+                    }
+                    else
+                    {
+                        stamp = WorldFiles.Stamp(profDir);
+                    }
                     if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene)
                     {
                         world = _hostWorld;
@@ -789,7 +810,11 @@ namespace DarkwoodMP.World
             {
                 string why = World.Prologue.WhyWait(WorldReady);
                 World.Prologue.NoteWait(why);
-                return why == null ? null : "The host is between parts of the prologue. You'll join in a moment.";
+                if (why == null)
+                {
+                    return null;
+                }
+                return "The host is between parts of the prologue. You'll join in a moment.";
             }
             var outside = Singleton<OutsideLocations>.Instance;
             var dreams = Singleton<Dreams>.Instance;
@@ -954,9 +979,29 @@ namespace DarkwoodMP.World
         private const int MaxStalls = 3;
 
         /// <summary>For the panel: (bytes got, bytes total) while downloading the host's world.</summary>
-        public (long Got, long Total)? Progress => _download == null ? ((long, long)?)null : (_download.Received, _download.Blob.Length);
+        public (long Got, long Total)? Progress
+        {
+            get
+            {
+                if (_download == null)
+                {
+                    return ((long, long)?)null;
+                }
+                return (_download.Received, _download.Blob.Length);
+            }
+        }
         /// <summary>The download's size unpacked, for the loading screen (0: not packed, or no download).</summary>
-        public long UnpackedSize => _download != null && _download.Packing != 0 ? _download.RawSize : 0;
+        public long UnpackedSize
+        {
+            get
+            {
+                if (_download != null && _download.Packing != 0)
+                {
+                    return _download.RawSize;
+                }
+                return 0;
+            }
+        }
         public string LoadStatus { get; private set; }
 
         private byte[] ClientHelloHash()
@@ -1203,7 +1248,15 @@ namespace DarkwoodMP.World
             var job = System.Threading.Tasks.Task.Run(() =>
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                var raw = d.Packing == 1 ? WorldFiles.Inflate(d.Blob, d.RawSize) : d.Blob;
+                byte[] raw;
+                if (d.Packing == 1)
+                {
+                    raw = WorldFiles.Inflate(d.Blob, d.RawSize);
+                }
+                else
+                {
+                    raw = d.Blob;
+                }
                 var files = new List<WorldFiles.File>();
                 int at = 0;
                 foreach (var (name, size) in d.Files)
@@ -1234,7 +1287,15 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             _unpacking = false;
-            string error = job.IsFaulted ? $"couldn't store the world: {job.Exception?.GetBaseException().Message}" : job.Result;
+            string error;
+            if (job.IsFaulted)
+            {
+                error = $"couldn't store the world: {job.Exception?.GetBaseException().Message}";
+            }
+            else
+            {
+                error = job.Result;
+            }
             if (!_session.Active || _session.IsHost)
             {
                 yield break; // stopped joining meanwhile
@@ -1466,7 +1527,15 @@ namespace DarkwoodMP.World
         internal static bool RedirectWorks(string saveDir)
         {
             var sm = Singleton<SaveManager>.Instance;
-            string save = Core.currentProfile != null ? sm?.dynamicFile : sm?.localProfilesFile;
+            string save;
+            if (Core.currentProfile != null)
+            {
+                save = sm?.dynamicFile;
+            }
+            else
+            {
+                save = sm?.localProfilesFile;
+            }
             if (WorldFiles.IsUnder(save, saveDir))
             {
                 return true;

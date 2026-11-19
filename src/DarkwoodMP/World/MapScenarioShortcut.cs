@@ -50,7 +50,11 @@ namespace DarkwoodMP.World
         private static GameEvents WorldEvent()
         {
             var ev = Singleton<Events>.Instance;
-            return ev != null && ev.worldEvents.TryGetValue(Event, out var ge) ? ge : null;
+            if (ev != null && ev.worldEvents.TryGetValue(Event, out var ge))
+            {
+                return ge;
+            }
+            return null;
         }
 
         /// <summary>Whether the object is shown: by its SaveableObject's Active when it has one (the location
@@ -62,7 +66,11 @@ namespace DarkwoodMP.World
                 return false;
             }
             var so = go.GetComponent<SaveableObject>();
-            return so != null ? so.Active : go.activeSelf;
+            if (so != null)
+            {
+                return so.Active;
+            }
+            return go.activeSelf;
         }
 
         private static bool IsOpen() => Shown(Find(In)) && !Shown(Find(Locked));
@@ -75,8 +83,14 @@ namespace DarkwoodMP.World
                 + $"{Locked}: {Desc(Find(Locked))}, {Out}: {Desc(Find(Out))}, location {(loc == null ? "none" : $"{loc.name} entered={loc.entered}")}";
         }
 
-        private static string Desc(GameObject go) =>
-            go == null ? "missing" : $"shown={Shown(go)} active={go.activeInHierarchy} at {Fmt(go.transform.position)}";
+        private static string Desc(GameObject go)
+        {
+            if (go == null)
+            {
+                return "missing";
+            }
+            return $"shown={Shown(go)} active={go.activeInHierarchy} at {Fmt(go.transform.position)}";
+        }
 
         private static IEnumerator Check(string[] a, Result r)
         {
@@ -174,7 +188,11 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(2f);
             Core.forbidInputs = false; // the trip's fade gives the inputs back on its own; a test step doesn't wait for it
-            float d = to != null ? StateDump.Flat(p.transform.position - to.transform.position) : -1f;
+            float d = -1f;
+            if (to != null)
+            {
+                d = StateDump.Flat(p.transform.position - to.transform.position);
+            }
             if (!Arrived())
             {
                 r.Fail($"not taken to {dest} ({(to == null ? "not here" : $"{d:0} from it")}, away={o.playerInOutsideLocation}): {State()}");

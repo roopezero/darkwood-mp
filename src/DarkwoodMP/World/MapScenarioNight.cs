@@ -216,7 +216,14 @@ namespace DarkwoodMP.World
                     k += " " + e.Value;
                     break;
                 case GameEvent.Type.switchItemOnOff:
-                    k += e.activeModifier ? " on" : " off";
+                    if (e.activeModifier)
+                    {
+                        k += " on";
+                    }
+                    else
+                    {
+                        k += " off";
+                    }
                     break;
                 case GameEvent.Type.setSprite:
                     k += " " + e.Value;
@@ -250,7 +257,14 @@ namespace DarkwoodMP.World
             CustomEvent ev = null;
             foreach (var sc in ns.scenarios)
             {
-                ev = sc != null ? WorldEvents.FindEvent(sc, a[0]) : null;
+                if (sc != null)
+                {
+                    ev = WorldEvents.FindEvent(sc, a[0]);
+                }
+                else
+                {
+                    ev = null;
+                }
                 if (ev != null)
                 {
                     break;
@@ -302,8 +316,16 @@ namespace DarkwoodMP.World
         /// <summary>"nl-herd N [KIND]" (host): N enemies (DogMutated by default) by the client's player, after it.</summary>
         private static IEnumerator Herd(string[] a, Result r)
         {
-            int n = a.Length > 0 ? int.Parse(a[0]) : 6;
-            string kind = a.Length > 1 ? a[1] : "DogMutated";
+            int n = 6;
+            if (a.Length > 0)
+            {
+                n = int.Parse(a[0]);
+            }
+            string kind = "DogMutated";
+            if (a.Length > 1)
+            {
+                kind = a[1];
+            }
             var proxy = ClientProxy();
             if (proxy == null)
             {
@@ -350,7 +372,11 @@ namespace DarkwoodMP.World
         /// <summary>"nl-motion SECS" (client): walk round in a circle while counting how the host's enemies are drawn.</summary>
         private static IEnumerator Motion(string[] a, Result r)
         {
-            float secs = a.Length > 0 ? F(a[0]) : 20f;
+            float secs = 20f;
+            if (a.Length > 0)
+            {
+                secs = F(a[0]);
+            }
             var p = P;
             if (p == null)
             {

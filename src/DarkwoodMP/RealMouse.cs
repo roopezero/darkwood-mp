@@ -46,7 +46,11 @@ namespace DarkwoodMP
                     yield break;
                 }
                 // Accelerated moves overshoot the long way: go half of it, then the rest in small steps.
-                float k = d.magnitude > 40f ? 0.5f : 1f;
+                float k = 1f;
+                if (d.magnitude > 40f)
+                {
+                    k = 0.5f;
+                }
                 int dx = Mathf.RoundToInt(d.x * k), dy = Mathf.RoundToInt(d.y * k);
                 if (dx == 0 && dy == 0)
                 {

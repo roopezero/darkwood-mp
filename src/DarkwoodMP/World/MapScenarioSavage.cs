@@ -52,7 +52,11 @@ namespace DarkwoodMP.World
                 r.Fail("usage: sv-spawn KIND[,KIND...] [N]");
                 yield break;
             }
-            int n = a.Length > 1 ? int.Parse(a[1], CultureInfo.InvariantCulture) : 1;
+            int n = 1;
+            if (a.Length > 1)
+            {
+                n = int.Parse(a[1], CultureInfo.InvariantCulture);
+            }
             var proxy = MapScenarioEnemies.ClientProxy();
             if (proxy == null)
             {
@@ -61,7 +65,15 @@ namespace DarkwoodMP.World
             }
             var away = proxy.transform.position - P.transform.position;
             away.y = 0f;
-            var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.forward;
+            Vector3 dir;
+            if (away.sqrMagnitude > 1f)
+            {
+                dir = away.normalized;
+            }
+            else
+            {
+                dir = Vector3.forward;
+            }
             var made = new List<Character>();
             int k = 0;
             foreach (string kind in a[0].Split(','))
@@ -112,7 +124,11 @@ namespace DarkwoodMP.World
             foreach (var an in c.GetComponentsInChildren<tk2dSpriteAnimator>(true))
             {
                 var clip = an.CurrentClip;
-                string attacks = an.Library != null ? string.Join("/", an.Library.clips.Where(x => x != null && x.name.StartsWith("Attack")).Select(x => $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{x.frames?.Length ?? 0}")) : "no library";
+                string attacks = "no library";
+                if (an.Library != null)
+                {
+                    attacks = string.Join("/", an.Library.clips.Where(x => x != null && x.name.StartsWith("Attack")).Select(x => $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{x.frames?.Length ?? 0}"));
+                }
                 l.Add($"[{PathOf(an, c.transform)}{(an == c.animator ? " main" : "")}{(an.legs != null ? " legs=" + PathOf(an.legs, c.transform) : "")}" +
                       $"{(c.animator != null && c.animator.legs == an ? " (the main's legs)" : "")} clip {clip?.name ?? "none"} {attacks}]");
             }
@@ -203,7 +219,11 @@ namespace DarkwoodMP.World
             }
             double end = at + secs;
             var ne = NetEnemies.Instance;
-            var proxy = host ? MapScenarioEnemies.ClientProxy() : null;
+            NetPlayerProxy proxy = null;
+            if (host)
+            {
+                proxy = MapScenarioEnemies.ClientProxy();
+            }
             // The client's copies are disabled characters (NetEnemies.Freeze), which AllCharacters skips.
             var chars = new List<Character>();
             double listed = 0;
@@ -229,8 +249,27 @@ namespace DarkwoodMP.World
                     if (host)
                     {
                         state = (c.attacking ? "A" : "") + (c.recoveringFromAttack ? "R" : "") + (c.recoveringFromHit || c.gettingHit ? "H" : "");
-                        var cb = c.target != null ? c.target.GetComponent<CharBase>() : null;
-                        state += cb is NetPlayerProxy ? ">c" : cb is Player ? ">h" : c.target != null ? ">o" : ">-";
+                        CharBase cb = null;
+                        if (c.target != null)
+                        {
+                            cb = c.target.GetComponent<CharBase>();
+                        }
+                        if (cb is NetPlayerProxy)
+                        {
+                            state += ">c";
+                        }
+                        else if (cb is Player)
+                        {
+                            state += ">h";
+                        }
+                        else if (c.target != null)
+                        {
+                            state += ">o";
+                        }
+                        else
+                        {
+                            state += ">-";
+                        }
                         if (c.target != null)
                         {
                             state += FormattableString.Invariant($"{Core.trueDistance(c.transform.position, c.target.position):0}");
@@ -324,7 +363,11 @@ namespace DarkwoodMP.World
                     int sprites = playing.Select(x => x.Sprite).Distinct().Count();
                     int frames = run.Select(x => x.Frame).Distinct().Count();
                     seq.Add(FormattableString.Invariant($"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{(playing.Count == 0 ? " held" : "")}{(run[0].State != "" ? " " + run[0].State : "")})"));
-                    double playDur = playing.Count > 1 ? playing[playing.Count - 1].T - playing[0].T : 0;
+                    double playDur = 0;
+                    if (playing.Count > 1)
+                    {
+                        playDur = playing[playing.Count - 1].T - playing[0].T;
+                    }
                     if (run[0].Frames > 2 && playDur >= 1.0 && sprites <= 2)
                     {
                         stuck.Add(FormattableString.Invariant($"{run[0].Kind} #{g.Key.Id} {g.Key.Path} {run[0].Clip} played {playDur:0.0}s showing {sprites} sprite(s) of {run[0].Frames} frames (frames {string.Join(",", playing.Select(x => x.Frame).Distinct().Take(6))}){(run[0].State != "" ? ", AI " + run[0].State : "")}"));
@@ -434,7 +477,14 @@ namespace DarkwoodMP.World
                     {
                         var y0 = h.LastOrDefault(y => y.T <= x.T);
                         string key = $"ours {x.Clip}:{x.Frame} host {y0.Clip}:{y0.Frame}";
-                        bad[key] = bad.TryGetValue(key, out int c) ? c + 1 : 1;
+                        if (bad.TryGetValue(key, out int c))
+                        {
+                            bad[key] = c + 1;
+                        }
+                        else
+                        {
+                            bad[key] = 1;
+                        }
                     }
                 }
                 double rate = ok / (double)mine.Count;
@@ -444,7 +494,15 @@ namespace DarkwoodMP.World
                 var hostClips = Runs(h.Where(y => y.T >= from && y.T <= to).ToList()).Where(run => run[run.Count - 1].T - run[0].T >= 0.3).Select(run => run[0].Clip).Distinct().ToList();
                 var shown = new HashSet<string>(g.Select(x => x.Clip));
                 var missing = hostClips.Where(c => !shown.Contains(c)).ToList();
-                string worst = bad.Count == 0 ? "" : " (mismatches: " + string.Join(", ", bad.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} x{kv.Value}")) + ")";
+                string worst;
+                if (bad.Count == 0)
+                {
+                    worst = "";
+                }
+                else
+                {
+                    worst = " (mismatches: " + string.Join(", ", bad.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} x{kv.Value}")) + ")";
+                }
                 string line = FormattableString.Invariant($"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {rate:P0} of {mine.Count} match{worst}{(missing.Count > 0 ? "; never shown here: " + string.Join("/", missing) : "")}");
                 parts.Add(line);
                 if (rate < 0.85 || missing.Count > 0)

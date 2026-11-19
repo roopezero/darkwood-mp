@@ -143,7 +143,15 @@ namespace DarkwoodMP
                 yield return null;
                 var before = _win.Rect;
                 var dir = new Vector2(1f, 0.5f);
-                var from = c.resize ? new Vector2(before.xMax - 3, before.yMax - 3) : new Vector2(before.x + 40, before.y + 6);
+                Vector2 from;
+                if (c.resize)
+                {
+                    from = new Vector2(before.xMax - 3, before.yMax - 3);
+                }
+                else
+                {
+                    from = new Vector2(before.x + 40, before.y + 6);
+                }
                 if (c.resize)
                 {
                     _events.Enqueue(Mouse(EventType.MouseDown, from, Vector2.zero));
@@ -166,7 +174,15 @@ namespace DarkwoodMP
                 yield return null;
                 var after = _win.Rect;
                 var want = dir * (c.step * c.steps);
-                var got = c.resize ? after.size - before.size : after.position - before.position;
+                Vector2 got;
+                if (c.resize)
+                {
+                    got = after.size - before.size;
+                }
+                else
+                {
+                    got = after.position - before.position;
+                }
                 bool ok = Mathf.Abs(got.x - want.x) < 0.01f && Mathf.Abs(got.y - want.y) < 0.01f;
                 if (!ok)
                 {

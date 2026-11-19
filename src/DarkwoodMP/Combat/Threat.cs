@@ -82,7 +82,14 @@ namespace DarkwoodMP.Combat
                 Values[who] = v + amount;
             }
 
-            public float Get(CharBase who) => who != null && Values.TryGetValue(who, out float v) ? v : 0f;
+            public float Get(CharBase who)
+            {
+                if (who != null && Values.TryGetValue(who, out float v))
+                {
+                    return v;
+                }
+                return 0f;
+            }
         }
 
         private static readonly ConditionalWeakTable<Character, Table> _tables = new ConditionalWeakTable<Character, Table>();
@@ -161,7 +168,11 @@ namespace DarkwoodMP.Combat
             var others = new List<Collider>();
             foreach (var col in list)
             {
-                var cb = col != null ? col.GetComponent<CharBase>() : null;
+                CharBase cb = null;
+                if (col != null)
+                {
+                    cb = col.GetComponent<CharBase>();
+                }
                 if (Proxies.IsPlayer(cb) && cb.alive)
                 {
                     players.Add((col, cb, Score(table, c, cb, sight)));
@@ -276,7 +287,11 @@ namespace DarkwoodMP.Combat
         public static Transform PursuitTarget(Character c)
         {
             var best = BestPlayerFor(c);
-            return best != null ? best.transform : Player.Instance.transform;
+            if (best != null)
+            {
+                return best.transform;
+            }
+            return Player.Instance.transform;
         }
 
         /// <summary>
@@ -289,7 +304,11 @@ namespace DarkwoodMP.Combat
             var host = Player.Instance;
             if (host == null)
             {
-                return c != null ? c.transform.position : Vector3.zero;
+                if (c != null)
+                {
+                    return c.transform.position;
+                }
+                return Vector3.zero;
             }
             Vector3 best = host.transform.position;
             if (!Enabled || c == null)
@@ -327,6 +346,17 @@ namespace DarkwoodMP.Combat
             return NearestPlayerPos(c);
         }
 
-        private static string Name(CharBase c) => c is NetPlayerProxy p ? p.OwnerName : c is Player ? "host player" : c.name;
+        private static string Name(CharBase c)
+        {
+            if (c is NetPlayerProxy p)
+            {
+                return p.OwnerName;
+            }
+            if (c is Player)
+            {
+                return "host player";
+            }
+            return c.name;
+        }
     }
 }

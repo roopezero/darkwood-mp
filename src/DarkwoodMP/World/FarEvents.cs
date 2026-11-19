@@ -71,7 +71,11 @@ namespace DarkwoodMP.World
                 return false;
             }
             SharedCullingPatch.Distances(out int dx, out int dy);
-            float m = was ? 600f : 0f;
+            float m = 0f;
+            if (was)
+            {
+                m = 600f;
+            }
             var a = p.transform.position;
             var b = l.transform.position;
             return Mathf.Abs(a.x - b.x) <= dx + m && Mathf.Abs(a.z - b.z) <= dy + m;
@@ -126,7 +130,11 @@ namespace DarkwoodMP.World
                 }
                 HostIn.Remove(l);
             }
-            return hostIn ? (ScriptedEvents.Part?)null : ScriptedEvents.Part.HostAndShared;
+            if (hostIn)
+            {
+                return (ScriptedEvents.Part?)null;
+            }
+            return ScriptedEvents.Part.HostAndShared;
         }
 
         /// <summary>
@@ -203,7 +211,15 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 HostIn[l] = now;
-                var type = now ? global::EventTrigger.Type.onEnterLocation : global::EventTrigger.Type.onExitLocation;
+                global::EventTrigger.Type type;
+                if (now)
+                {
+                    type = global::EventTrigger.Type.onEnterLocation;
+                }
+                else
+                {
+                    type = global::EventTrigger.Type.onExitLocation;
+                }
                 Note(Log, l, now ? "enter" : "exit", ScriptedEvents.Part.PlayerOnly);
                 if (Debug)
                 {

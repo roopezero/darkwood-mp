@@ -100,11 +100,25 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>What stock waiting for a trader is kept under: a shared-save trader by his ref, any other by name.</summary>
-        private static string Key(string name, ObjRef r) => r.K == ObjRef.Kind.Saved ? $"{name}@{r}" : name;
+        private static string Key(string name, ObjRef r)
+        {
+            if (r.K == ObjRef.Kind.Saved)
+            {
+                return $"{name}@{r}";
+            }
+            return name;
+        }
 
         /// <summary>A trader's inventory. NPC.inventory is set when he first comes to life (NPC.init), so one in a part
         /// of the world this game hasn't run yet has it only as his component, which init then takes.</summary>
-        internal static Inventory Inv(NPC n) => n.inventory != null ? n.inventory : n.GetComponent<Inventory>();
+        internal static Inventory Inv(NPC n)
+        {
+            if (n.inventory != null)
+            {
+                return n.inventory;
+            }
+            return n.GetComponent<Inventory>();
+        }
 
         private static string StockOf(NPC npc) => JsonConvert.SerializeObject(new Inventory.SaveState(Inv(npc)));
 
@@ -359,7 +373,15 @@ namespace DarkwoodMP.World
                     return;
                 }
                 InventoryWatch.Undo(change);
-                var t = npc != null ? npc : Find(name, who, at);
+                NPC t;
+                if (npc != null)
+                {
+                    t = npc;
+                }
+                else
+                {
+                    t = Find(name, who, at);
+                }
                 if (t == null)
                 {
                     return;
@@ -489,7 +511,11 @@ namespace DarkwoodMP.World
         private static string CheckReputation(string name, Dictionary<string, int> took, Dictionary<string, int> gave, int repChange)
         {
             var st = Singleton<Flags>.Instance?.getNPCState(name);
-            int rep = st != null ? st.reputation : 0;
+            int rep = 0;
+            if (st != null)
+            {
+                rep = st.reputation;
+            }
             if (rep + repChange < 0)
             {
                 return $"his reputation is {rep}, which doesn't pay for {-repChange}";

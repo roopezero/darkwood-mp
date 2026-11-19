@@ -141,7 +141,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             float dmg = F(a[1]);
-            int times = a.Length > 2 ? int.Parse(a[2]) : 1;
+            int times = 1;
+            if (a.Length > 2)
+            {
+                times = int.Parse(a[2]);
+            }
             float was = c.health;
             _healthAtHit = P.health;
             for (int i = 0; i < times && c != null && c.alive; i++)
@@ -187,7 +191,11 @@ namespace DarkwoodMP.World
             bool ok = false;
             while (Time.realtimeSinceStartup < until && c != null)
             {
-                var proxy = c.target != null ? c.target.GetComponent<Combat.NetPlayerProxy>() : null;
+                Combat.NetPlayerProxy proxy = null;
+                if (c.target != null)
+                {
+                    proxy = c.target.GetComponent<Combat.NetPlayerProxy>();
+                }
                 bool tracked = Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IdOf(c, out _);
                 ok = tracked && (wantClient ? proxy != null : c.target != null && c.target.GetComponent<Player>() != null);
                 if (ok)
@@ -224,7 +232,16 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} here");
                 yield break;
             }
-            float was = _healthAtHit > 0f ? _healthAtHit : P.health; // it may have hurt us since we hit it
+            // it may have hurt us since we hit it
+            float was;
+            if (_healthAtHit > 0f)
+            {
+                was = _healthAtHit;
+            }
+            else
+            {
+                was = P.health;
+            }
             float until = Time.realtimeSinceStartup + 35f;
             while (Time.realtimeSinceStartup < until && P.health >= was && c != null && c.alive)
             {
@@ -311,7 +328,14 @@ namespace DarkwoodMP.World
             {
                 c = Object.FindObjectsOfType<Character>().Where(x => x != null && Kind(x) == a[0])
                     .OrderBy(x => StateDump.Flat(x.transform.position - Centre)).FirstOrDefault();
-                st = Singleton<Flags>.Instance != null && a.Length > 1 ? Singleton<Flags>.Instance.getNPCState(a[1]) : null;
+                if (Singleton<Flags>.Instance != null && a.Length > 1)
+                {
+                    st = Singleton<Flags>.Instance.getNPCState(a[1]);
+                }
+                else
+                {
+                    st = null;
+                }
                 if (c != null && !c.alive && (st == null || st.dead))
                 {
                     break;

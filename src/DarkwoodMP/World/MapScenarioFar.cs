@@ -51,8 +51,16 @@ namespace DarkwoodMP.World
                 r.Fail("no player");
                 yield break;
             }
-            float min = a.Length > 0 ? F(a[0]) : 6000f;
-            int index = a.Length > 1 ? int.Parse(a[1]) : 0;
+            float min = 6000f;
+            if (a.Length > 0)
+            {
+                min = F(a[0]);
+            }
+            int index = 0;
+            if (a.Length > 1)
+            {
+                index = int.Parse(a[1]);
+            }
             var from = MapScenario.Centre;
             var grid = Singleton<WorldGrid>.Instance;
             var outside = grid?.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world) ?? grid?.currentGrid;

@@ -98,7 +98,11 @@ namespace DarkwoodMP.World
         public static string PlaceablePath(Object prefab)
         {
             EnsurePlaceables();
-            return prefab != null && _placeables != null && _placeables.TryGetValue(prefab, out var path) ? path : null;
+            if (prefab != null && _placeables != null && _placeables.TryGetValue(prefab, out var path))
+            {
+                return path;
+            }
+            return null;
         }
 
         /// <summary>Whether a player can place the prefab at this path (under Resources/Prefabs).</summary>
@@ -112,7 +116,11 @@ namespace DarkwoodMP.World
         public static HashSet<string> PlacedWith(string path)
         {
             EnsurePlaceables();
-            return _placeableTypes != null && _placeableTypes.TryGetValue(path, out var types) ? types : null;
+            if (_placeableTypes != null && _placeableTypes.TryGetValue(path, out var types))
+            {
+                return types;
+            }
+            return null;
         }
 
         public static Containers Instance { get; private set; }
@@ -431,7 +439,11 @@ namespace DarkwoodMP.World
         /// <summary>Host: send what's in a container to one client (a corpse it has only now been sent).</summary>
         public void SendContentsTo(ulong peer, Inventory inv)
         {
-            var r = inv != null ? ObjRef.Of(inv.gameObject) : default;
+            ObjRef r = default;
+            if (inv != null)
+            {
+                r = ObjRef.Of(inv.gameObject);
+            }
             if (!r.Valid || !_session.IsHost)
             {
                 return;
@@ -879,13 +891,26 @@ namespace DarkwoodMP.World
                     _pending.RemoveAt(i);
                     continue;
                 }
-                if (placedNow ? !p.Placed : Time.time < p.SendAt)
+                bool condition;
+                if (placedNow)
+                {
+                    condition = !p.Placed;
+                }
+                else
+                {
+                    condition = Time.time < p.SendAt;
+                }
+                if (condition)
                 {
                     continue;
                 }
                 _pending.RemoveAt(i);
                 var inv = p.Go.GetComponent<Inventory>();
-                string contents = inv != null ? Serialize(inv) : "";
+                string contents = "";
+                if (inv != null)
+                {
+                    contents = Serialize(inv);
+                }
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo($"[world] sent {p.Prefab} #{p.Id} at {p.Go.transform.position}");
@@ -947,7 +972,11 @@ namespace DarkwoodMP.World
             }
             long id = r.R.ReadInt64();
             Vector3 pos = r.ReadVector3();
-            var drop = ObjRef.Spawned.TryGetValue(id, out var go) && go != null ? go.GetComponent<DeathDrop>() : null;
+            DeathDrop drop = null;
+            if (ObjRef.Spawned.TryGetValue(id, out var go) && go != null)
+            {
+                drop = go.GetComponent<DeathDrop>();
+            }
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + (drop != null ? drop.name : "no such bag here"));

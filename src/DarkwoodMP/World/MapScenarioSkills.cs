@@ -26,7 +26,11 @@ namespace DarkwoodMP.World
         /// <summary>"skills-give N": N more levels for our player (their points to spend, no skills chosen); a negative N takes levels away.</summary>
         private static IEnumerator Give(string[] a, Result r)
         {
-            int n = a.Length > 0 ? int.Parse(a[0]) : 1;
+            int n = 1;
+            if (a.Length > 0)
+            {
+                n = int.Parse(a[0]);
+            }
             Progression.TestGiveLevels(n, chooseSkills: false);
             yield return new WaitForSecondsRealtime(1.5f); // the host takes in its own level (Progression.Update)
             r.Info = Progression.TestState();

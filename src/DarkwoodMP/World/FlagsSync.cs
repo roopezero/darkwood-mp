@@ -230,7 +230,11 @@ namespace DarkwoodMP.World
                 'i' => j.itemsDict.TryGetValue(name, out var i) ? i : null,
                 _ => null,
             };
-            return e != null ? JsonConvert.SerializeObject(e) : null;
+            if (e != null)
+            {
+                return JsonConvert.SerializeObject(e);
+            }
+            return null;
         }
 
         private static bool IsRemovable(string key) =>
@@ -766,7 +770,11 @@ namespace DarkwoodMP.World
         /// <summary>The trade window with this NPC is open: its reputation label shows the new value at once.</summary>
         private static void RefreshReputation(string npc)
         {
-            var talked = Player.Instance != null ? Player.Instance.talkedToNPC : null;
+            NPC talked = null;
+            if (Player.Instance != null)
+            {
+                talked = Player.Instance.talkedToNPC;
+            }
             if (talked == null || talked.name != npc || talked.inventory == null || talked.inventory.reputationText == null)
             {
                 return;
@@ -794,7 +802,11 @@ namespace DarkwoodMP.World
             try
             {
                 var loc = Singleton<WorldGenerator>.Instance?.getLocation(name);
-                var el = loc != null ? loc.GetComponent<MapElement>() : null;
+                MapElement el = null;
+                if (loc != null)
+                {
+                    el = loc.GetComponent<MapElement>();
+                }
                 if (el == null || el.isOnMap)
                 {
                     return;

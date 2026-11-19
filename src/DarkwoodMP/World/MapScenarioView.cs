@@ -85,7 +85,14 @@ namespace DarkwoodMP.World
                                     continue;
                                 }
                                 string k = $"{label} {e.type}{(e.type == GameEvent.Type.runFunction || e.type == GameEvent.Type.fireEvent ? " " + e.Value : "")}";
-                                count[k] = count.TryGetValue(k, out int c) ? c + 1 : 1;
+                                if (count.TryGetValue(k, out int c))
+                                {
+                                    count[k] = c + 1;
+                                }
+                                else
+                                {
+                                    count[k] = 1;
+                                }
                             }
                         }
                     }
@@ -104,8 +111,16 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var p = Player.Instance;
-            float dist = a.Length > 0 ? F(a[0]) : 200f;
-            int times = a.Length > 1 ? int.Parse(a[1], CultureInfo.InvariantCulture) : 3;
+            float dist = 200f;
+            if (a.Length > 0)
+            {
+                dist = F(a[0]);
+            }
+            int times = 3;
+            if (a.Length > 1)
+            {
+                times = int.Parse(a[1], CultureInfo.InvariantCulture);
+            }
             var start = p.transform.position;
             var dir = _mark.Value - start;
             dir.y = 0f;
@@ -115,7 +130,15 @@ namespace DarkwoodMP.World
             var eof = new WaitForEndOfFrame();
             for (int i = 0; i < times * 2; i++)
             {
-                var to = i % 2 == 0 ? start + dir * dist : start;
+                Vector3 to;
+                if (i % 2 == 0)
+                {
+                    to = start + dir * dist;
+                }
+                else
+                {
+                    to = start;
+                }
                 while (StateDump.Flat(to - p.transform.position) > 1f)
                 {
                     var d = to - p.transform.position;
@@ -143,7 +166,11 @@ namespace DarkwoodMP.World
                     parts.Add($"{s.name} rgb {s.color.r:0.00},{s.color.g:0.00},{s.color.b:0.00} a{s.color.a:0.00}{(s.gameObject.activeInHierarchy ? "" : " (off)")}");
                 }
             }
-            return parts.Count == 0 ? "none" : string.Join(", ", parts);
+            if (parts.Count == 0)
+            {
+                return "none";
+            }
+            return string.Join(", ", parts);
         }
 
         /// <summary>The area triggers by the mark: our player's entries and exits as the game counted them, and whether it stands on each.</summary>
@@ -163,7 +190,11 @@ namespace DarkwoodMP.World
                     parts.Add($"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
                 }
             }
-            return parts.Count == 0 ? "none" : string.Join("; ", parts);
+            if (parts.Count == 0)
+            {
+                return "none";
+            }
+            return string.Join("; ", parts);
         }
 
         /// <summary>
@@ -172,11 +203,30 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Colors(string[] a, Result r)
         {
-            string want = a.Length > 0 && (a[0] == "dark" || a[0] == "clear") ? a[0] : null;
-            var names = want != null ? a.Skip(1).ToArray() : a;
+            string want = null;
+            if (a.Length > 0 && (a[0] == "dark" || a[0] == "clear"))
+            {
+                want = a[0];
+            }
+            string[] names;
+            if (want != null)
+            {
+                names = a.Skip(1).ToArray();
+            }
+            else
+            {
+                names = a;
+            }
             float Alpha() => Object.FindObjectsOfType<tk2dBaseSprite>(true)
                 .Where(s => s != null && names.Length > 0 && s.name == names[0] && _mark != null && StateDump.Flat(s.transform.position - _mark.Value) < 1500f)
-                .Select(s => s.gameObject.activeInHierarchy ? s.color.a : 0f).DefaultIfEmpty(0f).Max();
+                .Select(s =>
+                {
+                    if (s.gameObject.activeInHierarchy)
+                    {
+                        return s.color.a;
+                    }
+                    return 0f;
+                }).DefaultIfEmpty(0f).Max();
             bool Ok() => want == null || (want == "dark" ? Alpha() > 0.5f : Alpha() < 0.1f);
             float until = Time.realtimeSinceStartup + (want == null ? 0f : 16f);
             while (!Ok() && Time.realtimeSinceStartup < until)
@@ -193,7 +243,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Tree(string[] a, Result r)
         {
             var list = Matches(a[0]);
-            int i = a.Length > 1 ? int.Parse(a[1], CultureInfo.InvariantCulture) : 0;
+            int i = 0;
+            if (a.Length > 1)
+            {
+                i = int.Parse(a[1], CultureInfo.InvariantCulture);
+            }
             if (i >= list.Count)
             {
                 r.Fail("not found");
@@ -259,7 +313,11 @@ namespace DarkwoodMP.World
                 return "host";
             }
             string n = s.LocalName ?? "";
-            return n.StartsWith("Client") ? "c" + n.Substring(6) : n;
+            if (n.StartsWith("Client"))
+            {
+                return "c" + n.Substring(6);
+            }
+            return n;
         }
 
         // ---- finding the spot -------------------------------------------------------------------------------
@@ -292,7 +350,11 @@ namespace DarkwoodMP.World
                 r.Fail("usage: vw-find PATTERN [N]");
                 yield break;
             }
-            int n = a.Length > 1 ? int.Parse(a[1], CultureInfo.InvariantCulture) : 8;
+            int n = 8;
+            if (a.Length > 1)
+            {
+                n = int.Parse(a[1], CultureInfo.InvariantCulture);
+            }
             var list = Matches(a[0]);
             r.Info = $"{list.Count} spots with '{a[0]}': " + string.Join("; ", list.Take(n).Select(Describe));
             Plugin.Log.LogInfo($"[view] vw-find {a[0]}: {r.Info}");
@@ -393,7 +455,11 @@ namespace DarkwoodMP.World
             public void Frame(bool audit)
             {
                 var p = Player.Instance;
-                var light = p != null ? FovLight(p) : null;
+                Light2D light = null;
+                if (p != null)
+                {
+                    light = FovLight(p);
+                }
                 if (light == null || Time.timeScale == 0f)
                 {
                     return;
@@ -410,7 +476,14 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         string k = Sync.ViewWatch.Path(h.collider.transform) + $" [layer {h.collider.gameObject.layer}]";
-                        DarkBy[k] = DarkBy.TryGetValue(k, out int n) ? n + 1 : 1;
+                        if (DarkBy.TryGetValue(k, out int n))
+                        {
+                            DarkBy[k] = n + 1;
+                        }
+                        else
+                        {
+                            DarkBy[k] = 1;
+                        }
                         if (IsOurs(h.collider) || IsGhost(h.collider))
                         {
                             BadDark.Add(k);
@@ -476,8 +549,20 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var p = Player.Instance;
-            float len = a.Length > 0 ? F(a[0]) : 3000f;
-            float speed = a.Length > 1 ? F(a[1]) : RunSpeed;
+            float len = 3000f;
+            if (a.Length > 0)
+            {
+                len = F(a[0]);
+            }
+            float speed;
+            if (a.Length > 1)
+            {
+                speed = F(a[1]);
+            }
+            else
+            {
+                speed = RunSpeed;
+            }
             // Down the line from where we stand towards the mark, LEN long (not past the mark).
             var from = p.transform.position;
             var dir = _mark.Value - from;
@@ -521,7 +606,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Check(string[] a, Result r)
         {
             var p = Player.Instance;
-            var light = p != null ? FovLight(p) : null;
+            Light2D light = null;
+            if (p != null)
+            {
+                light = FovLight(p);
+            }
             if (light == null)
             {
                 r.Fail("no view light");
@@ -698,12 +787,31 @@ namespace DarkwoodMP.World
                 float ang = -cone / 2f + cone * i / 40f; // negative: to the left (counter-clockwise seen from above)
                 var dir = Quaternion.AngleAxis(ang, Vector3.up) * f;
                 bool hit = Physics.Raycast(o, dir, out var h, R, light.ShadowLayer);
-                float reach = hit ? h.distance / R : 1f;
-                var stops = ang < 0f ? stopL : stopR;
+                float reach = 1f;
+                if (hit)
+                {
+                    reach = h.distance / R;
+                }
+                Dictionary<string, int> stops;
+                if (ang < 0f)
+                {
+                    stops = stopL;
+                }
+                else
+                {
+                    stops = stopR;
+                }
                 if (hit)
                 {
                     string k = h.collider.name;
-                    stops[k] = stops.TryGetValue(k, out int c) ? c + 1 : 1;
+                    if (stops.TryGetValue(k, out int c))
+                    {
+                        stops[k] = c + 1;
+                    }
+                    else
+                    {
+                        stops[k] = 1;
+                    }
                 }
                 if (ang < 0f)
                 {
@@ -716,7 +824,14 @@ namespace DarkwoodMP.World
                     nr++;
                 }
             }
-            string top(Dictionary<string, int> s) => s.Count == 0 ? "nothing" : string.Join(", ", s.OrderByDescending(x => x.Value).Take(3).Select(x => $"{x.Key} x{x.Value}"));
+            string top(Dictionary<string, int> s)
+            {
+                if (s.Count == 0)
+                {
+                    return "nothing";
+                }
+                return string.Join(", ", s.OrderByDescending(x => x.Value).Take(3).Select(x => $"{x.Key} x{x.Value}"));
+            }
             return $"reach left {(nl > 0 ? left / nl : 0f):P0} (stopped by {top(stopL)}), right {(nr > 0 ? right / nr : 0f):P0} (stopped by {top(stopR)})";
         }
     }

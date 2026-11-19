@@ -152,7 +152,14 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var e = ctx.Add(d.gameObject);
-                    e["marker"] = d.additionalMapMarker != null ? (object)StateDump.Pos(d.additionalMapMarker.transform.position) : "none";
+                    if (d.additionalMapMarker != null)
+                    {
+                        e["marker"] = (object)StateDump.Pos(d.additionalMapMarker.transform.position);
+                    }
+                    else
+                    {
+                        e["marker"] = "none";
+                    }
                 }
             });
             StateDump.AddSection("afternight", ctx =>
@@ -339,9 +346,21 @@ namespace DarkwoodMP.World
         private static IEnumerator ClockCheck(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
-            float secs = a.Length > 1 ? F(a[1]) : 3f;
+            float secs = 3f;
+            if (a.Length > 1)
+            {
+                secs = F(a[1]);
+            }
             yield return new WaitForSecondsRealtime(secs);
-            int want = a.Length > 0 && a[0] == "dream" ? _dreamTime : _noted;
+            int want;
+            if (a.Length > 0 && a[0] == "dream")
+            {
+                want = _dreamTime;
+            }
+            else
+            {
+                want = _noted;
+            }
             int off = Math.Abs(((c.CurrentTime - want) % 1440 + 1440 + 720) % 1440 - 720);
             r.Info = $"clock {c.CurrentTime} (wanted {want}, {off} off)";
             if (off > 3)
@@ -360,8 +379,23 @@ namespace DarkwoodMP.World
         {
             var j = Singleton<UI>.Instance.journal;
             var db = Singleton<JournalDatabase>.Instance;
-            _jKind = a.Length > 0 ? a[0] : "key";
-            var keys = _jKind == "key" ? db.keysDict.Keys : db.itemsDict.Keys;
+            if (a.Length > 0)
+            {
+                _jKind = a[0];
+            }
+            else
+            {
+                _jKind = "key";
+            }
+            Dictionary<string, string>.KeyCollection keys;
+            if (_jKind == "key")
+            {
+                keys = db.keysDict.Keys;
+            }
+            else
+            {
+                keys = db.itemsDict.Keys;
+            }
             _jType = keys?.Where(k => !string.IsNullOrEmpty(k) && (_jKind == "key" ? !j.keysDict.ContainsKey(k) : !j.itemsDict.ContainsKey(k)))
                 .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
             if (_jType == null)
@@ -402,7 +436,15 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var j = Singleton<UI>.Instance.journal;
-            bool had = _jKind == "key" ? j.keysDict.Remove(_jType) : j.itemsDict.Remove(_jType);
+            bool had;
+            if (_jKind == "key")
+            {
+                had = j.keysDict.Remove(_jType);
+            }
+            else
+            {
+                had = j.itemsDict.Remove(_jType);
+            }
             if (!had)
             {
                 r.Fail($"our journal hadn't got {_jType}");
@@ -421,7 +463,14 @@ namespace DarkwoodMP.World
             }
             var j = Singleton<UI>.Instance.journal;
             bool want = a.Length == 0 || a[0] == "yes";
-            bool Has() => _jKind == "key" ? j.keysDict.ContainsKey(_jType) : j.itemsDict.ContainsKey(_jType);
+            bool Has()
+            {
+                if (_jKind == "key")
+                {
+                    return j.keysDict.ContainsKey(_jType);
+                }
+                return j.itemsDict.ContainsKey(_jType);
+            }
             float until = Time.realtimeSinceStartup + 8f;
             while (Has() != want && Time.realtimeSinceStartup < until)
             {
@@ -461,8 +510,20 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            var go = l.trader != null ? l.trader : l.wolf;
-            return go != null ? go.GetComponent<NPC>() : null;
+            GameObject go;
+            if (l.trader != null)
+            {
+                go = l.trader;
+            }
+            else
+            {
+                go = l.wolf;
+            }
+            if (go != null)
+            {
+                return go.GetComponent<NPC>();
+            }
+            return null;
         }
 
         /// <summary>"an-start [noreward] [late]": our player in their hideout at dawn: the game's morning (Controller.startAfterNight,
@@ -479,7 +540,15 @@ namespace DarkwoodMP.World
             }
             if (Location.getAtPos(p.transform.position) != l)
             {
-                var to = l.traderPosition != null ? l.traderPosition.transform.position : l.transform.position;
+                Vector3 to;
+                if (l.traderPosition != null)
+                {
+                    to = l.traderPosition.transform.position;
+                }
+                else
+                {
+                    to = l.transform.position;
+                }
                 yield return Walk(to, 150f);
                 yield return new WaitForSecondsRealtime(0.5f);
             }
@@ -559,7 +628,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(0.5f);
             var l = Hideout(Player.Instance);
-            var npc = l != null && l.trader != null ? l.trader.GetComponent<NPC>() : null; // the wolf stays (each game's own)
+            // the wolf stays (each game's own)
+            NPC npc = null;
+            if (l != null && l.trader != null)
+            {
+                npc = l.trader.GetComponent<NPC>();
+            }
             bool frozen = Player.Instance.effects.hasEffectType(CharacterEffectType.timeFreeze);
             r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {(npc != null ? npc.name : "gone")}{(l != null && l.wolf != null ? ", the wolf here" : "")}";
             if (c.isAfterNight != want || (!want && (npc != null || frozen)))
@@ -804,7 +878,15 @@ namespace DarkwoodMP.World
                 }
                 yield return null;
             }
-            float d1 = InvItemClass.isNull(slot.invItem) ? -1f : slot.invItem.durability;
+            float d1;
+            if (InvItemClass.isNull(slot.invItem))
+            {
+                d1 = -1f;
+            }
+            else
+            {
+                d1 = slot.invItem.durability;
+            }
             yield return new WaitForSecondsRealtime(1.5f); // a few of Containers' looks at the open slots
             var sent = LogSince(mark).Where(l => l.Contains($"slot(s) of {inv.name}") && l.Contains("sent") && !l.Contains("[map]")).ToList();
             var refused = Refused(mark);
@@ -959,8 +1041,20 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return Walk(cp.transform.position, 150f);
-            float dmg = a.Length > 0 && a[0] == "all" ? cp.health : Mathf.Floor(cp.maxHealth / 2f);
-            var seg = cp.lastChainSegment != null ? cp.lastChainSegment.GetComponent<Vine>() : null;
+            float dmg;
+            if (a.Length > 0 && a[0] == "all")
+            {
+                dmg = cp.health;
+            }
+            else
+            {
+                dmg = Mathf.Floor(cp.maxHealth / 2f);
+            }
+            Vine seg = null;
+            if (cp.lastChainSegment != null)
+            {
+                seg = cp.lastChainSegment.GetComponent<Vine>();
+            }
             if (seg == null)
             {
                 seg = cp.GetComponentInChildren<Vine>();
@@ -992,7 +1086,19 @@ namespace DarkwoodMP.World
                 yield break;
             }
             // "half": what one vine-cut half left
-            float health = a.Length < 2 ? -1f : a[1] == "half" ? cp.maxHealth - Mathf.Floor(cp.maxHealth / 2f) : F(a[1]);
+            float health;
+            if (a.Length < 2)
+            {
+                health = -1f;
+            }
+            else if (a[1] == "half")
+            {
+                health = cp.maxHealth - Mathf.Floor(cp.maxHealth / 2f);
+            }
+            else
+            {
+                health = F(a[1]);
+            }
             bool Ok() => cp.attached == attached && (health < 0f || Mathf.Abs(cp.health - health) < 0.5f);
             float until = Time.realtimeSinceStartup + 5f;
             while (!Ok() && Time.realtimeSinceStartup < until)
@@ -1038,7 +1144,11 @@ namespace DarkwoodMP.World
                 r.Fail("no shadow-covered crate");
                 yield break;
             }
-            int dmg = a.Length > 0 ? int.Parse(a[0]) : 10;
+            int dmg = 10;
+            if (a.Length > 0)
+            {
+                dmg = int.Parse(a[0]);
+            }
             yield return Walk(crate.transform.position, 150f);
             int hp = crate.health;
             int mark = MapScenarioIssues.LogMark();
@@ -1067,11 +1177,19 @@ namespace DarkwoodMP.World
                 yield break;
             }
             bool alive = a.Length == 0 || a[0] == "alive";
-            float at = a.Length > 1 ? F(a[1]) : 1e9f;
+            float at = 1e9f;
+            if (a.Length > 1)
+            {
+                at = F(a[1]);
+            }
             bool Ok()
             {
                 var sa = crate.GetComponent<ShadowArmor>();
-                return alive ? sa != null && BreakSync.ShadowHealth(crate) <= at + 0.01f : sa == null;
+                if (alive)
+                {
+                    return sa != null && BreakSync.ShadowHealth(crate) <= at + 0.01f;
+                }
+                return sa == null;
             }
             float until = Time.realtimeSinceStartup + 15f;
             while (!Ok() && Time.realtimeSinceStartup < until)
@@ -1149,8 +1267,22 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(3f); // a bag is sent once it has come to rest
             var bag = NearestAll<DeathDrop>(p.transform.position, d => d.GetComponent<Inventory>() != null);
-            _marker = bag != null ? bag.additionalMapMarker : null;
-            r.Info = bag == null ? "no bag" : $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(_marker != null ? Fmt(_marker.transform.position) : "none")}";
+            if (bag != null)
+            {
+                _marker = bag.additionalMapMarker;
+            }
+            else
+            {
+                _marker = null;
+            }
+            if (bag == null)
+            {
+                r.Info = "no bag";
+            }
+            else
+            {
+                r.Info = $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(_marker != null ? Fmt(_marker.transform.position) : "none")}";
+            }
             if (bag == null || _marker == null)
             {
                 r.Fail(r.Info);
@@ -1182,8 +1314,14 @@ namespace DarkwoodMP.World
             {
                 _marker = bag.additionalMapMarker;
             }
-            r.Info = bag == null ? $"no bag, marker {(_marker != null ? "still here" : "gone")}"
-                : $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(bag.additionalMapMarker != null ? Fmt(bag.additionalMapMarker.transform.position) : "none")}";
+            if (bag == null)
+            {
+                r.Info = $"no bag, marker {(_marker != null ? "still here" : "gone")}";
+            }
+            else
+            {
+                r.Info = $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(bag.additionalMapMarker != null ? Fmt(bag.additionalMapMarker.transform.position) : "none")}";
+            }
             if (!Ok())
             {
                 r.Fail(r.Info);

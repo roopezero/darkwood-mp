@@ -145,8 +145,23 @@ namespace DarkwoodMP
                 {
                     w.PictureRenderer.enabled = false;
                 }
-                var c = w.Button.rolledOver ? Color.white : Grey;
-                c.a = w.Picture != null ? w.Picture.color.a : 1f;
+                Color c;
+                if (w.Button.rolledOver)
+                {
+                    c = Color.white;
+                }
+                else
+                {
+                    c = Grey;
+                }
+                if (w.Picture != null)
+                {
+                    c.a = w.Picture.color.a;
+                }
+                else
+                {
+                    c.a = 1f;
+                }
                 if (w.Text.color != c)
                 {
                     w.Text.color = c;
@@ -157,7 +172,11 @@ namespace DarkwoodMP
 
         private static void Scan(MainMenu mm)
         {
-            var font = mm.CurrentVersion != null ? mm.CurrentVersion.font : null;
+            tk2dFontData font = null;
+            if (mm.CurrentVersion != null)
+            {
+                font = mm.CurrentVersion.font;
+            }
             if (font == null)
             {
                 return;
@@ -232,7 +251,16 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
-                if (font.useDictionary ? font.charDict == null || !font.charDict.ContainsKey(ch) : font.chars == null || ch >= font.chars.Length || font.chars[ch] == null || font.chars[ch].advance <= 0f)
+                bool condition;
+                if (font.useDictionary)
+                {
+                    condition = font.charDict == null || !font.charDict.ContainsKey(ch);
+                }
+                else
+                {
+                    condition = font.chars == null || ch >= font.chars.Length || font.chars[ch] == null || font.chars[ch].advance <= 0f;
+                }
+                if (condition)
                 {
                     return false;
                 }
@@ -282,7 +310,11 @@ namespace DarkwoodMP
             {
                 return;
             }
-            var cam = Core.CamUI != null ? Core.CamUI.GetComponent<Camera>() : null;
+            Camera cam = null;
+            if (Core.CamUI != null)
+            {
+                cam = Core.CamUI.GetComponent<Camera>();
+            }
             if (cam == null)
             {
                 return;
@@ -309,10 +341,22 @@ namespace DarkwoodMP
             // The menu's vignette (Background/Overlay) darkens the screen's edges and is drawn over the logo, which the
             // game keeps in the middle. In the corner it'd be dimmed, so it's brought to the version line's depth, in
             // front of it (the UI camera is orthographic and looks along -Y, so depth doesn't move it on the screen).
-            float? front = mm.CurrentVersion != null && cam.orthographic ? mm.CurrentVersion.transform.position.y : (float?)null;
+            float? front;
+            if (mm.CurrentVersion != null && cam.orthographic)
+            {
+                front = mm.CurrentVersion.transform.position.y;
+            }
+            else
+            {
+                front = (float?)null;
+            }
             // The logo: top left, its left edge on the column's.
             var logo = mm.Menu0.transform.Find("Darkwood");
-            var logoR = logo != null ? logo.GetComponent<Renderer>() : null;
+            Renderer logoR = null;
+            if (logo != null)
+            {
+                logoR = logo.GetComponent<Renderer>();
+            }
             if (logoR != null)
             {
                 var rect = ScreenRect(cam, logoR.bounds);
@@ -518,7 +562,15 @@ namespace DarkwoodMP
 
         private static void Renderers(GameObject go, bool self)
         {
-            var rs = self ? new[] { go.GetComponent<Renderer>() } : go.GetComponentsInChildren<Renderer>(false);
+            Renderer[] rs;
+            if (self)
+            {
+                rs = new[] { go.GetComponent<Renderer>() };
+            }
+            else
+            {
+                rs = go.GetComponentsInChildren<Renderer>(false);
+            }
             foreach (var r in rs)
             {
                 if (r != null && r.enabled)
@@ -556,12 +608,20 @@ namespace DarkwoodMP
                 Go("upgrade", ui.upgradeItemMenu.gameObject);
             }
             Go("bars", ui.bars);
-            var cr = ui.clock != null ? ui.clock.GetComponent<Renderer>() : null;
+            Renderer cr = null;
+            if (ui.clock != null)
+            {
+                cr = ui.clock.GetComponent<Renderer>();
+            }
             if (cr != null && cr.enabled && cr.gameObject.activeInHierarchy)
             {
                 on.Add("clock");
             }
-            return on.Count == 0 ? "none" : string.Join(" ", on);
+            if (on.Count == 0)
+            {
+                return "none";
+            }
+            return string.Join(" ", on);
         }
     }
 }

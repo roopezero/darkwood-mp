@@ -11,7 +11,14 @@ namespace DarkwoodMP.World
     {
         public readonly Dictionary<string, int> N = new Dictionary<string, int>();
         private void DwmpOwnCount(string id) => N[id] = Of(id) + 1;
-        public int Of(string id) => N.TryGetValue(id, out var n) ? n : 0;
+        public int Of(string id)
+        {
+            if (N.TryGetValue(id, out var n))
+            {
+                return n;
+            }
+            return 0;
+        }
     }
 
     /// <summary>
@@ -47,7 +54,11 @@ namespace DarkwoodMP.World
         private static GameObject TankPrefab()
         {
             var db = Singleton<ItemsDatabase>.Instance;
-            return db != null && db.itemsDict.TryGetValue(SharedTank.Item, out var path) ? Resources.Load(path) as GameObject : null;
+            if (db != null && db.itemsDict.TryGetValue(SharedTank.Item, out var path))
+            {
+                return Resources.Load(path) as GameObject;
+            }
+            return null;
         }
 
         /// <summary>
@@ -363,7 +374,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string Name(Object o) => o == null ? "null" : o.name;
+        private static string Name(Object o)
+        {
+            if (o == null)
+            {
+                return "null";
+            }
+            return o.name;
+        }
 
         private static string Req(EventTriggerRequirement q) =>
             $"{q.type}{(q.type == EventTriggerRequirement.Type.playerState ? "/" + q.playerState : "")} item={Name(q.itemType)} key='{q.keyType}' n={q.amount} mod={q.activeModifier} dest={Name(q.destTransform)}";
@@ -380,7 +398,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Scan(string[] a, Result r)
         {
-            string pat = a.Length > 0 ? a[0] : "cellar";
+            string pat = "cellar";
+            if (a.Length > 0)
+            {
+                pat = a[0];
+            }
             var sb = new System.Text.StringBuilder();
             int n = 0;
             bool Wanted(Component c)
@@ -459,8 +481,16 @@ namespace DarkwoodMP.World
             foreach (var type in new[] { "oxygenTank_full", "oxygenTank_empty" })
             {
                 var db = Singleton<ItemsDatabase>.Instance;
-                var prefab = db != null && db.itemsDict.TryGetValue(type, out var path) ? Resources.Load(path) as GameObject : null;
-                var inv = prefab != null ? prefab.GetComponent<InvItem>() : null;
+                GameObject prefab = null;
+                if (db != null && db.itemsDict.TryGetValue(type, out var path))
+                {
+                    prefab = Resources.Load(path) as GameObject;
+                }
+                InvItem inv = null;
+                if (prefab != null)
+                {
+                    inv = prefab.GetComponent<InvItem>();
+                }
                 var jd = Singleton<JournalDatabase>.Instance;
                 sb.Append($"\n[item] {type}: prefab={(prefab != null)} important={inv?.isImportantItem} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}" +
                           $" inJournal={Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(type)} carried={MapScenarioWorld.CarriedOf(type)}");

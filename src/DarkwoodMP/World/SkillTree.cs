@@ -65,7 +65,11 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
-                return _tiers != null ? _tiers.tiers : null;
+                if (_tiers != null)
+                {
+                    return _tiers.tiers;
+                }
+                return null;
             }
         }
 
@@ -113,7 +117,14 @@ namespace DarkwoodMP.World
         }
 
         private static readonly string[] TierNames = { "I", "II", "III", "IV" };
-        public static string TierName(int index) => index >= 0 && index < TierNames.Length ? TierNames[index] : (index + 1).ToString();
+        public static string TierName(int index)
+        {
+            if (index >= 0 && index < TierNames.Length)
+            {
+                return TierNames[index];
+            }
+            return (index + 1).ToString();
+        }
 
         // ---- the rules ------------------------------------------------------------------------------
 
@@ -164,7 +175,14 @@ namespace DarkwoodMP.World
 
         /// <summary>Points to spend: one for each level taken, less the good skills had.</summary>
         public static int Points(int level, HashSet<string> chosen) => Math.Max(0, level - Good(chosen));
-        public static int Points(Player p) => p == null ? 0 : Points(p.currentLevel, Chosen(p));
+        public static int Points(Player p)
+        {
+            if (p == null)
+            {
+                return 0;
+            }
+            return Points(p.currentLevel, Chosen(p));
+        }
 
         /// <summary>
         /// Whether this good skill must come with a negative skill: it would be the first good skill of a tier that has
@@ -252,7 +270,11 @@ namespace DarkwoodMP.World
             bool need = NeedsNegative(chosen, good);
             if (string.IsNullOrEmpty(negative))
             {
-                return need ? "a negative skill of its tier has to be taken with it" : null;
+                if (need)
+                {
+                    return "a negative skill of its tier has to be taken with it";
+                }
+                return null;
             }
             if (!need)
             {
@@ -432,7 +454,11 @@ namespace DarkwoodMP.World
                     wrong.Add($"tier {TierName(i)}: {negs} negative skills with {GoodIn(t, chosen)} skills");
                 }
             }
-            return wrong.Count > 0 ? string.Join(", ", wrong) : null;
+            if (wrong.Count > 0)
+            {
+                return string.Join(", ", wrong);
+            }
+            return null;
         }
 
         /// <summary>For tests: a choice that the rules allow now (good, negative or null), or null if there's none.</summary>

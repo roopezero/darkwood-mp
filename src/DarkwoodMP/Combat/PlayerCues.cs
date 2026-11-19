@@ -49,7 +49,11 @@ namespace DarkwoodMP.Combat
                 int hits = Physics.OverlapSphereNonAlloc(pos, 150f, _near, EnemyLayers);
                 for (int i = 0; i < hits; i++)
                 {
-                    var c = _near[i] != null ? _near[i].GetComponent<Character>() : null;
+                    Character c = null;
+                    if (_near[i] != null)
+                    {
+                        c = _near[i].GetComponent<Character>();
+                    }
                     if (c == null)
                     {
                         continue;

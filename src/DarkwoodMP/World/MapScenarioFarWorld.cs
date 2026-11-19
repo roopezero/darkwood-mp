@@ -211,7 +211,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var co = it.GetComponent<CullableObject>();
-            var node = co != null ? co.node : null;
+            WorldGrid.Node node = null;
+            if (co != null)
+            {
+                node = co.node;
+            }
             r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}"
                      + (node != null ? $" node {node.position.x:0},{node.position.y:0} entered={node.entered}" : " no node");
             if (StateDump.Flat(it.transform.position - at) > 300f)

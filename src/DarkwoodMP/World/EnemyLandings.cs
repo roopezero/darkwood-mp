@@ -103,7 +103,14 @@ namespace DarkwoodMP.World
             {
                 Physics.IgnoreCollision(col, thrower.collider);
             }
-            ti.objectThatSpawnedMe = thrower != null ? thrower.transform : null;
+            if (thrower != null)
+            {
+                ti.objectThatSpawnedMe = thrower.transform;
+            }
+            else
+            {
+                ti.objectThatSpawnedMe = null;
+            }
             ti.damage = 0;
             rb.velocity = vel;
             rb.AddTorque(0f, 225000f, 0f);

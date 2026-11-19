@@ -40,7 +40,15 @@ namespace DarkwoodMP.World
         public static int BaseSlots(Workbench wb)
         {
             var so = wb.GetComponent<SaveableObject>();
-            string name = so != null && !string.IsNullOrEmpty(so.prefabName) ? so.prefabName : DefaultPrefab;
+            string name;
+            if (so != null && !string.IsNullOrEmpty(so.prefabName))
+            {
+                name = so.prefabName;
+            }
+            else
+            {
+                name = DefaultPrefab;
+            }
             if (_base.TryGetValue(name, out int n))
             {
                 return n;
@@ -49,7 +57,11 @@ namespace DarkwoodMP.World
             foreach (string path in new[] { "Prefabs/" + name, name, "Prefabs/" + DefaultPrefab })
             {
                 var go = Resources.Load(path) as GameObject;
-                var inv = go != null ? go.GetComponent<Workbench>()?.normalInventory ?? go.GetComponent<Inventory>() : null;
+                Inventory inv = null;
+                if (go != null)
+                {
+                    inv = go.GetComponent<Workbench>()?.normalInventory ?? go.GetComponent<Inventory>();
+                }
                 if (inv != null && inv.slots != null && inv.slots.Count > 0)
                 {
                     n = inv.slots.Count;
@@ -68,7 +80,17 @@ namespace DarkwoodMP.World
         /// <summary>The slot count the storage should have at this level.</summary>
         public static int Wanted(Workbench wb, int level) => BaseSlots(wb) + RowSize * Mathf.Max(0, level - BaseLevel);
 
-        private static int Level => Singleton<Controller>.Instance != null ? Singleton<Controller>.Instance.workbenchLevel : BaseLevel;
+        private static int Level
+        {
+            get
+            {
+                if (Singleton<Controller>.Instance != null)
+                {
+                    return Singleton<Controller>.Instance.workbenchLevel;
+                }
+                return BaseLevel;
+            }
+        }
 
         /// <summary>Every frame: once a world has loaded (again), or the level changed, give every workbench its rows.</summary>
         public static void Update()
@@ -178,7 +200,11 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var cam = Core.CamUI != null ? Core.CamUI.GetComponent<Camera>() : null;
+            Camera cam = null;
+            if (Core.CamUI != null)
+            {
+                cam = Core.CamUI.GetComponent<Camera>();
+            }
             if (cam == null)
             {
                 return;

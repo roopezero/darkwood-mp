@@ -78,8 +78,16 @@ namespace DarkwoodMP.Sync
         /// <summary>The radius of the player's body (its capsule), at least 10.</summary>
         public static float BodyRadius(Player p)
         {
-            var cap = p != null ? p.GetComponent<CapsuleCollider>() : null;
-            float r = cap != null ? cap.radius * Mathf.Max(Mathf.Abs(p.transform.lossyScale.x), Mathf.Abs(p.transform.lossyScale.z)) : 15f;
+            CapsuleCollider cap = null;
+            if (p != null)
+            {
+                cap = p.GetComponent<CapsuleCollider>();
+            }
+            float r = 15f;
+            if (cap != null)
+            {
+                r = cap.radius * Mathf.Max(Mathf.Abs(p.transform.lossyScale.x), Mathf.Abs(p.transform.lossyScale.z));
+            }
             return Mathf.Max(10f, r);
         }
 

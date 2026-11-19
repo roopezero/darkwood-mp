@@ -93,7 +93,11 @@ namespace DarkwoodMP.World
         {
             try
             {
-                string path = dir != null ? Path.Combine(dir, "darkwoodmp_later.json") : null;
+                string path = null;
+                if (dir != null)
+                {
+                    path = Path.Combine(dir, "darkwoodmp_later.json");
+                }
                 if (path != null && File.Exists(path))
                 {
                     var d = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
@@ -136,8 +140,14 @@ namespace DarkwoodMP.World
             return _data;
         }
 
-        private static string KeyOf(ulong peer) =>
-            S != null && S.Keys.TryGetValue(peer, out var key) && !string.IsNullOrEmpty(key) ? Characters.KeyHash(key) : "#" + peer;
+        private static string KeyOf(ulong peer)
+        {
+            if (S != null && S.Keys.TryGetValue(peer, out var key) && !string.IsNullOrEmpty(key))
+            {
+                return Characters.KeyHash(key);
+            }
+            return "#" + peer;
+        }
 
         /// <summary>Host: write the record beside the save (the game saved).</summary>
         internal static void HostSaved()
@@ -188,7 +198,11 @@ namespace DarkwoodMP.World
         internal static bool HostOwe(global::EventTrigger t)
         {
             var s = S;
-            string id = s != null && s.IsHost ? IdOf(t) : null;
+            string id = null;
+            if (s != null && s.IsHost)
+            {
+                id = IdOf(t);
+            }
             return id != null && Data().HostOwed.Add(id);
         }
 

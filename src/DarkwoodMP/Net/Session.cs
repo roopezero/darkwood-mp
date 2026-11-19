@@ -190,7 +190,11 @@ namespace DarkwoodMP.Net
         private static float ReadLag()
         {
             var v = Environment.GetEnvironmentVariable("DWMP_LAG_MS");
-            return int.TryParse(v, out int ms) && ms > 0 ? ms / 1000f : 0f;
+            if (int.TryParse(v, out int ms) && ms > 0)
+            {
+                return ms / 1000f;
+            }
+            return 0f;
         }
 
         private void Received(ulong from, byte[] data, int length)
@@ -217,12 +221,29 @@ namespace DarkwoodMP.Net
 
         public void Register(MsgType type, Action<ulong, PacketReader> handler) => _handlers[type] = handler;
 
-        public string NameOf(ulong id) => Names.TryGetValue(id, out var n) ? n : $"Player {id}";
+        public string NameOf(ulong id)
+        {
+            if (Names.TryGetValue(id, out var n))
+            {
+                return n;
+            }
+            return $"Player {id}";
+        }
 
         public PacketWriter Begin(MsgType type) => _pw.Begin(type);
 
         /// <summary>Host: everyone playing, the host included.</summary>
-        public int PlayerCount => IsHost ? 1 + Peers.Count : Names.Count;
+        public int PlayerCount
+        {
+            get
+            {
+                if (IsHost)
+                {
+                    return 1 + Peers.Count;
+                }
+                return Names.Count;
+            }
+        }
 
         // ---- sending -------------------------------------------------------
 
@@ -330,13 +351,34 @@ namespace DarkwoodMP.Net
                 return;
             }
 
-            string why =
-                game != Protocol.Game ? "This server runs a different game."
-                : version != Protocol.Version ? $"The host has DarkwoodMP {PluginInfo.Version}, you have {modVersion}. Use the same version."
-                : Backend.HostPassword.Length > 0 && password != Backend.HostPassword ? (password.Length == 0 ? "This server needs a password." : "Wrong password.")
-                : key.Length < 32 ? "Bad player key."
-                : Keys.TryGetValue(LocalId, out var hostKey) && hostKey == key ? "You're already playing on this server."
-                : null;
+            string why = null;
+            if (game != Protocol.Game)
+            {
+                why = "This server runs a different game.";
+            }
+            else if (version != Protocol.Version)
+            {
+                why = $"The host has DarkwoodMP {PluginInfo.Version}, you have {modVersion}. Use the same version.";
+            }
+            else if (Backend.HostPassword.Length > 0 && password != Backend.HostPassword)
+            {
+                if (password.Length == 0)
+                {
+                    why = "This server needs a password.";
+                }
+                else
+                {
+                    why = "Wrong password.";
+                }
+            }
+            else if (key.Length < 32)
+            {
+                why = "Bad player key.";
+            }
+            else if (Keys.TryGetValue(LocalId, out var hostKey) && hostKey == key)
+            {
+                why = "You're already playing on this server.";
+            }
             if (why != null)
             {
                 Refuse(from, why);
@@ -552,7 +594,11 @@ namespace DarkwoodMP.Net
             {
                 name = name.Substring(0, 32);
             }
-            return name.Length == 0 ? "Player" : name;
+            if (name.Length == 0)
+            {
+                return "Player";
+            }
+            return name;
         }
 
         public void Update()

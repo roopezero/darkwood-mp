@@ -175,10 +175,25 @@ namespace DarkwoodMP.Net
                             return;
                         }
                     }
-                    bool ok = m.Upnp ? AddUpnp(m, "TCP", LeaseSeconds, out _) : PmpMap(m.Gateway, 2, m.Port, m.ExternalTcp, LeaseSeconds) > 0;
+                    bool ok;
+                    if (m.Upnp)
+                    {
+                        ok = AddUpnp(m, "TCP", LeaseSeconds, out _);
+                    }
+                    else
+                    {
+                        ok = PmpMap(m.Gateway, 2, m.Port, m.ExternalTcp, LeaseSeconds) > 0;
+                    }
                     if (ok && m.ExternalUdp > 0)
                     {
-                        ok = m.Upnp ? AddUpnp(m, "UDP", LeaseSeconds, out _) : PmpMap(m.Gateway, 1, m.Port, m.ExternalUdp, LeaseSeconds) > 0;
+                        if (m.Upnp)
+                        {
+                            ok = AddUpnp(m, "UDP", LeaseSeconds, out _);
+                        }
+                        else
+                        {
+                            ok = PmpMap(m.Gateway, 1, m.Port, m.ExternalUdp, LeaseSeconds) > 0;
+                        }
                     }
                     if (!Current(gen))
                     {
@@ -203,11 +218,26 @@ namespace DarkwoodMP.Net
 
         private void Report(Mapping m)
         {
-            string how = m.Upnp ? "UPnP" : "NAT-PMP";
+            string how = "NAT-PMP";
+            if (m.Upnp)
+            {
+                how = "UPnP";
+            }
             string ip = ExternalIp;
             BehindAnotherNat = ip != null && IPAddress.TryParse(ip, out IPAddress a) && IsPrivate(a);
-            string ports = m.ExternalTcp == m.ExternalUdp ? $"port {m.ExternalTcp} (TCP and UDP)"
-                : m.ExternalUdp <= 0 ? $"TCP port {m.ExternalTcp} (not UDP)" : $"TCP {m.ExternalTcp}, UDP {m.ExternalUdp}";
+            string ports;
+            if (m.ExternalTcp == m.ExternalUdp)
+            {
+                ports = $"port {m.ExternalTcp} (TCP and UDP)";
+            }
+            else if (m.ExternalUdp <= 0)
+            {
+                ports = $"TCP port {m.ExternalTcp} (not UDP)";
+            }
+            else
+            {
+                ports = $"TCP {m.ExternalTcp}, UDP {m.ExternalUdp}";
+            }
             if (BehindAnotherNat)
             {
                 Status = $"Your router opened {ports} ({how}), but its internet address {ip} is a shared or private one (your provider's NAT, or a second router): friends over the internet probably still can't reach you. Use Steam or a VPN.";
@@ -272,7 +302,15 @@ namespace DarkwoodMP.Net
 
         private Mapping TryUpnp(int port, int gen)
         {
-            var locations = TestRouter != null ? new List<string> { $"http://{TestRouter}/rootDesc.xml" } : Discover();
+            List<string> locations;
+            if (TestRouter != null)
+            {
+                locations = new List<string> { $"http://{TestRouter}/rootDesc.xml" };
+            }
+            else
+            {
+                locations = Discover();
+            }
             foreach (string loc in locations)
             {
                 if (!Current(gen))
@@ -487,7 +525,15 @@ namespace DarkwoodMP.Net
 
         private bool AddUpnp(Mapping m, string proto, int lease, out string why)
         {
-            int ext = proto == "TCP" ? m.ExternalTcp : m.ExternalUdp;
+            int ext;
+            if (proto == "TCP")
+            {
+                ext = m.ExternalTcp;
+            }
+            else
+            {
+                ext = m.ExternalUdp;
+            }
             string args(int l) =>
                 $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>" +
                 $"<NewInternalPort>{m.Port}</NewInternalPort><NewInternalClient>{m.InternalIp}</NewInternalClient><NewEnabled>1</NewEnabled>" +
@@ -557,7 +603,14 @@ namespace DarkwoodMP.Net
                     }
                 }
             }
-            error = code != null ? $"{code} {desc}" : $"HTTP {status}";
+            if (code != null)
+            {
+                error = $"{code} {desc}";
+            }
+            else
+            {
+                error = $"HTTP {status}";
+            }
             return null;
         }
 

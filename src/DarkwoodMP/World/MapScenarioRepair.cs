@@ -38,12 +38,39 @@ namespace DarkwoodMP.World
             Add("rp-hold", RpHold, timeout: 60f);
         }
 
-        private static string DoorInfo => _door == null ? "door gone" : $"{_door.name} {MapScenarioWorld.Ref(_door)} broken={_door.destroyed} health {_door.health}";
-        private static string ItemInfo => _item == null ? "item gone" : $"{_item.name} {MapScenarioWorld.Ref(_item)} broken={_item.destroyed} health {_item.health}/{_item.maxHealth}";
+        private static string DoorInfo
+        {
+            get
+            {
+                if (_door == null)
+                {
+                    return "door gone";
+                }
+                return $"{_door.name} {MapScenarioWorld.Ref(_door)} broken={_door.destroyed} health {_door.health}";
+            }
+        }
+        private static string ItemInfo
+        {
+            get
+            {
+                if (_item == null)
+                {
+                    return "item gone";
+                }
+                return $"{_item.name} {MapScenarioWorld.Ref(_item)} broken={_item.destroyed} health {_item.health}/{_item.maxHealth}";
+            }
+        }
 
         private static IEnumerator RpDoor(string[] a, Result r)
         {
-            _door = a.Length > 0 ? MapScenarioWorld.Nth<Door>(a[0]) : null;
+            if (a.Length > 0)
+            {
+                _door = MapScenarioWorld.Nth<Door>(a[0]);
+            }
+            else
+            {
+                _door = null;
+            }
             if (_door == null)
             {
                 r.Fail("usage: rp-door N (no such door)");
@@ -176,7 +203,11 @@ namespace DarkwoodMP.World
 
         private static IEnumerator RpHold(string[] a, Result r)
         {
-            float secs = a.Length > 0 ? F(a[0]) : 5f;
+            float secs = 5f;
+            if (a.Length > 0)
+            {
+                secs = F(a[0]);
+            }
             float until = Time.realtimeSinceStartup + secs;
             string broke = null;
             while (Time.realtimeSinceStartup < until && broke == null)

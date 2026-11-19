@@ -368,7 +368,14 @@ namespace DarkwoodMP.World
             var grown = new string[inv.slots.Count];
             for (int i = 0; i < grown.Length; i++)
             {
-                grown[i] = i < keys.Length ? keys[i] : Key(inv.slots[i]);
+                if (i < keys.Length)
+                {
+                    grown[i] = keys[i];
+                }
+                else
+                {
+                    grown[i] = Key(inv.slots[i]);
+                }
             }
             _watched[inv] = grown;
         }
@@ -574,7 +581,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Keys of a watched storage just before the world's own refresh (Inventory.refreshItems), or null.</summary>
-        internal string[] BeforeDrift(Inventory inv) => inv != null && _watched.ContainsKey(inv) ? Keys(inv) : null;
+        internal string[] BeforeDrift(Inventory inv)
+        {
+            if (inv != null && _watched.ContainsKey(inv))
+            {
+                return Keys(inv);
+            }
+            return null;
+        }
 
         /// <summary>
         /// After the world's own refresh: a slot that changed in it (rot, drain, recharge) and that the player
@@ -609,7 +623,11 @@ namespace DarkwoodMP.World
         private static string Json(Inventory inv, int i)
         {
             var it = inv.slots[i].invItem;
-            return InvItemClass.isNull(it) ? "" : JsonConvert.SerializeObject(new InvItemClass.SaveState(it, i));
+            if (InvItemClass.isNull(it))
+            {
+                return "";
+            }
+            return JsonConvert.SerializeObject(new InvItemClass.SaveState(it, i));
         }
 
         private static InvItemClass Item(string json)
@@ -641,7 +659,11 @@ namespace DarkwoodMP.World
             // game would put the held item back there when it's let go (Controller.placeItem), over theirs. It goes
             // into our bags instead (it's ours: the slot gave it up when we picked it up).
             var ctl = Singleton<Controller>.Instance;
-            var held = ctl != null ? ctl.pickedUpItem : null;
+            InvItemClass held = null;
+            if (ctl != null)
+            {
+                held = ctl.pickedUpItem;
+            }
             var player = Player.Instance;
             if (!string.IsNullOrEmpty(json) && !InvItemClass.isNull(held) && held.slot == slot && player != null)
             {
@@ -778,7 +800,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    refusedAll = changes.Count > 1 ? $"slot {c.Slot} had just changed, so the {changes.Count} changes made with it are refused too" : "it had just changed";
+                    if (changes.Count > 1)
+                    {
+                        refusedAll = $"slot {c.Slot} had just changed, so the {changes.Count} changes made with it are refused too";
+                    }
+                    else
+                    {
+                        refusedAll = "it had just changed";
+                    }
                     break;
                 }
             }
@@ -916,8 +945,16 @@ namespace DarkwoodMP.World
         private static void Moved(string oldKey, InvItemClass tried, Dictionary<string, (int n, InvItemClass item)> net)
         {
             var old = oldKey.Split('|');
-            string oldType = oldKey.Length > 0 ? old[0] : null;
-            int oldAmount = oldKey.Length > 0 && old.Length > 1 && int.TryParse(old[1], out int a) ? a : 0;
+            string oldType = null;
+            if (oldKey.Length > 0)
+            {
+                oldType = old[0];
+            }
+            int oldAmount = 0;
+            if (oldKey.Length > 0 && old.Length > 1 && int.TryParse(old[1], out int a))
+            {
+                oldAmount = a;
+            }
             bool any = !InvItemClass.isNull(tried);
             void Add(string type, int n, InvItemClass item)
             {
@@ -951,12 +988,20 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 any = true;
-                int dropped = put > 0 && kv.Value.item != null ? GiveBack(player, kv.Value.item, put) : 0;
+                int dropped = 0;
+                if (put > 0 && kv.Value.item != null)
+                {
+                    dropped = GiveBack(player, kv.Value.item, put);
+                }
                 int left = took;
                 if (left > 0)
                 {
                     var ctl = Singleton<Controller>.Instance;
-                    var held = ctl != null ? ctl.pickedUpItem : null;
+                    InvItemClass held = null;
+                    if (ctl != null)
+                    {
+                        held = ctl.pickedUpItem;
+                    }
                     if (!InvItemClass.isNull(held) && held.type == kv.Key)
                     {
                         int n = Mathf.Min(held.amount, left);
@@ -1090,8 +1135,15 @@ namespace DarkwoodMP.World
             if (s.IsHost)
             {
                 // An upgrade (CraftingRecipes.doCraft) raises the level by one, at an open workbench.
-                string refused = level != ctl.workbenchLevel + 1 ? $"level {level} isn't one above {ctl.workbenchLevel}"
-                    : !AtWorkbench(from) ? "they aren't at a workbench" : null;
+                string refused = null;
+                if (level != ctl.workbenchLevel + 1)
+                {
+                    refused = $"level {level} isn't one above {ctl.workbenchLevel}";
+                }
+                else if (!AtWorkbench(from))
+                {
+                    refused = "they aren't at a workbench";
+                }
                 if (refused != null)
                 {
                     Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} raised the workbench level: refused ({refused})");
@@ -1105,7 +1157,11 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"The workbench is now level {level} ({s.NameOf(from)} upgraded it)");
             WorkbenchStorage.ApplyAll("upgraded"); // its new row, before any change to it arrives
             // An open workbench shows the new level's recipes.
-            var open = Player.Instance != null ? Player.Instance.openedItemInventory : null;
+            Inventory open = null;
+            if (Player.Instance != null)
+            {
+                open = Player.Instance.openedItemInventory;
+            }
             if (open != null && open.isWorkbench && open.workbench != null)
             {
                 open.workbench.workbenchInventory.clear();
@@ -1138,7 +1194,17 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
     static class WorkbenchUpgradePatch
     {
-        static void Prefix(out int __state) => __state = Singleton<Controller>.Instance != null ? Singleton<Controller>.Instance.workbenchLevel : 0;
+        static void Prefix(out int __state)
+        {
+            if (Singleton<Controller>.Instance != null)
+            {
+                __state = Singleton<Controller>.Instance.workbenchLevel;
+            }
+            else
+            {
+                __state = 0;
+            }
+        }
         static void Postfix(int __state)
         {
             var ctl = Singleton<Controller>.Instance;

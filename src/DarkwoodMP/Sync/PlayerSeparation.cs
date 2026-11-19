@@ -69,7 +69,19 @@ namespace DarkwoodMP.Sync
                     continue;
                 }
                 // Right on top of each other: each game goes its own way, by who has the lower id.
-                var away = dist > 0.01f ? d / dist : (localId < r.Owner ? Vector3.right : Vector3.left);
+                Vector3 away;
+                if (dist > 0.01f)
+                {
+                    away = d / dist;
+                }
+                else if (localId < r.Owner)
+                {
+                    away = Vector3.right;
+                }
+                else
+                {
+                    away = Vector3.left;
+                }
                 push += away * ((min - dist) / min);
             }
             if (push == Vector3.zero)

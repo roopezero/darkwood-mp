@@ -32,7 +32,17 @@ namespace DarkwoodMP.Net
         public bool InSession { get; private set; }
         public bool IsHost { get; private set; }
         public ulong HostId => HostPeerId;
-        public ulong LocalId => IsHost ? HostPeerId : 0; // a client's id comes in Welcome
+        public ulong LocalId // a client's id comes in Welcome
+        {
+            get
+            {
+                if (IsHost)
+                {
+                    return HostPeerId;
+                }
+                return 0;
+            }
+        }
         public string HostPassword { get; private set; } = "";
         public string JoinPassword { get; private set; } = "";
         public int MaxPlayers { get; private set; } = Protocol.MaxPlayers;
@@ -150,7 +160,14 @@ namespace DarkwoodMP.Net
 
             int gen = ++_generation;
             Port = port;
-            ServerName = string.IsNullOrWhiteSpace(serverName) ? "Darkwood" : serverName.Trim();
+            if (string.IsNullOrWhiteSpace(serverName))
+            {
+                ServerName = "Darkwood";
+            }
+            else
+            {
+                ServerName = serverName.Trim();
+            }
             HostPassword = password ?? "";
             MaxPlayers = Math.Max(2, Math.Min(TestMaxPlayers > 0 ? TestMaxPlayers : Protocol.MaxPlayers, maxPlayers));
             IsHost = true;
@@ -345,8 +362,14 @@ namespace DarkwoodMP.Net
         }
 
         /// <summary>"host:port", with the default port filled in, as the browser's lists keep addresses.</summary>
-        public static string Normalize(string address) =>
-            TryParseAddress(address, out var h, out var p) ? $"{h}:{p}" : null;
+        public static string Normalize(string address)
+        {
+            if (TryParseAddress(address, out var h, out var p))
+            {
+                return $"{h}:{p}";
+            }
+            return null;
+        }
 
         // ---- reading and writing -------------------------------------------
 
@@ -359,7 +382,15 @@ namespace DarkwoodMP.Net
                 {
                     ReadFull(conn.Stream, head, 4);
                     int len = (int)BitConverter.ToUInt32(head, 0); // little-endian on every platform Darkwood runs on
-                    int max = conn.Inbound && !conn.SaidHello ? PreHelloMax : Protocol.MaxMessage;
+                    int max;
+                    if (conn.Inbound && !conn.SaidHello)
+                    {
+                        max = PreHelloMax;
+                    }
+                    else
+                    {
+                        max = Protocol.MaxMessage;
+                    }
                     if (len < 1 || len > max)
                     {
                         throw new IOException($"bad message length {len}");

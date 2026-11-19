@@ -82,27 +82,54 @@ namespace DarkwoodMP.World
             bool zMore = opener.z > body.position.z, xMore = opener.x > body.position.x;
             if (y > 179f && y < 181f)
             {
-                return zMore ? -1f : 1f;
+                if (zMore)
+                {
+                    return -1f;
+                }
+                return 1f;
             }
             if (y > -1f && y < 1f)
             {
-                return zMore ? 1f : -1f;
+                if (zMore)
+                {
+                    return 1f;
+                }
+                return -1f;
             }
             if (y > 89f && y < 91f)
             {
-                return xMore ? 1f : -1f;
+                if (xMore)
+                {
+                    return 1f;
+                }
+                return -1f;
             }
             if (y > 269f && y < 271f)
             {
-                return xMore ? -1f : 1f;
+                if (xMore)
+                {
+                    return -1f;
+                }
+                return 1f;
             }
-            return xMore ? -1f : 1f;
+            if (xMore)
+            {
+                return -1f;
+            }
+            return 1f;
         }
 
         public static void Clear() => Pending.Clear();
 
         /// <summary>The leaf's signed angle from shut (DeltaAngle(local z, 90)), the value the mod saves as rot.</summary>
-        public static float Signed(Door d) => d.body == null ? 0f : Mathf.DeltaAngle(d.body.localRotation.eulerAngles.z, 90f);
+        public static float Signed(Door d)
+        {
+            if (d.body == null)
+            {
+                return 0f;
+            }
+            return Mathf.DeltaAngle(d.body.localRotation.eulerAngles.z, 90f);
+        }
 
         /// <summary>
         /// How far the leaf turns from shut either way: its hinge's limit (110), or all the way round for a door whose
@@ -111,7 +138,11 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static float MaxTurn(Door d)
         {
-            var hinge = d != null && d.body != null ? d.body.GetComponent<HingeJoint>() : null;
+            HingeJoint hinge = null;
+            if (d != null && d.body != null)
+            {
+                hinge = d.body.GetComponent<HingeJoint>();
+            }
             if (hinge == null || !hinge.useLimits)
             {
                 return 180f;
@@ -151,7 +182,11 @@ namespace DarkwoodMP.World
         /// <summary>The leaf turned about its hinge to this signed angle from shut (within its limits), nothing else.</summary>
         internal static void Turn(Door d, float signedAngle)
         {
-            var hinge = d != null && d.body != null ? d.body.GetComponent<HingeJoint>() : null;
+            HingeJoint hinge = null;
+            if (d != null && d.body != null)
+            {
+                hinge = d.body.GetComponent<HingeJoint>();
+            }
             if (hinge == null)
             {
                 return;
@@ -389,7 +424,15 @@ namespace DarkwoodMP.World
             }
             Vector2 h = new Vector2(hinge.connectedAnchor.x, hinge.connectedAnchor.z), e = h + 2f * (c - h);
             var he = e - h;
-            float t = he.sqrMagnitude < 1e-3f ? 0f : Mathf.Clamp01(Vector2.Dot(q - h, he) / he.sqrMagnitude);
+            float t;
+            if (he.sqrMagnitude < 1e-3f)
+            {
+                t = 0f;
+            }
+            else
+            {
+                t = Mathf.Clamp01(Vector2.Dot(q - h, he) / he.sqrMagnitude);
+            }
             return (q - (h + t * he)).magnitude;
         }
 
@@ -519,7 +562,11 @@ namespace DarkwoodMP.World
         {
             foreach (var kv in _glides)
             {
-                var rb = kv.Key != null ? DoorLeaf.BodyRB(kv.Key) : null;
+                Rigidbody rb = null;
+                if (kv.Key != null)
+                {
+                    rb = DoorLeaf.BodyRB(kv.Key);
+                }
                 if (rb != null && kv.Key.opened && !kv.Key.destroyed)
                 {
                     rb.isKinematic = kv.Value.WasKinematic;

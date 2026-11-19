@@ -64,7 +64,14 @@ namespace DarkwoodMP.World
             var light = FovLight(p);
             if (float.IsNaN(_coneLight))
             {
-                _coneLight = light != null ? light.LightConeAngle : p.FOVLogic.LightConeAngle;
+                if (light != null)
+                {
+                    _coneLight = light.LightConeAngle;
+                }
+                else
+                {
+                    _coneLight = p.FOVLogic.LightConeAngle;
+                }
                 _coneLogic = p.FOVLogic.LightConeAngle;
                 _currentFov = CurrentFov(p);
             }
@@ -238,7 +245,14 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            _body = player != null ? player.GetComponent<Rigidbody>() : null;
+            if (player != null)
+            {
+                _body = player.GetComponent<Rigidbody>();
+            }
+            else
+            {
+                _body = null;
+            }
             Plugin.Instance.StartCoroutine(Run());
             return true;
         }
@@ -300,7 +314,14 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            _body = player != null ? player.GetComponent<Rigidbody>() : null;
+            if (player != null)
+            {
+                _body = player.GetComponent<Rigidbody>();
+            }
+            else
+            {
+                _body = null;
+            }
             Plugin.Notice("You died. Watching the others: click to switch.");
             Plugin.Instance.StartCoroutine(Run());
         }
@@ -312,7 +333,15 @@ namespace DarkwoodMP.World
             {
                 var s = Session.Instance;
                 bool inSession = s != null && s.Active && s.Connected && WorldShare.InWorld;
-                var playing = inSession ? Playing() : new List<RemotePlayer>();
+                List<RemotePlayer> playing;
+                if (inSession)
+                {
+                    playing = Playing();
+                }
+                else
+                {
+                    playing = new List<RemotePlayer>();
+                }
                 if (playing.Count == 0 && Epilogue)
                 {
                     yield return null; // nobody else crawling: stay put until the pan (EndWatch)

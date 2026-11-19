@@ -21,7 +21,11 @@ namespace DarkwoodMP
         public static void LateUpdate(bool windowsOpen)
         {
             var ui = Singleton<UI>.Instance;
-            var cursor = ui != null ? ui.cursor : null;
+            global::Cursor cursor = null;
+            if (ui != null)
+            {
+                cursor = ui.cursor;
+            }
             if (windowsOpen && cursor != null)
             {
                 foreach (var r in cursor.GetComponentsInChildren<Renderer>())

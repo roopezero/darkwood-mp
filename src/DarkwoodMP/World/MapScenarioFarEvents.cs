@@ -134,7 +134,15 @@ namespace DarkwoodMP.World
             string what;
             if (t.StartsWith("loc:"))
             {
-                var l = t == "loc:auto" ? Auto() : WorldLocations().FirstOrDefault(x => Name(x) == t.Substring(4));
+                Location l;
+                if (t == "loc:auto")
+                {
+                    l = Auto();
+                }
+                else
+                {
+                    l = WorldLocations().FirstOrDefault(x => Name(x) == t.Substring(4));
+                }
                 if (l == null)
                 {
                     r.Fail($"no location for {t}");
@@ -172,7 +180,14 @@ namespace DarkwoodMP.World
                 what = $"beside {j.OwnerName}";
                 _hostArrived = Time.realtimeSinceStartup;
                 var l = NearestTo(j.transform.position, 2500f);
-                _shared = l != null ? Name(l) : null;
+                if (l != null)
+                {
+                    _shared = Name(l);
+                }
+                else
+                {
+                    _shared = null;
+                }
             }
             else
             {
@@ -289,7 +304,15 @@ namespace DarkwoodMP.World
         private static IEnumerator Churn(string[] a, Result r)
         {
             // The host watches round the client's stand-in; the client round its own player.
-            Component j = Net.Session.Instance != null && Net.Session.Instance.IsHost ? (Component)Joiner() : Player.Instance;
+            Component j;
+            if (Net.Session.Instance != null && Net.Session.Instance.IsHost)
+            {
+                j = (Component)Joiner();
+            }
+            else
+            {
+                j = Player.Instance;
+            }
             if (j == null)
             {
                 r.Fail("no joiner");

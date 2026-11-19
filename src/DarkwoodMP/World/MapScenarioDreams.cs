@@ -39,7 +39,11 @@ namespace DarkwoodMP.World
         /// <summary>"own-dream NAME" (client): go into the dream NAME by ourselves (not shared), as a story dream does.</summary>
         private static IEnumerator OwnDream(string[] a, Result r)
         {
-            string name = a.Length > 0 ? a[0] : "dream_church_ruins_01";
+            string name = "dream_church_ruins_01";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             if (DreamSync.Shared != null)
             {
                 r.Fail($"already in the shared dream {DreamSync.Shared}");
@@ -69,7 +73,11 @@ namespace DarkwoodMP.World
         private static IEnumerator OwnDreamUse(string[] a, Result r)
         {
             var loc = D.dreamLocation;
-            var et = loc != null ? loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned")) : null;
+            EventTriggers et = null;
+            if (loc != null)
+            {
+                et = loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned"));
+            }
             if (et == null)
             {
                 r.Fail($"no burnt wardrobe in {loc?.name}");
@@ -118,7 +126,14 @@ namespace DarkwoodMP.World
                 yield return MoveNear(door.transform);
                 AsPlayer(() => door.open(P.transform.position, P.transform, 0f));
                 yield return new WaitForSeconds(1f);
-                doorInfo = door != null ? $"{door.name} open {door.opened}" : "the door is gone";
+                if (door != null)
+                {
+                    doorInfo = $"{door.name} open {door.opened}";
+                }
+                else
+                {
+                    doorInfo = "the door is gone";
+                }
             }
 
             // As a game without the fix sent it: a request about our wardrobe, which the host hasn't got.
@@ -172,7 +187,15 @@ namespace DarkwoodMP.World
             var p = P;
             var away = p.transform.position - t.position;
             away.y = 0f;
-            var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.right;
+            Vector3 dir;
+            if (away.sqrMagnitude > 1f)
+            {
+                dir = away.normalized;
+            }
+            else
+            {
+                dir = Vector3.right;
+            }
             var at = t.position + dir * 250f;
             for (int i = 0; i < 16; i++)
             {
@@ -233,7 +256,11 @@ namespace DarkwoodMP.World
         /// <summary>"level-dream NAME" (host): a level brings the dream NAME, as SkillsMenu.confirmSkills starts it; wait until we're in it.</summary>
         private static IEnumerator LevelDream(string[] a, Result r)
         {
-            string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
+            string name = "dream_bunker_underground_01";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             if (!D.allPresets.Any(x => x != null && x.name == name))
             {
                 r.Fail($"no dream {name}");
@@ -255,7 +282,11 @@ namespace DarkwoodMP.World
         /// <summary>"in-host-dream NAME" (client): we went into the host's dream by ourselves, and see the host there.</summary>
         private static IEnumerator InHostDream(string[] a, Result r)
         {
-            string name = a.Length > 0 ? a[0] : "dream_bunker_underground_01";
+            string name = "dream_bunker_underground_01";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
             while (!D.dreaming)
             {
                 yield return new WaitForSeconds(0.5f);
@@ -344,7 +375,11 @@ namespace DarkwoodMP.World
         private static IEnumerator DreamWardrobe(string[] a, Result r)
         {
             var loc = D.dreamLocation;
-            var et = loc != null ? loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned")) : null;
+            EventTriggers et = null;
+            if (loc != null)
+            {
+                et = loc.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("Wardrobe_Big_1_Burned"));
+            }
             if (et == null)
             {
                 r.Fail($"no burnt wardrobe in {loc?.name}");
@@ -354,7 +389,15 @@ namespace DarkwoodMP.World
             // Near it, on a spot with no loose thing (a bowl, the draggable wardrobe) our player would land on and push.
             var away = p.transform.position - et.transform.position;
             away.y = 0f;
-            var dir = away.sqrMagnitude > 1f ? away.normalized : Vector3.right;
+            Vector3 dir;
+            if (away.sqrMagnitude > 1f)
+            {
+                dir = away.normalized;
+            }
+            else
+            {
+                dir = Vector3.right;
+            }
             var at = et.transform.position + dir * 250f;
             for (int i = 0; i < 16; i++)
             {
@@ -466,15 +509,41 @@ namespace DarkwoodMP.World
 
         // The level dream at home (dream_home): the player wakes in the bedroom, and walking into the knocking area
         // (start_knocking_dreamHome) unlocks the bedroom's door (a modifyDoor unlock step) for the way out.
-        private static EventTriggers Knocking() =>
-            D.dreamLocation == null ? null : D.dreamLocation.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("start_knocking_dreamHome"));
+        private static EventTriggers Knocking()
+        {
+            if (D.dreamLocation == null)
+            {
+                return null;
+            }
+            return D.dreamLocation.GetComponentsInChildren<EventTriggers>(true).FirstOrDefault(x => x.name.StartsWith("start_knocking_dreamHome"));
+        }
 
         private static Door HomeDoorOf(EventTriggers et)
         {
-            var ge = et == null ? null : et.GetComponent<GameEvents>();
-            var step = ge == null ? null : ge.events.FirstOrDefault(e => e != null && e.type == GameEvent.Type.modifyDoor);
+            GameEvents ge;
+            if (et == null)
+            {
+                ge = null;
+            }
+            else
+            {
+                ge = et.GetComponent<GameEvents>();
+            }
+            GameEvent step;
+            if (ge == null)
+            {
+                step = null;
+            }
+            else
+            {
+                step = ge.events.FirstOrDefault(e => e != null && e.type == GameEvent.Type.modifyDoor);
+            }
             var go = step?.targetGameObjects.FirstOrDefault(g => g != null);
-            return go == null ? null : go.GetComponent<Door>() ?? go.GetComponentInChildren<Door>();
+            if (go == null)
+            {
+                return null;
+            }
+            return go.GetComponent<Door>() ?? go.GetComponentInChildren<Door>();
         }
 
         private static string DoorInfo(Door d)
@@ -496,7 +565,11 @@ namespace DarkwoodMP.World
             var l = door.GetComponent<Locked>();
             bool locked = l != null && l.locked;
             r.Info = DoorInfo(door);
-            string want = a.Length > 0 ? a[0] : "";
+            string want = "";
+            if (a.Length > 0)
+            {
+                want = a[0];
+            }
             if ((want == "locked" && !locked) || (want == "unlocked" && (locked || door.blocked)) || (want == "open" && !door.opened))
             {
                 r.Fail($"the door isn't {want}: {r.Info}");

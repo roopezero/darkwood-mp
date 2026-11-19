@@ -31,7 +31,17 @@ namespace DarkwoodMP.World
 
         public static bool Open => _win != null && _win.Open;
 
-        private static KeyCode Key => Plugin.Cfg != null ? Plugin.Cfg.SkillsKey.Value : KeyCode.K;
+        private static KeyCode Key
+        {
+            get
+            {
+                if (Plugin.Cfg != null)
+                {
+                    return Plugin.Cfg.SkillsKey.Value;
+                }
+                return KeyCode.K;
+            }
+        }
         public static string KeyName => Key.ToString();
 
         private const string Title = "Skills";
@@ -244,9 +254,19 @@ namespace DarkwoodMP.World
             {
                 SkillTree.TierOf(show, out bool neg);
                 PixelFont.Draw(f.Next(PixelFont.Line + 2 * UiWindow.S), SkillName(show), neg ? MenuSkin.Warn : MenuSkin.Bright, TextAnchor.MiddleLeft, PixelFont.Kind.Title);
-                string state = chosen.Contains(show) ? "Learned"
-                    : neg ? SkillTree.CantTakeNegative(level, chosen, show) ?? "Taken with the first skill of its tier"
-                    : SkillTree.CantTake(level, chosen, show) ?? (SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned");
+                string state;
+                if (chosen.Contains(show))
+                {
+                    state = "Learned";
+                }
+                else if (neg)
+                {
+                    state = SkillTree.CantTakeNegative(level, chosen, show) ?? "Taken with the first skill of its tier";
+                }
+                else
+                {
+                    state = SkillTree.CantTake(level, chosen, show) ?? (SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned");
+                }
                 Ui.Label(f, Capital(state), MenuSkin.Dim);
                 Ui.Text(f, SkillDesc(show));
             }
@@ -309,7 +329,14 @@ namespace DarkwoodMP.World
                 }
                 else if (_good == null)
                 {
-                    status = SkillTree.Points(level, chosen) > 0 ? "" : "No skill points to spend";
+                    if (SkillTree.Points(level, chosen) > 0)
+                    {
+                        status = "";
+                    }
+                    else
+                    {
+                        status = "No skill points to spend";
+                    }
                 }
                 else if (needNeg && _negative == null)
                 {
@@ -359,7 +386,15 @@ namespace DarkwoodMP.World
         {
             float S = UiWindow.S;
             var r = new Rect(cell.x + (cell.width - icon) / 2f, cell.y + (cell.height - icon) / 2f, icon, icon);
-            var mouse = TestMouse.HasValue ? GUIUtility.ScreenToGUIPoint(TestMouse.Value) : Event.current.mousePosition;
+            Vector2 mouse;
+            if (TestMouse.HasValue)
+            {
+                mouse = GUIUtility.ScreenToGUIPoint(TestMouse.Value);
+            }
+            else
+            {
+                mouse = Event.current.mousePosition;
+            }
             bool hover = cell.Contains(mouse);
             if (hover)
             {
@@ -367,7 +402,26 @@ namespace DarkwoodMP.World
             }
             var frame = new Rect(r.x - 3 * S, r.y - 3 * S, r.width + 6 * S, r.height + 6 * S);
             GUI.Box(frame, GUIContent.none, MenuSkin.Sunken);
-            Color tint = have ? Color.white : can ? (hover ? new Color(0.85f, 0.85f, 0.85f) : new Color(0.55f, 0.55f, 0.55f)) : new Color(0.25f, 0.25f, 0.25f);
+            Color tint;
+            if (have)
+            {
+                tint = Color.white;
+            }
+            else if (can)
+            {
+                if (hover)
+                {
+                    tint = new Color(0.85f, 0.85f, 0.85f);
+                }
+                else
+                {
+                    tint = new Color(0.55f, 0.55f, 0.55f);
+                }
+            }
+            else
+            {
+                tint = new Color(0.25f, 0.25f, 0.25f);
+            }
             if (negative)
             {
                 tint = new Color(1f, 0.4f, 0.4f) * (have ? 1f : can ? (hover ? 0.9f : 0.65f) : 0.3f);
@@ -402,11 +456,25 @@ namespace DarkwoodMP.World
                 _message = null;
                 if (negative)
                 {
-                    _negative = _negative == sk.name ? null : sk.name;
+                    if (_negative == sk.name)
+                    {
+                        _negative = null;
+                    }
+                    else
+                    {
+                        _negative = sk.name;
+                    }
                 }
                 else
                 {
-                    _good = _good == sk.name ? null : sk.name;
+                    if (_good == sk.name)
+                    {
+                        _good = null;
+                    }
+                    else
+                    {
+                        _good = sk.name;
+                    }
                 }
                 // A negative skill goes with the first skill of its own tier: a pick that doesn't fit the other drops it.
                 if (_good != null && _negative != null && SkillTree.TierOf(_good, out _) != SkillTree.TierOf(_negative, out _))
@@ -472,7 +540,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string Capital(string s) => string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+        private static string Capital(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                return s;
+            }
+            return char.ToUpperInvariant(s[0]) + s.Substring(1);
+        }
 
         private static readonly Dictionary<string, string> _names = new Dictionary<string, string>(), _descs = new Dictionary<string, string>();
 
@@ -488,7 +563,14 @@ namespace DarkwoodMP.World
             }
             try
             {
-                s = global::Language.HasKey(key, "Skills") ? global::Language.Get(key, "Skills") : fallback;
+                if (global::Language.HasKey(key, "Skills"))
+                {
+                    s = global::Language.Get(key, "Skills");
+                }
+                else
+                {
+                    s = fallback;
+                }
             }
             catch
             {
@@ -583,8 +665,16 @@ namespace DarkwoodMP.World
             yield return null;
             yield return null;
             var skills = new List<string>(_rects.Keys);
-            string first = skills.Count > 0 ? skills[0] : null;
-            Rect firstCell = first != null ? _rects[first][1] : default;
+            string first = null;
+            if (skills.Count > 0)
+            {
+                first = skills[0];
+            }
+            Rect firstCell = default;
+            if (first != null)
+            {
+                firstCell = _rects[first][1];
+            }
             Rect win = Win.Rect;
             bool scrolls = Win.TestScrolls;
             float content = Win.TestContentHeight;
@@ -598,7 +688,11 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                     frames++;
-                    var fc = first != null ? _rects[first][1] : default;
+                    Rect fc = default;
+                    if (first != null)
+                    {
+                        fc = _rects[first][1];
+                    }
                     if (Win.Rect.size != win.size || Win.TestScrolls != scrolls || Mathf.Abs(Win.TestContentHeight - content) > 0.5f || fc != firstCell)
                     {
                         bad++;
@@ -806,8 +900,19 @@ namespace DarkwoodMP.World
                 try
                 {
                     var go = Resources.Load("Prefabs/UI/UISkill") as GameObject;
-                    var spr = go != null ? go.GetComponent<tk2dSprite>() : null;
-                    _coll = spr != null && spr.Collection != null ? spr.Collection.inst : null;
+                    tk2dSprite spr = null;
+                    if (go != null)
+                    {
+                        spr = go.GetComponent<tk2dSprite>();
+                    }
+                    if (spr != null && spr.Collection != null)
+                    {
+                        _coll = spr.Collection.inst;
+                    }
+                    else
+                    {
+                        _coll = null;
+                    }
                     if (_coll == null)
                     {
                         Plugin.Log.LogWarning("[skills] no skill icons (UISkill's sprites): names only");
@@ -841,8 +946,20 @@ namespace DarkwoodMP.World
                 return id >= 0;
             }
             var def = _coll.spriteDefinitions[id];
-            var mat = def.materialInst != null ? def.materialInst : def.material;
-            var tex = mat != null ? mat.mainTexture : null;
+            Material mat;
+            if (def.materialInst != null)
+            {
+                mat = def.materialInst;
+            }
+            else
+            {
+                mat = def.material;
+            }
+            Texture tex = null;
+            if (mat != null)
+            {
+                tex = mat.mainTexture;
+            }
             if (tex == null || def.uvs == null || def.uvs.Length < 4)
             {
                 return false;

@@ -23,7 +23,14 @@ namespace DarkwoodMP.World
             // "hold-joiners SECS" (host, before the join): answer joiners as if watching the prologue's intro for SECS from the first.
             Add("hold-joiners", (a, r) =>
             {
-                WorldShare.TestHoldSecs = a.Length > 0 ? F(a[0]) : 15f;
+                if (a.Length > 0)
+                {
+                    WorldShare.TestHoldSecs = F(a[0]);
+                }
+                else
+                {
+                    WorldShare.TestHoldSecs = 15f;
+                }
                 r.Info = $"joiners wait {WorldShare.TestHoldSecs:0} s from the first";
                 return Nothing();
             });
@@ -154,8 +161,14 @@ namespace DarkwoodMP.World
             }
             yield return null; // the browser's update hands over the last answers
             var found = b.List(Net.ServerBrowser.Tab.Lan).Select(addr => (addr, e: b.Get(addr))).ToList();
-            r.Info = found.Count == 0 ? "nothing found"
-                : string.Join(", ", found.Select(f => $"{f.addr} \"{f.e.Info?.Name}\" {f.e.Info?.Players}/{f.e.Info?.MaxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms"));
+            if (found.Count == 0)
+            {
+                r.Info = "nothing found";
+            }
+            else
+            {
+                r.Info = string.Join(", ", found.Select(f => $"{f.addr} \"{f.e.Info?.Name}\" {f.e.Info?.Players}/{f.e.Info?.MaxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms"));
+            }
             if (!found.Any(f => f.e.Info != null && f.e.Info.Proto == Net.Protocol.Version && f.e.Info.Players >= 2))
             {
                 r.Fail($"the LAN tab didn't find the host (2 players, protocol {Net.Protocol.Version}): {r.Info}");
@@ -168,7 +181,14 @@ namespace DarkwoodMP.World
         /// <summary>The other player's puppet (not the test dummy).</summary>
         private static RemotePlayer Other() => PlayerSync.Instance?.Remotes.Values.FirstOrDefault(x => x.Owner != PlayerSync.DummyId);
 
-        private static string Clip(Player p) => p.torsoAnimator != null && p.torsoAnimator.CurrentClip != null ? p.torsoAnimator.CurrentClip.name : "-";
+        private static string Clip(Player p)
+        {
+            if (p.torsoAnimator != null && p.torsoAnimator.CurrentClip != null)
+            {
+                return p.torsoAnimator.CurrentClip.name;
+            }
+            return "-";
+        }
 
         /// <summary>"disarm-crouch TRAP[@DX,DZ]": start disarming it as the player does (Player.doDisarm), with the
         /// progress bar held, and check our player crouches (InventoryGet, then InventoryLoop).</summary>
@@ -259,7 +279,15 @@ namespace DarkwoodMP.World
         private static IEnumerator DisarmFinish(string[] a, Result r)
         {
             var t = FindTrap(a[0]);
-            string what = t != null ? $"{t.name} at {Fmt(t.transform.position)}" : a[0];
+            string what;
+            if (t != null)
+            {
+                what = $"{t.name} at {Fmt(t.transform.position)}";
+            }
+            else
+            {
+                what = a[0];
+            }
             if (P.progressBar == null || !P.disarmingTrap)
             {
                 r.Fail($"not disarming {what} (bar {P.progressBar != null})");
@@ -321,7 +349,11 @@ namespace DarkwoodMP.World
             var cam = Singleton<CamMain>.Instance;
             var host = Other();
             bool follows = cam != null && host?.Root != null && cam.followTarget == host.Root.transform;
-            float dist = host?.Root != null ? StateDump.Flat(P.transform.position - host.Root.transform.position) : -1f;
+            float dist = -1f;
+            if (host?.Root != null)
+            {
+                dist = StateDump.Flat(P.transform.position - host.Root.transform.position);
+            }
             bool touching = P.GetComponentsInChildren<Collider>().Any(c => c.enabled);
             r.Info = $"watching {host?.Name}: camera follows {follows}, our body {dist:0} from them, colliders on {touching}, profile dead {Core.currentProfile.dead}, time scale {Time.timeScale}";
             if (!follows || dist < 0f || dist > 50f || touching || !Core.currentProfile.dead || Time.timeScale == 0f)
@@ -391,7 +423,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             NetPlayerProxy.All.TryGetValue(rp.Owner, out var proxy);
-            var col = proxy != null ? proxy.GetComponent<Collider>() : null;
+            Collider col = null;
+            if (proxy != null)
+            {
+                col = proxy.GetComponent<Collider>();
+            }
             int corrections = MapScenarioIssues.LogLines().Skip(from).Count(l => l.Contains("put back"));
             r.Info = $"{rp.Name}: spectating {rp.Spectating}, shown {rp.Root != null && rp.Root.activeSelf}, proxy alive {proxy?.alive}, collider on {col != null && col.enabled}, corrections {corrections}";
             if (!rp.Spectating || (rp.Root != null && rp.Root.activeSelf) || (col != null && col.enabled) || corrections > 0)

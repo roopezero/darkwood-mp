@@ -218,7 +218,14 @@ namespace DarkwoodMP.World
             // The chapter of the world the joiner's game is in: what it sends from the last chapter's map, while it
             // waits for the next one or reloads, is stamped with that chapter, whenever it arrives.
             int chapter = r.R.ReadInt32();
-            rec.Chapter = chapter > 0 ? chapter : Chapters.HostChapter;
+            if (chapter > 0)
+            {
+                rec.Chapter = chapter;
+            }
+            else
+            {
+                rec.Chapter = Chapters.HostChapter;
+            }
             if (rec.Player.Length == 0 || rec.Inv.Length == 0)
             {
                 return;
@@ -572,7 +579,11 @@ namespace DarkwoodMP.World
                 var d = c.transform.position - at;
                 best = Mathf.Min(best, Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.z)));
             }
-            return best == float.MaxValue ? 0f : best;
+            if (best == float.MaxValue)
+            {
+                return 0f;
+            }
+            return best;
         }
 
         /// <summary>
@@ -675,7 +686,11 @@ namespace DarkwoodMP.World
                 return;
             }
             var slot = p.getCurrentlySelectedHotbarSlot();
-            InvItemClass item = slot != null ? slot.invItem : null;
+            InvItemClass item = null;
+            if (slot != null)
+            {
+                item = slot.invItem;
+            }
             try
             {
                 if (slot != null)

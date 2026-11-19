@@ -18,10 +18,18 @@ namespace DarkwoodMP.Combat
 
         public static void Send(ulong owner, float damage, Transform attacker, bool shadow, List<InvItemEffect> effects)
         {
-            string from = attacker != null ? attacker.name : "?";
+            string from = "?";
+            if (attacker != null)
+            {
+                from = attacker.name;
+            }
             // A friendly NPC is each player's own: one the host doesn't run as an enemy (Combat.HostileNpcs) hits the
             // joiner with the joiner's own copy, so the host's copy's hit on the proxy would be a second one.
-            var npc = attacker != null ? attacker.GetComponentInParent<Character>() : null;
+            Character npc = null;
+            if (attacker != null)
+            {
+                npc = attacker.GetComponentInParent<Character>();
+            }
             if (npc != null && npc.npc != null && !NetEnemies.Eligible(npc))
             {
                 if (Threat.Debug)
@@ -52,7 +60,15 @@ namespace DarkwoodMP.Combat
         /// <summary>u8 n, n x effect (see the class's summary).</summary>
         public static void WriteEffects(PacketWriter w, List<InvItemEffect> effects)
         {
-            int n = effects == null ? 0 : Mathf.Min(effects.Count, 16);
+            int n;
+            if (effects == null)
+            {
+                n = 0;
+            }
+            else
+            {
+                n = Mathf.Min(effects.Count, 16);
+            }
             w.W.Write((byte)n);
             for (int i = 0; i < n; i++)
             {
@@ -86,7 +102,14 @@ namespace DarkwoodMP.Combat
                 e.stopsPoison = (f & 2) != 0;
                 e.hasPoisonOverlay = (f & 4) != 0;
                 string snd = r.ReadStr();
-                e.activateSound = snd.Length > 0 ? snd : null;
+                if (snd.Length > 0)
+                {
+                    e.activateSound = snd;
+                }
+                else
+                {
+                    e.activateSound = null;
+                }
                 effects.Add(e);
             }
             return effects;

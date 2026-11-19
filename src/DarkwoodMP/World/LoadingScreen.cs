@@ -157,7 +157,15 @@ namespace DarkwoodMP.World
                 return;
             }
             int cut = text.IndexOfAny(new[] { '(', ':' });
-            string key = cut > 0 ? text.Substring(0, cut) : text;
+            string key;
+            if (cut > 0)
+            {
+                key = text.Substring(0, cut);
+            }
+            else
+            {
+                key = text;
+            }
             if (key == _shotKey)
             {
                 return;
@@ -220,7 +228,15 @@ namespace DarkwoodMP.World
             }
 
             var cam = UiCamera(ui.loadingBar.gameObject.layer);
-            Vector3 up = cam != null ? cam.transform.up : Vector3.forward;
+            Vector3 up;
+            if (cam != null)
+            {
+                up = cam.transform.up;
+            }
+            else
+            {
+                up = Vector3.forward;
+            }
             var b = barR.bounds;
             float height = Mathf.Abs(Vector3.Dot(b.size, up));
             if (height < 1f)

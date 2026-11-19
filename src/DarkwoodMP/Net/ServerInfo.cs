@@ -23,13 +23,44 @@ namespace DarkwoodMP.Net
         public string Version = "";
         public readonly SortedDictionary<string, string> Fields = new SortedDictionary<string, string>(System.StringComparer.Ordinal);
 
-        public string Game => Fields.TryGetValue("game", out var g) ? g : "";
-        public int Proto => Fields.TryGetValue("proto", out var p) && int.TryParse(p, out int v) ? v : 0;
+        public string Game
+        {
+            get
+            {
+                if (Fields.TryGetValue("game", out var g))
+                {
+                    return g;
+                }
+                return "";
+            }
+        }
+        public int Proto
+        {
+            get
+            {
+                if (Fields.TryGetValue("proto", out var p) && int.TryParse(p, out int v))
+                {
+                    return v;
+                }
+                return 0;
+            }
+        }
         /// <summary>Whether this build can join it, and why not.</summary>
-        public string Incompatibility =>
-            Game != Protocol.Game ? "not a Darkwood server"
-            : Proto != Protocol.Version ? $"different DarkwoodMP version ({Version})"
-            : null;
+        public string Incompatibility
+        {
+            get
+            {
+                if (Game != Protocol.Game)
+                {
+                    return "not a Darkwood server";
+                }
+                if (Proto != Protocol.Version)
+                {
+                    return $"different DarkwoodMP version ({Version})";
+                }
+                return null;
+            }
+        }
 
         public static byte[] Encode(string name, params string[] fields)
         {

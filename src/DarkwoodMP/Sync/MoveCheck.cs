@@ -60,7 +60,14 @@ namespace DarkwoodMP.Sync
         public bool TryGood(ulong from, out Vector3 pos)
         {
             bool known = _tracks.TryGetValue(from, out var t);
-            pos = known ? t.Good : default;
+            if (known)
+            {
+                pos = t.Good;
+            }
+            else
+            {
+                pos = default;
+            }
             return known;
         }
 

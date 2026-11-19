@@ -143,7 +143,14 @@ namespace DarkwoodMP.World
                 {
                     RaiseByGame(wg);
                 }
-                _line = _inGame ? (LoadingScreen.GameStage() ?? _line) : (world.LoadStatus ?? _line);
+                if (_inGame)
+                {
+                    _line = LoadingScreen.GameStage() ?? _line;
+                }
+                else
+                {
+                    _line = world.LoadStatus ?? _line;
+                }
                 Draw();
                 return;
             }

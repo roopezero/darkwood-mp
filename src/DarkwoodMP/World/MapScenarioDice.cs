@@ -151,7 +151,14 @@ namespace DarkwoodMP.World
     {
         private static void Prefix(Location __instance, out List<GameObject> __state)
         {
-            __state = __instance != null && __instance.sets != null && __instance.sets.Count > 1 ? new List<GameObject>(__instance.sets) : null;
+            if (__instance != null && __instance.sets != null && __instance.sets.Count > 1)
+            {
+                __state = new List<GameObject>(__instance.sets);
+            }
+            else
+            {
+                __state = null;
+            }
         }
 
         private static void Postfix(Location __instance, List<GameObject> __state)

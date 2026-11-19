@@ -39,7 +39,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator OwedLoaded(string[] a, Result r)
         {
-            var et = a.Length > 0 ? GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>() : null;
+            EventTriggers et = null;
+            if (a.Length > 0)
+            {
+                et = GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>();
+            }
             if (et == null || et.eventTriggers.Count == 0)
             {
                 r.Fail("no such trigger (later-setup first)");
@@ -101,7 +105,11 @@ namespace DarkwoodMP.World
             m.C = Root(go.name + "_count", go.transform.position).AddComponent<LaterTestCounter>();
             ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpLaterCount", targetGameObjects = new List<GameObject> { m.C.gameObject }, eventAmount = 1 });
             var db = Singleton<ItemsDatabase>.Instance;
-            var prefab = db != null && db.itemsDict.TryGetValue(Item, out var path) ? Resources.Load(path) as GameObject : null;
+            GameObject prefab = null;
+            if (db != null && db.itemsDict.TryGetValue(Item, out var path))
+            {
+                prefab = Resources.Load(path) as GameObject;
+            }
             if (prefab == null || prefab.GetComponent<InvItem>() == null)
             {
                 r.Fail($"no item prefab {Item}");

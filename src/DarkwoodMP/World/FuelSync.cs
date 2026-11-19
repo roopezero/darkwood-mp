@@ -75,7 +75,11 @@ namespace DarkwoodMP.World
                 _pending[key] = p = new Pour();
             }
             p.Amount += delta;
-            var can = Player.Instance != null ? Player.Instance.currentItem : null;
+            InvItemClass can = null;
+            if (Player.Instance != null)
+            {
+                can = Player.Instance.currentItem;
+            }
             if (delta > 0f && !InvItemClass.isNull(can) && can.type == "gasoline")
             {
                 p.Can = can;
@@ -132,8 +136,22 @@ namespace DarkwoodMP.World
             _pending.Clear();
         }
 
-        private static float FuelOf(Component c) => c is Generator g ? g.fuel : ((Saw)c).fuel;
-        private static float MaxOf(Component c) => c is Generator g ? g.maxFuel : ((Saw)c).maxFuel;
+        private static float FuelOf(Component c)
+        {
+            if (c is Generator g)
+            {
+                return g.fuel;
+            }
+            return ((Saw)c).fuel;
+        }
+        private static float MaxOf(Component c)
+        {
+            if (c is Generator g)
+            {
+                return g.maxFuel;
+            }
+            return ((Saw)c).maxFuel;
+        }
 
         /// <summary>What a gasoline can holds: the most one pour can add.</summary>
         private static float CanHolds()
@@ -211,7 +229,15 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[authority] gave back a gasoline can for the fuel {to} didn't take");
                     return;
                 }
-                float max = can.baseClass != null ? can.baseClass.maxDurability : float.MaxValue;
+                float max;
+                if (can.baseClass != null)
+                {
+                    max = can.baseClass.maxDurability;
+                }
+                else
+                {
+                    max = float.MaxValue;
+                }
                 can.durability = Mathf.Min(max, can.durability + amount);
                 can.refresh();
                 Plugin.Log.LogInfo($"[authority] gave back {amount:0.0} fuel to the gasoline can ({to} didn't take it)");
@@ -267,7 +293,15 @@ namespace DarkwoodMP.World
             byte what = r.R.ReadByte();
             float value = r.R.ReadSingle(); // from a client: the amount it added; from the host: the level
             bool on = r.R.ReadByte() != 0;
-            Component c = what == IsGenerator ? (Component)ObjRef.Resolve<Generator>(obj) : ObjRef.Resolve<Saw>(obj);
+            Component c;
+            if (what == IsGenerator)
+            {
+                c = (Component)ObjRef.Resolve<Generator>(obj);
+            }
+            else
+            {
+                c = ObjRef.Resolve<Saw>(obj);
+            }
             if (c == null)
             {
                 if (_session.IsHost)
@@ -320,7 +354,11 @@ namespace DarkwoodMP.World
                     // Fuel only goes down at the saw, a log's worth (Saw.fuelToConvert) for each log cut.
                     var saw = c as Saw;
                     float used = -value;
-                    float logs = saw != null ? used / Mathf.Max(1, saw.fuelToConvert) : 0f;
+                    float logs = 0f;
+                    if (saw != null)
+                    {
+                        logs = used / Mathf.Max(1, saw.fuelToConvert);
+                    }
                     if (saw == null)
                     {
                         refused = "a generator's fuel only goes down by itself";
@@ -486,7 +524,15 @@ namespace DarkwoodMP.World
                 return;
             }
             var at = __instance.transform.position;
-            float best = SharedCullingPatch.HostAway ? float.MaxValue : StateDump.Flat(p.transform.position - at);
+            float best;
+            if (SharedCullingPatch.HostAway)
+            {
+                best = float.MaxValue;
+            }
+            else
+            {
+                best = StateDump.Flat(p.transform.position - at);
+            }
             NetPlayerProxy nearest = null;
             foreach (var x in NetPlayerProxy.All.Values)
             {
@@ -501,14 +547,25 @@ namespace DarkwoodMP.World
                     nearest = x;
                 }
             }
-            var has = nearest != null ? Characters.Instance.Electrician(nearest.Owner) : null;
+            bool? has = null;
+            if (nearest != null)
+            {
+                has = Characters.Instance.Electrician(nearest.Owner);
+            }
             Last = $"{__instance.name}: {(nearest != null ? nearest.OwnerName : "ours")}'s skill, {(has.HasValue ? (has.Value ? 0.5f : 1f) : p.electricityModifier)}";
             if (has == null)
             {
                 return;
             }
             __state = p.electricityModifier;
-            p.electricityModifier = has.Value ? 0.5f : 1f;
+            if (has.Value)
+            {
+                p.electricityModifier = 0.5f;
+            }
+            else
+            {
+                p.electricityModifier = 1f;
+            }
         }
 
         static System.Exception Finalizer(System.Exception __exception, float? __state)

@@ -56,13 +56,30 @@ namespace DarkwoodMP.World
         private static int Index(Inventory inv, string s)
         {
             int i = int.Parse(s, CultureInfo.InvariantCulture);
-            return i < 0 ? inv.slots.Count + i : i;
+            if (i < 0)
+            {
+                return inv.slots.Count + i;
+            }
+            return i;
         }
 
-        private static string Slot(InvSlot s) => InvItemClass.isNull(s.invItem) ? "-" : $"{s.invItem.type}x{s.invItem.amount}";
+        private static string Slot(InvSlot s)
+        {
+            if (InvItemClass.isNull(s.invItem))
+            {
+                return "-";
+            }
+            return $"{s.invItem.type}x{s.invItem.amount}";
+        }
 
-        private static bool Matches(InvSlot s, string type, int amount) =>
-            type == "-" ? InvItemClass.isNull(s.invItem) : !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
+        private static bool Matches(InvSlot s, string type, int amount)
+        {
+            if (type == "-")
+            {
+                return InvItemClass.isNull(s.invItem);
+            }
+            return !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
+        }
 
         /// <summary>Make slot i hold this as our player (a client's change goes to the host as ContainerSlots).</summary>
         private static void Put(Inventory inv, int i, string type, int amount)
@@ -124,8 +141,16 @@ namespace DarkwoodMP.World
                     bad.Add($"slot {i} ({Slot(s)}): no icon drawn");
                     continue;
                 }
-                string want = s.invItem.baseClass != null ? s.invItem.baseClass.iconType : null;
-                string got = ui.sprite != null && ui.sprite.CurrentSprite != null ? ui.sprite.CurrentSprite.name : null;
+                string want = null;
+                if (s.invItem.baseClass != null)
+                {
+                    want = s.invItem.baseClass.iconType;
+                }
+                string got = null;
+                if (ui.sprite != null && ui.sprite.CurrentSprite != null)
+                {
+                    got = ui.sprite.CurrentSprite.name;
+                }
                 if (want != null && got != want)
                 {
                     bad.Add($"slot {i} ({Slot(s)}): icon {got}, not {want}");
@@ -140,7 +165,11 @@ namespace DarkwoodMP.World
             {
                 bad.Add($"{icons} icons drawn for {filled} filled slots");
             }
-            return bad.Count == 0 ? null : string.Join("; ", bad);
+            if (bad.Count == 0)
+            {
+                return null;
+            }
+            return string.Join("; ", bad);
         }
 
         private static readonly AccessTools.FieldRef<UIInvItem, Color> Red = AccessTools.FieldRefAccess<UIInvItem, Color>("redColor");
@@ -208,13 +237,22 @@ namespace DarkwoodMP.World
                     bad.Add($"{s.invItem.type} drawn {(drawnRed ? "red" : "makeable")}, is {(can ? "makeable" : "not")} ({Needs(recipe)})");
                 }
             }
-            return bad.Count == 0 ? null : string.Join("; ", bad);
+            if (bad.Count == 0)
+            {
+                return null;
+            }
+            return string.Join("; ", bad);
         }
 
         private static string Needs(CraftingRecipes.Recipe recipe) =>
-            string.Join(",", recipe.requirements.Where(q => q.item != null).Select(q => q.amount > 0
-                ? $"{q.item.type}x{q.amount} have {P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}"
-                : $"{q.item.type} dur {q.durabilityAmount:0.##}"));
+            string.Join(",", recipe.requirements.Where(q => q.item != null).Select(q =>
+            {
+                if (q.amount > 0)
+                {
+                    return $"{q.item.type}x{q.amount} have {P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}";
+                }
+                return $"{q.item.type} dur {q.durabilityAmount:0.##}";
+            }));
 
         // ---- the pause menu over open windows (R08, R10) ------------------------------------------------------
 
@@ -224,7 +262,11 @@ namespace DarkwoodMP.World
         private static IEnumerator Pause(string[] a, Result r)
         {
             var wb = Bench();
-            var st = wb != null ? wb.normalInventory : null;
+            Inventory st = null;
+            if (wb != null)
+            {
+                st = wb.normalInventory;
+            }
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
@@ -341,7 +383,11 @@ namespace DarkwoodMP.World
                 args.RemoveRange(at, 2);
             }
             var wb = Bench();
-            var st = wb != null ? wb.normalInventory : null;
+            Inventory st = null;
+            if (wb != null)
+            {
+                st = wb.normalInventory;
+            }
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
@@ -367,7 +413,15 @@ namespace DarkwoodMP.World
         private static IEnumerator WbRace(string[] a, Result r)
         {
             bool host = Net.Session.Instance == null || !Net.Session.Instance.IsClient;
-            var args = host ? new[] { "-7", "bandages", "2" } : new[] { "-8", "wire", "6" };
+            string[] args;
+            if (host)
+            {
+                args = new[] { "-7", "bandages", "2" };
+            }
+            else
+            {
+                args = new[] { "-8", "wire", "6" };
+            }
             yield return WbSet(args.Concat(new[] { "--at", a[0] }).ToArray(), r);
         }
 
@@ -375,7 +429,11 @@ namespace DarkwoodMP.World
         private static IEnumerator WbBurst(string[] a, Result r)
         {
             var wb = Bench();
-            var st = wb != null ? wb.normalInventory : null;
+            Inventory st = null;
+            if (wb != null)
+            {
+                st = wb.normalInventory;
+            }
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
@@ -407,7 +465,11 @@ namespace DarkwoodMP.World
                 args.RemoveRange(mk, 2);
             }
             var wb = Bench();
-            var st = wb != null ? wb.normalInventory : null;
+            Inventory st = null;
+            if (wb != null)
+            {
+                st = wb.normalInventory;
+            }
             if (st == null || P.openedItemInventory2 != st || !st.open)
             {
                 r.Fail("the workbench isn't open here");
@@ -481,27 +543,46 @@ namespace DarkwoodMP.World
             r.Info = $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
         }
 
-        private static string Label(Inventory inv) => inv.thisLabel != null && inv.thisLabel.rightText != null ? inv.thisLabel.rightText.text : null;
+        private static string Label(Inventory inv)
+        {
+            if (inv.thisLabel != null && inv.thisLabel.rightText != null)
+            {
+                return inv.thisLabel.rightText.text;
+            }
+            return null;
+        }
 
         /// <summary>"ui-saw-check [MINFUEL]": with no input from us, the open saw's "Fuel: N" label shows its fuel
         /// (within 4 s), which is at least MINFUEL, and its Convert button is enabled exactly when it can cut a log.</summary>
         private static IEnumerator SawCheck(string[] a, Result r)
         {
             var saw = _saw;
-            var inv = saw != null ? saw.GetComponent<Inventory>() : null;
+            Inventory inv = null;
+            if (saw != null)
+            {
+                inv = saw.GetComponent<Inventory>();
+            }
             if (inv == null || !inv.open)
             {
                 r.Fail("the saw's window isn't open here");
                 yield break;
             }
-            float min = a.Length > 0 ? F(a[0]) : 0f;
+            float min = 0f;
+            if (a.Length > 0)
+            {
+                min = F(a[0]);
+            }
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
             while ((saw.fuel < min || Label(inv) != Want()) && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
-            var btn = saw.convertFuelBtn != null ? saw.convertFuelBtn.GetComponent<global::Button>() : null;
+            global::Button btn = null;
+            if (saw.convertFuelBtn != null)
+            {
+                btn = saw.convertFuelBtn.GetComponent<global::Button>();
+            }
             bool enabled = btn != null && btn.background != null && btn.background.activeSelf;
             bool can = saw.canConvert();
             r.Info = $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert enabled={enabled} can={can}";
@@ -530,7 +611,11 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning($"[map] ui-saw-close: {e.Message}");
             }
             yield return new WaitForSeconds(0.8f);
-            var inv = _saw != null ? _saw.GetComponent<Inventory>() : null;
+            Inventory inv = null;
+            if (_saw != null)
+            {
+                inv = _saw.GetComponent<Inventory>();
+            }
             if (inv != null && inv.open)
             {
                 r.Fail("still open");

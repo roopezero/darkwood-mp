@@ -61,7 +61,11 @@ namespace DarkwoodMP.World
                 S.Broadcast(w, Channel.Control, reliable: true);
                 return;
             }
-            string sound = option >= 0 && option < c.options.Count ? c.options[option].buildCompleteSound : null;
+            string sound = null;
+            if (option >= 0 && option < c.options.Count)
+            {
+                sound = c.options[option].buildCompleteSound;
+            }
             Waiting.Add(c);
             Authority.Request(w, what, (ok, reason, _) =>
             {
@@ -205,7 +209,11 @@ namespace DarkwoodMP.World
                 if (manual)
                 {
                     var menu = Singleton<ConstructionMenu>.Instance;
-                    var icon = menu != null ? menu.selectedIcon : null;
+                    ConstructionIcon icon = null;
+                    if (menu != null)
+                    {
+                        icon = menu.selectedIcon;
+                    }
                     if (icon != null)
                     {
                         foreach (var req in icon.requirements)
@@ -228,7 +236,15 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            int option = forceOption != -1 ? forceOption : __instance.chosenOption;
+            int option;
+            if (forceOption != -1)
+            {
+                option = forceOption;
+            }
+            else
+            {
+                option = __instance.chosenOption;
+            }
             Construction.Send(__instance, option);
         }
     }

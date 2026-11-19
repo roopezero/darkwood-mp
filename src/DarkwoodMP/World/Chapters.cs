@@ -62,7 +62,17 @@ namespace DarkwoodMP.World
         public static bool TestQuick;
 
         /// <summary>The chapter of the world loaded now (0 if none).</summary>
-        public static int HostChapter => Singleton<WorldGenerator>.Instance != null ? Singleton<WorldGenerator>.Instance.chapterID : 0;
+        public static int HostChapter
+        {
+            get
+            {
+                if (Singleton<WorldGenerator>.Instance != null)
+                {
+                    return Singleton<WorldGenerator>.Instance.chapterID;
+                }
+                return 0;
+            }
+        }
 
         public static void Register(Session s)
         {
@@ -162,7 +172,14 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        private static string What(StoryKind kind, int chapter) => kind == StoryKind.Chapter ? $"chapter {chapter}" : $"the game's end ({kind})";
+        private static string What(StoryKind kind, int chapter)
+        {
+            if (kind == StoryKind.Chapter)
+            {
+                return $"chapter {chapter}";
+            }
+            return $"the game's end ({kind})";
+        }
 
         private static float _lastRequest = -999f;
 
@@ -174,8 +191,16 @@ namespace DarkwoodMP.World
                 return; // one event can hold the step more than once
             }
             _lastRequest = Time.realtimeSinceStartup;
-            var ge = thisGO != null ? thisGO.GetComponent<GameEvents>() : null;
-            var r = ge != null ? ObjRef.Of(thisGO) : default;
+            GameEvents ge = null;
+            if (thisGO != null)
+            {
+                ge = thisGO.GetComponent<GameEvents>();
+            }
+            ObjRef r = default;
+            if (ge != null)
+            {
+                r = ObjRef.Of(thisGO);
+            }
             Sync.PlayerSync.Instance?.FlushNow(); // the host checks our reach (a stage starts as we arrive): our newest position first
             var w = S.Begin(MsgType.StoryRequest);
             r.Write(w);
@@ -218,7 +243,11 @@ namespace DarkwoodMP.World
             {
                 return; // only as a Request
             }
-            var rp = Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.Remotes.TryGetValue(from, out var remote) ? remote : null;
+            Sync.RemotePlayer rp = null;
+            if (Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.Remotes.TryGetValue(from, out var remote))
+            {
+                rp = remote;
+            }
             var h = new Held { From = from, Obj = obj, Index = index, Kind = kind, Chapter = chapter, WasAway = rp != null && rp.Away };
             string reason;
             switch (Decide(h, out reason))
@@ -261,7 +290,14 @@ namespace DarkwoodMP.World
         private static float _readySince = -1f;
         /// <summary>Host: the story steps run for a joiner or started by our own game in this session (KeyOf): none runs twice.</summary>
         private static readonly System.Collections.Generic.HashSet<string> _ran = new System.Collections.Generic.HashSet<string>();
-        private static string KeyOf(StoryKind kind, int chapter) => kind == StoryKind.Chapter ? "chapter " + chapter : "end";
+        private static string KeyOf(StoryKind kind, int chapter)
+        {
+            if (kind == StoryKind.Chapter)
+            {
+                return "chapter " + chapter;
+            }
+            return "end";
+        }
 
         private enum Verdict
         {
@@ -319,10 +355,18 @@ namespace DarkwoodMP.World
                 reason = $"the epilogue comes after chapter {LastChapter} (this is chapter {now})";
                 return Verdict.Refuse;
             }
-            var ge = h.Obj.Valid ? ObjRef.Resolve<GameEvents>(h.Obj) : null;
+            GameEvents ge = null;
+            if (h.Obj.Valid)
+            {
+                ge = ObjRef.Resolve<GameEvents>(h.Obj);
+            }
             if (ge != null)
             {
-                var step = h.Index < ge.events.Count ? ge.events[h.Index] : null;
+                GameEvent step = null;
+                if (h.Index < ge.events.Count)
+                {
+                    step = ge.events[h.Index];
+                }
                 if (KindOf(step) != kind || (kind == StoryKind.Chapter && step.intValue != h.Chapter))
                 {
                     reason = $"{ge.name} doesn't do that";
@@ -340,7 +384,11 @@ namespace DarkwoodMP.World
                 }
                 return Verdict.Run;
             }
-            var rp = Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.Remotes.TryGetValue(h.From, out var remote) ? remote : null;
+            Sync.RemotePlayer rp = null;
+            if (Sync.PlayerSync.Instance != null && Sync.PlayerSync.Instance.Remotes.TryGetValue(h.From, out var remote))
+            {
+                rp = remote;
+            }
             if (!h.WasAway && !(rp != null && rp.Away))
             {
                 reason = "that event isn't in the host's world, and they aren't in a place of their own";
