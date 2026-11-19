@@ -199,7 +199,12 @@ namespace DarkwoodMP.Net
                     {
                         return;
                     }
-                    Plugin.Log.LogInfo(ok ? "[port mapping] renewed" : "[port mapping] the router didn't renew the mapping");
+                    string data = "[port mapping] the router didn't renew the mapping";
+                    if (ok)
+                    {
+                        data = "[port mapping] renewed";
+                    }
+                    Plugin.Log.LogInfo(data);
                     if (!ok)
                     {
                         Status = "Your router stopped forwarding the port. Forward it by hand, or use a VPN.";
@@ -250,7 +255,16 @@ namespace DarkwoodMP.Net
             {
                 Status += " Friends' server browsers can't see you over the internet: they connect by address.";
             }
-            Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip ?? "unknown"}{(m.Permanent ? ", permanent" : $", lease {LeaseSeconds} s")}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
+            string text;
+            if (m.Permanent)
+            {
+                text = ", permanent";
+            }
+            else
+            {
+                text = $", lease {LeaseSeconds} s";
+            }
+            Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip ?? "unknown"}{text}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
         }
 
         private void Remove(Mapping m)
@@ -267,7 +281,12 @@ namespace DarkwoodMP.Net
                     PmpMap(m.Gateway, 2, m.Port, 0, 0, tries: 2);
                     PmpMap(m.Gateway, 1, m.Port, 0, 0, tries: 2);
                 }
-                Plugin.Log.LogInfo($"[port mapping] removed {(m.Upnp ? "UPnP" : "NAT-PMP")} mapping of port {m.Port}");
+                string text = "NAT-PMP";
+                if (m.Upnp)
+                {
+                    text = "UPnP";
+                }
+                Plugin.Log.LogInfo($"[port mapping] removed {text} mapping of port {m.Port}");
             }
             catch (Exception e)
             {
@@ -350,7 +369,16 @@ namespace DarkwoodMP.Net
                         }
                         continue;
                     }
-                    if (!AddUpnp(m, "UDP", m.Permanent ? 0 : LeaseSeconds, out why))
+                    int lease;
+                    if (m.Permanent)
+                    {
+                        lease = 0;
+                    }
+                    else
+                    {
+                        lease = LeaseSeconds;
+                    }
+                    if (!AddUpnp(m, "UDP", lease, out why))
                     {
                         // The game itself still works over TCP; only the browser's info query is missing.
                         Plugin.Log.LogInfo($"[port mapping] UPnP router refused UDP {port}: {why}");
@@ -470,7 +498,12 @@ namespace DarkwoodMP.Net
                     }
                 }
             }
-            Plugin.Log.LogInfo($"[port mapping] SSDP: {found.Count} answer(s){(found.Count > 0 ? ": " + string.Join(", ", found) : "")}");
+            string text = "";
+            if (found.Count > 0)
+            {
+                text = ": " + string.Join(", ", found);
+            }
+            Plugin.Log.LogInfo($"[port mapping] SSDP: {found.Count} answer(s){text}");
             return found;
         }
 
@@ -538,7 +571,16 @@ namespace DarkwoodMP.Net
                 $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>" +
                 $"<NewInternalPort>{m.Port}</NewInternalPort><NewInternalClient>{m.InternalIp}</NewInternalClient><NewEnabled>1</NewEnabled>" +
                 $"<NewPortMappingDescription>{Description}</NewPortMappingDescription><NewLeaseDuration>{l}</NewLeaseDuration>";
-            if (Soap(m, "AddPortMapping", args(m.Permanent ? 0 : lease), out why) != null)
+            int l2;
+            if (m.Permanent)
+            {
+                l2 = 0;
+            }
+            else
+            {
+                l2 = lease;
+            }
+            if (Soap(m, "AddPortMapping", args(l2), out why) != null)
             {
                 return true;
             }

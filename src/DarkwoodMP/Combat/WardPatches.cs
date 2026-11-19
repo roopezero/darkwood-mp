@@ -99,7 +99,16 @@ namespace DarkwoodMP.Combat
                 list[i + 3].operand = mine;
                 swapped++;
             }
-            Plugin.Log.Log(swapped == 2 ? BepInEx.Logging.LogLevel.Info : BepInEx.Logging.LogLevel.Warning,
+            BepInEx.Logging.LogLevel level;
+            if (swapped == 2)
+            {
+                level = BepInEx.Logging.LogLevel.Info;
+            }
+            else
+            {
+                level = BepInEx.Logging.LogLevel.Warning;
+            }
+            Plugin.Log.Log(level,
                 $"Wards: {swapped} ward checks in Character.canSeeEnemy read the enemy's target (2 expected)");
             return list;
         }
@@ -149,7 +158,16 @@ namespace DarkwoodMP.Combat
                     break;
                 }
             }
-            Plugin.Log.Log(swapped > 0 && swapped == targets ? BepInEx.Logging.LogLevel.Info : BepInEx.Logging.LogLevel.Warning,
+            BepInEx.Logging.LogLevel level;
+            if (swapped > 0 && swapped == targets)
+            {
+                level = BepInEx.Logging.LogLevel.Info;
+            }
+            else
+            {
+                level = BepInEx.Logging.LogLevel.Warning;
+            }
+            Plugin.Log.Log(level,
                 $"Wards: {swapped} forest skill checks ({targets} with their target) in {where} read the enemy's target");
             return list;
         }

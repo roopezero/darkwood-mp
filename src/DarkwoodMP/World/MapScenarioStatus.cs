@@ -38,7 +38,12 @@ namespace DarkwoodMP.World
             // "join-stop" (host, after the join): how long the snapshot for the joiner stopped the host's game.
             Add("join-stop", (a, r) =>
             {
-                r.Info = $"snapshot stopped the game for {WorldShare.LastSnapshotStopMs} ms ({(WorldShare.LastSnapshotOffThread ? "sav.dat written on a worker thread" : "the game's own save")}), longest host frame while joining {WorldShare.LastJoinLongestFrameMs:0} ms";
+                string text = "the game's own save";
+                if (WorldShare.LastSnapshotOffThread)
+                {
+                    text = "sav.dat written on a worker thread";
+                }
+                r.Info = $"snapshot stopped the game for {WorldShare.LastSnapshotStopMs} ms ({text}), longest host frame while joining {WorldShare.LastJoinLongestFrameMs:0} ms";
                 if (WorldShare.LastSnapshotStopMs < 0)
                 {
                     r.Fail("no snapshot was made for the joiner");
@@ -262,7 +267,12 @@ namespace DarkwoodMP.World
                         }
                     }
                     int match = last.Sprites.Count(s => frames.Contains((s.CollectionHash, s.SpriteId)));
-                    seen = $"library {last.Library} ({(lib != null ? "found" : "not found here")}), {match} of {last.Sprites.Count} sprites from the crouch, shown {rp.Root != null && rp.Root.activeInHierarchy}";
+                    string text = "not found here";
+                    if (lib != null)
+                    {
+                        text = "found";
+                    }
+                    seen = $"library {last.Library} ({text}), {match} of {last.Sprites.Count} sprites from the crouch, shown {rp.Root != null && rp.Root.activeInHierarchy}";
                     if (match > 0 && rp.Root != null && rp.Root.activeInHierarchy)
                     {
                         r.Info = $"{rp.Name}: {seen}";
@@ -306,7 +316,16 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            r.Info = $"{what}: {(t == null ? "disarmed (gone)" : t.triggered ? "sprung (the roll failed)" : "still armed")}; clip {Clip(P)}, performingAction {P.performingAction}, gettingInventory {P.gettingInventory}";
+            string text = "still armed";
+            if (t == null)
+            {
+                text = "disarmed (gone)";
+            }
+            else if (t.triggered)
+            {
+                text = "sprung (the roll failed)";
+            }
+            r.Info = $"{what}: {text}; clip {Clip(P)}, performingAction {P.performingAction}, gettingInventory {P.gettingInventory}";
             if (t != null && !t.triggered)
             {
                 r.Fail($"{r.Info}: nothing happened");

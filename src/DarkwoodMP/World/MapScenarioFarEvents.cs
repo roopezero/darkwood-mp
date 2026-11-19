@@ -439,7 +439,12 @@ namespace DarkwoodMP.World
             gen.drainFuel();
             gen.fuel = fuel;
             var skill = Characters.Instance?.Electrician(j.Owner);
-            r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {(skill.HasValue ? skill.Value.ToString() : "not known")})";
+            string toString = "not known";
+            if (skill.HasValue)
+            {
+                toString = skill.Value.ToString();
+            }
+            r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {toString})";
             if (clientNearer && skill.HasValue && GeneratorDrainSkillPatch.Last != null && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
             {
                 r.Fail("drained by our skill: " + r.Info);
@@ -471,7 +476,12 @@ namespace DarkwoodMP.World
             }
             if (MapScenarioFarEvents.PlayerStepsRun.Count < 50)
             {
-                MapScenarioFarEvents.PlayerStepsRun.Add($"{__instance.type} ({(thisGO != null ? thisGO.name : "?")})");
+                string name2 = "?";
+                if (thisGO != null)
+                {
+                    name2 = thisGO.name;
+                }
+                MapScenarioFarEvents.PlayerStepsRun.Add($"{__instance.type} ({name2})");
             }
         }
 

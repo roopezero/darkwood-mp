@@ -51,7 +51,12 @@ namespace DarkwoodMP.Combat
             {
                 go.layer = 0;
             }
-            CopyCollider(player != null ? player.GetComponent<Collider>() : null, go);
+            Collider src = null;
+            if (player != null)
+            {
+                src = player.GetComponent<Collider>();
+            }
+            CopyCollider(src, go);
             var rb = go.AddComponent<Rigidbody>();
             rb.isKinematic = true; // moved by the network, not physics; still gets trigger hits
             rb.useGravity = false;
@@ -298,9 +303,25 @@ namespace DarkwoodMP.Combat
                 bool here = r.Alive && !away;
                 if (proxy.Away != away || proxy.InLocation != loc)
                 {
-                    Plugin.Log.LogInfo(away ? $"{proxy.OwnerName} is away ({(snap != null && snap.Place.StartsWith("dream:") ? "a dream" : "a separate location we don't have")}): the host's enemies leave them be"
-                                     : loc != null ? $"{proxy.OwnerName} is in {snap.Place}, which we run for them: the enemies there are ours and go for them"
-                                     : $"{proxy.OwnerName} is back in the world");
+                    string data;
+                    if (away)
+                    {
+                        string text = "a separate location we don't have";
+                        if (snap != null && snap.Place.StartsWith("dream:"))
+                        {
+                            text = "a dream";
+                        }
+                        data = $"{proxy.OwnerName} is away ({text}): the host's enemies leave them be";
+                    }
+                    else if (loc != null)
+                    {
+                        data = $"{proxy.OwnerName} is in {snap.Place}, which we run for them: the enemies there are ours and go for them";
+                    }
+                    else
+                    {
+                        data = $"{proxy.OwnerName} is back in the world";
+                    }
+                    Plugin.Log.LogInfo(data);
                     proxy.Away = away;
                     proxy.InLocation = loc;
                 }
@@ -356,9 +377,14 @@ namespace DarkwoodMP.Combat
             }
             if (changed && Threat.Debug)
             {
+                string value = "";
+                if (turnedInvisible)
+                {
+                    value = $"; {stopped} enemies stop attacking them";
+                }
                 Plugin.Log.LogInfo($"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, shadow ward {proxy.ShadowWard}, forest spirit ward {proxy.ForestSpiritWard}, " +
                                    $"friend of the forest {proxy.FriendOfTheForest}, enemy of the forest {proxy.EnemyOfTheForest}" +
-                                   (turnedInvisible ? $"; {stopped} enemies stop attacking them" : "") +
+                                   value +
                                    $"; night worms sent at them: {NightSpawns.WormWanted(proxy)}; in light here: {Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
             }
         }

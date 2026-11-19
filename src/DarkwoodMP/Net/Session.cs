@@ -309,7 +309,16 @@ namespace DarkwoodMP.Net
             w.WriteStr(PluginInfo.Version);
             w.WriteStr(LocalName);
             var hash = ClientWorldHash?.Invoke();
-            w.WriteBytes(hash != null && hash.Length == 32 ? hash : new byte[32]); // the world we have; zeros: none
+            byte[] b;
+            if (hash != null && hash.Length == 32)
+            {
+                b = hash;
+            }
+            else
+            {
+                b = new byte[32];
+            }
+            w.WriteBytes(b); // the world we have; zeros: none
             SendToHost(w, Channel.Control, reliable: true);
             _helloAt = Now;
             if (_heardHostAt < 0f)

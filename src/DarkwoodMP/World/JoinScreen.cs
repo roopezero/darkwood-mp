@@ -182,7 +182,12 @@ namespace DarkwoodMP.World
 
             if (world.Progress is var p && p.HasValue)
             {
-                Raise(DownloadShare * (p.Value.Total > 0 ? (float)p.Value.Got / p.Value.Total : 0f));
+                float value = 0f;
+                if (p.Value.Total > 0)
+                {
+                    value = (float)p.Value.Got / p.Value.Total;
+                }
+                Raise(DownloadShare * value);
                 SetStage(Stage.Downloading, $"Downloading the host's world: {p.Value.Got / 1048576f:0.0} / {p.Value.Total / 1048576f:0.0} MB" +
                     (world.UnpackedSize > 0 ? $" ({world.UnpackedSize / 1048576f:0.0} MB unpacked)" : ""));
             }
@@ -261,7 +266,12 @@ namespace DarkwoodMP.World
         private static void Draw()
         {
             LoadingScreen.SetBar(_fraction);
-            LoadingScreen.SetLine(_line, _stage != Stage.Game ? "Esc: stop joining" : null);
+            string hint = null;
+            if (_stage != Stage.Game)
+            {
+                hint = "Esc: stop joining";
+            }
+            LoadingScreen.SetLine(_line, hint);
         }
 
         private static void SetStage(Stage s, string line)

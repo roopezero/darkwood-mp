@@ -188,13 +188,32 @@ namespace DarkwoodMP
                 {
                     _fails++;
                 }
-                Log($"{(ok ? "PASS" : "FAIL")} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {(c.resize ? "grew" : "moved")} ({got.x:0.##}, {got.y:0.##})");
+                string text = "FAIL";
+                if (ok)
+                {
+                    text = "PASS";
+                }
+                string text2 = "moved";
+                if (c.resize)
+                {
+                    text2 = "grew";
+                }
+                Log($"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {text2} ({got.x:0.##}, {got.y:0.##})");
                 _win.Close();
                 yield return null;
             }
             _win = null;
             UiWindow.TestMouse = null;
-            Log(_fails == 0 ? "done: all passed" : $"done: {_fails} failed");
+            string s;
+            if (_fails == 0)
+            {
+                s = "done: all passed";
+            }
+            else
+            {
+                s = $"done: {_fails} failed";
+            }
+            Log(s);
         }
     }
 }

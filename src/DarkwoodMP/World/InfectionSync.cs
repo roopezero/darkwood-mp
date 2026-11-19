@@ -244,7 +244,16 @@ namespace DarkwoodMP.World
             WorldActions.Replaying = true;
             try
             {
-                var go = Core.AddPrefab("Traps/infection_splat", pos, Quaternion.Euler(90f, 0f, 0f), parent != null ? parent.gameObject : Core.ItemContainer, worldSpace: true);
+                GameObject parentGO;
+                if (parent != null)
+                {
+                    parentGO = parent.gameObject;
+                }
+                else
+                {
+                    parentGO = Core.ItemContainer;
+                }
+                var go = Core.AddPrefab("Traps/infection_splat", pos, Quaternion.Euler(90f, 0f, 0f), parentGO, worldSpace: true);
                 Infection inf = null;
                 if (go != null)
                 {

@@ -164,7 +164,17 @@ namespace DarkwoodMP.Combat
                     {
                         loc = NightSpawns.BigLocationAt(a.target.transform.position);
                     }
-                    Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {(a.target != null ? a.target.name : "none")}, in {(loc != null ? loc.name : "no location")}");
+                    string name2 = "none";
+                    if (a.target != null)
+                    {
+                        name2 = a.target.name;
+                    }
+                    string name3 = "no location";
+                    if (loc != null)
+                    {
+                        name3 = loc.name;
+                    }
+                    Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {name2}, in {name3}");
                 }
                 Plugin.Log.LogInfo($"[joiner ai test] {c.name} has {c.activities.Count} activities");
 
@@ -200,7 +210,12 @@ namespace DarkwoodMP.Combat
         /// <summary>The forest spirit leaves when its player goes indoors: the joiner it chases, or else the host's.</summary>
         public static bool TargetIsInside(Character c)
         {
-            var proxy = ProxyOf(c != null ? c.target : null);
+            Transform t = null;
+            if (c != null)
+            {
+                t = c.target;
+            }
+            var proxy = ProxyOf(t);
             if (proxy != null)
             {
                 return InsideAt(proxy.transform.position);

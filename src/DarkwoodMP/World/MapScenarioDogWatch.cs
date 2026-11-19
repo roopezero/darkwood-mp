@@ -82,7 +82,22 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                parts.Add($"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{(c.sleeping ? " asleep" : "")}{(c.eating ? " eating" : "")}{(c.playingCustomAni ? " ani:" + c.customAni : "")}");
+                string text = "";
+                if (c.sleeping)
+                {
+                    text = " asleep";
+                }
+                string text2 = "";
+                if (c.eating)
+                {
+                    text2 = " eating";
+                }
+                string text3 = "";
+                if (c.playingCustomAni)
+                {
+                    text3 = " ani:" + c.customAni;
+                }
+                parts.Add($"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{text2}{text3}");
             }
             Plugin.Log.LogInfo("[dogwatch] list: " + string.Join("; ", parts));
             return parts.Count + " enemies: " + string.Join("; ", parts.Take(30));
@@ -281,7 +296,12 @@ namespace DarkwoodMP.World
                     }
                     if (d < 400f)
                     {
-                        near.Add($"{c.name}#{id} {d:0}{(c.sleeping ? " asleep" : "")}");
+                        string text = "";
+                        if (c.sleeping)
+                        {
+                            text = " asleep";
+                        }
+                        near.Add($"{c.name}#{id} {d:0}{text}");
                     }
                 }
                 if (log && near.Count > 0)

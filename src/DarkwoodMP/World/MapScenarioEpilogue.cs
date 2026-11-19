@@ -363,7 +363,19 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(12f);
             var outcomes = Object.FindObjectOfType<EpilogueOutcomes>();
-            r.Info = $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active}; host's burned {EpilogueSync.HostBurned}; outcomes screen {(outcomes != null ? (outcomes.burnedForest ? "burned" : "not burned") : "not shown")}";
+            string text = "not shown";
+            if (outcomes != null)
+            {
+                if (outcomes.burnedForest)
+                {
+                    text = "burned";
+                }
+                else
+                {
+                    text = "not burned";
+                }
+            }
+            r.Info = $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active}; host's burned {EpilogueSync.HostBurned}; outcomes screen {text}";
             if (!EpilogueSync.PanReleased)
             {
                 r.Fail($"no pan: {r.Info}");

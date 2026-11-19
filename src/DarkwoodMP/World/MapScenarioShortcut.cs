@@ -79,7 +79,16 @@ namespace DarkwoodMP.World
         {
             var ge = WorldEvent();
             var loc = Find(In)?.transform.GetLocation();
-            return $"event {(ge == null ? "not registered" : ge.fired ? "fired" : "not fired")}, {In}: {Desc(Find(In))}, "
+            string text = "not fired";
+            if (ge == null)
+            {
+                text = "not registered";
+            }
+            else if (ge.fired)
+            {
+                text = "fired";
+            }
+            return $"event {text}, {In}: {Desc(Find(In))}, "
                 + $"{Locked}: {Desc(Find(Locked))}, {Out}: {Desc(Find(Out))}, location {(loc == null ? "none" : $"{loc.name} entered={loc.entered}")}";
         }
 
@@ -103,7 +112,12 @@ namespace DarkwoodMP.World
             var ge = WorldEvent();
             if (IsOpen() != want)
             {
-                r.Fail($"not {(want ? "open" : "closed")}: {State()}");
+                string text = "closed";
+                if (want)
+                {
+                    text = "open";
+                }
+                r.Fail($"not {text}: {State()}");
             }
             else if (want && (ge == null || !ge.fired))
             {
@@ -195,7 +209,16 @@ namespace DarkwoodMP.World
             }
             if (!Arrived())
             {
-                r.Fail($"not taken to {dest} ({(to == null ? "not here" : $"{d:0} from it")}, away={o.playerInOutsideLocation}): {State()}");
+                string text;
+                if (to == null)
+                {
+                    text = "not here";
+                }
+                else
+                {
+                    text = $"{d:0} from it";
+                }
+                r.Fail($"not taken to {dest} ({text}, away={o.playerInOutsideLocation}): {State()}");
                 yield break;
             }
             r.Info = $"through {hole} to {Fmt(p.transform.position)}; {State()}";

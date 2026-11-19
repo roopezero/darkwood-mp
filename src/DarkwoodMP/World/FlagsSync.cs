@@ -307,7 +307,16 @@ namespace DarkwoodMP.World
             }
             else
             {
-                AddReputation(trader, had ? amount - was.Value : amount); // the host's is the one that counts
+                int delta;
+                if (had)
+                {
+                    delta = amount - was.Value;
+                }
+                else
+                {
+                    delta = amount;
+                }
+                AddReputation(trader, delta); // the host's is the one that counts
             }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo($"[world] {trader}'s after-night reward for day {day}: {amount}");
@@ -473,7 +482,16 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                changed.Add(new KeyValuePair<string, string>(kv.Key, kv.Key.StartsWith("r:") ? "=" + kv.Value : kv.Value));
+                string value;
+                if (kv.Key.StartsWith("r:"))
+                {
+                    value = "=" + kv.Value;
+                }
+                else
+                {
+                    value = kv.Value;
+                }
+                changed.Add(new KeyValuePair<string, string>(kv.Key, value));
             }
             bool shared = SharedDream; // as Flush: a dream entry the game dropped as the dream ended isn't sent
             foreach (var kv in _atSnapshot)

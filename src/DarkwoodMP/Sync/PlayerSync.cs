@@ -152,7 +152,16 @@ namespace DarkwoodMP.Sync
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
-            if (LeftJustNow(_session.IsHost ? from : _incoming.Owner))
+            ulong id;
+            if (_session.IsHost)
+            {
+                id = from;
+            }
+            else
+            {
+                id = _incoming.Owner;
+            }
+            if (LeftJustNow(id))
             {
                 return;
             }

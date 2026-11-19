@@ -439,7 +439,12 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     n++;
-                    sb.Append($"\n  > {t.type} '{t.reactsToItemType}' fired={t.fired} multi={t.multipleFire}{(t.disabled ? " disabled" : "")} removeItem={t.removeItemThatTriggeredMe}");
+                    string text = "";
+                    if (t.disabled)
+                    {
+                        text = " disabled";
+                    }
+                    sb.Append($"\n  > {t.type} '{t.reactsToItemType}' fired={t.fired} multi={t.multipleFire}{text} removeItem={t.removeItemThatTriggeredMe}");
                     foreach (var q in t.eventRequirements)
                     {
                         if (q != null)
@@ -505,8 +510,18 @@ namespace DarkwoodMP.World
                 {
                     if (e != null && ScriptedEvents.TargetsPlayer(e))
                     {
-                        string k = e.type + (e.type == GameEvent.Type.runFunction ? " " + e.Value : "") + (ScriptedEvents.IsPlayerStep(e.type) ? " (player step)" : "");
-                        onPlayer[k] = (onPlayer.TryGetValue(k, out var c) ? c : 0) + 1;
+                        string value = "";
+                        if (e.type == GameEvent.Type.runFunction)
+                        {
+                            value = " " + e.Value;
+                        }
+                        string k = e.type + value + (ScriptedEvents.IsPlayerStep(e.type) ? " (player step)" : "");
+                        int value2 = 0;
+                        if (onPlayer.TryGetValue(k, out var c))
+                        {
+                            value2 = c;
+                        }
+                        onPlayer[k] = value2 + 1;
                         if ((e.targetGameObjects?.Count ?? 0) + (e.targetUniqueObjects?.Count ?? 0) > 1)
                         {
                             mixed++;

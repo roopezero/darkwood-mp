@@ -84,7 +84,12 @@ namespace DarkwoodMP.World
                                 {
                                     continue;
                                 }
-                                string k = $"{label} {e.type}{(e.type == GameEvent.Type.runFunction || e.type == GameEvent.Type.fireEvent ? " " + e.Value : "")}";
+                                string text = "";
+                                if (e.type == GameEvent.Type.runFunction || e.type == GameEvent.Type.fireEvent)
+                                {
+                                    text = " " + e.Value;
+                                }
+                                string k = $"{label} {e.type}{text}";
                                 if (count.TryGetValue(k, out int c))
                                 {
                                     count[k] = c + 1;
@@ -228,7 +233,12 @@ namespace DarkwoodMP.World
                     return 0f;
                 }).DefaultIfEmpty(0f).Max();
             bool Ok() => want == null || (want == "dark" ? Alpha() > 0.5f : Alpha() < 0.1f);
-            float until = Time.realtimeSinceStartup + (want == null ? 0f : 16f);
+            float value = 16f;
+            if (want == null)
+            {
+                value = 0f;
+            }
+            float until = Time.realtimeSinceStartup + value;
             while (!Ok() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);
@@ -269,14 +279,29 @@ namespace DarkwoodMP.World
                 sb.Append($"\n{new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} layer={t.gameObject.layer} at {Fmt(t.position)} y {t.position.y:0}{(so != null ? $" saved={so.Active}" : "")} [{comps}]");
                 foreach (var c in t.GetComponents<Collider>())
                 {
-                    sb.Append($" col:{c.GetType().Name}{(c.isTrigger ? "/trigger" : "")}{(c.enabled ? "" : "/off")} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
+                    string text = "";
+                    if (c.isTrigger)
+                    {
+                        text = "/trigger";
+                    }
+                    string text2 = "/off";
+                    if (c.enabled)
+                    {
+                        text2 = "";
+                    }
+                    sb.Append($" col:{c.GetType().Name}{text}{text2} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
                 }
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
                 {
                     foreach (var et in ets.eventTriggers)
                     {
-                        sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{(et.disabled ? " disabled" : "")}");
+                        string text3 = "";
+                        if (et.disabled)
+                        {
+                            text3 = " disabled";
+                        }
+                        sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{text3}");
                         foreach (var (label, ge) in new[] { ("do", et.gameEvents), ("exit", et.gameEventsExit), ("else", et.gameEventsElse) })
                         {
                             if (ge != null)
@@ -832,7 +857,12 @@ namespace DarkwoodMP.World
                 }
                 return string.Join(", ", s.OrderByDescending(x => x.Value).Take(3).Select(x => $"{x.Key} x{x.Value}"));
             }
-            return $"reach left {(nl > 0 ? left / nl : 0f):P0} (stopped by {top(stopL)}), right {(nr > 0 ? right / nr : 0f):P0} (stopped by {top(stopR)})";
+            float text = 0f;
+            if (nl > 0)
+            {
+                text = left / nl;
+            }
+            return $"reach left {text:P0} (stopped by {top(stopL)}), right {(nr > 0 ? right / nr : 0f):P0} (stopped by {top(stopR)})";
         }
     }
 }

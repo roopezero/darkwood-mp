@@ -126,7 +126,12 @@ namespace DarkwoodMP.World
                 }
             });
             var id = ObjRef.Spawned.Keys.FirstOrDefault(k => !before.Contains(k));
-            made(id != 0 && ObjRef.Spawned.TryGetValue(id, out var go) ? go : null);
+            GameObject obj = null;
+            if (id != 0 && ObjRef.Spawned.TryGetValue(id, out var go))
+            {
+                obj = go;
+            }
+            made(obj);
         }
 
         /// <summary>
@@ -389,7 +394,12 @@ namespace DarkwoodMP.World
             }
             if ((l != null && l.locked) != want)
             {
-                r.Fail($"{r.Info}, not {(want ? "locked" : "open")}");
+                string text = "open";
+                if (want)
+                {
+                    text = "locked";
+                }
+                r.Fail($"{r.Info}, not {text}");
             }
         }
 
@@ -478,7 +488,12 @@ namespace DarkwoodMP.World
             }
             if (d == null || d.blocked != want)
             {
-                r.Fail($"{r.Info}, not {(want ? "blocked" : "clear")}");
+                string text = "clear";
+                if (want)
+                {
+                    text = "blocked";
+                }
+                r.Fail($"{r.Info}, not {text}");
             }
         }
 
@@ -540,7 +555,12 @@ namespace DarkwoodMP.World
             }
             if (d == null || d.opened != want)
             {
-                r.Fail($"{r.Info}, not {(want ? "open" : "closed")}");
+                string text = "closed";
+                if (want)
+                {
+                    text = "open";
+                }
+                r.Fail($"{r.Info}, not {text}");
             }
         }
 
@@ -673,7 +693,20 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            r.Info = $"at {far.name}: " + (ok == null ? "no answer" : ok.Value ? "allowed" : "refused: " + why);
+            string value;
+            if (ok == null)
+            {
+                value = "no answer";
+            }
+            else if (ok.Value)
+            {
+                value = "allowed";
+            }
+            else
+            {
+                value = "refused: " + why;
+            }
+            r.Info = $"at {far.name}: " + value;
             if (ok != false)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");

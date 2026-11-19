@@ -383,7 +383,12 @@ namespace DarkwoodMP.World
             WorldActions.Replaying = true;
             try
             {
-                go = Core.AddPrefab(prefab, pos, rot, under != null ? under.gameObject : null, worldSpace: true);
+                GameObject parentGO = null;
+                if (under != null)
+                {
+                    parentGO = under.gameObject;
+                }
+                go = Core.AddPrefab(prefab, pos, rot, parentGO, worldSpace: true);
                 if (go != null)
                 {
                     ObjRef.RegisterSpawned(id, go);
@@ -413,7 +418,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{(kind == MadeBefore ? " (made before we came)" : "")}");
+                string text = "";
+                if (kind == MadeBefore)
+                {
+                    text = " (made before we came)";
+                }
+                Plugin.Log.LogInfo($"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{text}");
             }
         }
 
@@ -425,7 +435,16 @@ namespace DarkwoodMP.World
             {
                 trap = go.GetComponent<Trigger>();
             }
-            return (byte)(trap == null ? 255 : trap.active ? 1 : 0);
+            int value = 0;
+            if (trap == null)
+            {
+                value = 255;
+            }
+            else if (trap.active)
+            {
+                value = 1;
+            }
+            return (byte)value;
         }
 
         private static void Arm(GameObject go, byte armed)

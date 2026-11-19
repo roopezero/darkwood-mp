@@ -157,7 +157,16 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
-                    PlayerDamage.Send(p.Owner, damage, ex.objectThatSpawnedMe != null ? ex.objectThatSpawnedMe : at, shadow: false,
+                    Transform attacker;
+                    if (ex.objectThatSpawnedMe != null)
+                    {
+                        attacker = ex.objectThatSpawnedMe;
+                    }
+                    else
+                    {
+                        attacker = at;
+                    }
+                    PlayerDamage.Send(p.Owner, damage, attacker, shadow: false,
                         effects: ex.hasEffect ? new List<InvItemEffect> { ex.effect } : null);
                 }
             }
@@ -454,7 +463,12 @@ namespace DarkwoodMP.Combat
             ex.affectsPlayer = true;
             ex.effect = new InvItemEffect();
             EnemyAreaHits.MarkEnemy(go);
-            Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({(ex.explosionPrefab != null ? ex.explosionPrefab.name : "no flash")}) beside {p.OwnerName}");
+            string name2 = "no flash";
+            if (ex.explosionPrefab != null)
+            {
+                name2 = ex.explosionPrefab.name;
+            }
+            Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({name2}) beside {p.OwnerName}");
             ex.onActivate();
             Object.Destroy(go);
             yield return new WaitForSeconds(1f);

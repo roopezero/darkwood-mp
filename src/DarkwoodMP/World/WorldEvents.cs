@@ -186,13 +186,28 @@ namespace DarkwoodMP.World
             }
             var w = _session.Begin(MsgType.NightEvent);
             w.W.Write(EventFired);
-            w.WriteStr(ns != null && ns.currentScenario != null ? ns.currentScenario.name : "");
+            string s = "";
+            if (ns != null && ns.currentScenario != null)
+            {
+                s = ns.currentScenario.name;
+            }
+            w.WriteStr(s);
             w.WriteStr(ev.gameObject.name);
-            w.WriteStr(big != null ? big.name : "");
+            string s2 = "";
+            if (big != null)
+            {
+                s2 = big.name;
+            }
+            w.WriteStr(s2);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent night event {ev.gameObject.name} at {(big != null ? big.name : "nowhere")}");
+                string name2 = "nowhere";
+                if (big != null)
+                {
+                    name2 = big.name;
+                }
+                Plugin.Log.LogInfo($"[world] sent night event {ev.gameObject.name} at {name2}");
             }
         }
 
@@ -686,7 +701,16 @@ namespace DarkwoodMP.World
         private void SendWeather(Rain r)
         {
             var w = _session.Begin(MsgType.Weather);
-            w.W.Write((byte)((r.rainToday ? 1 : 0) | (r.preRainLightning ? 2 : 0)));
+            int flags = 0;
+            if (r.rainToday)
+            {
+                flags |= 1;
+            }
+            if (r.preRainLightning)
+            {
+                flags |= 2;
+            }
+            w.W.Write((byte)flags);
             w.W.Write(r.timeToStart);
             w.W.Write(r.duration);
             w.W.Write(r.preRainLightningTime);
@@ -969,7 +993,12 @@ namespace DarkwoodMP.World
             {
                 return true; // only the host's player could be ambushed: the game's own
             }
-            int pick = UnityEngine.Random.Range(0, joiners.Count + (hostCan ? 1 : 0));
+            int value = 0;
+            if (hostCan)
+            {
+                value = 1;
+            }
+            int pick = UnityEngine.Random.Range(0, joiners.Count + value);
             if (pick >= joiners.Count)
             {
                 return true; // the host's player: the game's own

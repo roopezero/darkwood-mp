@@ -497,7 +497,12 @@ namespace DarkwoodMP.World
                 LeftCount++;
                 if (Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] {(t.thisEventTriggers != null ? t.thisEventTriggers.name : "?")} ({type}): left to the player who did it");
+                    string name2 = "?";
+                    if (t.thisEventTriggers != null)
+                    {
+                        name2 = t.thisEventTriggers.name;
+                    }
+                    Plugin.Log.LogInfo($"[world] {name2} ({type}): left to the player who did it");
                 }
             }
             return true;
@@ -1125,11 +1130,25 @@ namespace DarkwoodMP.World
             }
             FlushPosition();
             var w = S.Begin(MsgType.EventFired);
-            w.W.Write((byte)(world ? Kind.WorldTrigger : Kind.Trigger));
+            Kind trigger;
+            if (world)
+            {
+                trigger = Kind.WorldTrigger;
+            }
+            else
+            {
+                trigger = Kind.Trigger;
+            }
+            w.W.Write((byte)trigger);
             r.Write(w);
             w.W.Write((byte)index);
             w.WriteStr(WorldEventsOf(TriggerAt(et, index)));
-            Send(w, $"{(world ? "world trigger" : "event")} {et.name} #{index} {r}", accepted);
+            string text = "event";
+            if (world)
+            {
+                text = "world trigger";
+            }
+            Send(w, $"{text} {et.name} #{index} {r}", accepted);
             return true;
         }
 
@@ -1210,7 +1229,12 @@ namespace DarkwoodMP.World
             var ge = t.gameEventsExit;
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] got the exit of {et.name} #{index}: running {(ge != null ? ge.name : "nothing")}");
+                string name2 = "nothing";
+                if (ge != null)
+                {
+                    name2 = ge.name;
+                }
+                Plugin.Log.LogInfo($"[world] got the exit of {et.name} #{index}: running {name2}");
             }
             if (ge == null || !CanRun(ge))
             {
@@ -1461,7 +1485,16 @@ namespace DarkwoodMP.World
                 }
                 if (t == null)
                 {
-                    RunWorldEvents(name, ours ? Part.PlayerAndShared : Part.SharedOnly, replaying: true, $"world trigger {obj} #{index}");
+                    Part part2;
+                    if (ours)
+                    {
+                        part2 = Part.PlayerAndShared;
+                    }
+                    else
+                    {
+                        part2 = Part.SharedOnly;
+                    }
+                    RunWorldEvents(name, part2, replaying: true, $"world trigger {obj} #{index}");
                     return;
                 }
                 if (t.fired && !t.multipleFire)
@@ -1481,7 +1514,20 @@ namespace DarkwoodMP.World
                     bool near = p != null && (p.transform.position - et.transform.position).sqrMagnitude < NearMessages * NearMessages;
                     try
                     {
-                        RunAs(ours ? Part.PlayerAndShared : near ? Part.SharedAndMessages : Part.SharedOnly, replaying: true, ge.fire);
+                        Part part3;
+                        if (ours)
+                        {
+                            part3 = Part.PlayerAndShared;
+                        }
+                        else if (near)
+                        {
+                            part3 = Part.SharedAndMessages;
+                        }
+                        else
+                        {
+                            part3 = Part.SharedOnly;
+                        }
+                        RunAs(part3, replaying: true, ge.fire);
                     }
                     catch (Exception e)
                     {
@@ -1517,7 +1563,16 @@ namespace DarkwoodMP.World
                 }
                 try
                 {
-                    ExitArrived(et, t, index, s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient);
+                    Part part4;
+                    if (s.IsHost)
+                    {
+                        part4 = Part.HostAndShared;
+                    }
+                    else
+                    {
+                        part4 = Part.SharedOnly;
+                    }
+                    ExitArrived(et, t, index, part4, replaying: s.IsClient);
                 }
                 finally
                 {
@@ -1630,7 +1685,12 @@ namespace DarkwoodMP.World
                 }
                 if (Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] got world event {name}" + (known ? "" : ": not found here"));
+                    string value = ": not found here";
+                    if (known)
+                    {
+                        value = "";
+                    }
+                    Plugin.Log.LogInfo($"[world] got world event {name}" + value);
                 }
                 if (!known)
                 {
@@ -1643,7 +1703,16 @@ namespace DarkwoodMP.World
                 }
                 try
                 {
-                    RunAs(s.IsHost ? Part.HostAndShared : Part.SharedOnly, replaying: s.IsClient, () => events.fireWorldEvent(name));
+                    Part part5;
+                    if (s.IsHost)
+                    {
+                        part5 = Part.HostAndShared;
+                    }
+                    else
+                    {
+                        part5 = Part.SharedOnly;
+                    }
+                    RunAs(part5, replaying: s.IsClient, () => events.fireWorldEvent(name));
                 }
                 catch (Exception e)
                 {

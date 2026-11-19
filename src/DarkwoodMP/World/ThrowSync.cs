@@ -58,7 +58,34 @@ namespace DarkwoodMP.World
                 return;
             }
             var w = _session.Begin(MsgType.ItemThrown);
-            Write(w, _session.LocalId, type, go.transform.position, go.transform.rotation, dropped ? Vector3.zero : rb.velocity, dropped ? go.transform.position : ti.landTarget, dropped ? Dropped : Vector3.Distance(ti.landTarget, from));
+            Vector3 vel;
+            if (dropped)
+            {
+                vel = Vector3.zero;
+            }
+            else
+            {
+                vel = rb.velocity;
+            }
+            Vector3 target;
+            if (dropped)
+            {
+                target = go.transform.position;
+            }
+            else
+            {
+                target = ti.landTarget;
+            }
+            float distance;
+            if (dropped)
+            {
+                distance = Dropped;
+            }
+            else
+            {
+                distance = Vector3.Distance(ti.landTarget, from);
+            }
+            Write(w, _session.LocalId, type, go.transform.position, go.transform.rotation, vel, target, distance);
             if (_session.IsHost)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -69,7 +96,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] {(dropped ? "dropped" : "threw")} {type}");
+                string text = "threw";
+                if (dropped)
+                {
+                    text = "dropped";
+                }
+                Plugin.Log.LogInfo($"[world] {text} {type}");
             }
         }
 

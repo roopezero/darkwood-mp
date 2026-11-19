@@ -211,7 +211,17 @@ namespace DarkwoodMP.World
             string contents = r.ReadBigStr();
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] got porter delivery from {(src != null ? src.name : "?")} to {(dest != null ? dest.name : "?")}");
+                string name2 = "?";
+                if (src != null)
+                {
+                    name2 = src.name;
+                }
+                string name3 = "?";
+                if (dest != null)
+                {
+                    name3 = dest.name;
+                }
+                Plugin.Log.LogInfo($"[world] got porter delivery from {name2} to {name3}");
             }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
@@ -392,7 +402,12 @@ namespace DarkwoodMP.World
             }
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] got porter call: " + (loc != null ? loc.name : "no porter's place here"));
+                string name2 = "no porter's place here";
+                if (loc != null)
+                {
+                    name2 = loc.name;
+                }
+                Plugin.Log.LogInfo($"[world] got porter call: " + name2);
             }
             if (loc == null)
             {
@@ -480,7 +495,12 @@ namespace DarkwoodMP.World
         {
             var w = S.Begin(MsgType.OvenLit);
             ObjRef.Of(lit.gameObject).Write(w);
-            (other != null ? ObjRef.Of(other.gameObject) : default).Write(w);
+            ObjRef of = default;
+            if (other != null)
+            {
+                of = ObjRef.Of(other.gameObject);
+            }
+            of.Write(w);
             return w;
         }
 
@@ -489,7 +509,12 @@ namespace DarkwoodMP.World
             var w = BeginOven(lit, putOut);
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + (putOut != null ? $", {putOut.name} out" : ""));
+                string value = "";
+                if (putOut != null)
+                {
+                    value = $", {putOut.name} out";
+                }
+                Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + value);
             }
             S.Broadcast(w, Channel.Control, reliable: true);
         }

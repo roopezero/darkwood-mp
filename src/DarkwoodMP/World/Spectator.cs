@@ -121,7 +121,12 @@ namespace DarkwoodMP.World
                 return (-1f, -1f, -1f);
             }
             var light = FovLight(p);
-            return (light != null ? light.LightConeAngle : -1f, p.FOVLogic.LightConeAngle, CurrentFov(p));
+            float lightConeAngle = -1f;
+            if (light != null)
+            {
+                lightConeAngle = light.LightConeAngle;
+            }
+            return (lightConeAngle, p.FOVLogic.LightConeAngle, CurrentFov(p));
         }
 
         /// <summary>

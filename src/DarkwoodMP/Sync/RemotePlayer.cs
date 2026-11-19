@@ -527,7 +527,16 @@ namespace DarkwoodMP.Sync
                 return c;
             }
             var lib = Resources.Load(library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
-            Plugin.Log.LogInfo(lib != null ? $"Loaded animation library {library} for another player's look" : $"No animation library {library} here");
+            string data;
+            if (lib != null)
+            {
+                data = $"Loaded animation library {library} for another player's look";
+            }
+            else
+            {
+                data = $"No animation library {library} here";
+            }
+            Plugin.Log.LogInfo(data);
             if (lib == null)
             {
                 return null;

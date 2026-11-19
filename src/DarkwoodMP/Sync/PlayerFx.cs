@@ -89,15 +89,42 @@ namespace DarkwoodMP.Sync
                 if (burn != null)
                 {
                     w.W.Write((byte)2);
-                    w.WriteStr(burn.noParticle ? "" : p.burnPrefab != null ? p.burnPrefab.name : "fire_flamesV2_burningEnemy_01");
-                    w.WriteStr(burn.noSound ? "" : string.IsNullOrEmpty(burn.burnSoundOverride) ? "fire_loop_01" : burn.burnSoundOverride);
+                    string s = "fire_flamesV2_burningEnemy_01";
+                    if (burn.noParticle)
+                    {
+                        s = "";
+                    }
+                    else if (p.burnPrefab != null)
+                    {
+                        s = p.burnPrefab.name;
+                    }
+                    w.WriteStr(s);
+                    string s2;
+                    if (burn.noSound)
+                    {
+                        s2 = "";
+                    }
+                    else if (string.IsNullOrEmpty(burn.burnSoundOverride))
+                    {
+                        s2 = "fire_loop_01";
+                    }
+                    else
+                    {
+                        s2 = burn.burnSoundOverride;
+                    }
+                    w.WriteStr(s2);
                 }
                 else
                 {
                     w.W.Write((byte)3);
                 }
                 Send(w, reliable: true);
-                Plugin.Log.LogInfo($"[fx] sent: our player {(burn != null ? "started" : "stopped")} burning");
+                string text = "stopped";
+                if (burn != null)
+                {
+                    text = "started";
+                }
+                Plugin.Log.LogInfo($"[fx] sent: our player {text} burning");
             }
         }
 
@@ -114,9 +141,24 @@ namespace DarkwoodMP.Sync
         public void OurShot(InvItem gun)
         {
             var w = Begin(MsgType.PlayerShot);
-            w.WriteStr(gun.muzzlePrefab != null ? gun.muzzlePrefab.name : "");
-            w.WriteStr(gun.muzzleParticles != null ? gun.muzzleParticles.name : "");
-            w.W.Write((byte)(gun.noMuzzleFlash ? 0 : 1));
+            string s = "";
+            if (gun.muzzlePrefab != null)
+            {
+                s = gun.muzzlePrefab.name;
+            }
+            w.WriteStr(s);
+            string s2 = "";
+            if (gun.muzzleParticles != null)
+            {
+                s2 = gun.muzzleParticles.name;
+            }
+            w.WriteStr(s2);
+            int value = 1;
+            if (gun.noMuzzleFlash)
+            {
+                value = 0;
+            }
+            w.W.Write((byte)value);
             w.Write(gun.muzzleOffset);
             Send(w, reliable: false);
             LogOnce("sent shot", "[fx] sending our player's shots");

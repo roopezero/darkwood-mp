@@ -606,7 +606,17 @@ namespace DarkwoodMP.World
             {
                 return "not watched";
             }
-            return System.FormattableString.Invariant($"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{(p.Since >= 0f ? ", away" : "")}{(p.Touched ? ", touched" : "")}");
+            string text = "";
+            if (p.Since >= 0f)
+            {
+                text = ", away";
+            }
+            string text2 = "";
+            if (p.Touched)
+            {
+                text2 = ", touched";
+            }
+            return System.FormattableString.Invariant($"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{text}{text2}");
         }
 
         private static void Rebase(Loose p)
@@ -714,7 +724,12 @@ namespace DarkwoodMP.World
             w.W.Write(rot.y);
             w.W.Write(rot.z);
             w.W.Write(rot.w);
-            w.W.Write((byte)(last ? 1 : 0));
+            int value = 0;
+            if (last)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             return w;
         }
 
@@ -958,7 +973,12 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.DragOwner);
             r.Write(w);
             w.W.Write(owner);
-            w.W.Write((byte)(letGo ? 1 : 0));
+            int value = 0;
+            if (letGo)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -1301,7 +1321,12 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] {go.name} moved to another culling node here ({(now.entered ? "shown" : "switched off")})");
+                    string text = "switched off";
+                    if (now.entered)
+                    {
+                        text = "shown";
+                    }
+                    Plugin.Log.LogInfo($"[world] {go.name} moved to another culling node here ({text})");
                 }
             }
             catch (System.Exception e)

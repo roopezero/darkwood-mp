@@ -452,7 +452,12 @@ namespace DarkwoodMP.World
             }
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Outcomes);
-            w.WriteStr(burned ? "1" : "0");
+            string s2 = "0";
+            if (burned)
+            {
+                s2 = "1";
+            }
+            w.WriteStr(s2);
             s.Broadcast(w, Channel.Control, reliable: true);
         }
 

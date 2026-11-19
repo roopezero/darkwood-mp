@@ -333,7 +333,12 @@ namespace DarkwoodMP.World
             {
                 r.Fail("no [spawn] line in the log");
             }
-            r.Info = string.Join(", ", parts) + (spawn != null ? " | " + spawn.Substring(spawn.IndexOf("[spawn]", StringComparison.Ordinal)) : "");
+            string value = "";
+            if (spawn != null)
+            {
+                value = " | " + spawn.Substring(spawn.IndexOf("[spawn]", StringComparison.Ordinal));
+            }
+            r.Info = string.Join(", ", parts) + value;
         }
 
         // ---- #3 re-equip after join ----------------------------------------------------------------------------
@@ -563,7 +568,12 @@ namespace DarkwoodMP.World
             r.Info = $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
             if (!(_dog.health < _dogHealth))
             {
-                r.Fail((_dog.alive ? "the client's attack did nothing here: " : "it died of something else before the client's attack: ") + r.Info);
+                string value = "it died of something else before the client's attack: ";
+                if (_dog.alive)
+                {
+                    value = "the client's attack did nothing here: ";
+                }
+                r.Fail(value + r.Info);
             }
         }
 
@@ -735,7 +745,12 @@ namespace DarkwoodMP.World
             {
                 idle = mine.sounds.idleLoop;
             }
-            r.Info = $"spawn point made {(spawned ? "a dog" : "nothing")}; our {mine.name} hidden {hidden}, idle loop {idle ?? "none"} (a Dog's: {dogLoops}); " +
+            string text = "nothing";
+            if (spawned)
+            {
+                text = "a dog";
+            }
+            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idle ?? "none"} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
             NetEnemies.Hidden.Remove(mine);
             NetEnemies.Frozen.Remove(mine);
@@ -1061,7 +1076,12 @@ namespace DarkwoodMP.World
         /// --from-other the log says the other game's break arrived (and whether it was culled here then).</summary>
         private static IEnumerator EggCheck(string[] a, Result r)
         {
-            var which = (a.Length > 0 ? a[0] : "station").Split(',');
+            string a2 = "station";
+            if (a.Length > 0)
+            {
+                a2 = a[0];
+            }
+            var which = a2.Split(',');
             string[] fromOther;
             if (a.Length > 2 && a[1] == "--from-other")
             {
@@ -1088,7 +1108,12 @@ namespace DarkwoodMP.World
                 }
                 string rf = ObjRef.Of(e.gameObject).ToString();
                 var line = lines.LastOrDefault(l => l.Contains($"[world] egg {rf} destroyed"));
-                parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + (line != null ? $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'" : ""));
+                string value = "";
+                if (line != null)
+                {
+                    value = $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
+                }
+                parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + value);
                 if (!e.destroyed)
                 {
                     r.Fail($"the {kv.Key} egg {rf} isn't broken here");
@@ -1254,7 +1279,12 @@ namespace DarkwoodMP.World
         /// <summary>"infection-check station[,infection:client] [--from-other]": those patches are gone here (and the log says the other game's clear arrived).</summary>
         private static IEnumerator InfectionCheck(string[] a, Result r)
         {
-            var which = (a.Length > 0 ? a[0] : "station").Split(',');
+            string a2 = "station";
+            if (a.Length > 0)
+            {
+                a2 = a[0];
+            }
+            var which = a2.Split(',');
             var missing = new List<string>();
             if (a.Contains("--from-other"))
             {
@@ -1280,7 +1310,12 @@ namespace DarkwoodMP.World
                 }
             }
             var line = LogLines().LastOrDefault(l => l.Contains("[world] infection cleared"));
-            parts.Add(line != null ? line.Substring(line.IndexOf("[world]", StringComparison.Ordinal)) : "no 'infection cleared' line");
+            string item = "no 'infection cleared' line";
+            if (line != null)
+            {
+                item = line.Substring(line.IndexOf("[world]", StringComparison.Ordinal));
+            }
+            parts.Add(item);
             r.Info = string.Join("; ", parts);
             if (missing.Count > 0)
             {

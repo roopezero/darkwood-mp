@@ -348,7 +348,16 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[ids] gave out {list.Count} ids{(to == 0 ? "" : $" to #{to} (made before it joined)")}");
+                string text;
+                if (to == 0)
+                {
+                    text = "";
+                }
+                else
+                {
+                    text = $" to #{to} (made before it joined)";
+                }
+                Plugin.Log.LogInfo($"[ids] gave out {list.Count} ids{text}");
             }
         }
 

@@ -160,7 +160,12 @@ namespace DarkwoodMP.World
                     {
                         w = DragSync.Instance.WatchInfo(b);
                     }
-                    what = $"{(it.draggable ? "draggable" : "loose")}, {w}";
+                    string text = "loose";
+                    if (it.draggable)
+                    {
+                        text = "draggable";
+                    }
+                    what = $"{text}, {w}";
                     things.Add(it);
                     if (w == "not watched" || w == "no body")
                     {
@@ -169,7 +174,12 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    what = $"NOT SHARED (no Item{(b.GetComponentInParent<Item>() != null ? " on the body, one above it" : "")})";
+                    string text2 = "";
+                    if (b.GetComponentInParent<Item>() != null)
+                    {
+                        text2 = " on the body, one above it";
+                    }
+                    what = $"NOT SHARED (no Item{text2})";
                     unwatched.Add($"{b.name} {Ref(b)}");
                 }
                 Plugin.Log.LogInfo(FormattableString.Invariant($"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
@@ -391,7 +401,12 @@ namespace DarkwoodMP.World
 
         private static IEnumerator DoorWalk(string[] a, Result r)
         {
-            var dir = Dir(a.Length > 0 ? F(a[0]) : 0f);
+            float deg = 0f;
+            if (a.Length > 0)
+            {
+                deg = F(a[0]);
+            }
+            var dir = Dir(deg);
             var d = Nearest(Object.FindObjectsOfType<Door>().Where(x => x.opened && !x.destroyed && !x.barricaded && x.body != null && ObjRef.Of(x.gameObject).Valid), Centre);
             if (d == null)
             {

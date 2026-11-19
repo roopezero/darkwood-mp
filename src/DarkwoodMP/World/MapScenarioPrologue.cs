@@ -140,7 +140,12 @@ namespace DarkwoodMP.World
             r.Info = $"key {a[0]} in our journal {k != null} (inDream {k?.inDream}), dreaming {D.dreaming}, shared dream {DreamSync.Shared ?? "none"}";
             if ((k != null) != want)
             {
-                r.Fail($"{r.Info}, wanted {(want ? "it" : "none")}");
+                string text = "none";
+                if (want)
+                {
+                    text = "it";
+                }
+                r.Fail($"{r.Info}, wanted {text}");
             }
             else if (k != null && !k.inDream)
             {
@@ -223,7 +228,12 @@ namespace DarkwoodMP.World
             }
             if (condition)
             {
-                r.Fail($"{r.Info}, wanted {(open ? "unlocked and open" : "locked and shut")}");
+                string text = "locked and shut";
+                if (open)
+                {
+                    text = "unlocked and open";
+                }
+                r.Fail($"{r.Info}, wanted {text}");
             }
         }
 
@@ -351,7 +361,12 @@ namespace DarkwoodMP.World
             string names = string.Join(",", outcomes.Select(o => o.name));
             if (pick == null)
             {
-                r.Fail($"no outcome to {(last ? "the end" : "the next stage")} in {stage} ({names})");
+                string text = "the next stage";
+                if (last)
+                {
+                    text = "the end";
+                }
+                r.Fail($"no outcome to {text} in {stage} ({names})");
                 yield break;
             }
             d.outcome = pick.name;

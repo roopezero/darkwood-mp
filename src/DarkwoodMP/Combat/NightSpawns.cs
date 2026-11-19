@@ -227,8 +227,18 @@ namespace DarkwoodMP.Combat
                 {
                     who = proxy.OwnerName;
                 }
-                SentLog.Add((loc != null ? loc.name : "-", who, c));
-                Plugin.Log.LogInfo($"[night] {c.name} sent at {who}'s hideout {(loc != null ? loc.name : "-")} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
+                string name2 = "-";
+                if (loc != null)
+                {
+                    name2 = loc.name;
+                }
+                SentLog.Add((name2, who, c));
+                string name3 = "-";
+                if (loc != null)
+                {
+                    name3 = loc.name;
+                }
+                Plugin.Log.LogInfo($"[night] {c.name} sent at {who}'s hideout {name3} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
                                    $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
                 return c;
             }
@@ -371,7 +381,12 @@ namespace DarkwoodMP.Combat
             foreach (var proxy in LivingProxies())
             {
                 bool home = AtHideout(proxy.transform.position, out var loc);
-                Plugin.Log.LogInfo($"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {(loc != null ? loc.name : "none")}, at a hideout: {home}");
+                string name2 = "none";
+                if (loc != null)
+                {
+                    name2 = loc.name;
+                }
+                Plugin.Log.LogInfo($"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {name2}, at a hideout: {home}");
                 var worm = SpawnWorm(spawner, proxy);
                 Plugin.Log.LogInfo(worm != null
                     ? $"[night test] worm for {proxy.OwnerName} at {worm.transform.position}, {Core.trueDistance(worm.transform.position, proxy.transform.position):0} from them, going for {(worm.target != null ? worm.target.name : "nobody")}"
@@ -381,8 +396,16 @@ namespace DarkwoodMP.Combat
                 if (at != null)
                 {
                     var c = SpawnNightChar(spawner, proxy, at);
-                    Plugin.Log.LogInfo(c != null ? $"[night test] night attacker {c.name} for {proxy.OwnerName} at {c.transform.position}"
-                                                 : $"[night test] no night attacker for {proxy.OwnerName} (the scenario has none left)");
+                    string data;
+                    if (c != null)
+                    {
+                        data = $"[night test] night attacker {c.name} for {proxy.OwnerName} at {c.transform.position}";
+                    }
+                    else
+                    {
+                        data = $"[night test] no night attacker for {proxy.OwnerName} (the scenario has none left)";
+                    }
+                    Plugin.Log.LogInfo(data);
                     JoinerAi.Test(c, proxy);
                 }
                 else

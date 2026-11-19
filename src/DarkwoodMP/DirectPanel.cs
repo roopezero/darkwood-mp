@@ -125,7 +125,12 @@ namespace DarkwoodMP
         {
             if (_session.Active && _session.Backend != _tcp)
             {
-                Ui.Text(f, _session.IsHost ? "In a Steam game." : "In a Steam game. Joining a server here leaves it.", MenuSkin.Dim);
+                string text = "In a Steam game. Joining a server here leaves it.";
+                if (_session.IsHost)
+                {
+                    text = "In a Steam game.";
+                }
+                Ui.Text(f, text, MenuSkin.Dim);
                 if (!_session.IsHost)
                 {
                     JoinButtons(f);
@@ -214,7 +219,12 @@ namespace DarkwoodMP
             {
                 _tcp.Rejoin(); // sends your character first
             }
-            if (Ui.Button(f, _tcp.IsHost ? "Stop hosting" : "Leave"))
+            string text = "Leave";
+            if (_tcp.IsHost)
+            {
+                text = "Stop hosting";
+            }
+            if (Ui.Button(f, text))
             {
                 _tcp.Leave();
             }
@@ -355,8 +365,29 @@ namespace DarkwoodMP
                         _sortDown = false;
                     }
                 }
-                string name = Columns[c] + (_sortColumn == c && c > 0 ? (_sortDown ? "  v" : "  ^") : "");
-                Ui.Label(new Rect(r.x + 4 * s, r.y, r.width - 6 * s, r.height), name, r.Contains(Event.current.mousePosition) ? MenuSkin.Bright : MenuSkin.Text);
+                string value = "";
+                if (_sortColumn == c && c > 0)
+                {
+                    if (_sortDown)
+                    {
+                        value = "  v";
+                    }
+                    else
+                    {
+                        value = "  ^";
+                    }
+                }
+                string name = Columns[c] + value;
+                Color color;
+                if (r.Contains(Event.current.mousePosition))
+                {
+                    color = MenuSkin.Bright;
+                }
+                else
+                {
+                    color = MenuSkin.Text;
+                }
+                Ui.Label(new Rect(r.x + 4 * s, r.y, r.width - 6 * s, r.height), name, color);
             }
 
             var rows = Sorted(_browser.List(_tab));
@@ -481,7 +512,12 @@ namespace DarkwoodMP
                 }
                 else
                 {
-                    status = $"{rows.Count} server{(rows.Count == 1 ? "" : "s")}";
+                    string text = "s";
+                    if (rows.Count == 1)
+                    {
+                        text = "";
+                    }
+                    status = $"{rows.Count} server{text}";
                 }
             }
             // Beside it, while no name is set (the Steam or OS user name is used), where to set one.
@@ -559,7 +595,16 @@ namespace DarkwoodMP
                 }
             }
             var sorted = list.OrderBy(Key);
-            return (_sortDown ? sorted.Reverse() : sorted).ToList();
+            IEnumerable<string> reverse;
+            if (_sortDown)
+            {
+                reverse = sorted.Reverse();
+            }
+            else
+            {
+                reverse = sorted;
+            }
+            return reverse.ToList();
         }
 
         private void BrowserButtons(Rect r)
@@ -590,7 +635,12 @@ namespace DarkwoodMP
                     _browser.AddFavorite(_selected);
                 }
             }
-            if (Ui.Button(b[4], _tab == ServerBrowser.Tab.Lan && _browser.SearchingLan ? "Searching" : "Refresh"))
+            string text = "Refresh";
+            if (_tab == ServerBrowser.Tab.Lan && _browser.SearchingLan)
+            {
+                text = "Searching";
+            }
+            if (Ui.Button(b[4], text))
             {
                 _browser.Refresh(_tab);
             }

@@ -351,7 +351,21 @@ namespace DarkwoodMP.World
             {
                 c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(player.gameObject, Vector3.zero, 400f, type, nocturnal: false, attackPlayer: false);
             }
-            Plugin.Log.LogInfo(c != null ? $"Test world: spawned {c.name} at {c.transform.position}{(tries > 1 ? $" (try {tries})" : "")}" : $"Test world: couldn't spawn {type} in {tries - 1} tries");
+            string data;
+            if (c != null)
+            {
+                string text = "";
+                if (tries > 1)
+                {
+                    text = $" (try {tries})";
+                }
+                data = $"Test world: spawned {c.name} at {c.transform.position}{text}";
+            }
+            else
+            {
+                data = $"Test world: couldn't spawn {type} in {tries - 1} tries";
+            }
+            Plugin.Log.LogInfo(data);
             return c;
         }
 

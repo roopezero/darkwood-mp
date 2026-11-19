@@ -36,7 +36,12 @@ namespace DarkwoodMP
             {
                 _fails++;
             }
-            Log($"{(ok ? "PASS" : "FAIL")} {what}");
+            string text = "FAIL";
+            if (ok)
+            {
+                text = "PASS";
+            }
+            Log($"{text} {what}");
         }
 
         public static IEnumerator Run(string dir, bool inWorld)
@@ -231,7 +236,12 @@ namespace DarkwoodMP
                 yield return Shot(P("video-keep"));
                 ConfirmDialog.Cancel();
                 OptionsWindow.TestTab(1);
-                OptionsWindow.SetVolume(music: false, GameSettings.GetFloat("SoundVolume") > 0.5f ? 0.3f : 0.8f);
+                float v = 0.8f;
+                if (GameSettings.GetFloat("SoundVolume") > 0.5f)
+                {
+                    v = 0.3f;
+                }
+                OptionsWindow.SetVolume(music: false, v);
                 OptionsWindow.RequestClose();
                 yield return Shot(P("audio-apply-question"));
                 ConfirmDialog.Choose(false); // Discard: the sound volume back, the window closed
@@ -251,12 +261,30 @@ namespace DarkwoodMP
             OptionsWindow.TestReloadControls();
             _before = null;
             var diffs = Compare(before, ReadPrefs());
-            Check(diffs.Count == 0, diffs.Count == 0 ? "the prefs file has every setting as before the test" : $"the prefs file differs from before: {string.Join("; ", diffs)}");
+            string what;
+            if (diffs.Count == 0)
+            {
+                what = "the prefs file has every setting as before the test";
+            }
+            else
+            {
+                what = $"the prefs file differs from before: {string.Join("; ", diffs)}";
+            }
+            Check(diffs.Count == 0, what);
             if (inWorld)
             {
                 Core.showHidePauseMenu();
             }
-            Log($"done: {(_fails == 0 ? "all passed" : _fails + " failed")}");
+            string text;
+            if (_fails == 0)
+            {
+                text = "all passed";
+            }
+            else
+            {
+                text = _fails + " failed";
+            }
+            Log($"done: {text}");
         }
 
         // What Run changed, kept until it has put it back, so a run cut short (an exception, a reset's StopTests,

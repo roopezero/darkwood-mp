@@ -67,7 +67,12 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[map] location {Core.getTrueLocationName(l.name)} at {Fmt(l.transform.position)} ({Fmt(l.transform.position - Centre)} from the centre)");
                 }
             }
-            var to = Spot(a.Length > 0 ? a[0] : "centre");
+            string s = "centre";
+            if (a.Length > 0)
+            {
+                s = a[0];
+            }
+            var to = Spot(s);
             yield return Walk(to, 60f);
             r.Info = $"at {Fmt(P.transform.position)}";
         }
@@ -104,7 +109,12 @@ namespace DarkwoodMP.World
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open)
             {
-                r.Fail($"{r.Info}: not {(open ? "open" : "shut")}");
+                string text = "shut";
+                if (open)
+                {
+                    text = "open";
+                }
+                r.Fail($"{r.Info}: not {text}");
             }
         }
 
@@ -130,14 +140,24 @@ namespace DarkwoodMP.World
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open || DoorLeaf.Turned(door) != open)
             {
-                r.Fail($"{r.Info}: should be {(open ? "open and drawn open" : "shut")}");
+                string text = "shut";
+                if (open)
+                {
+                    text = "open and drawn open";
+                }
+                r.Fail($"{r.Info}: should be {text}");
             }
         }
 
         /// <summary>"far-doors-info SPOT": each door within 1000 of the spot: open, drawn open, its leaf's angle, switched on.</summary>
         private static IEnumerator FarDoorsInfo(string[] a, Result r)
         {
-            var at = Spot(a.Length > 0 ? a[0] : "centre");
+            string s = "centre";
+            if (a.Length > 0)
+            {
+                s = a[0];
+            }
+            var at = Spot(s);
             r.Info = string.Join("; ", Object.FindObjectsOfType<Door>(true).Where(d => StateDump.Flat(d.transform.position - at) < 1000f)
                 .Select(d => $"{ObjRef.Of(d.gameObject)} at {Fmt(d.transform.position)} open={d.opened} leaf {DoorLeaf.Angle(d):0} (z {d.body?.localEulerAngles.z:0}) on={d.gameObject.activeInHierarchy}"));
             yield break;
@@ -236,7 +256,12 @@ namespace DarkwoodMP.World
         /// <summary>"far-dog SPOT" (host, before the client joins, so it's in the save the client loads): a dog there.</summary>
         private static IEnumerator FarDog(string[] a, Result r)
         {
-            var spot = Spot(a.Length > 0 ? a[0] : "off:0,2400");
+            string s = "off:0,2400";
+            if (a.Length > 0)
+            {
+                s = a[0];
+            }
+            var spot = Spot(s);
             // Run again at the far steps: the dog made before the join may have wandered off or died in the meantime, so
             // a living one is put back on its spot and a dead one is made again.
             if (_dog != null && _dog.alive)

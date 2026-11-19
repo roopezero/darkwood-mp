@@ -109,7 +109,12 @@ namespace DarkwoodMP.World
             bool loaded = scene != _appliedScene;
             _appliedScene = scene;
             _appliedLevel = level;
-            ApplyAll(loaded ? "world loaded" : "level changed");
+            string why = "level changed";
+            if (loaded)
+            {
+                why = "world loaded";
+            }
+            ApplyAll(why);
         }
 
         /// <summary>Give every workbench's storage the slot count of the current level.</summary>

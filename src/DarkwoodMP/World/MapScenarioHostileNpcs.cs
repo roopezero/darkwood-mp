@@ -219,7 +219,12 @@ namespace DarkwoodMP.World
             r.Info = $"{Props(c)}; {sent?.Trim() ?? "never sent after anyone"}";
             if (!ok)
             {
-                r.Fail($"not run by us after the {(wantClient ? "client" : "host")}: {r.Info}");
+                string text = "host";
+                if (wantClient)
+                {
+                    text = "client";
+                }
+                r.Fail($"not run by us after the {text}: {r.Info}");
             }
         }
 
@@ -347,7 +352,25 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} here");
                 yield break;
             }
-            r.Info = $"alive {c.alive}, story dead {(st != null ? st.dead.ToString() : "no state")}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(a.Length > 2 ? a[2] : a.Length > 1 ? a[1] : a[0])}";
+            string toString = "no state";
+            if (st != null)
+            {
+                toString = st.dead.ToString();
+            }
+            string part;
+            if (a.Length > 2)
+            {
+                part = a[2];
+            }
+            else if (a.Length > 1)
+            {
+                part = a[1];
+            }
+            else
+            {
+                part = a[0];
+            }
+            r.Info = $"alive {c.alive}, story dead {toString}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(part)}";
             if (c.alive || (st != null && !st.dead))
             {
                 r.Fail($"not dead here: {r.Info}");

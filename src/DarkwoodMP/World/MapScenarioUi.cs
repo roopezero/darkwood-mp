@@ -41,7 +41,12 @@ namespace DarkwoodMP.World
             Add("ui-refresh", (a, r) =>
             {
                 UiRefresh.Enabled = a.Length == 0 || a[0] != "off";
-                r.Info = $"UiRefresh {(UiRefresh.Enabled ? "on" : "off")}";
+                string text = "off";
+                if (UiRefresh.Enabled)
+                {
+                    text = "on";
+                }
+                r.Info = $"UiRefresh {text}";
                 return Nothing();
             });
         }
@@ -125,7 +130,12 @@ namespace DarkwoodMP.World
                 if (s.UIInvSlot != null && s.UIInvSlot.sprite != null && s.UIInvSlot.sprite.CurrentSprite != null && !s.inHotbar)
                 {
                     string frame = s.UIInvSlot.sprite.CurrentSprite.name;
-                    if (frame == (full ? "emptyInv" : "fullInv"))
+                    string value = "fullInv";
+                    if (full)
+                    {
+                        value = "emptyInv";
+                    }
+                    if (frame == value)
                     {
                         bad.Add($"slot {i} ({Slot(s)}): frame {frame}");
                     }
@@ -234,7 +244,17 @@ namespace DarkwoodMP.World
                 bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f && Mathf.Abs(c.g - red.g) < 0.02f && Mathf.Abs(c.b - red.b) < 0.02f;
                 if (drawnRed == can)
                 {
-                    bad.Add($"{s.invItem.type} drawn {(drawnRed ? "red" : "makeable")}, is {(can ? "makeable" : "not")} ({Needs(recipe)})");
+                    string text = "makeable";
+                    if (drawnRed)
+                    {
+                        text = "red";
+                    }
+                    string text2 = "not";
+                    if (can)
+                    {
+                        text2 = "makeable";
+                    }
+                    bad.Add($"{s.invItem.type} drawn {text}, is {text2} ({Needs(recipe)})");
                 }
             }
             if (bad.Count == 0)
@@ -329,7 +349,12 @@ namespace DarkwoodMP.World
                 AsPlayer(() => wb.open());
             }
             // A client asks the host for the storage as it opens it, and its window takes the answer.
-            yield return new WaitForSeconds(Net.Session.Instance != null && Net.Session.Instance.IsClient ? SlotShare.AskTimeout + 0.5f : 1f);
+            float seconds = 1f;
+            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            {
+                seconds = SlotShare.AskTimeout + 0.5f;
+            }
+            yield return new WaitForSeconds(seconds);
             var st = wb.normalInventory;
             if (P.openedItemInventory2 != st || !st.open)
             {

@@ -40,7 +40,12 @@ namespace DarkwoodMP.Combat
             }
             if (owner == PlayerSync.DummyId)
             {
-                Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + (effects != null && effects.Count > 0 ? $" (+{effects.Count} effects)" : ""));
+                string value = "";
+                if (effects != null && effects.Count > 0)
+                {
+                    value = $" (+{effects.Count} effects)";
+                }
+                Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + value);
                 PlayerSync.Instance?.FlashDummy(damage);
                 return;
             }
@@ -51,7 +56,12 @@ namespace DarkwoodMP.Combat
             }
             var w = session.Begin(MsgType.PlayerDamage);
             w.W.Write(damage);
-            w.W.Write((byte)(shadow ? 1 : 0));
+            int value2 = 0;
+            if (shadow)
+            {
+                value2 = 1;
+            }
+            w.W.Write((byte)value2);
             w.WriteStr(from);
             WriteEffects(w, effects);
             session.SendTo(owner, w, Channel.Control, reliable: true);
@@ -78,7 +88,20 @@ namespace DarkwoodMP.Combat
                 w.W.Write(e.duration);
                 w.W.Write(e.modifier);
                 w.W.Write(e.interval);
-                w.W.Write((byte)((e.stopsBleeding ? 1 : 0) | (e.stopsPoison ? 2 : 0) | (e.hasPoisonOverlay ? 4 : 0)));
+                int flags = 0;
+                if (e.stopsBleeding)
+                {
+                    flags |= 1;
+                }
+                if (e.stopsPoison)
+                {
+                    flags |= 2;
+                }
+                if (e.hasPoisonOverlay)
+                {
+                    flags |= 4;
+                }
+                w.W.Write((byte)flags);
                 w.WriteStr(e.activateSound ?? "");
             }
         }

@@ -152,7 +152,16 @@ namespace DarkwoodMP.World
             r.Info = $"{_sound} playing {Playing()} (want {(want ? "playing" : "stopped")}); entered {_et.entered}, left {_et.exited}, exit ran {_t.firedExit}";
             if (Playing() != want)
             {
-                r.Fail(want ? $"the whispers don't play here: {r.Info}" : $"stuck hearing the whispers here: {r.Info}");
+                string why;
+                if (want)
+                {
+                    why = $"the whispers don't play here: {r.Info}";
+                }
+                else
+                {
+                    why = $"stuck hearing the whispers here: {r.Info}";
+                }
+                r.Fail(why);
             }
         }
 

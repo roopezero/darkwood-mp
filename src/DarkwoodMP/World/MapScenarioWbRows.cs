@@ -162,7 +162,12 @@ namespace DarkwoodMP.World
             if (dir != null)
             {
                 Directory.CreateDirectory(dir);
-                string path = Path.Combine(dir, $"wb-rows-{(Net.Session.Instance != null && Net.Session.Instance.IsClient ? "client" : "host")}-{st.slots.Count}.png");
+                string text = "host";
+                if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+                {
+                    text = "client";
+                }
+                string path = Path.Combine(dir, $"wb-rows-{text}-{st.slots.Count}.png");
                 ScreenCapture.CaptureScreenshot(path);
                 yield return new WaitForSecondsRealtime(1f);
                 Plugin.Log.LogInfo($"[shots] {path}");
@@ -190,7 +195,12 @@ namespace DarkwoodMP.World
                 }
                 at.Add(ui.transform.position);
             }
-            float size = (at.Count > 1 ? Vector3.Distance(at[0], at[1]) : 60f) * 0.9f;
+            float distance = 60f;
+            if (at.Count > 1)
+            {
+                distance = Vector3.Distance(at[0], at[1]);
+            }
+            float size = distance * 0.9f;
             for (int i = 0; i < at.Count; i++)
             {
                 for (int j = i + 1; j < at.Count; j++)
@@ -216,7 +226,16 @@ namespace DarkwoodMP.World
             }
             if (cam != null)
             {
-                foreach (var p in new[] { at[0], at[at.Count - 1] }.Concat(button != null ? new[] { button.position } : new Vector3[0]))
+                Vector3[] second;
+                if (button != null)
+                {
+                    second = new[] { button.position };
+                }
+                else
+                {
+                    second = new Vector3[0];
+                }
+                foreach (var p in new[] { at[0], at[at.Count - 1] }.Concat(second))
                 {
                     var v = cam.WorldToViewportPoint(p);
                     if (v.x < 0f || v.x > 1f || v.y < 0f || v.y > 1f)

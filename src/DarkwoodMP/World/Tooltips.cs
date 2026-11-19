@@ -394,7 +394,16 @@ namespace DarkwoodMP.World
                 Fail($"map popup: {e.Message}");
             }
 
-            Plugin.Log.LogInfo(fails == 0 ? "[tooltips] done: all passed" : $"[tooltips] done: {fails} failed");
+            string data;
+            if (fails == 0)
+            {
+                data = "[tooltips] done: all passed";
+            }
+            else
+            {
+                data = $"[tooltips] done: {fails} failed";
+            }
+            Plugin.Log.LogInfo(data);
         }
 
         /// <summary>The game's own text for an item's description, without the mod (null if there's no entry).</summary>

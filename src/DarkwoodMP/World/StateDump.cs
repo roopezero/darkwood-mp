@@ -613,7 +613,12 @@ namespace DarkwoodMP.World
                     sb.Append("null");
                     break;
                 case bool b:
-                    sb.Append(b ? "true" : "false");
+                    string value = "false";
+                    if (b)
+                    {
+                        value = "true";
+                    }
+                    sb.Append(value);
                     break;
                 case string s:
                     Str(sb, s);
@@ -651,7 +656,12 @@ namespace DarkwoodMP.World
                             }
                             if (flat)
                             {
-                                sb.Append(k > 0 ? " " : "");
+                                string value2 = "";
+                                if (k > 0)
+                                {
+                                    value2 = " ";
+                                }
+                                sb.Append(value2);
                             }
                             else
                             {

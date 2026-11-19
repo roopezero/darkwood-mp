@@ -84,8 +84,40 @@ namespace DarkwoodMP.Sync
             w.Write(Owner);
             pw.Write(Position);
             WriteRot(w, Rotation);
-            w.Write((byte)((Alive ? 1 : 0) | (Spectating ? 2 : 0) | (Flashlight ? 4 : 0) | (Invisible ? 8 : 0) | (ShadowWard ? 16 : 0)
-                           | (ForestSpiritWard ? 32 : 0) | (FriendOfTheForest ? 64 : 0) | (EnemyOfTheForest ? 128 : 0)));
+            int flags = 0;
+            if (Alive)
+            {
+                flags |= 1;
+            }
+            if (Spectating)
+            {
+                flags |= 2;
+            }
+            if (Flashlight)
+            {
+                flags |= 4;
+            }
+            if (Invisible)
+            {
+                flags |= 8;
+            }
+            if (ShadowWard)
+            {
+                flags |= 16;
+            }
+            if (ForestSpiritWard)
+            {
+                flags |= 32;
+            }
+            if (FriendOfTheForest)
+            {
+                flags |= 64;
+            }
+            if (EnemyOfTheForest)
+            {
+                flags |= 128;
+            }
+            w.Write((byte)flags);
             pw.WriteStr(Library ?? "");
             pw.WriteStr(HeldLight ?? "");
             w.Write((byte)Sprites.Count);
@@ -106,7 +138,16 @@ namespace DarkwoodMP.Sync
                 w.Write(c.b);
                 w.Write(c.a);
             }
-            w.Write((byte)((Away ? 1 : 0) | (AfterNight ? 2 : 0)));
+            int flags2 = 0;
+            if (Away)
+            {
+                flags2 |= 1;
+            }
+            if (AfterNight)
+            {
+                flags2 |= 2;
+            }
+            w.Write((byte)flags2);
             w.Write(Health);
             pw.WriteStr(Place ?? "");
             pw.Write(HeldFlames);
@@ -242,7 +283,12 @@ namespace DarkwoodMP.Sync
                     bool ok = IsCharacterArt(path);
                     if (dump)
                     {
-                        Plugin.Log.LogInfo($"[sprite] {(ok ? "SYNC" : "skip")} path={path} layer={LayerMask.LayerToName(s.gameObject.layer)} " +
+                        string text = "skip";
+                        if (ok)
+                        {
+                            text = "SYNC";
+                        }
+                        Plugin.Log.LogInfo($"[sprite] {text} path={path} layer={LayerMask.LayerToName(s.gameObject.layer)} " +
                                            $"active={s.gameObject.activeInHierarchy} coll={s.Collection?.spriteCollectionName} sprite={s.CurrentSprite?.name}");
                     }
                     if (!ok)
@@ -335,7 +381,12 @@ namespace DarkwoodMP.Sync
             snap.Away = LocalAway();
             snap.AfterNight = World.AfterNight.Local;
             snap.Place = World.Locations.Current();
-            snap.Health = (byte)(player.maxHealth > 0f ? Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100) : 0);
+            int clamp = 0;
+            if (player.maxHealth > 0f)
+            {
+                clamp = Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100);
+            }
+            snap.Health = (byte)clamp;
             snap.Sprites.Clear();
             for (int i = 0; i < _sprites.Length && snap.Sprites.Count < 255; i++)
             {

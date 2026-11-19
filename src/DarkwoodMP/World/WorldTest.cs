@@ -78,7 +78,12 @@ namespace DarkwoodMP.World
                 return;
             }
             var found = DbItems().Where(x => x.it.placeOnUse).Select(x => $"{x.key} -> {(x.it.item != null ? x.it.item.name : "nothing")}").ToList();
-            Plugin.Log.LogInfo($"[world test] items placed on use: {found.Count}" + (found.Count > 0 ? ": " + string.Join(", ", found) : ""));
+            string value = "";
+            if (found.Count > 0)
+            {
+                value = ": " + string.Join(", ", found);
+            }
+            Plugin.Log.LogInfo($"[world test] items placed on use: {found.Count}" + value);
         }
 
         public static IEnumerator Run()
@@ -256,7 +261,22 @@ namespace DarkwoodMP.World
                     yield return null;
                     yield return null;
                     bool letGo = player.itemBeingDragged != drag && DragSync.Cancelled > cancelled;
-                    Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {(stopped ? "not started" : "started")}, ours {(letGo ? "let go" : "kept")}: {(stopped && letGo ? "PASS" : "FAIL")}");
+                    string text = "started";
+                    if (stopped)
+                    {
+                        text = "not started";
+                    }
+                    string text2 = "kept";
+                    if (letGo)
+                    {
+                        text2 = "let go";
+                    }
+                    string text3 = "FAIL";
+                    if (stopped && letGo)
+                    {
+                        text3 = "PASS";
+                    }
+                    Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {text}, ours {text2}: {text3}");
                     if (player.itemBeingDragged == drag)
                     {
                         player.itemBeingDragged = null;
@@ -348,7 +368,12 @@ namespace DarkwoodMP.World
                 var colls = lib?.clips?.SelectMany(c => c.frames ?? new tk2dSpriteAnimationFrame[0]).Select(f => f.spriteCollection?.spriteCollectionName)
                     .Where(n => n != null).Distinct().ToList() ?? new List<string>();
                 int inLib = colls.Count(n => Sync.SpriteCollections.Get(Net.StableHash.Of(n)) != null);
-                Plugin.Log.LogInfo($"[world test] look: {libName} {(lib != null ? "loaded" : "FAIL: not loaded")}; {inLib} of {colls.Count} of its sprite collections found");
+                string text4 = "FAIL: not loaded";
+                if (lib != null)
+                {
+                    text4 = "loaded";
+                }
+                Plugin.Log.LogInfo($"[world test] look: {libName} {text4}; {inLib} of {colls.Count} of its sprite collections found");
             }
             // Objects named by where they stand (no save id) are still found when they lie a little off that spot,
             // as after physics settled differently in another game: nudge some, look each up by its old name.
@@ -580,7 +605,16 @@ namespace DarkwoodMP.World
                     {
                         it = made.GetComponent<Item>();
                     }
-                    Plugin.Log.LogInfo($"[world test] placed {prefab}: {(it == null ? "no item" : $"destructible={it.destructible}, health {it.health} of {it.maxHealth}")}");
+                    string text5;
+                    if (it == null)
+                    {
+                        text5 = "no item";
+                    }
+                    else
+                    {
+                        text5 = $"destructible={it.destructible}, health {it.health} of {it.maxHealth}";
+                    }
+                    Plugin.Log.LogInfo($"[world test] placed {prefab}: {text5}");
                     if (it != null && it.destructible && !it.destroyed && it.health > 1)
                     {
                         furniture = it;
@@ -969,7 +1003,12 @@ namespace DarkwoodMP.World
                     }
                     if (it.item is GameObject ig && ig.GetComponent<Lure>() != null)
                     {
-                        lures.Add(k + (it.recoverableAfterThrown ? " (recoverable)" : ""));
+                        string value = "";
+                        if (it.recoverableAfterThrown)
+                        {
+                            value = " (recoverable)";
+                        }
+                        lures.Add(k + value);
                         if (lureItem == null)
                         {
                             lureItem = it;
@@ -992,7 +1031,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] clicking dropped {item.type} {ObjRef.Of(di.gameObject)}");
                 di.getDroppedItem();
                 yield return new WaitForSeconds(1f);
-                Plugin.Log.LogInfo($"[world test] dropped item after the click: {(dropped == null ? "gone" : "still there")}");
+                string text = "still there";
+                if (dropped == null)
+                {
+                    text = "gone";
+                }
+                Plugin.Log.LogInfo($"[world test] dropped item after the click: {text}");
             }
 
             // A gasoline trail, poured as Player.waitToSpillLiquid does, then set alight.
@@ -1139,7 +1183,12 @@ namespace DarkwoodMP.World
                     ns.setCurrentScenario();
                 }
                 var sc = ns.currentScenario;
-                Plugin.Log.LogInfo($"[world test] night scenario {(sc != null ? sc.name : "none")}");
+                string name2 = "none";
+                if (sc != null)
+                {
+                    name2 = sc.name;
+                }
+                Plugin.Log.LogInfo($"[world test] night scenario {name2}");
                 var ev = sc?.customEventAndInts.Select(e => e?.customEvent).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
                 var big = player.whereAmI.bigLocation;
                 if (ev != null && big != null)
@@ -1149,7 +1198,17 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    Plugin.Log.LogInfo($"[world test] no night event fired (event {(ev != null ? ev.name : "none")}, location {(big != null ? big.name : "none")})");
+                    string name3 = "none";
+                    if (ev != null)
+                    {
+                        name3 = ev.name;
+                    }
+                    string name4 = "none";
+                    if (big != null)
+                    {
+                        name4 = big.name;
+                    }
+                    Plugin.Log.LogInfo($"[world test] no night event fired (event {name3}, location {name4})");
                 }
             }
             var gen = Singleton<WorldGenerator>.Instance;
@@ -1167,10 +1226,20 @@ namespace DarkwoodMP.World
                     }
                     return 0;
                 });
-                Plugin.Log.LogInfo($"[world test] random objects respawned in {gen.worldChunks.Count} chunks: {(rwo != null ? rwo.objects.Count : -1)} kinds, {made} in the chunks now");
+                int count = -1;
+                if (rwo != null)
+                {
+                    count = rwo.objects.Count;
+                }
+                Plugin.Log.LogInfo($"[world test] random objects respawned in {gen.worldChunks.Count} chunks: {count} kinds, {made} in the chunks now");
             }
             bool lights = WorldEvents.Instance != null && WorldEvents.Instance.HostShadowLights(player, anyTime: true);
-            Plugin.Log.LogInfo($"[world test] shadow lights {(lights ? "sent" : "not here (no generator with lamps)")}");
+            string text = "not here (no generator with lamps)";
+            if (lights)
+            {
+                text = "sent";
+            }
+            Plugin.Log.LogInfo($"[world test] shadow lights {text}");
             yield return new WaitForSeconds(4f); // the random objects go 2 seconds after they're made; the weather within a second
         }
 
@@ -1220,7 +1289,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] setting off {et.name} #{i} ({t.type})");
                 AsPlayer(() => et.fireEventTrigger(et.eventTriggers[i].type));
                 yield return new WaitForSeconds(t.delay + t.warmupTime + 1.5f);
-                Plugin.Log.LogInfo($"[world test] #{i} fired={t.fired}{(et == null ? ", and its object is gone (the event removed it)" : "")}");
+                string text = "";
+                if (et == null)
+                {
+                    text = ", and its object is gone (the event removed it)";
+                }
+                Plugin.Log.LogInfo($"[world test] #{i} fired={t.fired}{text}");
             }
             else
             {
@@ -1368,7 +1442,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[client test] setting off {et.eventTriggers[i].type} {et.name} {ObjRef.Of(et.gameObject)} #{i}: {Steps(et.eventTriggers[i].gameEvents)}");
                 AsPlayer(() => et.fireEventTrigger(et.eventTriggers[i].type));
                 yield return new WaitForSeconds(et.eventTriggers[i].delay + et.eventTriggers[i].warmupTime + 2f);
-                Plugin.Log.LogInfo($"[client test] #{i} fired={et.eventTriggers[i].fired}{(et == null ? ", and its object is gone (the event removed it)" : "")}");
+                string text = "";
+                if (et == null)
+                {
+                    text = ", and its object is gone (the event removed it)";
+                }
+                Plugin.Log.LogInfo($"[client test] #{i} fired={et.eventTriggers[i].fired}{text}");
             }
             else
             {
@@ -1382,9 +1461,19 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[client test] talking to {npc.name} {ObjRef.Of(npc.gameObject)}");
                 npc.talkTo();
                 var win = Singleton<UI>.Instance.dialogueWindow;
-                Plugin.Log.LogInfo($"[client test] dialogue open with {(win.npc != null ? win.npc.name : "nobody")}");
+                string name2 = "nobody";
+                if (win.npc != null)
+                {
+                    name2 = win.npc.name;
+                }
+                Plugin.Log.LogInfo($"[client test] dialogue open with {name2}");
                 yield return new WaitForSecondsRealtime(8f);
-                Plugin.Log.LogInfo($"[client test] after the host's answer: dialogue {(win.npc != null ? "still open with " + win.npc.name : "closed")}");
+                string text2 = "closed";
+                if (win.npc != null)
+                {
+                    text2 = "still open with " + win.npc.name;
+                }
+                Plugin.Log.LogInfo($"[client test] after the host's answer: dialogue {text2}");
             }
             else
             {

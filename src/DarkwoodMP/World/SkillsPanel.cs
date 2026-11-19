@@ -180,7 +180,16 @@ namespace DarkwoodMP.World
             }
 
             var top = f.Row(PixelFont.Line + 4 * UiWindow.S, 0, 0);
-            Ui.Label(top[0], $"Skill points: {points}", points > 0 ? MenuSkin.Bright : MenuSkin.Text);
+            Color color;
+            if (points > 0)
+            {
+                color = MenuSkin.Bright;
+            }
+            else
+            {
+                color = MenuSkin.Text;
+            }
+            Ui.Label(top[0], $"Skill points: {points}", color);
             Ui.Label(top[1], $"Level {level}", MenuSkin.Dim, TextAnchor.MiddleRight);
             f.Space(4);
 
@@ -272,7 +281,12 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Ui.Text(f, points > 0 ? "Choose a skill to learn." : "Take a level at a stove for a skill point.", MenuSkin.Dim);
+                string text = "Take a level at a stove for a skill point.";
+                if (points > 0)
+                {
+                    text = "Choose a skill to learn.";
+                }
+                Ui.Text(f, text, MenuSkin.Dim);
             }
             // Never shorter than what was drawn, so a description that takes more room than measured can't make the body grow while hovering.
             if (f.Y - detailTop > _detailH)
@@ -363,7 +377,12 @@ namespace DarkwoodMP.World
         {
             var p = Player.Instance;
             bool needNeg = p != null && _good != null && SkillTree.NeedsNegative(SkillTree.Chosen(p), _good);
-            if (SkillTree.Learn(_good, needNeg ? _negative : null, out string why))
+            string negative = null;
+            if (needNeg)
+            {
+                negative = _negative;
+            }
+            if (SkillTree.Learn(_good, negative, out string why))
             {
                 _good = _negative = _message = null;
             }
@@ -424,7 +443,23 @@ namespace DarkwoodMP.World
             }
             if (negative)
             {
-                tint = new Color(1f, 0.4f, 0.4f) * (have ? 1f : can ? (hover ? 0.9f : 0.65f) : 0.3f);
+                float value = 0.3f;
+                if (have)
+                {
+                    value = 1f;
+                }
+                else if (can)
+                {
+                    if (hover)
+                    {
+                        value = 0.9f;
+                    }
+                    else
+                    {
+                        value = 0.65f;
+                    }
+                }
+                tint = new Color(1f, 0.4f, 0.4f) * value;
             }
             tint.a = 1f;
             if (!SkillIcons.Draw(r, sk.name, tint))
@@ -435,7 +470,16 @@ namespace DarkwoodMP.World
             {
                 if (have)
                 {
-                    Outline(frame, 2 * S, negative ? LearnedNegFrame : LearnedFrame);
+                    Color c;
+                    if (negative)
+                    {
+                        c = LearnedNegFrame;
+                    }
+                    else
+                    {
+                        c = LearnedFrame;
+                    }
+                    Outline(frame, 2 * S, c);
                 }
                 else if (picked)
                 {
@@ -447,7 +491,16 @@ namespace DarkwoodMP.World
                 }
                 if (have)
                 {
-                    CheckMark(new Vector2(frame.xMax, frame.y), S, negative ? LearnedNegFrame : LearnedFrame);
+                    Color c2;
+                    if (negative)
+                    {
+                        c2 = LearnedNegFrame;
+                    }
+                    else
+                    {
+                        c2 = LearnedFrame;
+                    }
+                    CheckMark(new Vector2(frame.xMax, frame.y), S, c2);
                 }
                 _rects[sk.name] = new[] { ToScreen(r), ToScreen(cell) };
             }
@@ -589,10 +642,24 @@ namespace DarkwoodMP.World
                 // tk2d inline colours: ^cRGBA (hex) or ^CRRGGBBAA.
                 if (s[i] == '^' && i + 1 < s.Length && (s[i + 1] == 'c' || s[i + 1] == 'C'))
                 {
-                    i += 1 + (s[i + 1] == 'c' ? 4 : 8);
+                    int value = 8;
+                    if (s[i + 1] == 'c')
+                    {
+                        value = 4;
+                    }
+                    i += 1 + value;
                     continue;
                 }
-                sb.Append(s[i] == '\r' ? ' ' : s[i]);
+                char s2;
+                if (s[i] == '\r')
+                {
+                    s2 = ' ';
+                }
+                else
+                {
+                    s2 = s[i];
+                }
+                sb.Append(s2);
             }
             return sb.ToString().Trim();
         }
@@ -622,7 +689,12 @@ namespace DarkwoodMP.World
             }
             var chosen = SkillTree.Chosen(p);
             bool needNeg = SkillTree.NeedsNegative(chosen, good);
-            return SkillTree.Check(p.currentLevel, chosen, good, needNeg ? negative : null) == null;
+            string negative2 = null;
+            if (needNeg)
+            {
+                negative2 = negative;
+            }
+            return SkillTree.Check(p.currentLevel, chosen, good, negative2) == null;
         }
 
         /// <summary>For tests: show this skill's details as if the mouse were over it.</summary>
@@ -701,7 +773,16 @@ namespace DarkwoodMP.World
                 }
             }
             TestMouse = null;
-            Plugin.Log.LogInfo($"[skills] hover sweep: {frames} frames, {(bad == 0 ? "PASS nothing moved" : $"FAIL {bad} frames moved")}");
+            string text;
+            if (bad == 0)
+            {
+                text = "PASS nothing moved";
+            }
+            else
+            {
+                text = $"FAIL {bad} frames moved";
+            }
+            Plugin.Log.LogInfo($"[skills] hover sweep: {frames} frames, {text}");
             done?.Invoke(bad);
         }
 
@@ -766,7 +847,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[skills] real click {n} on Learn (mouse {RealMouse.Now}, button {_learnRect}): {(ok2 ? "learned" : "NOT learned")} {choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}, points {before} -> {SkillTree.Points(p)}, panel open {Open}, chosen {_good ?? "nothing"}, message {_message ?? "none"}");
                 if (!ok2)
                 {
-                    fails.Add($"choice {n} ({choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
+                    string text = "";
+                    if (choice[1] != null)
+                    {
+                        text = "+" + choice[1];
+                    }
+                    fails.Add($"choice {n} ({choice[0]}{text}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
                     break;
                 }
             }

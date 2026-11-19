@@ -291,7 +291,12 @@ namespace DarkwoodMP.World
             {
                 NetEnemies.Instance.NetIdOf(c, out id);
             }
-            r.Info = $"{(c != null ? c.name : "-")} #{id}: hits of {dmg:0}, health {was:0} -> {(c != null ? c.health : 0):0}, alive {c != null && c.alive}";
+            string name2 = "-";
+            if (c != null)
+            {
+                name2 = c.name;
+            }
+            r.Info = $"{name2} #{id}: hits of {dmg:0}, health {was:0} -> {(c != null ? c.health : 0):0}, alive {c != null && c.alive}";
             if (kill && c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");
@@ -339,7 +344,12 @@ namespace DarkwoodMP.World
                     yield return null;
                 }
             }
-            r.Info = $"after {NameOf(c != null ? c.target : null)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
+            Transform t = null;
+            if (c != null)
+            {
+                t = c.target;
+            }
+            r.Info = $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
             if (c == null || !c.alive)
             {
                 r.Fail($"{r.Info}: it's dead");
@@ -384,7 +394,12 @@ namespace DarkwoodMP.World
             var alive = HostEnemy(true, 2500f);
             if (c == null)
             {
-                r.Fail($"no dead enemy of the host's near us (a living one: {(alive != null ? alive.name : "none")})");
+                string name2 = "none";
+                if (alive != null)
+                {
+                    name2 = alive.name;
+                }
+                r.Fail($"no dead enemy of the host's near us (a living one: {name2})");
                 yield break;
             }
             var inv = c.GetComponentInChildren<Inventory>(true);
@@ -408,7 +423,12 @@ namespace DarkwoodMP.World
             }
             if (c == null || inv == null || c.GetComponent<Item>() == null)
             {
-                r.Fail($"no searchable corpse near us ({(c != null ? c.name : "none")})");
+                string name2 = "none";
+                if (c != null)
+                {
+                    name2 = c.name;
+                }
+                r.Fail($"no searchable corpse near us ({name2})");
                 yield break;
             }
             yield return Walk(c.transform.position, 90f);
@@ -500,7 +520,12 @@ namespace DarkwoodMP.World
             int now = MapScenarioWorld.CarriedOf(item.type);
             bool got = now > before;
             bool back = !InvItemClass.isNull(inv.slots[si].invItem) && inv.slots[si].invItem.type == item.type;
-            r.Info = $"{(got ? "got" : "rolled back")} {item.type} x{item.amount} (slot {si} of {inv.name} {MapScenarioWorld.Ref(inv)}): we carry {before} -> {now}; it holds [{MapScenarioWorld.Contents(inv)}]";
+            string text = "rolled back";
+            if (got)
+            {
+                text = "got";
+            }
+            r.Info = $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} {MapScenarioWorld.Ref(inv)}): we carry {before} -> {now}; it holds [{MapScenarioWorld.Contents(inv)}]";
             if (now != before && now != before + item.amount)
             {
                 r.Fail($"{r.Info}: carried amount changed by something else");
@@ -585,7 +610,12 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             var win = Singleton<UI>.Instance.dialogueWindow;
             AsPlayer(() => npc.talkTo());
-            float until = Time.realtimeSinceStartup + (expectRefused ? 8f : 2.5f);
+            float value = 2.5f;
+            if (expectRefused)
+            {
+                value = 8f;
+            }
+            float until = Time.realtimeSinceStartup + value;
             bool Told() => MapScenarioIssues.LogLines().Skip(mark).Any(l => !l.Contains("[map]") && (l.Contains("is talking to them") || l.Contains("just talked to them")));
             while (Time.realtimeSinceStartup < until && !(expectRefused && Told() && win.npc != npc))
             {
@@ -628,7 +658,12 @@ namespace DarkwoodMP.World
             r.Info = $"{door.name} {ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
             if (drawnOpen != door.opened)
             {
-                r.Fail($"{r.Info}: drawn {(drawnOpen ? "open" : "closed")}");
+                string text = "closed";
+                if (drawnOpen)
+                {
+                    text = "open";
+                }
+                r.Fail($"{r.Info}: drawn {text}");
             }
         }
 
@@ -647,7 +682,12 @@ namespace DarkwoodMP.World
                 .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
             if (to == null)
             {
-                r.Fail($"no other hideout (the centre's is {(here != null ? here.name : "none")})");
+                string name2 = "none";
+                if (here != null)
+                {
+                    name2 = here.name;
+                }
+                r.Fail($"no other hideout (the centre's is {name2})");
                 yield break;
             }
             yield return Walk(to.transform.position, 60f);
@@ -776,7 +816,12 @@ namespace DarkwoodMP.World
         {
             if (l != null)
             {
-                return l.name + (l.playerBase ? " (hideout)" : "");
+                string value = "";
+                if (l.playerBase)
+                {
+                    value = " (hideout)";
+                }
+                return l.name + value;
             }
             return "none";
         }

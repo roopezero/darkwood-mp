@@ -51,7 +51,12 @@ namespace DarkwoodMP.World
             var t = ObjRef.Resolve<Transform>(obj);
             if (t == null)
             {
-                Authority.Refuse(a == Action.Removed ? "it's already gone" : "not here");
+                string reason = "not here";
+                if (a == Action.Removed)
+                {
+                    reason = "it's already gone";
+                }
+                Authority.Refuse(reason);
                 return false;
             }
             switch (a)
@@ -93,7 +98,12 @@ namespace DarkwoodMP.World
                         }
                         if (ii.isOn == on)
                         {
-                            Authority.Refuse(on ? "it's already on" : "it's already off");
+                            string reason2 = "it's already off";
+                            if (on)
+                            {
+                                reason2 = "it's already on";
+                            }
+                            Authority.Refuse(reason2);
                             return false;
                         }
                         return true;
@@ -251,7 +261,16 @@ namespace DarkwoodMP.World
             }
             try
             {
-                (on ? ii.onTrigger : ii.offTrigger)?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+                EventTriggers trigger;
+                if (on)
+                {
+                    trigger = ii.onTrigger;
+                }
+                else
+                {
+                    trigger = ii.offTrigger;
+                }
+                trigger?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
             }
             catch (System.Exception e)
             {
@@ -604,7 +623,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(Action.ShadowArmorDied, __state, __instance != null ? __instance.name : "shadow");
+            string name2 = "shadow";
+            if (__instance != null)
+            {
+                name2 = __instance.name;
+            }
+            WorldActions.Send(Action.ShadowArmorDied, __state, name2);
         }
     }
 }

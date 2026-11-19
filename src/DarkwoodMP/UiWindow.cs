@@ -284,7 +284,16 @@ namespace DarkwoodMP
             }
             bool scrolls = _scrolls;
             float inner = body.width - (scrolls ? 12 * S : 0);
-            _scroll = GUI.BeginScrollView(body, _scroll, new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)), false, false, GUIStyle.none, scrolls ? GUI.skin.verticalScrollbar : GUIStyle.none);
+            GUIStyle verticalScrollbar2;
+            if (scrolls)
+            {
+                verticalScrollbar2 = GUI.skin.verticalScrollbar;
+            }
+            else
+            {
+                verticalScrollbar2 = GUIStyle.none;
+            }
+            _scroll = GUI.BeginScrollView(body, _scroll, new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)), false, false, GUIStyle.none, verticalScrollbar2);
             var flow = new Flow(new Rect(0, 0, inner, body.height));
             Body(flow);
             if (Event.current.type == EventType.Layout || Event.current.type == EventType.Repaint)
@@ -443,7 +452,20 @@ namespace DarkwoodMP
             {
                 tr = r;
             }
-            PixelFont.Draw(tr, text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text, TextAnchor.MiddleCenter);
+            Color color;
+            if (!enabled)
+            {
+                color = MenuSkin.Dim;
+            }
+            else if (hover)
+            {
+                color = MenuSkin.Bright;
+            }
+            else
+            {
+                color = MenuSkin.Text;
+            }
+            PixelFont.Draw(tr, text, color, TextAnchor.MiddleCenter);
             return clicked;
         }
 
@@ -458,7 +480,25 @@ namespace DarkwoodMP
                 GUI.Box(new Rect(r.x, r.y, r.width, r.height + 2 * S), GUIContent.none, MenuSkin.Button);
             }
             bool clicked = !chosen && GUI.Button(new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S), GUIContent.none, MenuSkin.Pressed);
-            PixelFont.Draw(chosen ? r : new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S), text, chosen || hover ? MenuSkin.Bright : MenuSkin.Text, TextAnchor.MiddleCenter);
+            Rect r2;
+            if (chosen)
+            {
+                r2 = r;
+            }
+            else
+            {
+                r2 = new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S);
+            }
+            Color color;
+            if (chosen || hover)
+            {
+                color = MenuSkin.Bright;
+            }
+            else
+            {
+                color = MenuSkin.Text;
+            }
+            PixelFont.Draw(r2, text, color, TextAnchor.MiddleCenter);
             return clicked;
         }
 

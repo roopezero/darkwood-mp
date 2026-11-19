@@ -200,7 +200,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(0.3f);
             bool have = SkillTree.Chosen(P).Contains(choice[0]);
-            r.Info = $"{choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}: have it {have}, points {before} -> {SkillTree.Points(P)}, waiting {SkillTree.Waiting}";
+            string text = "";
+            if (choice[1] != null)
+            {
+                text = " with " + choice[1];
+            }
+            r.Info = $"{choice[0]}{text}: have it {have}, points {before} -> {SkillTree.Points(P)}, waiting {SkillTree.Waiting}";
             if (SkillTree.Waiting || have == refused)
             {
                 r.Fail(r.Info);
@@ -245,7 +250,12 @@ namespace DarkwoodMP.World
                 int before = SkillTree.Points(P);
                 string why = SkillsPanel.TestLearn(choice[0], choice[1]);
                 n++;
-                log.Add($"{choice[0]}{(choice[1] != null ? "+" + choice[1] : "")}: {why ?? "ok"} ({before} -> {SkillTree.Points(P)})");
+                string text = "";
+                if (choice[1] != null)
+                {
+                    text = "+" + choice[1];
+                }
+                log.Add($"{choice[0]}{text}: {why ?? "ok"} ({before} -> {SkillTree.Points(P)})");
                 if (why != null)
                 {
                     fails.Add($"choice {n} ({choice[0]}): {why}");

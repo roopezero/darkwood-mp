@@ -292,8 +292,12 @@ namespace DarkwoodMP.World
                     WorldActions.Replaying = false;
                 }
             }
-            Plugin.Log.LogInfo(host ? "[world] a joiner's morning is over: ours ended too (the trader left)"
-                                    : "[world] the host's after-night is over: ours ended too (the trader left)");
+            string data = "[world] the host's after-night is over: ours ended too (the trader left)";
+            if (host)
+            {
+                data = "[world] a joiner's morning is over: ours ended too (the trader left)";
+            }
+            Plugin.Log.LogInfo(data);
         }
 
         /// <summary>The morning ended in another game while we talked to the trader; ours ends once that dialogue closes.</summary>

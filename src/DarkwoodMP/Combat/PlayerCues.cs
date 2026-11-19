@@ -76,8 +76,18 @@ namespace DarkwoodMP.Combat
             }
             if (Threat.Debug)
             {
-                Plugin.Log.LogInfo($"[threat] {proxy.OwnerName} {(kind == Dodge ? "swings" : "aims")}: {n} characters " +
-                                   (kind == Dodge ? "within 150 may dodge" : "within 350 told to be scared"));
+                string text = "aims";
+                if (kind == Dodge)
+                {
+                    text = "swings";
+                }
+                string value = "within 350 told to be scared";
+                if (kind == Dodge)
+                {
+                    value = "within 150 may dodge";
+                }
+                Plugin.Log.LogInfo($"[threat] {proxy.OwnerName} {text}: {n} characters " +
+                                   value);
             }
         }
 

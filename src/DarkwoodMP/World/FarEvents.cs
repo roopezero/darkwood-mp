@@ -146,10 +146,20 @@ namespace DarkwoodMP.World
             if (Together && WorldLocation(l))
             {
                 var ran = part ?? ScriptedEvents.Part.All;
-                Note(Log, l, enter ? "enter" : "exit", ran);
+                string kind = "exit";
+                if (enter)
+                {
+                    kind = "enter";
+                }
+                Note(Log, l, kind, ran);
                 if (Debug)
                 {
-                    Plugin.Log.LogInfo($"[farevents] {l.name} {(enter ? "entered: its enter" : "left: its exit")} events run as {ran}{more}");
+                    string text = "left: its exit";
+                    if (enter)
+                    {
+                        text = "entered: its enter";
+                    }
+                    Plugin.Log.LogInfo($"[farevents] {l.name} {text} events run as {ran}{more}");
                 }
             }
             if (part == null)
@@ -220,10 +230,25 @@ namespace DarkwoodMP.World
                 {
                     type = global::EventTrigger.Type.onExitLocation;
                 }
-                Note(Log, l, now ? "enter" : "exit", ScriptedEvents.Part.PlayerOnly);
+                string kind = "exit";
+                if (now)
+                {
+                    kind = "enter";
+                }
+                Note(Log, l, kind, ScriptedEvents.Part.PlayerOnly);
                 if (Debug)
                 {
-                    Plugin.Log.LogInfo($"[farevents] our player {(now ? "came into" : "went out of")} {l.name}, kept entered for the others: its {(now ? "enter" : "exit")} events, our player's part only");
+                    string text = "went out of";
+                    if (now)
+                    {
+                        text = "came into";
+                    }
+                    string text2 = "exit";
+                    if (now)
+                    {
+                        text2 = "enter";
+                    }
+                    Plugin.Log.LogInfo($"[farevents] our player {text} {l.name}, kept entered for the others: its {text2} events, our player's part only");
                 }
                 ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly, replaying: false, () =>
                 {
@@ -285,8 +310,13 @@ namespace DarkwoodMP.World
             __state = (false, ScriptedEvents.Current, KeepCharacters);
             var part = FarEvents.PartFor(__instance, enter: false);
             KeepCharacters = !FarEvents.Despawns(__instance);
+            string more = "";
+            if (KeepCharacters)
+            {
+                more = "; its trader, porter and wolf stay (another player is by it)";
+            }
             __state.Item1 = FarEvents.Begin(__instance, enter: false, part,
-                KeepCharacters ? "; its trader, porter and wolf stay (another player is by it)" : "");
+                more);
         }
 
         static Exception Finalizer(Exception __exception, (bool, ScriptedEvents.Part, bool) __state)

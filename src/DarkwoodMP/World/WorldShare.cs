@@ -500,7 +500,17 @@ namespace DarkwoodMP.World
                 sm.Save(doJson: true, doSaveProfile: true, force: true, forceSaveStatic: !haveStatic, showSavingIndicator: false, closeAndOpenStadiaSave: false);
                 LastSnapshotStopMs = sw.ElapsedMilliseconds + copied;
                 LastSnapshotOffThread = false;
-                Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({(haveStatic ? $"static part copied from your save in {copied} ms" : "static part saved too: your save hasn't got one")}{(newLocation ? ", with a new location's static part" : "")})");
+                string text = "static part saved too: your save hasn't got one";
+                if (haveStatic)
+                {
+                    text = $"static part copied from your save in {copied} ms";
+                }
+                string text2 = "";
+                if (newLocation)
+                {
+                    text2 = ", with a new location's static part";
+                }
+                Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{text2})");
                 _lastSnapshot = Time.realtimeSinceStartup;
                 _lastSnapshotScene = ActiveScene;
                 if (File.Exists(Path.Combine(profDir, "sav.dat")))
@@ -1136,7 +1146,12 @@ namespace DarkwoodMP.World
             d.LastPieceAt = d.StartedAt = Time.realtimeSinceStartup;
             _download = d;
             LoadStatus = null;
-            Plugin.Log.LogInfo($"Downloading the host's world ({size / 1024} KiB{(d.Packing == 1 ? $", {raw / 1024} KiB unpacked" : "")}, day {d.Profile.day})");
+            string text = "";
+            if (d.Packing == 1)
+            {
+                text = $", {raw / 1024} KiB unpacked";
+            }
+            Plugin.Log.LogInfo($"Downloading the host's world ({size / 1024} KiB{text}, day {d.Profile.day})");
             JoinScreen.Begin();
             for (int i = 0; i < PiecesInFlight; i++)
             {
@@ -1511,7 +1526,16 @@ namespace DarkwoodMP.World
             var slots = new List<GameProfile>();
             for (int i = 1; i <= Math.Max(5, profile.id); i++)
             {
-                slots.Add(i == profile.id ? profile : new GameProfile(i, _Active: false, 0));
+                GameProfile item;
+                if (i == profile.id)
+                {
+                    item = profile;
+                }
+                else
+                {
+                    item = new GameProfile(i, _Active: false, 0);
+                }
+                slots.Add(item);
             }
             Core.profiles = slots;
             Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initLoadGame());

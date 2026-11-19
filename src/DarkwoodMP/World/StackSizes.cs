@@ -176,9 +176,16 @@ namespace DarkwoodMP.World
                     Kept.Add(it);
                 }
             }
-            Plugin.Log.LogInfo(size > 0
-                ? $"[stacks] {eligible} stackable items stack to {size} ({changed} raised)"
-                : $"[stacks] {eligible} stackable items stack to the game's own sizes");
+            string data;
+            if (size > 0)
+            {
+                data = $"[stacks] {eligible} stackable items stack to {size} ({changed} raised)";
+            }
+            else
+            {
+                data = $"[stacks] {eligible} stackable items stack to the game's own sizes";
+            }
+            Plugin.Log.LogInfo(data);
         }
 
         /// <summary>For tests: the game's own stack size of an item type (before Apply), or its size now if never seen.</summary>

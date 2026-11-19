@@ -67,7 +67,16 @@ namespace DarkwoodMP.World
             var dir = from - me;
             dir.y = 0f;
             body.WakeUp();
-            body.velocity = (dir.sqrMagnitude > 1f ? dir.normalized : Vector3.right) * 150f;
+            Vector3 value;
+            if (dir.sqrMagnitude > 1f)
+            {
+                value = dir.normalized;
+            }
+            else
+            {
+                value = Vector3.right;
+            }
+            body.velocity = value * 150f;
             Plugin.Log.LogInfo($"--dwmp-test-away: knocked {best.name} at {from.x:0},{from.z:0} (sharing {WorldActions.Sharing})");
             yield return new WaitForSeconds(4f);
             Vector3 to;
@@ -79,7 +88,12 @@ namespace DarkwoodMP.World
             {
                 to = from;
             }
-            Plugin.Log.LogInfo($"--dwmp-test-away: {(best != null ? best.name : "it")} moved {(to - from).magnitude:0} units to {to.x:0},{to.z:0}; pushes sent: {DragSync.PushesSent - sent}");
+            string name2 = "it";
+            if (best != null)
+            {
+                name2 = best.name;
+            }
+            Plugin.Log.LogInfo($"--dwmp-test-away: {name2} moved {(to - from).magnitude:0} units to {to.x:0},{to.z:0}; pushes sent: {DragSync.PushesSent - sent}");
         }
 
         public static IEnumerator Run()

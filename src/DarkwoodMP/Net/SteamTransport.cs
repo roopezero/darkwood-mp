@@ -190,7 +190,16 @@ namespace DarkwoodMP.Net
         {
             var ident = new SteamNetworkingIdentity();
             ident.SetSteamID(to);
-            int flags = (reliable ? Constants.k_nSteamNetworkingSend_Reliable : Constants.k_nSteamNetworkingSend_UnreliableNoDelay)
+            int value;
+            if (reliable)
+            {
+                value = Constants.k_nSteamNetworkingSend_Reliable;
+            }
+            else
+            {
+                value = Constants.k_nSteamNetworkingSend_UnreliableNoDelay;
+            }
+            int flags = value
                         | Constants.k_nSteamNetworkingSend_AutoRestartBrokenSession;
             GCHandle h = GCHandle.Alloc(data, GCHandleType.Pinned);
             try

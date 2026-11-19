@@ -116,7 +116,12 @@ namespace DarkwoodMP
                 _win.OnClose = Closed;
             }
             _pending = act;
-            Plugin.Log.LogInfo($"[confirm] answered {(yes ? "yes" : "no")}: {_win.Title}");
+            string text = "no";
+            if (yes)
+            {
+                text = "yes";
+            }
+            Plugin.Log.LogInfo($"[confirm] answered {text}: {_win.Title}");
         }
 
         /// <summary>Every frame (Plugin.Update, after the game's buttons are let go): run the answer's action.</summary>
@@ -187,7 +192,12 @@ namespace DarkwoodMP
             if (_deadline > 0f)
             {
                 int left = Mathf.Max(0, Mathf.CeilToInt(_deadline - Time.realtimeSinceStartup));
-                Ui.Text(f, $"{_no} in {left} second{(left == 1 ? "" : "s")}.", MenuSkin.Dim);
+                string text = "s";
+                if (left == 1)
+                {
+                    text = "";
+                }
+                Ui.Text(f, $"{_no} in {left} second{text}.", MenuSkin.Dim);
             }
         }
 

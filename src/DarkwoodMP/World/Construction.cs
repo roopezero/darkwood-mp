@@ -131,7 +131,16 @@ namespace DarkwoodMP.World
                 try
                 {
                     c.chosenOption = option;
-                    ScriptedEvents.RunAs(s.IsHost ? ScriptedEvents.Part.HostAndShared : ScriptedEvents.Part.SharedOnly, replaying: true,
+                    ScriptedEvents.Part part;
+                    if (s.IsHost)
+                    {
+                        part = ScriptedEvents.Part.HostAndShared;
+                    }
+                    else
+                    {
+                        part = ScriptedEvents.Part.SharedOnly;
+                    }
+                    ScriptedEvents.RunAs(part, replaying: true,
                         () => c.construct(manual: false, option));
                 }
                 catch (Exception e)

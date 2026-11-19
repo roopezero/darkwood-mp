@@ -89,7 +89,16 @@ namespace DarkwoodMP.World
             w.WriteStr(name);
             w.Write(t.position);
             w.W.Write(t.eulerAngles.y);
-            w.Write(rb != null ? rb.velocity : Vector3.zero);
+            Vector3 v;
+            if (rb != null)
+            {
+                v = rb.velocity;
+            }
+            else
+            {
+                v = Vector3.zero;
+            }
+            w.Write(v);
             return w;
         }
 

@@ -669,7 +669,16 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Door __instance, Vector3 openerPosition, Transform openerTransform)
         {
-            DoorLeaf.Opened(__instance, openerTransform != null ? openerTransform.position : openerPosition);
+            Vector3 opener;
+            if (openerTransform != null)
+            {
+                opener = openerTransform.position;
+            }
+            else
+            {
+                opener = openerPosition;
+            }
+            DoorLeaf.Opened(__instance, opener);
             DoorPush.Opened(__instance);
         }
     }

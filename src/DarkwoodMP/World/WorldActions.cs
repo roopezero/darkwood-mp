@@ -255,7 +255,20 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write(x);
             w.W.Write(y);
-            w.W.Write((byte)((f1 ? 1 : 0) | (f2 ? 2 : 0) | (byPlayer ? 4 : 0)));
+            int flags = 0;
+            if (f1)
+            {
+                flags |= 1;
+            }
+            if (f2)
+            {
+                flags |= 2;
+            }
+            if (byPlayer)
+            {
+                flags |= 4;
+            }
+            w.W.Write((byte)flags);
             w.WriteStr(str ?? "");
         }
 
@@ -319,7 +332,12 @@ namespace DarkwoodMP.World
                     // the crate is searched here and the others are told (ItemSearched); a failed pick changes nothing.
                     bool was = crate.searched;
                     bool worked = was || crate.disarmChance > UnityEngine.Random.Range(0f, 1f);
-                    Authority.Result(worked ? "1" : "0");
+                    string result = "0";
+                    if (worked)
+                    {
+                        result = "1";
+                    }
+                    Authority.Result(result);
                     if (Debug)
                     {
                         Plugin.Log.LogInfo($"[world] {s.NameOf(from)} picks the lock of {obj} ({crate.name}): {(was ? "already open" : worked ? "worked" : "failed")}");
@@ -336,7 +354,12 @@ namespace DarkwoodMP.World
                     // Only ever a request to the host: roll it here, as the game rolls it for its own player.
                     var item = ObjRef.Resolve<Item>(obj);
                     bool worked = item != null && item.disarmChance > UnityEngine.Random.Range(0f, 1f);
-                    Authority.Result(worked ? "1" : "0");
+                    string result2 = "0";
+                    if (worked)
+                    {
+                        result2 = "1";
+                    }
+                    Authority.Result(result2);
                     if (Debug)
                     {
                         Plugin.Log.LogInfo($"[world] {s.NameOf(from)} disarms {obj}: {(worked ? "worked" : "failed")}");
@@ -666,7 +689,16 @@ namespace DarkwoodMP.World
                     Authority.Refuse("not here");
                     return false;
                 }
-                if (!Authority.InReach(item.transform.position, a == Action.ItemHit ? ShotReach : Reach, item.name))
+                float reach;
+                if (a == Action.ItemHit)
+                {
+                    reach = ShotReach;
+                }
+                else
+                {
+                    reach = Reach;
+                }
+                if (!Authority.InReach(item.transform.position, reach, item.name))
                 {
                     return false;
                 }
@@ -822,7 +854,12 @@ namespace DarkwoodMP.World
                         trap.active = false;
                         UnityEngine.Object.DestroyImmediate(trap.gameObject);
                     }
-                    Authority.Refuse(TrapFiredPatch.TestRefuse == "race" ? "the trap had already gone off (test)" : "the trap is gone (test)");
+                    string reason = "the trap is gone (test)";
+                    if (TrapFiredPatch.TestRefuse == "race")
+                    {
+                        reason = "the trap had already gone off (test)";
+                    }
+                    Authority.Refuse(reason);
                     return false;
                 }
                 if (a == Action.TrapFired && !trap.active)
@@ -846,7 +883,16 @@ namespace DarkwoodMP.World
                     return false;
                 }
                 // A hit can come from a shot or our flamethrower's flame (BreakSync.OwnFlame), which reach further than a hand.
-                if (!Authority.InReach(door.transform.position, a == Action.DoorHit ? ShotReach : Reach, door.name))
+                float reach2;
+                if (a == Action.DoorHit)
+                {
+                    reach2 = ShotReach;
+                }
+                else
+                {
+                    reach2 = Reach;
+                }
+                if (!Authority.InReach(door.transform.position, reach2, door.name))
                 {
                     return false;
                 }
@@ -903,7 +949,16 @@ namespace DarkwoodMP.World
                 Authority.Refuse("no such window here");
                 return false;
             }
-            if (!Authority.InReach(window.transform.position, a == Action.WindowHit ? ShotReach : Reach, window.name))
+            float reach3;
+            if (a == Action.WindowHit)
+            {
+                reach3 = ShotReach;
+            }
+            else
+            {
+                reach3 = Reach;
+            }
+            if (!Authority.InReach(window.transform.position, reach3, window.name))
             {
                 return false;
             }
@@ -1012,27 +1067,68 @@ namespace DarkwoodMP.World
             if (pad != null)
             {
                 w.W.Write((byte)Kind.Padlock);
-                w.W.Write((byte)(pad.locked ? 1 : 0));
+                int value = 0;
+                if (pad.locked)
+                {
+                    value = 1;
+                }
+                w.W.Write((byte)value);
             }
             else if (door != null)
             {
                 var l = door.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Door);
-                w.W.Write((byte)((door.opened ? 1 : 0) | (door.barricaded ? 2 : 0) | (door.destroyed ? 4 : 0) | (l != null && l.locked ? 8 : 0) | (door.blocked ? 16 : 0)));
+                int flags = 0;
+                if (door.opened)
+                {
+                    flags |= 1;
+                }
+                if (door.barricaded)
+                {
+                    flags |= 2;
+                }
+                if (door.destroyed)
+                {
+                    flags |= 4;
+                }
+                if (l != null && l.locked)
+                {
+                    flags |= 8;
+                }
+                if (door.blocked)
+                {
+                    flags |= 16;
+                }
+                w.W.Write((byte)flags);
                 w.W.Write(door.health);
                 w.W.Write(door.barricadeHealth);
-                w.WriteStr(l != null ? l.keyType ?? "" : "");
+                string s = "";
+                if (l != null)
+                {
+                    s = l.keyType ?? "";
+                }
+                w.WriteStr(s);
             }
             else if (window != null)
             {
                 w.W.Write((byte)Kind.Window);
-                w.W.Write((byte)(window.barricaded ? 1 : 0));
+                int value2 = 0;
+                if (window.barricaded)
+                {
+                    value2 = 1;
+                }
+                w.W.Write((byte)value2);
                 w.W.Write(window.barricadeHealth);
             }
             else if (trap != null)
             {
                 w.W.Write((byte)Kind.Trap);
-                w.W.Write((byte)(trap.active ? 1 : 0));
+                int value3 = 0;
+                if (trap.active)
+                {
+                    value3 = 1;
+                }
+                w.W.Write((byte)value3);
             }
             else if (item != null)
             {
@@ -1040,7 +1136,32 @@ namespace DarkwoodMP.World
                 w.W.Write((byte)Kind.Item);
                 var ii = item.GetComponent<InteractiveItem>();
                 var feeder = item.GetComponent<Feeder>();
-                w.W.Write((byte)((item.isOn ? 1 : 0) | (l != null && l.locked ? 2 : 0) | (item.searched ? 4 : 0) | (item.destroyed ? 8 : 0) | (ii != null && ii.isOn ? 16 : 0) | (feeder != null && feeder.Active ? 32 : 0)));
+                int flags2 = 0;
+                if (item.isOn)
+                {
+                    flags2 |= 1;
+                }
+                if (l != null && l.locked)
+                {
+                    flags2 |= 2;
+                }
+                if (item.searched)
+                {
+                    flags2 |= 4;
+                }
+                if (item.destroyed)
+                {
+                    flags2 |= 8;
+                }
+                if (ii != null && ii.isOn)
+                {
+                    flags2 |= 16;
+                }
+                if (feeder != null && feeder.Active)
+                {
+                    flags2 |= 32;
+                }
+                w.W.Write((byte)flags2);
                 w.W.Write(item.health);
             }
             else if (go != null && go.GetComponent<Explodes>() != null)
@@ -2197,7 +2318,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(WorldActions.Action.PadlockUnlock, __instance.gameObject, f1: manually, str: manually ? __instance.currentCombination : "");
+            string str2 = "";
+            if (manually)
+            {
+                str2 = __instance.currentCombination;
+            }
+            WorldActions.Send(WorldActions.Action.PadlockUnlock, __instance.gameObject, f1: manually, str: str2);
         }
     }
 }

@@ -180,7 +180,16 @@ namespace DarkwoodMP.World
             }
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
-            w.W.Write(c is Generator ? IsGenerator : IsSaw);
+            byte value;
+            if (c is Generator)
+            {
+                value = IsGenerator;
+            }
+            else
+            {
+                value = IsSaw;
+            }
+            w.W.Write(value);
             w.W.Write(p.Amount);
             w.W.Write((byte)0);
             string name = c.name;
@@ -258,9 +267,23 @@ namespace DarkwoodMP.World
             var g = c as Generator;
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
-            w.W.Write(g != null ? IsGenerator : IsSaw);
+            byte value;
+            if (g != null)
+            {
+                value = IsGenerator;
+            }
+            else
+            {
+                value = IsSaw;
+            }
+            w.W.Write(value);
             w.W.Write(FuelOf(c));
-            w.W.Write((byte)(g != null && g.isOn ? 1 : 0));
+            int value2 = 0;
+            if (g != null && g.isOn)
+            {
+                value2 = 1;
+            }
+            w.W.Write((byte)value2);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -306,7 +329,12 @@ namespace DarkwoodMP.World
             {
                 if (_session.IsHost)
                 {
-                    Authority.Refuse($"no {(what == IsGenerator ? "generator" : "saw")} {obj} here");
+                    string text = "saw";
+                    if (what == IsGenerator)
+                    {
+                        text = "generator";
+                    }
+                    Authority.Refuse($"no {text} {obj} here");
                 }
                 if (WorldActions.Debug)
                 {
@@ -552,7 +580,28 @@ namespace DarkwoodMP.World
             {
                 has = Characters.Instance.Electrician(nearest.Owner);
             }
-            Last = $"{__instance.name}: {(nearest != null ? nearest.OwnerName : "ours")}'s skill, {(has.HasValue ? (has.Value ? 0.5f : 1f) : p.electricityModifier)}";
+            string ownerName = "ours";
+            if (nearest != null)
+            {
+                ownerName = nearest.OwnerName;
+            }
+            float electricityModifier2;
+            if (has.HasValue)
+            {
+                if (has.Value)
+                {
+                    electricityModifier2 = 0.5f;
+                }
+                else
+                {
+                    electricityModifier2 = 1f;
+                }
+            }
+            else
+            {
+                electricityModifier2 = p.electricityModifier;
+            }
+            Last = $"{__instance.name}: {ownerName}'s skill, {electricityModifier2}";
             if (has == null)
             {
                 return;

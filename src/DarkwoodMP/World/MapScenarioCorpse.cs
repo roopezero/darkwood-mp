@@ -56,7 +56,17 @@ namespace DarkwoodMP.World
             var ne = Combat.NetEnemies.Instance;
             uint id = 0;
             bool net = ne != null && ne.NetIdOf(c, out id);
-            return $"{c.name} (npc {(c.npc != null ? c.npc.name + (c.npc.onlyOneInstance ? ", one instance" : "") : "-")}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), " +
+            string text = "-";
+            if (c.npc != null)
+            {
+                string value = "";
+                if (c.npc.onlyOneInstance)
+                {
+                    value = ", one instance";
+                }
+                text = c.npc.name + value;
+            }
+            return $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), " +
                    $"on {c.gameObject.activeInHierarchy}, alive {c.alive}, save id {(sv != null ? sv.uniqueId : -1)}, in {(loc != null ? Core.getTrueLocationName(loc.name) : "-")}, " +
                    $"searchable {c.GetComponent<Item>() != null}, inventory {(c.inventory != null ? c.inventory.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem)) : -1)}, " +
                    $"host enemy {(net ? "#" + id : "no")}, frozen {Combat.NetEnemies.Frozen.Contains(c)}, hidden {Combat.NetEnemies.Hidden.Contains(c)}";
@@ -69,7 +79,12 @@ namespace DarkwoodMP.World
         private static IEnumerator SnInfo(string[] a, Result r)
         {
             var st = State(a[0]);
-            r.Info = $"state {(st != null ? $"dead {st.dead} deadID {st.deadID} attackedID {st.attackedID}" : "none")}; " +
+            string text = "none";
+            if (st != null)
+            {
+                text = $"dead {st.dead} deadID {st.deadID} attackedID {st.attackedID}";
+            }
+            r.Info = $"state {text}; " +
                      string.Join("; ", Copies(a[0]).Select(Props));
             yield break;
         }

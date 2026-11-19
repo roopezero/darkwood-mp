@@ -169,7 +169,16 @@ namespace DarkwoodMP.Net
                 ServerName = serverName.Trim();
             }
             HostPassword = password ?? "";
-            MaxPlayers = Math.Max(2, Math.Min(TestMaxPlayers > 0 ? TestMaxPlayers : Protocol.MaxPlayers, maxPlayers));
+            int val1;
+            if (TestMaxPlayers > 0)
+            {
+                val1 = TestMaxPlayers;
+            }
+            else
+            {
+                val1 = Protocol.MaxPlayers;
+            }
+            MaxPlayers = Math.Max(2, Math.Min(val1, maxPlayers));
             IsHost = true;
             InSession = true;
             Status = $"Hosting \"{ServerName}\" on port {port}";

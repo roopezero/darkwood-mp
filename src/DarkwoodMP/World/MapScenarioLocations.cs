@@ -235,7 +235,16 @@ namespace DarkwoodMP.World
                 side = p.transform.position - c.transform.position;
                 side.y = 0f;
             }
-            var at = c.transform.position + (side.sqrMagnitude > 1e-4f ? side.normalized : Vector3.right) * 70f;
+            Vector3 value;
+            if (side.sqrMagnitude > 1e-4f)
+            {
+                value = side.normalized;
+            }
+            else
+            {
+                value = Vector3.right;
+            }
+            var at = c.transform.position + value * 70f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
             if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
@@ -406,7 +415,16 @@ namespace DarkwoodMP.World
             // so a fixed direction could put the dog past the exit, and walking to it would leave the location.
             var inward = proxy.InLocation.transform.position - proxy.transform.position;
             inward.y = 0f;
-            var at = proxy.transform.position + (inward.sqrMagnitude > 1f ? inward.normalized : Vector3.right) * 250f;
+            Vector3 value;
+            if (inward.sqrMagnitude > 1f)
+            {
+                value = inward.normalized;
+            }
+            else
+            {
+                value = Vector3.right;
+            }
+            var at = proxy.transform.position + value * 250f;
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(proxy.gameObject, at, 1f, "Dog", nocturnal: false, attackPlayer: false);
             if (c == null)
             {
@@ -452,7 +470,16 @@ namespace DarkwoodMP.World
             // loc-sight), and a walk across the location can cross its way out (returnToWorld), which ends every step after.
             var side = p.transform.position - dog.transform.position;
             side.y = 0f;
-            var at = dog.transform.position + (side.sqrMagnitude > 1f ? side.normalized : Vector3.right) * 80f;
+            Vector3 value;
+            if (side.sqrMagnitude > 1f)
+            {
+                value = side.normalized;
+            }
+            else
+            {
+                value = Vector3.right;
+            }
+            var at = dog.transform.position + value * 80f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
             if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
@@ -522,7 +549,12 @@ namespace DarkwoodMP.World
                      $"characters of our own running here: {ownActive}";
             if (dog.alive != wantAlive)
             {
-                r.Fail($"it should be {(wantAlive ? "alive" : "dead")}: {r.Info}");
+                string text = "dead";
+                if (wantAlive)
+                {
+                    text = "alive";
+                }
+                r.Fail($"it should be {text}: {r.Info}");
             }
             else if (ownActive > 0)
             {
@@ -544,7 +576,12 @@ namespace DarkwoodMP.World
             }
             if (c == null)
             {
-                r.Fail(woken ? "nothing woken (loc-wake first)" : "no dog (loc-dog first)");
+                string why = "no dog (loc-dog first)";
+                if (woken)
+                {
+                    why = "nothing woken (loc-wake first)";
+                }
+                r.Fail(why);
                 yield break;
             }
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1f);
@@ -566,7 +603,12 @@ namespace DarkwoodMP.World
                 r.Fail("no world location with a characters holder");
                 yield break;
             }
-            var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), a.Length > 0 ? a[0] : "Villager");
+            string typeValue = "Villager";
+            if (a.Length > 0)
+            {
+                typeValue = a[0];
+            }
+            var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), typeValue);
             if (c == null)
             {
                 r.Fail("couldn't spawn the savage");
@@ -697,7 +739,12 @@ namespace DarkwoodMP.World
                             }
                             var t = h.collider.transform;
                             string path = Sync.ViewWatch.Path(t);
-                            string key = $"{path} [layer {h.collider.gameObject.layer}{(h.collider.isTrigger ? ", trigger" : "")}]";
+                            string text = "";
+                            if (h.collider.isTrigger)
+                            {
+                                text = ", trigger";
+                            }
+                            string key = $"{path} [layer {h.collider.gameObject.layer}{text}]";
                             if (hiders.TryGetValue(key, out int n))
                             {
                                 hiders[key] = n + 1;

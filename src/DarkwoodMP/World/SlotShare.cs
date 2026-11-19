@@ -228,7 +228,12 @@ namespace DarkwoodMP.World
                 var r = ObjRef.Of(wb.normalInventory.gameObject);
                 if (r.Valid)
                 {
-                    Ask(_watched.ContainsKey(wb.normalInventory) ? wb.normalInventory : null, r);
+                    Inventory inv = null;
+                    if (_watched.ContainsKey(wb.normalInventory))
+                    {
+                        inv = wb.normalInventory;
+                    }
+                    Ask(inv, r);
                 }
             }
         }
@@ -249,7 +254,12 @@ namespace DarkwoodMP.World
             }
             var w = s.Begin(MsgType.ContainerSlotsAll);
             obj.Write(w);
-            w.WriteBigStr(inv != null ? JsonConvert.SerializeObject(new Inventory.SaveState(inv)) : "");
+            string s2 = "";
+            if (inv != null)
+            {
+                s2 = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+            }
+            w.WriteBigStr(s2);
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -501,7 +511,12 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
-            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{(it.isRecipe ? 1 : 0)}|{it.upgrades?.Count ?? 0}";
+            int text = 0;
+            if (it.isRecipe)
+            {
+                text = 1;
+            }
+            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{text}|{it.upgrades?.Count ?? 0}";
         }
 
         /// <summary>
@@ -681,7 +696,16 @@ namespace DarkwoodMP.World
                 // A gun's saved amount is its loaded rounds (it.ammo); its amount stays the 1 the copy gives it, not 0.
                 if (it != null)
                 {
-                    slot.createItem(it, it.baseClass != null && it.baseClass.hasAmmo ? -1 : it.amount);
+                    int amount2;
+                    if (it.baseClass != null && it.baseClass.hasAmmo)
+                    {
+                        amount2 = -1;
+                    }
+                    else
+                    {
+                        amount2 = it.amount;
+                    }
+                    slot.createItem(it, amount2);
                 }
             }
             finally
@@ -1022,9 +1046,16 @@ namespace DarkwoodMP.World
                         left -= player.Inventory.removeItemAmountFromPlayer(kv.Key, left, includeAdditionalInventory: false);
                     }
                 }
-                Plugin.Log.LogInfo(put > 0
-                    ? $"[slots] undone: gave back {put} {kv.Key} ({dropped} of them at our feet, no room)"
-                    : $"[slots] undone: took back {took - left} of {took} {kv.Key}");
+                string data;
+                if (put > 0)
+                {
+                    data = $"[slots] undone: gave back {put} {kv.Key} ({dropped} of them at our feet, no room)";
+                }
+                else
+                {
+                    data = $"[slots] undone: took back {took - left} of {took} {kv.Key}";
+                }
+                Plugin.Log.LogInfo(data);
             }
             if (any && !quiet)
             {

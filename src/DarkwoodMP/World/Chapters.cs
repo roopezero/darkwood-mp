@@ -154,7 +154,17 @@ namespace DarkwoodMP.World
             if (s.IsClient)
             {
                 bool ours = ScriptedEvents.Current == ScriptedEvents.Part.PlayerAndShared;
-                Plugin.Log.LogInfo($"A story step ({kind}{(kind == StoryKind.Chapter ? $" {e.intValue}" : "")}) is the host's: " + (ours ? "asking the host" : "not run here"));
+                string text = "";
+                if (kind == StoryKind.Chapter)
+                {
+                    text = $" {e.intValue}";
+                }
+                string value = "not run here";
+                if (ours)
+                {
+                    value = "asking the host";
+                }
+                Plugin.Log.LogInfo($"A story step ({kind}{text}) is the host's: " + value);
                 if (ours)
                 {
                     SendStoryRequest(e, thisGO, kind);
@@ -206,7 +216,12 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write((byte)(ge != null ? Math.Max(0, ge.events.IndexOf(e)) : 0));
             w.W.Write((byte)kind);
-            w.W.Write(kind == StoryKind.Chapter ? e.intValue : 0);
+            int intValue2 = 0;
+            if (kind == StoryKind.Chapter)
+            {
+                intValue2 = e.intValue;
+            }
+            w.W.Write(intValue2);
             string what = What(kind, e.intValue);
             Authority.Request(w, what, (ok, reason, result) =>
             {
@@ -700,7 +715,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning($"Couldn't show the end screen: {e.Message}");
             }
             Plugin.Log.LogInfo("Showing the end screen");
-            yield return new WaitForSecondsRealtime(TestQuick ? 4f : 12f);
+            float time = 12f;
+            if (TestQuick)
+            {
+                time = 4f;
+            }
+            yield return new WaitForSecondsRealtime(time);
         }
 
         /// <summary>As EpilogueOutcomes.goToCredits does: fade out, then the credits scene, which ends at the main menu.</summary>

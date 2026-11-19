@@ -193,7 +193,12 @@ namespace DarkwoodMP.World
                 _quietEnter.Remove(loc);
                 string name = Core.getTrueLocationName(loc.name);
                 bool ours = OursNow(loc);
-                Plugin.Log.LogInfo($"[locations] nobody else is in {name} any more{(ours ? "; our player is, so it stays" : ": left")}");
+                string text = ": left";
+                if (ours)
+                {
+                    text = "; our player is, so it stays";
+                }
+                Plugin.Log.LogInfo($"[locations] nobody else is in {name} any more{text}");
                 if (ours)
                 {
                     continue;
@@ -573,7 +578,12 @@ namespace DarkwoodMP.World
             }
             var d = Singleton<Dreams>.Instance;
             var w = s.Begin(MsgType.LocationAsk);
-            w.W.Write((byte)(d != null && (d.dreamPrepared || d.dreaming) ? 1 : 0));
+            int value = 0;
+            if (d != null && (d.dreamPrepared || d.dreaming))
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             w.WriteStr(name);
             s.SendToHost(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo($"[locations] asked the host where {name} stands");

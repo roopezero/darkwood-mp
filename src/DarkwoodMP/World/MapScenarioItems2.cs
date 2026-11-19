@@ -394,7 +394,12 @@ namespace DarkwoodMP.World
         /// <summary>"i2-kill NAME" (host): the dog killed (as by our player), so it doesn't follow anyone around later steps.</summary>
         private static IEnumerator Kill(string[] a, Result r)
         {
-            var d = DogOf(a.Length > 0 ? a[0] : "gun");
+            string name = "gun";
+            if (a.Length > 0)
+            {
+                name = a[0];
+            }
+            var d = DogOf(name);
             if (d == null)
             {
                 r.Info = "no dog (gone already)";
@@ -488,7 +493,12 @@ namespace DarkwoodMP.World
                     {
                         yield return null;
                     }
-                    loads += (loads == "" ? "" : ", ") + $"{before}->{gun.ammo}";
+                    string value = ", ";
+                    if (loads == "")
+                    {
+                        value = "";
+                    }
+                    loads += value + $"{before}->{gun.ammo}";
                     if (gun.ammo <= before)
                     {
                         r.Fail($"the {type} didn't reload ({before} -> {gun.ammo} of {b.clipSize}, reloading {p.reloading}, {b.ammoType} in bags {p.Inventory.getItemInPlayer(b.ammoType)?.amount ?? 0})");
@@ -590,7 +600,16 @@ namespace DarkwoodMP.World
             }
             var t = hit.collider.transform;
             clear = dog != null && (t.GetComponent<Character>() == dog || (t.parent != null && t.parent.GetComponent<Character>() == dog));
-            return $"{(t.parent != null ? t.parent.name : t.name)}@{hit.distance:0}";
+            string name2;
+            if (t.parent != null)
+            {
+                name2 = t.parent.name;
+            }
+            else
+            {
+                name2 = t.name;
+            }
+            return $"{name2}@{hit.distance:0}";
         }
 
         // ---- throwing ---------------------------------------------------------------------------------------------
@@ -625,7 +644,12 @@ namespace DarkwoodMP.World
             {
                 target = MapScenarioEnemies.FreeSpot(Spot(at));
             }
-            yield return Walk(Stand(target, type == "gasBomb" ? 340f : 250f), 30f); // (out of a gas cloud's reach)
+            float dist = 250f;
+            if (type == "gasBomb")
+            {
+                dist = 340f;
+            }
+            yield return Walk(Stand(target, dist), 30f); // (out of a gas cloud's reach)
             if (dog != null)
             {
                 target = dog.transform.position;
@@ -847,7 +871,21 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             float d = StateDump.Flat(last - near);
-            r.Info = $"{(copy != null ? copy.name : prefab + (gone ? " (gone already)" : ""))} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
+            string name2;
+            if (copy != null)
+            {
+                name2 = copy.name;
+            }
+            else
+            {
+                string value = "";
+                if (gone)
+                {
+                    value = " (gone already)";
+                }
+                name2 = prefab + value;
+            }
+            r.Info = $"{name2} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
             bool ok;
             if (want == "lands")
             {
@@ -863,7 +901,16 @@ namespace DarkwoodMP.World
             }
             if (!ok)
             {
-                r.Fail($"it didn't {(want == "lands" ? "land" : want == "off" ? "go off" : "leave fire")}: {r.Info}");
+                string text = "leave fire";
+                if (want == "lands")
+                {
+                    text = "land";
+                }
+                else if (want == "off")
+                {
+                    text = "go off";
+                }
+                r.Fail($"it didn't {text}: {r.Info}");
             }
             else if (d > 500f)
             {
@@ -892,7 +939,12 @@ namespace DarkwoodMP.World
         /// <summary>"i2-heard NAME" (host): the NAME dog heard a sound (not a dangerous one) from the thrown thing since i2-note.</summary>
         private static IEnumerator HeardStep(string[] a, Result r)
         {
-            var d = DogOf(a.Length > 0 ? a[0] : "meat");
+            string name2 = "meat";
+            if (a.Length > 0)
+            {
+                name2 = a[0];
+            }
+            var d = DogOf(name2);
             if (d == null)
             {
                 r.Fail("no dog");
@@ -915,7 +967,12 @@ namespace DarkwoodMP.World
         /// <summary>"i2-eats NAME" (host): the NAME dog goes for the thrown lure and eats it up.</summary>
         private static IEnumerator Eats(string[] a, Result r)
         {
-            var d = DogOf(a.Length > 0 ? a[0] : "meat");
+            string name2 = "meat";
+            if (a.Length > 0)
+            {
+                name2 = a[0];
+            }
+            var d = DogOf(name2);
             if (d == null)
             {
                 r.Fail("no dog");
@@ -947,10 +1004,24 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
-            r.Info = $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {(lure == null ? "eaten up" : $"still there (health {lure.health})")}";
+            string text;
+            if (lure == null)
+            {
+                text = "eaten up";
+            }
+            else
+            {
+                text = $"still there (health {lure.health})";
+            }
+            r.Info = $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {text}";
             if (lure != null && d != null)
             {
-                r.Info += $"; the dog is {d.behaviour} after {(d.target != null ? d.target.name : "nothing")}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
+                string name3 = "nothing";
+                if (d.target != null)
+                {
+                    name3 = d.target.name;
+                }
+                r.Info += $"; the dog is {d.behaviour} after {name3}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
             }
             if (lure != null)
             {
@@ -1063,7 +1134,17 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             bool lit = ctl.logicLights.Contains(p.lightDot) && p.lightDot.lightsPlayer;
-            r.Info = $"lantern {(on ? "on" : "off")}: our light dot {(lit ? "lit" : "not lit")}, radius {p.lightDot.LightRadius:0}";
+            string text = "off";
+            if (on)
+            {
+                text = "on";
+            }
+            string text2 = "not lit";
+            if (lit)
+            {
+                text2 = "lit";
+            }
+            r.Info = $"lantern {text}: our light dot {text2}, radius {p.lightDot.LightRadius:0}";
             if (lit != on)
             {
                 r.Fail(r.Info);

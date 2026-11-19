@@ -157,7 +157,12 @@ namespace DarkwoodMP.World
             }
 
             int refused = Authority.RolledBack - rolledBefore;
-            r.Info = $"in {loc?.name}: wardrobe {opened}, {(et != null && item != null ? "still there" : "gone")}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
+            string text = "gone";
+            if (et != null && item != null)
+            {
+                text = "still there";
+            }
+            r.Info = $"in {loc?.name}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
                      $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
             if (refused > 0)
             {
@@ -332,7 +337,12 @@ namespace DarkwoodMP.World
         /// <summary>"dream-chars" (either): the dream location's characters and events, logged (for reading a run).</summary>
         private static IEnumerator DreamChars(string[] a, Result r)
         {
-            yield return new WaitForSeconds(a.Length > 0 ? float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture) : 1f);
+            float seconds = 1f;
+            if (a.Length > 0)
+            {
+                seconds = float.Parse(a[0], System.Globalization.CultureInfo.InvariantCulture);
+            }
+            yield return new WaitForSeconds(seconds);
             var loc = D.dreamLocation;
             if (loc == null)
             {

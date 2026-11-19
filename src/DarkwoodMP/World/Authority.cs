@@ -164,7 +164,12 @@ namespace DarkwoodMP.World
             }
             else if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[authority] {p.What}: ok{(result.Length > 0 ? " (" + result + ")" : "")} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
+                string text = "";
+                if (result.Length > 0)
+                {
+                    text = " (" + result + ")";
+                }
+                Plugin.Log.LogInfo($"[authority] {p.What}: ok{text} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
             }
             try
             {
@@ -236,7 +241,12 @@ namespace DarkwoodMP.World
             }
             var w = s.Begin(MsgType.Verdict);
             w.W.Write(seq);
-            w.W.Write((byte)(_refusal == null ? 1 : 0));
+            int value = 0;
+            if (_refusal == null)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             w.WriteStr(_refusal ?? "");
             w.WriteStr(_result ?? "");
             s.SendTo(from, w, Channel.Control, reliable: true);
@@ -397,7 +407,12 @@ namespace DarkwoodMP.World
                     {
                         p.Inventory.removeItemAmountFromPlayer(kv.Key, kv.Value);
                     }
-                    Plugin.Log.LogInfo($"[authority] {(kv.Value < 0 ? "gave back" : "took back")} {Math.Abs(kv.Value)} {kv.Key}");
+                    string text = "took back";
+                    if (kv.Value < 0)
+                    {
+                        text = "gave back";
+                    }
+                    Plugin.Log.LogInfo($"[authority] {text} {Math.Abs(kv.Value)} {kv.Key}");
                 }
                 catch (Exception e)
                 {

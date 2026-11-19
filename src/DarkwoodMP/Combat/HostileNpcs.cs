@@ -223,14 +223,37 @@ namespace DarkwoodMP.Combat
             var w = s.Begin(MsgType.NpcHit);
             ObjRef.Of(c.gameObject).Write(w);
             w.W.Write(damage);
-            w.W.Write((byte)((cut ? 1 : 0) | 2 | (interrupt ? 4 : 0) | (normal ? 8 : 0)));
+            int flags = 0;
+            if (cut)
+            {
+                flags |= 1;
+            }
+            flags |= 2;
+            if (interrupt)
+            {
+                flags |= 4;
+            }
+            if (normal)
+            {
+                flags |= 8;
+            }
+            w.W.Write((byte)flags);
             PlayerDamage.WriteEffects(w, effects);
             InvItemClass item = null;
             if (Player.Instance != null)
             {
                 item = Player.Instance.currentItem;
             }
-            w.WriteStr(InvItemClass.isNull(item) ? "" : Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0)));
+            string s2;
+            if (InvItemClass.isNull(item))
+            {
+                s2 = "";
+            }
+            else
+            {
+                s2 = Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0));
+            }
+            w.WriteStr(s2);
             List<InvItemEffect> mine = null;
             if (effects != null)
             {

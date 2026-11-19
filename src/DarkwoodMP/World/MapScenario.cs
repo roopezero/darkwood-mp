@@ -599,7 +599,12 @@ namespace DarkwoodMP.World
             var parts = new List<string> { $"we: health {(p != null ? p.health : 0f):0}" };
             if (p == null || !p.alive || p.health <= 0f)
             {
-                r.Fail($"our player is dead (health {(p != null ? p.health : 0f):0})");
+                float health2 = 0f;
+                if (p != null)
+                {
+                    health2 = p.health;
+                }
+                r.Fail($"our player is dead (health {health2:0})");
             }
             var ps = Sync.PlayerSync.Instance;
             if (ps != null)

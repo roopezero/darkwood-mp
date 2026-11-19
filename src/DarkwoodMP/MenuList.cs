@@ -544,7 +544,12 @@ namespace DarkwoodMP
             {
                 parts.Add($"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
             }
-            return $"list shown {_shown} (alpha {_alpha:0.00}), {(_pause ? "pause menu" : "main menu")}: {string.Join("; ", parts)}; takes clicks {!MenuWindows.AnyOpen}; " +
+            string text = "main menu";
+            if (_pause)
+            {
+                text = "pause menu";
+            }
+            return $"list shown {_shown} (alpha {_alpha:0.00}), {text}: {string.Join("; ", parts)}; takes clicks {!MenuWindows.AnyOpen}; " +
                    $"game entries hidden {GameEntriesHidden(mm)}; screen {Screen.width}x{Screen.height}";
         }
 

@@ -130,7 +130,12 @@ namespace DarkwoodMP.World
 
         private static IEnumerator GoTo(string[] a, Result r)
         {
-            var to = Spot(a.Length > 0 ? a[0] : "");
+            string which = "";
+            if (a.Length > 0)
+            {
+                which = a[0];
+            }
+            var to = Spot(which);
             yield return Walk(to, 40f);
             r.Info = $"at {Fmt(P.transform.position)}";
         }
@@ -474,7 +479,12 @@ namespace DarkwoodMP.World
             }
             var ii = host.GetComponent<InteractiveItem>() ?? host.gameObject.AddComponent<InteractiveItem>();
             ii.textureOn = tex[0].name;
-            ii.textureOff = tex[tex.Length > 1 ? 1 : 0].name;
+            int value = 0;
+            if (tex.Length > 1)
+            {
+                value = 1;
+            }
+            ii.textureOff = tex[value].name;
             ii.switchSound = "";
             ii.doesNotPauseGame = true;
             ii.isOn = false;
@@ -516,7 +526,12 @@ namespace DarkwoodMP.World
             yield return Walk(_ii.transform.position);
             if (_ii.isOn == on)
             {
-                r.Fail($"it's already {(on ? "on" : "off")} here");
+                string text = "off";
+                if (on)
+                {
+                    text = "on";
+                }
+                r.Fail($"it's already {text} here");
                 yield break;
             }
             _onT.fired = false;
@@ -533,7 +548,12 @@ namespace DarkwoodMP.World
             {
                 mine = _offT;
             }
-            r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired {mine.fired}";
+            string text2 = "off";
+            if (on)
+            {
+                text2 = "on";
+            }
+            r.Info = $"{_ii.name}: on {_ii.isOn}, its {text2} trigger fired {mine.fired}";
             if (_ii.isOn != on)
             {
                 r.Fail($"it didn't switch (refused?): {r.Info}");
@@ -569,7 +589,12 @@ namespace DarkwoodMP.World
             {
                 t = _offT;
             }
-            r.Info = $"{_ii.name}: on {_ii.isOn}, its {(on ? "on" : "off")} trigger fired here {t.fired}";
+            string text = "off";
+            if (on)
+            {
+                text = "on";
+            }
+            r.Info = $"{_ii.name}: on {_ii.isOn}, its {text} trigger fired here {t.fired}";
             if (_ii.isOn != on)
             {
                 r.Fail($"the other's switch didn't reach us: {r.Info}");
@@ -828,7 +853,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(4f); // removeMe destroys a spirit 3 s later
             bool gone = c == null;
-            r.Info = $"{state}: the spirit {(gone ? "left" : "stayed")}";
+            string text = "stayed";
+            if (gone)
+            {
+                text = "left";
+            }
+            r.Info = $"{state}: the spirit {text}";
             if (!gone)
             {
                 Object.Destroy(c.gameObject);

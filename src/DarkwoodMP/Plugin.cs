@@ -791,14 +791,24 @@ namespace DarkwoodMP
         private static void ShotsHud(string shot, string want)
         {
             string now = PauseHud.Shown();
-            Log.LogInfo($"[shots] {shot}: {(now == want ? "PASS" : "FAIL")} HUD shown {now}, want {want}");
+            string text = "FAIL";
+            if (now == want)
+            {
+                text = "PASS";
+            }
+            Log.LogInfo($"[shots] {shot}: {text} HUD shown {now}, want {want}");
         }
 
         /// <summary>The shots test: whether world overlays (name tags) are hidden at this shot, as they should be.</summary>
         private static void ShotsUi(string shot, bool hidden)
         {
             bool now = World.UiState.WorldOverlaysHidden;
-            Log.LogInfo($"[shots] {shot}: {(now == hidden ? "PASS" : "FAIL")} world overlays hidden {now} ({World.UiState.Reason ?? "the world in play"}), want {hidden}");
+            string text = "FAIL";
+            if (now == hidden)
+            {
+                text = "PASS";
+            }
+            Log.LogInfo($"[shots] {shot}: {text} world overlays hidden {now} ({World.UiState.Reason ?? "the world in play"}), want {hidden}");
         }
 
         private System.Collections.IEnumerator SoloTest(string dir)
@@ -867,11 +877,30 @@ namespace DarkwoodMP
                 SkillsPanel.TestPick(choice[0], choice[1]);
                 yield return Shot("solo-skills-picked");
                 string why = SkillsPanel.TestLearn(choice[0], choice[1]);
-                Log.LogInfo($"[solo] learned {choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}: {(why == null ? "ok" : "FAIL " + why)}, points {pointsBefore} -> {SkillTree.Points(p)}");
+                string text = "";
+                if (choice[1] != null)
+                {
+                    text = " with " + choice[1];
+                }
+                string text2;
+                if (why == null)
+                {
+                    text2 = "ok";
+                }
+                else
+                {
+                    text2 = "FAIL " + why;
+                }
+                Log.LogInfo($"[solo] learned {choice[0]}{text}: {text2}, points {pointsBefore} -> {SkillTree.Points(p)}");
                 yield return Shot("solo-skills-learned");
                 // Against the rules: the same skill again.
                 string again = SkillsPanel.TestLearn(choice[0], choice[1]);
-                Log.LogInfo($"[solo] the same skill again: {(again != null ? "refused (" + again + ")" : "FAIL learned")}");
+                string text3 = "FAIL learned";
+                if (again != null)
+                {
+                    text3 = "refused (" + again + ")";
+                }
+                Log.LogInfo($"[solo] the same skill again: {text3}");
 
                 // The mouse (the panel's test mouse) on the learned icon's bottom right pixel.
                 if (SkillsPanel.TestRects(choice[0], out var icon, out var cell))
@@ -902,7 +931,16 @@ namespace DarkwoodMP
                     List<string> clickFails = null;
                     yield return SkillsPanel.TestClickAll(f => clickFails = f);
                     yield return Shot("solo-skills-clicked");
-                    Log.LogInfo($"[solo] real clicks on {had} points: {(clickFails.Count == 0 && had >= 2 ? "PASS all learned" : "FAIL " + string.Join("; ", clickFails))}: {Progression.TestState()}");
+                    string text4;
+                    if (clickFails.Count == 0 && had >= 2)
+                    {
+                        text4 = "PASS all learned";
+                    }
+                    else
+                    {
+                        text4 = "FAIL " + string.Join("; ", clickFails);
+                    }
+                    Log.LogInfo($"[solo] real clicks on {had} points: {text4}: {Progression.TestState()}");
                 }
                 else
                 {
@@ -1047,7 +1085,12 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator CheckMenuEntry(string where, string shots)
         {
             Log.LogInfo($"[menu-entry] {where}: {MenuList.Check()}");
-            bool took = MenuList.Click(where == "main menu" ? "Join Game" : "Multiplayer");
+            string label = "Multiplayer";
+            if (where == "main menu")
+            {
+                label = "Join Game";
+            }
+            bool took = MenuList.Click(label);
             yield return null;
             yield return null;
             Log.LogInfo($"[menu-entry] {where}: clicked, panel open: {_showMenu} (entry taken: {took})");
@@ -1210,7 +1253,16 @@ namespace DarkwoodMP
             }
             Vector3 spot = mid + new Vector3(0f, 0f, 250f);
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(Player.Instance.gameObject, spot, 1f, _spawnType, nocturnal: false, attackPlayer: false);
-            Log.LogInfo(c != null ? $"--dwmp-spawn: {c.name} at {c.transform.position}" : $"--dwmp-spawn: couldn't spawn {_spawnType}");
+            string data;
+            if (c != null)
+            {
+                data = $"--dwmp-spawn: {c.name} at {c.transform.position}";
+            }
+            else
+            {
+                data = $"--dwmp-spawn: couldn't spawn {_spawnType}";
+            }
+            Log.LogInfo(data);
             if (c == null || !Threat.Debug)
             {
                 yield break;
@@ -1402,7 +1454,16 @@ namespace DarkwoodMP
             yield return new WaitForSeconds(1f);
             Log.LogInfo($"[menu test] joining {address} again from the Multiplayer window");
             _direct.JoinForTest(address);
-            Log.LogInfo(_tcp.InSession ? "[menu test] PASS: joining again" : $"[menu test] FAIL: not joining ({_tcp.Status})");
+            string data;
+            if (_tcp.InSession)
+            {
+                data = "[menu test] PASS: joining again";
+            }
+            else
+            {
+                data = $"[menu test] FAIL: not joining ({_tcp.Status})";
+            }
+            Log.LogInfo(data);
         }
 
         private System.Collections.IEnumerator JoinWhenReady(string address)
@@ -1815,7 +1876,12 @@ namespace DarkwoodMP
             }
             else
             {
-                Ui.Text(f, _steamUnavailable ? "Steam isn't running (the GOG version, say): use a direct connection." : "Waiting for Steam...", MenuSkin.Dim);
+                string text = "Waiting for Steam...";
+                if (_steamUnavailable)
+                {
+                    text = "Steam isn't running (the GOG version, say): use a direct connection.";
+                }
+                Ui.Text(f, text, MenuSkin.Dim);
             }
 
             Ui.Heading(f, "Direct connection");
@@ -1835,7 +1901,17 @@ namespace DarkwoodMP
                 }
                 foreach (var kv in _session.Names)
                 {
-                    string tags = (kv.Key == hostId ? "  (host)" : "") + (kv.Key == _session.LocalId ? "  (you)" : "");
+                    string value = "";
+                    if (kv.Key == hostId)
+                    {
+                        value = "  (host)";
+                    }
+                    string value2 = "";
+                    if (kv.Key == _session.LocalId)
+                    {
+                        value2 = "  (you)";
+                    }
+                    string tags = value + value2;
                     Ui.Label(f, kv.Value + tags);
                 }
             }
@@ -1988,7 +2064,12 @@ namespace DarkwoodMP
             {
                 return;
             }
-            sb.SetPresence(text, _session.Active ? _session.PlayerCount : 1);
+            int players = 1;
+            if (_session.Active)
+            {
+                players = _session.PlayerCount;
+            }
+            sb.SetPresence(text, players);
             if (log)
             {
                 Log.LogInfo($"[presence] {text} (Steam has: {sb.PresenceReadBack()})");
@@ -2007,7 +2088,16 @@ namespace DarkwoodMP
                 return string.Join(" · ", parts);
             }
             var (day, chapter) = DayAndChapter();
-            parts.Add(chapter > 0 ? $"Chapter {Mathf.Clamp(chapter, 1, 10)}, day {day}" : $"Day {day}");
+            string item;
+            if (chapter > 0)
+            {
+                item = $"Chapter {Mathf.Clamp(chapter, 1, 10)}, day {day}";
+            }
+            else
+            {
+                item = $"Day {day}";
+            }
+            parts.Add(item);
             string biome = BiomeName();
             if (!string.IsNullOrEmpty(biome))
             {
@@ -2059,7 +2149,16 @@ namespace DarkwoodMP
                 return "";
             }
             // The game's sheet has biome_forest, _forest_mutated, _meadow and _swamp; dense forest is forest on its map.
-            string key = "biome_" + (b.type == Biome.Type.forest_dense ? Biome.Type.forest : b.type);
+            Biome.Type value;
+            if (b.type == Biome.Type.forest_dense)
+            {
+                value = Biome.Type.forest;
+            }
+            else
+            {
+                value = b.type;
+            }
+            string key = "biome_" + value;
             string name = "";
             try
             {

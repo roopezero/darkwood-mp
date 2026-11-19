@@ -51,7 +51,12 @@ namespace DarkwoodMP.Combat
             }
 
             var attacker = s.attackerTransform.GetComponent<CharBase>();
-            float damage = s.damage * (attacker != null ? attacker.strengthModifier : 1f);
+            float strengthModifier2 = 1f;
+            if (attacker != null)
+            {
+                strengthModifier2 = attacker.strengthModifier;
+            }
+            float damage = s.damage * strengthModifier2;
             s.onHit?.Invoke();
             PlayerDamage.Send(proxy.Owner, damage, s.attackerTransform, s.shadowSensor, s.effects);
             return false;
@@ -669,7 +674,16 @@ namespace DarkwoodMP.Combat
                 w.Write(_pos);
                 w.W.Write(range);
                 w.W.Write(volume);
-                w.W.Write((byte)((dangerousSound ? 1 : 0) | (gunshot ? 2 : 0)));
+                int flags = 0;
+                if (dangerousSound)
+                {
+                    flags |= 1;
+                }
+                if (gunshot)
+                {
+                    flags |= 2;
+                }
+                w.W.Write((byte)flags);
                 s.SendToHost(w, Net.Channel.Control, reliable: true);
             }
             Threat.NoiseSource = Player.Instance;

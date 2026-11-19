@@ -479,13 +479,23 @@ namespace DarkwoodMP.World
             r.Info = $"{_jKind} {_jType}: {(Has() ? "here" : "not here")}";
             if (Has() != want)
             {
-                r.Fail(r.Info + $", wanted {(want ? "here" : "gone")}");
+                string text = "gone";
+                if (want)
+                {
+                    text = "here";
+                }
+                r.Fail(r.Info + $", wanted {text}");
             }
             // Stay a moment, so that a game that still had it doesn't send it back in its next snapshot.
             yield return new WaitForSecondsRealtime(FlagsSync.Interval + 0.5f);
             if (Has() != want)
             {
-                r.Fail($"{_jType} came {(want ? "off" : "back")} after {FlagsSync.Interval + 0.5f:0.#} s");
+                string text2 = "back";
+                if (want)
+                {
+                    text2 = "off";
+                }
+                r.Fail($"{_jType} came {text2} after {FlagsSync.Interval + 0.5f:0.#} s");
             }
         }
 
@@ -609,7 +619,12 @@ namespace DarkwoodMP.World
             });
             yield return new WaitForSecondsRealtime(0.5f);
             var hl = Hideout(Player.Instance);
-            r.Info = $"afterNight {c.isAfterNight}, trader {(hl != null && hl.trader != null ? "still here" : "gone")}";
+            string text = "gone";
+            if (hl != null && hl.trader != null)
+            {
+                text = "still here";
+            }
+            r.Info = $"afterNight {c.isAfterNight}, trader {text}";
             if (c.isAfterNight)
             {
                 r.Fail(r.Info);
@@ -635,7 +650,17 @@ namespace DarkwoodMP.World
                 npc = l.trader.GetComponent<NPC>();
             }
             bool frozen = Player.Instance.effects.hasEffectType(CharacterEffectType.timeFreeze);
-            r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {(npc != null ? npc.name : "gone")}{(l != null && l.wolf != null ? ", the wolf here" : "")}";
+            string name2 = "gone";
+            if (npc != null)
+            {
+                name2 = npc.name;
+            }
+            string text = "";
+            if (l != null && l.wolf != null)
+            {
+                text = ", the wolf here";
+            }
+            r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {name2}{text}";
             if (c.isAfterNight != want || (!want && (npc != null || frozen)))
             {
                 r.Fail(r.Info);
@@ -665,7 +690,12 @@ namespace DarkwoodMP.World
             r.Info = $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} in {wait:0.#} s";
             if (c.DoUpdateTime != want || (want ? moved == 0 : moved != 0))
             {
-                r.Fail(r.Info + $", wanted {(want ? "running" : "stopped")}");
+                string text = "stopped";
+                if (want)
+                {
+                    text = "running";
+                }
+                r.Fail(r.Info + $", wanted {text}");
             }
         }
 
@@ -712,7 +742,12 @@ namespace DarkwoodMP.World
                 }
                 yield break;
             }
-            yield return new WaitForSecondsRealtime(host ? 1.5f : 2f);
+            float time = 2f;
+            if (host)
+            {
+                time = 1.5f;
+            }
+            yield return new WaitForSecondsRealtime(time);
             var refused = LogSince(mark).Where(l => !l.Contains("[map]")).Where(l => l.Contains("is talking to them") || l.Contains("just talked to them") || (l.Contains("refused") && l.Contains("talk"))).ToList();
             r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)}: dialogue {(win.npc == npc ? "open" : "not open")}";
             if (refused.Count > 0)
@@ -755,7 +790,12 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             if (win.npc == null || !win.npc.trader)
             {
-                r.Fail($"not talking to a trader ({(win.npc != null ? win.npc.name : "no one")})");
+                string name2 = "no one";
+                if (win.npc != null)
+                {
+                    name2 = win.npc.name;
+                }
+                r.Fail($"not talking to a trader ({name2})");
                 yield break;
             }
             float until = Time.realtimeSinceStartup + 8f;
@@ -793,8 +833,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             yield return new WaitForSecondsRealtime(1.5f); // the fade back and Core.forbidInputsFor
+            string text = "closed";
+            if (win.gameObject.activeSelf)
+            {
+                text = "open";
+            }
             r.Info = $"inDialogue {p.inDialogue}, inShop {p.inShop}, performingAction {p.performingAction}, window " +
-                     $"{(win.gameObject.activeSelf ? "open" : "closed")}, timeScale {Time.timeScale:0.##}, afterNight {Singleton<Controller>.Instance.isAfterNight}";
+                     $"{text}, timeScale {Time.timeScale:0.##}, afterNight {Singleton<Controller>.Instance.isAfterNight}";
             if (!Free() || Time.timeScale <= 0f)
             {
                 r.Fail(r.Info);
@@ -814,7 +859,12 @@ namespace DarkwoodMP.World
             }
             yield return Close(win, npc);
             _talkingTo = null;
-            r.Info = $"dialogue {(win.npc == null ? "closed" : "still open")}";
+            string text = "still open";
+            if (win.npc == null)
+            {
+                text = "closed";
+            }
+            r.Info = $"dialogue {text}";
             if (win.npc != null)
             {
                 r.Fail(r.Info);
@@ -1197,7 +1247,12 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             var s = crate.GetComponent<ShadowArmor>();
-            r.Info = $"shadow {(s != null ? $"alive, going to {BreakSync.ShadowHealth(crate):0.#}" : "gone")}, item health {crate.health}, destroyed {crate.destroyed}";
+            string text = "gone";
+            if (s != null)
+            {
+                text = $"alive, going to {BreakSync.ShadowHealth(crate):0.#}";
+            }
+            r.Info = $"shadow {text}, item health {crate.health}, destroyed {crate.destroyed}";
             if (!Ok() || crate.destroyed)
             {
                 r.Fail(r.Info);
@@ -1226,7 +1281,12 @@ namespace DarkwoodMP.World
             yield return null;
             saved.loadValues(crate);
             yield return null;
-            r.Info = $"after loadValues: shadow {(crate.GetComponent<ShadowArmor>() != null ? "alive" : "gone")}";
+            string text = "gone";
+            if (crate.GetComponent<ShadowArmor>() != null)
+            {
+                text = "alive";
+            }
+            r.Info = $"after loadValues: shadow {text}";
         }
 
         // ---- 68 a death bag's map marker ----------------------------------------------------------------------
@@ -1316,7 +1376,12 @@ namespace DarkwoodMP.World
             }
             if (bag == null)
             {
-                r.Info = $"no bag, marker {(_marker != null ? "still here" : "gone")}";
+                string text = "gone";
+                if (_marker != null)
+                {
+                    text = "still here";
+                }
+                r.Info = $"no bag, marker {text}";
             }
             else
             {
@@ -1377,7 +1442,17 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(1.5f);
             var refused = Refused(mark);
-            r.Info = $"bag {(bag != null ? "still here" : "gone")}, marker {(_marker != null ? "still here" : "gone")}";
+            string text = "gone";
+            if (bag != null)
+            {
+                text = "still here";
+            }
+            string text2 = "gone";
+            if (_marker != null)
+            {
+                text2 = "still here";
+            }
+            r.Info = $"bag {text}, marker {text2}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");

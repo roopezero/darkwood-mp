@@ -46,7 +46,12 @@ namespace DarkwoodMP
                     {
                         UnityEngine.Cursor.SetCursor(cursor.idle, new Vector2(32f, 32f), CursorMode.Auto);
                     }
-                    Plugin.Log.LogInfo($"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({(cursor.idle != null ? cursor.idle.width + "x" + cursor.idle.height : "none")}); hardware cursor setting {HardwareCursor}");
+                    string text = "none";
+                    if (cursor.idle != null)
+                    {
+                        text = cursor.idle.width + "x" + cursor.idle.height;
+                    }
+                    Plugin.Log.LogInfo($"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({text}); hardware cursor setting {HardwareCursor}");
                 }
             }
             else if (_active)

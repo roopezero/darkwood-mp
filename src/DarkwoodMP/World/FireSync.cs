@@ -87,11 +87,21 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write((byte)what);
             w.W.Write(b.burnTime);
-            w.W.Write((byte)(on ? 1 : 0));
+            int value = 0;
+            if (on)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] {b.name} {(on ? "caught fire" : "stopped burning")} ({r})");
+                string text = "stopped burning";
+                if (on)
+                {
+                    text = "caught fire";
+                }
+                Plugin.Log.LogInfo($"[world] {b.name} {text} ({r})");
             }
         }
 
@@ -152,7 +162,12 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.Burning);
             r.Write(w);
             w.W.Write((byte)what);
-            w.W.Write(burn != null ? burn.burnTime : 20f);
+            float burnTime2 = 20f;
+            if (burn != null)
+            {
+                burnTime2 = burn.burnTime;
+            }
+            w.W.Write(burnTime2);
             w.W.Write((byte)1);
             Authority.Request(w, $"set {go.name} alight", (ok, reason, result) =>
             {

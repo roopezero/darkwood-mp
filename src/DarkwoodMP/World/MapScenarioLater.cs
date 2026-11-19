@@ -179,7 +179,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
-            r.Info = $"{(wasFired ? "already fired here" : "first")}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, "
+            string text = "first";
+            if (wasFired)
+            {
+                text = "already fired here";
+            }
+            r.Info = $"{text}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, "
                 + $"shared part ran {m.C?.N ?? -1} time(s) here, still owed {ScriptedEvents.IsOwed(m.T)}{made}; bags {MapScenarioWorld.Contents(bag)}";
             if (wantItem && got != 1)
             {

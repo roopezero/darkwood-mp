@@ -356,13 +356,37 @@ namespace DarkwoodMP
                 ow = Screen.width;
                 oh = Screen.height;
             }
-            Screen.SetResolution(w, h, full ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
-            Plugin.Log.LogInfo($"[options] screen {w}x{h} {(full ? "full screen" : "window")}, asking to keep it");
-            AskKeep($"The screen is now {w}x{h}, {(full ? "full screen" : "in a window")}.", () =>
+            FullScreenMode fullscreenMode;
+            if (full)
+            {
+                fullscreenMode = FullScreenMode.FullScreenWindow;
+            }
+            else
+            {
+                fullscreenMode = FullScreenMode.Windowed;
+            }
+            Screen.SetResolution(w, h, fullscreenMode);
+            string text = "window";
+            if (full)
+            {
+                text = "full screen";
+            }
+            Plugin.Log.LogInfo($"[options] screen {w}x{h} {text}, asking to keep it");
+            string text2 = "in a window";
+            if (full)
+            {
+                text2 = "full screen";
+            }
+            AskKeep($"The screen is now {w}x{h}, {text2}.", () =>
             {
                 GameSettings.SetInt("ScreenWidth", w);
                 GameSettings.SetInt("ScreenHeight", h);
-                GameSettings.SetInt("Fullscreen", full ? 1 : 0);
+                int intValue = 0;
+                if (full)
+                {
+                    intValue = 1;
+                }
+                GameSettings.SetInt("Fullscreen", intValue);
                 if (Menu != null)
                 {
                     Menu.VideoMenu.destFulscreen = full ? 1 : 0;
@@ -371,7 +395,16 @@ namespace DarkwoodMP
                 Plugin.Log.LogInfo("[options] screen kept");
             }, () =>
             {
-                Screen.SetResolution(ow, oh, ofull ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+                FullScreenMode fullscreenMode2;
+                if (ofull)
+                {
+                    fullscreenMode2 = FullScreenMode.FullScreenWindow;
+                }
+                else
+                {
+                    fullscreenMode2 = FullScreenMode.Windowed;
+                }
+                Screen.SetResolution(ow, oh, fullscreenMode2);
                 Plugin.Log.LogInfo($"[options] screen back to {ow}x{oh}");
             });
         }
@@ -579,14 +612,28 @@ namespace DarkwoodMP
                 {
                     v = _sound;
                 }
-                var c = Setting(f, music ? "Music volume" : "Sound volume");
+                string label = "Sound volume";
+                if (music)
+                {
+                    label = "Music volume";
+                }
+                var c = Setting(f, label);
                 var cc = Ui.Split(c[1], 0, 44);
                 float nv = Slider(cc[0], v, min, max);
                 if (!Mathf.Approximately(nv, v))
                 {
                     SetVolume(music, nv);
                 }
-                Ui.Label(cc[1], Percent(music ? _music : _sound, min, max), MenuSkin.Bright, TextAnchor.MiddleRight);
+                float v2;
+                if (music)
+                {
+                    v2 = _music;
+                }
+                else
+                {
+                    v2 = _sound;
+                }
+                Ui.Label(cc[1], Percent(v2, min, max), MenuSkin.Bright, TextAnchor.MiddleRight);
             }
             f.Space(6);
             Ui.Text(f, "You hear a new volume at once. Apply keeps it.", MenuSkin.Dim);
@@ -641,7 +688,16 @@ namespace DarkwoodMP
             {
                 shown = session.LocalName;
             }
-            Ui.Text(f, inGame ? "You can change it when you're in no game." : $"Others see you as {shown}. Left empty, it's your Steam name, or your computer's user name.", MenuSkin.Dim);
+            string text;
+            if (inGame)
+            {
+                text = "You can change it when you're in no game.";
+            }
+            else
+            {
+                text = $"Others see you as {shown}. Left empty, it's your Steam name, or your computer's user name.";
+            }
+            Ui.Text(f, text, MenuSkin.Dim);
 
             Ui.Heading(f, "Hosting");
             c = Setting(f, "Server name");
@@ -852,9 +908,27 @@ namespace DarkwoodMP
             int fitDown = Mathf.FloorToInt((_win.Rect.height - below.y - 8 * S) / rowH);
             int fitUp = Mathf.FloorToInt((top - PixelFont.Line - 12 * S) / rowH);
             bool up = fitDown < Mathf.Min(n, 6) && fitUp > fitDown;
-            int vis = Mathf.Clamp(up ? fitUp : fitDown, 1, n);
+            int value;
+            if (up)
+            {
+                value = fitUp;
+            }
+            else
+            {
+                value = fitDown;
+            }
+            int vis = Mathf.Clamp(value, 1, n);
             float h = vis * rowH + 4 * S;
-            var box = new Rect(below.x, up ? top - h : below.y, _drop.Width, h);
+            float y2;
+            if (up)
+            {
+                y2 = top - h;
+            }
+            else
+            {
+                y2 = below.y;
+            }
+            var box = new Rect(below.x, y2, _drop.Width, h);
             if (_drop.First < 0)
             {
                 _drop.First = Mathf.Clamp(_drop.Index - vis / 2, 0, Mathf.Max(0, n - vis));
@@ -992,8 +1066,26 @@ namespace DarkwoodMP
                 if (a.type == RW.InputActionType.Axis)
                 {
                     AddRow(maps, a, RW.AxisRange.Full, a.descriptiveName);
-                    AddRow(maps, a, RW.AxisRange.Positive, !string.IsNullOrEmpty(a.positiveDescriptiveName) ? a.positiveDescriptiveName : a.descriptiveName + " +");
-                    AddRow(maps, a, RW.AxisRange.Negative, !string.IsNullOrEmpty(a.negativeDescriptiveName) ? a.negativeDescriptiveName : a.descriptiveName + " -");
+                    string label;
+                    if (!string.IsNullOrEmpty(a.positiveDescriptiveName))
+                    {
+                        label = a.positiveDescriptiveName;
+                    }
+                    else
+                    {
+                        label = a.descriptiveName + " +";
+                    }
+                    AddRow(maps, a, RW.AxisRange.Positive, label);
+                    string label2;
+                    if (!string.IsNullOrEmpty(a.negativeDescriptiveName))
+                    {
+                        label2 = a.negativeDescriptiveName;
+                    }
+                    else
+                    {
+                        label2 = a.descriptiveName + " -";
+                    }
+                    AddRow(maps, a, RW.AxisRange.Negative, label2);
                 }
                 else if (a.type == RW.InputActionType.Button)
                 {
@@ -1067,7 +1159,12 @@ namespace DarkwoodMP
             bool rel = GameSettings.GetInt("RelativeControls") == 1;
             if (Ui.Check(c[0], rel, "Relative controls") != rel)
             {
-                SetSetting("RelativeControls", rel ? 0 : 1);
+                int v = 1;
+                if (rel)
+                {
+                    v = 0;
+                }
+                SetSetting("RelativeControls", v);
                 if (Player.Instance != null)
                 {
                     Player.Instance.relativeControls = !rel;
@@ -1076,13 +1173,23 @@ namespace DarkwoodMP
             bool wheel = GameSettings.GetInt("MouseScrollHotbar") == 1;
             if (Ui.Check(c[1], wheel, "Mouse wheel scrolls the hotbar") != wheel)
             {
-                SetSetting("MouseScrollHotbar", wheel ? 0 : 1);
+                int v2 = 1;
+                if (wheel)
+                {
+                    v2 = 0;
+                }
+                SetSetting("MouseScrollHotbar", v2);
             }
             c = f.Row(Ui.RowH, 0, 90, 110);
             bool noPad = GameSettings.GetInt("DisableControllerMode") == 1;
             if (Ui.Check(c[0], noPad, "Turn the controller off") != noPad)
             {
-                SetSetting("DisableControllerMode", noPad ? 0 : 1);
+                int v3 = 1;
+                if (noPad)
+                {
+                    v3 = 0;
+                }
+                SetSetting("DisableControllerMode", v3);
                 RW.ControllerMap pad = null;
                 if (Menu != null)
                 {
@@ -1187,7 +1294,17 @@ namespace DarkwoodMP
                 {
                     left = _mapper.timeRemaining;
                 }
-                status = $"{(_mapCol == 0 ? "Press the new key" : "Click the new mouse button")} for {_mapRow.Label}{(left > 0 ? $" ({Mathf.CeilToInt(left)} s)" : "")}. Escape cancels.";
+                string text2 = "Click the new mouse button";
+                if (_mapCol == 0)
+                {
+                    text2 = "Press the new key";
+                }
+                string text3 = "";
+                if (left > 0)
+                {
+                    text3 = $" ({Mathf.CeilToInt(left)} s)";
+                }
+                status = $"{text2} for {_mapRow.Label}{text3}. Escape cancels.";
             }
             if (status == null)
             {
@@ -1307,7 +1424,12 @@ namespace DarkwoodMP
                     actionRange = _mapRow.Range,
                     actionElementMapToReplace = _mapRow.MapIds[_mapCol] >= 0 ? map.GetElementMap(_mapRow.MapIds[_mapCol]) : null,
                 });
-                Plugin.Log.LogInfo($"[options] listening for {Columns[_mapCol].ToLowerInvariant()} input for {_mapRow.Label}: {(started ? "started" : "didn't start")}");
+                string text = "didn't start";
+                if (started)
+                {
+                    text = "started";
+                }
+                Plugin.Log.LogInfo($"[options] listening for {Columns[_mapCol].ToLowerInvariant()} input for {_mapRow.Label}: {text}");
                 if (!started)
                 {
                     StopMapping("Couldn't listen for a key.", warn: true);

@@ -241,7 +241,12 @@ namespace DarkwoodMP
             {
                 with = "with " + string.Join(", ", s.PlayedWith);
             }
-            return $"Slot {s.Id}" + (name != "" ? $": {name}" : "") + $"  -  {Summary(s.Profile)}  -  {with}";
+            string value = "";
+            if (name != "")
+            {
+                value = $": {name}";
+            }
+            return $"Slot {s.Id}" + value + $"  -  {Summary(s.Profile)}  -  {with}";
         }
 
         private string NewGameLine()
@@ -309,7 +314,12 @@ namespace DarkwoodMP
             }
             float pad = 6 * S, arrow = 14 * S;
             Ui.Label(new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height), PixelFont.Fit(text, r.width - 2 * pad - arrow), hover ? MenuSkin.Bright : MenuSkin.Text);
-            Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), _listOpen ? "^" : "v", MenuSkin.Bright, TextAnchor.MiddleCenter);
+            string text2 = "v";
+            if (_listOpen)
+            {
+                text2 = "^";
+            }
+            Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), text2, MenuSkin.Bright, TextAnchor.MiddleCenter);
             if (!_listOpen)
             {
                 return;
@@ -353,7 +363,16 @@ namespace DarkwoodMP
                 ConfirmDialog.Ask("Delete save", $"Delete the save in slot {s.Id} ({Summary(p)})? It can't be undone.", "Delete", () => Delete(s.Id));
             }
             Info(f, "Played", $"{Summary(p)};  last saved {p.timeSaved}");
-            Info(f, "Played with", s.PlayedWith.Count == 0 ? "nobody: single-player" : string.Join(", ", s.PlayedWith));
+            string text;
+            if (s.PlayedWith.Count == 0)
+            {
+                text = "nobody: single-player";
+            }
+            else
+            {
+                text = string.Join(", ", s.PlayedWith);
+            }
+            Info(f, "Played with", text);
             if (!p.isCompatible)
             {
                 Ui.Text(f, $"This save is from an older version of the game ({p.versionText()}). Open it from the game's own profiles screen, which explains what can be done with it.", MenuSkin.Warn);
@@ -396,7 +415,12 @@ namespace DarkwoodMP
                 {
                     int id = s.Id;
                     string label = SaveBook.NameOf(id);
-                    ConfirmDialog.Ask("Overwrite save", $"Start the new game in slot {id}{(label != "" ? $" ({label})" : "")}? Its save ({Summary(s.Profile)}) is deleted when the game starts.", "Overwrite", () => _overwrite = id);
+                    string text = "";
+                    if (label != "")
+                    {
+                        text = $" ({label})";
+                    }
+                    ConfirmDialog.Ask("Overwrite save", $"Start the new game in slot {id}{text}? Its save ({Summary(s.Profile)}) is deleted when the game starts.", "Overwrite", () => _overwrite = id);
                 }
             }
             if (_overwrite > 0)
@@ -488,7 +512,12 @@ namespace DarkwoodMP
                 }
                 if (!steamUp)
                 {
-                    Ui.Text(f, plugin.SteamMissing ? "Steam isn't running (the GOG version, say): Direct only." : "Waiting for Steam...", MenuSkin.Dim);
+                    string text = "Waiting for Steam...";
+                    if (plugin.SteamMissing)
+                    {
+                        text = "Steam isn't running (the GOG version, say): Direct only.";
+                    }
+                    Ui.Text(f, text, MenuSkin.Dim);
                 }
 
                 var n = f.Row(Ui.RowH, 90, 0);
@@ -584,7 +613,12 @@ namespace DarkwoodMP
             {
                 Ui.Label(c[0], PixelFont.Fit(why, c[0].width), MenuSkin.Dim);
             }
-            if (Ui.Button(c[1], _host ? "Start and host" : "Start", why == null))
+            string text = "Start";
+            if (_host)
+            {
+                text = "Start and host";
+            }
+            if (Ui.Button(c[1], text, why == null))
             {
                 Start();
             }
@@ -638,7 +672,17 @@ namespace DarkwoodMP
             if (_choice > 0)
             {
                 var p = Chosen.Profile;
-                Plugin.Log.LogInfo($"[start game] continue slot {p.id} (day {p.day}){(host ? $", then host with {(steam ? "Steam" : "Direct")}" : "")}");
+                string text = "";
+                if (host)
+                {
+                    string text2 = "Direct";
+                    if (steam)
+                    {
+                        text2 = "Steam";
+                    }
+                    text = $", then host with {text2}";
+                }
+                Plugin.Log.LogInfo($"[start game] continue slot {p.id} (day {p.day}){text}");
                 mm.creatingProfile = false;
                 Core.currentProfile = p;
                 Close();

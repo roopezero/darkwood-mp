@@ -92,7 +92,16 @@ namespace DarkwoodMP.World
             var near = Object.FindObjectsOfType<T>().Where(t => t != null && StateDump.Flat(t.transform.position - Centre) < StateDump.DefaultRadius && (ok == null || ok(t))).ToList();
             // That name exactly, else one whose name starts with it.
             var exact = near.Where(t => StateDump.Clean(t.gameObject.name) == name).ToList();
-            return Nearest(exact.Count > 0 ? exact : near.Where(t => StateDump.Clean(t.gameObject.name).StartsWith(name, StringComparison.Ordinal)), at);
+            IEnumerable<T> things;
+            if (exact.Count > 0)
+            {
+                things = exact;
+            }
+            else
+            {
+                things = near.Where(t => StateDump.Clean(t.gameObject.name).StartsWith(name, StringComparison.Ordinal));
+            }
+            return Nearest(things, at);
         }
 
         /// <summary>The Nth nearest to the centre (broken ones counted too, so the numbers don't move).</summary>
@@ -513,11 +522,21 @@ namespace DarkwoodMP.World
             var item = Carried().FirstOrDefault(i => a.Length < 2 || i.type == a[1]);
             if (item == null)
             {
-                r.Fail($"not carrying {(a.Length > 1 ? a[1] : "anything")}");
+                string a2 = "anything";
+                if (a.Length > 1)
+                {
+                    a2 = a[1];
+                }
+                r.Fail($"not carrying {a2}");
                 yield break;
             }
             string type = item.type;
-            int amount = Math.Min(a.Length > 2 ? int.Parse(a[2]) : 1, item.amount);
+            int val1 = 1;
+            if (a.Length > 2)
+            {
+                val1 = int.Parse(a[2]);
+            }
+            int amount = Math.Min(val1, item.amount);
             yield return Walk(inv.transform.position);
             P.openedItemInventory = inv;
             yield return new WaitForSeconds(0.8f); // a client asks what it holds first
@@ -809,7 +828,12 @@ namespace DarkwoodMP.World
             bool held = false;
             yield return DragFor(it, by, 1.5f, h => held = h);
             yield return new WaitForSeconds(3f);
-            r.Info = $"{(held ? "got" : "lost")} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} drag(s) of ours let go of), at rest at {Fmt(it.transform.position)}";
+            string text = "lost";
+            if (held)
+            {
+                text = "got";
+            }
+            r.Info = $"{text} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} drag(s) of ours let go of), at rest at {Fmt(it.transform.position)}";
             if (held == (DragSync.Cancelled > cancelled))
             {
                 r.Fail($"{r.Info}: held to the end and let go of don't agree");
@@ -1339,7 +1363,16 @@ namespace DarkwoodMP.World
             }
             P.hidingInventory = false;
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{what}: {(t == null ? "disarmed (gone)" : t.triggered ? "sprung (the roll failed)" : "still armed")}";
+            string text = "still armed";
+            if (t == null)
+            {
+                text = "disarmed (gone)";
+            }
+            else if (t.triggered)
+            {
+                text = "sprung (the roll failed)";
+            }
+            r.Info = $"{what}: {text}";
             if (t != null && !t.triggered)
             {
                 r.Fail($"{r.Info}: nothing happened");
@@ -1360,7 +1393,16 @@ namespace DarkwoodMP.World
             string what = $"{e.name} {Ref(e)} at {Fmt(e.transform.position)}";
             AsPlayer(() => e.onActivate());
             yield return new WaitForSeconds(2f);
-            r.Info = $"{what}: {(e == null ? "gone" : "activated=" + BreakSync.Activated(e))}";
+            string text;
+            if (e == null)
+            {
+                text = "gone";
+            }
+            else
+            {
+                text = "activated=" + BreakSync.Activated(e);
+            }
+            r.Info = $"{what}: {text}";
             if (e != null && !BreakSync.Activated(e))
             {
                 r.Fail($"{r.Info}: didn't go off");
@@ -1379,7 +1421,12 @@ namespace DarkwoodMP.World
             }
             var e = it.GetComponent<Explodes>();
             bool explosive = e != null;
-            yield return Walk(AwayFrom(it.transform.position, explosive ? Mathf.Max(e.radius + 250f, 500f) : 200f), 40f);
+            float dist = 200f;
+            if (explosive)
+            {
+                dist = Mathf.Max(e.radius + 250f, 500f);
+            }
+            yield return Walk(AwayFrom(it.transform.position, dist), 40f);
             string what = $"{it.name} {Ref(it)} at {Fmt(it.transform.position)}";
             if (it.GetComponent<Burn>() == null)
             {
@@ -1387,7 +1434,21 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(2f);
             bool exploded = explosive && (e == null || BreakSync.Activated(e));
-            r.Info = $"{what}: {(it == null ? "gone" : $"burning={it.GetComponent<Burn>() != null}")}{(explosive ? $" exploded={exploded}" : "")}";
+            string text;
+            if (it == null)
+            {
+                text = "gone";
+            }
+            else
+            {
+                text = $"burning={it.GetComponent<Burn>() != null}";
+            }
+            string text2 = "";
+            if (explosive)
+            {
+                text2 = $" exploded={exploded}";
+            }
+            r.Info = $"{what}: {text}{text2}";
             if (explosive && !exploded)
             {
                 r.Fail($"{r.Info}: lit, but it didn't go off");
@@ -1725,10 +1786,24 @@ namespace DarkwoodMP.World
             P.talkedToNPC = null;
             yield return new WaitForSeconds(1f);
             string refused = MapScenarioIssues.LogLines().Skip(mark).FirstOrDefault(l => l.Contains("refused trade with"));
-            r.Info = $"{npc.name}: bought {boughtType} ({boughtValue}), gave {(earn ? $"nothing, earned {boughtValue} reputation first" : giveText)} ({giveValue}): [{was}] -> [{Contents(npc.inventory)}], reputation {npc.reputation}";
+            string text;
+            if (earn)
+            {
+                text = $"nothing, earned {boughtValue} reputation first";
+            }
+            else
+            {
+                text = giveText;
+            }
+            r.Info = $"{npc.name}: bought {boughtType} ({boughtValue}), gave {text} ({giveValue}): [{was}] -> [{Contents(npc.inventory)}], reputation {npc.reputation}";
             if (ri >= 0)
             {
-                r.Info = (refused != null ? "refused " : "got ") + r.Info;
+                string value = "got ";
+                if (refused != null)
+                {
+                    value = "refused ";
+                }
+                r.Info = value + r.Info;
                 yield break;
             }
             if (refused != null)
@@ -1749,7 +1824,12 @@ namespace DarkwoodMP.World
                 r.Fail("enemies are the host's");
                 yield break;
             }
-            var c = TestWorld.SpawnEnemy(a.Length > 0 ? a[0] : "Dog");
+            string typeValue = "Dog";
+            if (a.Length > 0)
+            {
+                typeValue = a[0];
+            }
+            var c = TestWorld.SpawnEnemy(typeValue);
             yield return new WaitForSeconds(1f);
             if (c != null)
             {

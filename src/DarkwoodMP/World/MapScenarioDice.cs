@@ -114,7 +114,26 @@ namespace DarkwoodMP.World
                             {
                                 random++;
                             }
-                            Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {(g.getClosestToPlayer ? "nearest-to-own-player" : "random")} {g.type} of {(count < 0 ? "?" : count.ToString())} in {(loc != null ? loc.name : "no location")}");
+                            string text = "random";
+                            if (g.getClosestToPlayer)
+                            {
+                                text = "nearest-to-own-player";
+                            }
+                            string toString;
+                            if (count < 0)
+                            {
+                                toString = "?";
+                            }
+                            else
+                            {
+                                toString = count.ToString();
+                            }
+                            string name2 = "no location";
+                            if (loc != null)
+                            {
+                                name2 = loc.name;
+                            }
+                            Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {toString} in {name2}");
                         }
                     }
                 }

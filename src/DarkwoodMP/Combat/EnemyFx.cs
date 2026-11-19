@@ -106,14 +106,24 @@ namespace DarkwoodMP.Combat
                 _inCombat[proxy.Owner] = fight;
                 if (Threat.Debug || WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[enemyfx] {proxy.OwnerName} {(fight ? "is" : "is no longer")} in combat");
+                    string text = "is no longer";
+                    if (fight)
+                    {
+                        text = "is";
+                    }
+                    Plugin.Log.LogInfo($"[enemyfx] {proxy.OwnerName} {text} in combat");
                 }
                 if (proxy.Owner == Sync.PlayerSync.DummyId)
                 {
                     continue;
                 }
                 var w = s.Begin(MsgType.CombatMusic);
-                w.W.Write((byte)(fight ? 1 : 0));
+                int value = 0;
+                if (fight)
+                {
+                    value = 1;
+                }
+                w.W.Write((byte)value);
                 s.SendTo(proxy.Owner, w, Channel.Control, reliable: true);
             }
         }
@@ -136,7 +146,17 @@ namespace DarkwoodMP.Combat
             {
                 me.InCombat = want; // the setter starts or fades out the combat track
             }
-            Plugin.Log.LogInfo($"[enemyfx] combat music {(want ? "on" : "off")} (the host says {(HostSaysInCombat ? "an enemy is after us" : "none is")})");
+            string text = "off";
+            if (want)
+            {
+                text = "on";
+            }
+            string text2 = "none is";
+            if (HostSaysInCombat)
+            {
+                text2 = "an enemy is after us";
+            }
+            Plugin.Log.LogInfo($"[enemyfx] combat music {text} (the host says {text2})");
         }
 
         // ---- effect prefabs -----------------------------------------------------------------------------
@@ -205,7 +225,12 @@ namespace DarkwoodMP.Combat
                     return;
                 }
                 Show(() => c.modifyEmitter(toggle));
-                Plugin.Log.LogInfo($"[enemyfx] {c.name}'s emitter {(toggle == 0 ? "off" : "on")}");
+                string text = "on";
+                if (toggle == 0)
+                {
+                    text = "off";
+                }
+                Plugin.Log.LogInfo($"[enemyfx] {c.name}'s emitter {text}");
                 return;
             }
             string name = r.ReadStr();

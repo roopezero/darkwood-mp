@@ -248,7 +248,22 @@ namespace DarkwoodMP.World
                     string state = "";
                     if (host)
                     {
-                        state = (c.attacking ? "A" : "") + (c.recoveringFromAttack ? "R" : "") + (c.recoveringFromHit || c.gettingHit ? "H" : "");
+                        string value = "";
+                        if (c.attacking)
+                        {
+                            value = "A";
+                        }
+                        string value2 = "";
+                        if (c.recoveringFromAttack)
+                        {
+                            value2 = "R";
+                        }
+                        string value3 = "";
+                        if (c.recoveringFromHit || c.gettingHit)
+                        {
+                            value3 = "H";
+                        }
+                        state = value + value2 + value3;
                         CharBase cb = null;
                         if (c.target != null)
                         {
@@ -302,7 +317,12 @@ namespace DarkwoodMP.World
             try
             {
                 Directory.CreateDirectory(Dir);
-                File.WriteAllLines(FileOf(tag, host ? "host" : "client"), samples.Select(x => FormattableString.Invariant(
+                string role = "client";
+                if (host)
+                {
+                    role = "host";
+                }
+                File.WriteAllLines(FileOf(tag, role), samples.Select(x => FormattableString.Invariant(
                     $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{(x.Playing ? 1 : 0)}\t{x.State}")));
             }
             catch (Exception e)
@@ -339,7 +359,12 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() => c.getHit(3f, P.transform, false, true, false));
             }
-            Plugin.Log.LogInfo($"[sv] hit {c?.name} to draw it to the host; its target now {(c != null && c.target != null ? c.target.name : "none")}");
+            string name2 = "none";
+            if (c != null && c.target != null)
+            {
+                name2 = c.target.name;
+            }
+            Plugin.Log.LogInfo($"[sv] hit {c?.name} to draw it to the host; its target now {name2}");
             yield return new WaitForSeconds(secs * 0.4f);
             yield return Walk(home, 60f, detours: 0);
         }
@@ -362,7 +387,17 @@ namespace DarkwoodMP.World
                     var playing = run.Where(x => x.Playing).ToList();
                     int sprites = playing.Select(x => x.Sprite).Distinct().Count();
                     int frames = run.Select(x => x.Frame).Distinct().Count();
-                    seq.Add(FormattableString.Invariant($"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{(playing.Count == 0 ? " held" : "")}{(run[0].State != "" ? " " + run[0].State : "")})"));
+                    string text = "";
+                    if (playing.Count == 0)
+                    {
+                        text = " held";
+                    }
+                    string text2 = "";
+                    if (run[0].State != "")
+                    {
+                        text2 = " " + run[0].State;
+                    }
+                    seq.Add(FormattableString.Invariant($"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{text}{text2})"));
                     double playDur = 0;
                     if (playing.Count > 1)
                     {

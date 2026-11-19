@@ -314,7 +314,12 @@ namespace DarkwoodMP.World
             var gs = Find(good);
             var ns = Find(negative);
             Give(gs, ns);
-            Plugin.Log.LogInfo($"[skills] learned {good}{(ns != null ? " with " + negative : "")}: {Points(p)} points left");
+            string text = "";
+            if (ns != null)
+            {
+                text = " with " + negative;
+            }
+            Plugin.Log.LogInfo($"[skills] learned {good}{text}: {Points(p)} points left");
             if (NetEnemies.ClientMode && WorldShare.InWorld && S != null && S.IsClient)
             {
                 _waiting = true;

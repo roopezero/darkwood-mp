@@ -190,12 +190,38 @@ namespace DarkwoodMP.World
             bool earlier = rec != null && rec.Chapter != 0 && chapter != 0 && rec.Chapter != chapter;
             bool dead = rec != null && rec.Dead;
             // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new, 3: yours, beside the host, 4: yours, dead for good
-            w.W.Write((byte)(dead ? 4 : earlier ? 3 : rec != null ? 1 : copy ? 2 : 0));
+            int value = 0;
+            if (dead)
+            {
+                value = 4;
+            }
+            else if (earlier)
+            {
+                value = 3;
+            }
+            else if (rec != null)
+            {
+                value = 1;
+            }
+            else if (copy)
+            {
+                value = 2;
+            }
+            w.W.Write((byte)value);
             w.WriteBigStr(rec?.Player ?? "");
             w.WriteBigStr(rec?.Inv ?? "");
             w.WriteBigStr(rec?.Hotbar ?? "");
             // Where the host stands: the joiner's game finds a free spot beside it (Sync.SpawnSpot), off the host.
-            w.Write(host != null ? host.transform.position : Vector3.zero);
+            Vector3 v;
+            if (host != null)
+            {
+                v = host.transform.position;
+            }
+            else
+            {
+                v = Vector3.zero;
+            }
+            w.Write(v);
             _session.SendTo(from, w, Channel.Control, reliable: true);
             Progression.HostSendTo(from); // after the character: the shared essence and level (World.Progression)
             DragSync.Instance?.JoinerInWorld(from); // loose things that moved since the snapshot it loaded
@@ -540,11 +566,37 @@ namespace DarkwoodMP.World
                 {
                     p.transform.position = spawn;
                 }
-                PlaceFree(p, spawn == Vector3.zero ? (Vector3?)null : spawn);
+                Vector3? host;
+                if (spawn == Vector3.zero)
+                {
+                    host = (Vector3?)null;
+                }
+                else
+                {
+                    host = spawn;
+                }
+                PlaceFree(p, host);
                 p.refreshRecipes();
                 Reequip(p);
                 Progression.AfterCharacter(p);
-                Plugin.Log.LogInfo(prologue ? "A new character for you in the host's prologue" : kind == 1 ? "Your character in this world is back" : kind == 3 ? "Your character from the last chapter is back, beside the host" : kind == 0 ? "A new character for you in this world" : "You start as a copy of the host's character");
+                string data = "You start as a copy of the host's character";
+                if (prologue)
+                {
+                    data = "A new character for you in the host's prologue";
+                }
+                else if (kind == 1)
+                {
+                    data = "Your character in this world is back";
+                }
+                else if (kind == 3)
+                {
+                    data = "Your character from the last chapter is back, beside the host";
+                }
+                else if (kind == 0)
+                {
+                    data = "A new character for you in this world";
+                }
+                Plugin.Log.LogInfo(data);
             }
             catch (Exception e)
             {
@@ -594,7 +646,12 @@ namespace DarkwoodMP.World
         internal static void PlaceFree(Player p, Vector3? host)
         {
             var want = p.transform.position;
-            var at = Sync.SpawnSpot.Find(p, want, host.HasValue ? new[] { host.Value } : null);
+            Vector3[] taken = null;
+            if (host.HasValue)
+            {
+                taken = new[] { host.Value };
+            }
+            var at = Sync.SpawnSpot.Find(p, want, taken);
             if ((at - want).sqrMagnitude < 1f)
             {
                 Plugin.Log.LogInfo($"[spawn] placed at {want}: free");

@@ -208,7 +208,12 @@ namespace DarkwoodMP
                     break;
                 case "wait":
                     _busy = true;
-                    _plugin.StartCoroutine(Wait(words.Length > 1 ? words[1] : "", words.Length > 2 ? MapScenario.F(words[2]) : 60f,
+                    string what = "";
+                    if (words.Length > 1)
+                    {
+                        what = words[1];
+                    }
+                    _plugin.StartCoroutine(Wait(what, words.Length > 2 ? MapScenario.F(words[2]) : 60f,
                         words.Length > 3 && int.TryParse(words[3], out int n) ? n : 1, reply));
                     break;
                 case "quit":
@@ -244,7 +249,12 @@ namespace DarkwoodMP
                 yield return null;
             }
             _busy = false;
-            reply.WriteLine(done() ? "ok" : "fail timeout");
+            string value = "fail timeout";
+            if (done())
+            {
+                value = "ok";
+            }
+            reply.WriteLine(value);
         }
 
         /// <summary>Host: how many players have joined and are out of loading (their PlayerState no longer comes from
@@ -322,7 +332,12 @@ namespace DarkwoodMP
             Plugin.Instance.SetPanel(false);
             MapScenarioIssues.MarkLogStart(); // the next test's log scans start here
             _busy = false;
-            reply.WriteLine(WorldShare.MainMenuReady() ? "ready" : "error: no main menu after 90 s");
+            string value = "error: no main menu after 90 s";
+            if (WorldShare.MainMenuReady())
+            {
+                value = "ready";
+            }
+            reply.WriteLine(value);
         }
 
         /// <summary>Called from Plugin.OnGUI: the test's title along the top of the screen.</summary>

@@ -251,7 +251,12 @@ namespace DarkwoodMP.World
 
         private static void DropWindow(Player p, Inventory inv)
         {
-            Plugin.Log.LogInfo($"[containers] an open container was destroyed with its window still up: removed the window{(inv.thisUI != null ? "" : " (none left)")}");
+            string text = " (none left)";
+            if (inv.thisUI != null)
+            {
+                text = "";
+            }
+            Plugin.Log.LogInfo($"[containers] an open container was destroyed with its window still up: removed the window{text}");
             try
             {
                 if (inv.slots != null)
@@ -516,7 +521,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.ContainerLock);
             r.Write(w);
-            w.W.Write((byte)(open ? 1 : 0));
+            int value = 0;
+            if (open)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             _session.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -937,7 +947,12 @@ namespace DarkwoodMP.World
                     });
                     continue;
                 }
-                SendSpawn(p.Id, p.Prefab, p.Go.transform.position, p.Go.transform.rotation, contents, p.Placed, drop != null ? drop.expAmount : 0, except: 0);
+                int exp = 0;
+                if (drop != null)
+                {
+                    exp = drop.expAmount;
+                }
+                SendSpawn(p.Id, p.Prefab, p.Go.transform.position, p.Go.transform.rotation, contents, p.Placed, exp, except: 0);
                 if (drop != null && drop.additionalMapMarker != null)
                 {
                     SendBagMarker(p.Id, drop.additionalMapMarker.transform.position, except: 0);
@@ -979,7 +994,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + (drop != null ? drop.name : "no such bag here"));
+                string name2 = "no such bag here";
+                if (drop != null)
+                {
+                    name2 = drop.name;
+                }
+                Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + name2);
             }
             if (drop == null || drop.additionalMapMarker != null)
             {
@@ -1010,7 +1030,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.ObjSpawn);
             w.W.Write(id);
-            w.W.Write((byte)(placed ? 1 : 0));
+            int value = 0;
+            if (placed)
+            {
+                value = 1;
+            }
+            w.W.Write((byte)value);
             w.WriteStr(prefab);
             w.Write(pos);
             w.W.Write(rot.x);

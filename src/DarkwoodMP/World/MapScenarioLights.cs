@@ -64,8 +64,27 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             var beam = OwnBeam(p);
-            r.Info = $"holding {(InvItemClass.isNull(p.currentItem) ? "nothing" : p.currentItem.type)}; our beam {(beam != null && beam.gameObject.activeSelf ? $"on, radius {beam.LightRadius:0}" : "off")}, " +
-                     $"held light {(p.itemLightEmitter != null ? "on" : "none")}";
+            string typeValue;
+            if (InvItemClass.isNull(p.currentItem))
+            {
+                typeValue = "nothing";
+            }
+            else
+            {
+                typeValue = p.currentItem.type;
+            }
+            string text = "off";
+            if (beam != null && beam.gameObject.activeSelf)
+            {
+                text = $"on, radius {beam.LightRadius:0}";
+            }
+            string text2 = "none";
+            if (p.itemLightEmitter != null)
+            {
+                text2 = "on";
+            }
+            r.Info = $"holding {typeValue}; our beam {text}, " +
+                     $"held light {text2}";
         }
 
         /// <summary>
@@ -120,7 +139,16 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.3f);
             }
             var view = ViewSource();
-            r.Info = $"{what}: puppets {(seen == "" ? "none" : seen)}; {view}";
+            string text;
+            if (seen == "")
+            {
+                text = "none";
+            }
+            else
+            {
+                text = seen;
+            }
+            r.Info = $"{what}: puppets {text}; {view}";
             if (!ok)
             {
                 r.Fail($"no puppet shows {what} as wanted: {r.Info}");
@@ -161,9 +189,23 @@ namespace DarkwoodMP.World
             if (x.Beam != null && x.Beam.activeSelf)
             {
                 var l = x.Beam.GetComponent<Light2D>();
-                parts.Add($"beam r{(l != null ? l.LightRadius : 0f):0} (sent {x.Last?.BeamRadius ?? 0f:0}) grey {(l != null ? l.LightColor.r : 0f):0.00} drawn {Drawn(l)}");
+                float lightRadius = 0f;
+                if (l != null)
+                {
+                    lightRadius = l.LightRadius;
+                }
+                parts.Add($"beam r{lightRadius:0} (sent {x.Last?.BeamRadius ?? 0f:0}) grey {(l != null ? l.LightColor.r : 0f):0.00} drawn {Drawn(l)}");
             }
-            return $"{x.Name}: {(parts.Count == 0 ? "no lights" : string.Join(", ", parts))}";
+            string joinValue;
+            if (parts.Count == 0)
+            {
+                joinValue = "no lights";
+            }
+            else
+            {
+                joinValue = string.Join(", ", parts);
+            }
+            return $"{x.Name}: {joinValue}";
         }
 
         /// <summary>Lights on our player or a puppet whose mesh another light also has ("" if none).</summary>
@@ -230,9 +272,28 @@ namespace DarkwoodMP.World
                 bool own = l._mesh == null || (f != null && f.sharedMesh == l._mesh);
                 ours &= onUs && own;
                 float d = StateDump.Flat(l.transform.position - p.transform.position);
-                parts.Add($"{name} {(onUs ? "on our player" : "on " + Sync.ViewWatch.Path(l.transform))} {d:0} from it, mesh {(own ? "its own" : "not its own")}");
+                string text;
+                if (onUs)
+                {
+                    text = "on our player";
+                }
+                else
+                {
+                    text = "on " + Sync.ViewWatch.Path(l.transform);
+                }
+                string text2 = "not its own";
+                if (own)
+                {
+                    text2 = "its own";
+                }
+                parts.Add($"{name} {text} {d:0} from it, mesh {text2}");
             }
-            return $"view: {(ours ? "ours" : "NOT ours")} ({string.Join(", ", parts)})";
+            string text3 = "NOT ours";
+            if (ours)
+            {
+                text3 = "ours";
+            }
+            return $"view: {text3} ({string.Join(", ", parts)})";
         }
     }
 }
