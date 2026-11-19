@@ -45,6 +45,7 @@ network flow.
 | `src/DarkwoodMP.MapTests` | net472 | the plugin | the in-game map test steps (`MapScenario*`); deployed to the test game folders only, never in the players' zips |
 | `src/DarkwoodMP.Analyzers` | netstandard2.0 | Roslyn | the build checks for the formatting rules below |
 | `tests/DarkwoodMP.Core.Tests` | net8.0 | Core only | unit tests (xUnit, Shouldly) |
+| `tests/DarkwoodMP.Analyzers.Tests` | net8.0 | the analyzer, Roslyn | unit tests of the formatting rules, each run on small pieces of code (xUnit, Shouldly) |
 
 The core can't name a Unity or game type: it doesn't reference them, so that's
 a compile error, not a rule to remember. `PortMapper`, `ServerInfo`,
@@ -350,6 +351,37 @@ sealed class PlayerMovement
   `if (x) { return; }` is written over four lines.
 - **Braces on their own line** (the usual C# style), not at the end of the
   line as in Go.
+- **A blank line after a block.** A statement, member or accessor that holds
+  a `{ }` pair spread over more than one line, anywhere in it (a body, an
+  accessor list, an initializer, a lambda's body, a `switch`), is followed by
+  a blank line, unless the next token is a `}` or the file ends:
+  ```csharp
+  AsPlayer(() =>
+  {
+      door.Open();
+  });
+
+  Plugin.Log.LogInfo("opened");
+  ```
+  - So `});`, `};` and a `})` with `.ToList();` on the next line end
+    statements that need one, a `case`'s `{ }` block needs one before the
+    next label, and a multi-line `get` before its `set`. A `}` in the middle
+    of a statement that goes on, as in `}, "Discard", () =>`, isn't checked.
+    A `{ }` on one line (`{ get; set; }`, `new Door { Open = true }`)
+    doesn't count, and neither do the braces of an interpolation in
+    `$"..."`.
+  - An `if`/`else` chain, a `try` and a `do`/`while` are one statement each,
+    so the blank line goes after the last `}` (or after `while (...);`),
+    never before `else`, `catch`, `finally` or `while`.
+  - A statement is one in a block or a `case`, local functions included,
+    inside lambdas and accessors too. A member is one in a type's or a
+    namespace's body, and an accessor is a `get`, `set`, `init`, `add` or
+    `remove`. A file's own types and namespaces are members of the global
+    namespace, so they count, and so do top-level statements.
+  - A comment or a directive line (`#region`, `#endif`, `#pragma`) isn't a
+    blank line: the blank line goes before it. A statement that starts on
+    the line where the one before ends, as in `} Run();`, is left to IDE0055
+    and DW0002.
 - **`=>` is allowed**, for lambdas (`list.RemoveAll(x => x.Until < now)`)
   and for expression-bodied members
   (`public bool Refused => Reason != Refusal.None;`). It isn't a block, so
@@ -365,14 +397,18 @@ sealed class PlayerMovement
 
 The build enforces these. `.editorconfig` makes a missing brace and a brace
 at the end of a line errors (with `EnforceCodeStyleInBuild`), and
-`src/DarkwoodMP.Analyzers` fails the build on a one-line block, a line over
-80 columns, `?:`, `??`, `??=` and `?.`. They are errors in the core, the
-tests and the map tests. In the plugin they are warnings until one formatting
-pass has been over all of its code. When that pass is finished and no finding
-is left, the plugin's warning section in `.editorconfig` is deleted, so the
-rules are errors everywhere. If only some folders are clean at that point,
-they are listed in the last section of `.editorconfig`, the one that makes
-those folders errors, until the rest follow.
+`src/DarkwoodMP.Analyzers` fails the build on a one-line block, a missing
+blank line after a block, a line over 80 columns, `?:`, `??`, `??=` and `?.`
+(rules DW0001 to DW0007). They are errors in the core, the tests and the map
+tests. In the plugin they are warnings until one formatting pass has been
+over all of its code. A whitespace stage of the codemod that runs that pass,
+still to be written, is to add the plugin's missing blank lines. When that
+pass is finished and no finding is left, the plugin's warning section in
+`.editorconfig` is deleted, so the rules are errors everywhere. If only some
+folders are clean at that point, they are listed in the last section of
+`.editorconfig`, the one that makes those folders errors, until the rest
+follow. `tests/DarkwoodMP.Analyzers.Tests` runs each rule on small pieces of
+code, with a case that fires and one that stays quiet.
 
 ## Unit tests
 
@@ -423,6 +459,10 @@ SessionTests+Hello.Refuses_an_old_protocol
 - **One test class per class under test**, in the mirrored folder
   (`tests/DarkwoodMP.Core.Tests/World/Doors/DoorRulesTests.cs`), with one
   nested class per method it tests.
+- **The analyzer's tests** (`tests/DarkwoodMP.Analyzers.Tests`) follow the
+  same rules, except that `FormattingAnalyzerTests` has one nested class per
+  rule (`FormattingAnalyzerTests+BlankLine`): each test runs the whole
+  analyzer on a piece of code and checks one rule's findings.
 - **A test's name starts with a verb** (`Refuses_...`, `Allows_...`,
   `Puts_back_...`) and says the behaviour, not the inputs:
   `Refuses_a_locked_door`, not `Locked_true_returns_false`.
@@ -446,5 +486,5 @@ What's tested:
 
 What isn't: patches, the shell's `FactsOf`, physics, culling and scripted
 events. Those need the game, and the in-game tests (scripted Python peers and
-the map test) cover them. `tools/run-test.sh` runs the unit tests first and
-stops if any fail, before it starts the game.
+the map test) cover them. `tools/run-test.sh` runs the core's unit tests
+first and stops if any fail, before it starts the game.

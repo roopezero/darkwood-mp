@@ -25,9 +25,10 @@ src/DarkwoodMP/
                                 (doors, windows, traps, switches, NPC deaths), Containers (contents, locks, drops, loot),
                                 Characters (per-player characters), FlagsSync (story state), DeathPatches, WorldTest, ObjRef
 src/DarkwoodMP.Core/            rules and small types with no Unity or game references (netstandard2.0); ships as a second DLL
-src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0006
+src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0007
 src/GameReferences.props        the game's paths and DLL references
 tests/DarkwoodMP.Core.Tests/    unit tests of the core (net8.0, xUnit, Shouldly)
+tests/DarkwoodMP.Analyzers.Tests/ unit tests of the formatting rules on small pieces of code (net8.0, xUnit, Shouldly)
 Directory.Build.props           the mod's version (<Version>), language settings, the analyzer reference
 .editorconfig                   style rules: errors in the core and the tests, warnings in the plugin until its code is formatted
 tools/run-test.sh, tools/tests/ in-game tests with scripted Python peers
@@ -51,6 +52,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 ## Tests
 
 - Unit tests: `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`. They need neither the game nor a display, and `tools/run-test.sh` runs them first and stops if one fails.
+- Analyzer tests: `dotnet test tests/DarkwoodMP.Analyzers.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`, after any change to `src/DarkwoodMP.Analyzers`. `tools/run-test.sh` doesn't run them.
 - One test or battery: `tools/run-test.sh NAME...` (e.g. `tools/run-test.sh host-world`, `tools/run-test.sh map:ui`; `map:NAME` runs `tools/tests/map_scenario_NAME.py` alone in a fresh test world). `tools/run-test.sh --list` lists them all; `--plan NAME` shows what would run.
 - A custom subset of map steps: `MAP_SCENARIO=module tools/run-test.sh map` runs `tools/tests/module.py`.
 - The full suite (`tools/run-test.sh full` = `all` + `map`) takes well over an hour: run it once at the end, in the background, not after each change.
@@ -75,7 +77,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - **Game quirks:** the game has its own global `RandomNumberGenerator` and `Button` types that shadow .NET's (qualify them). Darkwood counts a new day at dawn, not midnight. `Player` is a 9000-line singleton, so don't instantiate it.
 - **Comments and docs:** plain, concrete sentences that say what happens and why; no hype.
 - **Naming and size (`docs/ARCHITECTURE.md`):** short real words for variables and parameters (single letters only in short scopes); the type carries the unit (`Vec2`, `Seconds`) and the class says whose; say which version of a value it is (`Reported`, `Accepted`, never `Good`); at most three parameters, more become a facts struct; no `bool` that switches behaviour (split the method); a call that needs named arguments means the method should change; `PascalCase` public members, `_camelCase` private fields; files about 600 lines at most, one main type each.
-- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in Core, tests and map tests; warnings in the plugin until the formatting pass has been over its code.
+- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); a blank line after a statement, member or accessor that holds a `{ }` pair spread over lines, anywhere in it (so after `});`, `};` and `}).Max();` too, but a `{ }` on one line doesn't count), unless a `}` or the end of the file comes next; a comment or directive line isn't blank, so the blank line goes before it; at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in Core, tests and map tests; warnings in the plugin until the formatting pass has been over its code.
 
 ## Docs
 
