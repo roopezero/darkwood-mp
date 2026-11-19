@@ -27,13 +27,21 @@ static class KnownPure
     /// Single methods of other types that only read.
     static readonly HashSet<string> PureMethods = new HashSet<string>
     {
-        "object.ReferenceEquals", "object.Equals", "object.GetType",
+        "System.Object.ReferenceEquals", "System.Object.Equals",
+        "System.Object.GetType",
         "UnityEngine.Object.ReferenceEquals",
         "UnityEngine.Component.GetComponent",
         "UnityEngine.Component.CompareTag",
         "UnityEngine.GameObject.GetComponent",
         "UnityEngine.GameObject.CompareTag",
     };
+
+    /// A type's name as the lists above write it: "System.String", where
+    /// ToDisplayString() would say "string".
+    static readonly SymbolDisplayFormat FullName = new SymbolDisplayFormat(
+        typeQualificationStyle:
+            SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+        genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters);
 
     public static bool IsPureCall(IMethodSymbol method)
     {
@@ -42,7 +50,7 @@ static class KnownPure
         {
             return false;
         }
-        var original = type.OriginalDefinition.ToDisplayString();
+        var original = type.OriginalDefinition.ToDisplayString(FullName);
         if (PureTypes.Contains(original))
         {
             return true;

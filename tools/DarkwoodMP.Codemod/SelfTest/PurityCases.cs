@@ -70,6 +70,11 @@ static class PurityCases
         ("F(_n, c ? (local = 1) : 0);", Purity.ReadEarlier),
         ("F(1, c ? throw new Exception() : 3);", Ok),
         ("F(Bump(), c ? throw new Exception() : 3);", Purity.ReadEarlier),
+        // string, int and bool are System.String, System.Int32 and
+        // System.Boolean: their methods only read.
+        ("F(_n, c ? string.Concat(\"a\", \"b\").Length : 0);", Ok),
+        ("F(_n, c ? int.Parse(\"1\") : 0);", Ok),
+        ("F(_n, c ? bool.Parse(\"true\").GetHashCode() : 0);", Ok),
         // Asked about the loop or the if around it, the site is in a statement
         // of its own, which runs once per element or only sometimes.
         ("foreach (var i in _list)\n{\nlocal += c ? Bump() : 0;\n}",
