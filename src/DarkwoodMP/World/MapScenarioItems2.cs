@@ -230,7 +230,11 @@ namespace DarkwoodMP.World
         private static void GiveBag(string type, int n)
         {
             var p = P;
-            var slot = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? p.Inventory.slots.Last();
+            InvSlot slot = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+            if (slot == null)
+            {
+                slot = p.Inventory.slots.Last();
+            }
             slot.inventory = p.Inventory;
             if (!InvItemClass.isNull(slot.invItem))
             {
@@ -1101,7 +1105,12 @@ namespace DarkwoodMP.World
             if (on && slot == null)
             {
                 // A free slot, else the last one not in hand (its item put back when the lantern comes off).
-                slot = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected) ?? p.Hotbar.slots.LastOrDefault(s => !s.selected);
+                InvSlot slot2 = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected);
+                if (slot2 == null)
+                {
+                    slot2 = p.Hotbar.slots.LastOrDefault(s => !s.selected);
+                }
+                slot = slot2;
                 if (slot == null)
                 {
                     r.Fail("no hotbar slot");
@@ -1175,7 +1184,15 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    pos = rp?.Last?.Position ?? Vector3.zero;
+                    Vector3? position = rp?.Last?.Position;
+                    if (position.HasValue)
+                    {
+                        pos = position.Value;
+                    }
+                    else
+                    {
+                        pos = Vector3.zero;
+                    }
                 }
                 inLight = rp != null && Core.isInLight(pos, mustBeWalkable: false);
                 if ((shown == want && inLight == want) || Time.realtimeSinceStartup > until)
@@ -1184,7 +1201,21 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.3f);
             }
-            r.Info = $"{rp?.Name ?? "nobody"}: lantern light on their puppet {shown} (radius {rp?.LanternShown ?? 0f:0}), their {(proxy != null ? "stand-in" : "puppet")} in light {inLight}";
+            string name = null;
+            if (rp != null)
+            {
+                name = rp.Name;
+            }
+            if (name == null)
+            {
+                name = "nobody";
+            }
+            float lanternShown = 0f;
+            if (rp != null)
+            {
+                lanternShown = rp.LanternShown;
+            }
+            r.Info = $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {(proxy != null ? "stand-in" : "puppet")} in light {inLight}";
             if (shown != want || inLight != want)
             {
                 r.Fail(r.Info);

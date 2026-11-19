@@ -145,7 +145,15 @@ namespace DarkwoodMP.World
         {
             if (Together && WorldLocation(l))
             {
-                var ran = part ?? ScriptedEvents.Part.All;
+                ScriptedEvents.Part ran;
+                if (part.HasValue)
+                {
+                    ran = part.Value;
+                }
+                else
+                {
+                    ran = ScriptedEvents.Part.All;
+                }
                 string kind = "exit";
                 if (enter)
                 {

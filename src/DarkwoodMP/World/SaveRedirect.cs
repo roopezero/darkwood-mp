@@ -58,7 +58,11 @@ namespace DarkwoodMP.World
 
         private static bool Prefix(ref string __result)
         {
-            string dir = _temporary ?? Dir;
+            string dir = _temporary;
+            if (dir == null)
+            {
+                dir = Dir;
+            }
             if (dir == null)
             {
                 return true;

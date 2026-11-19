@@ -502,7 +502,12 @@ namespace DarkwoodMP.World
                 && !i.name.StartsWith("DroppedItem") && i.slots.Any(Has) && (locked || !(i.GetComponentInParent<Locked>() is Locked l && l.locked)) && i != p.Inventory && i != p.Hotbar && !i.transform.IsChildOf(p.transform)), Centre);
             if (inv == null)
             {
-                r.Fail($"no container with {type ?? "anything"} in it");
+                string type2 = type;
+                if (type2 == null)
+                {
+                    type2 = "anything";
+                }
+                r.Fail($"no container with {type2} in it");
                 yield break;
             }
             yield return Walk(inv.transform.position);

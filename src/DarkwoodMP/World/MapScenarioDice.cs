@@ -96,7 +96,13 @@ namespace DarkwoodMP.World
                             {
                                 try
                                 {
-                                    count = loc.getObjects(g)?.Count ?? 0;
+                                    List<GameObject> objects = loc.getObjects(g);
+                                    int count2 = 0;
+                                    if (objects != null)
+                                    {
+                                        count2 = objects.Count;
+                                    }
+                                    count = count2;
                                 }
                                 catch
                                 {

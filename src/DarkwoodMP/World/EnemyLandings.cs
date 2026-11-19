@@ -648,7 +648,12 @@ namespace DarkwoodMP.World
                       && WorldActions.Sharing && NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(__instance, out EnemyLandings.SensorThrowingBy);
             if (__state)
             {
-                EnemyLandings.SensorThrowing = sensorType.name ?? "";
+                string sensorThrowing = sensorType.name;
+                if (sensorThrowing == null)
+                {
+                    sensorThrowing = "";
+                }
+                EnemyLandings.SensorThrowing = sensorThrowing;
                 EnemyLandings.SensorThrown.Clear();
             }
         }

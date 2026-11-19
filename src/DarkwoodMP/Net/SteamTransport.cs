@@ -308,7 +308,11 @@ namespace DarkwoodMP.Net
                 }
                 if (q.Count == 0)
                 {
-                    (done ??= new List<CSteamID>()).Add(kv.Key);
+                    if (done == null)
+                    {
+                        done = new List<CSteamID>();
+                    }
+                    done.Add(kv.Key);
                 }
             }
             if (done != null)

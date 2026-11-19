@@ -106,7 +106,11 @@ namespace DarkwoodMP.Sync
             string want = "";
             if (_last.Alive && !_last.Spectating)
             {
-                want = _last.HeldLight ?? "";
+                want = _last.HeldLight;
+                if (want == null)
+                {
+                    want = "";
+                }
             }
             if (want != _heldShown || (want != "" && _heldLight == null))
             {

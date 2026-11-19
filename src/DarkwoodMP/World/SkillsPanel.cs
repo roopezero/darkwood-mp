@@ -258,7 +258,15 @@ namespace DarkwoodMP.World
             // Room for the longest description, so the window keeps its size whichever skill is shown.
             MeasureDetails(tiers, f.Width);
             float detailTop = f.Y;
-            string show = _hover ?? _good ?? _negative;
+            string show = _hover;
+            if (show == null)
+            {
+                show = _good;
+            }
+            if (show == null)
+            {
+                show = _negative;
+            }
             if (show != null)
             {
                 SkillTree.TierOf(show, out bool neg);
@@ -270,11 +278,19 @@ namespace DarkwoodMP.World
                 }
                 else if (neg)
                 {
-                    state = SkillTree.CantTakeNegative(level, chosen, show) ?? "Taken with the first skill of its tier";
+                    state = SkillTree.CantTakeNegative(level, chosen, show);
+                    if (state == null)
+                    {
+                        state = "Taken with the first skill of its tier";
+                    }
                 }
                 else
                 {
-                    state = SkillTree.CantTake(level, chosen, show) ?? (SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned");
+                    state = SkillTree.CantTake(level, chosen, show);
+                    if (state == null)
+                    {
+                        state = SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned";
+                    }
                 }
                 Ui.Label(f, Capital(state), MenuSkin.Dim);
                 Ui.Text(f, SkillDesc(show));
@@ -629,7 +645,11 @@ namespace DarkwoodMP.World
             {
                 s = fallback;
             }
-            s = Clean(s ?? fallback);
+            if (s == null)
+            {
+                s = fallback;
+            }
+            s = Clean(s);
             cache[key] = s;
             return s;
         }
@@ -768,7 +788,12 @@ namespace DarkwoodMP.World
                     if (Win.Rect.size != win.size || Win.TestScrolls != scrolls || Mathf.Abs(Win.TestContentHeight - content) > 0.5f || fc != firstCell)
                     {
                         bad++;
-                        Plugin.Log.LogInfo($"[skills] FAIL hovering {sk} ({_hover ?? "nothing"}): window {Win.Rect.width}x{Win.Rect.height}, scrolls {Win.TestScrolls}, content {Win.TestContentHeight}, first cell {fc} (was {firstCell})");
+                        string hover = _hover;
+                        if (hover == null)
+                        {
+                            hover = "nothing";
+                        }
+                        Plugin.Log.LogInfo($"[skills] FAIL hovering {sk} ({hover}): window {Win.Rect.width}x{Win.Rect.height}, scrolls {Win.TestScrolls}, content {Win.TestContentHeight}, first cell {fc} (was {firstCell})");
                     }
                 }
             }
@@ -852,7 +877,22 @@ namespace DarkwoodMP.World
                     {
                         text = "+" + choice[1];
                     }
-                    fails.Add($"choice {n} ({choice[0]}{text}) not learned: chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
+                    string good = _good;
+                    if (good == null)
+                    {
+                        good = "nothing";
+                    }
+                    string negative = _negative;
+                    if (negative == null)
+                    {
+                        negative = "nothing";
+                    }
+                    string message = _message;
+                    if (message == null)
+                    {
+                        message = "none";
+                    }
+                    fails.Add($"choice {n} ({choice[0]}{text}) not learned: chosen {good} with {negative}, message {message}");
                     break;
                 }
             }

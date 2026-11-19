@@ -187,7 +187,11 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            string sound = ex.explodeSound ?? "";
+            string sound = ex.explodeSound;
+            if (sound == null)
+            {
+                sound = "";
+            }
             string fx = "";
             if (ex.explosionPrefab != null)
             {

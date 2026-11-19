@@ -269,7 +269,12 @@ namespace DarkwoodMP.World
                 flags |= 4;
             }
             w.W.Write((byte)flags);
-            w.WriteStr(str ?? "");
+            string str2 = str;
+            if (str2 == null)
+            {
+                str2 = "";
+            }
+            w.WriteStr(str2);
         }
 
         private static void OnAction(ulong from, PacketReader r)
@@ -1105,7 +1110,11 @@ namespace DarkwoodMP.World
                 string s = "";
                 if (l != null)
                 {
-                    s = l.keyType ?? "";
+                    s = l.keyType;
+                    if (s == null)
+                    {
+                        s = "";
+                    }
                 }
                 w.WriteStr(s);
             }

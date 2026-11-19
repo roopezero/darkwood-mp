@@ -278,7 +278,11 @@ namespace DarkwoodMP.World
                 var p = kv.Value;
                 if (p.Body == null || p.Item == null)
                 {
-                    (gone ??= new List<Rigidbody>()).Add(kv.Key);
+                    if (gone == null)
+                    {
+                        gone = new List<Rigidbody>();
+                    }
+                    gone.Add(kv.Key);
                     continue;
                 }
                 var t = p.Item.transform;
@@ -1128,7 +1132,11 @@ namespace DarkwoodMP.World
             {
                 if (Stale(kv.Value))
                 {
-                    (stale ??= new List<string>()).Add(kv.Key);
+                    if (stale == null)
+                    {
+                        stale = new List<string>();
+                    }
+                    stale.Add(kv.Key);
                 }
             }
             if (stale == null)
@@ -1159,7 +1167,11 @@ namespace DarkwoodMP.World
             {
                 if (kv.Value.Id == who)
                 {
-                    (theirs ??= new List<string>()).Add(kv.Key);
+                    if (theirs == null)
+                    {
+                        theirs = new List<string>();
+                    }
+                    theirs.Add(kv.Key);
                 }
             }
             if (theirs != null)
@@ -1233,7 +1245,11 @@ namespace DarkwoodMP.World
                 var m = kv.Value;
                 if (kv.Key == null || m.T == null)
                 {
-                    (done ??= new List<GameObject>()).Add(kv.Key);
+                    if (done == null)
+                    {
+                        done = new List<GameObject>();
+                    }
+                    done.Add(kv.Key);
                     continue;
                 }
                 bool stale = Time.unscaledTime - m.Heard > StaleAfter;
@@ -1254,7 +1270,11 @@ namespace DarkwoodMP.World
                         Release(m);
                         Rebase(kv.Key);
                         Recell(kv.Key);
-                        (done ??= new List<GameObject>()).Add(kv.Key);
+                        if (done == null)
+                        {
+                            done = new List<GameObject>();
+                        }
+                        done.Add(kv.Key);
                     }
                     continue;
                 }
@@ -1303,7 +1323,16 @@ namespace DarkwoodMP.World
             }
             try
             {
-                var type = old.getCullable(go)?.type ?? WorldGrid.Cullable.Type.normal;
+                WorldGrid.Cullable cullable = old.getCullable(go);
+                WorldGrid.Cullable.Type type;
+                if (cullable != null)
+                {
+                    type = cullable.type;
+                }
+                else
+                {
+                    type = WorldGrid.Cullable.Type.normal;
+                }
                 grid.registerToNode(go, type);
                 var now = co.node;
                 var cul = now?.getCullable(go);

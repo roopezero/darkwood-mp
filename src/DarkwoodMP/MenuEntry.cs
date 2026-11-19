@@ -205,7 +205,16 @@ namespace DarkwoodMP
             {
                 return;
             }
-            string sprite = pic.CurrentSprite?.name ?? "";
+            tk2dSpriteDefinition currentSprite = pic.CurrentSprite;
+            string sprite = null;
+            if (currentSprite != null)
+            {
+                sprite = currentSprite.name;
+            }
+            if (sprite == null)
+            {
+                sprite = "";
+            }
             int cut = sprite.IndexOf('_');
             if (cut <= 0 || !Keys.TryGetValue(sprite.Substring(0, cut), out var key))
             {

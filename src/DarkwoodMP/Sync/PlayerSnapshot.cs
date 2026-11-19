@@ -118,8 +118,18 @@ namespace DarkwoodMP.Sync
                 flags |= 128;
             }
             w.Write((byte)flags);
-            pw.WriteStr(Library ?? "");
-            pw.WriteStr(HeldLight ?? "");
+            string library = Library;
+            if (library == null)
+            {
+                library = "";
+            }
+            pw.WriteStr(library);
+            string heldLight = HeldLight;
+            if (heldLight == null)
+            {
+                heldLight = "";
+            }
+            pw.WriteStr(heldLight);
             w.Write((byte)Sprites.Count);
             foreach (var s in Sprites)
             {
@@ -149,7 +159,12 @@ namespace DarkwoodMP.Sync
             }
             w.Write((byte)flags2);
             w.Write(Health);
-            pw.WriteStr(Place ?? "");
+            string place = Place;
+            if (place == null)
+            {
+                place = "";
+            }
+            pw.WriteStr(place);
             pw.Write(HeldFlames);
             w.Write(Lantern);
             w.Write(BeamRadius);
@@ -320,7 +335,12 @@ namespace DarkwoodMP.Sync
             var held = player.currentItem;
             if (player.itemLightEmitter != null && !InvItemClass.isNull(held) && held.baseClass != null)
             {
-                snap.HeldLight = held.type ?? "";
+                string heldLight = held.type;
+                if (heldLight == null)
+                {
+                    heldLight = "";
+                }
+                snap.HeldLight = heldLight;
             }
             else
             {

@@ -346,7 +346,12 @@ namespace DarkwoodMP.World
         {
             using (var sha = SHA256.Create())
             {
-                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key ?? ""))).Substring(0, 32);
+                string key2 = key;
+                if (key2 == null)
+                {
+                    key2 = "";
+                }
+                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key2))).Substring(0, 32);
             }
         }
 

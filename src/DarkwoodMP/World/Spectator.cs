@@ -459,7 +459,16 @@ namespace DarkwoodMP.World
             {
                 return; // not over the pause menu or the mod's windows
             }
-            string name = Session.Instance?.NameOf(_watching) ?? "?";
+            Session instance = Session.Instance;
+            string name = null;
+            if (instance != null)
+            {
+                name = instance.NameOf(_watching);
+            }
+            if (name == null)
+            {
+                name = "?";
+            }
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
             if (Epilogue)
             {

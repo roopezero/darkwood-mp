@@ -100,7 +100,11 @@ namespace DarkwoodMP.World
                 }
                 if (path != null && File.Exists(path))
                 {
-                    var d = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
+                    FileData d = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path));
+                    if (d == null)
+                    {
+                        d = new FileData();
+                    }
                     if (d.Had == null)
                     {
                         d.Had = new Dictionary<string, HashSet<string>>();

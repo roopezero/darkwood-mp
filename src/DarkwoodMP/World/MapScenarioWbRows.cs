@@ -150,7 +150,11 @@ namespace DarkwoodMP.World
             }
             if (st.open)
             {
-                string drawn = MapScenarioUi.Drawn(st) ?? Layout(st);
+                string drawn = MapScenarioUi.Drawn(st);
+                if (drawn == null)
+                {
+                    drawn = Layout(st);
+                }
                 if (drawn != null)
                 {
                     r.Fail($"drawn wrong: {drawn}; {r.Info}");

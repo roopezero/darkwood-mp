@@ -126,7 +126,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.TraderStock);
             WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
-            w.WriteBigStr(stock ?? StockOf(npc));
+            string stock2 = stock;
+            if (stock2 == null)
+            {
+                stock2 = StockOf(npc);
+            }
+            w.WriteBigStr(stock2);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -490,7 +495,11 @@ namespace DarkwoodMP.World
                 Send(npc, from);
                 return;
             }
-            string why = Check(Inv(npc), took, gave, stock) ?? CheckReputation(name, took, gave, repChange);
+            string why = Check(Inv(npc), took, gave, stock);
+            if (why == null)
+            {
+                why = CheckReputation(name, took, gave, repChange);
+            }
             if (why != null)
             {
                 Send(npc, from);

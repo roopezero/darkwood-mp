@@ -74,7 +74,12 @@ namespace DarkwoodMP.World
                 }
                 string name = session.NameOf(id);
                 session.Keys.TryGetValue(id, out string key);
-                AddPlayer(Core.currentProfile.id, name, key ?? "");
+                string key2 = key;
+                if (key2 == null)
+                {
+                    key2 = "";
+                }
+                AddPlayer(Core.currentProfile.id, name, key2);
             };
         }
 
@@ -106,7 +111,12 @@ namespace DarkwoodMP.World
             {
                 if (File.Exists(path))
                 {
-                    _data = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path)) ?? new FileData();
+                    FileData data = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path));
+                    if (data == null)
+                    {
+                        data = new FileData();
+                    }
+                    _data = data;
                 }
                 if (_data.Slots == null)
                 {
@@ -177,7 +187,11 @@ namespace DarkwoodMP.World
 
         public static void SetName(int slot, string name)
         {
-            name = (name ?? "").Trim();
+            if (name == null)
+            {
+                name = "";
+            }
+            name = name.Trim();
             if (NameOf(slot) == name)
             {
                 return;

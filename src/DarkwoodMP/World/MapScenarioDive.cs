@@ -522,7 +522,19 @@ namespace DarkwoodMP.World
                             value2 = c;
                         }
                         onPlayer[k] = value2 + 1;
-                        if ((e.targetGameObjects?.Count ?? 0) + (e.targetUniqueObjects?.Count ?? 0) > 1)
+                        List<GameObject> targetGameObjects = e.targetGameObjects;
+                        int count = 0;
+                        if (targetGameObjects != null)
+                        {
+                            count = targetGameObjects.Count;
+                        }
+                        List<string> targetUniqueObjects = e.targetUniqueObjects;
+                        int count2 = 0;
+                        if (targetUniqueObjects != null)
+                        {
+                            count2 = targetUniqueObjects.Count;
+                        }
+                        if (count + count2 > 1)
                         {
                             mixed++;
                         }

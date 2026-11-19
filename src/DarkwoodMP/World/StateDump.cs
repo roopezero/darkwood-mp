@@ -94,7 +94,15 @@ namespace DarkwoodMP.World
         /// <summary>Write the dump to path. centre/radius default to the test area's.</summary>
         public static string Write(string path, Vector3? centre, float radius)
         {
-            var c = centre ?? DefaultCentre();
+            Vector3 c;
+            if (centre.HasValue)
+            {
+                c = centre.Value;
+            }
+            else
+            {
+                c = DefaultCentre();
+            }
             var root = new SortedDictionary<string, object>(StringComparer.Ordinal)
             {
                 ["role"] = Session.Instance == null ? "alone" : Session.Instance.IsHost ? "host" : "client",

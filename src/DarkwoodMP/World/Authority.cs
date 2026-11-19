@@ -203,7 +203,12 @@ namespace DarkwoodMP.World
         {
             if (Handling)
             {
-                _result = result ?? "";
+                string result2 = result;
+                if (result2 == null)
+                {
+                    result2 = "";
+                }
+                _result = result2;
             }
         }
 
@@ -247,8 +252,18 @@ namespace DarkwoodMP.World
                 value = 1;
             }
             w.W.Write((byte)value);
-            w.WriteStr(_refusal ?? "");
-            w.WriteStr(_result ?? "");
+            string refusal = _refusal;
+            if (refusal == null)
+            {
+                refusal = "";
+            }
+            w.WriteStr(refusal);
+            string result = _result;
+            if (result == null)
+            {
+                result = "";
+            }
+            w.WriteStr(result);
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (_refusal != null)
             {
@@ -289,7 +304,12 @@ namespace DarkwoodMP.World
             }
             Plugin.Log.LogInfo($"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({_refusal ?? "not here"}), so it's theirs alone: accepted, not applied here");
             _refusal = null;
-            _result = result ?? "";
+            string result2 = result;
+            if (result2 == null)
+            {
+                result2 = "";
+            }
+            _result = result2;
         }
 
         /// <summary>Host: whether this player's stand-in is within reach of pos (true if it isn't known yet).</summary>

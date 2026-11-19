@@ -99,7 +99,13 @@ namespace DarkwoodMP
             }
             // Five slots, as the game always has; a slot that isn't active (or whose character died for good) is free.
             _profiles = new List<GameProfile>();
-            int count = Math.Max(5, state?.profiles?.Count ?? 0);
+            int? count2 = state?.profiles?.Count;
+            int count3 = 0;
+            if (count2.HasValue)
+            {
+                count3 = count2.Value;
+            }
+            int count = Math.Max(5, count3);
             for (int i = 0; i < count; i++)
             {
                 GameProfile p = null;
@@ -124,7 +130,12 @@ namespace DarkwoodMP
             {
                 // The save played last, or New Game when there's none.
                 var last = _slots.Where(s => !s.Free).OrderByDescending(s => SavedAt(s.Profile)).FirstOrDefault();
-                _choice = last?.Id ?? 0;
+                int choice = 0;
+                if (last != null)
+                {
+                    choice = last.Id;
+                }
+                _choice = choice;
             }
             _overwrite = 0;
             LoadName();
@@ -772,7 +783,12 @@ namespace DarkwoodMP
                 ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shots, prefix + what + ".png"));
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            int firstSave = w._slots.FirstOrDefault(s => !s.Free)?.Id ?? 0;
+            Slot slot2 = w._slots.FirstOrDefault(s => !s.Free);
+            int firstSave = 0;
+            if (slot2 != null)
+            {
+                firstSave = slot2.Id;
+            }
             if (shots != null)
             {
                 yield return Shot("start-save");

@@ -166,7 +166,17 @@ namespace DarkwoodMP.World
                 }
                 else if (_labels.Count == 0)
                 {
-                    Build(Center() ?? Player.Instance.transform.position);
+                    Vector3? center = Center();
+                    Vector3 at;
+                    if (center.HasValue)
+                    {
+                        at = center.Value;
+                    }
+                    else
+                    {
+                        at = Player.Instance.transform.position;
+                    }
+                    Build(at);
                 }
             }
             if (Time.unscaledTime >= _nextLabelScan)

@@ -1276,7 +1276,11 @@ namespace DarkwoodMP
                     }
                     else
                     {
-                        text = b.Keys[col] ?? "-";
+                        text = b.Keys[col];
+                        if (text == null)
+                        {
+                            text = "-";
+                        }
                     }
                     if (Ui.Button(cell, PixelFont.Fit(text, cell.width - 6 * S)) && _mapRow == null)
                     {

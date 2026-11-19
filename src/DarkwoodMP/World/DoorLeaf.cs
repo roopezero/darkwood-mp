@@ -302,7 +302,11 @@ namespace DarkwoodMP.World
                 if (d == null || !d.opened || d.destroyed || d.body == null || w.Rb == null || !d.body.gameObject.activeInHierarchy
                     || StateDump.Flat(d.body.position - at) > WatchRadius + 100f)
                 {
-                    (gone ?? (gone = new List<Door>())).Add(d);
+                    if (gone == null)
+                    {
+                        gone = new List<Door>();
+                    }
+                    gone.Add(d);
                     continue;
                 }
                 if (w.Rb.isKinematic || _glides.ContainsKey(d))
@@ -524,7 +528,11 @@ namespace DarkwoodMP.World
                 var g = kv.Value;
                 if (d == null || d.body == null || !d.opened || d.destroyed) // shut: Door.close holds it
                 {
-                    (done ??= new List<Door>()).Add(d);
+                    if (done == null)
+                    {
+                        done = new List<Door>();
+                    }
+                    done.Add(d);
                     continue;
                 }
                 float now = DoorLeaf.Signed(d), off = Mathf.DeltaAngle(now, g.Target);
@@ -544,7 +552,11 @@ namespace DarkwoodMP.World
                         w.Touched = false;
                         w.StillSince = -1f;
                     }
-                    (done ??= new List<Door>()).Add(d);
+                    if (done == null)
+                    {
+                        done = new List<Door>();
+                    }
+                    done.Add(d);
                     continue;
                 }
                 DoorLeaf.Turn(d, now + off * k);

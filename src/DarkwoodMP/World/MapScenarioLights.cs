@@ -40,7 +40,11 @@ namespace DarkwoodMP.World
             }
             else
             {
-                var slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? p.Hotbar.slots.FirstOrDefault(s => !s.selected);
+                InvSlot slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                if (slot == null)
+                {
+                    slot = p.Hotbar.slots.FirstOrDefault(s => !s.selected);
+                }
                 if (slot == null)
                 {
                     r.Fail("no hotbar slot");
@@ -105,7 +109,16 @@ namespace DarkwoodMP.World
             bool ok = false;
             while (true)
             {
-                var puppets = Sync.PlayerSync.Instance?.Remotes.Values.Where(x => x.Owner != Sync.PlayerSync.DummyId && x.Root != null).ToList() ?? new List<Sync.RemotePlayer>();
+                Sync.PlayerSync instance = Sync.PlayerSync.Instance;
+                List<Sync.RemotePlayer> puppets = null;
+                if (instance != null)
+                {
+                    puppets = instance.Remotes.Values.Where(x => x.Owner != Sync.PlayerSync.DummyId && x.Root != null).ToList();
+                }
+                if (puppets == null)
+                {
+                    puppets = new List<Sync.RemotePlayer>();
+                }
                 seen = string.Join("; ", puppets.Select(Describe));
                 bool any(System.Func<Sync.RemotePlayer, bool> f) => puppets.Any(f);
                 switch (what)
@@ -194,7 +207,13 @@ namespace DarkwoodMP.World
                 {
                     lightRadius = l.LightRadius;
                 }
-                parts.Add($"beam r{lightRadius:0} (sent {x.Last?.BeamRadius ?? 0f:0}) grey {(l != null ? l.LightColor.r : 0f):0.00} drawn {Drawn(l)}");
+                Sync.PlayerSnapshot last = x.Last;
+                float beamRadius = 0f;
+                if (last != null)
+                {
+                    beamRadius = last.BeamRadius;
+                }
+                parts.Add($"beam r{lightRadius:0} (sent {beamRadius:0}) grey {(l != null ? l.LightColor.r : 0f):0.00} drawn {Drawn(l)}");
             }
             string joinValue;
             if (parts.Count == 0)

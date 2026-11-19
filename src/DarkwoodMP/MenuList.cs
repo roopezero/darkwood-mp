@@ -224,7 +224,12 @@ namespace DarkwoodMP
             }
             if (b == null)
             {
-                Plugin.Log.LogWarning($"[menu] the game's {go?.name ?? "entry"} isn't there");
+                string name = go?.name;
+                if (name == null)
+                {
+                    name = "entry";
+                }
+                Plugin.Log.LogWarning($"[menu] the game's {name} isn't there");
                 return;
             }
             b.getClicked(force: true);

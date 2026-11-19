@@ -77,7 +77,12 @@ namespace DarkwoodMP.World
         {
             try
             {
-                var preset = d.getPreset(d.startTransition.dreamToTransitionTo ?? "");
+                string presetName = d.startTransition.dreamToTransitionTo;
+                if (presetName == null)
+                {
+                    presetName = "";
+                }
+                var preset = d.getPreset(presetName);
                 if (preset != null)
                 {
                     d.startTransition.dreamToTransitionTo = preset.name;
@@ -118,7 +123,12 @@ namespace DarkwoodMP.World
                 return;
             }
             _ended = true;
-            var w = EndMessage(d.outcome ?? "");
+            string outcome = d.outcome;
+            if (outcome == null)
+            {
+                outcome = "";
+            }
+            var w = EndMessage(outcome);
             if (S.IsHost)
             {
                 S.Broadcast(w, Channel.Control, reliable: true);
@@ -134,7 +144,12 @@ namespace DarkwoodMP.World
         {
             var w = S.Begin(MsgType.DreamEnd);
             w.WriteStr(outcome);
-            w.WriteStr(Shared ?? "");
+            string shared = Shared;
+            if (shared == null)
+            {
+                shared = "";
+            }
+            w.WriteStr(shared);
             return w;
         }
 

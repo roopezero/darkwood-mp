@@ -63,7 +63,11 @@ namespace DarkwoodMP.World
             }
             var from = MapScenario.Centre;
             var grid = Singleton<WorldGrid>.Instance;
-            var outside = grid?.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world) ?? grid?.currentGrid;
+            WorldGrid.Grid outside = grid?.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world);
+            if (outside == null)
+            {
+                outside = grid?.currentGrid;
+            }
             if (outside == null)
             {
                 r.Fail("no world grid");

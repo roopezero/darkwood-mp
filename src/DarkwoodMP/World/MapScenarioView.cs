@@ -310,7 +310,12 @@ namespace DarkwoodMP.World
                                 {
                                     if (e != null)
                                     {
-                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{string.Join(",", (e.targetGameObjects ?? new List<GameObject>()).Select(g => g == null ? "null" : g.name))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}] fromParent={e.getTargetGameObjectsFromParent}{(e.disabled ? " disabled" : "")}");
+                                        List<GameObject> targetGameObjects = e.targetGameObjects;
+                                        if (targetGameObjects == null)
+                                        {
+                                            targetGameObjects = new List<GameObject>();
+                                        }
+                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{string.Join(",", targetGameObjects.Select(g => g == null ? "null" : g.name))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}] fromParent={e.getTargetGameObjectsFromParent}{(e.disabled ? " disabled" : "")}");
                                     }
                                 }
                             }
@@ -337,7 +342,11 @@ namespace DarkwoodMP.World
             {
                 return "host";
             }
-            string n = s.LocalName ?? "";
+            string n = s.LocalName;
+            if (n == null)
+            {
+                n = "";
+            }
             if (n.StartsWith("Client"))
             {
                 return "c" + n.Substring(6);

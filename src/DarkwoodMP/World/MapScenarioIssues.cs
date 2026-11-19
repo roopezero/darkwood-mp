@@ -519,10 +519,19 @@ namespace DarkwoodMP.World
             }
             if (InvItemClass.isNull(p.currentItem))
             {
-                var slot = p.getCurrentlySelectedHotbarSlot() ?? p.Hotbar.slots[0];
+                InvSlot slot = p.getCurrentlySelectedHotbarSlot();
+                if (slot == null)
+                {
+                    slot = p.Hotbar.slots[0];
+                }
                 if (!InvItemClass.isNull(slot.invItem))
                 {
-                    slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem)) ?? slot;
+                    InvSlot slot2 = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                    if (slot2 == null)
+                    {
+                        slot2 = slot;
+                    }
+                    slot = slot2;
                 }
                 slot.inventory = p.Hotbar;
                 if (InvItemClass.isNull(slot.invItem))
@@ -688,7 +697,12 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            var res = Resources.Load("Prefabs/Characters/" + (kind ?? "Dog"));
+            string kind2 = kind;
+            if (kind2 == null)
+            {
+                kind2 = "Dog";
+            }
+            var res = Resources.Load("Prefabs/Characters/" + kind2);
             GameObject go = null;
             if (res != null)
             {
@@ -705,7 +719,12 @@ namespace DarkwoodMP.World
                 {
                     Object.Destroy(go);
                 }
-                r.Fail($"couldn't make a {kind ?? "Dog"} of our own here");
+                string kind3 = kind;
+                if (kind3 == null)
+                {
+                    kind3 = "Dog";
+                }
+                r.Fail($"couldn't make a {kind3} of our own here");
                 yield break;
             }
             var save = mine.GetComponent<SaveableObject>();
@@ -750,7 +769,12 @@ namespace DarkwoodMP.World
             {
                 text = "a dog";
             }
-            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idle ?? "none"} (a Dog's: {dogLoops}); " +
+            string idle2 = idle;
+            if (idle2 == null)
+            {
+                idle2 = "none";
+            }
+            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idle2} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
             NetEnemies.Hidden.Remove(mine);
             NetEnemies.Frozen.Remove(mine);

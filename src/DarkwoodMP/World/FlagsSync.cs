@@ -654,7 +654,12 @@ namespace DarkwoodMP.World
             bool dead;
             try
             {
-                dead = JObject.Parse(value).Value<bool?>("dead") ?? false;
+                bool? dead2 = JObject.Parse(value).Value<bool?>("dead");
+                dead = false;
+                if (dead2.HasValue)
+                {
+                    dead = dead2.Value;
+                }
             }
             catch
             {

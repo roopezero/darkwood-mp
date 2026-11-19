@@ -621,7 +621,12 @@ namespace DarkwoodMP.World
             P.whereAmI.checkWhereAmI();
             if (P.whereAmI.bigLocation != loc)
             {
-                r.Fail($"we're in {P.whereAmI.bigLocation?.name ?? "no big location"}, not {loc.name}");
+                string name = P.whereAmI.bigLocation?.name;
+                if (name == null)
+                {
+                    name = "no big location";
+                }
+                r.Fail($"we're in {name}, not {loc.name}");
                 yield break;
             }
             if (PorterThere(loc))

@@ -255,7 +255,12 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(2f);
-            r.Info = (r.Info ?? "not dreaming") + $"; at {Fmt(P.transform.position)}";
+            string info = r.Info;
+            if (info == null)
+            {
+                info = "not dreaming";
+            }
+            r.Info = info + $"; at {Fmt(P.transform.position)}";
         }
 
         /// <summary>"level-dream NAME" (host): a level brings the dream NAME, as SkillsMenu.confirmSkills starts it; wait until we're in it.</summary>

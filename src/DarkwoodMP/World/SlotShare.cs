@@ -516,7 +516,13 @@ namespace DarkwoodMP.World
             {
                 text = 1;
             }
-            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{text}|{it.upgrades?.Count ?? 0}";
+            List<ItemUpgrade> upgrades = it.upgrades;
+            int count = 0;
+            if (upgrades != null)
+            {
+                count = upgrades.Count;
+            }
+            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{text}|{count}";
         }
 
         /// <summary>
@@ -759,7 +765,10 @@ namespace DarkwoodMP.World
                 {
                     return b;
                 }
-                found ??= b;
+                if (found == null)
+                {
+                    found = b;
+                }
             }
             return found;
         }
@@ -983,7 +992,12 @@ namespace DarkwoodMP.World
             void Add(string type, int n, InvItemClass item)
             {
                 net.TryGetValue(type, out var was);
-                net[type] = (was.n + n, was.item ?? item);
+                InvItemClass item2 = was.item;
+                if (item2 == null)
+                {
+                    item2 = item;
+                }
+                net[type] = (was.n + n, item2);
             }
             if (any)
             {

@@ -43,7 +43,13 @@ namespace DarkwoodMP.Net
             {
                 lock (_lock)
                 {
-                    return _mapped?.ExternalTcp ?? 0;
+                    Mapping mapped = _mapped;
+                    int externalTcp = 0;
+                    if (mapped != null)
+                    {
+                        externalTcp = mapped.ExternalTcp;
+                    }
+                    return externalTcp;
                 }
             }
         }
@@ -144,7 +150,12 @@ namespace DarkwoodMP.Net
                 }
                 if (m == null)
                 {
-                    Status = _refused ?? "Your router didn't open the port (UPnP and NAT-PMP are off or missing). Forward it by hand, or use a VPN.";
+                    string status = _refused;
+                    if (status == null)
+                    {
+                        status = "Your router didn't open the port (UPnP and NAT-PMP are off or missing). Forward it by hand, or use a VPN.";
+                    }
+                    Status = status;
                     Plugin.Log.LogInfo("[port mapping] " + Status);
                     return;
                 }
@@ -264,7 +275,12 @@ namespace DarkwoodMP.Net
             {
                 text = $", lease {LeaseSeconds} s";
             }
-            Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip ?? "unknown"}{text}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
+            string ip2 = ip;
+            if (ip2 == null)
+            {
+                ip2 = "unknown";
+            }
+            Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip2}{text}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
         }
 
         private void Remove(Mapping m)

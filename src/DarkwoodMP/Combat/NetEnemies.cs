@@ -904,7 +904,16 @@ namespace DarkwoodMP.Combat
             }
             if (!HitRateOk(from, weapon))
             {
-                World.Authority.Refuse($"more hits a second than {weapon?.type ?? "bare hands"} makes");
+                string type = null;
+                if (weapon != null)
+                {
+                    type = weapon.type;
+                }
+                if (type == null)
+                {
+                    type = "bare hands";
+                }
+                World.Authority.Refuse($"more hits a second than {type} makes");
                 return;
             }
             float cap = DamageCap(weapon);
@@ -2035,11 +2044,26 @@ namespace DarkwoodMP.Combat
                 {
                     if (step.Name == "setDeathCollider")
                     {
-                        DeathColliderRest(c, e.InnerException ?? e);
+                        System.Exception why = e.InnerException;
+                        if (why == null)
+                        {
+                            why = e;
+                        }
+                        DeathColliderRest(c, why);
                     }
                     else
                     {
-                        Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse ({step.Name}): {e.InnerException?.Message ?? e.Message}");
+                        System.Exception innerException = e.InnerException;
+                        string message = null;
+                        if (innerException != null)
+                        {
+                            message = innerException.Message;
+                        }
+                        if (message == null)
+                        {
+                            message = e.Message;
+                        }
+                        Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse ({step.Name}): {message}");
                     }
                 }
             }
@@ -2167,7 +2191,17 @@ namespace DarkwoodMP.Combat
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut ({step.Name}): {e.InnerException?.Message ?? e.Message}");
+                    System.Exception innerException = e.InnerException;
+                    string message = null;
+                    if (innerException != null)
+                    {
+                        message = innerException.Message;
+                    }
+                    if (message == null)
+                    {
+                        message = e.Message;
+                    }
+                    Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut ({step.Name}): {message}");
                 }
             }
             try
@@ -2264,13 +2298,34 @@ namespace DarkwoodMP.Combat
                 {
                     text3 = "there";
                 }
+                string clip2 = clip;
+                if (clip2 == null)
+                {
+                    clip2 = "none";
+                }
+                List<ColliderInfo> deathColliders = c.deathColliders;
+                int count = -1;
+                if (deathColliders != null)
+                {
+                    count = deathColliders.Count;
+                }
                 Plugin.Log.LogInfo($"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
-                                   $"animator {text}, clip {clip ?? "none"}, collider {text2}, " +
-                                   $"capsule {text3}, death colliders {c.deathColliders?.Count ?? -1}; at {why.StackTrace?.Split('\n')[0]?.Trim()}); trigger now {(c.collider != null && c.collider.isTrigger)}");
+                                   $"animator {text}, clip {clip2}, collider {text2}, " +
+                                   $"capsule {text3}, death colliders {count}; at {why.StackTrace?.Split('\n')[0]?.Trim()}); trigger now {(c.collider != null && c.collider.isTrigger)}");
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse: {e.InnerException?.Message ?? e.Message}");
+                System.Exception innerException = e.InnerException;
+                string message = null;
+                if (innerException != null)
+                {
+                    message = innerException.Message;
+                }
+                if (message == null)
+                {
+                    message = e.Message;
+                }
+                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse: {message}");
             }
         }
 

@@ -577,9 +577,23 @@ namespace DarkwoodMP
                         }
                         return 0;
                     case 1:
-                        return (i?.Name ?? a).ToLowerInvariant();
+                        string name = null;
+                        if (i != null)
+                        {
+                            name = i.Name;
+                        }
+                        if (name == null)
+                        {
+                            name = a;
+                        }
+                        return name.ToLowerInvariant();
                     case 2:
-                        return i?.Players ?? -1;
+                        int players = -1;
+                        if (i != null)
+                        {
+                            players = i.Players;
+                        }
+                        return players;
                     case 3:
                         if (i != null && i.Fields.TryGetValue("world", out var w))
                         {
@@ -693,7 +707,12 @@ namespace DarkwoodMP
             _session.LastRefusal = null;
             _browser.Joined(addr);
             Plugin.Cfg.LastAddress.Value = addr;
-            _tcp.Join(addr, password ?? "");
+            string password2 = password;
+            if (password2 == null)
+            {
+                password2 = "";
+            }
+            _tcp.Join(addr, password2);
             OnJoining?.Invoke();
             CloseWindows();
         }
@@ -702,7 +721,12 @@ namespace DarkwoodMP
         {
             if (string.IsNullOrEmpty(_address))
             {
-                _address = Plugin.Cfg.LastAddress.Value ?? "";
+                string address = Plugin.Cfg.LastAddress.Value;
+                if (address == null)
+                {
+                    address = "";
+                }
+                _address = address;
             }
             _focusField = true;
             _addressWin.Show();
@@ -753,7 +777,12 @@ namespace DarkwoodMP
             {
                 return;
             }
-            Connect(addr, _addressPassword ?? "");
+            string password = _addressPassword;
+            if (password == null)
+            {
+                password = "";
+            }
+            Connect(addr, password);
         }
 
         private void DrawPassword(Flow f)
@@ -768,7 +797,12 @@ namespace DarkwoodMP
             }
             if (Ui.EnterPressed())
             {
-                Connect(_passwordFor, _password ?? "");
+                string password = _password;
+                if (password == null)
+                {
+                    password = "";
+                }
+                Connect(_passwordFor, password);
             }
         }
 
@@ -777,7 +811,12 @@ namespace DarkwoodMP
             var b = Ui.Split(r, 0, 80, 80);
             if (Ui.Button(b[1], "Join"))
             {
-                Connect(_passwordFor, _password ?? "");
+                string password = _password;
+                if (password == null)
+                {
+                    password = "";
+                }
+                Connect(_passwordFor, password);
             }
             if (Ui.Button(b[2], "Cancel"))
             {

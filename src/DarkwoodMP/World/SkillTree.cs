@@ -326,7 +326,12 @@ namespace DarkwoodMP.World
                 var w = S.Begin(MsgType.SkillSpend);
                 w.W.Write((byte)Mathf.Clamp(level, 0, 255));
                 w.WriteStr(good);
-                w.WriteStr(negative ?? "");
+                string negative2 = negative;
+                if (negative2 == null)
+                {
+                    negative2 = "";
+                }
+                w.WriteStr(negative2);
                 var had = chosen.ToList();
                 w.W.Write((byte)Math.Min(had.Count, 255));
                 for (int i = 0; i < had.Count && i < 255; i++)

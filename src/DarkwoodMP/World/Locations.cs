@@ -251,7 +251,17 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"[locations] {l.name}'s exit events: {e.InnerException?.Message ?? e.Message}");
+                System.Exception innerException = e.InnerException;
+                string message = null;
+                if (innerException != null)
+                {
+                    message = innerException.Message;
+                }
+                if (message == null)
+                {
+                    message = e.Message;
+                }
+                Plugin.Log.LogWarning($"[locations] {l.name}'s exit events: {message}");
             }
         }
         private static void CheckEnterEvents(Location l)
@@ -262,7 +272,17 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"[locations] {l.name}'s enter events: {e.InnerException?.Message ?? e.Message}");
+                System.Exception innerException = e.InnerException;
+                string message = null;
+                if (innerException != null)
+                {
+                    message = innerException.Message;
+                }
+                if (message == null)
+                {
+                    message = e.Message;
+                }
+                Plugin.Log.LogWarning($"[locations] {l.name}'s enter events: {message}");
             }
         }
 
@@ -284,7 +304,11 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            string name = o.currentLocationName ?? "";
+            string name = o.currentLocationName;
+            if (name == null)
+            {
+                name = "";
+            }
             return !_gaveUp.Contains(name) && !_gaveUp.Contains(Core.getTrueLocationName(name));
         }
 
@@ -322,7 +346,11 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
-            string g = Singleton<WorldGrid>.Instance?.currentGrid?.name ?? "?";
+            string g = Singleton<WorldGrid>.Instance?.currentGrid?.name;
+            if (g == null)
+            {
+                g = "?";
+            }
             if (dream)
             {
                 return "dream:" + g;

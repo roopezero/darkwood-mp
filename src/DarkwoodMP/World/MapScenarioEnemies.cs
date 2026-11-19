@@ -124,7 +124,11 @@ namespace DarkwoodMP.World
             string n = go.name;
             if (n.StartsWith("Fov_") || n.Contains("sound_loop") || n.Contains("Spawner"))
             {
-                var st = new System.Diagnostics.StackTrace(2, false).GetFrames() ?? new System.Diagnostics.StackFrame[0];
+                System.Diagnostics.StackFrame[] st = new System.Diagnostics.StackTrace(2, false).GetFrames();
+                if (st == null)
+                {
+                    st = new System.Diagnostics.StackFrame[0];
+                }
                 string from = string.Join(" < ", st.Take(8).Select(f => f.GetMethod()).Where(m => m != null).Select(m => m.DeclaringType?.Name + "." + m.Name));
                 string comps = string.Join("/", go.GetComponentsInChildren<MonoBehaviour>(true).Where(m => m != null).Select(m => m.GetType().Name).Distinct());
                 Plugin.Log.LogInfo($"[ee] made {n} at {Fmt(go.transform.position)} (parent {(go.transform.parent != null ? go.transform.parent.name : "none")}; {comps}) from {from}");
@@ -868,9 +872,19 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
-                var slot = p.Hotbar.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type)
-                           ?? p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem))
-                           ?? p.Hotbar.slots.FirstOrDefault(s => !s.selected) ?? p.Hotbar.slots[0];
+                InvSlot slot = p.Hotbar.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
+                if (slot == null)
+                {
+                    slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                }
+                if (slot == null)
+                {
+                    slot = p.Hotbar.slots.FirstOrDefault(s => !s.selected);
+                }
+                if (slot == null)
+                {
+                    slot = p.Hotbar.slots[0];
+                }
                 slot.inventory = p.Hotbar;
                 // A full hotbar (earlier steps left a torch and a flashlight in it): make room in a slot that isn't
                 // in hand, or the selected weapon was taken out again instead.

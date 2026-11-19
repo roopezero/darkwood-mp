@@ -722,8 +722,18 @@ namespace DarkwoodMP.World
 
         private static void WriteTad(PacketWriter w, TimeAndDay t)
         {
-            w.W.Write(t?.time ?? -1);
-            w.W.Write(t?.day ?? -1);
+            int time = -1;
+            if (t != null)
+            {
+                time = t.time;
+            }
+            w.W.Write(time);
+            int day = -1;
+            if (t != null)
+            {
+                day = t.day;
+            }
+            w.W.Write(day);
         }
         private static TimeAndDay ReadTad(PacketReader r)
         {

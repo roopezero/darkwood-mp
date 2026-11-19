@@ -80,7 +80,12 @@ namespace DarkwoodMP.World
         {
             using (var sha = SHA256.Create())
             {
-                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key ?? ""))).Substring(0, 32);
+                string key2 = key;
+                if (key2 == null)
+                {
+                    key2 = "";
+                }
+                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key2))).Substring(0, 32);
             }
         }
 
@@ -208,9 +213,36 @@ namespace DarkwoodMP.World
                 value = 2;
             }
             w.W.Write((byte)value);
-            w.WriteBigStr(rec?.Player ?? "");
-            w.WriteBigStr(rec?.Inv ?? "");
-            w.WriteBigStr(rec?.Hotbar ?? "");
+            string player = null;
+            if (rec != null)
+            {
+                player = rec.Player;
+            }
+            if (player == null)
+            {
+                player = "";
+            }
+            w.WriteBigStr(player);
+            string inv = null;
+            if (rec != null)
+            {
+                inv = rec.Inv;
+            }
+            if (inv == null)
+            {
+                inv = "";
+            }
+            w.WriteBigStr(inv);
+            string hotbar = null;
+            if (rec != null)
+            {
+                hotbar = rec.Hotbar;
+            }
+            if (hotbar == null)
+            {
+                hotbar = "";
+            }
+            w.WriteBigStr(hotbar);
             // Where the host stands: the joiner's game finds a free spot beside it (Sync.SpawnSpot), off the host.
             Vector3 v;
             if (host != null)

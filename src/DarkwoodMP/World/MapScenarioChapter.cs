@@ -291,7 +291,16 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            r.Info = (line ?? refused ?? "no answer from the host").Trim();
+            string line2 = line;
+            if (line2 == null)
+            {
+                line2 = refused;
+            }
+            if (line2 == null)
+            {
+                line2 = "no answer from the host";
+            }
+            r.Info = line2.Trim();
             if (refused != null)
             {
                 r.Fail($"refused: {r.Info}");
@@ -307,7 +316,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(5f);
             var lines = Lines();
             string held = lines.LastOrDefault(l => l.Contains("which can't run here yet"));
-            r.Info = $"{(held ?? "nothing held").Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
+            string held2 = held;
+            if (held2 == null)
+            {
+                held2 = "nothing held";
+            }
+            r.Info = $"{held2.Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
             if (held == null)
             {
                 r.Fail($"no chapter held: {r.Info}");

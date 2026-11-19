@@ -168,7 +168,12 @@ namespace DarkwoodMP.Net
             {
                 ServerName = serverName.Trim();
             }
-            HostPassword = password ?? "";
+            string hostPassword = password;
+            if (hostPassword == null)
+            {
+                hostPassword = "";
+            }
+            HostPassword = hostPassword;
             int val1;
             if (TestMaxPlayers > 0)
             {
@@ -314,7 +319,12 @@ namespace DarkwoodMP.Net
             IsHost = false;
             HostLost = false;
             InSession = true; // connecting; OnEntered once connected
-            JoinPassword = password ?? "";
+            string joinPassword = password;
+            if (joinPassword == null)
+            {
+                joinPassword = "";
+            }
+            JoinPassword = joinPassword;
             Status = $"Connecting to {host}:{port}...";
             StartThread("DarkwoodMP connect", () =>
             {
@@ -470,7 +480,11 @@ namespace DarkwoodMP.Net
                             break;
                         }
                     }
-                    f = f ?? PingFrame; // nothing to send for a while
+                    // nothing to send for a while
+                    if (f == null)
+                    {
+                        f = PingFrame;
+                    }
                     c.Stream.Write(f, 0, f.Length);
                 }
                 // Let what was written (e.g. Refused, or a leaving client's character) go out, then close.

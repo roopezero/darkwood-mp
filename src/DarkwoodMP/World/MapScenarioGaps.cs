@@ -220,7 +220,12 @@ namespace DarkwoodMP.World
                 }
             }
             all = string.Join(",", found.Select(f => f.type + (f.exp ? "(exp)" : "")));
-            return found.Where(f => !f.exp).Select(f => f.type).FirstOrDefault() ?? found.Select(f => f.type).FirstOrDefault();
+            string type = found.Where(f => !f.exp).Select(f => f.type).FirstOrDefault();
+            if (type == null)
+            {
+                type = found.Select(f => f.type).FirstOrDefault();
+            }
+            return type;
         }
 
         /// <summary>"gaps-setup" (host, before the join): a wardrobe with rotting food in it; a crate with a shadow

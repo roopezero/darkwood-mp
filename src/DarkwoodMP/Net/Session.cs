@@ -598,7 +598,11 @@ namespace DarkwoodMP.Net
 
         private static string Sanitize(string name)
         {
-            name = (name ?? "").Trim();
+            if (name == null)
+            {
+                name = "";
+            }
+            name = name.Trim();
             if (name.Length > 32)
             {
                 name = name.Substring(0, 32);

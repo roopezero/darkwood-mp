@@ -601,7 +601,11 @@ namespace DarkwoodMP.World
                         DragSync.ForgetSnapshot();
                         FlagsSync.ForgetSnapshot();
                     }
-                    string profDir = snapDir ?? (Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id));
+                    string profDir = snapDir;
+                    if (profDir == null)
+                    {
+                        profDir = Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
+                    }
                     // left the world meanwhile: nothing to offer
                     string stamp;
                     if (profDir == null || !InWorld)

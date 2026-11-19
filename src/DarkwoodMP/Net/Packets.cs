@@ -541,7 +541,12 @@ namespace DarkwoodMP.Net
         /// <summary>str: u16 length, then that many UTF-8 bytes. Longer text is cut (and logged): use WriteBigStr for JSON.</summary>
         public void WriteStr(string s)
         {
-            var b = Encoding.UTF8.GetBytes(s ?? "");
+            string s2 = s;
+            if (s2 == null)
+            {
+                s2 = "";
+            }
+            var b = Encoding.UTF8.GetBytes(s2);
             int n = Math.Min(b.Length, ushort.MaxValue);
             if (n < b.Length)
             {
@@ -554,7 +559,12 @@ namespace DarkwoodMP.Net
         /// <summary>bigstr: u32 length, then that many UTF-8 bytes. For JSON (inventories, profiles), which can pass 64 KiB.</summary>
         public void WriteBigStr(string s)
         {
-            var b = Encoding.UTF8.GetBytes(s ?? "");
+            string s2 = s;
+            if (s2 == null)
+            {
+                s2 = "";
+            }
+            var b = Encoding.UTF8.GetBytes(s2);
             _w.Write((uint)b.Length);
             _w.Write(b);
         }

@@ -907,7 +907,12 @@ namespace DarkwoodMP
                 {
                     SkillsPanel.TestMouse = new Vector2(icon.xMax - 1f, icon.yMax - 1f);
                     yield return Shot("solo-skills-hover-edge");
-                    Log.LogInfo($"[solo] test mouse at {choice[0]}'s icon edge: over {SkillsPanel.TestHover ?? "nothing"}; icon {icon}, cell {cell}");
+                    string testHover = SkillsPanel.TestHover;
+                    if (testHover == null)
+                    {
+                        testHover = "nothing";
+                    }
+                    Log.LogInfo($"[solo] test mouse at {choice[0]}'s icon edge: over {testHover}; icon {icon}, cell {cell}");
                     SkillsPanel.TestMouse = null;
                 }
                 // Hovering every skill in turn mustn't change the window, its scrollbar or the grid's place.
@@ -919,7 +924,17 @@ namespace DarkwoodMP
                     int eaten = SkillsPanel.TestEaten;
                     Log.LogInfo($"[solo] real-mouse {Mathf.RoundToInt(nIcon.xMin + 1)} {Mathf.RoundToInt(nIcon.yMin + 1)} click (top left pixel of {next[0]})");
                     yield return new WaitForSecondsRealtime(6f);
-                    Log.LogInfo($"[solo] real mouse: over {SkillsPanel.TestHover ?? "nothing"}, chosen {SkillsPanel.TestChosen ?? "nothing"}, the game's mouse reads eaten {SkillsPanel.TestEaten - eaten}");
+                    string testHover2 = SkillsPanel.TestHover;
+                    if (testHover2 == null)
+                    {
+                        testHover2 = "nothing";
+                    }
+                    string testChosen = SkillsPanel.TestChosen;
+                    if (testChosen == null)
+                    {
+                        testChosen = "nothing";
+                    }
+                    Log.LogInfo($"[solo] real mouse: over {testHover2}, chosen {testChosen}, the game's mouse reads eaten {SkillsPanel.TestEaten - eaten}");
                     yield return Shot("solo-skills-real-mouse");
                 }
                 // Several points spent one after another with the real mouse: a skill, its negative one if needed, Learn.
@@ -1497,7 +1512,17 @@ namespace DarkwoodMP
                 catch (Exception e)
                 {
                     failed++;
-                    Log.LogError($"Patch {type.Name} doesn't fit this build of the game, skipped: {e.InnerException?.Message ?? e.Message}");
+                    Exception innerException = e.InnerException;
+                    string message = null;
+                    if (innerException != null)
+                    {
+                        message = innerException.Message;
+                    }
+                    if (message == null)
+                    {
+                        message = e.Message;
+                    }
+                    Log.LogError($"Patch {type.Name} doesn't fit this build of the game, skipped: {message}");
                 }
             }
             if (failed > 0)
@@ -1543,7 +1568,17 @@ namespace DarkwoodMP
                 }
                 catch (Exception e)
                 {
-                    Log.LogError($"Test patch {type.Name} doesn't fit this build of the game, skipped: {e.InnerException?.Message ?? e.Message}");
+                    Exception innerException = e.InnerException;
+                    string message = null;
+                    if (innerException != null)
+                    {
+                        message = innerException.Message;
+                    }
+                    if (message == null)
+                    {
+                        message = e.Message;
+                    }
+                    Log.LogError($"Test patch {type.Name} doesn't fit this build of the game, skipped: {message}");
                 }
             }
             Log.LogInfo($"{ok} test patches applied");
@@ -1746,7 +1781,12 @@ namespace DarkwoodMP
         /// <summary>Your name (General.PlayerName; empty: the Steam or OS user name), changed in Options.</summary>
         public void SetPlayerName(string name)
         {
-            Cfg.PlayerName.Value = name ?? "";
+            string name2 = name;
+            if (name2 == null)
+            {
+                name2 = "";
+            }
+            Cfg.PlayerName.Value = name2;
             UpdateLocalName();
         }
 

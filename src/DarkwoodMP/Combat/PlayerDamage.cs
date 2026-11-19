@@ -102,7 +102,12 @@ namespace DarkwoodMP.Combat
                     flags |= 4;
                 }
                 w.W.Write((byte)flags);
-                w.WriteStr(e.activateSound ?? "");
+                string activateSound = e.activateSound;
+                if (activateSound == null)
+                {
+                    activateSound = "";
+                }
+                w.WriteStr(activateSound);
             }
         }
 

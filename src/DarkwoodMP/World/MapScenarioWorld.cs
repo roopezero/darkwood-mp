@@ -200,7 +200,12 @@ namespace DarkwoodMP.World
                 {
                     Messages.RemoveAt(0);
                 }
-                Messages.Add((Time.realtimeSinceStartup, message ?? ""));
+                string message2 = message;
+                if (message2 == null)
+                {
+                    message2 = "";
+                }
+                Messages.Add((Time.realtimeSinceStartup, message2));
             }
         }
 
@@ -1147,7 +1152,12 @@ namespace DarkwoodMP.World
             {
                 TrapFiredPatch.TestRefuse = a[0];
             }
-            r.Info = $"TrapFired requests: {(TrapFiredPatch.TestRefuse ?? "as usual")}";
+            string testRefuse = TrapFiredPatch.TestRefuse;
+            if (testRefuse == null)
+            {
+                testRefuse = "as usual";
+            }
+            r.Info = $"TrapFired requests: {testRefuse}";
             yield break;
         }
 
@@ -1654,7 +1664,16 @@ namespace DarkwoodMP.World
             var lines = MapScenarioIssues.LogLines();
             string took = lines.LastOrDefault(l => l.Contains(" traded with ") && l.Contains(": took "));
             string refused = lines.LastOrDefault(l => l.Contains("[authority] refused TraderTrade"));
-            r.Info = (took ?? refused ?? "no client's trade here").Trim();
+            string took2 = took;
+            if (took2 == null)
+            {
+                took2 = refused;
+            }
+            if (took2 == null)
+            {
+                took2 = "no client's trade here";
+            }
+            r.Info = took2.Trim();
             if (refused != null)
             {
                 r.Fail($"refused: {refused.Trim()}");

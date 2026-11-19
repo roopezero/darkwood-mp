@@ -510,9 +510,19 @@ namespace DarkwoodMP
             }
             if (password)
             {
-                return GUI.PasswordField(r, value ?? "", '*', max, MenuSkin.Field);
+                string value2 = value;
+                if (value2 == null)
+                {
+                    value2 = "";
+                }
+                return GUI.PasswordField(r, value2, '*', max, MenuSkin.Field);
             }
-            return GUI.TextField(r, value ?? "", max, MenuSkin.Field);
+            string text = value;
+            if (text == null)
+            {
+                text = "";
+            }
+            return GUI.TextField(r, text, max, MenuSkin.Field);
         }
 
         /// <summary>A label on the left and a field beside it, on one row.</summary>

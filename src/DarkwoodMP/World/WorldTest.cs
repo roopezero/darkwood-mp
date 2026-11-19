@@ -497,7 +497,12 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        Plugin.Log.LogInfo($"[world test] sort & stack: skipped (stackable type {stackType ?? "none"}, {frees.Count} free slots)");
+                        string stackType2 = stackType;
+                        if (stackType2 == null)
+                        {
+                            stackType2 = "none";
+                        }
+                        Plugin.Log.LogInfo($"[world test] sort & stack: skipped (stackable type {stackType2}, {frees.Count} free slots)");
                     }
                 }
             }
@@ -708,8 +713,16 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[world test] stacks: left alone {k} (stackable {it.stackable}, stacksDurability {it.stacksDurability}, maxAmount {it.maxAmount})");
             }
-            string bandage = db.Select(x => x.key).FirstOrDefault(k => k == "bandage") ?? db.Select(x => x.key).FirstOrDefault(k => k.Contains("bandage"));
-            string gas = db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault(k => k.Contains("gas")) ?? db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault();
+            string bandage = db.Select(x => x.key).FirstOrDefault(k => k == "bandage");
+            if (bandage == null)
+            {
+                bandage = db.Select(x => x.key).FirstOrDefault(k => k.Contains("bandage"));
+            }
+            string gas = db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault(k => k.Contains("gas"));
+            if (gas == null)
+            {
+                gas = db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault();
+            }
 
             List<InvSlot> Bags() => player.Inventory.slots.Concat(player.Hotbar != null ? player.Hotbar.slots : new List<InvSlot>()).ToList();
             void Clear(string type)

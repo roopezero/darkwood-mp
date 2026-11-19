@@ -88,9 +88,19 @@ namespace DarkwoodMP
             }
             if (kind == Kind.Title)
             {
-                return _title ?? _body;
+                Face title = _title;
+                if (title == null)
+                {
+                    title = _body;
+                }
+                return title;
             }
-            return _body ?? _title;
+            Face body = _body;
+            if (body == null)
+            {
+                body = _title;
+            }
+            return body;
         }
 
         private static tk2dFontChar Glyph(Face f, char c)
@@ -274,7 +284,12 @@ namespace DarkwoodMP
         public static List<string> Wrap(string text, float width, Kind kind = Kind.Body)
         {
             var lines = new List<string>();
-            foreach (var para in (text ?? "").Split('\n'))
+            string text2 = text;
+            if (text2 == null)
+            {
+                text2 = "";
+            }
+            foreach (var para in text2.Split('\n'))
             {
                 string line = "";
                 foreach (var word in para.Split(' '))

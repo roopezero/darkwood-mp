@@ -131,7 +131,11 @@ namespace DarkwoodMP.World
             {
                 if (kv.Value == null)
                 {
-                    (dead ??= new List<long>()).Add(kv.Key);
+                    if (dead == null)
+                    {
+                        dead = new List<long>();
+                    }
+                    dead.Add(kv.Key);
                 }
             }
             if (dead == null)

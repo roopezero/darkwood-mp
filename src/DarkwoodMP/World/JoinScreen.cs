@@ -76,7 +76,17 @@ namespace DarkwoodMP.World
             _menuScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
             _handOverUntil = Time.realtimeSinceStartup + 30f;
             _buttonsOffOn = null; // initNewGame turns the buttons off itself, and the next scene has its own Controller
-            SetStage(Stage.Game, WorldShare.Instance?.LoadStatus ?? "Loading the host's world...");
+            WorldShare instance = WorldShare.Instance;
+            string line = null;
+            if (instance != null)
+            {
+                line = instance.LoadStatus;
+            }
+            if (line == null)
+            {
+                line = "Loading the host's world...";
+            }
+            SetStage(Stage.Game, line);
         }
 
         /// <summary>Joining stopped before the world loaded: take the screen down and open the panel, which says why.</summary>
@@ -145,11 +155,21 @@ namespace DarkwoodMP.World
                 }
                 if (_inGame)
                 {
-                    _line = LoadingScreen.GameStage() ?? _line;
+                    string line = LoadingScreen.GameStage();
+                    if (line == null)
+                    {
+                        line = _line;
+                    }
+                    _line = line;
                 }
                 else
                 {
-                    _line = world.LoadStatus ?? _line;
+                    string line2 = world.LoadStatus;
+                    if (line2 == null)
+                    {
+                        line2 = _line;
+                    }
+                    _line = line2;
                 }
                 Draw();
                 return;
@@ -157,7 +177,12 @@ namespace DarkwoodMP.World
 
             if (session.IsHost || !session.Active)
             {
-                Fail(world.LoadStatus ?? session.Status);
+                string why = world.LoadStatus;
+                if (why == null)
+                {
+                    why = session.Status;
+                }
+                Fail(why);
                 return;
             }
 
@@ -194,7 +219,12 @@ namespace DarkwoodMP.World
             else if (session.Connected)
             {
                 Raise(DownloadShare);
-                SetStage(Stage.Loading, world.LoadStatus ?? "Loading the host's world...");
+                string line3 = world.LoadStatus;
+                if (line3 == null)
+                {
+                    line3 = "Loading the host's world...";
+                }
+                SetStage(Stage.Loading, line3);
             }
             else if (world.LoadStatus != null)
             {

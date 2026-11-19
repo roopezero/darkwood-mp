@@ -247,7 +247,13 @@ namespace DarkwoodMP.World
             var at = c.transform.position + value * 70f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
+            bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+            bool playerInOutsideLocation2 = false;
+            if (playerInOutsideLocation.HasValue)
+            {
+                playerInOutsideLocation2 = playerInOutsideLocation.Value;
+            }
+            if (!playerInOutsideLocation2)
             {
                 r.Fail("our player left the location on the way to the sleeper");
                 yield break;
@@ -482,7 +488,13 @@ namespace DarkwoodMP.World
             var at = dog.transform.position + value * 80f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            if (!(Singleton<OutsideLocations>.Instance?.playerInOutsideLocation ?? false))
+            bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+            bool playerInOutsideLocation2 = false;
+            if (playerInOutsideLocation.HasValue)
+            {
+                playerInOutsideLocation2 = playerInOutsideLocation.Value;
+            }
+            if (!playerInOutsideLocation2)
             {
                 r.Fail("our player left the location on the way to the dog");
                 yield break;
