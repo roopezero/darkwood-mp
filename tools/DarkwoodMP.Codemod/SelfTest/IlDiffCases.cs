@@ -37,6 +37,16 @@ static class IlDiffCases
             }
             public struct P { public int A; public int B; }
             public class Q { public int X1; public int X2; }
+            public class Gen
+            {
+                int _n;
+                public const int Version = 29;
+                public const int Step = 5;
+                [NonSerialized] public int Mark;
+                public int Next(int x) { return x + Step; }
+                public Func<int> Cap(int x) { return () => _n + Version; }
+                public int Twice(int x) { int L(int y) { return y * 9; } return L(x); }
+            }
         }
         """;
 
@@ -51,6 +61,12 @@ static class IlDiffCases
     const string OverS = "N.C::OverS(System.Int32)";
     const string IterOver = "N.C::IterOver(System.Int32)";
     const string LocOver = "N.C::LocOver(System.Int32)";
+    // Gen holds Cap's lambda, which captures only this, and Twice's local
+    // function: both are methods of Gen itself, not of a generated type.
+    const string Next = "N.Gen::Next(System.Int32)";
+    const string Cap = "N.Gen::Cap(System.Int32)";
+    const string Twice = "N.Gen::Twice(System.Int32)";
+    const string Mark = "public int Mark;";
     const string Hello = "\"hello\"";
     const string Hullo = "\"hullo\"";
 
@@ -146,6 +162,26 @@ static class IlDiffCases
             None, null, "method facts changed"),
         ("a changed constant fails", "Limit = 5", "Limit = 6", None, None, null,
             "field facts changed"),
+        // A type written in source holds the lambdas and local functions of
+        // its listed members, but its fields are still its own.
+        ("a changed constant fails though its user and the type's lambda and "
+            + "local function are listed", "Step = 5", "Step = 6",
+            new[] { Next, Cap, Twice }, None, null, "field facts changed"),
+        ("a changed constant fails though the lambda it is inlined in is "
+            + "listed", "Version = 29", "Version = 30",
+            new[] { Cap, Twice }, None, null, "field facts changed"),
+        ("a removed field attribute fails though the type's lambda and local "
+            + "function are listed", "[NonSerialized] " + Mark, Mark,
+            new[] { Cap, Twice }, None, null, "field facts changed"),
+        ("a field made readonly fails though the type's lambda and local "
+            + "function are listed", Mark, "public readonly int Mark;",
+            new[] { Cap, Twice }, None, null, "field facts changed"),
+        ("a field made static fails though the type's lambda and local "
+            + "function are listed", Mark, "public static int Mark;",
+            new[] { Cap, Twice }, None, null, "field facts changed"),
+        ("a changed field type fails though the type's lambda and local "
+            + "function are listed", Mark, "public long Mark;",
+            new[] { Cap, Twice }, None, null, "field facts changed"),
         ("changed accessibility fails", "public int Foo(int x)",
             "internal int Foo(int x)", new[] { Foo }, None, null,
             "method facts changed"),

@@ -92,10 +92,16 @@ sealed class Ownership
     }
 
     /// The source methods a generated type was traced to: for a state machine
-    /// or closure class the code that uses it, for any other type the owners
-    /// of its methods together.
+    /// or closure class the code that uses it, for any other generated type
+    /// the owners of its methods together. A type written in source has none,
+    /// although it holds the lambdas and local functions of its members: its
+    /// fields are its own, and must be compared whatever the manifest holds.
     public IReadOnlyCollection<string> ExactOwnersOf(TypeDefinition t)
     {
+        if (!IsGenerated(t))
+        {
+            return Array.Empty<string>();
+        }
         if (_exactTypes.TryGetValue(t, out var owners))
         {
             return owners;
@@ -108,7 +114,8 @@ sealed class Ownership
         return all;
     }
 
-    /// A delegate cache field belongs to its lambda, as in OwnersOf.
+    /// A delegate cache field belongs to its lambda, as in OwnersOf; another
+    /// field to its type, so a field of a type written in source to nothing.
     public IReadOnlyCollection<string> ExactOwnersOf(FieldDefinition f)
     {
         var lambda = LambdaOf(f);
