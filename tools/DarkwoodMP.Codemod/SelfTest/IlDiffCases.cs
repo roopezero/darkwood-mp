@@ -25,6 +25,14 @@ static class IlDiffCases
                 public int Lam(int x) { Func<int, int> f = y => y + x; return f(1); }
                 public IEnumerable<int> Iter(int x) { yield return x; }
                 public int Loc(int x) { int Inner(int y) { return y + 1; } return Inner(x); }
+                public int Over(int x) { Func<int, int> f = y => y - x; return f(1); }
+                public int Over(string s) { Func<int, int> f = y => y - s.Length; return f(1); }
+                public int OverS(int x) { Func<int, int> f = y => y * 2; return f(x); }
+                public int OverS(string s) { Func<int, int> f = y => y * 3; return f(s.Length); }
+                public IEnumerable<int> IterOver(int x) { yield return x * 2; }
+                public IEnumerable<int> IterOver(string s) { yield return s.Length; }
+                public int LocOver(int x) { int In(int y) { return y + 4; } return In(x); }
+                public int LocOver(string s) { int In(int y) { return y + 5; } return In(s.Length); }
             }
         }
         """;
@@ -35,6 +43,10 @@ static class IlDiffCases
     const string Iter = "N.C::Iter(System.Int32)";
     const string Loc = "N.C::Loc(System.Int32)";
     const string Def = "N.C::Def(System.Int32)";
+    const string Over = "N.C::Over(System.Int32)";
+    const string OverS = "N.C::OverS(System.Int32)";
+    const string IterOver = "N.C::IterOver(System.Int32)";
+    const string LocOver = "N.C::LocOver(System.Int32)";
     const string Hello = "\"hello\"";
     const string Hullo = "\"hullo\"";
 
@@ -46,9 +58,11 @@ static class IlDiffCases
             new[] { Foo }, None, null, ""),
         ("a body outside the manifest fails", "x + 1", "x + 2",
             None, None, null, "changed outside the manifest"),
-        ("another overload fails", "s.Length", "s.Length + 1",
+        ("another overload fails", "{ return s.Length; }",
+            "{ return s.Length + 1; }",
             new[] { Foo }, None, null, "changed outside the manifest"),
-        ("a name without types covers every overload", "s.Length", "s.Length + 1",
+        ("a name without types covers every overload", "{ return s.Length; }",
+            "{ return s.Length + 1; }",
             new[] { "N.C::Foo" }, None, null, ""),
         ("a lambda counts for its owner", "y + x", "y + x + 1",
             new[] { Lam }, None, null, ""),
@@ -74,6 +88,23 @@ static class IlDiffCases
             "return y + x; }", new[] { Loc }, None, null, ""),
         ("a new closure class outside the manifest fails", "return y + 1; }",
             "return y + x; }", None, None, null, "type added"),
+        ("a lambda of the listed overload passes", "y - x", "y - x - 1",
+            new[] { Over }, None, null, ""),
+        ("a lambda of another overload fails", "y - s.Length", "y - s.Length - 1",
+            new[] { Over }, None, null, "changed outside the manifest"),
+        ("a cached lambda of the listed overload passes", "y * 2", "y * 5",
+            new[] { OverS }, None, null, ""),
+        ("a cached lambda of another overload fails", "y * 3", "y * 4",
+            new[] { OverS }, None, null, "changed outside the manifest"),
+        ("MoveNext of the listed overload passes", "x * 2;", "x * 3;",
+            new[] { IterOver }, None, null, ""),
+        ("MoveNext of another overload fails", "yield return s.Length;",
+            "yield return s.Length + 1;", new[] { IterOver }, None, null,
+            "changed outside the manifest"),
+        ("a local function of the listed overload passes", "y + 4", "y + 6",
+            new[] { LocOver }, None, null, ""),
+        ("a local function of another overload fails", "y + 5", "y + 7",
+            new[] { LocOver }, None, null, "changed outside the manifest"),
         ("an added field fails", "public int Field;",
             "public int Field; public int Extra;", None, None, null, "field added"),
         ("a listed field passes", "public int Field;",

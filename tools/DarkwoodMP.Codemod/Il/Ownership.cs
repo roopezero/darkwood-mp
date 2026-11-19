@@ -9,13 +9,27 @@ namespace DarkwoodMP.Codemod.Il;
 /// state machine "<Foo>d__12", all named after the member Foo. A closure class
 /// "<>c__DisplayClass3_0" names no member, so it counts for the members whose
 /// code mentions it.
+///
+/// A name is the same for every overload, so the exact owners are traced as
+/// well: the source methods whose code leads to the generated code, through
+/// the methods it calls or makes delegates of and the state machines and
+/// closure classes it uses, as IlDiff.MemberKey spells them.
 sealed class Ownership
 {
     static readonly Regex Named = new Regex("^<+(?<owner>[^<>]+)>");
     static readonly Regex CacheField = new Regex("^<>9__(?<id>[0-9]+_[0-9]+)$");
     static readonly Regex LambdaId = new Regex("b__(?<id>[0-9]+_[0-9]+)$");
 
+    /// The generated types that belong whole to the code that uses them: a
+    /// state machine "<Foo>d__12" and a closure class. The shared "<>c" holds
+    /// the lambdas of many members, so only the lambdas used count there.
+    static readonly Regex WholeType = new Regex("^<[^<>]*>d__|^<>c__DisplayClass");
+
     readonly Dictionary<string, HashSet<string>> _types = new();
+    readonly Dictionary<string, TypeDefinition> _generated = new();
+    readonly Dictionary<string, TypeDefinition> _all = new();
+    readonly Dictionary<MethodDefinition, HashSet<string>> _exactMethods = new();
+    readonly Dictionary<TypeDefinition, HashSet<string>> _exactTypes = new();
 
     public Ownership(ModuleDefinition module)
     {
@@ -23,6 +37,18 @@ sealed class Ownership
         foreach (var t in generated)
         {
             _types[t.FullName] = NamedOwners(t);
+            _generated[t.FullName] = t;
+        }
+        foreach (var t in IlTools.AllTypes(module))
+        {
+            _all[t.FullName] = t;
+        }
+        foreach (var t in IlTools.AllTypes(module))
+        {
+            foreach (var m in t.Methods.Where(m => !IsGeneratedMethod(m)))
+            {
+                Trace(m, IlDiff.MemberKey(m));
+            }
         }
         var users = Users(module, generated);
         bool grew = true;
@@ -46,6 +72,124 @@ sealed class Ownership
     public static bool IsGenerated(TypeDefinition t)
     {
         return t.Name.StartsWith('<') && t.Name != "<Module>";
+    }
+
+    /// A lambda, local function or method of a generated type.
+    public static bool IsGeneratedMethod(MethodDefinition m)
+    {
+        return m.Name.StartsWith('<') || IsGenerated(m.DeclaringType);
+    }
+
+    /// The source methods the generated method was traced to; empty when
+    /// none leads to it.
+    public IReadOnlyCollection<string> ExactOwnersOf(MethodDefinition m)
+    {
+        if (_exactMethods.TryGetValue(m, out var owners))
+        {
+            return owners;
+        }
+        return Array.Empty<string>();
+    }
+
+    /// The source methods a generated type was traced to: for a state machine
+    /// or closure class the code that uses it, for any other type the owners
+    /// of its methods together.
+    public IReadOnlyCollection<string> ExactOwnersOf(TypeDefinition t)
+    {
+        if (_exactTypes.TryGetValue(t, out var owners))
+        {
+            return owners;
+        }
+        var all = new HashSet<string>();
+        foreach (var m in t.Methods)
+        {
+            all.UnionWith(ExactOwnersOf(m));
+        }
+        return all;
+    }
+
+    /// A delegate cache field belongs to its lambda, as in OwnersOf.
+    public IReadOnlyCollection<string> ExactOwnersOf(FieldDefinition f)
+    {
+        var lambda = LambdaOf(f);
+        if (lambda != null)
+        {
+            return ExactOwnersOf(lambda);
+        }
+        return ExactOwnersOf(f.DeclaringType);
+    }
+
+    /// Credits to key every generated method and type that the source
+    /// method's code leads to, directly or through other generated code.
+    void Trace(MethodDefinition source, string key)
+    {
+        var seen = new HashSet<MethodDefinition>();
+        var work = new Stack<MethodDefinition>();
+        work.Push(source);
+        while (work.Count > 0)
+        {
+            foreach (var next in Leads(work.Pop(), key))
+            {
+                if (seen.Add(next))
+                {
+                    Credit(_exactMethods, next, key);
+                    work.Push(next);
+                }
+            }
+        }
+    }
+
+    /// The generated methods a method's code leads to directly: the ones it
+    /// calls or makes delegates of, and every method of a state machine or
+    /// closure class it uses (MoveNext is never called by name). Such a type
+    /// is credited to key as well.
+    IEnumerable<MethodDefinition> Leads(MethodDefinition m, string key)
+    {
+        if (!m.HasBody)
+        {
+            yield break;
+        }
+        foreach (var instruction in m.Body.Instructions)
+        {
+            if (instruction.Operand is MethodReference called)
+            {
+                var element = called.GetElementMethod();
+                _all.TryGetValue(Definition(element.DeclaringType), out var declaring);
+                if (declaring == null)
+                {
+                    continue;
+                }
+                foreach (var target in declaring.Methods)
+                {
+                    if (target.Name == element.Name && IsGeneratedMethod(target))
+                    {
+                        yield return target;
+                    }
+                }
+            }
+        }
+        foreach (var name in Mentioned(m).Distinct())
+        {
+            if (_generated.TryGetValue(name, out var type)
+                && WholeType.IsMatch(type.Name))
+            {
+                Credit(_exactTypes, type, key);
+                foreach (var whole in type.Methods)
+                {
+                    yield return whole;
+                }
+            }
+        }
+    }
+
+    static void Credit<T>(Dictionary<T, HashSet<string>> map, T item, string key)
+    {
+        if (!map.TryGetValue(item, out var keys))
+        {
+            keys = new HashSet<string>();
+            map[item] = keys;
+        }
+        keys.Add(key);
     }
 
     /// Every member the method belongs to, as "Ns.Type::Name".
@@ -79,19 +223,31 @@ sealed class Ownership
     /// to the lambda "<Foo>b__3_0" beside it; other fields to the whole type.
     public IReadOnlyCollection<string> OwnersOf(FieldDefinition f)
     {
-        var cache = CacheField.Match(f.Name);
-        if (cache.Success)
+        var lambda = LambdaOf(f);
+        if (lambda != null)
         {
-            foreach (var m in f.DeclaringType.Methods)
-            {
-                var id = LambdaId.Match(m.Name);
-                if (id.Success && id.Groups["id"].Value == cache.Groups["id"].Value)
-                {
-                    return OwnersOf(m);
-                }
-            }
+            return OwnersOf(lambda);
         }
         return OwnersOf(f.DeclaringType);
+    }
+
+    /// The lambda "<Foo>b__3_0" a cache field "<>9__3_0" holds, or null.
+    static MethodDefinition LambdaOf(FieldDefinition f)
+    {
+        var cache = CacheField.Match(f.Name);
+        if (!cache.Success)
+        {
+            return null;
+        }
+        foreach (var m in f.DeclaringType.Methods)
+        {
+            var id = LambdaId.Match(m.Name);
+            if (id.Success && id.Groups["id"].Value == cache.Groups["id"].Value)
+            {
+                return m;
+            }
+        }
+        return null;
     }
 
     static string NamedOwner(string name)

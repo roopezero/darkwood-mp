@@ -17,6 +17,7 @@ sealed class IlDiff
     readonly HashSet<string> _exact = new();
     readonly HashSet<string> _anyOverload = new();
     readonly HashSet<string> _byName = new();
+    readonly Dictionary<string, HashSet<string>> _overloads = new();
     readonly HashSet<string> _allowed;
 
     IlDiff(ModuleDefinition a, ModuleDefinition b, Manifest manifest)
@@ -27,6 +28,8 @@ sealed class IlDiff
         _namesA = new GeneratedNames(a, _ownersA);
         _namesB = new GeneratedNames(b, _ownersB);
         _allowed = new HashSet<string>(manifest.Allowed);
+        AddOverloads(a);
+        AddOverloads(b);
         foreach (var member in manifest.Members)
         {
             _byName.Add(Manifest.NameLevel(member));
@@ -100,15 +103,52 @@ sealed class IlDiff
         _report.Problems.Add(text);
     }
 
-    /// True when the manifest holds every one of these owners.
-    bool Holds(IReadOnlyCollection<string> owners)
+    /// True when the manifest holds every member that generated code was
+    /// made for. A name is the same for every overload, so the exact members
+    /// traced to the code decide; when none was traced, every overload of
+    /// each owner's name must be listed.
+    bool Holds(IReadOnlyCollection<string> exact, IReadOnlyCollection<string> named)
     {
-        return owners.Count > 0 && owners.All(_byName.Contains);
+        if (exact.Count > 0)
+        {
+            return exact.All(key => _exact.Contains(key)
+                || _anyOverload.Contains(Manifest.NameLevel(key)));
+        }
+        return named.Count > 0 && named.All(HoldsEveryOverload);
+    }
+
+    bool HoldsEveryOverload(string name)
+    {
+        if (_anyOverload.Contains(name))
+        {
+            return true;
+        }
+        return _overloads.TryGetValue(name, out var keys)
+            && keys.All(_exact.Contains);
+    }
+
+    /// Every source method of both builds, by name.
+    void AddOverloads(ModuleDefinition module)
+    {
+        foreach (var t in IlTools.AllTypes(module))
+        {
+            foreach (var m in t.Methods.Where(m => !IsGeneratedMethod(m)))
+            {
+                var key = MemberKey(m);
+                if (!_overloads.TryGetValue(Manifest.NameLevel(key), out var keys))
+                {
+                    keys = new HashSet<string>();
+                    _overloads[Manifest.NameLevel(key)] = keys;
+                }
+                keys.Add(key);
+            }
+        }
     }
 
     bool HoldsGenerated(TypeDefinition t, Ownership owners)
     {
-        return Ownership.IsGenerated(t) && Holds(owners.OwnersOf(t));
+        return Ownership.IsGenerated(t)
+            && Holds(owners.ExactOwnersOf(t), owners.OwnersOf(t));
     }
 
     void MissingType(TypeDefinition t, Ownership owners, string what)
@@ -165,7 +205,8 @@ sealed class IlDiff
         {
             if (fieldsB.TryGetValue(name, out var other))
             {
-                if (!owned && !Holds(_ownersA.OwnersOf(field))
+                if (!owned
+                    && !Holds(_ownersA.ExactOwnersOf(field), _ownersA.OwnersOf(field))
                     && IlFacts.Of(field, _namesA) != IlFacts.Of(other, _namesB))
                 {
                     Problem("field facts changed: " + field.FullName);
@@ -189,7 +230,8 @@ sealed class IlDiff
         FieldDefinition f, Ownership owners, bool owned, string what)
     {
         var generated = Ownership.IsGenerated(f.DeclaringType);
-        if (owned || (generated && Holds(owners.OwnersOf(f)))
+        if (owned
+            || (generated && Holds(owners.ExactOwnersOf(f), owners.OwnersOf(f)))
             || _allowed.Contains($"field {f.DeclaringType.FullName}::{f.Name}"))
         {
             return;
@@ -253,12 +295,13 @@ sealed class IlDiff
     /// True for a compiler-generated method of a member in the manifest.
     bool GeneratedAndHeld(MethodDefinition m, Ownership owners)
     {
-        return IsGeneratedMethod(m) && Holds(owners.OwnersOf(m));
+        return IsGeneratedMethod(m)
+            && Holds(owners.ExactOwnersOf(m), owners.OwnersOf(m));
     }
 
     static bool IsGeneratedMethod(MethodDefinition m)
     {
-        return m.Name.StartsWith('<') || Ownership.IsGenerated(m.DeclaringType);
+        return Ownership.IsGeneratedMethod(m);
     }
 
     void MissingMethod(MethodDefinition m, Ownership owners, string what)
