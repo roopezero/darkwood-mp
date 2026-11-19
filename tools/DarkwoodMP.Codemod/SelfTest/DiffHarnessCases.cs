@@ -125,6 +125,20 @@ static class DiffHarnessCases
             """, "return 7;"),
     };
 
+    /// An async void Run returns at its first await, and the rest of its body
+    /// runs on the thread pool during later rows. Whether a wrong rewrite
+    /// after the await shows would depend on timing, so the harness must stop.
+    const string AsyncVoid = """
+        public static async void Run(bool c)
+        {
+            await System.Threading.Tasks.Task.Yield();
+            Log("x", Log("c", c) ? Log("a", 1) : Log("b", 2));
+        }
+        """;
+
+    const string AsyncVoidSwapped = "int t;\nif (Log(\"c\", c))\n{\n"
+        + "t = Log(\"b\", 2);\n}\nelse\n{\nt = Log(\"a\", 1);\n}\nLog(\"x\", t);";
+
     /// The right rewrite of the endless coroutine: both runs stop at the same
     /// step and must compare equal.
     const string EndlessRight = "if (Log(\"c\", c))\n{\n"
@@ -160,7 +174,7 @@ static class DiffHarnessCases
         + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
         + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
 
-    public const int Count = 9 + 5 + 2 + 3 + 4 + 1 + 1 + 2;
+    public const int Count = 9 + 5 + 2 + 3 + 4 + 1 + 1 + 2 + 1;
 
     public static List<string> Failures()
     {
@@ -228,11 +242,29 @@ static class DiffHarnessCases
         }
         ExpectCaught(problems, "a passed-through object checked under unity-null",
             fallback, new ProbeTextRule("unity-null", FallbackChecked));
+        ExpectStop(problems, "an async void Run",
+            new DiffCase { Name = "async void", Method = AsyncVoid },
+            new ProbeTextRule("probe-text", AsyncVoidSwapped));
         foreach (var (what, text) in Unreadable)
         {
             ExpectUnreadable(problems, what, text);
         }
         return problems;
+    }
+
+    static void ExpectStop(
+        List<string> problems, string what, DiffCase diffCase, Rule rule)
+    {
+        try
+        {
+            var outcome = DiffHarness.Run(rule, diffCase);
+            problems.Add($"  {what}: compared, not refused, with "
+                + $"{outcome.Mismatches.Count} mismatches");
+        }
+        catch (Stop)
+        {
+            // The case was refused, as it should be.
+        }
     }
 
     static void ExpectUnreadable(

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
 using DarkwoodMP.Codemod.Format;
@@ -230,6 +231,14 @@ static class DiffHarness
         if (run == null)
         {
             throw new Stop("A differential case has no static method Run.");
+        }
+        // An async void method returns at its first await, and the rest of
+        // its body runs on the thread pool, during later rows.
+        if (run.ReturnType == typeof(void)
+            && run.IsDefined(typeof(AsyncStateMachineAttribute), false))
+        {
+            throw new Stop("A differential case's Run is async void. Make it "
+                + "return Task, so that the harness can wait for its body.");
         }
         return run;
     }
