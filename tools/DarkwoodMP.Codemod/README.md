@@ -353,8 +353,10 @@ as a value, whose value is the unwrapped one.
 A `?.` chain whose tested values are not Unity objects becomes ifs
 (codemod.md section 7.3, `Rules/ConditionalAccessRule.cs` and
 `Rules/Access*.cs`). Every value a `?.` tests is read once: a receiver
-that isn't a local, a parameter (neither a ref) or `this` goes into a
-temporary named after it, an event or a delegate into one named `handler`,
+that isn't a local, a parameter or `this` goes into a temporary named
+after it, and so does a local or a parameter that is a ref or that a
+lambda or a local function captures, which another thread can write
+between two reads; an event or a delegate goes into one named `handler`,
 which is then called as a delegate (`handler(a)` for `?.Invoke(a)`), and
 each inner `?.` of a chain tests a temporary of the step in front of it:
 
@@ -369,8 +371,11 @@ each inner `?.` of a chain tests a temporary of the step in front of it:
 - an assignment of one `?.` to a target without an element, a constant or
   a call, whose parts may run after the receiver (hazard 2): `if (x !=
   null) { t = x.F; } else { t = null; }`, so a field or a property is
-  written once, with the final value;
-- a return: `if (x != null) { return x.F; } return null;`;
+  written once, with the final value, when the value goes into the target
+  by an identity or a reference conversion (a user-defined one would no
+  longer run for a null `x`);
+- a return: `if (x != null) { return x.F; } return null;`, when the value
+  is returned by an identity or a reference conversion;
 - an expression body: a block first, holding the statement form for a void
   member or lambda and the return form for any other, a get accessor for a
   property or an indexer;
@@ -410,7 +415,8 @@ operator says for a null `x`, not false, and so is `x?.M == null` with an
 `==(Meter? a, Meter? b)`. Such comparisons move into a temporary instead.
 The same check sends to the hoist a member whose type's own `==` the
 comparison calls (a reference type's operator is never lifted), unless
-that `==` is .NET's or a Unity object's. Where the reference `==` is
+that `==` is .NET's or the one `UnityEngine.Object` declares. Where the
+reference `==` is
 called instead, as for `h?.It == this` with an `It` of a type that
 derives from this one's, both forms compare references and the
 translation holds.
@@ -538,33 +544,35 @@ receivers: arguments that run only for a receiver that isn't null, a
 receiver property that returns null on its second read (a rewrite that
 reads it twice throws), events and delegates, the natural type of a
 declaration, a declaration of two variables and a using declaration,
-chains, a setter that logs each set, returns, expression
-bodies and lambdas, every fixed comparison and its parentheses, a compared
-value with effects or a null (which must still run and compare), a
-compared value that is a property, a loop condition, element reads and
-.NET's `==`, a user-defined conversion of the `?.`'s value or of the
-compared value, an operator of the compared value's own that takes a
-Nullable and one that a member compared with null calls, a compared
-`this` under the reference `==`, receivers that are another type's
-property or a call, a value
-read or a call earlier in the statement, an assignment of a chain to a
-target that wasn't null, an assignment whose target runs a getter and one
-whose receiver changes a part of its target. Reading the receiver twice (a
-call's or another type's property's too), writing `x?.F != v` as `x != null
-&& x.F != v`, translating a compared value with effects (a property too) or
-a comparison that converts by code of its own or whose operator gets the
+chains, a setter that logs each set, returns, expression bodies and
+lambdas, every fixed comparison and its parentheses, a compared value with
+effects or a null (which must still run and compare), a compared value
+that is a property, a loop condition, element reads and .NET's `==`, a
+user-defined conversion of the `?.`'s value, of the compared value or into
+an assignment's target, an operator of the compared value's own that
+takes a Nullable and one that a member compared with null calls, a
+compared `this` under the reference `==`, receivers that are another
+type's property or a call, a value read or a call earlier in the
+statement, an assignment of a chain to a target that wasn't null, an
+assignment whose target runs a getter and one whose receiver changes a
+part of its target. Reading the receiver twice (a call's or another
+type's property's too), writing `x?.F != v` as `x != null && x.F != v`,
+translating a compared value with effects (a property too) or a
+comparison that converts by code of its own or whose operator gets the
 null itself (with `== null` too), moving a `?.` with effects past an
 earlier read of a value it changes or one without effects past an earlier
-call, the assignment form for a chain, running the receiver before the
+call, the assignment form for a chain or for a target that takes the
+value by a user-defined conversion, running the receiver before the
 target's getter or a part of the target it changes, and the declaration
 form for a declaration of two variables or a using declaration each fail
 a case. The golden cases pin what a single thread can't show, and the
-texts: a ref parameter or ref local and a field of this, also written
+texts: a ref parameter or ref local, a local or a parameter that a lambda
+or a local function captures and a field of this, also written
 `this._box`, go into a temporary; a statement in an interpolation hole,
 with an await or in an else-if condition goes to the queue; a compared
-field or property moves into a temporary, and so do a compared `this`
-of a Unity object and a member whose Unity type declares an `==` of its
-own; and the queue names the call in an earlier operand.
+field or property moves into a temporary, and so do a compared `this` of
+a Unity object and a member whose Unity type declares an `==` of its own;
+and the queue names the call in an earlier operand.
 
 ## Golden cases
 

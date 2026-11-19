@@ -976,3 +976,51 @@ public static object Run(bool has, int v)
     bool apart = a?.Pair != t;
     return (same, apart);
 }
+=== an assignment through a user-defined conversion runs it for a null receiver
+public class Wrap
+{
+    public string S;
+
+    public static implicit operator Wrap(string s)
+    {
+        if (s == null)
+        {
+            return new Wrap { S = Log("wrap", "none") };
+        }
+        return new Wrap { S = Log("wrap", s) };
+    }
+}
+
+public class Box
+{
+    public string Name;
+}
+
+static Wrap s_field;
+
+public static object Run(bool has)
+{
+    Box a = null;
+    if (has)
+    {
+        a = new Box { Name = "b" };
+    }
+    Wrap w = new Wrap { S = "start" };
+    w = a?.Name;
+    s_field = new Wrap { S = "start" };
+    s_field = a?.Name;
+    string local = "x";
+    if (ReferenceEquals(w, null))
+    {
+        local = "null";
+    }
+    else
+    {
+        local = w.S;
+    }
+    if (ReferenceEquals(s_field, null))
+    {
+        return (local, "null");
+    }
+    return (local, s_field.S);
+}

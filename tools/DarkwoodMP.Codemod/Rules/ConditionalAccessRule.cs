@@ -22,7 +22,9 @@ namespace DarkwoodMP.Codemod.Rules;
 ///
 /// Every value a ?. tests is read once: a receiver that isn't a local, a
 /// parameter or this goes into a temporary first, because Net/ runs on
-/// several threads, and so does the value each inner ?. of a chain tests.
+/// several threads, and so do a ref local or parameter, a local or
+/// parameter that a lambda or a local function captures, and the value
+/// each inner ?. of a chain tests.
 /// A delegate is called through its temporary: "handler(a)". A chain that
 /// tests a Unity object is left whole for stage 7.
 sealed class ConditionalAccessRule : Rule
@@ -298,7 +300,9 @@ sealed partial class AccessPlanner
     }
 
     /// A receiver read twice must be a local or a parameter that isn't a
-    /// ref, or this: anything else can change between the reads.
+    /// ref and that no lambda or local function captures, or this: anything
+    /// else can change between the reads. A captured variable is a field of
+    /// the closure's class, which a lambda run on another thread can write.
     bool NeedsTemporary(ExpressionSyntax receiver)
     {
         var bare = TernaryChain.Strip(receiver);
@@ -310,14 +314,55 @@ sealed partial class AccessPlanner
         {
             return true;
         }
-        switch (_model.GetSymbolInfo(bare).Symbol)
+        var symbol = _model.GetSymbolInfo(bare).Symbol;
+        switch (symbol)
         {
             case ILocalSymbol local:
-                return local.IsRef;
+                return local.IsRef || Captured(symbol, bare);
             case IParameterSymbol parameter:
-                return parameter.RefKind != RefKind.None;
+                return parameter.RefKind != RefKind.None
+                    || Captured(symbol, bare);
             default:
                 return true;
+        }
+    }
+
+    /// Whether a lambda or a local function captures the variable, by the
+    /// data flow of all the code of the member the site is in. True when
+    /// that code isn't found or can't be analysed.
+    bool Captured(ISymbol symbol, SyntaxNode site)
+    {
+        var code = site.AncestorsAndSelf().LastOrDefault(IsMemberCode);
+        if (code == null)
+        {
+            return true;
+        }
+        var flow = _model.AnalyzeDataFlow(code);
+        return !flow.Succeeded || flow.Captured.Contains(symbol);
+    }
+
+    /// The outermost code of a member: the block of a method, an operator,
+    /// a constructor or an accessor, the expression of an expression body,
+    /// or the value that initializes a field or a property.
+    static bool IsMemberCode(SyntaxNode node)
+    {
+        switch (node.Parent)
+        {
+            case BaseMethodDeclarationSyntax method:
+                return node == method.Body;
+            case AccessorDeclarationSyntax accessor:
+                return node == accessor.Body;
+            case ArrowExpressionClauseSyntax arrow:
+                return arrow.Parent is MemberDeclarationSyntax
+                    or AccessorDeclarationSyntax;
+            case EqualsValueClauseSyntax value:
+                return value.Parent is PropertyDeclarationSyntax
+                    or VariableDeclaratorSyntax
+                    {
+                        Parent.Parent: BaseFieldDeclarationSyntax,
+                    };
+            default:
+                return false;
         }
     }
 
