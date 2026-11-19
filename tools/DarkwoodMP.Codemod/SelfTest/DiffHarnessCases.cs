@@ -57,6 +57,14 @@ static class DiffHarnessCases
             """,
             "if (Log(\"c\", c))\n{\nreturn Log(\"n\", n) + 1L;\n}\n"
                 + "return 0L;"),
+        ("a different exception message", """
+            public static string Run(string s)
+            {
+                return Log("s", s) ?? throw new InvalidOperationException("no s");
+            }
+            """,
+            "var t = Log(\"s\", s);\nif (t == null)\n{\n"
+                + "throw new InvalidOperationException(\"no S\");\n}\nreturn t;"),
         ("a dropped checked context", """
             public static int Run(bool c, int n)
             {
@@ -215,7 +223,7 @@ static class DiffHarnessCases
         + "if (t != null)\n{\nreturn t;\n}\nvar s = Log(\"b\", b);\n"
         + "if (s != null)\n{\nreturn s;\n}\nreturn null;";
 
-    public const int Count = 9 + 5 + 4 + 3 + 4 + 1 + 1 + 2 + 1 + 2;
+    public const int Count = 9 + 5 + 5 + 3 + 4 + 1 + 1 + 2 + 1 + 2;
 
     public static List<string> Failures()
     {

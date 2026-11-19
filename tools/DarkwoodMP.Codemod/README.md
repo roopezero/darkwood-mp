@@ -148,7 +148,8 @@ every combination of bools, integers of every size with their type's limits
 at `int.MaxValue`, and so does a lost `checked`), every value of an enum and
 one it doesn't name, other numbers (with NaN and the infinities for `double`
 and `float`), nulls and a fake `UnityObject` whose `==` treats a destroyed
-object as null. It compares the results, the logged order of evaluation and
+object as null. It compares the results (an exception by its type and
+message), the logged order of evaluation and
 what each run left in its object arguments and in the case's static fields. A
 collection, returned or logged, is compared element by element. A returned
 iterator or coroutine is run, for at most 1,000 values, and a returned task is

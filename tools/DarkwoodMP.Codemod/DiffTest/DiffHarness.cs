@@ -284,7 +284,7 @@ static class DiffHarness
         }
         catch (TargetInvocationException e)
         {
-            outcome = "threw " + e.InnerException.GetType().Name;
+            outcome = Threw(e.InnerException);
         }
         outcome += Statics(assembly);
         var entries = (System.Collections.IEnumerable)trace
@@ -330,8 +330,8 @@ static class DiffHarness
         }
         catch (Exception e)
         {
-            return $"yielded [{string.Join(", ", yielded)}], then threw "
-                + e.GetType().Name;
+            return $"yielded [{string.Join(", ", yielded)}], then "
+                + Threw(e);
         }
         var text = $"yielded [{string.Join(", ", yielded)}]";
         if (yielded.Count == StepLimit)
@@ -353,7 +353,7 @@ static class DiffHarness
         }
         catch (AggregateException e)
         {
-            return "threw " + e.InnerException.GetType().Name;
+            return Threw(e.InnerException);
         }
         // An async Task is a Task<VoidTaskResult> underneath, so the declared
         // type says whether there is a result.
@@ -364,6 +364,13 @@ static class DiffHarness
         }
         var result = type.GetProperty("Result").GetValue(task);
         return "returned " + Describe(assembly, result);
+    }
+
+    /// An exception by its type and message, so that a rewrite that throws
+    /// the same type with other words shows.
+    static string Threw(Exception e)
+    {
+        return "threw " + e.GetType().Name + ": " + e.Message;
     }
 
     static string Describe(Assembly assembly, object value)
