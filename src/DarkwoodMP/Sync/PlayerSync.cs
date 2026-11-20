@@ -117,8 +117,13 @@ namespace DarkwoodMP.Sync
                 return;
             }
             _snap.Owner = _session.LocalId;
+            if (!_session.Active || !_session.Connected)
+            {
+                return;
+            }
             // A joiner isn't shown until its character is placed (World.Characters.Placing), off the others.
-            if (!_session.Active || !_session.Connected || (World.Characters.Instance?.Placing ?? false))
+            var characters = World.Characters.Instance;
+            if (characters != null && characters.Placing)
             {
                 return;
             }

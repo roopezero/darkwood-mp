@@ -298,8 +298,19 @@ namespace DarkwoodMP.Combat
             if (away != _wasAway)
             {
                 _wasAway = away;
-                Plugin.Log.LogInfo(away ? $"The host is away ({current.name}): the world is kept running around {(others.TryGetValue(world, out var w) ? w.Count : 0)} other player(s)"
-                                        : "The host is back in the world");
+                var log = Plugin.Log;
+                string message = "The host is back in the world";
+                if (away)
+                {
+                    string name = current.name;
+                    int count = 0;
+                    if (others.TryGetValue(world, out var w))
+                    {
+                        count = w.Count;
+                    }
+                    message = $"The host is away ({name}): the world is kept running around {count} other player(s)";
+                }
+                log.LogInfo(message);
             }
             Run(wg, current, centres, instant, force);
             foreach (var kv in others)
@@ -804,7 +815,19 @@ namespace DarkwoodMP.Combat
             switch (__instance)
             {
                 case Door _:
-                    __state = __args.Length > 0 && __args[__args.Length > 1 ? 1 : 0] is Transform t && t != null && t.GetComponent<Player>() != null;
+                    if (__args.Length > 0)
+                    {
+                        int index = 0;
+                        if (__args.Length > 1)
+                        {
+                            index = 1;
+                        }
+                        __state = __args[index] is Transform t && t != null && t.GetComponent<Player>() != null;
+                    }
+                    else
+                    {
+                        __state = false;
+                    }
                     break;
                 case MeleeSensor m:
                     __state = m.type == MeleeSensor.MeleeSensorType.player;

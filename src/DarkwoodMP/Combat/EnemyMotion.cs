@@ -304,10 +304,17 @@ namespace DarkwoodMP.Combat
                 {
                     text = SumGap / _gaps.Count * 1000f;
                 }
-                return FormattableString.Invariant(
-                    $"{Batches} batches, gap avg {text:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ") + FormattableString.Invariant(
-                    $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; moving enemy frames {Moving}: stalls {Stalls} ({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ") + FormattableString.Invariant(
-                    $"speed error avg {(Moving > 0 ? SumErr / Moving * 100f : 0f):0}%; delay {_delay * 1000f:0} ms (interval {_interval * 1000f:0}, jitter {_jitter * 1000f:0})");
+                string arrivals = FormattableString.Invariant(
+                    $"{Batches} batches, gap avg {text:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ");
+                string motion = FormattableString.Invariant(
+                    $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; moving enemy frames {Moving}: stalls {Stalls} ({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ");
+                float error = 0f;
+                if (Moving > 0)
+                {
+                    error = SumErr / Moving * 100f;
+                }
+                return arrivals + motion + FormattableString.Invariant(
+                    $"speed error avg {error:0}%; delay {_delay * 1000f:0} ms (interval {_interval * 1000f:0}, jitter {_jitter * 1000f:0})");
             }
 
             private static string Pct(int n)

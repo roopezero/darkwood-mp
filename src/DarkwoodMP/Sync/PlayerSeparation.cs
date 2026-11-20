@@ -25,7 +25,18 @@ namespace DarkwoodMP.Sync
         public static float Eased;
 
         /// <summary>How close two players' centres can be before they're eased apart (two body widths).</summary>
-        public static float Distance => 2f * (_radius > 0f ? _radius : DefaultRadius);
+        public static float Distance
+        {
+            get
+            {
+                float radius = DefaultRadius;
+                if (_radius > 0f)
+                {
+                    radius = _radius;
+                }
+                return 2f * radius;
+            }
+        }
 
         public static void Update(PlayerSync sync, ulong localId)
         {

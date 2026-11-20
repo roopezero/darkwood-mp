@@ -53,7 +53,15 @@ namespace DarkwoodMP.Sync
                     continue;
                 }
                 var b = c.bounds;
-                list.Add($"{Path(c.transform)} [layer {c.gameObject.layer}, {c.GetType().Name}{(c.isTrigger ? ", trigger" : "")}, " +
+                var path = Path(c.transform);
+                var layer = c.gameObject.layer;
+                var kind = c.GetType().Name;
+                string trigger = "";
+                if (c.isTrigger)
+                {
+                    trigger = ", trigger";
+                }
+                list.Add($"{path} [layer {layer}, {kind}{trigger}, " +
                          $"{b.size.x:0}x{b.size.z:0} at ({b.center.x:0}, {b.center.z:0})]");
             }
             return list;

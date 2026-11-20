@@ -388,14 +388,37 @@ namespace DarkwoodMP.Combat
                 }
                 Plugin.Log.LogInfo($"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {name2}, at a hideout: {home}");
                 var worm = SpawnWorm(spawner, proxy);
-                Plugin.Log.LogInfo(worm != null
-                    ? $"[night test] worm for {proxy.OwnerName} at {worm.transform.position}, {Core.trueDistance(worm.transform.position, proxy.transform.position):0} from them, going for {(worm.target != null ? worm.target.name : "nobody")}"
-                    : $"[night test] no worm for {proxy.OwnerName}");
+                var log = Plugin.Log;
+                string line;
+                if (worm != null)
+                {
+                    var owner = proxy.OwnerName;
+                    var position = worm.transform.position;
+                    var distance = Core.trueDistance(worm.transform.position, proxy.transform.position);
+                    string target = "nobody";
+                    if (worm.target != null)
+                    {
+                        target = worm.target.name;
+                    }
+                    line = $"[night test] worm for {owner} at {position}, {distance:0} from them, going for {target}";
+                }
+                else
+                {
+                    line = $"[night test] no worm for {proxy.OwnerName}";
+                }
+                log.LogInfo(line);
                 // A night attacker as at a hideout: the host's own location if the proxy isn't at one.
                 Location at = loc;
                 if (at == null)
                 {
-                    at = Player.Instance.whereAmI != null ? Player.Instance.whereAmI.bigLocation : null;
+                    if (Player.Instance.whereAmI != null)
+                    {
+                        at = Player.Instance.whereAmI.bigLocation;
+                    }
+                    else
+                    {
+                        at = null;
+                    }
                 }
                 if (at != null)
                 {

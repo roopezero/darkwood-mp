@@ -140,7 +140,12 @@ namespace DarkwoodMP.Combat
                 list[i].opcode = OpCodes.Ldarg_0;
                 list[i].operand = null;
                 list[i + 1].opcode = OpCodes.Call;
-                list[i + 1].operand = AccessTools.Method(typeof(Wards), isFriend ? nameof(FriendOfTheForest) : nameof(EnemyOfTheForest));
+                string name = nameof(EnemyOfTheForest);
+                if (isFriend)
+                {
+                    name = nameof(FriendOfTheForest);
+                }
+                list[i + 1].operand = AccessTools.Method(typeof(Wards), name);
                 list[i + 2].opcode = OpCodes.Nop;
                 list[i + 2].operand = null;
                 swapped++;

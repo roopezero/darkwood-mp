@@ -264,7 +264,15 @@ namespace DarkwoodMP.Sync
                 && (Player.Instance.transform.position - puppet.position).sqrMagnitude < HearingRange * HearingRange;
             if (puppet != null && !near)
             {
-                LogOnce($"far {owner}", $"[fx] {_s.NameOf(owner)}'s sounds: too far away to hear (puppet at {puppet.position}, we're at {(Player.Instance != null ? Player.Instance.transform.position.ToString() : "nowhere")})");
+                var key = $"far {owner}";
+                var name = _s.NameOf(owner);
+                var position = puppet.position;
+                string ours = "nowhere";
+                if (Player.Instance != null)
+                {
+                    ours = Player.Instance.transform.position.ToString();
+                }
+                LogOnce(key, $"[fx] {name}'s sounds: too far away to hear (puppet at {position}, we're at {ours})");
             }
             for (int i = 0; i < n; i++)
             {

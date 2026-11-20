@@ -735,8 +735,26 @@ namespace DarkwoodMP.Combat
             w.W.Write(t.Id);
             w.Write(c.transform.position);
             WriteRot(w, c.transform.rotation);
-            w.W.Write((byte)((InPlay(c) ? 1 : 0) | (c.sleeping ? 2 : 0) | (c.cuttingInHalf ? 4 : 0)));
-            w.W.Write(c.maxHealth > 0 ? Mathf.Clamp01(c.health / c.maxHealth) : 1f);
+            int flags = 0;
+            if (InPlay(c))
+            {
+                flags |= 1;
+            }
+            if (c.sleeping)
+            {
+                flags |= 2;
+            }
+            if (c.cuttingInHalf)
+            {
+                flags |= 4;
+            }
+            w.W.Write((byte)flags);
+            float health = 1f;
+            if (c.maxHealth > 0)
+            {
+                health = Mathf.Clamp01(c.health / c.maxHealth);
+            }
+            w.W.Write(health);
             int n = Mathf.Min(t.Animators.Count, 8);
             w.W.Write((byte)n);
             for (int i = 0; i < n; i++)
@@ -748,9 +766,24 @@ namespace DarkwoodMP.Combat
                     clip = a.CurrentClip;
                 }
                 w.W.Write(t.AnimatorPaths[i]);
-                w.W.Write(clip != null ? StableHash.Of(clip.name) : 0);
-                w.W.Write((ushort)(clip != null ? Mathf.Clamp(a.CurrentFrame, 0, 65535) : 0));
-                w.W.Write((byte)(a != null && a.Playing ? 1 : 0));
+                int hash = 0;
+                if (clip != null)
+                {
+                    hash = StableHash.Of(clip.name);
+                }
+                w.W.Write(hash);
+                int frame = 0;
+                if (clip != null)
+                {
+                    frame = Mathf.Clamp(a.CurrentFrame, 0, 65535);
+                }
+                w.W.Write((ushort)frame);
+                int playing = 0;
+                if (a != null && a.Playing)
+                {
+                    playing = 1;
+                }
+                w.W.Write((byte)playing);
             }
         }
 
@@ -924,7 +957,19 @@ namespace DarkwoodMP.Combat
             float applied = Mathf.Clamp(damage, 0f, cap);
             if (applied < damage)
             {
-                Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)}'s hit on {c.name}: {damage:0} is more than {weapon?.type ?? "bare hands"} can do; {applied:0}");
+                var log = Plugin.Log;
+                var hitter = _session.NameOf(from);
+                var target = c.name;
+                string weaponType = null;
+                if (weapon != null)
+                {
+                    weaponType = weapon.type;
+                }
+                if (weaponType == null)
+                {
+                    weaponType = "bare hands";
+                }
+                log.LogInfo($"[authority] {hitter}'s hit on {target}: {damage:0} is more than {weaponType} can do; {applied:0}");
             }
             World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             // The bar isn't shown for another player's hit (getHit would, as byPlayer); as for any hit not by our
@@ -987,7 +1032,12 @@ namespace DarkwoodMP.Combat
             if (!_weaponEffects.TryGetValue(b, out var own))
             {
                 own = new List<InvItemEffect>();
-                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, b.isFirearm ? b.item : null, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
+                UnityEngine.Object firearm = null;
+                if (b.isFirearm)
+                {
+                    firearm = b.item;
+                }
+                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, firearm, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
                 {
                     var go = o as GameObject ?? (o as Component)?.gameObject;
                     if (go == null)
@@ -1604,7 +1654,14 @@ namespace DarkwoodMP.Combat
                 }
                 if (c != null && KindOf(c) != name)
                 {
-                    Plugin.Log.LogInfo($"Save id {uid} is our {KindOf(c)}{(c.npc == null ? "" : " (an NPC)")}, not the host's {name}: making it from its prefab");
+                    var log = Plugin.Log;
+                    var kind = KindOf(c);
+                    string npc = " (an NPC)";
+                    if (c.npc == null)
+                    {
+                        npc = "";
+                    }
+                    log.LogInfo($"Save id {uid} is our {kind}{npc}, not the host's {name}: making it from its prefab");
                     c = null;
                 }
             }
@@ -2015,7 +2072,12 @@ namespace DarkwoodMP.Combat
                 {
                     text = "on";
                 }
-                Plugin.Log.LogInfo($"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched {text} with {Core.getTrueLocationName(loc.name)}{(again != "" ? "; playing again: " + again : "")}");
+                string note = "";
+                if (again != "")
+                {
+                    note = "; playing again: " + again;
+                }
+                Plugin.Log.LogInfo($"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched {text} with {Core.getTrueLocationName(loc.name)}{note}");
             }
         }
 

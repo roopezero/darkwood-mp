@@ -303,8 +303,18 @@ namespace DarkwoodMP.Sync
                         {
                             text = "SYNC";
                         }
-                        Plugin.Log.LogInfo($"[sprite] {text} path={path} layer={LayerMask.LayerToName(s.gameObject.layer)} " +
-                                           $"active={s.gameObject.activeInHierarchy} coll={s.Collection?.spriteCollectionName} sprite={s.CurrentSprite?.name}");
+                        var log = Plugin.Log;
+                        var layer = LayerMask.LayerToName(s.gameObject.layer);
+                        var active = s.gameObject.activeInHierarchy;
+                        var coll = s.Collection?.spriteCollectionName;
+                        var definition = s.CurrentSprite;
+                        string sprite = null;
+                        if (definition != null)
+                        {
+                            sprite = definition.name;
+                        }
+                        log.LogInfo($"[sprite] {text} path={path} layer={layer} " +
+                                    $"active={active} coll={coll} sprite={sprite}");
                     }
                     if (!ok)
                     {

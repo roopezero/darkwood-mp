@@ -166,8 +166,14 @@ namespace DarkwoodMP.Combat
                     {
                         attacker = at;
                     }
-                    PlayerDamage.Send(p.Owner, damage, attacker, shadow: false,
-                        effects: ex.hasEffect ? new List<InvItemEffect> { ex.effect } : null);
+                    var owner = p.Owner;
+                    List<InvItemEffect> effects = null;
+                    if (ex.hasEffect)
+                    {
+                        effects = new List<InvItemEffect> { ex.effect };
+                    }
+                    PlayerDamage.Send(owner, damage, attacker, shadow: false,
+                        effects: effects);
                 }
             }
             if (ByEnemy(at, ex.objectThatSpawnedMe))
@@ -374,8 +380,16 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            PlayerDamage.Send(p.Owner, f.contactDamage, f.transform, shadow: false,
-                effects: f.effect != null ? new List<InvItemEffect> { f.effect } : null);
+            var owner = p.Owner;
+            var damage = f.contactDamage;
+            var attacker = f.transform;
+            List<InvItemEffect> effects = null;
+            if (f.effect != null)
+            {
+                effects = new List<InvItemEffect> { f.effect };
+            }
+            PlayerDamage.Send(owner, damage, attacker, shadow: false,
+                effects: effects);
         }
     }
 

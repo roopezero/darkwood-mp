@@ -248,7 +248,13 @@ namespace DarkwoodMP.Combat
             var me = Player.Instance;
             if (me == null || EnemyAreaHits.PlayerAway() || Core.trueDistance(me.transform.position, pos) > 4000f)
             {
-                Plugin.Log.LogInfo($"[enemyfx] the host's enemy made {name}, not shown: our player is {(me != null && !EnemyAreaHits.PlayerAway() ? $"too far (at {me.transform.position.x:0},{me.transform.position.z:0})" : "away")}");
+                var log = Plugin.Log;
+                string where = "away";
+                if (me != null && !EnemyAreaHits.PlayerAway())
+                {
+                    where = $"too far (at {me.transform.position.x:0},{me.transform.position.z:0})";
+                }
+                log.LogInfo($"[enemyfx] the host's enemy made {name}, not shown: our player is {where}");
                 return;
             }
             if (Show(() =>
