@@ -159,7 +159,20 @@ namespace DarkwoodMP.World
             }
             var at = Spot(s);
             r.Info = string.Join("; ", Object.FindObjectsOfType<Door>(true).Where(d => StateDump.Flat(d.transform.position - at) < 1000f)
-                .Select(d => $"{ObjRef.Of(d.gameObject)} at {Fmt(d.transform.position)} open={d.opened} leaf {DoorLeaf.Angle(d):0} (z {d.body?.localEulerAngles.z:0}) on={d.gameObject.activeInHierarchy}"));
+                .Select(d =>
+                {
+                    ObjRef id = ObjRef.Of(d.gameObject);
+                    string spot = Fmt(d.transform.position);
+                    bool opened = d.opened;
+                    float angle = DoorLeaf.Angle(d);
+                    Transform body = d.body;
+                    float? turn = null;
+                    if (body != null)
+                    {
+                        turn = body.localEulerAngles.z;
+                    }
+                    return $"{id} at {spot} open={opened} leaf {angle:0} (z {turn:0}) on={d.gameObject.activeInHierarchy}";
+                }));
             yield break;
         }
 
@@ -172,9 +185,18 @@ namespace DarkwoodMP.World
             var from = Spot(a[0]);
             var to = Spot(a[1]);
             // One on the culling grid (a node of its own), not one switched on and off with its location's objects.
-            var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i => i.draggable && i.GetComponent<Rigidbody>() != null
-                && i.GetComponent<CullableObject>()?.node != null
-                && ObjRef.Of(i.gameObject).Valid && StateDump.Flat(i.transform.position - from) < 2500f), from);
+            var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i =>
+            {
+                if (i.draggable && i.GetComponent<Rigidbody>() != null)
+                {
+                    CullableObject cull = i.GetComponent<CullableObject>();
+                    if (cull != null && cull.node != null)
+                    {
+                        return ObjRef.Of(i.gameObject).Valid && StateDump.Flat(i.transform.position - from) < 2500f;
+                    }
+                }
+                return false;
+            }), from);
             if (it == null)
             {
                 r.Fail($"nothing draggable within 2500 of {Fmt(from)}");
@@ -279,7 +301,15 @@ namespace DarkwoodMP.World
                     body.position = spot;
                 }
                 yield return new WaitForSeconds(1.5f);
-                r.Info = $"{_dog.name} back at {Fmt(_dog.transform.position)}, save id {_dog.GetComponent<SaveableObject>()?.uniqueId}";
+                string name = _dog.name;
+                string at = Fmt(_dog.transform.position);
+                SaveableObject save = _dog.GetComponent<SaveableObject>();
+                int? id = null;
+                if (save != null)
+                {
+                    id = save.uniqueId;
+                }
+                r.Info = $"{name} back at {at}, save id {id}";
                 yield break;
             }
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
@@ -291,7 +321,15 @@ namespace DarkwoodMP.World
             c.transform.position = spot;
             _dog = c;
             yield return new WaitForSeconds(1.5f);
-            r.Info = $"{c.name} at {Fmt(c.transform.position)}, save id {c.GetComponent<SaveableObject>()?.uniqueId}";
+            string spawnedName = c.name;
+            string spawnedAt = Fmt(c.transform.position);
+            SaveableObject spawnedSave = c.GetComponent<SaveableObject>();
+            int? spawnedId = null;
+            if (spawnedSave != null)
+            {
+                spawnedId = spawnedSave.uniqueId;
+            }
+            r.Info = $"{spawnedName} at {spawnedAt}, save id {spawnedId}";
         }
 
         private static Character CopyNear(Vector3 at, float within)
@@ -312,7 +350,8 @@ namespace DarkwoodMP.World
         {
             string state = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}";
             string origin = "our copy from the save";
-            if (c.GetComponent<SaveableObject>()?.dontSave == true)
+            SaveableObject save = c.GetComponent<SaveableObject>();
+            if (save != null && save.dontSave)
             {
                 origin = "made from its prefab";
             }
@@ -348,7 +387,14 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var hidden = far.Where(c => !Shown(c)).ToArray();
-            r.Info = $"{far.Length} outside our rect, {hidden.Length} not shown; e.g. {Describe(hidden.FirstOrDefault() ?? far[0])}";
+            int total = far.Length;
+            int unseen = hidden.Length;
+            Character example = hidden.FirstOrDefault();
+            if (example == null)
+            {
+                example = far[0];
+            }
+            r.Info = $"{total} outside our rect, {unseen} not shown; e.g. {Describe(example)}";
             if (hidden.Length > 0)
             {
                 r.Fail(r.Info);

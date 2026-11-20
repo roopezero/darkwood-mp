@@ -185,7 +185,12 @@ namespace DarkwoodMP.World
                 text = "already fired here";
             }
             string state = $"{text}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, ";
-            int? count = m.C?.N;
+            LaterTestCounter counter = m.C;
+            int? count = null;
+            if (counter != null)
+            {
+                count = counter.N;
+            }
             int runs = -1;
             if (count.HasValue)
             {
@@ -235,7 +240,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(3f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
             bool there = m.Marker != null && Arrived(m);
-            int? count = m.C?.N;
+            LaterTestCounter counter = m.C;
+            int? count = null;
+            if (counter != null)
+            {
+                count = counter.N;
+            }
             int runs = 0;
             if (count.HasValue)
             {
@@ -245,7 +255,12 @@ namespace DarkwoodMP.World
             bool again = got != 0 || (m.Marker != null && Arrived(m));
             if (!again)
             {
-                int? recount = m.C?.N;
+                LaterTestCounter latest = m.C;
+                int? recount = null;
+                if (latest != null)
+                {
+                    recount = latest.N;
+                }
                 int total = 0;
                 if (recount.HasValue)
                 {

@@ -1067,12 +1067,22 @@ namespace DarkwoodMP.World
             {
                 string name = t.name;
                 string id = Ref(t);
-                string item = it?.name;
+                Item found = it;
+                string item = null;
+                if (found != null)
+                {
+                    item = found.name;
+                }
                 if (item == null)
                 {
                     item = "-";
                 }
-                string constructed = con?.constructed.ToString();
+                Constructible build = con;
+                string constructed = null;
+                if (build != null)
+                {
+                    constructed = build.constructed.ToString();
+                }
                 if (constructed == null)
                 {
                     constructed = "-";

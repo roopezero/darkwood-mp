@@ -441,7 +441,18 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
             yield return new WaitForSeconds(1f);
-            r.Info = $"back from {was} at {Fmt(Player.Instance.transform.position)}, in {Singleton<WorldGrid>.Instance?.currentGrid?.name}";
+            string spot = Fmt(Player.Instance.transform.position);
+            WorldGrid world = Singleton<WorldGrid>.Instance;
+            string area = null;
+            if (world != null)
+            {
+                WorldGrid.Grid grid = world.currentGrid;
+                if (grid != null)
+                {
+                    area = grid.name;
+                }
+            }
+            r.Info = $"back from {was} at {spot}, in {area}";
         }
 
         private static IEnumerator Dog(string[] a, Result r)
