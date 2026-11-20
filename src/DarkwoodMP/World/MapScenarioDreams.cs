@@ -62,7 +62,12 @@ namespace DarkwoodMP.World
             {
                 name2 = preset.name;
             }
-            r.Info = $"dreaming {name2} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+            string shared = DreamSync.Shared;
+            if (shared == null)
+            {
+                shared = "none";
+            }
+            r.Info = $"dreaming {name2} (shared {shared}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
             if (!D.dreaming || DreamSync.Shared != null || Locations.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");
@@ -182,8 +187,32 @@ namespace DarkwoodMP.World
             {
                 name2 = loc.name;
             }
-            r.Info = $"in {name2}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
-                     $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
+            string chomper = "not out";
+            if (ours != null)
+            {
+                string place = Fmt(ours.transform.position);
+                string state = " running";
+                if (Combat.NetEnemies.Frozen.Contains(ours))
+                {
+                    state = " (frozen)";
+                }
+                chomper = place + state;
+            }
+            string answer;
+            if (ok == null)
+            {
+                answer = "no answer";
+            }
+            else if (ok.Value)
+            {
+                answer = "accepted";
+            }
+            else
+            {
+                answer = "refused: " + why;
+            }
+            r.Info = $"in {name2}: wardrobe {opened}, {text}; our chomper {chomper}; {doorInfo}; " +
+                     $"forged request {answer}; refused {refused}";
             if (refused > 0)
             {
                 r.Fail($"the host refused what we did in our own dream: {r.Info}");
@@ -368,7 +397,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(2f);
-            r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
+            string spot = Fmt(P.transform.position);
+            string shared = DreamSync.Shared;
+            if (shared == null)
+            {
+                shared = "none";
+            }
+            r.Info = $"back at {spot}; shared dream {shared}";
         }
 
         /// <summary>"dream-chars" (either): the dream location's characters and events, logged (for reading a run).</summary>
@@ -397,9 +432,23 @@ namespace DarkwoodMP.World
                 }
                 uint id = 0;
                 bool net = ne != null && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
-                sb.Append($"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig {Combat.NetEnemies.Eligible(c)} act {c.gameObject.activeInHierarchy} en {c.enabled} alive {c.alive} " +
-                          $"at {Fmt(c.transform.position)} tgt {(c.target != null ? c.target.name : "-")} net {net}#{id} aggr {c.aggressive} sleep {c.sleeping} " +
-                          $"comps {string.Join(",", c.GetComponents<MonoBehaviour>().Select(m => m == null ? "?" : m.GetType().Name))}");
+                string line = $"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig {Combat.NetEnemies.Eligible(c)} act {c.gameObject.activeInHierarchy} en {c.enabled} alive {c.alive} ";
+                string spot = Fmt(c.transform.position);
+                string target = "-";
+                if (c.target != null)
+                {
+                    target = c.target.name;
+                }
+                string state = $"at {spot} tgt {target} net {net}#{id} aggr {c.aggressive} sleep {c.sleeping} ";
+                var scripts = c.GetComponents<MonoBehaviour>().Select(m =>
+                {
+                    if (m == null)
+                    {
+                        return "?";
+                    }
+                    return m.GetType().Name;
+                });
+                sb.Append(line + state + $"comps {string.Join(",", scripts)}");
             }
             foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true))
             {
@@ -478,7 +527,15 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
                 shown = DreamCharacters().FirstOrDefault(c => c.name.StartsWith("ChomperBlack") && c.gameObject.activeInHierarchy && ne.IsPuppet(c, out _));
             }
-            r.Info = $"closed {et.name} at {Fmt(et.transform.position)} from {Fmt(p.transform.position)}; the host's chomper shown: {(shown != null ? Fmt(shown.transform.position) : "no")}";
+            string wardrobe = et.name;
+            string there = Fmt(et.transform.position);
+            string here = Fmt(p.transform.position);
+            string seen = "no";
+            if (shown != null)
+            {
+                seen = Fmt(shown.transform.position);
+            }
+            r.Info = $"closed {wardrobe} at {there} from {here}; the host's chomper shown: {seen}";
             if (shown == null)
             {
                 r.Fail($"the host's chomper isn't shown here: {r.Info}");
@@ -517,9 +574,27 @@ namespace DarkwoodMP.World
             }
             var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
             ne.NetIdOf(c, out uint id);
-            r.Info = $"{c.name} #{id} at {Fmt(c.transform.position)}, target {(c.target != null ? c.target.name : "none")}; " +
-                     $"the client's stand-in: away {proxy?.Away}, in {((proxy != null && proxy.InLocation != null) ? proxy.InLocation.name : "-")}" +
-                     (proxy != null ? $", threat {Combat.Threat.Of(c).Get(proxy):0.#}" : "");
+            string chomper = c.name;
+            string spot = Fmt(c.transform.position);
+            string target = "none";
+            if (c.target != null)
+            {
+                target = c.target.name;
+            }
+            bool? away = proxy?.Away;
+            string inside = "-";
+            if (proxy != null && proxy.InLocation != null)
+            {
+                inside = proxy.InLocation.name;
+            }
+            string threat = "";
+            if (proxy != null)
+            {
+                threat = $", threat {Combat.Threat.Of(c).Get(proxy):0.#}";
+            }
+            r.Info = $"{chomper} #{id} at {spot}, target {target}; " +
+                     $"the client's stand-in: away {away}, in {inside}" +
+                     threat;
             if (proxy == null || proxy.Away || proxy.InLocation != D.dreamLocation)
             {
                 r.Fail($"the client isn't in the dream we run: {r.Info}");
@@ -538,8 +613,13 @@ namespace DarkwoodMP.World
             var all = DreamCharacters().ToList();
             int puppets = all.Count(c => ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy);
             var running = all.Where(c => !ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy && !Combat.NetEnemies.Frozen.Contains(c)).ToList();
-            r.Info = $"host runs it here {Locations.HostRunsHere()}; the host's shown {puppets}; ours running {running.Count}" +
-                     (running.Count > 0 ? $" ({string.Join(", ", running.Select(c => c.name))})" : "");
+            string line = $"host runs it here {Locations.HostRunsHere()}; the host's shown {puppets}; ours running {running.Count}";
+            string names = "";
+            if (running.Count > 0)
+            {
+                names = $" ({string.Join(", ", running.Select(c => c.name))})";
+            }
+            r.Info = line + names;
             if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0)
             {
                 r.Fail($"the dream's characters aren't the host's: {r.Info}");
@@ -669,7 +749,13 @@ namespace DarkwoodMP.World
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.area));
             yield return new WaitForSeconds(3f);
             var door = HomeDoorOf(et);
-            r.Info = $"walked into {et.name} at {Fmt(et.transform.position)}; " + (door != null ? DoorInfo(door) : "no door");
+            string line = $"walked into {et.name} at {Fmt(et.transform.position)}; ";
+            string state = "no door";
+            if (door != null)
+            {
+                state = DoorInfo(door);
+            }
+            r.Info = line + state;
         }
 
         /// <summary>"home-open" (either): our player opens the bedroom door, as a player can only when it isn't locked here, and it stays open.</summary>
@@ -722,7 +808,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(2f);
-            r.Info = $"back at {Fmt(P.transform.position)}; shared dream {DreamSync.Shared ?? "none"}";
+            string spot = Fmt(P.transform.position);
+            string shared = DreamSync.Shared;
+            if (shared == null)
+            {
+                shared = "none";
+            }
+            r.Info = $"back at {spot}; shared dream {shared}";
             if (DreamSync.Shared != null)
             {
                 r.Fail($"still in a shared dream: {r.Info}");

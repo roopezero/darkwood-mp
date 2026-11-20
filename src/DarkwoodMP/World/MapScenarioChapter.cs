@@ -153,7 +153,13 @@ namespace DarkwoodMP.World
             }
             if (et == null)
             {
-                r.Fail($"no trigger for {a[0]} here (in {Locations.Current() ?? "the world"})");
+                string wanted = a[0];
+                string location = Locations.Current();
+                if (location == null)
+                {
+                    location = "the world";
+                }
+                r.Fail($"no trigger for {wanted} here (in {location})");
                 yield break;
             }
             // Its area is off while we land in it and the host sees us there: the host checks the exit is within
@@ -166,7 +172,16 @@ namespace DarkwoodMP.World
             }
             Place(et.transform.position + new Vector3(40f, 0f, 0f));
             yield return new WaitForSeconds(2f);
-            r.Info = $"set off {et.name} ({t.type}) for {a[0]} at {Pos(et.transform)} in {Locations.Current() ?? "the world"}, chapter {Chapter}";
+            string area = et.name;
+            global::EventTrigger.Type kind = t.type;
+            string eventName = a[0];
+            string spot = Pos(et.transform);
+            string place = Locations.Current();
+            if (place == null)
+            {
+                place = "the world";
+            }
+            r.Info = $"set off {area} ({kind}) for {eventName} at {spot} in {place}, chapter {Chapter}";
             var type = t.type;
             AsPlayer(() => et.fireEventTrigger(type));
             yield return new WaitForSeconds(1f);
@@ -203,9 +218,15 @@ namespace DarkwoodMP.World
             {
                 if (Time.realtimeSinceStartup > giveUp)
                 {
-                    r.Fail($"not in with our character after 300 s: chapter {Chapter}, scene {SceneManager.GetActiveScene().name}, in world {WorldShare.InWorld}, " +
-                           $"gen done {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs off {Core.forbidInputs}, client mode {Combat.NetEnemies.ClientMode}, " +
-                           $"have {Characters.Instance?.HasCharacter}, at {Pos(P)}");
+                    string line = $"not in with our character after 300 s: chapter {Chapter}, scene {SceneManager.GetActiveScene().name}, in world {WorldShare.InWorld}, " +
+                                  $"gen done {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs off {Core.forbidInputs}, client mode {Combat.NetEnemies.ClientMode}, ";
+                    bool? have = null;
+                    Characters characters = Characters.Instance;
+                    if (characters != null)
+                    {
+                        have = characters.HasCharacter;
+                    }
+                    r.Fail(line + $"have {have}, at {Pos(P)}");
                     yield break;
                 }
                 yield return new WaitForSecondsRealtime(0.5f);
@@ -221,7 +242,15 @@ namespace DarkwoodMP.World
             }
             string ui = HotbarUi(p);
             int told = Count("[notice] The host is starting chapter 2");
-            r.Info = $"told {told}x; chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(p)}, host {(host.HasValue ? $"{d:0} away" : "not seen")}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
+            int chapter = Chapter;
+            string scene = SceneManager.GetActiveScene().name;
+            string spot = Pos(p);
+            string away = "not seen";
+            if (host.HasValue)
+            {
+                away = $"{d:0} away";
+            }
+            r.Info = $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
             if (told != 1)
             {
                 r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
@@ -285,7 +314,12 @@ namespace DarkwoodMP.World
                     name2 = preset.name;
                 }
             }
-            r.Info = $"dreaming {dreaming} ({name2}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
+            string shared = DreamSync.Shared;
+            if (shared == null)
+            {
+                shared = "none";
+            }
+            r.Info = $"dreaming {dreaming} ({name2}), entering {Core.EnteringDream}, shared {shared}, chapter {Chapter}";
             if (!(D != null && D.dreaming))
             {
                 r.Fail($"not in a dream: {r.Info}");

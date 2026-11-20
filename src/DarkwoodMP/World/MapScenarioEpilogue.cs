@@ -44,7 +44,18 @@ namespace DarkwoodMP.World
                     name = preset.name;
                 }
             }
-            return $"preset {name ?? "none"} dreaming {D != null && D.dreaming} inEpilogue {P != null && P.inEpilogue} shared {DreamSync.Shared ?? "none"} playing {EpilogueSync.Playing}";
+            if (name == null)
+            {
+                name = "none";
+            }
+            bool dreaming = D != null && D.dreaming;
+            bool inEpilogue = P != null && P.inEpilogue;
+            string shared = DreamSync.Shared;
+            if (shared == null)
+            {
+                shared = "none";
+            }
+            return $"preset {name} dreaming {dreaming} inEpilogue {inEpilogue} shared {shared} playing {EpilogueSync.Playing}";
         }
 
         private static bool InPart(string name) => P != null && P.inEpilogue && D != null && D.dreaming && !D.switchingDream && D.preset != null && D.preset.name == name;
@@ -90,7 +101,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(4f);
-            r.Info = $"{Where()}; session {Net.Session.Instance?.Active}; a friend's puppet shown {FriendShown()}";
+            string state = Where();
+            bool? active = null;
+            Net.Session session = Net.Session.Instance;
+            if (session != null)
+            {
+                active = session.Active;
+            }
+            r.Info = $"{state}; session {active}; a friend's puppet shown {FriendShown()}";
             if (!EpilogueSync.Playing || DreamSync.Shared == null || Net.Session.Instance == null || !Net.Session.Instance.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");
