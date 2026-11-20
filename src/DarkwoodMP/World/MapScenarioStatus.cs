@@ -501,7 +501,14 @@ namespace DarkwoodMP.World
                 col = proxy.GetComponent<Collider>();
             }
             int corrections = MapScenarioIssues.LogLines().Skip(from).Count(l => l.Contains("put back"));
-            r.Info = $"{rp.Name}: spectating {rp.Spectating}, shown {rp.Root != null && rp.Root.activeSelf}, proxy alive {proxy?.alive}, collider on {col != null && col.enabled}, corrections {corrections}";
+            bool spectating = rp.Spectating;
+            bool shown = rp.Root != null && rp.Root.activeSelf;
+            bool? alive = null;
+            if (proxy != null)
+            {
+                alive = proxy.alive;
+            }
+            r.Info = $"{rp.Name}: spectating {spectating}, shown {shown}, proxy alive {alive}, collider on {col != null && col.enabled}, corrections {corrections}";
             if (!rp.Spectating || (rp.Root != null && rp.Root.activeSelf) || (col != null && col.enabled) || corrections > 0)
             {
                 r.Fail(r.Info);
