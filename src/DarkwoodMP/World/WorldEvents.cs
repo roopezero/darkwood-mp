@@ -947,7 +947,7 @@ namespace DarkwoodMP.World
                 return false;
             }
             var p = Player.Instance;
-            // where the game lists it
+            // The game lists the new mushroom in the chunk the player is in.
             WorldChunk chunk = null;
             if (p != null)
             {
