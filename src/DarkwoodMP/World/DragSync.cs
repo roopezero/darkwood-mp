@@ -654,10 +654,10 @@ namespace DarkwoodMP.World
             }
             var t = item.transform;
             var w = Message(r, t.position, t.rotation, last);
-            if (last) // and into the culling node of where it is now
+            if (last)
             {
                 Rebase(item.gameObject);
-                Recell(item.gameObject);
+                Recell(item.gameObject); // it goes into the culling node of where it is now
             }
             int ch;
             if (last)

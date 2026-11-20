@@ -136,11 +136,11 @@ namespace DarkwoodMP.World
                         t = method.DeclaringType;
                     }
                 }
-                for (; t != null; t = t.DeclaringType)
+                for (; t != null; t = t.DeclaringType) // lambdas/iterators are nested types
                 {
                     if (PlayerSide.Contains(t))
                     {
-                        return true; // lambdas/iterators are nested types
+                        return true;
                     }
                 }
             }
