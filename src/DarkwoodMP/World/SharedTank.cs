@@ -52,8 +52,23 @@ namespace DarkwoodMP.World
                 return;
             }
             // As the requirement looks: in the bags, or among the journal's items.
-            bool holds = p.Inventory.getItemInPlayer(Item, 0f, includeAdditionalInventory: true) != null
-                         || (Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(Item) ?? false);
+            bool holds = p.Inventory.getItemInPlayer(Item, 0f, includeAdditionalInventory: true) != null;
+            if (!holds)
+            {
+                UI ui = Singleton<UI>.Instance;
+                if (ui != null)
+                {
+                    Journal journal = ui.journal;
+                    if (journal != null)
+                    {
+                        var items = journal.itemsDict;
+                        if (items != null)
+                        {
+                            holds = items.ContainsKey(Item);
+                        }
+                    }
+                }
+            }
             if (!holds)
             {
                 return;
@@ -80,7 +95,12 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            if (!(itemType is GameObject go) || go.GetComponent<InvItem>()?.type != Item)
+            if (!(itemType is GameObject go))
+            {
+                return false;
+            }
+            InvItem item = go.GetComponent<InvItem>();
+            if (item == null || item.type != Item)
             {
                 return false;
             }
