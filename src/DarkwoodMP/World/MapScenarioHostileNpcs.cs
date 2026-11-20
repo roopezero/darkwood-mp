@@ -85,9 +85,18 @@ namespace DarkwoodMP.World
             {
                 target = c.target.name;
             }
+            bool hostile = Combat.HostileNpcs.TurnedHostile(c);
+            bool byHost = Combat.NetEnemies.Eligible(c);
+            bool frozen = Combat.NetEnemies.Frozen.Contains(c);
+            SaveableObject saveable = c.GetComponent<SaveableObject>();
+            int id = 0;
+            if (saveable != null)
+            {
+                id = saveable.uniqueId;
+            }
             return head +
-                   $"target {target}, hostile {Combat.HostileNpcs.TurnedHostile(c)}, run by host {Combat.NetEnemies.Eligible(c)}, " +
-                   $"frozen {Combat.NetEnemies.Frozen.Contains(c)}, save id {(c.GetComponent<SaveableObject>()?.uniqueId ?? 0)}";
+                   $"target {target}, hostile {hostile}, run by host {byHost}, " +
+                   $"frozen {frozen}, save id {id}";
         }
 
         /// <summary>"npc-spawn NAME DX DZ" (host): the NPC prefab NAME, at the centre plus (DX, DZ), saved with the world.</summary>
