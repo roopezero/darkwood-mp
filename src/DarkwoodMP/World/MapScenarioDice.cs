@@ -156,7 +156,11 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    string k = $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}{(x.gameObject.scene.IsValid() ? "" : " (prefab)")}";
+                    string k = $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}";
+                    if (!x.gameObject.scene.IsValid())
+                    {
+                        k += " (prefab)";
+                    }
                     blasts.TryGetValue(k, out int n);
                     blasts[k] = n + 1;
                 }
@@ -194,7 +198,13 @@ namespace DarkwoodMP.World
             }
             var kept = __state.FirstOrDefault(g => g != null && !__instance.sets.Contains(g));
             var p = __instance.transform.position;
-            MapScenarioDice.Picks[FormattableString.Invariant($"{__instance.name}@{p.x:0},{p.z:0}")] = $"{(kept != null ? kept.name : "?")} of {__state.Count}";
+            string key = FormattableString.Invariant($"{__instance.name}@{p.x:0},{p.z:0}");
+            string name = "?";
+            if (kept != null)
+            {
+                name = kept.name;
+            }
+            MapScenarioDice.Picks[key] = $"{name} of {__state.Count}";
         }
     }
 }

@@ -111,9 +111,27 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string FollowInfo(Character c, Combat.NetPlayerProxy proxy) =>
-            $"{c.name}: {c.aggressiveness}, {c.behaviour}, target {(c.target == null ? "none" : c.target == proxy.transform ? proxy.OwnerName : c.target.name)}, " +
-            $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, {StateDump.Flat(c.transform.position - Player.Instance.transform.position):0} from us";
+        private static string FollowInfo(Character c, Combat.NetPlayerProxy proxy)
+        {
+            string name = c.name;
+            Aggressiveness aggressiveness = c.aggressiveness;
+            Character.Behaviour behaviour = c.behaviour;
+            string target;
+            if (c.target == null)
+            {
+                target = "none";
+            }
+            else if (c.target == proxy.transform)
+            {
+                target = proxy.OwnerName;
+            }
+            else
+            {
+                target = c.target.name;
+            }
+            return $"{name}: {aggressiveness}, {behaviour}, target {target}, " +
+                   $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, {StateDump.Flat(c.transform.position - Player.Instance.transform.position):0} from us";
+        }
 
         /// <summary>"follow-check" (host, after the joiner walked off): the follower went after them, not us (within
         /// 500 of their stand-in, waiting up to 20 s).</summary>
@@ -396,7 +414,15 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
-            r.Info = $"{npc.name}: wantsToTalk {npc.wantsToTalk}, disabled {npc.disabled}, the event {(ge.fired ? "ran" : "didn't run")} here";
+            string name = npc.name;
+            bool wants = npc.wantsToTalk;
+            bool disabled = npc.disabled;
+            string ran = "didn't run";
+            if (ge.fired)
+            {
+                ran = "ran";
+            }
+            r.Info = $"{name}: wantsToTalk {wants}, disabled {disabled}, the event {ran} here";
             if (npc.disabled || !npc.wantsToTalk || !ge.fired)
             {
                 r.Fail(r.Info);
@@ -456,7 +482,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(2.5f);
             var refused = MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).Where(l => !l.Contains("[map]") && l.Contains("refused")).ToList();
             bool open = win.npc == npc;
-            r.Info = $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from the host's): dialogue {(open ? "open" : "not open")}";
+            string dialogue = "not open";
+            if (open)
+            {
+                dialogue = "open";
+            }
+            r.Info = $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from the host's): dialogue {dialogue}";
             if (open)
             {
                 yield return MapScenarioGaps.Close(win, npc);
@@ -517,7 +548,19 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             var c = Singleton<Controller>.Instance;
-            r.Info = $"{l.name}: {(npc != null ? $"{npc.name} with {(npc.inventory != null ? npc.inventory.getAllItems().Count : 0)} things" : "no trader")}, our morning {c.isAfterNight}";
+            string hideout = l.name;
+            string trader = "no trader";
+            if (npc != null)
+            {
+                string name = npc.name;
+                int things = 0;
+                if (npc.inventory != null)
+                {
+                    things = npc.inventory.getAllItems().Count;
+                }
+                trader = $"{name} with {things} things";
+            }
+            r.Info = $"{hideout}: {trader}, our morning {c.isAfterNight}";
             if (c.isAfterNight)
             {
                 r.Fail($"we're in a morning ourselves: {r.Info}");

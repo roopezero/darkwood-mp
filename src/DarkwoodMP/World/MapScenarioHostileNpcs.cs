@@ -76,11 +76,19 @@ namespace DarkwoodMP.World
             Object.FindObjectsOfType<Character>().Where(c => c != null && c.npc != null && Kind(c) == kind)
                 .OrderBy(c => StateDump.Flat(c.transform.position - Centre)).FirstOrDefault();
 
-        private static string Props(Character c) =>
-            $"{c.name} ({Kind(c)}, npc {c.npc.name}) at {Fmt(c.transform.position)}: health {c.health:0}/{c.maxHealth:0}, alive {c.alive}, " +
-            $"{c.aggressiveness}, {c.behaviour}, faction {c.faction}, attacks players {c.attacksFaction(Faction.player)}, " +
-            $"target {(c.target != null ? c.target.name : "none")}, hostile {Combat.HostileNpcs.TurnedHostile(c)}, run by host {Combat.NetEnemies.Eligible(c)}, " +
-            $"frozen {Combat.NetEnemies.Frozen.Contains(c)}, save id {(c.GetComponent<SaveableObject>()?.uniqueId ?? 0)}";
+        private static string Props(Character c)
+        {
+            string head = $"{c.name} ({Kind(c)}, npc {c.npc.name}) at {Fmt(c.transform.position)}: health {c.health:0}/{c.maxHealth:0}, alive {c.alive}, " +
+                          $"{c.aggressiveness}, {c.behaviour}, faction {c.faction}, attacks players {c.attacksFaction(Faction.player)}, ";
+            string target = "none";
+            if (c.target != null)
+            {
+                target = c.target.name;
+            }
+            return head +
+                   $"target {target}, hostile {Combat.HostileNpcs.TurnedHostile(c)}, run by host {Combat.NetEnemies.Eligible(c)}, " +
+                   $"frozen {Combat.NetEnemies.Frozen.Contains(c)}, save id {(c.GetComponent<SaveableObject>()?.uniqueId ?? 0)}";
+        }
 
         /// <summary>"npc-spawn NAME DX DZ" (host): the NPC prefab NAME, at the centre plus (DX, DZ), saved with the world.</summary>
         private static IEnumerator Spawn(string[] a, Result r)
@@ -197,7 +205,18 @@ namespace DarkwoodMP.World
                     proxy = c.target.GetComponent<Combat.NetPlayerProxy>();
                 }
                 bool tracked = Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IdOf(c, out _);
-                ok = tracked && (wantClient ? proxy != null : c.target != null && c.target.GetComponent<Player>() != null);
+                if (!tracked)
+                {
+                    ok = false;
+                }
+                else if (wantClient)
+                {
+                    ok = proxy != null;
+                }
+                else
+                {
+                    ok = c.target != null && c.target.GetComponent<Player>() != null;
+                }
                 if (ok)
                 {
                     break;
@@ -216,7 +235,17 @@ namespace DarkwoodMP.World
             {
                 ok = true;
             }
-            r.Info = $"{Props(c)}; {sent?.Trim() ?? "never sent after anyone"}";
+            string details = Props(c);
+            string line;
+            if (sent != null)
+            {
+                line = sent.Trim();
+            }
+            else
+            {
+                line = "never sent after anyone";
+            }
+            r.Info = $"{details}; {line}";
             if (!ok)
             {
                 string text = "host";
@@ -256,7 +285,13 @@ namespace DarkwoodMP.World
                 }
                 yield return null;
             }
-            r.Info = $"our health {was:0} -> {P.health:0}; {(c != null ? Props(c) : "gone")}";
+            float health = P.health;
+            string details = "gone";
+            if (c != null)
+            {
+                details = Props(c);
+            }
+            r.Info = $"our health {was:0} -> {health:0}; {details}";
             if (P.health >= was)
             {
                 r.Fail($"it never hurt us: {r.Info}");

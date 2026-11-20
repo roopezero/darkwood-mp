@@ -26,7 +26,12 @@ namespace DarkwoodMP.World
             Flags instance = Singleton<Flags>.Instance;
             if (instance != null)
             {
-                return instance.getNPCState(_story ?? name);
+                string story = _story;
+                if (story == null)
+                {
+                    story = name;
+                }
+                return instance.getNPCState(story);
             }
             return null;
         }
@@ -71,10 +76,34 @@ namespace DarkwoodMP.World
                 }
                 text = c.npc.name + value;
             }
-            return $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), " +
-                   $"on {c.gameObject.activeInHierarchy}, alive {c.alive}, save id {(sv != null ? sv.uniqueId : -1)}, in {(loc != null ? Core.getTrueLocationName(loc.name) : "-")}, " +
-                   $"searchable {c.GetComponent<Item>() != null}, inventory {(c.inventory != null ? c.inventory.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem)) : -1)}, " +
-                   $"host enemy {(net ? "#" + id : "no")}, frozen {Combat.NetEnemies.Frozen.Contains(c)}, hidden {Combat.NetEnemies.Hidden.Contains(c)}";
+            string head = $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), ";
+            bool on = c.gameObject.activeInHierarchy;
+            bool alive = c.alive;
+            int saveId = -1;
+            if (sv != null)
+            {
+                saveId = sv.uniqueId;
+            }
+            string place = "-";
+            if (loc != null)
+            {
+                place = Core.getTrueLocationName(loc.name);
+            }
+            bool searchable = c.GetComponent<Item>() != null;
+            int carried = -1;
+            if (c.inventory != null)
+            {
+                carried = c.inventory.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem));
+            }
+            string enemy = "no";
+            if (net)
+            {
+                enemy = "#" + id;
+            }
+            return head +
+                   $"on {on}, alive {alive}, save id {saveId}, in {place}, " +
+                   $"searchable {searchable}, inventory {carried}, " +
+                   $"host enemy {enemy}, frozen {Combat.NetEnemies.Frozen.Contains(c)}, hidden {Combat.NetEnemies.Hidden.Contains(c)}";
         }
 
         private static Character Nearest(string name) =>
@@ -199,9 +228,13 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"hidden (a frozen copy of ours, not shown as the host's): {r.Info}");
             }
-            else if (Combat.NetEnemies.ClientMode && !(Combat.NetEnemies.Instance?.NetIdOf(c, out _) ?? false))
+            else if (Combat.NetEnemies.ClientMode)
             {
-                r.Fail($"not the host's corpse (its loot wouldn't be the host's): {r.Info}");
+                Combat.NetEnemies enemies = Combat.NetEnemies.Instance;
+                if (enemies == null || !enemies.NetIdOf(c, out _))
+                {
+                    r.Fail($"not the host's corpse (its loot wouldn't be the host's): {r.Info}");
+                }
             }
         }
 
@@ -389,7 +422,15 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             _cwInv = inv;
             _cwWindow = inv.thisUI;
-            r.Info = $"{c.name} at {Fmt(c.transform.position)}: open {inv.open}, window {(inv.thisUI != null ? inv.thisUI.name : "none")}, " +
+            string name = c.name;
+            string spot = Fmt(c.transform.position);
+            bool open = inv.open;
+            string window = "none";
+            if (inv.thisUI != null)
+            {
+                window = inv.thisUI.name;
+            }
+            r.Info = $"{name} at {spot}: open {open}, window {window}, " +
                      $"ours open {ReferenceEquals(P.openedItemInventory, inv)}, windows [{string.Join(", ", Windows())}]";
             if (!inv.open || inv.thisUI == null || !ReferenceEquals(P.openedItemInventory, inv))
             {
@@ -472,8 +513,13 @@ namespace DarkwoodMP.World
             {
                 opened = P.openedItemInventory.name;
             }
-            r.Info = $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], " +
-                     $"openedItemInventory {opened}, openedItemInventory2 {(ReferenceEquals(P.openedItemInventory2, null) ? "null" : "set")}";
+            string head = $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], ";
+            string second = "set";
+            if (ReferenceEquals(P.openedItemInventory2, null))
+            {
+                second = "null";
+            }
+            r.Info = head + $"openedItemInventory {opened}, openedItemInventory2 {second}";
             if (!ok)
             {
                 r.Fail($"a window was left: {r.Info}");

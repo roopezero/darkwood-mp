@@ -130,16 +130,41 @@ namespace DarkwoodMP.World
                     attacks = string.Join("/", an.Library.clips.Where(x => x != null && x.name.StartsWith("Attack")).Select(x =>
                     {
                         tk2dSpriteAnimationFrame[] frames = x.frames;
-                        int? length = null;
+                        int length = 0;
                         if (frames != null)
                         {
                             length = frames.Length;
                         }
-                        return $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{length ?? 0}";
+                        return $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{length}";
                     }));
                 }
-                l.Add($"[{PathOf(an, c.transform)}{(an == c.animator ? " main" : "")}{(an.legs != null ? " legs=" + PathOf(an.legs, c.transform) : "")}" +
-                      $"{(c.animator != null && c.animator.legs == an ? " (the main's legs)" : "")} clip {clip?.name ?? "none"} {attacks}]");
+                string path = PathOf(an, c.transform);
+                string main = "";
+                if (an == c.animator)
+                {
+                    main = " main";
+                }
+                string legs = "";
+                if (an.legs != null)
+                {
+                    legs = " legs=" + PathOf(an.legs, c.transform);
+                }
+                string mainLegs = "";
+                if (c.animator != null && c.animator.legs == an)
+                {
+                    mainLegs = " (the main's legs)";
+                }
+                string clipName = null;
+                if (clip != null)
+                {
+                    clipName = clip.name;
+                }
+                if (clipName == null)
+                {
+                    clipName = "none";
+                }
+                l.Add($"[{path}{main}{legs}" +
+                      $"{mainLegs} clip {clipName} {attacks}]");
             }
             return string.Join(" ", l);
         }
@@ -306,7 +331,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
-                        samples.Add(new S
+                        S sample = new S
                         {
                             T = t,
                             Id = id,
@@ -314,11 +339,19 @@ namespace DarkwoodMP.World
                             Path = PathOf(an, c.transform),
                             Clip = clip.name,
                             Frame = an.CurrentFrame,
-                            Sprite = an.Sprite != null ? an.Sprite.spriteId : -1,
-                            Frames = clip.frames.Length,
-                            Playing = an.Playing,
-                            State = state,
-                        });
+                        };
+                        if (an.Sprite != null)
+                        {
+                            sample.Sprite = an.Sprite.spriteId;
+                        }
+                        else
+                        {
+                            sample.Sprite = -1;
+                        }
+                        sample.Frames = clip.frames.Length;
+                        sample.Playing = an.Playing;
+                        sample.State = state;
+                        samples.Add(sample);
                     }
                 }
                 yield return null;
@@ -331,8 +364,16 @@ namespace DarkwoodMP.World
                 {
                     role = "host";
                 }
-                File.WriteAllLines(FileOf(tag, role), samples.Select(x => FormattableString.Invariant(
-                    $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{(x.Playing ? 1 : 0)}\t{x.State}")));
+                File.WriteAllLines(FileOf(tag, role), samples.Select(x =>
+                {
+                    int playing = 0;
+                    if (x.Playing)
+                    {
+                        playing = 1;
+                    }
+                    return FormattableString.Invariant(
+                        $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{playing}\t{x.State}");
+                }));
             }
             catch (Exception e)
             {
@@ -420,7 +461,12 @@ namespace DarkwoodMP.World
                     }
                     if (run[0].Frames > 2 && playDur >= 1.0 && sprites <= 2)
                     {
-                        stuck.Add(FormattableString.Invariant($"{run[0].Kind} #{g.Key.Id} {g.Key.Path} {run[0].Clip} played {playDur:0.0}s showing {sprites} sprite(s) of {run[0].Frames} frames (frames {string.Join(",", playing.Select(x => x.Frame).Distinct().Take(6))}){(run[0].State != "" ? ", AI " + run[0].State : "")}"));
+                        string line = FormattableString.Invariant($"{run[0].Kind} #{g.Key.Id} {g.Key.Path} {run[0].Clip} played {playDur:0.0}s showing {sprites} sprite(s) of {run[0].Frames} frames (frames {string.Join(",", playing.Select(x => x.Frame).Distinct().Take(6))})");
+                        if (run[0].State != "")
+                        {
+                            line += ", AI " + run[0].State;
+                        }
+                        stuck.Add(line);
                     }
                 }
                 if (seq.Count > 14)
@@ -553,7 +599,11 @@ namespace DarkwoodMP.World
                 {
                     worst = " (mismatches: " + string.Join(", ", bad.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} x{kv.Value}")) + ")";
                 }
-                string line = FormattableString.Invariant($"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {rate:P0} of {mine.Count} match{worst}{(missing.Count > 0 ? "; never shown here: " + string.Join("/", missing) : "")}");
+                string line = FormattableString.Invariant($"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {rate:P0} of {mine.Count} match{worst}");
+                if (missing.Count > 0)
+                {
+                    line += "; never shown here: " + string.Join("/", missing);
+                }
                 parts.Add(line);
                 if (rate < 0.85 || missing.Count > 0)
                 {
