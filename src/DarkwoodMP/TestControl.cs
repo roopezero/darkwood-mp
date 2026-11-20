@@ -213,8 +213,17 @@ namespace DarkwoodMP
                     {
                         what = words[1];
                     }
-                    _plugin.StartCoroutine(Wait(what, words.Length > 2 ? MapScenario.F(words[2]) : 60f,
-                        words.Length > 3 && int.TryParse(words[3], out int n) ? n : 1, reply));
+                    float secs = 60f;
+                    if (words.Length > 2)
+                    {
+                        secs = MapScenario.F(words[2]);
+                    }
+                    int count = 1;
+                    if (words.Length > 3 && int.TryParse(words[3], out int n))
+                    {
+                        count = n;
+                    }
+                    _plugin.StartCoroutine(Wait(what, secs, count, reply));
                     break;
                 case "quit":
                     reply.WriteLine("ok");

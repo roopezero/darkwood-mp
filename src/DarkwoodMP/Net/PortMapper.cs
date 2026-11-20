@@ -280,7 +280,14 @@ namespace DarkwoodMP.Net
             {
                 ip2 = "unknown";
             }
-            Plugin.Log.LogInfo($"[port mapping] {how}: {m.InternalIp}:{m.Port} -> {ports}, external address {ip2}{text}{(BehindAnotherNat ? " (private: another NAT in front)" : "")}");
+            string internalIp = m.InternalIp;
+            int port = m.Port;
+            string nat = "";
+            if (BehindAnotherNat)
+            {
+                nat = " (private: another NAT in front)";
+            }
+            Plugin.Log.LogInfo($"[port mapping] {how}: {internalIp}:{port} -> {ports}, external address {ip2}{text}{nat}");
         }
 
         private void Remove(Mapping m)

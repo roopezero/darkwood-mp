@@ -50,7 +50,12 @@ namespace DarkwoodMP
 
         private static Event Mouse(EventType type, Vector2 at, Vector2 delta)
         {
-            return new Event { type = type, mousePosition = at, delta = delta, button = 0, clickCount = type == EventType.MouseDown ? 1 : 0 };
+            int clicks = 0;
+            if (type == EventType.MouseDown)
+            {
+                clicks = 1;
+            }
+            return new Event { type = type, mousePosition = at, delta = delta, button = 0, clickCount = clicks };
         }
 
         /// <summary>

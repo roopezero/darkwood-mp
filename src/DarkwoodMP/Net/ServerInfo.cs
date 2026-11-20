@@ -80,12 +80,29 @@ namespace DarkwoodMP.Net
 
         public static bool IsQuery(byte[] b, int n) => n == Query.Length && b.Take(n).SequenceEqual(Query);
 
-        private static string Clean(string s, string drop) =>
-            new string((s ?? "").Where(c => c != (char)Sep && drop.IndexOf(c) < 0).ToArray());
+        private static string Clean(string s, string drop)
+        {
+            string text = s;
+            if (text == null)
+            {
+                text = "";
+            }
+            return new string(text.Where(c => c != (char)Sep && drop.IndexOf(c) < 0).ToArray());
+        }
 
         public byte[] EncodeAnswer()
         {
-            var f = new List<string> { Clean(Name, ""), Players.ToString(), MaxPlayers.ToString(), Password ? "1" : "0", LocalChars ? "1" : "0", Clean(Version, "") };
+            string passwordFlag = "0";
+            if (Password)
+            {
+                passwordFlag = "1";
+            }
+            string localCharsFlag = "0";
+            if (LocalChars)
+            {
+                localCharsFlag = "1";
+            }
+            var f = new List<string> { Clean(Name, ""), Players.ToString(), MaxPlayers.ToString(), passwordFlag, localCharsFlag, Clean(Version, "") };
             foreach (var kv in Fields)
             {
                 string k = Clean(kv.Key, "=");

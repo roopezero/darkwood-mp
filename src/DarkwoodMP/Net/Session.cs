@@ -28,12 +28,11 @@ namespace DarkwoodMP.Net
             get
             {
                 INetBackend backend = Backend;
-                ulong? hostId = null;
                 if (backend != null)
                 {
-                    hostId = backend.HostId;
+                    return backend.HostId;
                 }
-                return hostId ?? 0;
+                return 0;
             }
         }
         public string Status
@@ -46,7 +45,11 @@ namespace DarkwoodMP.Net
                 {
                     status = backend.Status;
                 }
-                return status ?? "Not connected";
+                if (status == null)
+                {
+                    return "Not connected";
+                }
+                return status;
             }
         }
         public string LocalName = "Player";

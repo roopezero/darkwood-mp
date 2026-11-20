@@ -235,7 +235,12 @@ namespace DarkwoodMP.Net
                     continue;
                 }
                 c.NoDelay = true;
-                var conn = new Conn { Client = c, Stream = c.GetStream(), Remote = c.Client.RemoteEndPoint?.ToString(), Inbound = true, Pending = 1 };
+                var conn = new Conn { Client = c, Stream = c.GetStream(), Inbound = true, Pending = 1 };
+                EndPoint endPoint = c.Client.RemoteEndPoint;
+                if (endPoint != null)
+                {
+                    conn.Remote = endPoint.ToString();
+                }
                 lock (_conns)
                 {
                     conn.Id = _nextId++;
@@ -356,7 +361,17 @@ namespace DarkwoodMP.Net
                 {
                     if (gen == _generation)
                     {
-                        _events.Enqueue(new Ev { Kind = EvKind.ConnectFailed, Error = e.InnerException?.Message ?? e.Message });
+                        Exception inner = e.InnerException;
+                        string error = null;
+                        if (inner != null)
+                        {
+                            error = inner.Message;
+                        }
+                        if (error == null)
+                        {
+                            error = e.Message;
+                        }
+                        _events.Enqueue(new Ev { Kind = EvKind.ConnectFailed, Error = error });
                     }
                 }
             });

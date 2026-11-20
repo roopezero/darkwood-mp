@@ -279,7 +279,11 @@ namespace DarkwoodMP
             {
                 footer = FooterHeight * S;
             }
-            var body = new Rect(Pad, bar.yMax + Pad, w - 2 * Pad, h - bar.yMax - 2 * Pad - (footer > 0 ? footer + Pad : 0));
+            var body = new Rect(Pad, bar.yMax + Pad, w - 2 * Pad, h - bar.yMax - 2 * Pad);
+            if (footer > 0)
+            {
+                body.height -= footer + Pad;
+            }
             // Whether it scrolls is decided once a frame, on Layout, so the Repaint after it can't differ: a scrollbar
             // that came and went within a frame narrowed the body, re-wrapped its text and pushed everything aside.
             if (Event.current.type == EventType.Layout)
@@ -287,7 +291,11 @@ namespace DarkwoodMP
                 _scrolls = _contentHeight > body.height + 1;
             }
             bool scrolls = _scrolls;
-            float inner = body.width - (scrolls ? 12 * S : 0);
+            float inner = body.width;
+            if (scrolls)
+            {
+                inner -= 12 * S;
+            }
             GUIStyle verticalScrollbar2;
             if (scrolls)
             {
@@ -303,7 +311,12 @@ namespace DarkwoodMP
             if (Event.current.type == EventType.Layout || Event.current.type == EventType.Repaint)
             {
                 _contentHeight = flow.Y;
-                _fitHeight = bar.yMax + 2 * Pad + flow.Y + (footer > 0 ? footer + Pad : 0) + 2;
+                float fit = bar.yMax + 2 * Pad + flow.Y;
+                if (footer > 0)
+                {
+                    fit += footer + Pad;
+                }
+                _fitHeight = fit + 2;
             }
             GUI.EndScrollView();
             if (footer > 0)
@@ -406,8 +419,19 @@ namespace DarkwoodMP
             return rects;
         }
 
-        public static void Label(Rect r, string text, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft) =>
-            PixelFont.Draw(r, text, color ?? MenuSkin.Text, align);
+        public static void Label(Rect r, string text, Color? color = null, TextAnchor align = TextAnchor.MiddleLeft)
+        {
+            Color shade;
+            if (color.HasValue)
+            {
+                shade = color.Value;
+            }
+            else
+            {
+                shade = MenuSkin.Text;
+            }
+            PixelFont.Draw(r, text, shade, align);
+        }
 
         public static void Label(Flow f, string text, Color? color = null) => Label(f.Next(PixelFont.Line), text, color);
 
@@ -552,7 +576,20 @@ namespace DarkwoodMP
             {
                 GUI.Box(new Rect(b.x + 3 * S, b.y + 3 * S, b.width - 6 * S, b.height - 6 * S), GUIContent.none, MenuSkin.Line);
             }
-            Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, !enabled ? MenuSkin.Dim : hover ? MenuSkin.Bright : MenuSkin.Text);
+            Color color;
+            if (!enabled)
+            {
+                color = MenuSkin.Dim;
+            }
+            else if (hover)
+            {
+                color = MenuSkin.Bright;
+            }
+            else
+            {
+                color = MenuSkin.Text;
+            }
+            Label(new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height), text, color);
             return on;
         }
 

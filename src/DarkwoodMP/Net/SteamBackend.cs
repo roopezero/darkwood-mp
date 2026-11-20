@@ -40,7 +40,18 @@ namespace DarkwoodMP.Net
         {
             _transport.Init();
             _lobby.Init();
-            _transport.ShouldAccept = id => _lobby.InLobby && (IsHost ? _lobby.IsMember(id) : id == _lobby.Owner);
+            _transport.ShouldAccept = id =>
+            {
+                if (!_lobby.InLobby)
+                {
+                    return false;
+                }
+                if (IsHost)
+                {
+                    return _lobby.IsMember(id);
+                }
+                return id == _lobby.Owner;
+            };
             _transport.OnMessage += (from, data, len, ch) =>
             {
                 Action<ulong, byte[], int> handler = OnMessage;

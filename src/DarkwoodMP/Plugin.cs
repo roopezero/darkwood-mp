@@ -97,12 +97,27 @@ namespace DarkwoodMP
         /// Why you can't host yet, or null if you can. A host shares the world it's in, so hosting starts from
         /// inside your world; from the main menu a server would only turn joiners away.
         /// </summary>
-        public static string CantHostReason =>
-            !WorldShare.InWorld ? "To host, load your world first (Start Game), then press Esc and choose Multiplayer in the pause menu."
-            // After leaving someone's game you're still in your copy of their world (your own saves are untouched).
-            : WorldShare.Instance?.PlayingHostCopy == true ? "This is your copy of another host's world. To host, go back to the main menu and load your own world."
-            : EpilogueSync.InEpilogueAlone() ? "This world is in the epilogue, which can't be shared once it has begun. Host from a save before the end of the game."
-            : null;
+        public static string CantHostReason
+        {
+            get
+            {
+                if (!WorldShare.InWorld)
+                {
+                    return "To host, load your world first (Start Game), then press Esc and choose Multiplayer in the pause menu.";
+                }
+                // After leaving someone's game you're still in your copy of their world (your own saves are untouched).
+                WorldShare share = WorldShare.Instance;
+                if (share != null && share.PlayingHostCopy)
+                {
+                    return "This is your copy of another host's world. To host, go back to the main menu and load your own world.";
+                }
+                if (EpilogueSync.InEpilogueAlone())
+                {
+                    return "This world is in the epilogue, which can't be shared once it has begun. Host from a save before the end of the game.";
+                }
+                return null;
+            }
+        }
 
         /// <summary>Open the co-op panel (Multiplayer in the pause menu).</summary>
         public void OpenPanel() => SetPanel(true);
@@ -169,7 +184,13 @@ namespace DarkwoodMP
             {
                 _session.LastRefusal = null;
                 bool ok = HostDirect();
-                Log.LogInfo($"[start game] hosting with Direct on port {Cfg.DirectPort.Value}: {(ok ? "started" : _tcp.Status)}");
+                int port = Cfg.DirectPort.Value;
+                string status = "started";
+                if (!ok)
+                {
+                    status = _tcp.Status;
+                }
+                Log.LogInfo($"[start game] hosting with Direct on port {port}: {status}");
             }
         }
 
@@ -180,8 +201,20 @@ namespace DarkwoodMP
         private static bool OpensPort() => PortMapper.TestRouter != null || (Cfg.OpenPort.Value && !TestMode);
 
         /// <summary>Host with Direct on the configured port; a password or player limit given here is for this time only.</summary>
-        private bool HostDirect(string password = null, int maxPlayers = 0) =>
-            _tcp.Host(Cfg.ServerName.Value, Cfg.DirectPort.Value, password ?? Cfg.Password.Value, maxPlayers > 0 ? maxPlayers : Cfg.MaxPlayers.Value);
+        private bool HostDirect(string password = null, int maxPlayers = 0)
+        {
+            string serverName = Cfg.ServerName.Value;
+            int port = Cfg.DirectPort.Value;
+            if (password == null)
+            {
+                password = Cfg.Password.Value;
+            }
+            if (maxPlayers <= 0)
+            {
+                maxPlayers = Cfg.MaxPlayers.Value;
+            }
+            return _tcp.Host(serverName, port, password, maxPlayers);
+        }
 
         internal void SetPanel(bool show)
         {
@@ -824,7 +857,12 @@ namespace DarkwoodMP
             {
                 text = "PASS";
             }
-            Log.LogInfo($"[shots] {shot}: {text} world overlays hidden {now} ({World.UiState.Reason ?? "the world in play"}), want {hidden}");
+            string reason = World.UiState.Reason;
+            if (reason == null)
+            {
+                reason = "the world in play";
+            }
+            Log.LogInfo($"[shots] {shot}: {text} world overlays hidden {now} ({reason}), want {hidden}");
         }
 
         private System.Collections.IEnumerator SoloTest(string dir)
@@ -1034,8 +1072,15 @@ namespace DarkwoodMP
         {
             var wh = size.Split('x');
             int w = int.Parse(wh[0]), h = int.Parse(wh[1]);
-            System.Collections.IEnumerator Shot(string name) =>
-                Screenshot(shots == null ? null : System.IO.Path.Combine(shots, $"{size}-{name}.png"));
+            System.Collections.IEnumerator Shot(string name)
+            {
+                string path = null;
+                if (shots != null)
+                {
+                    path = System.IO.Path.Combine(shots, $"{size}-{name}.png");
+                }
+                return Screenshot(path);
+            }
             // Loading a world sets the game's own resolution again, so in a world the size is set once it's up.
             if (!inWorld)
             {
@@ -1497,7 +1542,14 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
-            Log.LogInfo(_session.Active ? "[menu test] FAIL: at the main menu, still in the host's game" : "[menu test] PASS: at the main menu, out of the host's game");
+            if (_session.Active)
+            {
+                Log.LogInfo("[menu test] FAIL: at the main menu, still in the host's game");
+            }
+            else
+            {
+                Log.LogInfo("[menu test] PASS: at the main menu, out of the host's game");
+            }
             yield return new WaitForSeconds(1f);
             Log.LogInfo($"[menu test] joining {address} again from the Multiplayer window");
             _direct.JoinForTest(address);
@@ -2037,7 +2089,12 @@ namespace DarkwoodMP
             {
                 Ui.Text(f, "A copy of your saves with a test area of everything that's shared. Host it, and friends join it as usual.", MenuSkin.Dim);
                 var r = f.Row(Ui.RowH, 0, 90);
-                if (Ui.Button(r[0], TestWorld.Exists ? "Start the test world" : "Make and start a test world"))
+                string label = "Make and start a test world";
+                if (TestWorld.Exists)
+                {
+                    label = "Start the test world";
+                }
+                if (Ui.Button(r[0], label))
                 {
                     SetPanel(false);
                     StartCoroutine(TestWorld.Start(_world, reset: false));
@@ -2114,8 +2171,16 @@ namespace DarkwoodMP
         }
 
         /// <summary>The world's day, and its chapter (0 when there's no world generator).</summary>
-        private static (int day, int chapter) DayAndChapter() =>
-            (Singleton<Controller>.Instance.day, Singleton<WorldGenerator>.Instance != null ? Singleton<WorldGenerator>.Instance.chapterID : 0);
+        private static (int day, int chapter) DayAndChapter()
+        {
+            int day = Singleton<Controller>.Instance.day;
+            int chapter = 0;
+            if (Singleton<WorldGenerator>.Instance != null)
+            {
+                chapter = Singleton<WorldGenerator>.Instance.chapterID;
+            }
+            return (day, chapter);
+        }
 
         private float _nextPresence;
         private string _lastPresence;
