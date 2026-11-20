@@ -74,8 +74,10 @@ sealed partial class TempNames
 
     /// A call after what it gives: an element it picks after what the
     /// element is ("Select(f => f.type).First()" gives "type"), a get call
-    /// after what it gets ("getObjects()" gives "objects", and
-    /// "SawField.GetValue(x)" "saw"), a trimmed text after the text
+    /// after what it gets ("getObjects()" gives "objects",
+    /// "SawField.GetValue(x)" "saw", and a value got by the name of its
+    /// field, as 'Field("descriptionText").GetValue<T>()', after that
+    /// name), a trimmed text after the text
     /// ("line.Trim()" gives "trimmedLine"), another call that makes a
     /// string of a string after that string, and a call whose method is
     /// named for what it does after the rest of the name ("FindTarget()"
@@ -96,6 +98,11 @@ sealed partial class TempNames
             && receiver is IdentifierNameSyntax or MemberAccessExpressionSyntax)
         {
             return CleanName(Unreflected(LastIdentifier(receiver)));
+        }
+        var found = FoundByName(receiver);
+        if (noun == "Value" && found != null)
+        {
+            return CleanName(found);
         }
         if (noun != null)
         {
@@ -301,6 +308,34 @@ sealed partial class TempNames
             return method.Substring(3);
         }
         return null;
+    }
+
+    /// The name of the field or property that a call finds by its name, as
+    /// in Harmony's 'Traverse.Create(o).Field("descriptionText")' or
+    /// 'AccessTools.Field(type, "x")': the first string constant passed to
+    /// a method called Field or Property, if it is an identifier; else null.
+    static string FoundByName(ExpressionSyntax receiver)
+    {
+        if (receiver is not InvocationExpressionSyntax find)
+        {
+            return null;
+        }
+        var method = LastIdentifier(find.Expression);
+        if (method != "Field" && method != "Property")
+        {
+            return null;
+        }
+        var name = find.ArgumentList.Arguments
+            .Select(argument => argument.Expression)
+            .OfType<LiteralExpressionSyntax>()
+            .FirstOrDefault(literal =>
+                literal.IsKind(SyntaxKind.StringLiteralExpression));
+        if (name == null
+            || !SyntaxFacts.IsValidIdentifier(name.Token.ValueText))
+        {
+            return null;
+        }
+        return name.Token.ValueText;
     }
 
     /// "SawField" as "Saw": what a FieldInfo or a PropertyInfo reads.

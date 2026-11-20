@@ -76,6 +76,7 @@ sealed class UnityNullRule : Rule
 
     public override void Plan(RulePlan plan)
     {
+        KeptSites.Queue(plan);
         var nesting = new UnityNesting(plan);
         nesting.QueuePairs();
         new CoalescePlanner(plan, NullCheck.Unity).Run();
@@ -117,6 +118,54 @@ sealed class UnityNullRule : Rule
             }
         }
         return given;
+    }
+}
+
+/// The sites the rule leaves as written, named one by one, because the
+/// code they are in relies on running for a destroyed object: a ?. chain
+/// that tests a Unity object, found by the member that holds it, as the
+/// manifest spells it, and the start of its text. Each goes to the queue
+/// with its reason before the planners run, so neither of them takes it.
+static class KeptSites
+{
+    const string OnPurpose = "runs on destroyed objects on purpose";
+
+    static readonly (string Member, string Start, string Reason)[] Sites =
+    {
+        // A client's switch flip on the host does what the host's own game
+        // does: InteractiveItem.switchOn and switchOff fire the trigger with
+        // no check, and EventTriggers.fireEventTrigger never touches the
+        // native object, so a destroyed trigger's events still run there.
+        (
+            "DarkwoodMP.World.ObjectActions::AfterOnHost("
+                + "DarkwoodMP.World.WorldActions/Action,"
+                + "DarkwoodMP.World.ObjRef,System.Boolean)",
+            "trigger?.fireEventTrigger",
+            OnPurpose + ": the game's own switch fires its trigger with no "
+                + "check, and fireEventTrigger doesn't touch the native "
+                + "object"
+        ),
+    };
+
+    public static void Queue(RulePlan plan)
+    {
+        if (NullChecks.Filtered(plan.Receivers, NullCheck.Unity) != null)
+        {
+            return;
+        }
+        foreach (var access in UnityNesting.Accesses(plan))
+        {
+            var text = access.ToString();
+            foreach (var (member, start, reason) in Sites)
+            {
+                if (text.StartsWith(start, StringComparison.Ordinal)
+                    && MemberKeys.Of(access, plan.Model) == member)
+                {
+                    plan.Queue(access, reason);
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -247,7 +296,8 @@ sealed class UnityNesting
     }
 
     /// Every ?. chain that tests a Unity object, whatever its fate.
-    static List<ConditionalAccessExpressionSyntax> Accesses(RulePlan plan)
+    public static List<ConditionalAccessExpressionSyntax> Accesses(
+        RulePlan plan)
     {
         var types = new AccessTypes(plan.Model, NullCheck.Unity);
         return plan.Root.DescendantNodes()

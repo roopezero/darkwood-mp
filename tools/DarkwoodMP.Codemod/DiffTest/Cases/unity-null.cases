@@ -244,6 +244,34 @@ public static object Run(UnityObject a, [PassesThrough] UnityObject b)
     var n = a?.Next?.Count;
     return (x, n);
 }
+=== a ?. that a ?? opens reads a receiver that is a call once
+static UnityObject s_object;
+static UnityObject s_field;
+static int s_gets;
+
+static UnityObject Get()
+{
+    s_gets++;
+    return Log("get", s_object);
+}
+
+static UnityObject Back(UnityObject b)
+{
+    return Get()?.Next ?? b;
+}
+
+public static object Run(UnityObject u, [PassesThrough] UnityObject b)
+{
+    s_object = u;
+    s_field = null;
+    s_gets = 0;
+    var x = Get()?.Next ?? b;
+    s_field = Get()?.Next ?? b;
+    var y = Back(b);
+    int n = Get()?.Count ?? -1;
+    s_object = null;
+    return (x, s_field, y, n, s_gets);
+}
 === ??= replaces a destroyed value
 static UnityObject s_cache;
 

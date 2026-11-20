@@ -28,6 +28,14 @@ static class TempNameCases
                 public Holder Child() { return null; }
             }
 
+            public class Traverse
+            {
+                public static Traverse Create(object o) { return null; }
+                public Traverse Field(string name) { return null; }
+                public Traverse Property(string name) { return null; }
+                public T GetValue<T>() { return default; }
+            }
+
             public class C
             {
                 int _foo;
@@ -65,6 +73,10 @@ static class TempNameCases
                             bool typed = one is { type: "a" };
                             var runs = (one.NPCs, one.IPAddress, one.XMax);
                             var made = Holder.Make().Child();
+                            var mesh = Traverse.Create(one)
+                                .Field("descriptionText").GetValue<Holder>();
+                            var flag = Traverse.Create(one)
+                                .Property("_isShown").GetValue<bool>();
                             break;
                     }
                 }
@@ -72,7 +84,7 @@ static class TempNameCases
         }
         """;
 
-    public const int Count = 34;
+    public const int Count = 36;
 
     public static List<string> Failures()
     {
@@ -192,6 +204,12 @@ static class TempNameCases
             TempNames.Named(
                 calls.First(c => c.ToString() == "Holder.Make().Child()"),
                 model));
+        Expect(problems, "a field's value got by its name: the field",
+            "descriptionText", TempNames.Named(calls.First(
+                c => c.ToString().EndsWith(".GetValue<Holder>()")), model));
+        Expect(problems, "a property's value got by its name: the property",
+            "isShown", TempNames.Named(calls.First(
+                c => c.ToString().EndsWith(".GetValue<bool>()")), model));
         return problems;
     }
 

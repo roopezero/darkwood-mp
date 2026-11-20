@@ -110,7 +110,11 @@ static class RuleEngine
     /// The new code of each proposal as the layout pass left it, from the
     /// start of its first line, for a readable site list. Layout changes
     /// only whitespace, so the proposal's tokens keep their places in the
-    /// file's token stream. Empty if that doesn't hold.
+    /// file's token stream. Empty if that doesn't hold. A comment the
+    /// proposal took in from behind its statement can lie outside its
+    /// first and last tokens: above the first one, on the line of the token
+    /// before it (a body's member) or behind the last one. The shown code
+    /// takes in its line.
     static Dictionary<Proposal, string> Shown(
         string spliced,
         Dictionary<Proposal, TextSpan> spans,
@@ -136,10 +140,86 @@ static class RuleEngine
             {
                 continue;
             }
-            shown[proposal] = FromLineStart(
-                final, after[first].SpanStart, after[last].Span.End);
+            int start = after[first].SpanStart;
+            int end = after[last].Span.End;
+            if (first > 0)
+            {
+                start = Math.Min(start, Moved(
+                    before[first - 1].TrailingTrivia,
+                    after[first - 1].TrailingTrivia,
+                    span,
+                    start));
+            }
+            start = Math.Min(start, Moved(
+                before[first].LeadingTrivia,
+                after[first].LeadingTrivia,
+                span,
+                start));
+            end = Math.Max(end, MovedEnd(
+                before[last].TrailingTrivia,
+                after[last].TrailingTrivia,
+                span,
+                end));
+            shown[proposal] = FromLineStart(final, start, end);
         }
         return shown;
+    }
+
+    /// Where the first comment of the spliced trivia that lies in the span
+    /// starts in the laid-out trivia, which holds the same comments in the
+    /// same order; or the given start, if there is none.
+    static int Moved(
+        SyntaxTriviaList spliced,
+        SyntaxTriviaList laid,
+        TextSpan span,
+        int start)
+    {
+        var mine = Comments(spliced);
+        var theirs = Comments(laid);
+        if (mine.Count != theirs.Count)
+        {
+            return start;
+        }
+        for (int i = 0; i < mine.Count; i++)
+        {
+            if (span.Contains(mine[i].Span))
+            {
+                return theirs[i].SpanStart;
+            }
+        }
+        return start;
+    }
+
+    /// Where the last comment of the spliced trivia that lies in the span
+    /// ends in the laid-out trivia; or the given end, if there is none.
+    static int MovedEnd(
+        SyntaxTriviaList spliced,
+        SyntaxTriviaList laid,
+        TextSpan span,
+        int end)
+    {
+        var mine = Comments(spliced);
+        var theirs = Comments(laid);
+        if (mine.Count != theirs.Count)
+        {
+            return end;
+        }
+        for (int i = mine.Count - 1; i >= 0; i--)
+        {
+            if (span.Contains(mine[i].Span))
+            {
+                return theirs[i].Span.End;
+            }
+        }
+        return end;
+    }
+
+    static List<SyntaxTrivia> Comments(SyntaxTriviaList trivia)
+    {
+        return trivia
+            .Where(t => t.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                || t.IsKind(SyntaxKind.MultiLineCommentTrivia))
+            .ToList();
     }
 
     static string FromLineStart(string text, int start, int end)

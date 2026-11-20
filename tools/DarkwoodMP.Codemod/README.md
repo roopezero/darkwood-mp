@@ -120,7 +120,9 @@ the game's stack readers would see the extra frame. `DIR` gets:
   rewritten. `census --operators` prints the number of sites left per operator,
 - `sites.txt`, for a rule with a site list (`Rule.SiteList`, only unity-null):
   every rewrite with the lines of its sites, its member, the old code from the
-  start of its line and the new code as the layout pass left it. When the rule
+  start of its line and the new code as the layout pass left it, with the
+  comment it took in from behind the statement where the file has it (above
+  the new code, or on the member's line of a body). When the rule
   rewrites the plugin's own sources (no `--src`, no `--dry-run`), the same list
   goes to the path the rule names, for the stage's commit.
 
@@ -523,7 +525,15 @@ initializer, an `await` in the statement, ...), the queue gets:
   The rewrite of the outer one would move the inner one into a statement,
   where a second run would rewrite it, so both are queued, as two `?.` or two
   `??` one inside the other are. The `?.` that a `??` opens is the
-  exception, and when that `??` goes to the queue, its `?.` goes after it.
+  exception, and when that `??` goes to the queue, its `?.` goes after it;
+- a site in the rule's list of sites kept as written (`KeptSites`), whose
+  code relies on running for a destroyed object, found by its member, as
+  the manifest spells it, and the start of its text. The one there now is
+  `trigger?.fireEventTrigger` in `ObjectActions.AfterOnHost`: the game's own
+  switch fires its trigger with no check, and `fireEventTrigger` never
+  touches the native object, so the host runs a destroyed trigger's events
+  for its own flip. Its reason starts with "runs on destroyed objects on
+  purpose", and the queue's stage decides how to write it.
 
 So one run is a fixed point: a second run rewrites nothing and lists the same
 queue. `Recheck` then counts, in each compiled rewrite, the null checks that
@@ -655,15 +665,18 @@ a plain receiver with a Unity member, assignments that write the target
 once, returns, bodies and lambdas, arguments and holes, every fixed
 comparison, a loop condition, a compared value with effects, `??` in a
 declaration, a chain, a field, a return, an argument and a local, the `?.`
-a `??` opens, `??=` alone and as a value, and `x?.Count != 5`. A case
-returns what its sites make rather than the objects it tests, since the
-harness compares what each run left in those; a site that must stay as
-written has a receiver the case makes itself, which is never destroyed,
-because such a site sees a destroyed object as alive. Emitting `is not null`
-with the recheck switched off fails the destroyed rows of the cases. The
-golden cases pin the texts and the queue: a Unity class with an `==` of its
-own, a `??` of `object`, a type parameter, the nested sites and the
-refusals of stages 5 and 6.
+a `??` opens, with a receiver that is a call read once in a declaration,
+a field and a return, `??=` alone and as a value, and `x?.Count != 5`. A
+case returns what its sites make rather than the objects it tests, since
+the harness compares what each run left in those; a site that must stay
+as written has a receiver the case makes itself, which is never
+destroyed, because such a site sees a destroyed object as alive. Emitting
+`is not null` with the recheck switched off fails the destroyed rows of
+the cases, and reading the receiver of an opened `?.` twice fails the
+alive rows of its case. The golden cases pin the texts and the queue: the
+temporary that receiver goes into, a Unity class with an `==` of its own,
+a `??` of `object`, a type parameter, the nested sites, the refusals of
+stages 5 and 6 and the site kept as written (`unity-null/07-kept`).
 
 ## Golden cases
 

@@ -1,0 +1,203 @@
+A site named in the rule's list of sites kept as written, because its
+code relies on running for a destroyed object, goes to the queue with
+the list's reason: the ?. on the trigger in ObjectActions.AfterOnHost,
+found by its member and the start of its text. The other ?. in that
+member, the same text in another member and in an overload of
+AfterOnHost are rewritten as any other.
+=== input
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+}
+
+namespace DarkwoodMP.World
+{
+    using UnityEngine;
+
+    public class EventTriggers : Object
+    {
+        public void fireEventTrigger(int type, string tag, bool force)
+        {
+        }
+    }
+
+    public class InteractiveItem : Object
+    {
+        public EventTriggers onTrigger;
+        public EventTriggers offTrigger;
+
+        public void Hit()
+        {
+        }
+    }
+
+    public static class WorldActions
+    {
+        public enum Action
+        {
+            InteractiveSwitch,
+        }
+    }
+
+    public class ObjRef
+    {
+        public InteractiveItem item;
+    }
+
+    public static class ObjectActions
+    {
+        internal static void AfterOnHost(WorldActions.Action a, ObjRef obj, bool on)
+        {
+            var ii = obj.item;
+            ii?.Hit();
+            EventTriggers trigger = ii.onTrigger;
+            trigger?.fireEventTrigger(1, "", force: true);
+        }
+
+        internal static void AfterOnHost(ObjRef obj)
+        {
+            EventTriggers trigger = obj.item.offTrigger;
+            trigger?.fireEventTrigger(1, "", force: true);
+        }
+
+        internal static void AfterOnClient(ObjRef obj, bool on)
+        {
+            EventTriggers trigger = obj.item.onTrigger;
+            trigger?.fireEventTrigger(1, "", force: true);
+        }
+    }
+}
+=== output
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+}
+
+namespace DarkwoodMP.World
+{
+    using UnityEngine;
+
+    public class EventTriggers : Object
+    {
+        public void fireEventTrigger(int type, string tag, bool force)
+        {
+        }
+    }
+
+    public class InteractiveItem : Object
+    {
+        public EventTriggers onTrigger;
+        public EventTriggers offTrigger;
+
+        public void Hit()
+        {
+        }
+    }
+
+    public static class WorldActions
+    {
+        public enum Action
+        {
+            InteractiveSwitch,
+        }
+    }
+
+    public class ObjRef
+    {
+        public InteractiveItem item;
+    }
+
+    public static class ObjectActions
+    {
+        internal static void AfterOnHost(WorldActions.Action a, ObjRef obj, bool on)
+        {
+            var ii = obj.item;
+            if (ii != null)
+            {
+                ii.Hit();
+            }
+            EventTriggers trigger = ii.onTrigger;
+            trigger?.fireEventTrigger(1, "", force: true);
+        }
+
+        internal static void AfterOnHost(ObjRef obj)
+        {
+            EventTriggers trigger = obj.item.offTrigger;
+            if (trigger != null)
+            {
+                trigger.fireEventTrigger(1, "", force: true);
+            }
+        }
+
+        internal static void AfterOnClient(ObjRef obj, bool on)
+        {
+            EventTriggers trigger = obj.item.onTrigger;
+            if (trigger != null)
+            {
+                trigger.fireEventTrigger(1, "", force: true);
+            }
+        }
+    }
+}
+=== queue
+77: runs on destroyed objects on purpose: the game's own switch fires its trigger with no check, and fireEventTrigger doesn't touch the native object

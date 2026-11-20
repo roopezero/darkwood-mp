@@ -58,7 +58,7 @@ static class RuleEngineCases
         }
         """;
 
-    public const int Count = 9;
+    public const int Count = 10;
 
     public static List<string> Failures()
     {
@@ -73,6 +73,8 @@ static class RuleEngineCases
         Check(problems, "--receivers tells Unity objects apart", Receivers);
         Check(problems, "unity-null's recheck refuses a reference check",
             RecheckRefusesReference);
+        Check(problems, "the site list shows a comment the rewrite moved",
+            SiteListShowsComments);
         return problems;
     }
 
@@ -338,6 +340,77 @@ static class RuleEngineCases
         {
             return "Unity's own check was refused: "
                 + string.Join("; ", right.Queue.Select(q => q.Reason));
+        }
+        return null;
+    }
+
+    /// A comment the rewrite took in from behind a statement is in the
+    /// new code of the site list where the file has it: on a line of its
+    /// own above the new code, or on the member's line of a body.
+    static string SiteListShowsComments()
+    {
+        const string source = """
+            namespace UnityEngine
+            {
+                public class Object
+                {
+                    public string name;
+
+                    public static bool operator ==(Object a, Object b)
+                    {
+                        return ReferenceEquals(a, b);
+                    }
+
+                    public static bool operator !=(Object a, Object b)
+                    {
+                        return !ReferenceEquals(a, b);
+                    }
+
+                    public override bool Equals(object o)
+                    {
+                        return ReferenceEquals(this, o);
+                    }
+
+                    public override int GetHashCode()
+                    {
+                        return 0;
+                    }
+                }
+
+                public class Holder : Object
+                {
+                    public void Empty()
+                    {
+                    }
+                }
+            }
+
+            namespace N
+            {
+                public class C
+                {
+                    UnityEngine.Object _u;
+
+                    public void Clear(UnityEngine.Holder h)
+                    {
+                        h?.Empty(); // as the host's did
+                    }
+
+                    public string Name() => _u?.name; // patched
+                }
+            }
+            """;
+        const string above = "new:\n    // as the host's did\n"
+            + "    if (h != null)\n    {\n        h.Empty();\n    }\n";
+        const string member = "new:\n    public string Name() // patched\n"
+            + "    {\n";
+        var rule = new UnityNullRule();
+        var result = Apply(rule, source, out _);
+        var list = SiteListText.Of(rule, result);
+        if (result.Sites.Count != 2 || !list.Contains(above)
+            || !list.Contains(member))
+        {
+            return "the site list is:\n" + list;
         }
         return null;
     }
