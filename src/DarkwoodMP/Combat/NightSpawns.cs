@@ -227,18 +227,13 @@ namespace DarkwoodMP.Combat
                 {
                     who = proxy.OwnerName;
                 }
-                string name2 = "-";
+                string where = "-";
                 if (loc != null)
                 {
-                    name2 = loc.name;
+                    where = loc.name;
                 }
-                SentLog.Add((name2, who, c));
-                string name3 = "-";
-                if (loc != null)
-                {
-                    name3 = loc.name;
-                }
-                Plugin.Log.LogInfo($"[night] {c.name} sent at {who}'s hideout {name3} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
+                SentLog.Add((where, who, c));
+                Plugin.Log.LogInfo($"[night] {c.name} sent at {who}'s hideout {where} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
                                    $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
                 return c;
             }

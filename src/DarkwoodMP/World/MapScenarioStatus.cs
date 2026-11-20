@@ -190,23 +190,20 @@ namespace DarkwoodMP.World
                     {
                         name = info.Name;
                     }
-                    Net.ServerInfo playersInfo = f.e.Info;
                     int? players = null;
-                    if (playersInfo != null)
+                    if (info != null)
                     {
-                        players = playersInfo.Players;
+                        players = info.Players;
                     }
-                    Net.ServerInfo maxInfo = f.e.Info;
                     int? maxPlayers = null;
-                    if (maxInfo != null)
+                    if (info != null)
                     {
-                        maxPlayers = maxInfo.MaxPlayers;
+                        maxPlayers = info.MaxPlayers;
                     }
-                    Net.ServerInfo answer = f.e.Info;
                     int? proto = null;
-                    if (answer != null)
+                    if (info != null)
                     {
-                        proto = answer.Proto;
+                        proto = info.Proto;
                     }
                     return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto {proto} {f.e.PingMs} ms";
                 }));

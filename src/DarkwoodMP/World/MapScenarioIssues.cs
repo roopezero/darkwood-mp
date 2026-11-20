@@ -786,12 +786,7 @@ namespace DarkwoodMP.World
                 {
                     Object.Destroy(go);
                 }
-                string named = kind;
-                if (named == null)
-                {
-                    named = "Dog";
-                }
-                r.Fail($"couldn't make a {named} of our own here");
+                r.Fail($"couldn't make a {wanted} of our own here");
                 yield break;
             }
             var save = mine.GetComponent<SaveableObject>();
