@@ -377,7 +377,13 @@ namespace DarkwoodMP
             }
             // The versions: right-aligned in the bottom right corner, the player ID line above them.
             float margin = H * Corner, bottom = margin;
-            foreach (var t in new[] { mm.CurrentVersion, mm.Menu0.transform.Find("playerID")?.GetComponent<tk2dTextMesh>() })
+            Transform idLine = mm.Menu0.transform.Find("playerID");
+            tk2dTextMesh idText = null;
+            if (idLine != null)
+            {
+                idText = idLine.GetComponent<tk2dTextMesh>();
+            }
+            foreach (var t in new[] { mm.CurrentVersion, idText })
             {
                 if (t == null || !t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text))
                 {

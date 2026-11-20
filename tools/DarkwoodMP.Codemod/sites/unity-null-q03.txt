@@ -1,0 +1,27 @@
+# The Unity site of queue batch q03, rewritten by hand: 1 site.
+# Stage 8 of the formatting pass (guide sections 4.7 and 4.8). The site
+# tested a Unity object by reference, with ?. inside an array initializer,
+# which is why the unity-null rule queued it. The new code tests it with
+# "x != null", which calls Unity's ==, so code that ran on a destroyed
+# object is now skipped, as it is for null. The old code is from the start
+# of its line; lines are those before the rewrite.
+
+MenuEntry.cs:380
+member: DarkwoodMP.MenuLayout::Lay(MainMenu,UnityEngine.Camera)
+old:
+    foreach (var t in new[] { mm.CurrentVersion, mm.Menu0.transform.Find("playerID")?.GetComponent<tk2dTextMesh>() })
+new:
+    Transform idLine = mm.Menu0.transform.Find("playerID");
+    tk2dTextMesh idText = null;
+    if (idLine != null)
+    {
+        idText = idLine.GetComponent<tk2dTextMesh>();
+    }
+    foreach (var t in new[] { mm.CurrentVersion, idText })
+on a destroyed object: if the "playerID" transform found under Menu0 is
+destroyed, its text mesh is now null and the loop skips that line, as it
+does when there is no such child; before, GetComponent was called on the
+destroyed transform. Transform.Find only finds children in the hierarchy,
+and Unity takes a destroyed object out of it, so in practice nothing
+changes. Find and GetComponent have no effects, so they now run before
+the array is made and mm.CurrentVersion is read, which nothing can notice.
