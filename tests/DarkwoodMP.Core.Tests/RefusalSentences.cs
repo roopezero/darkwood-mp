@@ -466,6 +466,29 @@ namespace DarkwoodMP.Tests
                     null,
                     "The host is playing the ending."
                 },
+                { Refusal.HasItOpen, "Player 2", "Player 2 has it open" },
+                {
+                    Refusal.SlotChanged,
+                    Refusals.Detail("3", "2"),
+                    "slot 3 had just changed, so the 2 changes made with it"
+                        + " are refused too"
+                },
+                { Refusal.JustChanged, null, "it had just changed" },
+                {
+                    Refusal.OverStack,
+                    "12",
+                    "slot 12: more than one stack holds"
+                },
+                {
+                    Refusal.LevelNotNext,
+                    Refusals.Detail("4", "2"),
+                    "level 4 isn't one above 2"
+                },
+                {
+                    Refusal.NotAtWorkbench,
+                    null,
+                    "they aren't at a workbench"
+                },
             };
     }
 }

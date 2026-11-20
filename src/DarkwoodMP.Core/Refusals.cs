@@ -357,6 +357,21 @@ namespace DarkwoodMP
                         + " they've loaded their world.";
                 case Refusal.PlayingEnding:
                     return "The host is playing the ending.";
+                case Refusal.HasItOpen:
+                    return detail + " has it open";
+                case Refusal.SlotChanged:
+                    return Fill(
+                        "slot {0} had just changed, so the {1} changes made"
+                        + " with it are refused too", detail, 2);
+                case Refusal.JustChanged:
+                    return "it had just changed";
+                case Refusal.OverStack:
+                    return "slot " + detail + ": more than one stack holds";
+                case Refusal.LevelNotNext:
+                    return Fill(
+                        "level {0} isn't one above {1}", detail, 2);
+                case Refusal.NotAtWorkbench:
+                    return "they aren't at a workbench";
                 default:
                     return verdict.Reason.ToString();
             }
