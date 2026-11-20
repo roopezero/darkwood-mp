@@ -698,7 +698,7 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(0.5f);
             var l = Hideout(Player.Instance);
-            // the wolf stays (each game's own)
+            // The trader only, not the wolf: the wolf stays (each game's own).
             NPC npc = null;
             if (l != null && l.trader != null)
             {
