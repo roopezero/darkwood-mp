@@ -218,7 +218,8 @@ sealed partial class AccessPlanner
         ITypeSymbol member)
     {
         var right = TernaryChain.Strip(coalesce.Right);
-        if (coalesce.Left != outer
+        // A ?? another planner of the rule took (unity-null) isn't free.
+        if (coalesce.Left != outer || _plan.IsReported(coalesce)
             || member.SpecialType != SpecialType.System_Boolean
             || coalesce.Parent.IsKind(SyntaxKind.CoalesceExpression)
             || (!right.IsKind(SyntaxKind.TrueLiteralExpression)

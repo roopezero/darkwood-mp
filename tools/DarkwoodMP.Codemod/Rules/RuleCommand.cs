@@ -10,7 +10,9 @@ namespace DarkwoodMP.Codemod.Rules;
 /// "codemod rule NAME [--receivers unity|other] --out DIR [--src DIR]
 /// [--dry-run]": runs one rule over the plugin's sources (or another copy of
 /// them), writes manifest.json, queue.jsonl, sites.jsonl and census.txt to DIR,
-/// and rewrites the sources unless --dry-run is given.
+/// and rewrites the sources unless --dry-run is given. A rule with a site list
+/// (Rule.SiteList) also gets sites.txt in DIR, and the list in the repo when
+/// the plugin's own sources are rewritten.
 static class RuleCommand
 {
     const string Usage =
@@ -37,6 +39,12 @@ static class RuleCommand
         CheckMembers(project.Compilation, result.Manifest);
         Directory.CreateDirectory(options.Out);
         WriteOutputs(result, options.Out);
+        string list = null;
+        if (rule.SiteList != null)
+        {
+            list = SiteListText.Of(rule, result);
+            File.WriteAllText(Path.Combine(options.Out, "sites.txt"), list);
+        }
         result.PrintCensus(Console.Out);
         Console.WriteLine(
             $"{rule.Name}: {result.Sites.Count} sites rewritten in "
@@ -50,6 +58,13 @@ static class RuleCommand
         }
         OutputFiles.WriteAll(
             result.Rewritten.Select(kv => (kv.Key, kv.Value)).ToList());
+        if (list != null && options.Source == null)
+        {
+            var path = Path.Combine(paths.Root, rule.SiteList);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllText(path, list);
+            Console.WriteLine("Site list: " + rule.SiteList);
+        }
         return 0;
     }
 

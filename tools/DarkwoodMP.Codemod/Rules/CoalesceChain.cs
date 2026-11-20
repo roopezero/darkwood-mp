@@ -95,20 +95,27 @@ sealed class CoalesceChain
 /// object, which waits for stage 7, and a user-defined one for any type
 /// that has one but string, which goes to the queue. The conversions decide
 /// the form: a value may go into the temporary before its null check only
-/// when that conversion keeps a null a null and runs no code.
-sealed class CoalesceTypes
+/// when that conversion keeps a null a null and runs no code. Under
+/// unity-null the Unity objects are the ones rewritten, with Unity's ==
+/// (UnityNullRule.cs).
+sealed partial class CoalesceTypes
 {
     public const string UnityLater =
         "a Unity object, whose null check is unity-null's (stage 7)";
 
     readonly SemanticModel _model;
     readonly INamedTypeSymbol _unity;
+    readonly NullCheck _checks;
 
-    public CoalesceTypes(SemanticModel model)
+    public CoalesceTypes(
+        SemanticModel model, NullCheck checks = NullCheck.Reference)
     {
         _model = model;
         _unity = model.Compilation.GetTypeByMetadataName("UnityEngine.Object");
+        _checks = checks;
     }
+
+    public NullCheck Checks => _checks;
 
     /// Null when the chain can be rewritten, after which its form and the
     /// ?. it opens are set; otherwise why not. later is set for a Unity
@@ -121,15 +128,23 @@ sealed class CoalesceTypes
         {
             return "the ?? has no type of its own";
         }
+        if (_checks == NullCheck.Unity)
+        {
+            var unity = UnityChain(chain);
+            if (unity != null)
+            {
+                return unity;
+            }
+        }
         foreach (var value in chain.Tested)
         {
-            if (IsUnity(TypeOf(value)))
+            if (IsUnity(TypeOf(value)) && _checks == NullCheck.Reference)
             {
                 later = true;
                 return UnityLater + ": " + value;
             }
         }
-        if (IsUnity(natural))
+        if (IsUnity(natural) && _checks == NullCheck.Reference)
         {
             later = true;
             return UnityLater + ": the ?? has the type " + natural.Name;
@@ -154,7 +169,7 @@ sealed class CoalesceTypes
     /// written on.
     public string CheckTarget(ITypeSymbol type, out bool later)
     {
-        later = IsUnity(type);
+        later = IsUnity(type) && _checks == NullCheck.Reference;
         if (later)
         {
             return UnityLater + ": the target";
@@ -162,6 +177,14 @@ sealed class CoalesceTypes
         if (type == null || type.TypeKind == TypeKind.Error)
         {
             return "the target has no type";
+        }
+        if (_checks == NullCheck.Unity)
+        {
+            var unity = UnityTests(type);
+            if (unity != null)
+            {
+                return unity;
+            }
         }
         return Tests(type);
     }
@@ -178,7 +201,8 @@ sealed class CoalesceTypes
         {
             return Dynamic;
         }
-        if (type.IsReferenceType && HasOwnEquality(type))
+        if (type.IsReferenceType && HasOwnEquality(type)
+            && !ChecksAsUnity(type))
         {
             return "the type " + type.Name + " has an == of its own, which "
                 + "the rewrite's null check would call";
@@ -244,8 +268,10 @@ sealed class CoalesceTypes
             return null;
         }
         var receiver = TypeOf(access.Expression);
-        if (receiver == null || !receiver.IsReferenceType || IsUnity(receiver)
-            || IsDynamic(receiver) || HasOwnEquality(receiver))
+        if (receiver == null || !receiver.IsReferenceType
+            || (IsUnity(receiver) && !ChecksAsUnity(receiver))
+            || IsDynamic(receiver)
+            || (HasOwnEquality(receiver) && !ChecksAsUnity(receiver)))
         {
             return null;
         }

@@ -87,11 +87,14 @@ sealed partial class AccessPlanner
     readonly List<AccessHoist> _hoists = new();
     List<ConditionalAccessExpressionSyntax> _all;
 
-    public AccessPlanner(RulePlan plan)
+    /// Checks says which null checks the planner rewrites: by reference
+    /// for the conditional-access rule, Unity's for unity-null
+    /// (UnityNullRule).
+    public AccessPlanner(RulePlan plan, NullCheck checks = NullCheck.Reference)
     {
         _plan = plan;
         _model = plan.Model;
-        _types = new AccessTypes(plan.Model);
+        _types = new AccessTypes(plan.Model, checks);
         _hazards = new HoistHazards(plan.Model, plan.Purity);
     }
 
@@ -101,12 +104,19 @@ sealed partial class AccessPlanner
             .OfType<ConditionalAccessExpressionSyntax>()
             .Where(node => OperatorCount.KindOf(node) != null)
             .ToList();
+        var filtered = NullChecks.Filtered(
+            _plan.Receivers, _types.Types.Checks);
         foreach (var site in _all)
         {
-            if (_plan.Receivers == ReceiverFilter.Unity)
+            // Under unity-null the coalesce planner runs first and takes
+            // the ?. it opens in the first value of a ??.
+            if (_plan.IsReported(site))
             {
-                _plan.Later(site, "--receivers unity: this rule rewrites "
-                    + "no Unity object");
+                continue;
+            }
+            if (filtered != null)
+            {
+                _plan.Later(site, filtered);
                 continue;
             }
             Decide(new AccessChain(site));

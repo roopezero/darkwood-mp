@@ -71,10 +71,11 @@ sealed class AccessTypes
     readonly SemanticModel _model;
     readonly CoalesceTypes _types;
 
-    public AccessTypes(SemanticModel model)
+    public AccessTypes(
+        SemanticModel model, NullCheck checks = NullCheck.Reference)
     {
         _model = model;
-        _types = new CoalesceTypes(model);
+        _types = new CoalesceTypes(model, checks);
     }
 
     public CoalesceTypes Types => _types;
@@ -90,14 +91,29 @@ sealed class AccessTypes
     {
         later = false;
         var tested = chain.Tested().Select(TypeOf).ToList();
-        if (tested.Any(type => type != null && _types.IsUnity(type)))
+        bool unity = tested.Any(type => type != null && _types.IsUnity(type));
+        if (_types.Checks == NullCheck.Unity && !unity)
+        {
+            later = true;
+            return NullChecks.NotUnity;
+        }
+        if (_types.Checks == NullCheck.Reference && unity)
         {
             later = true;
             return Unity;
         }
         foreach (var type in tested)
         {
-            var refused = Receiver(type);
+            string refused;
+            if (_types.Checks == NullCheck.Unity && type != null
+                && _types.IsUnity(type))
+            {
+                refused = _types.UnityTests(type);
+            }
+            else
+            {
+                refused = Receiver(type);
+            }
             if (refused != null)
             {
                 return refused;

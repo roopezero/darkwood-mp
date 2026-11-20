@@ -1,0 +1,230 @@
+The fixed comparisons keep their place with Unity's check on the
+receiver, as "go != null && go.name == v", in a loop condition and the
+right side of && too. A receiver that isn't a local goes into a
+temporary first. A compared this of a Unity object can be destroyed,
+which Unity's == counts as null, and Unity's bool conversion runs for a
+null receiver as well, so those comparisons move into a temporary.
+=== input
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+        public int count;
+        public bool active;
+        public GameObject parent;
+        public Holder holder;
+        public Action<int> onHit;
+
+        public void Hit()
+        {
+        }
+
+        public int this[string key]
+        {
+            get
+            {
+                return key.Length;
+            }
+        }
+    }
+
+    public class Holder
+    {
+        public GameObject root;
+        public string tag;
+
+        public void Use(string text)
+        {
+        }
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public class C : GameObject
+    {
+        GameObject _go;
+
+        public bool Use(bool b)
+        {
+            return b;
+        }
+
+        public object Compare(GameObject go, string s, int k)
+        {
+            bool a = go?.name == "x";
+            bool b = go?.name != s;
+            bool c = go?.count > k;
+            bool d = go?.parent == null;
+            bool e = go?.parent != null;
+            bool f = go?.active == true;
+            bool g = go?.active != true;
+            bool h = go?.active == false;
+            bool i = go?.active ?? false;
+            bool j = go?.active ?? true;
+            bool l = k > 0 && go?.count == 2;
+            bool m = _go?.count == 1;
+            bool n = go?.parent == this;
+            bool o = go?.parent == false;
+            while (go?.count > 3)
+            {
+                go = go.parent;
+            }
+            return (a, b, c, d, e, f, g, h, i, j, l, m, n, o);
+        }
+    }
+}
+=== output
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+        public int count;
+        public bool active;
+        public GameObject parent;
+        public Holder holder;
+        public Action<int> onHit;
+
+        public void Hit()
+        {
+        }
+
+        public int this[string key]
+        {
+            get
+            {
+                return key.Length;
+            }
+        }
+    }
+
+    public class Holder
+    {
+        public GameObject root;
+        public string tag;
+
+        public void Use(string text)
+        {
+        }
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public class C : GameObject
+    {
+        GameObject _go;
+
+        public bool Use(bool b)
+        {
+            return b;
+        }
+
+        public object Compare(GameObject go, string s, int k)
+        {
+            bool a = go != null && go.name == "x";
+            string name = null;
+            if (go != null)
+            {
+                name = go.name;
+            }
+            bool b = name != s;
+            bool c = go != null && go.count > k;
+            bool d = go == null || go.parent == null;
+            bool e = go != null && go.parent != null;
+            bool f = go != null && go.active;
+            bool g = go == null || !go.active;
+            bool h = go != null && !go.active;
+            bool i = go != null && go.active;
+            bool j = go == null || go.active;
+            bool l = k > 0 && go != null && go.count == 2;
+            GameObject go2 = _go;
+            bool m = go2 != null && go2.count == 1;
+            GameObject parent = null;
+            if (go != null)
+            {
+                parent = go.parent;
+            }
+            bool n = parent == this;
+            GameObject parent2 = null;
+            if (go != null)
+            {
+                parent2 = go.parent;
+            }
+            bool o = parent2 == false;
+            while (go != null && go.count > 3)
+            {
+                go = go.parent;
+            }
+            return (a, b, c, d, e, f, g, h, i, j, l, m, n, o);
+        }
+    }
+}

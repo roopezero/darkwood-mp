@@ -16,6 +16,10 @@ sealed partial class CoalescePlanner
     {
         var sites = new List<SyntaxNode> { site };
         var type = _types.TypeOf(site.Left);
+        if (!_types.MineTarget(type))
+        {
+            return;
+        }
         var refused = Shape(site, sites, all);
         if (refused == null)
         {

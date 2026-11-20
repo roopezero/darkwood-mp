@@ -258,6 +258,13 @@ sealed class RulePlan
         }
     }
 
+    /// Whether the site already has its fate: a rule that runs two
+    /// planners over a file (unity-null) skips what the first one took.
+    public bool IsReported(SyntaxNode site)
+    {
+        return _reported.Contains(site.Span);
+    }
+
     /// A rule that reports the same site twice has a bug.
     void Report(SyntaxNode site)
     {

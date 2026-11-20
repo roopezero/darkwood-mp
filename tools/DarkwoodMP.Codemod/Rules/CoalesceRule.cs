@@ -78,11 +78,14 @@ sealed partial class CoalescePlanner
     readonly List<PlannedEdit> _edits = new();
     readonly List<CoalesceHoist> _hoists = new();
 
-    public CoalescePlanner(RulePlan plan)
+    /// Checks says which null checks the planner rewrites: by reference
+    /// for the coalesce rule, Unity's for unity-null (UnityNullRule).
+    public CoalescePlanner(
+        RulePlan plan, NullCheck checks = NullCheck.Reference)
     {
         _plan = plan;
         _model = plan.Model;
-        _types = new CoalesceTypes(plan.Model);
+        _types = new CoalesceTypes(plan.Model, checks);
         _hazards = new HoistHazards(plan.Model, plan.Purity);
     }
 
@@ -92,12 +95,18 @@ sealed partial class CoalescePlanner
             .Where(IsSite)
             .Cast<ExpressionSyntax>()
             .ToList();
+        var filtered = NullChecks.Filtered(_plan.Receivers, _types.Checks);
         foreach (var site in sites)
         {
-            if (_plan.Receivers == ReceiverFilter.Unity)
+            // Under unity-null a ?? and a ?. one inside the other are
+            // queued before the planners run (UnityNesting).
+            if (_plan.IsReported(site))
             {
-                _plan.Later(site, "--receivers unity: this rule rewrites "
-                    + "no Unity object");
+                continue;
+            }
+            if (filtered != null)
+            {
+                _plan.Later(site, filtered);
                 continue;
             }
             if (site is BinaryExpressionSyntax link)
@@ -122,6 +131,12 @@ sealed partial class CoalescePlanner
 
     void Decide(CoalesceChain chain, List<ExpressionSyntax> all)
     {
+        // unity-null says nothing of a ?? that tests no Unity object, so
+        // that its access planner can still take "x?.B ?? false" with x.
+        if (!_types.Mine(chain))
+        {
+            return;
+        }
         var links = chain.Links.Cast<SyntaxNode>().ToList();
         var refused = Shape(chain.Top, links, all);
         if (refused == null)

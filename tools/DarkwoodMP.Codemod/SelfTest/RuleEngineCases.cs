@@ -58,7 +58,7 @@ static class RuleEngineCases
         }
         """;
 
-    public const int Count = 8;
+    public const int Count = 9;
 
     public static List<string> Failures()
     {
@@ -71,6 +71,8 @@ static class RuleEngineCases
         Check(problems, "refuses a statement outside a list", NeedsAStatementList);
         Check(problems, "manifest keys match the DLL", KeysMatchTheDll);
         Check(problems, "--receivers tells Unity objects apart", Receivers);
+        Check(problems, "unity-null's recheck refuses a reference check",
+            RecheckRefusesReference);
         return problems;
     }
 
@@ -269,6 +271,108 @@ static class RuleEngineCases
             return "the filter picked the wrong receivers";
         }
         return null;
+    }
+
+    /// unity-null's Recheck (UnityNullRule) queues a rewrite that tests a
+    /// Unity object through a variable of another type, which checks the
+    /// reference only, and lets the same rewrite with Unity's == through.
+    static string RecheckRefusesReference()
+    {
+        const string source = """
+            namespace UnityEngine
+            {
+                public class Object
+                {
+                    public string name;
+
+                    public static bool operator ==(Object a, Object b)
+                    {
+                        return ReferenceEquals(a, b);
+                    }
+
+                    public static bool operator !=(Object a, Object b)
+                    {
+                        return !ReferenceEquals(a, b);
+                    }
+
+                    public override bool Equals(object o)
+                    {
+                        return ReferenceEquals(this, o);
+                    }
+
+                    public override int GetHashCode()
+                    {
+                        return 0;
+                    }
+                }
+            }
+
+            namespace N
+            {
+                public class C
+                {
+                    public string M(UnityEngine.Object u)
+                    {
+                        return u?.name;
+                    }
+                }
+            }
+            """;
+        const string byReference =
+            "object held = u;\nif (held != null)\n{\nreturn u.name;\n}\n"
+                + "return null;";
+        const string byUnity =
+            "if (u != null)\n{\nreturn u.name;\n}\nreturn null;";
+        var wrong = Apply(new RecheckProbe(byReference), source, out var tree);
+        if (wrong.Rewritten.ContainsKey(tree.FilePath) || wrong.Queue.Count != 1
+            || !wrong.Queue[0].Reason.StartsWith(
+                "the rewrite makes 0 null checks with Unity's ==",
+                StringComparison.Ordinal))
+        {
+            return "a check by reference got through: "
+                + string.Join("; ", wrong.Queue.Select(q => q.Reason));
+        }
+        var right = Apply(new RecheckProbe(byUnity), source, out tree);
+        if (!right.Rewritten.ContainsKey(tree.FilePath)
+            || right.Queue.Count > 0)
+        {
+            return "Unity's own check was refused: "
+                + string.Join("; ", right.Queue.Select(q => q.Reason));
+        }
+        return null;
+    }
+
+    /// Rewrites the first return that holds a ?. into the given text and
+    /// rechecks it as unity-null does.
+    sealed class RecheckProbe : Rule
+    {
+        readonly string _text;
+
+        public RecheckProbe(string text)
+        {
+            _text = text;
+        }
+
+        public override string Name => "unity-null";
+
+        public override void Plan(RulePlan plan)
+        {
+            var site = plan.Root.DescendantNodes()
+                .OfType<ConditionalAccessExpressionSyntax>()
+                .First();
+            var target = site.AncestorsAndSelf()
+                .OfType<ReturnStatementSyntax>()
+                .First();
+            plan.Propose(site, target, _text);
+        }
+
+        public override List<(Proposal Proposal, string Reason)> Recheck(
+            RulePlan plan,
+            SemanticModel rewritten,
+            IReadOnlyDictionary<Proposal, TextSpan> spans)
+        {
+            return new UnityNullRule().Recheck(plan, rewritten, spans);
+        }
     }
 
     /// Every kind of signature the plugin uses must be spelled as Cecil does.

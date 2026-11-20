@@ -33,7 +33,7 @@ static class RuleEngine
             var model = compilation.GetSemanticModel(tree);
             var plan = new RulePlan(rule.Name, model, receivers, file);
             rule.Plan(plan);
-            var after = ApplyFile(plan, compilation, result);
+            var after = ApplyFile(rule, plan, compilation, result);
             finished = finished.ReplaceSyntaxTree(
                 finished.SyntaxTrees.First(t => t.FilePath == tree.FilePath),
                 Reparse(after, tree));
@@ -51,9 +51,14 @@ static class RuleEngine
             source, (CSharpParseOptions)tree.Options, tree.FilePath);
     }
 
-    /// Applies the plan to one file and returns its final text.
+    /// Applies the plan to one file and returns its final text. Once the
+    /// file compiles, the rule rechecks the rewrites it made (Rule.Recheck),
+    /// and those it gives up are queued as a compile error's are.
     static string ApplyFile(
-        RulePlan plan, CSharpCompilation compilation, RuleResult result)
+        Rule rule,
+        RulePlan plan,
+        CSharpCompilation compilation,
+        RuleResult result)
     {
         var tree = plan.Tree;
         var parse = (CSharpParseOptions)tree.Options;
@@ -66,18 +71,30 @@ static class RuleEngine
                 plan.File + " isn't in the layout stage's form: run layout first.");
         }
         var banned = new List<(SyntaxNode Site, string Reason)>();
+        var shown = new Dictionary<Proposal, string>();
         while (live.Count > 0)
         {
             var spliced = Splice(text, live, out var spans);
-            var errors = Errors(compilation, tree, Reparse(spliced, tree));
+            var errors = Errors(
+                compilation, tree, Reparse(spliced, tree), out var model);
+            var given = new List<(Proposal Proposal, string Reason)>();
             if (errors.Count == 0)
+            {
+                given = rule.Recheck(plan, model, spans);
+            }
+            if (errors.Count == 0 && given.Count == 0)
             {
                 final = Passes.Layout(spliced, parse);
                 CheckFile(plan.File, text, final, parse);
                 result.Rewritten[tree.FilePath] = final;
+                shown = Shown(spliced, spans, final, parse);
                 break;
             }
-            foreach (var (proposal, reason) in Blame(errors, live, spans, plan))
+            if (errors.Count > 0)
+            {
+                given = Blame(errors, live, spans, plan);
+            }
+            foreach (var (proposal, reason) in given)
             {
                 live.Remove(proposal);
                 foreach (var site in proposal.Sites)
@@ -86,8 +103,53 @@ static class RuleEngine
                 }
             }
         }
-        Tally(plan, live, banned, final, result);
+        Tally(plan, live, banned, final, shown, result);
         return final;
+    }
+
+    /// The new code of each proposal as the layout pass left it, from the
+    /// start of its first line, for a readable site list. Layout changes
+    /// only whitespace, so the proposal's tokens keep their places in the
+    /// file's token stream. Empty if that doesn't hold.
+    static Dictionary<Proposal, string> Shown(
+        string spliced,
+        Dictionary<Proposal, TextSpan> spans,
+        string final,
+        CSharpParseOptions parse)
+    {
+        var shown = new Dictionary<Proposal, string>();
+        var before = CSharpSyntaxTree.ParseText(spliced, parse).GetRoot()
+            .DescendantTokens().ToList();
+        var after = CSharpSyntaxTree.ParseText(final, parse).GetRoot()
+            .DescendantTokens().ToList();
+        if (before.Count != after.Count)
+        {
+            return shown;
+        }
+        foreach (var (proposal, span) in spans)
+        {
+            int first = before.FindIndex(t => t.SpanStart >= span.Start);
+            int last = before.FindLastIndex(t => t.Span.End <= span.End);
+            if (first < 0 || last < first
+                || before[first].Text != after[first].Text
+                || before[last].Text != after[last].Text)
+            {
+                continue;
+            }
+            shown[proposal] = FromLineStart(
+                final, after[first].SpanStart, after[last].Span.End);
+        }
+        return shown;
+    }
+
+    static string FromLineStart(string text, int start, int end)
+    {
+        int line = 0;
+        if (start > 0)
+        {
+            line = text.LastIndexOf('\n', start - 1) + 1;
+        }
+        return text.Substring(line, end - line);
     }
 
     /// The file with every live proposal's span replaced, and where each new
@@ -112,10 +174,14 @@ static class RuleEngine
     }
 
     static List<Diagnostic> Errors(
-        CSharpCompilation compilation, SyntaxTree tree, SyntaxTree trial)
+        CSharpCompilation compilation,
+        SyntaxTree tree,
+        SyntaxTree trial,
+        out SemanticModel model)
     {
-        return compilation.ReplaceSyntaxTree(tree, trial)
-            .GetSemanticModel(trial)
+        model = compilation.ReplaceSyntaxTree(tree, trial)
+            .GetSemanticModel(trial);
+        return model
             .GetDiagnostics()
             .Where(d => d.Severity == DiagnosticSeverity.Error)
             .ToList();
@@ -246,8 +312,10 @@ static class RuleEngine
         List<Proposal> live,
         List<(SyntaxNode Site, string Reason)> banned,
         string final,
+        Dictionary<Proposal, string> shown,
         RuleResult result)
     {
+        var text = plan.Tree.GetText().ToString();
         var parse = (CSharpParseOptions)plan.Tree.Options;
         Add(result.Before, OperatorCount.Of(plan.Root));
         var root = CSharpSyntaxTree.ParseText(final, parse).GetRoot();
@@ -265,6 +333,9 @@ static class RuleEngine
                     Before = proposal.Before,
                     After = proposal.Text,
                     Comment = plan.CommentOf(site),
+                    OldCode = FromLineStart(
+                        text, proposal.Span.Start, proposal.Span.End),
+                    NewCode = shown.GetValueOrDefault(proposal, proposal.Text),
                 });
             }
             if (!result.Manifest.Members.Contains(proposal.Member))

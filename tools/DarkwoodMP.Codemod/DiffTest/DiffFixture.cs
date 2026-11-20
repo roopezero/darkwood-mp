@@ -2,17 +2,100 @@ namespace DarkwoodMP.Codemod.DiffTest;
 
 /// The code every differential case is compiled with: a trace that records
 /// each operand in evaluation order, and a fake Unity object whose == treats a
-/// destroyed object as null.
+/// destroyed object as null. For the rule unity-null the harness defines
+/// UNITY_NULL (UnitySymbol): the fake then derives from a stub
+/// UnityEngine.Object that declares those operators, as Unity's does, so the
+/// rule sees a Unity object and its "x != null" calls that ==. There it also
+/// has a method that takes an argument and changes the object, a bool
+/// property that logs its read and a delegate property.
 static class DiffFixture
 {
+    public const string UnitySymbol = "UNITY_NULL";
+
     public const string Source = """
         using System;
         using System.Collections.Generic;
         using System.Globalization;
         using System.Reflection;
 
+        #if UNITY_NULL
+        namespace UnityEngine
+        {
+            public class Object
+            {
+                public bool Dead;
+
+                public static bool operator ==(Object a, Object b)
+                {
+                    return Same(a, b);
+                }
+
+                public static bool operator !=(Object a, Object b)
+                {
+                    return !Same(a, b);
+                }
+
+                public static implicit operator bool(Object a)
+                {
+                    return !Same(a, null);
+                }
+
+                static bool Same(Object a, Object b)
+                {
+                    bool noA = ReferenceEquals(a, null) || a.Dead;
+                    bool noB = ReferenceEquals(b, null) || b.Dead;
+                    if (noA || noB)
+                    {
+                        return noA && noB;
+                    }
+                    return ReferenceEquals(a, b);
+                }
+
+                public override bool Equals(object other)
+                {
+                    return Same(this, other as Object);
+                }
+
+                public override int GetHashCode()
+                {
+                    return 0;
+                }
+            }
+        }
+        #endif
+
         namespace DiffFixture
         {
+        #if UNITY_NULL
+            public sealed class UnityObject : UnityEngine.Object
+            {
+                public int Count = 3;
+                public UnityObject Next;
+
+                public int Hit()
+                {
+                    Trace.Log("hit", Count);
+                    return Count;
+                }
+
+                public void Take(int k)
+                {
+                    Trace.Log("take", k);
+                    Count += k;
+                }
+
+                public bool Big
+                {
+                    get
+                    {
+                        Trace.Log("big", Count);
+                        return Count > 15;
+                    }
+                }
+
+                public Action<int> Heard { get; set; }
+            }
+        #else
             public sealed class UnityObject
             {
                 public bool Dead;
@@ -61,6 +144,7 @@ static class DiffFixture
                     return 0;
                 }
             }
+        #endif
 
             /// Marks a Unity object parameter that the code passes on without
             /// checking it, as b in "a ?? b". The unity-null rule mustn't treat

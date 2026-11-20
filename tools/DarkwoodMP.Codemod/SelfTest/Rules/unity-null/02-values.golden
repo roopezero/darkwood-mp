@@ -1,0 +1,270 @@
+A ?. that tests a Unity object is a value in the forms of stage 6, with
+Unity's "x != null": a declaration with its natural type, an assignment
+that writes the target once, a return, an expression body and a lambda
+that get a block, and a temporary in front of the statement for an
+argument or an interpolation hole. "x?.count ?? 0" tests no Unity object
+with its ??, so the ?. goes into a temporary and the ?? stays for the
+queue: the coalesce rule had left it in an expression body.
+=== input
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+        public int count;
+        public bool active;
+        public GameObject parent;
+        public Holder holder;
+        public Action<int> onHit;
+
+        public void Hit()
+        {
+        }
+
+        public int this[string key]
+        {
+            get
+            {
+                return key.Length;
+            }
+        }
+    }
+
+    public class Holder
+    {
+        public GameObject root;
+        public string tag;
+
+        public void Use(string text)
+        {
+        }
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public class C
+    {
+        GameObject _go;
+        string _name;
+
+        string Name => _go?.name;
+
+        public void Log(string text)
+        {
+        }
+
+        public object Values(GameObject go)
+        {
+            string a = go?.name;
+            var b = go?.count;
+            _name = go?.parent?.name;
+            Func<GameObject, string> f = g => g?.name;
+            Log(go?.name);
+            Log($"at {go?.count}");
+            return (a, b, f(go));
+        }
+
+        public string Back(GameObject go)
+        {
+            return go?.parent?.name;
+        }
+
+        public int Count(GameObject go) => go?.count ?? 0;
+    }
+}
+=== output
+using System;
+
+namespace UnityEngine
+{
+    public class Object
+    {
+        public string name;
+
+        public static bool operator ==(Object a, Object b)
+        {
+            return ReferenceEquals(a, b);
+        }
+
+        public static bool operator !=(Object a, Object b)
+        {
+            return !ReferenceEquals(a, b);
+        }
+
+        public static implicit operator bool(Object a)
+        {
+            return !ReferenceEquals(a, null);
+        }
+
+        public override bool Equals(object o)
+        {
+            return ReferenceEquals(this, o);
+        }
+
+        public override int GetHashCode()
+        {
+            return 0;
+        }
+    }
+
+    public class GameObject : Object
+    {
+        public int count;
+        public bool active;
+        public GameObject parent;
+        public Holder holder;
+        public Action<int> onHit;
+
+        public void Hit()
+        {
+        }
+
+        public int this[string key]
+        {
+            get
+            {
+                return key.Length;
+            }
+        }
+    }
+
+    public class Holder
+    {
+        public GameObject root;
+        public string tag;
+
+        public void Use(string text)
+        {
+        }
+    }
+}
+
+namespace N
+{
+    using UnityEngine;
+
+    public class C
+    {
+        GameObject _go;
+        string _name;
+
+        string Name
+        {
+            get
+            {
+                GameObject go = _go;
+                if (go != null)
+                {
+                    return go.name;
+                }
+                return null;
+            }
+        }
+
+        public void Log(string text)
+        {
+        }
+
+        public object Values(GameObject go)
+        {
+            string a = null;
+            if (go != null)
+            {
+                a = go.name;
+            }
+            int? b = null;
+            if (go != null)
+            {
+                b = go.count;
+            }
+            string name = null;
+            if (go != null)
+            {
+                GameObject parent = go.parent;
+                if (parent != null)
+                {
+                    name = parent.name;
+                }
+            }
+            _name = name;
+            Func<GameObject, string> f = g =>
+            {
+                if (g != null)
+                {
+                    return g.name;
+                }
+                return null;
+            };
+            string text = null;
+            if (go != null)
+            {
+                text = go.name;
+            }
+            Log(text);
+            int? count = null;
+            if (go != null)
+            {
+                count = go.count;
+            }
+            Log($"at {count}");
+            return (a, b, f(go));
+        }
+
+        public string Back(GameObject go)
+        {
+            if (go != null)
+            {
+                GameObject parent = go.parent;
+                if (parent != null)
+                {
+                    return parent.name;
+                }
+            }
+            return null;
+        }
+
+        public int Count(GameObject go)
+        {
+            int? count = null;
+            if (go != null)
+            {
+                count = go.count;
+            }
+            return count ?? 0;
+        }
+    }
+}

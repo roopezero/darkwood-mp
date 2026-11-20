@@ -103,7 +103,8 @@ Exit code 0 means every DLL is identical to the byte.
 statements, compiles the file with its tree replaced, and formats the result
 with the layout stage's pass, so the new code has its braces and blocks on their
 own lines. A site whose rewrite doesn't compile goes to the queue and the file
-is rewritten without it. A rule never adds a lambda or a local function, because
+is rewritten without it, and so does one whose compiled rewrite the rule's own
+recheck refuses (`Rule.Recheck`; only unity-null has one). A rule never adds a lambda or a local function, because
 the game's stack readers would see the extra frame. `DIR` gets:
 
 - `manifest.json`: the members the rule rewrote, for the IL diff, and under
@@ -116,7 +117,12 @@ the game's stack readers would see the extra frame. `DIR` gets:
 - `census.txt`: per operator, the sites before, rewritten, queued, left for
   later rules and after. The command stops, writing nothing, unless before =
   rewritten + queued + later and the sites after are exactly those not
-  rewritten. `census --operators` prints the number of sites left per operator.
+  rewritten. `census --operators` prints the number of sites left per operator,
+- `sites.txt`, for a rule with a site list (`Rule.SiteList`, only unity-null):
+  every rewrite with the lines of its sites, its member, the old code from the
+  start of its line and the new code as the layout pass left it. When the rule
+  rewrites the plugin's own sources (no `--src`, no `--dry-run`), the same list
+  goes to the path the rule names, for the stage's commit.
 
 `line` is always a line of the tree the rule read, before its rewrite. For the
 queue of a stage's commit, run the rule again on that commit with `--dry-run`
@@ -474,6 +480,67 @@ record for a name every overload of it. Two conversion operators of a type can
 differ only in what they return, so their keys carry the return type as well:
 `N.T::op_Implicit(N.T):System.Int32`.
 
+### unity-null (stage 7)
+
+Every `?.`, `?[`, `??` and `??=` that tests a Unity object, a value whose
+static type derives from `UnityEngine.Object`, becomes the ifs of stages 5
+and 6 (guide section 4.7, codemod.md section 6, `Rules/UnityNullRule.cs`).
+The checks are `x != null` and `x == null` on a value of the Unity type, so
+they call Unity's `==`, which counts a destroyed object as null; the rule
+never writes `is null`, `ReferenceEquals` or `(object)x`. This is the one
+stage that changes what the code does: code that ran on a destroyed object is
+now skipped, `a ?? b` gives `b` for a destroyed `a`, and `x ??= v` replaces a
+destroyed `x`.
+
+The rule runs the coalesce planner and then the access planner over each
+file, both with Unity's checks (`NullCheck.Unity`), so the forms, names and
+hazard checks of stages 5 and 6 hold here too:
+
+- a `??` chain or a `??=` whose tested values or whose type are Unity objects
+  gets the forms of stage 5. A first value `r?.m` is opened with its `??`,
+  with Unity's check on a Unity receiver and the reference check on any
+  other;
+- a `?.` chain that tests a Unity object anywhere, the receiver or a value
+  an inner `?.` tests, gets the forms of stage 6 with an if per `?.`:
+  Unity's check on each Unity value and the reference check on any other, so
+  a plain receiver with a Unity member is tested by reference and the member
+  with Unity's `==`. The fixed comparisons keep their place
+  (`go != null && go.count > k`), and `go?.active ?? false` goes with its
+  `?.`, since that `??` tests no Unity object.
+
+A site that tests no Unity object isn't the rule's: a `?.` on an interface or
+on `object`, a `??` of strings, the sites stages 5 and 6 queued. Those are
+left for the queue's stage, not queued again. Besides what stages 5 and 6
+refuse (a call earlier in the statement, code that may not run, an
+initializer, an `await` in the statement, ...), the queue gets:
+
+- a class deriving from `UnityEngine.Object` that declares an `==` of its
+  own, which `x != null` would call, and a Unity object of a type parameter;
+- a `??` whose type isn't a Unity type, as in `object o = go ?? (object)"x"`:
+  every value is tested in a temporary of that type, which would test the
+  Unity object by reference;
+- a `?.` and a `??` or `??=` that test Unity objects, one inside the other.
+  The rewrite of the outer one would move the inner one into a statement,
+  where a second run would rewrite it, so both are queued, as two `?.` or two
+  `??` one inside the other are. The `?.` that a `??` opens is the
+  exception, and when that `??` goes to the queue, its `?.` goes after it.
+
+So one run is a fixed point: a second run rewrites nothing and lists the same
+queue. `Recheck` then counts, in each compiled rewrite, the null checks that
+call the `==` of `UnityEngine.Object`: they must grow by the number of Unity
+objects its sites test, and the others by no more than the number of other
+values they test (`x != null && x.B` tests `x` for both sites of
+`x?.B ?? false`). A rewrite that tests a Unity object through a variable of
+another type, or with `is null`, is refused, and its sites go to the queue
+with the counts as the reason. The site list goes to
+`tools/DarkwoodMP.Codemod/sites/unity-null.txt`.
+
+The check after the stage (guide section 4.7) is Microsoft's detector, in a
+temporary copy of the tree only: add `Microsoft.Unity.Analyzers` 1.28.0 to
+the plugin's project, raise UNT0007, UNT0008, UNT0023 and UNT0029 to warning
+in `.editorconfig`, build, and every report left must be at a site in the
+queue. Never commit the package or the severities.
+
 ## Differential tests
 
 `DiffTest/Cases/<rule>.cases` holds small methods, each written once in its
@@ -513,10 +580,16 @@ marked `[PassesThrough]`: a destroyed `b` must then come back as it did
 before, and isn't replaced by null in the original's run. Without the mark
 the right rewrite of `a ?? b` fails.
 
-The fake `UnityObject` doesn't derive from `UnityEngine.Object`, so the
-rules see it as a type with an `==` of its own. Which sites the coalesce
-rule counts as Unity objects, and leaves for stage 7, is checked only by
-the golden case `coalesce/04-types`. A case must hold a site the rule
+Under every rule but unity-null, the fake `UnityObject` doesn't derive from
+`UnityEngine.Object`, so the rules see it as a type with an `==` of its own.
+Which sites the coalesce rule counts as Unity objects, and leaves for stage
+7, is checked only by the golden case `coalesce/04-types`. Under unity-null
+the harness compiles the fixture with the symbol `UNITY_NULL`: the fake then
+derives from a stub `UnityEngine.Object` that declares the `==`, `!=` and
+`bool` operators, as Unity's does, so the rule sees a Unity object and its
+`x != null` calls that `==`. There the fake also has `Take(int)`, which logs
+and adds to its `Count`, a bool `Big` that logs its read, and a delegate
+property `Heard`. A case must hold a site the rule
 rewrites, so a case about a site that must stay as written has one of each.
 The coalesce cases guard the refusals of code that may not run (the right
 of `&&` or `||`, a `?:` branch, the part after `?.`, a lambda body), the
@@ -573,6 +646,24 @@ with an await or in an else-if condition goes to the queue; a compared
 field or property moves into a temporary, and so do a compared `this` of
 a Unity object and a member whose Unity type declares an `==` of its own;
 and the queue names the call in an earlier operand.
+
+The unity-null cases run the forms of both planners over null, alive and
+destroyed objects: statements whose arguments run only for an alive
+receiver, a receiver that is a property or a call and is read once, a
+delegate after a Unity receiver, declarations of the natural type, chains,
+a plain receiver with a Unity member, assignments that write the target
+once, returns, bodies and lambdas, arguments and holes, every fixed
+comparison, a loop condition, a compared value with effects, `??` in a
+declaration, a chain, a field, a return, an argument and a local, the `?.`
+a `??` opens, `??=` alone and as a value, and `x?.Count != 5`. A case
+returns what its sites make rather than the objects it tests, since the
+harness compares what each run left in those; a site that must stay as
+written has a receiver the case makes itself, which is never destroyed,
+because such a site sees a destroyed object as alive. Emitting `is not null`
+with the recheck switched off fails the destroyed rows of the cases. The
+golden cases pin the texts and the queue: a Unity class with an `==` of its
+own, a `??` of `object`, a type parameter, the nested sites and the
+refusals of stages 5 and 6.
 
 ## Golden cases
 

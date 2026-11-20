@@ -39,8 +39,15 @@ static class DiffHarness
     {
         var parse = SnippetCompiler.Parse;
         var source = Passes.Layout(DiffFixture.Wrap(diffCase.Method), parse);
-        var fixture = Tree(DiffFixture.Source, "fixture.cs");
-        var caseTree = Tree(source, "case.cs");
+        bool unityRule = rule.Name == "unity-null";
+        var fixtureParse = parse;
+        if (unityRule)
+        {
+            fixtureParse = parse.WithPreprocessorSymbols(
+                DiffFixture.UnitySymbol);
+        }
+        var fixture = Tree(DiffFixture.Source, "fixture.cs", fixtureParse);
+        var caseTree = Tree(source, "case.cs", parse);
         var compilation = CSharpCompilation.Create(
             "DiffCase",
             new[] { fixture, caseTree },
@@ -62,7 +69,7 @@ static class DiffHarness
         outcome.Rewritten = true;
         outcome.RewrittenText = after;
         var rewritten = compilation.ReplaceSyntaxTree(
-            caseTree, Tree(after, "case.cs"));
+            caseTree, Tree(after, "case.cs", parse));
         RequireCompiles(rewritten, diffCase.Name + " (rewritten)");
         // Two contexts, because both assemblies have the same name.
         var before = new AssemblyLoadContext("before", isCollectible: true);
@@ -72,7 +79,7 @@ static class DiffHarness
             CompareRows(
                 Load(before, compilation),
                 Load(now, rewritten),
-                rule.Name == "unity-null",
+                unityRule,
                 outcome);
         }
         finally
@@ -83,10 +90,10 @@ static class DiffHarness
         return outcome;
     }
 
-    static SyntaxTree Tree(string text, string path)
+    static SyntaxTree Tree(string text, string path, CSharpParseOptions parse)
     {
         var source = SourceText.From(text, Encoding.UTF8, SourceHashAlgorithm.Sha256);
-        return CSharpSyntaxTree.ParseText(source, SnippetCompiler.Parse, path);
+        return CSharpSyntaxTree.ParseText(source, parse, path);
     }
 
     static void RequireCompiles(CSharpCompilation compilation, string what)

@@ -20,6 +20,28 @@ abstract class Rule
     public abstract string Name { get; }
 
     public abstract void Plan(RulePlan plan);
+
+    /// The proposals of a file the rule gives up after all, each with the
+    /// reason, once the file compiles with every live proposal in place.
+    /// Rewritten is that file's model and spans says where each proposal's
+    /// text landed in it. The engine queues their sites and tries the file
+    /// again without them. Most rules have nothing to check here.
+    public virtual List<(Proposal Proposal, string Reason)> Recheck(
+        RulePlan plan,
+        SemanticModel rewritten,
+        IReadOnlyDictionary<Proposal, TextSpan> spans)
+    {
+        return new List<(Proposal Proposal, string Reason)>();
+    }
+
+    /// Where "codemod rule" writes the readable list of rewritten sites,
+    /// relative to the repo's root, when it rewrites the plugin's own
+    /// sources; null for no list. The list goes into the stage's commit.
+    public virtual string SiteList => null;
+
+    /// The lines that open the list, after its title: what the rewrite
+    /// changes.
+    public virtual string SiteListNote => "";
 }
 
 /// A rewrite the rule wants: this span of the file becomes this text.
@@ -75,4 +97,14 @@ sealed class SiteEntry
     [JsonPropertyName("comment")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Comment { get; set; }
+
+    /// The old code from the start of its first line, for the readable
+    /// site list (SiteListText); not in sites.jsonl.
+    [JsonIgnore]
+    public string OldCode { get; set; }
+
+    /// The new code as the layout pass left it, from the start of its
+    /// first line; not in sites.jsonl.
+    [JsonIgnore]
+    public string NewCode { get; set; }
 }
