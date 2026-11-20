@@ -581,7 +581,11 @@ namespace DarkwoodMP.World
             {
                 target = c.target.name;
             }
-            bool? away = proxy?.Away;
+            bool? away = null;
+            if (proxy != null)
+            {
+                away = proxy.Away;
+            }
             string inside = "-";
             if (proxy != null && proxy.InLocation != null)
             {

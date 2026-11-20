@@ -48,7 +48,24 @@ namespace DarkwoodMP.World
             + " | items with key in their name: " + string.Join("; ", Here<Inventory>().SelectMany(i => i.slots.Where(s => s != null && !InvItemClass.isNull(s.invItem)
                     && s.invItem.type.ToLower().Contains("key")).Select(s => $"{s.invItem.type} in {i.name} ({i.invType}) at {Fmt(i.transform.position)}")))
             + $" | {Here<Locked>().Count()} locks, doors near us: " + string.Join("; ", Here<Door>()
-                .Select(d => $"{d.name} at {Fmt(d.transform.position)} locked {d.GetComponent<Locked>()?.locked} key '{d.GetComponent<Locked>()?.keyType}' blocked {d.blocked} active {d.gameObject.activeInHierarchy}"));
+                .Select(d =>
+                {
+                    string name = d.name;
+                    string spot = Fmt(d.transform.position);
+                    Locked latch = d.GetComponent<Locked>();
+                    bool? locked = null;
+                    if (latch != null)
+                    {
+                        locked = latch.locked;
+                    }
+                    latch = d.GetComponent<Locked>();
+                    string key = null;
+                    if (latch != null)
+                    {
+                        key = latch.keyType;
+                    }
+                    return $"{name} at {spot} locked {locked} key '{key}' blocked {d.blocked} active {d.gameObject.activeInHierarchy}";
+                }));
 
         /// <summary>"prologue-key-look" (either): what Locks() finds here, and the events here that give a key, for the log.</summary>
         private static IEnumerator KeyLook(string[] a, Result r)
@@ -508,18 +525,19 @@ namespace DarkwoodMP.World
                     {
                         parent = n.transform.parent.name;
                     }
+                    Transform above = n.transform.parent;
                     string grand = "-";
-                    if (n.transform.parent?.parent != null)
+                    if (above != null && above.parent != null)
                     {
                         grand = n.transform.parent.parent.name;
                     }
                     bool shown = n.gameObject.activeInHierarchy;
                     ObjRef id = ObjRef.Of(n.gameObject);
-                    int? forSale = n.inventory?.getAllItems().Count;
+                    Inventory stock = n.inventory;
                     int count = -1;
-                    if (forSale.HasValue)
+                    if (stock != null)
                     {
-                        count = forSale.Value;
+                        count = stock.getAllItems().Count;
                     }
                     return $"{trader} at {spot} under {parent}/{grand} active {shown} id {id} ({count} for sale)";
                 });

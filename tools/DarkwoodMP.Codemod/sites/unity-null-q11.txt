@@ -1,0 +1,132 @@
+# The Unity sites of stage 8's batch q11 (World/: the map scenarios of
+# chapters, dreams and the prologue), rewritten by hand: 5 rewrites of seven
+# ?. sites. Each site tested a Unity object by reference. The new code tests
+# it with "x != null", which calls Unity's ==, so code that ran on a
+# destroyed object is now skipped, as it is for null. None of these sites
+# relies on running for a destroyed object, so none is kept as it was. All
+# of them are in steps of the two-game map test, which run only when
+# tools/tests/mapdriver.py drives a game started with --dwmp-test-control,
+# and each one only builds the text a step reports. The old code is from the
+# start of its line; lines are those of the file before this rewrite (the
+# commit with the batch's plain sites), with the site's line and column in
+# the stage 8 queue in brackets. "destroyed:" says what happens now when the
+# object has been destroyed.
+
+World/MapScenarioChapter.cs:253 [queue 224:260 and 224:311, two ?., the second a chain of two]
+member: DarkwoodMP.World.MapScenarioChapter::In(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
+new:
+    bool ground = OnGround(p);
+    float nearest = Characters.NearestChunk(p.transform.position);
+    WorldGenerator generator = Singleton<WorldGenerator>.Instance;
+    float? size = null;
+    if (generator != null)
+    {
+        size = generator.chunkSize;
+    }
+    WorldGenerator world = Singleton<WorldGenerator>.Instance;
+    int? chunks = null;
+    if (world != null)
+    {
+        var list = world.worldChunks;
+        if (list != null)
+        {
+            chunks = list.Count;
+        }
+    }
+    r.Info = $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {ground} (nearest chunk {nearest:0}, chunk size {size:0}, {chunks} chunks), hotbar {hot}, {ui}";
+destroyed: a destroyed WorldGenerator counts as none, so the step's line shows
+    no chunk size and no chunk count ("chunk size ,  chunks", with two
+    spaces before "chunks"), as it does with no generator, instead of the
+    chunkSize and the number of worldChunks left in the destroyed object's
+    managed fields. The generator is still read twice,
+    and OnGround and NearestChunk, which the line called before it, still run
+    first, in their order. Only the text the step reports changes.
+
+World/MapScenarioDreams.cs:584 [queue 521:53, ?.]
+member: DarkwoodMP.World.MapScenarioDreams::DreamMobHost(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    bool? away = proxy?.Away;
+new:
+    bool? away = null;
+    if (proxy != null)
+    {
+        away = proxy.Away;
+    }
+destroyed: a destroyed stand-in counts as none, so "away" is empty in the step's
+    line instead of the Away flag left in the destroyed object. The
+    FirstOrDefault above already passes over destroyed stand-ins (its x != null
+    calls Unity's ==), and the rest of the line and the check after it test
+    proxy with Unity's == too, so proxy is never a destroyed object here in
+    practice.
+
+World/MapScenarioPrologue.cs:51 [queue 51:80 and 51:120, two ?.]
+member: DarkwoodMP.World.MapScenarioPrologue::Locks()
+old:
+    .Select(d => $"{d.name} at {Fmt(d.transform.position)} locked {d.GetComponent<Locked>()?.locked} key '{d.GetComponent<Locked>()?.keyType}' blocked {d.blocked} active {d.gameObject.activeInHierarchy}"));
+new:
+    .Select(d =>
+    {
+        string name = d.name;
+        string spot = Fmt(d.transform.position);
+        Locked latch = d.GetComponent<Locked>();
+        bool? locked = null;
+        if (latch != null)
+        {
+            locked = latch.locked;
+        }
+        latch = d.GetComponent<Locked>();
+        string key = null;
+        if (latch != null)
+        {
+            key = latch.keyType;
+        }
+        return $"{name} at {spot} locked {locked} key '{key}' blocked {d.blocked} active {d.gameObject.activeInHierarchy}";
+    }));
+destroyed: a destroyed Locked counts as none, so a door's "locked" and "key ''"
+    are empty in the log line instead of the values left in the destroyed
+    component. GetComponent gives a live component or null, so this changes
+    nothing in practice. The component is still looked up twice, as before.
+
+World/MapScenarioPrologue.cs:512 [queue 434:143, ?.]
+member: DarkwoodMP.World.MapScenarioPrologue::Over(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    string grand = "-";
+    if (n.transform.parent?.parent != null)
+    {
+        grand = n.transform.parent.parent.name;
+    }
+new:
+    Transform above = n.transform.parent;
+    string grand = "-";
+    if (above != null && above.parent != null)
+    {
+        grand = n.transform.parent.parent.name;
+    }
+destroyed: a destroyed parent Transform counts as none, so the trader's
+    grandparent shows "-" instead of reading parent from the destroyed
+    Transform, which throws (Transform.parent asks the engine). Transform.parent
+    gives a live Transform or null, so this changes nothing in practice.
+
+World/MapScenarioPrologue.cs:518 [queue 434:290, ?.]
+member: DarkwoodMP.World.MapScenarioPrologue::Over(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    int? forSale = n.inventory?.getAllItems().Count;
+    int count = -1;
+    if (forSale.HasValue)
+    {
+        count = forSale.Value;
+    }
+new:
+    Inventory stock = n.inventory;
+    int count = -1;
+    if (stock != null)
+    {
+        count = stock.getAllItems().Count;
+    }
+destroyed: a destroyed Inventory counts as none, so the trader is logged with
+    "-1 for sale" instead of the number of items left in the destroyed
+    inventory's slots: getAllItems reads only managed fields, so the old code
+    counted them. NPC.inventory is a field, so it keeps a reference to an
+    Inventory that was destroyed.

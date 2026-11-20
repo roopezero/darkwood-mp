@@ -250,7 +250,25 @@ namespace DarkwoodMP.World
             {
                 away = $"{d:0} away";
             }
-            r.Info = $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {OnGround(p)} (nearest chunk {Characters.NearestChunk(p.transform.position):0}, chunk size {Singleton<WorldGenerator>.Instance?.chunkSize:0}, {Singleton<WorldGenerator>.Instance?.worldChunks?.Count} chunks), hotbar {hot}, {ui}";
+            bool ground = OnGround(p);
+            float nearest = Characters.NearestChunk(p.transform.position);
+            WorldGenerator generator = Singleton<WorldGenerator>.Instance;
+            float? size = null;
+            if (generator != null)
+            {
+                size = generator.chunkSize;
+            }
+            WorldGenerator world = Singleton<WorldGenerator>.Instance;
+            int? chunks = null;
+            if (world != null)
+            {
+                var list = world.worldChunks;
+                if (list != null)
+                {
+                    chunks = list.Count;
+                }
+            }
+            r.Info = $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {ground} (nearest chunk {nearest:0}, chunk size {size:0}, {chunks} chunks), hotbar {hot}, {ui}";
             if (told != 1)
             {
                 r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
