@@ -66,7 +66,18 @@ namespace DarkwoodMP.World
             _refreshesAtReset = SharedCullingPatch.LoadingRefreshes;
             var locs = WorldLocations().OrderBy(l => StateDump.Flat(l.transform.position - Centre)).ToList();
             Plugin.Log.LogInfo($"[map] fe-reset: {locs.Count} world locations: " +
-                string.Join(", ", locs.Select(l => $"{Name(l)} at {Fmt(l.transform.position)} ({EventCount(l)} enter/exit triggers{(Safe(l) ? "" : ", not safe")})")));
+                string.Join(", ", locs.Select(l =>
+                {
+                    string name = Name(l);
+                    string at = Fmt(l.transform.position);
+                    int triggers = EventCount(l);
+                    string note = "";
+                    if (!Safe(l))
+                    {
+                        note = ", not safe";
+                    }
+                    return $"{name} at {at} ({triggers} enter/exit triggers{note})";
+                })));
             yield return Info(r, $"{locs.Count} world locations");
         }
 

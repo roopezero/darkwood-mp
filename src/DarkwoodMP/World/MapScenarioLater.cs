@@ -184,8 +184,15 @@ namespace DarkwoodMP.World
             {
                 text = "already fired here";
             }
-            r.Info = $"{text}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, "
-                + $"shared part ran {m.C?.N ?? -1} time(s) here, still owed {ScriptedEvents.IsOwed(m.T)}{made}; bags {MapScenarioWorld.Contents(bag)}";
+            string state = $"{text}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, ";
+            int? count = m.C?.N;
+            int runs = -1;
+            if (count.HasValue)
+            {
+                runs = count.Value;
+            }
+            r.Info = state
+                + $"shared part ran {runs} time(s) here, still owed {ScriptedEvents.IsOwed(m.T)}{made}; bags {MapScenarioWorld.Contents(bag)}";
             if (wantItem && got != 1)
             {
                 r.Fail($"our player didn't get its {Item} (got {got}): {r.Info}");
@@ -227,8 +234,26 @@ namespace DarkwoodMP.World
             SetOff(m);
             yield return new WaitForSeconds(3f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
-            r.Info = $"got {got} {Item}, at the marker {m.Marker != null && Arrived(m)}, shared part ran {(m.C?.N ?? 0) - ran} more time(s)";
-            if (got != 0 || (m.Marker != null && Arrived(m)) || (m.C?.N ?? 0) != ran)
+            bool there = m.Marker != null && Arrived(m);
+            int? count = m.C?.N;
+            int runs = 0;
+            if (count.HasValue)
+            {
+                runs = count.Value;
+            }
+            r.Info = $"got {got} {Item}, at the marker {there}, shared part ran {runs - ran} more time(s)";
+            bool again = got != 0 || (m.Marker != null && Arrived(m));
+            if (!again)
+            {
+                int? recount = m.C?.N;
+                int total = 0;
+                if (recount.HasValue)
+                {
+                    total = recount.Value;
+                }
+                again = total != ran;
+            }
+            if (again)
             {
                 r.Fail($"it ran again for us: {r.Info}");
             }

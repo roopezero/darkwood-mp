@@ -224,7 +224,19 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 var comps = t.GetComponentsInChildren<Component>(true).Where(c => c != null && !(c is Transform) && !(c is Renderer) && !(c is MeshFilter))
-                    .Select(c => (c.transform == t ? "" : c.name + ".") + c.GetType().Name).Distinct().Take(14);
+                    .Select(c =>
+                    {
+                        string prefix;
+                        if (c.transform == t)
+                        {
+                            prefix = "";
+                        }
+                        else
+                        {
+                            prefix = c.name + ".";
+                        }
+                        return prefix + c.GetType().Name;
+                    }).Distinct().Take(14);
                 string extra = "";
                 if (t.GetComponent<Generator>() is Generator g)
                 {
@@ -240,7 +252,13 @@ namespace DarkwoodMP.World
                 }
                 if (t.GetComponent<NPC>() is NPC n)
                 {
-                    extra += $" trader {n.trader} stock [{(n.inventory != null ? Contents(n.inventory) : "-")}]";
+                    bool trader = n.trader;
+                    string stock = "-";
+                    if (n.inventory != null)
+                    {
+                        stock = Contents(n.inventory);
+                    }
+                    extra += $" trader {trader} stock [{stock}]";
                 }
                 if (t.GetComponentInChildren<Item>() is Item it)
                 {
@@ -669,7 +687,14 @@ namespace DarkwoodMP.World
             }
             P.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{inv.name} {Ref(inv)}: {msg ?? "no message"}";
+            string name = inv.name;
+            string id = Ref(inv);
+            string message = msg;
+            if (message == null)
+            {
+                message = "no message";
+            }
+            r.Info = $"{name} {id}: {message}";
             if (msg == null)
             {
                 r.Fail($"{r.Info}: we weren't told someone is using it");
@@ -739,7 +764,13 @@ namespace DarkwoodMP.World
             int before = CarriedOf(a[0]);
             AsPlayer(() => it.getDroppedItem());
             yield return new WaitForSeconds(1.5f);
-            r.Info = $"{what}: we carry {before} -> {CarriedOf(a[0])}, it's {(it == null ? "gone" : "still there")}";
+            int after = CarriedOf(a[0]);
+            string state = "still there";
+            if (it == null)
+            {
+                state = "gone";
+            }
+            r.Info = $"{what}: we carry {before} -> {after}, it's {state}";
             if (it != null || CarriedOf(a[0]) <= before)
             {
                 r.Fail($"{r.Info}: not picked up");
@@ -766,7 +797,18 @@ namespace DarkwoodMP.World
             r.Info = $"{it.name} {Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)}";
             if (!held)
             {
-                r.Fail($"{r.Info}: our drag was let go of ({DragSync.Instance?.OtherOwner(ObjRef.Of(it.gameObject)) ?? "nobody"} has it)");
+                string info = r.Info;
+                DragSync drag = DragSync.Instance;
+                string owner = null;
+                if (drag != null)
+                {
+                    owner = drag.OtherOwner(ObjRef.Of(it.gameObject));
+                }
+                if (owner == null)
+                {
+                    owner = "nobody";
+                }
+                r.Fail($"{info}: our drag was let go of ({owner} has it)");
             }
             else if (StateDump.Flat(it.transform.position - start) < StateDump.Flat(by) * 0.5f)
             {
@@ -1023,7 +1065,19 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Fail($"{t.name} {Ref(t)}: nothing to do with it (item {it?.name ?? "-"}, constructed {con?.constructed.ToString() ?? "-"})");
+                string name = t.name;
+                string id = Ref(t);
+                string item = it?.name;
+                if (item == null)
+                {
+                    item = "-";
+                }
+                string constructed = con?.constructed.ToString();
+                if (constructed == null)
+                {
+                    constructed = "-";
+                }
+                r.Fail($"{name} {id}: nothing to do with it (item {item}, constructed {constructed})");
             }
         }
 
@@ -1573,7 +1627,13 @@ namespace DarkwoodMP.World
         /// <summary>"flag N": flip the Nth story flag (Flags.setFlag).</summary>
         private static IEnumerator Flag(string[] a, Result r)
         {
-            var flag = StateDump.FlagsDict(Singleton<Flags>.Instance).Values.Where(f => f != null).OrderBy(f => f.name, StringComparer.Ordinal).Skip(a.Length > 0 ? int.Parse(a[0]) : 0).FirstOrDefault();
+            var ordered = StateDump.FlagsDict(Singleton<Flags>.Instance).Values.Where(f => f != null).OrderBy(f => f.name, StringComparer.Ordinal);
+            int index = 0;
+            if (a.Length > 0)
+            {
+                index = int.Parse(a[0]);
+            }
+            var flag = ordered.Skip(index).FirstOrDefault();
             if (flag == null)
             {
                 r.Fail("no such flag");
@@ -1923,7 +1983,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.4f);
             }
             yield return new WaitForSeconds(3f); // a client settles the corpse 2 s after it dies
-            r.Info = $"{what}: alive={(c != null && c.alive)} after {hits} hits, searchable={(c != null && c.GetComponent<Item>() != null)} at {(c != null ? Fmt(c.transform.position) : "-")}";
+            bool alive = c != null && c.alive;
+            bool searchable = c != null && c.GetComponent<Item>() != null;
+            string at = "-";
+            if (c != null)
+            {
+                at = Fmt(c.transform.position);
+            }
+            r.Info = $"{what}: alive={alive} after {hits} hits, searchable={searchable} at {at}";
             if (c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");

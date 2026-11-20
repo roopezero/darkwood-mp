@@ -22,7 +22,19 @@ namespace DarkwoodMP.World
         public static void Register()
         {
             // "where-me": where our player stands (the driver dumps both games around it).
-            Add("where-me", (a, r) => Info(r, Fmt(Player.Instance != null ? Player.Instance.transform.position : Vector3.zero)));
+            Add("where-me", (a, r) =>
+            {
+                Vector3 at;
+                if (Player.Instance != null)
+                {
+                    at = Player.Instance.transform.position;
+                }
+                else
+                {
+                    at = Vector3.zero;
+                }
+                return Info(r, Fmt(at));
+            });
             // "loc-go NAME": our player goes into that separate location, as its entrance takes them there.
             Add("loc-go", Go, timeout: 60f);
             // "loc-back": our player goes back to the world, where they came from.
@@ -73,9 +85,20 @@ namespace DarkwoodMP.World
             bool listed = col != null && c.charactersInViewRange.Contains(col);
             var hits = Physics.RaycastAll(from, dir, range, 18909185);
             string hitNames = string.Join(", ", hits.Select(h => $"{h.collider.name}(layer {h.collider.gameObject.layer}, {h.distance:0})"));
-            return
-                $"{who.name}: {StateDump.Flat(dir):0} away (sight {range:0}), y {from.y:0} vs {who.transform.position.y:0}, angle {Vector3.Angle(dir, c.transform.up):0} (view {c.fieldOfViewRange}), " +
-                $"in view range list {listed}, collider {(col != null ? (col.enabled ? "on" : "off") + " layer " + who.gameObject.layer : "none")}, " +
+            string geometry =
+                $"{who.name}: {StateDump.Flat(dir):0} away (sight {range:0}), y {from.y:0} vs {who.transform.position.y:0}, angle {Vector3.Angle(dir, c.transform.up):0} (view {c.fieldOfViewRange}), ";
+            string collider = "none";
+            if (col != null)
+            {
+                string state = "off";
+                if (col.enabled)
+                {
+                    state = "on";
+                }
+                collider = state + " layer " + who.gameObject.layer;
+            }
+            return geometry +
+                $"in view range list {listed}, collider {collider}, " +
                 $"ray hits [{hitNames}], Core.canSee {Core.canSee(c.transform, who.transform)}, in sight {c.charactersInSight.Any(s => s != null && s.transform == who.transform)}";
         }
 
@@ -289,7 +312,13 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.3f);
             }
-            r.Info = $"ran on the spot at {Fmt(at)} for {steps} steps; the host's {(sleeper != null ? sleeper.name : "none")} asleep here: {(sleeper != null && sleeper.sleeping)}";
+            string spot = Fmt(at);
+            string who = "none";
+            if (sleeper != null)
+            {
+                who = sleeper.name;
+            }
+            r.Info = $"ran on the spot at {spot} for {steps} steps; the host's {who} asleep here: {(sleeper != null && sleeper.sleeping)}";
         }
 
         private static IEnumerator Wake(string[] a, Result r)
@@ -386,7 +415,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f); // the black screen fades, the location's objects switch on
             var p = Player.Instance;
             var loc = o.getLocation(name);
-            r.Info = $"in {Locations.Current()} at {Fmt(p.transform.position)} (the location at {(loc != null ? Fmt(loc.transform.position) : "?")}), " +
+            string current = Locations.Current();
+            string spot = Fmt(p.transform.position);
+            string place = "?";
+            if (loc != null)
+            {
+                place = Fmt(loc.transform.position);
+            }
+            r.Info = $"in {current} at {spot} (the location at {place}), " +
                      $"host runs it here: {Locations.HostRunsHere()}";
         }
 
@@ -461,8 +497,19 @@ namespace DarkwoodMP.World
                      $"{Behaviour(c)}";
         }
 
-        private static string Behaviour(Character c) =>
-            $"behaviour {c.behaviour}, active {c.isActive}, enabled {c.enabled}, health {c.health:0}, going for {(c.target != null ? c.target.name : "nobody")}";
+        private static string Behaviour(Character c)
+        {
+            Character.Behaviour behaviour = c.behaviour;
+            bool active = c.isActive;
+            bool enabled = c.enabled;
+            float health = c.health;
+            string target = "nobody";
+            if (c.target != null)
+            {
+                target = c.target.name;
+            }
+            return $"behaviour {behaviour}, active {active}, enabled {enabled}, health {health:0}, going for {target}";
+        }
 
         /// <summary>"loc-hit" (client): our player walks up to the host's dog and hits it (sent to the host as our hit).</summary>
         private static IEnumerator Hit(string[] a, Result r)
@@ -694,7 +741,20 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             var ne = NetEnemies.Instance;
             var c = Object.FindObjectsOfType<Character>()
-                .Where(x => x != null && !x.alive && x.name.StartsWith(a.Length > 0 ? a[0] : "Villager") && ne != null && ne.NetIdOf(x, out _))
+                .Where(x =>
+                {
+                    if (x != null && !x.alive)
+                    {
+                        string name = x.name;
+                        string prefix = "Villager";
+                        if (a.Length > 0)
+                        {
+                            prefix = a[0];
+                        }
+                        return name.StartsWith(prefix) && ne != null && ne.NetIdOf(x, out _);
+                    }
+                    return false;
+                })
                 .OrderBy(x => (x.transform.position - p.transform.position).sqrMagnitude).FirstOrDefault();
             if (c == null)
             {

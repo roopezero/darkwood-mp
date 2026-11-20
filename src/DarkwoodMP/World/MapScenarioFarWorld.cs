@@ -236,8 +236,13 @@ namespace DarkwoodMP.World
             {
                 node = co.node;
             }
-            r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}"
-                     + (node != null ? $" node {node.position.x:0},{node.position.y:0} entered={node.entered}" : " no node");
+            string state = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
+            string culling = " no node";
+            if (node != null)
+            {
+                culling = $" node {node.position.x:0},{node.position.y:0} entered={node.entered}";
+            }
+            r.Info = state + culling;
             if (StateDump.Flat(it.transform.position - at) > 300f)
             {
                 r.Fail($"{r.Info}: not at {Fmt(at)}");
@@ -305,8 +310,13 @@ namespace DarkwoodMP.World
 
         private static string Describe(Character c)
         {
-            return $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}"
-                   + $" {(c.GetComponent<SaveableObject>()?.dontSave == true ? "made from its prefab" : "our copy from the save")}";
+            string state = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}";
+            string origin = "our copy from the save";
+            if (c.GetComponent<SaveableObject>()?.dontSave == true)
+            {
+                origin = "made from its prefab";
+            }
+            return state + $" {origin}";
         }
 
         /// <summary>
