@@ -275,11 +275,10 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} here");
                 yield break;
             }
-            // it may have hurt us since we hit it
             float was;
             if (_healthAtHit > 0f)
             {
-                was = _healthAtHit;
+                was = _healthAtHit; // it may have hurt us since we hit it
             }
             else
             {
