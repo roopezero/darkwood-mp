@@ -466,6 +466,23 @@ namespace DarkwoodMP.Tests
                     null,
                     "The host is playing the ending."
                 },
+                { Refusal.WaitForMainMenu, null, "Wait for the main menu." },
+                { Refusal.NoSaveInSlot, null, "No save in that slot." },
+                {
+                    Refusal.NeedsProfilesScreen,
+                    null,
+                    "This save needs the game's profiles screen."
+                },
+                {
+                    Refusal.ChooseOverwrite,
+                    null,
+                    "Choose a save to overwrite."
+                },
+                {
+                    Refusal.NameLocked,
+                    null,
+                    "You can change it when you're in no game."
+                },
             };
     }
 }

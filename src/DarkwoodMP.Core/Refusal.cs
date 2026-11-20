@@ -532,5 +532,26 @@ namespace DarkwoodMP
 
         /// A player joined while the host plays the ending.
         PlayingEnding,
+
+        // The menus: shown in the player's own window, never sent.
+
+        /// Start Game, before the main menu is ready for it
+        /// (WorldShare.MainMenuReady).
+        WaitForMainMenu,
+
+        /// Start Game: the chosen slot holds no save.
+        NoSaveInSlot,
+
+        /// Start Game: the chosen save is from an older version of the
+        /// game, which only the game's profiles screen opens.
+        NeedsProfilesScreen,
+
+        /// Start Game: a new game with every slot in use, and none chosen
+        /// to overwrite.
+        ChooseOverwrite,
+
+        /// Options: the player's name can't change while they're in a
+        /// game.
+        NameLocked,
     }
 }
