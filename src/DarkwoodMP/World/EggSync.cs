@@ -101,7 +101,17 @@ namespace DarkwoodMP.World
                     return;
                 }
             }
-            Plugin.Log.LogInfo($"[world] egg {obj} destroyed (from {s.NameOf(from)})" + (egg == null ? ": not found here" : egg.destroyed ? ": already broken here" : ""));
+            string line = $"[world] egg {obj} destroyed (from {s.NameOf(from)})";
+            string here = "";
+            if (egg == null)
+            {
+                here = ": not found here";
+            }
+            else if (egg.destroyed)
+            {
+                here = ": already broken here";
+            }
+            Plugin.Log.LogInfo(line + here);
             if (egg == null || egg.destroyed)
             {
                 return;

@@ -142,7 +142,11 @@ namespace DarkwoodMP.World
             }
             long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
             ObjRef.RegisterSpawned(id, go);
-            var live = new Live { Id = id, Go = go, Name = go.name, Tag = tag, Pos = go.transform.position, Rot = go.transform.rotation, Parent = parent != null ? ObjRef.Of(parent) : default };
+            var live = new Live { Id = id, Go = go, Name = go.name, Tag = tag, Pos = go.transform.position, Rot = go.transform.rotation };
+            if (parent != null)
+            {
+                live.Parent = ObjRef.Of(parent);
+            }
             _live.Add(live);
             if (HostSharing)
             {

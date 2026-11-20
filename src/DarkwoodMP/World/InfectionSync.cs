@@ -139,7 +139,13 @@ namespace DarkwoodMP.World
                 }
                 done.Add(p);
             }
-            Plugin.Log.LogInfo($"[world] infection cleared: {done.Count} (from {s.NameOf(from)})" + (done.Count < n ? $", {n - done.Count} not here, already gone or out of reach" : ""));
+            string line = $"[world] infection cleared: {done.Count} (from {s.NameOf(from)})";
+            string missed = "";
+            if (done.Count < n)
+            {
+                missed = $", {n - done.Count} not here, already gone or out of reach";
+            }
+            Plugin.Log.LogInfo(line + missed);
             if (s.IsHost && done.Count == 0 && n > 0)
             {
                 Authority.Refuse("none of that infection is within their reach");

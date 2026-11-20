@@ -303,7 +303,21 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent fuel {c.name} ({r}): {FuelOf(c):0.0}{(g != null ? g.isOn ? ", running" : ", off" : "")}");
+                string name = c.name;
+                float fuel = FuelOf(c);
+                string state = "";
+                if (g != null)
+                {
+                    if (g.isOn)
+                    {
+                        state = ", running";
+                    }
+                    else
+                    {
+                        state = ", off";
+                    }
+                }
+                Plugin.Log.LogInfo($"[world] sent fuel {name} ({r}): {fuel:0.0}{state}");
             }
         }
 
@@ -467,7 +481,25 @@ namespace DarkwoodMP.World
             UiRefresh.FuelChanged(c); // an open saw's "Fuel" label, the fuel bar under the cursor
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got fuel {c.name} ({obj}): {(_session.IsHost ? $"{have:0.0} {value:+0.0;-0.0} -> " : "")}{fuel:0.0}{(g != null ? g.isOn ? ", running" : ", off" : "")}");
+                string name = c.name;
+                string change = "";
+                if (_session.IsHost)
+                {
+                    change = $"{have:0.0} {value:+0.0;-0.0} -> ";
+                }
+                string state = "";
+                if (g != null)
+                {
+                    if (g.isOn)
+                    {
+                        state = ", running";
+                    }
+                    else
+                    {
+                        state = ", off";
+                    }
+                }
+                Plugin.Log.LogInfo($"[world] got fuel {name} ({obj}): {change}{fuel:0.0}{state}");
             }
 
             if (_session.IsHost)

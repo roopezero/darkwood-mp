@@ -553,7 +553,17 @@ namespace DarkwoodMP.World
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 24; i++)
             {
-                for (var t = st.GetFrame(i)?.GetMethod()?.DeclaringType; t != null; t = t.DeclaringType)
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                Type t = null;
+                if (frame != null)
+                {
+                    MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        t = method.DeclaringType;
+                    }
+                }
+                for (; t != null; t = t.DeclaringType)
                 {
                     if (t == type)
                     {
@@ -720,7 +730,12 @@ namespace DarkwoodMP.World
                 OwedParts.Give(cause, t);
                 ExpectTrips(cause, t.gameEvents);
             }
-            Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({t?.type}): {s.NameOf(cause)} caused it, so its player part is theirs");
+            global::EventTrigger.Type? type = null;
+            if (t != null)
+            {
+                type = t.type;
+            }
+            Plugin.Log.LogInfo($"[world] world trigger {et.name} #{index} {r} ({type}): {s.NameOf(cause)} caused it, so its player part is theirs");
             return true;
         }
 
@@ -1504,7 +1519,18 @@ namespace DarkwoodMP.World
                 var t = TriggerAt(et, index);
                 if (Debug || ours)
                 {
-                    Plugin.Log.LogInfo($"[world] got world trigger {obj} #{index}{(ours ? " (we caused it: our part too)" : "")}: " + (t != null ? $"{et.name} ({t.type})" : "not found here"));
+                    string caused = "";
+                    if (ours)
+                    {
+                        caused = " (we caused it: our part too)";
+                    }
+                    string line = $"[world] got world trigger {obj} #{index}{caused}: ";
+                    string found = "not found here";
+                    if (t != null)
+                    {
+                        found = $"{et.name} ({t.type})";
+                    }
+                    Plugin.Log.LogInfo(line + found);
                 }
                 if (t == null)
                 {
@@ -1636,7 +1662,13 @@ namespace DarkwoodMP.World
                 }
                 if (Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] got event {obj} #{index}: " + (t != null ? et.name : "not found here"));
+                    string line = $"[world] got event {obj} #{index}: ";
+                    string found = "not found here";
+                    if (t != null)
+                    {
+                        found = et.name;
+                    }
+                    Plugin.Log.LogInfo(line + found);
                 }
                 var wasBy = By;
                 if (s.IsHost)
@@ -2107,13 +2139,27 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+            ScriptedEvents.Part part;
+            if (sharedReplay)
+            {
+                part = ScriptedEvents.Part.SharedOnly;
+            }
+            else
+            {
+                part = ScriptedEvents.Current;
+            }
+            int index = -1;
+            if (byPlayer)
+            {
+                index = thisEventTriggers.eventTriggers.IndexOf(__instance);
+            }
             ScriptedEvents.Remember(__result, new ScriptedEvents.Started
             {
-                Part = sharedReplay ? ScriptedEvents.Part.SharedOnly : ScriptedEvents.Current,
+                Part = part,
                 By = ScriptedEvents.By,
                 ByPlayer = byPlayer,
                 Triggers = thisEventTriggers,
-                Index = byPlayer ? thisEventTriggers.eventTriggers.IndexOf(__instance) : -1,
+                Index = index,
             });
         }
     }

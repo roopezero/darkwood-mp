@@ -232,14 +232,34 @@ namespace DarkwoodMP.World
                 return null;
             }
             string name = key.Substring(3);
-            object e = key[1] switch
+            object e = null;
+            switch (key[1])
             {
-                'e' => j.journalEntriesDict.TryGetValue(name, out var x) ? x : null,
-                'n' => j.notesDict.TryGetValue(name, out var n) ? n : null,
-                'k' => j.keysDict.TryGetValue(name, out var k) ? k : null,
-                'i' => j.itemsDict.TryGetValue(name, out var i) ? i : null,
-                _ => null,
-            };
+                case 'e':
+                    if (j.journalEntriesDict.TryGetValue(name, out var x))
+                    {
+                        e = x;
+                    }
+                    break;
+                case 'n':
+                    if (j.notesDict.TryGetValue(name, out var n))
+                    {
+                        e = n;
+                    }
+                    break;
+                case 'k':
+                    if (j.keysDict.TryGetValue(name, out var k))
+                    {
+                        e = k;
+                    }
+                    break;
+                case 'i':
+                    if (j.itemsDict.TryGetValue(name, out var i))
+                    {
+                        e = i;
+                    }
+                    break;
+            }
             if (e != null)
             {
                 return JsonConvert.SerializeObject(e);
@@ -526,7 +546,14 @@ namespace DarkwoodMP.World
                 return;
             }
             Send(changed, except: 0, to: who);
-            Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {changed.Count} story changes since their snapshot sent to them ({string.Join(", ", changed.Take(8).Select(e => e.Key))}{(changed.Count > 8 ? ", ..." : "")})");
+            string name = _session.NameOf(who);
+            string keys = string.Join(", ", changed.Take(8).Select(e => e.Key));
+            string more = "";
+            if (changed.Count > 8)
+            {
+                more = ", ...";
+            }
+            Plugin.Log.LogInfo($"{name} is in the world: {changed.Count} story changes since their snapshot sent to them ({keys}{more})");
         }
 
         private void Send(List<KeyValuePair<string, string>> entries, ulong except, ulong to = 0)
@@ -641,7 +668,15 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got {got.Count} story changes: {string.Join(", ", got.ConvertAll(e => e.Key[0] == 'r' || e.Value == Removed ? e.Key + " " + e.Value : e.Key))}");
+                List<string> changes = got.ConvertAll(e =>
+                {
+                    if (e.Key[0] == 'r' || e.Value == Removed)
+                    {
+                        return e.Key + " " + e.Value;
+                    }
+                    return e.Key;
+                });
+                Plugin.Log.LogInfo($"[world] got {got.Count} story changes: {string.Join(", ", changes)}");
             }
             if (_session.IsHost && relay.Count > 0)
             {

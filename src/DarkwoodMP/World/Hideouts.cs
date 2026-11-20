@@ -577,7 +577,18 @@ namespace DarkwoodMP.World
             }
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] got oven {litRef} lit" + (otherRef.Valid ? $", {otherRef} out" : "") + (lit == null ? ": not found here" : ""));
+                string line = $"[world] got oven {litRef} lit";
+                string otherOut = "";
+                if (otherRef.Valid)
+                {
+                    otherOut = $", {otherRef} out";
+                }
+                string missing = "";
+                if (lit == null)
+                {
+                    missing = ": not found here";
+                }
+                Plugin.Log.LogInfo(line + otherOut + missing);
             }
             if (lit != null && !lit.isOn)
             {

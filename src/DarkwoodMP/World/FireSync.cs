@@ -290,7 +290,18 @@ namespace DarkwoodMP.World
             Component c = Resolve(obj, what);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got Burning {obj} {(on ? "on" : "off")}: " + (c != null ? c.name : "not found here"));
+                string state = "off";
+                if (on)
+                {
+                    state = "on";
+                }
+                string line = $"[world] got Burning {obj} {state}: ";
+                string name = "not found here";
+                if (c != null)
+                {
+                    name = c.name;
+                }
+                Plugin.Log.LogInfo(line + name);
             }
             if (c == null)
             {

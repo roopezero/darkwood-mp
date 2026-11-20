@@ -293,7 +293,17 @@ namespace DarkwoodMP.World
             _talkers[key] = from;
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] {s.NameOf(from)} talks to {(npc != null ? npc.name : obj.ToString())}");
+                string who = s.NameOf(from);
+                string name;
+                if (npc != null)
+                {
+                    name = npc.name;
+                }
+                else
+                {
+                    name = obj.ToString();
+                }
+                Plugin.Log.LogInfo($"[world] {who} talks to {name}");
             }
         }
     }

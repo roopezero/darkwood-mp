@@ -517,7 +517,13 @@ namespace DarkwoodMP.World
                         ObjRef.RegisterSpawned(id, go);
                     }
                     var inv = go.GetComponent<Inventory>();
-                    all.Add((id, c, oi, go.transform.localPosition, inv != null ? JsonConvert.SerializeObject(new Inventory.SaveState(inv)) : ""));
+                    Vector3 local = go.transform.localPosition;
+                    string contents = "";
+                    if (inv != null)
+                    {
+                        contents = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+                    }
+                    all.Add((id, c, oi, local, contents));
                 }
             }
             var w = _session.Begin(MsgType.RandomObjects);
@@ -704,9 +710,21 @@ namespace DarkwoodMP.World
 
         // ---- weather ---------------------------------------------------------------------
 
-        private static string WeatherKey(Rain r) =>
-            $"rain {(r.rainToday ? 1 : 0)} at {r.timeToStart:0} for {r.duration:0}, lightning {(r.preRainLightning ? 1 : 0)} {r.preRainLightningTime:0} {r.lightningTime:0}, " +
-            $"fog {Tad(r.timeToFadeInFog)}-{Tad(r.timeToFadeOutFog)}";
+        private static string WeatherKey(Rain r)
+        {
+            int rain = 0;
+            if (r.rainToday)
+            {
+                rain = 1;
+            }
+            int lightning = 0;
+            if (r.preRainLightning)
+            {
+                lightning = 1;
+            }
+            return $"rain {rain} at {r.timeToStart:0} for {r.duration:0}, lightning {lightning} {r.preRainLightningTime:0} {r.lightningTime:0}, " +
+                $"fog {Tad(r.timeToFadeInFog)}-{Tad(r.timeToFadeOutFog)}";
+        }
         private static string Tad(TimeAndDay t)
         {
             if (t == null)
