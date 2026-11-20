@@ -388,14 +388,57 @@ namespace DarkwoodMP.World
             return o.name;
         }
 
-        private static string Req(EventTriggerRequirement q) =>
-            $"{q.type}{(q.type == EventTriggerRequirement.Type.playerState ? "/" + q.playerState : "")} item={Name(q.itemType)} key='{q.keyType}' n={q.amount} mod={q.activeModifier} dest={Name(q.destTransform)}";
+        private static string Req(EventTriggerRequirement q)
+        {
+            string state = "";
+            if (q.type == EventTriggerRequirement.Type.playerState)
+            {
+                state = "/" + q.playerState;
+            }
+            return $"{q.type}{state} item={Name(q.itemType)} key='{q.keyType}' n={q.amount} mod={q.activeModifier} dest={Name(q.destTransform)}";
+        }
 
-        private static string Ev(GameEvent e) =>
-            $"{e.type} '{e.Value}' '{e.Value2}' mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}" +
-            $" prefabs=[{string.Join(",", (e.prefabList ?? new List<Object>()).Select(Name))}]" +
-            $" targets=[{string.Join(",", (e.targetGameObjects ?? new List<GameObject>()).Select(g => g == null ? "null" : $"{g.name}@{Fmt(g.transform.position)}"))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}]" +
-            $" loc={e.locationObjects?.Count ?? 0}{(e.disabled ? " disabled" : "")}";
+        private static string Ev(GameEvent e)
+        {
+            string head = $"{e.type} '{e.Value}' '{e.Value2}' mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}";
+            List<Object> prefabs = e.prefabList;
+            if (prefabs == null)
+            {
+                prefabs = new List<Object>();
+            }
+            string prefabNames = string.Join(",", prefabs.Select(Name));
+            List<GameObject> targets = e.targetGameObjects;
+            if (targets == null)
+            {
+                targets = new List<GameObject>();
+            }
+            string targetNames = string.Join(",", targets.Select(g =>
+            {
+                if (g == null)
+                {
+                    return "null";
+                }
+                return $"{g.name}@{Fmt(g.transform.position)}";
+            }));
+            List<string> uniques = e.targetUniqueObjects;
+            if (uniques == null)
+            {
+                uniques = new List<string>();
+            }
+            string uniqueNames = string.Join(",", uniques);
+            List<Location.GetObject> places = e.locationObjects;
+            int count = 0;
+            if (places != null)
+            {
+                count = places.Count;
+            }
+            string note = "";
+            if (e.disabled)
+            {
+                note = " disabled";
+            }
+            return head + $" prefabs=[{prefabNames}]" + $" targets=[{targetNames}|{uniqueNames}]" + $" loc={count}{note}";
+        }
 
         /// <summary>
         /// "dive-scan PATTERN": log every trigger (with its requirements) and every GameEvents under the objects whose
@@ -421,9 +464,28 @@ namespace DarkwoodMP.World
                     || root.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0
                     || c.GetComponentsInParent<Transform>(true).Any(t => t.name.IndexOf(pat, System.StringComparison.OrdinalIgnoreCase) >= 0);
             }
-            bool Mentions(GameEvents g) => g != null && g.events.Any(e => e != null &&
-                ((e.Value ?? "").IndexOf("dive", System.StringComparison.OrdinalIgnoreCase) >= 0
-                 || (e.prefabList ?? new List<Object>()).Any(o => o != null && o.name.Contains("oxygen"))));
+            bool Mentions(GameEvents g) => g != null && g.events.Any(e =>
+            {
+                if (e == null)
+                {
+                    return false;
+                }
+                string content = e.Value;
+                if (content == null)
+                {
+                    content = "";
+                }
+                if (content.IndexOf("dive", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+                List<Object> prefabs = e.prefabList;
+                if (prefabs == null)
+                {
+                    prefabs = new List<Object>();
+                }
+                return prefabs.Any(o => o != null && o.name.Contains("oxygen"));
+            });
             foreach (var et in Object.FindObjectsOfType<EventTriggers>(true))
             {
                 if (et == null || et.eventTriggers == null)
@@ -520,7 +582,13 @@ namespace DarkwoodMP.World
                         {
                             value = " " + e.Value;
                         }
-                        string k = e.type + value + (ScriptedEvents.IsPlayerStep(e.type) ? " (player step)" : "");
+                        GameEvent.Type kind = e.type;
+                        string step = "";
+                        if (ScriptedEvents.IsPlayerStep(e.type))
+                        {
+                            step = " (player step)";
+                        }
+                        string k = kind + value + step;
                         int value2 = 0;
                         if (onPlayer.TryGetValue(k, out var c))
                         {

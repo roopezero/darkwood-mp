@@ -434,7 +434,15 @@ namespace DarkwoodMP.World
                 sp = c.shadow.GetComponent<tk2dBaseSprite>();
             }
             int emitting = c.GetComponentsInChildren<ParticleSystem>().Count(ps => ps != null && ps.isEmitting);
-            r.Info = FormattableString.Invariant($"{c.name} #{IdOf(c)}: searchable {c.GetComponent<Item>() != null}, shadow alpha {(sp != null ? sp.color.a : -1f):0.00}, emitting particles {emitting}");
+            string name = c.name;
+            uint id = IdOf(c);
+            bool searchable = c.GetComponent<Item>() != null;
+            float alpha = -1f;
+            if (sp != null)
+            {
+                alpha = sp.color.a;
+            }
+            r.Info = FormattableString.Invariant($"{name} #{id}: searchable {searchable}, shadow alpha {alpha:0.00}, emitting particles {emitting}");
             if (c.GetComponent<Item>() == null)
             {
                 r.Fail($"its corpse isn't searchable: {r.Info}");
@@ -698,7 +706,12 @@ namespace DarkwoodMP.World
             {
                 name = held.name;
             }
-            r.Info = $"{type} ({name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
+            string spot = "-";
+            if (held != null)
+            {
+                spot = Fmt(held.transform.position);
+            }
+            r.Info = $"{type} ({name}) at {spot}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
             if (HeldItem(p) != null)
             {
                 r.Fail($"still held: {r.Info}");
@@ -740,7 +753,15 @@ namespace DarkwoodMP.World
             }
             var ti = found.GetComponent<ThrownItem>();
             var rb = found.GetComponent<Rigidbody>();
-            r.Info = $"{found.name} at {Fmt(found.transform.position)}: on the ground {(ti != null && ti.onGround)}, speed {(rb != null ? rb.velocity.magnitude : 0f):0}";
+            string name = found.name;
+            string spot = Fmt(found.transform.position);
+            bool grounded = ti != null && ti.onGround;
+            float speed = 0f;
+            if (rb != null)
+            {
+                speed = rb.velocity.magnitude;
+            }
+            r.Info = $"{name} at {spot}: on the ground {grounded}, speed {speed:0}";
             if (ti == null || !ti.onGround)
             {
                 r.Fail($"it wasn't dropped (ThrownItem.dropMe) here: {r.Info}");

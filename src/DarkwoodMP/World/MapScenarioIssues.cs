@@ -82,7 +82,15 @@ namespace DarkwoodMP.World
             MapScenario.Add("flags", (a, r) =>
             {
                 var dict = AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(Singleton<Flags>.Instance);
-                r.Info = string.Join(",", dict.Values.Where(f => f != null).Select(f => f.name + (f.isTrue ? "=1" : "=0")).OrderBy(x => x, StringComparer.Ordinal));
+                r.Info = string.Join(",", dict.Values.Where(f => f != null).Select(f =>
+                {
+                    string value = "=0";
+                    if (f.isTrue)
+                    {
+                        value = "=1";
+                    }
+                    return f.name + value;
+                }).OrderBy(x => x, StringComparer.Ordinal));
                 return Nothing();
             });
             // #6 infection
@@ -234,7 +242,19 @@ namespace DarkwoodMP.World
             StateDump.All<T>().Where(ok)
                 .OrderBy(t => StateDump.Flat(t.transform.position - to)).FirstOrDefault();
 
-        private static Item Egg(string which) => NearestAll<Item>(Spot(which == "station" ? which : "egg:" + which), i => i.gameObject.name.StartsWith("larva_egg", StringComparison.Ordinal));
+        private static Item Egg(string which)
+        {
+            string spot;
+            if (which == "station")
+            {
+                spot = which;
+            }
+            else
+            {
+                spot = "egg:" + which;
+            }
+            return NearestAll<Item>(Spot(spot), i => i.gameObject.name.StartsWith("larva_egg", StringComparison.Ordinal));
+        }
 
         private static Infection Patch(string which, bool any = false) => NearestAll<Infection>(Spot(which), i => any || !i.disappearing);
 
@@ -426,14 +446,37 @@ namespace DarkwoodMP.World
             }
             var held = p.currentItem;
             string line = LogLines().LastOrDefault(l => l.Contains("[chars] re-equipped"));
-            r.Info = $"holding {ItemName(held)}{(held == p.fists ? " (bare hands)" : "")}, selected slot holds {ItemName(slot?.invItem)}; {line?.Substring(line.IndexOf("[chars]", StringComparison.Ordinal))}";
+            string heldName = ItemName(held);
+            string bare = "";
+            if (held == p.fists)
+            {
+                bare = " (bare hands)";
+            }
+            InvItemClass slotItem = null;
+            if (slot != null)
+            {
+                slotItem = slot.invItem;
+            }
+            string slotName = ItemName(slotItem);
+            string logged = null;
+            if (line != null)
+            {
+                logged = line.Substring(line.IndexOf("[chars]", StringComparison.Ordinal));
+            }
+            r.Info = $"holding {heldName}{bare}, selected slot holds {slotName}; {logged}";
             if (missing.Count > 0)
             {
                 r.Fail("no '[chars] re-equipped' in the log");
             }
             else if (held != want && !(InvItemClass.isNull(held) && want == p.fists))
             {
-                r.Fail($"holding {ItemName(held)} ({(InBags(p, held) ? "in our bags" : "in no slot: the host's from the save")}), not {ItemName(want)}");
+                string item = ItemName(held);
+                string place = "in no slot: the host's from the save";
+                if (InBags(p, held))
+                {
+                    place = "in our bags";
+                }
+                r.Fail($"holding {item} ({place}), not {ItemName(want)}");
             }
         }
 
@@ -448,7 +491,13 @@ namespace DarkwoodMP.World
         private static IEnumerator SpawnDog(string[] a, Result r)
         {
             // Clear of the stations: a dog among them walked into a trap and died before anyone hit it.
-            var c = MapScenarioFixChecks.SpawnAt(Centre + new Vector3(0f, 0f, 1200f), a.Length > 0 ? a[0] : "Dog");
+            Vector3 spot = Centre + new Vector3(0f, 0f, 1200f);
+            string type = "Dog";
+            if (a.Length > 0)
+            {
+                type = a[0];
+            }
+            var c = MapScenarioFixChecks.SpawnAt(spot, type);
             if (c == null)
             {
                 r.Fail("couldn't spawn a dog");
@@ -627,7 +676,15 @@ namespace DarkwoodMP.World
             }
             var playing = dog.GetComponentsInChildren<AudioObject>(true).Where(ao => ao != null && ao.IsPlaying()).Select(ao => ao.audioID).ToList();
             var stray = playing.Where(id => id != _dogDeath).ToList();
-            r.Info = $"{dog.name} #{_dogId} alive {dog.alive}, idle loop {(loop != null && loop.IsPlaying() ? loop.audioID : "off")}, playing [{string.Join(", ", playing)}], death cry {_dogDeath}";
+            string name = dog.name;
+            uint number = _dogId;
+            bool alive = dog.alive;
+            string idle = "off";
+            if (loop != null && loop.IsPlaying())
+            {
+                idle = loop.audioID;
+            }
+            r.Info = $"{name} #{number} alive {alive}, idle loop {idle}, playing [{string.Join(", ", playing)}], death cry {_dogDeath}";
             if (dog.alive)
             {
                 r.Fail($"it's alive here: {r.Info}");
@@ -1275,7 +1332,13 @@ namespace DarkwoodMP.World
                     bool sees = Core.canSeeAttack(p.transform, hitT);
                     if (i == 0)
                     {
-                        tried.Add($"{StateDump.Flat(p.transform.position - inf.transform.position):0}:{(sees ? "sees" : "no")}");
+                        float gap = StateDump.Flat(p.transform.position - inf.transform.position);
+                        string sight = "no";
+                        if (sees)
+                        {
+                            sight = "sees";
+                        }
+                        tried.Add($"{gap:0}:{sight}");
                     }
                     if (sees)
                     {

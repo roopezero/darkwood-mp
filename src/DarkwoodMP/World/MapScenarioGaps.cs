@@ -219,7 +219,15 @@ namespace DarkwoodMP.World
                     found.Add((t, it.isExpItem));
                 }
             }
-            all = string.Join(",", found.Select(f => f.type + (f.exp ? "(exp)" : "")));
+            all = string.Join(",", found.Select(f =>
+            {
+                string mark = "";
+                if (f.exp)
+                {
+                    mark = "(exp)";
+                }
+                return f.type + mark;
+            }));
             string type = found.Where(f => !f.exp).Select(f => f.type).FirstOrDefault();
             if (type == null)
             {
@@ -411,7 +419,18 @@ namespace DarkwoodMP.World
             }
             if (keys != null)
             {
-                _jType = keys.Where(k => !string.IsNullOrEmpty(k) && (_jKind == "key" ? !j.keysDict.ContainsKey(k) : !j.itemsDict.ContainsKey(k)))
+                _jType = keys.Where(k =>
+                {
+                    if (string.IsNullOrEmpty(k))
+                    {
+                        return false;
+                    }
+                    if (_jKind == "key")
+                    {
+                        return !j.keysDict.ContainsKey(k);
+                    }
+                    return !j.itemsDict.ContainsKey(k);
+                })
                     .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
             }
             else
@@ -496,7 +515,14 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            r.Info = $"{_jKind} {_jType}: {(Has() ? "here" : "not here")}";
+            string kind = _jKind;
+            string type = _jType;
+            string answer = "not here";
+            if (Has())
+            {
+                answer = "here";
+            }
+            r.Info = $"{kind} {type}: {answer}";
             if (Has() != want)
             {
                 string text = "gone";
@@ -606,8 +632,13 @@ namespace DarkwoodMP.World
                 }
                 yield break;
             }
-            r.Info = $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, " +
-                     $"{(npc != null ? npc.name + " " + ObjRef.Of(npc.gameObject) : "no trader or wolf")}";
+            string head = $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, ";
+            string who = "no trader or wolf";
+            if (npc != null)
+            {
+                who = npc.name + " " + ObjRef.Of(npc.gameObject);
+            }
+            r.Info = head + who;
             if (!c.isAfterNight)
             {
                 r.Fail(r.Info);
@@ -712,7 +743,19 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(wait);
             int moved = ((c.CurrentTime - t0) % 1440 + 1440) % 1440;
             r.Info = $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} in {wait:0.#} s";
-            if (c.DoUpdateTime != want || (want ? moved == 0 : moved != 0))
+            bool wrong = c.DoUpdateTime != want;
+            if (!wrong)
+            {
+                if (want)
+                {
+                    wrong = moved == 0;
+                }
+                else
+                {
+                    wrong = moved != 0;
+                }
+            }
+            if (wrong)
             {
                 string text = "stopped";
                 if (want)
@@ -755,7 +798,14 @@ namespace DarkwoodMP.World
                     yield return new WaitForSecondsRealtime(0.25f);
                 }
                 bool told = LogSince(mark).Any(l => !l.Contains("[map]") && l.Contains("is talking to them"));
-                r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)}: told {told}, dialogue {(win.npc == npc ? "still open" : "closed")}";
+                string name = npc.name;
+                ObjRef id = ObjRef.Of(npc.gameObject);
+                string dialogue = "closed";
+                if (win.npc == npc)
+                {
+                    dialogue = "still open";
+                }
+                r.Info = $"{name} {id}: told {told}, dialogue {dialogue}";
                 if (!told || win.npc == npc)
                 {
                     r.Fail(r.Info);
@@ -773,7 +823,14 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(time);
             var refused = LogSince(mark).Where(l => !l.Contains("[map]")).Where(l => l.Contains("is talking to them") || l.Contains("just talked to them") || (l.Contains("refused") && l.Contains("talk"))).ToList();
-            r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)}: dialogue {(win.npc == npc ? "open" : "not open")}";
+            string talker = npc.name;
+            ObjRef talkerId = ObjRef.Of(npc.gameObject);
+            string state = "not open";
+            if (win.npc == npc)
+            {
+                state = "open";
+            }
+            r.Info = $"{talker} {talkerId}: dialogue {state}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -1096,7 +1153,14 @@ namespace DarkwoodMP.World
                 r.Fail($"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}");
                 yield break;
             }
-            var go = Object.Instantiate(pf, Spot("vine"), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer != null ? Core.ItemContainer.transform : null);
+            Vector3 position = Spot("vine");
+            Quaternion rotation = Quaternion.Euler(90f, 0f, 0f);
+            Transform parent = null;
+            if (Core.ItemContainer != null)
+            {
+                parent = Core.ItemContainer.transform;
+            }
+            var go = Object.Instantiate(pf, position, rotation, parent);
             go.name = pf.name;
             var cp = go.GetComponentInChildren<ChainParent>(true);
             yield return new WaitForSecondsRealtime(0.5f); // init runs a frame later
@@ -1106,7 +1170,16 @@ namespace DarkwoodMP.World
             {
                 cp.health = cp.maxHealth;
             }
-            r.Info = $"{from}: {ObjRef.Of(cp.gameObject)} at {Fmt(cp.transform.position)}: health {cp.health:0} of {cp.maxHealth:0}, segment {(cp.lastChainSegment != null ? cp.lastChainSegment.name : "none")}";
+            ObjRef vine = ObjRef.Of(cp.gameObject);
+            string spot = Fmt(cp.transform.position);
+            float health = cp.health;
+            float full = cp.maxHealth;
+            string segment = "none";
+            if (cp.lastChainSegment != null)
+            {
+                segment = cp.lastChainSegment.name;
+            }
+            r.Info = $"{from}: {vine} at {spot}: health {health:0} of {full:0}, segment {segment}";
             if (cp.maxHealth <= 0f)
             {
                 r.Fail(r.Info + ": no health to cut");
@@ -1375,7 +1448,14 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(_marker != null ? Fmt(_marker.transform.position) : "none")}";
+                ObjRef id = ObjRef.Of(bag.gameObject);
+                string spot = Fmt(bag.transform.position);
+                string markerSpot = "none";
+                if (_marker != null)
+                {
+                    markerSpot = Fmt(_marker.transform.position);
+                }
+                r.Info = $"bag {id} at {spot}, marker {markerSpot}";
             }
             if (bag == null || _marker == null)
             {
@@ -1419,7 +1499,14 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"bag {ObjRef.Of(bag.gameObject)} at {Fmt(bag.transform.position)}, marker {(bag.additionalMapMarker != null ? Fmt(bag.additionalMapMarker.transform.position) : "none")}";
+                ObjRef id = ObjRef.Of(bag.gameObject);
+                string spot = Fmt(bag.transform.position);
+                string markerSpot = "none";
+                if (bag.additionalMapMarker != null)
+                {
+                    markerSpot = Fmt(bag.additionalMapMarker.transform.position);
+                }
+                r.Info = $"bag {id} at {spot}, marker {markerSpot}";
             }
             if (!Ok())
             {
