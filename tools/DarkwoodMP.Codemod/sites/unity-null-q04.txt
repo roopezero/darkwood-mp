@@ -1,0 +1,44 @@
+# The Unity sites of stage 8, batch q04 (World/: actions, authority,
+# containers, dragging, throwing): 2 sites, written by hand. Stage 7 left
+# them in the queue: one is kept on purpose, the other sat in a branch of a
+# ?: that the batch's first commit made an if. The new code tests the Unity
+# object with "x != null", which calls Unity's ==, so code that ran on a
+# destroyed object is now skipped, unless "destroyed:" says the site is kept.
+# The old code is from the start of its line; lines are those before the
+# rewrite.
+
+World/ObjectActions.cs:282
+member: DarkwoodMP.World.ObjectActions::AfterOnHost(DarkwoodMP.World.WorldActions/Action,DarkwoodMP.World.ObjRef,System.Boolean)
+old:
+    trigger?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+new:
+    // Tested by reference, not with Unity's null check: the
+    // game's own switch fires its trigger with no check, and
+    // fireEventTrigger doesn't touch the native object, so the
+    // events of a destroyed trigger run here as they would for
+    // the host's own flip.
+    if (!ReferenceEquals(trigger, null))
+    {
+        trigger.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+    }
+destroyed: kept. A destroyed trigger's events still run, as before. The
+    game's own switch (InteractiveItem.switchOn and switchOff) fires its
+    trigger with no check, and fireEventTrigger only walks its lists and
+    starts coroutines on the Controller, so the host runs them for a
+    client's flip as the game would for its own. It is the one place a
+    Unity object is tested by reference (the rule's KeptSites).
+
+World/ThrowSync.cs:48
+member: DarkwoodMP.World.ThrowSync::Holding(Player)
+old:
+    type = cur.baseClass?.type;
+new:
+    InvItem kind = cur.baseClass;
+    if (kind != null)
+    {
+        type = kind.type;
+    }
+destroyed: a destroyed InvItem as the held item's base class now gives no
+    type (null) where it gave the type it had, so ThrowSync.Thrown sends
+    nothing for that throw or drop, as for an item with no base class. The
+    base class is the item's prefab, which isn't destroyed while playing.

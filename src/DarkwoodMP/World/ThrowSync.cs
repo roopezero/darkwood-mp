@@ -45,7 +45,11 @@ namespace DarkwoodMP.World
             string type = null;
             if (!InvItemClass.isNull(cur))
             {
-                type = cur.baseClass?.type;
+                InvItem kind = cur.baseClass;
+                if (kind != null)
+                {
+                    type = kind.type;
+                }
             }
             return (held, type);
         }

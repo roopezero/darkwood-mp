@@ -279,7 +279,15 @@ namespace DarkwoodMP.World
                 {
                     trigger = ii.offTrigger;
                 }
-                trigger?.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+                // Tested by reference, not with Unity's null check: the
+                // game's own switch fires its trigger with no check, and
+                // fireEventTrigger doesn't touch the native object, so the
+                // events of a destroyed trigger run here as they would for
+                // the host's own flip.
+                if (!ReferenceEquals(trigger, null))
+                {
+                    trigger.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+                }
             }
             catch (System.Exception e)
             {
