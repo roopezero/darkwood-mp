@@ -32,7 +32,7 @@ namespace DarkwoodMP.Net
         public bool InSession { get; private set; }
         public bool IsHost { get; private set; }
         public ulong HostId => HostPeerId;
-        public ulong LocalId // a client's id comes in Welcome
+        public ulong LocalId
         {
             get
             {
@@ -40,7 +40,7 @@ namespace DarkwoodMP.Net
                 {
                     return HostPeerId;
                 }
-                return 0;
+                return 0; // a client's id comes in Welcome
             }
         }
         public string HostPassword { get; private set; } = "";
