@@ -1282,7 +1282,14 @@ namespace DarkwoodMP
             var tm = t.GetComponent<tk2dTextMesh>();
             if (tm != null)
             {
-                extra += $" text=\"{tm.text}\" font={tm.font?.name}";
+                string text = tm.text;
+                tk2dFontData font = tm.font;
+                string fontName = null;
+                if (font != null)
+                {
+                    fontName = font.name;
+                }
+                extra += $" text=\"{text}\" font={fontName}";
             }
             var sp = t.GetComponent<tk2dBaseSprite>();
             if (sp != null)
