@@ -145,7 +145,12 @@ namespace DarkwoodMP.World
                 c.dontDestroyMeWhenConstructed = true;
                 c.options = new List<Constructible.Option> { new Constructible.Option { name = "repair", constructTime = 1f, requirements = new List<ConstructionRequirement>() } };
             }
-            r.Info = $"{ItemInfo} at {Fmt(_item.transform.position)}, construction menu {(made ? "added" : "its own")} (only when broken: {c.onlyWhenDestroyed}, {c.options.Count} options)";
+            string menu = "its own";
+            if (made)
+            {
+                menu = "added";
+            }
+            r.Info = $"{ItemInfo} at {Fmt(_item.transform.position)}, construction menu {menu} (only when broken: {c.onlyWhenDestroyed}, {c.options.Count} options)";
         }
 
         private static IEnumerator RpFurnitureBreak(string[] a, Result r)

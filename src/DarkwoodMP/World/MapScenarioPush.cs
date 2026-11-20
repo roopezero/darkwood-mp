@@ -147,7 +147,21 @@ namespace DarkwoodMP.World
                 }
                 else if (b.GetComponentInParent<Door>() is Door d)
                 {
-                    what = $"door {d.name} leaf, {(DoorPush.Watches(d) ? "watched" : d.opened ? "NOT WATCHED" : "shut")}";
+                    string name = d.name;
+                    string state;
+                    if (DoorPush.Watches(d))
+                    {
+                        state = "watched";
+                    }
+                    else if (d.opened)
+                    {
+                        state = "NOT WATCHED";
+                    }
+                    else
+                    {
+                        state = "shut";
+                    }
+                    what = $"door {name} leaf, {state}";
                 }
                 else if (b.GetComponentInParent<Window>() != null)
                 {
@@ -331,7 +345,21 @@ namespace DarkwoodMP.World
             }
             var start = it.transform.position;
             float back = Size(it) + 60f;
-            var dir = ClearWay(it, a.Length > 1 ? F(a[1]) : 0f, back, lean ? 0f : dist + 20f);
+            float angle = 0f;
+            if (a.Length > 1)
+            {
+                angle = F(a[1]);
+            }
+            float ahead;
+            if (lean)
+            {
+                ahead = 0f;
+            }
+            else
+            {
+                ahead = dist + 20f;
+            }
+            var dir = ClearWay(it, angle, back, ahead);
             yield return Walk(start - dir * back, 10f, detours: 0);
             yield return new WaitForSeconds(0.5f); // at rest where the walk left us
             start = it.transform.position;
@@ -486,7 +514,17 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var rb = it.GetComponent<Rigidbody>();
-            r.Info = FormattableString.Invariant($"{it.name} {Ref(it)} at {Fmt1(it.transform.position)} yaw {it.transform.rotation.eulerAngles.y:0}, {DragSync.Instance?.WatchInfo(rb)}");
+            string name = it.name;
+            string id = Ref(it);
+            string pos = Fmt1(it.transform.position);
+            float yaw = it.transform.rotation.eulerAngles.y;
+            string watch = null;
+            DragSync drag = DragSync.Instance;
+            if (drag != null)
+            {
+                watch = drag.WatchInfo(rb);
+            }
+            r.Info = FormattableString.Invariant($"{name} {id} at {pos} yaw {yaw:0}, {watch}");
             yield break;
         }
     }

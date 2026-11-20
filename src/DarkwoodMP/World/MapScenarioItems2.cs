@@ -96,7 +96,15 @@ namespace DarkwoodMP.World
             Add("i2-gone", Gone, timeout: 30f);
             Add("i2-gassed", Gassed, timeout: 15f);
             Add("i2-kill", Kill, timeout: 20f);
-            Add("i2-goto", (a, r) => Walk(MapScenarioEnemies.FreeSpot(Spot(a.Length > 0 ? a[0] : "")), 40f), timeout: 40f);
+            Add("i2-goto", (a, r) =>
+            {
+                string name = "";
+                if (a.Length > 0)
+                {
+                    name = a[0];
+                }
+                return Walk(MapScenarioEnemies.FreeSpot(Spot(name)), 40f);
+            }, timeout: 40f);
             Add("i2-lantern", Lantern, timeout: 15f);
             Add("i2-lit", Lit, timeout: 15f);
             Add("i2-map-pick", MapPick);
@@ -179,7 +187,13 @@ namespace DarkwoodMP.World
             // The host to one side and the client to the other: standing on one spot, each one's throws and shots
             // hit the other player in the way.
             var s = Net.Session.Instance;
-            var side = new Vector3(-d.z, 0f, d.x) * (s != null && s.IsClient ? -1f : 1f);
+            var across = new Vector3(-d.z, 0f, d.x);
+            float sign = 1f;
+            if (s != null && s.IsClient)
+            {
+                sign = -1f;
+            }
+            var side = across * sign;
             return MapScenarioEnemies.FreeSpot(target + (d + side).normalized * dist);
         }
 
@@ -316,7 +330,12 @@ namespace DarkwoodMP.World
             }
             _noted[name] = c.health;
             NetEnemies.Instance.NetIdOf(c, out uint id);
-            r.Info = $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}, eats {c.lureType}{(c.veryHungry ? ", very hungry" : "")}";
+            string info = $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}, eats {c.lureType}";
+            if (c.veryHungry)
+            {
+                info += ", very hungry";
+            }
+            r.Info = info;
         }
 
         /// <summary>"i2-note [NAME]": note the dog's health here, the log's length and the other players' shots seen.</summary>
@@ -335,7 +354,12 @@ namespace DarkwoodMP.World
                     _noted[a[0]] = d.health;
                 }
             }
-            r.Info = $"log line {_mark}, shots seen {_shotsNoted}" + (a.Length > 0 && _noted.TryGetValue(a[0], out float h) ? $", {a[0]} dog health {h:0}" : "");
+            string info = $"log line {_mark}, shots seen {_shotsNoted}";
+            if (a.Length > 0 && _noted.TryGetValue(a[0], out float h))
+            {
+                info += $", {a[0]} dog health {h:0}";
+            }
+            r.Info = info;
             yield break;
         }
 
@@ -445,7 +469,12 @@ namespace DarkwoodMP.World
             var p = P;
             bool loaded = System.Array.IndexOf(a, "--loaded") >= 0;
             a = System.Array.FindAll(a, s => s != "--loaded");
-            string type = a[0], name = a.Length > 1 ? a[1] : "gun";
+            string type = a[0];
+            string name = "gun";
+            if (a.Length > 1)
+            {
+                name = a[1];
+            }
             int shots = 3;
             if (a.Length > 2)
             {
@@ -508,7 +537,17 @@ namespace DarkwoodMP.World
                     loads += value + $"{before}->{gun.ammo}";
                     if (gun.ammo <= before)
                     {
-                        r.Fail($"the {type} didn't reload ({before} -> {gun.ammo} of {b.clipSize}, reloading {p.reloading}, {b.ammoType} in bags {p.Inventory.getItemInPlayer(b.ammoType)?.amount ?? 0})");
+                        int rounds = gun.ammo;
+                        int clip = b.clipSize;
+                        bool reloading = p.reloading;
+                        string kind = b.ammoType;
+                        int bagged = 0;
+                        InvItemClass spare = p.Inventory.getItemInPlayer(b.ammoType);
+                        if (spare != null)
+                        {
+                            bagged = spare.amount;
+                        }
+                        r.Fail($"the {type} didn't reload ({before} -> {rounds} of {clip}, reloading {reloading}, {kind} in bags {bagged})");
                     }
                 }
                 if (loaded)
@@ -571,9 +610,23 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(1.5f); // the host's answers
                 var sent = LogSince(mark, @"\[authority\] request \d+: hit on enemy");
                 var refused = LogSince(mark, @"the host refused hit on enemy");
-                r.Info = $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), every {b.fireRate:0.00} s, clip {b.clipSize}, {b.ammoType}): "
-                       + $"reloads {loads}; {fired} of {shots} fired, {sent.Count} hit(s) sent to the host, {refused.Count} refused; {(dog != null ? $"{dog.name} health here {dog.health:0}" : "the dog is gone")}; first in the line of fire "
-                       + string.Join(", ", aimed.Distinct().Select(x => $"{x} x{aimed.Count(y => y == x)}")) + (moved > 0 ? $" ({moved} step(s) round the dog for a clear shot)" : "");
+                string info = $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), every {b.fireRate:0.00} s, clip {b.clipSize}, {b.ammoType}): "
+                            + $"reloads {loads}; {fired} of {shots} fired, {sent.Count} hit(s) sent to the host, {refused.Count} refused; ";
+                if (dog != null)
+                {
+                    info += $"{dog.name} health here {dog.health:0}";
+                }
+                else
+                {
+                    info += "the dog is gone";
+                }
+                info += "; first in the line of fire "
+                      + string.Join(", ", aimed.Distinct().Select(x => $"{x} x{aimed.Count(y => y == x)}"));
+                if (moved > 0)
+                {
+                    info += $" ({moved} step(s) round the dog for a clear shot)";
+                }
+                r.Info = info;
                 if (fired < shots)
                 {
                     r.Fail("not every shot fired: " + r.Info);
@@ -631,7 +684,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Throw(string[] a, Result r)
         {
             var p = P;
-            string type = a[0], at = a.Length > 1 ? a[1] : "fire";
+            string type = a[0];
+            string at = "fire";
+            if (a.Length > 1)
+            {
+                at = a[1];
+            }
             Character dog = null;
             if (at == "meat" || at == "gun")
             {
@@ -754,8 +812,17 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
-                r.Info = $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: "
-                       + (held == null ? "gone on landing" : $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}");
+                string prefix = $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: ";
+                string landed;
+                if (held == null)
+                {
+                    landed = "gone on landing";
+                }
+                else
+                {
+                    landed = $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}";
+                }
+                r.Info = prefix + landed;
             }
             finally
             {
@@ -773,7 +840,17 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Seen(string[] a, Result r)
         {
-            string type = a[0], at = a.Length > 1 ? a[1] : "fire", want = a.Length > 2 ? a[2] : "lands";
+            string type = a[0];
+            string at = "fire";
+            if (a.Length > 1)
+            {
+                at = a[1];
+            }
+            string want = "lands";
+            if (a.Length > 2)
+            {
+                want = a[2];
+            }
             var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
             if (it == null || it.item == null)
             {
@@ -963,8 +1040,17 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             var got = Heard.Where(h => h.c == d).ToList();
-            r.Info = $"{d.name} heard {got.Count} sound(s): " + string.Join(", ", got.Take(4).Select(h => $"{Fmt(h.pos)}{(h.dangerous ? " (dangerous)" : "")}"))
-                   + $"; behaviour {d.behaviour}";
+            string prefix = $"{d.name} heard {got.Count} sound(s): ";
+            string sounds = string.Join(", ", got.Take(4).Select(h =>
+            {
+                string danger = "";
+                if (h.dangerous)
+                {
+                    danger = " (dangerous)";
+                }
+                return $"{Fmt(h.pos)}{danger}";
+            }));
+            r.Info = prefix + sounds + $"; behaviour {d.behaviour}";
             if (!got.Any(h => !h.dangerous))
             {
                 r.Fail("it heard nothing: " + r.Info);
@@ -1233,7 +1319,12 @@ namespace DarkwoodMP.World
             {
                 lanternShown = rp.LanternShown;
             }
-            r.Info = $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {(proxy != null ? "stand-in" : "puppet")} in light {inLight}";
+            string copy = "puppet";
+            if (proxy != null)
+            {
+                copy = "stand-in";
+            }
+            r.Info = $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {copy} in light {inLight}";
             if (shown != want || inLight != want)
             {
                 r.Fail(r.Info);
@@ -1300,7 +1391,16 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             var ls = PlacesOf(_map);
-            r.Info = $"{_map}: " + string.Join(", ", ls.Select(l => $"{l.name} {(Shown(l) ? "shown" : "hidden")}"));
+            r.Info = $"{_map}: " + string.Join(", ", ls.Select(l =>
+            {
+                string name = l.name;
+                string state = "hidden";
+                if (Shown(l))
+                {
+                    state = "shown";
+                }
+                return $"{name} {state}";
+            }));
             if (!ls.All(Shown))
             {
                 r.Fail(r.Info);

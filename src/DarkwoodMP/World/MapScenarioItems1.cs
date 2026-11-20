@@ -92,7 +92,16 @@ namespace DarkwoodMP.World
             }
             if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
             {
-                r.Fail($"couldn't take {type} in our hands (holding {(InvItemClass.isNull(p.currentItem) ? "nothing" : p.currentItem.type)})");
+                string holding;
+                if (InvItemClass.isNull(p.currentItem))
+                {
+                    holding = "nothing";
+                }
+                else
+                {
+                    holding = p.currentItem.type;
+                }
+                r.Fail($"couldn't take {type} in our hands (holding {holding})");
             }
         }
 
@@ -182,7 +191,13 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             int back = MapScenarioWorld.CarriedOf(type);
-            r.Info = $"{prefab} at {Fmt(at)}: carried {had} -> {after} -> {back}, ours {(go == null ? "removed" : "still there")}";
+            string spot = Fmt(at);
+            string ours = "still there";
+            if (go == null)
+            {
+                ours = "removed";
+            }
+            r.Info = $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours {ours}";
             if (Authority.RolledBack == refused)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
@@ -272,7 +287,21 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            r.Info = $"{a[0]} at {Fmt(at)}: " + (ok == null ? "no answer" : ok.Value ? "allowed" : "refused: " + why);
+            string prefix = $"{a[0]} at {Fmt(at)}: ";
+            string answer;
+            if (ok == null)
+            {
+                answer = "no answer";
+            }
+            else if (ok.Value)
+            {
+                answer = "allowed";
+            }
+            else
+            {
+                answer = "refused: " + why;
+            }
+            r.Info = prefix + answer;
             if (ok != false)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
@@ -583,8 +612,24 @@ namespace DarkwoodMP.World
         private static bool PorterThere(Location loc) =>
             loc.porter != null || Object.FindObjectsOfType<PorterSpawner>().Any(s => s != null && StateDump.Flat(s.transform.position - loc.porterPosition.transform.position) < 50f);
 
-        private static string PorterInfo(Location loc) =>
-            $"at {loc.name}: porter {(loc.porter != null ? "here" : PorterThere(loc) ? "on its way" : "not called")}";
+        private static string PorterInfo(Location loc)
+        {
+            string name = loc.name;
+            string state;
+            if (loc.porter != null)
+            {
+                state = "here";
+            }
+            else if (PorterThere(loc))
+            {
+                state = "on its way";
+            }
+            else
+            {
+                state = "not called";
+            }
+            return $"at {name}: porter {state}";
+        }
 
         /// <summary>"porter-ready" (host): daytime, the porter neither on the way nor there, so a whistle calls it.</summary>
         private static IEnumerator PorterReady(string[] a, Result r)

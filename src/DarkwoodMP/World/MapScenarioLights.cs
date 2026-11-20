@@ -219,7 +219,12 @@ namespace DarkwoodMP.World
                 {
                     beamRadius = last.BeamRadius;
                 }
-                parts.Add($"beam r{lightRadius:0} (sent {beamRadius:0}) grey {(l != null ? l.LightColor.r : 0f):0.00} drawn {Drawn(l)}");
+                float grey = 0f;
+                if (l != null)
+                {
+                    grey = l.LightColor.r;
+                }
+                parts.Add($"beam r{lightRadius:0} (sent {beamRadius:0}) grey {grey:0.00} drawn {Drawn(l)}");
             }
             string joinValue;
             if (parts.Count == 0)
