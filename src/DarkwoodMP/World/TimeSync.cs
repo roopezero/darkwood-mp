@@ -42,7 +42,16 @@ namespace DarkwoodMP.World
                 var dreams = Singleton<Dreams>.Instance;
                 bool dreaming = dreams != null && dreams.dreaming;
                 w.W.Write((uint)ctl.day);
-                w.W.Write((ushort)(dreaming ? Mathf.Clamp((int)dreams.timeCopy, 0, 1439) : ctl.CurrentTime));
+                int minute;
+                if (dreaming)
+                {
+                    minute = Mathf.Clamp((int)dreams.timeCopy, 0, 1439);
+                }
+                else
+                {
+                    minute = ctl.CurrentTime;
+                }
+                w.W.Write((ushort)minute);
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
 

@@ -225,8 +225,13 @@ namespace DarkwoodMP.World
                     value = (float)p.Value.Got / p.Value.Total;
                 }
                 Raise(DownloadShare * value);
-                SetStage(Stage.Downloading, $"Downloading the host's world: {p.Value.Got / 1048576f:0.0} / {p.Value.Total / 1048576f:0.0} MB" +
-                    (world.UnpackedSize > 0 ? $" ({world.UnpackedSize / 1048576f:0.0} MB unpacked)" : ""));
+                string progress = $"Downloading the host's world: {p.Value.Got / 1048576f:0.0} / {p.Value.Total / 1048576f:0.0} MB";
+                string unpacked = "";
+                if (world.UnpackedSize > 0)
+                {
+                    unpacked = $" ({world.UnpackedSize / 1048576f:0.0} MB unpacked)";
+                }
+                SetStage(Stage.Downloading, progress + unpacked);
             }
             else if (session.Connected)
             {

@@ -129,8 +129,17 @@ namespace DarkwoodMP.World
 
         // ---- paths and deleting folders ------------------------------------------------------------------
 
-        internal static readonly StringComparison PathCase =
-            Environment.OSVersion.Platform == PlatformID.Win32NT ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        internal static readonly StringComparison PathCase = PathCaseOf(Environment.OSVersion.Platform);
+
+        /// <summary>How paths compare on a platform: ignoring case on Windows, exactly elsewhere.</summary>
+        private static StringComparison PathCaseOf(PlatformID platform)
+        {
+            if (platform == PlatformID.Win32NT)
+            {
+                return StringComparison.OrdinalIgnoreCase;
+            }
+            return StringComparison.Ordinal;
+        }
 
         internal static string Full(string p) =>
             Path.GetFullPath(p).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);

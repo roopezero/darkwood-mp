@@ -88,7 +88,19 @@ namespace DarkwoodMP.World
         public static List<object> Pos(Vector3 p) => new List<object> { (double)Mathf.Round(p.x), (double)Mathf.Round(p.z) };
 
         /// <summary>Where the test area is: TestWorld's centre, else where our player stands.</summary>
-        public static Vector3 DefaultCentre() => TestWorld.Center() ?? (Player.Instance != null ? Player.Instance.transform.position : Vector3.zero);
+        public static Vector3 DefaultCentre()
+        {
+            Vector3? centre = TestWorld.Center();
+            if (centre.HasValue)
+            {
+                return centre.Value;
+            }
+            if (Player.Instance != null)
+            {
+                return Player.Instance.transform.position;
+            }
+            return Vector3.zero;
+        }
         public const float DefaultRadius = 2000f;
 
         /// <summary>Write the dump to path. centre/radius default to the test area's.</summary>
@@ -103,9 +115,22 @@ namespace DarkwoodMP.World
             {
                 c = DefaultCentre();
             }
+            string role;
+            if (Session.Instance == null)
+            {
+                role = "alone";
+            }
+            else if (Session.Instance.IsHost)
+            {
+                role = "host";
+            }
+            else
+            {
+                role = "client";
+            }
             var root = new SortedDictionary<string, object>(StringComparer.Ordinal)
             {
-                ["role"] = Session.Instance == null ? "alone" : Session.Instance.IsHost ? "host" : "client",
+                ["role"] = role,
                 ["centre"] = Pos(c),
                 ["radius"] = (double)radius,
             };
@@ -336,7 +361,12 @@ namespace DarkwoodMP.World
                     var ch = n.GetComponent<Character>();
                     // One from the shared save is that one (TraderSync names him by his ref): keyed by it.
                     var who = ObjRef.Of(n.gameObject);
-                    ctx.Set("trader:" + n.name + (who.K == ObjRef.Kind.Saved ? "@" + who : ""), new Dictionary<string, object>
+                    string label = "trader:" + n.name;
+                    if (who.K == ObjRef.Kind.Saved)
+                    {
+                        label += "@" + who;
+                    }
+                    ctx.Set(label, new Dictionary<string, object>
                     {
                         ["stock"] = Slots(TraderSync.Inv(n)),
                         ["reputation"] = n.reputation,
@@ -522,11 +552,20 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+                string holding;
+                if (InvItemClass.isNull(p.currentItem))
+                {
+                    holding = "";
+                }
+                else
+                {
+                    holding = p.currentItem.type;
+                }
                 ctx.Set("player", new Dictionary<string, object>
                 {
                     ["pos"] = Pos(p.transform.position),
                     ["health"] = R(p.health, 1f),
-                    ["holding"] = InvItemClass.isNull(p.currentItem) ? "" : p.currentItem.type,
+                    ["holding"] = holding,
                     ["carrying"] = p.Inventory.getAllItems().Count,
                 });
             });

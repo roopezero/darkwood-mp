@@ -474,7 +474,13 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 // Most likely the game changed a list while it was being written. Save it the game's way instead.
-                Plugin.Log.LogWarning($"Couldn't write the snapshot off the main thread, saving it the game's way: {writing.Exception?.GetBaseException().Message}");
+                AggregateException error = writing.Exception;
+                string why = null;
+                if (error != null)
+                {
+                    why = error.GetBaseException().Message;
+                }
+                Plugin.Log.LogWarning($"Couldn't write the snapshot off the main thread, saving it the game's way: {why}");
                 if (!InWorld || Core.loadingGame)
                 {
                     Restore();
@@ -610,9 +616,9 @@ namespace DarkwoodMP.World
                         FlagsSync.ForgetSnapshot();
                     }
                     string profDir = snapDir;
-                    if (profDir == null)
+                    if (profDir == null && Core.currentProfile != null)
                     {
-                        profDir = Core.currentProfile == null ? null : ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
+                        profDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
                     }
                     // left the world meanwhile: nothing to offer
                     string stamp;
@@ -640,14 +646,25 @@ namespace DarkwoodMP.World
                         }
                         if (job.IsFaulted)
                         {
-                            Plugin.Log.LogWarning($"Couldn't read the world for joiners: {job.Exception?.GetBaseException().Message}");
+                            AggregateException error = job.Exception;
+                            string why = null;
+                            if (error != null)
+                            {
+                                why = error.GetBaseException().Message;
+                            }
+                            Plugin.Log.LogWarning($"Couldn't read the world for joiners: {why}");
                         }
                         else if ((world = job.Result) != null)
                         {
                             world.Stamp = stamp;
                             world.IdCounter = ids;
+                            string packing = "";
+                            if (world.Packing == 1)
+                            {
+                                packing = " (Deflate)";
+                            }
                             Plugin.Log.LogInfo($"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
-                                               $"sent as {world.Sent.Length / 1024} KiB{(world.Packing == 1 ? " (Deflate)" : "")}; {world.Timing}");
+                                               $"sent as {world.Sent.Length / 1024} KiB{packing}; {world.Timing}");
                         }
                     }
                 }
@@ -711,7 +728,7 @@ namespace DarkwoodMP.World
             {
                 packError = e.Message;
             }
-            return new Snapshot
+            var snapshot = new Snapshot
             {
                 Hash = hash,
                 ProfileJson = json,
@@ -719,8 +736,18 @@ namespace DarkwoodMP.World
                 Sent = sent,
                 Packing = packing,
                 RawSize = raw.Length,
-                Timing = $"read and hashed in {readMs} ms, " + (packError == null ? $"packed in {sw.ElapsedMilliseconds - readMs} ms" : $"couldn't pack it ({packError})") + " on a worker thread",
             };
+            string timing = $"read and hashed in {readMs} ms, ";
+            if (packError == null)
+            {
+                timing += $"packed in {sw.ElapsedMilliseconds - readMs} ms";
+            }
+            else
+            {
+                timing += $"couldn't pack it ({packError})";
+            }
+            snapshot.Timing = timing + " on a worker thread";
+            return snapshot;
         }
 
         private void Offer(ulong peer, Snapshot world)

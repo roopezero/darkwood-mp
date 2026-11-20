@@ -91,8 +91,16 @@ namespace DarkwoodMP.World
         public static bool OursNow(Location l)
         {
             var o = Singleton<OutsideLocations>.Instance;
-            return l != null && o != null && o.playerInOutsideLocation
-                   && Core.getTrueLocationName(o.currentLocationName ?? "") == Core.getTrueLocationName(l.name);
+            if (l != null && o != null && o.playerInOutsideLocation)
+            {
+                string current = o.currentLocationName;
+                if (current == null)
+                {
+                    current = "";
+                }
+                return Core.getTrueLocationName(current) == Core.getTrueLocationName(l.name);
+            }
+            return false;
         }
 
         /// <summary>
@@ -178,7 +186,13 @@ namespace DarkwoodMP.World
             {
                 if (_kept.Add(loc))
                 {
-                    Plugin.Log.LogInfo($"[locations] keeping {Core.getTrueLocationName(loc.name)} running for the joiner(s) in it{(loc.entered ? " (already entered)" : "")}");
+                    string place = Core.getTrueLocationName(loc.name);
+                    string note = "";
+                    if (loc.entered)
+                    {
+                        note = " (already entered)";
+                    }
+                    Plugin.Log.LogInfo($"[locations] keeping {place} running for the joiner(s) in it{note}");
                 }
                 if (!loc.entered || !loc.gameObject.activeInHierarchy)
                 {
@@ -503,8 +517,13 @@ namespace DarkwoodMP.World
                     {
                         _toSpawn.Enqueue(name);
                     }
-                    Plugin.Log.LogInfo($"[locations] {s.NameOf(from)} goes to {name}, which we haven't loaded: it gets spot {slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}" +
-                                       (dream ? " (a dream: theirs alone)" : "; we load it too"));
+                    string line = $"[locations] {s.NameOf(from)} goes to {name}, which we haven't loaded: it gets spot {slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}";
+                    string where = "; we load it too";
+                    if (dream)
+                    {
+                        where = " (a dream: theirs alone)";
+                    }
+                    Plugin.Log.LogInfo(line + where);
                 }
                 _slots[name] = slot;
             }

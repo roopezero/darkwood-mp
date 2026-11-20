@@ -192,7 +192,11 @@ namespace DarkwoodMP.World
             {
                 name = record.Name;
             }
-            return name ?? "";
+            if (name == null)
+            {
+                name = "";
+            }
+            return name;
         }
 
         public static void SetName(int slot, string name)
@@ -338,9 +342,13 @@ namespace DarkwoodMP.World
                 instance.Forget("a new game");
             }
             var sm = Singleton<SaveManager>.Instance;
-            if (sm != null && WorldShare.Instance?.PlayingHostCopy != true)
+            if (sm != null)
             {
-                SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
+                WorldShare share = WorldShare.Instance;
+                if (share == null || !share.PlayingHostCopy)
+                {
+                    SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
+                }
             }
         }
     }
@@ -356,7 +364,12 @@ namespace DarkwoodMP.World
         static void Prefix(SaveManager __instance)
         {
             var p = Core.currentProfile;
-            if (p == null || WorldShare.Instance?.PlayingHostCopy == true)
+            if (p == null)
+            {
+                return;
+            }
+            WorldShare share = WorldShare.Instance;
+            if (share != null && share.PlayingHostCopy)
             {
                 return;
             }

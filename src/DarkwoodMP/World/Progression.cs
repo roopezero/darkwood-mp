@@ -100,7 +100,12 @@ namespace DarkwoodMP.World
         /// <summary>The most levels the shared essence allows: level L needs Req(L - 1).</summary>
         private static int Allowed(Player p)
         {
-            int max = p.levelRequirements != null ? p.levelRequirements.Count : 0, l = 0;
+            int max = 0;
+            if (p.levelRequirements != null)
+            {
+                max = p.levelRequirements.Count;
+            }
+            int l = 0;
             while (l < max && SharedExp >= Req(p, l))
             {
                 l++;
@@ -214,7 +219,19 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[progress] this world's shared essence {SharedExp}, level {SharedLevel}");
                 }
             }
-            if (_saved == null && start && (solo ? alone : s.Peers.Count > 0))
+            bool begin = false;
+            if (_saved == null && start)
+            {
+                if (solo)
+                {
+                    begin = alone;
+                }
+                else
+                {
+                    begin = s.Peers.Count > 0;
+                }
+            }
+            if (begin)
             {
                 _saved = new Saved { Exp = p.experience, Level = p.currentLevel };
                 SharedExp = _saved.Exp;
@@ -811,7 +828,16 @@ namespace DarkwoodMP.World
             {
                 w = Math.Max(w, PixelFont.Width(l) + 2 * pad);
             }
-            float h = 2 * pad + lines.Count * line + (morning ? Ui.RowH + (lines.Count > 0 ? pad : 0) : 0);
+            float row = 0f;
+            if (morning)
+            {
+                row = Ui.RowH;
+                if (lines.Count > 0)
+                {
+                    row += pad;
+                }
+            }
+            float h = 2 * pad + lines.Count * line + row;
             float x = Mathf.Round((Screen.width - w) / 2f), y = Mathf.Round(Screen.height - h - 40 * s);
             GUI.Box(new Rect(x, y, w, h), GUIContent.none, MenuSkin.Window);
             float ly = y + pad;

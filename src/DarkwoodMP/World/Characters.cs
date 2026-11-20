@@ -273,7 +273,25 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character died for good in this world: they watch the others");
                 return;
             }
-            Plugin.Log.LogInfo($"{_session.NameOf(from)}'s character: " + (rec != null ? $"theirs, from {DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}" + (earlier ? $" in chapter {rec.Chapter}: beside you" : "") : copy ? "a copy of yours" : "a new one"));
+            string name = _session.NameOf(from);
+            string which;
+            if (rec != null)
+            {
+                which = $"theirs, from {DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}";
+                if (earlier)
+                {
+                    which += $" in chapter {rec.Chapter}: beside you";
+                }
+            }
+            else if (copy)
+            {
+                which = "a copy of yours";
+            }
+            else
+            {
+                which = "a new one";
+            }
+            Plugin.Log.LogInfo($"{name}'s character: " + which);
         }
 
         private void OnSave(ulong from, PacketReader r)
@@ -822,7 +840,16 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning($"Couldn't re-equip your item: {e.Message}");
                 return;
             }
-            Plugin.Log.LogInfo($"[chars] re-equipped {(InvItemClass.isNull(item) ? "none" : item.type)}");
+            string type;
+            if (InvItemClass.isNull(item))
+            {
+                type = "none";
+            }
+            else
+            {
+                type = item.type;
+            }
+            Plugin.Log.LogInfo($"[chars] re-equipped {type}");
         }
 
         private static bool InBags(Player p, InvItemClass item)

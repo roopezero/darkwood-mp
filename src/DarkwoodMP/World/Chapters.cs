@@ -219,7 +219,12 @@ namespace DarkwoodMP.World
             }
             var w = S.Begin(MsgType.StoryRequest);
             r.Write(w);
-            w.W.Write((byte)(ge != null ? Math.Max(0, ge.events.IndexOf(e)) : 0));
+            int index = 0;
+            if (ge != null)
+            {
+                index = Math.Max(0, ge.events.IndexOf(e));
+            }
+            w.W.Write((byte)index);
             w.W.Write((byte)kind);
             int intValue2 = 0;
             if (kind == StoryKind.Chapter)

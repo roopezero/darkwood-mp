@@ -204,7 +204,13 @@ namespace DarkwoodMP.World
                 return;
             }
             s.Broadcast(s.Begin(MsgType.AfterNightEnded), Channel.Control, reliable: true, except: from);
-            Plugin.Log.LogInfo($"[world] {NameOf(s, from)} walked out of their hideout: the morning is over, sent to the others (ours {(c.isAfterNight ? "waits for our dream" : "already was")})");
+            string name = NameOf(s, from);
+            string ours = "already was";
+            if (c.isAfterNight)
+            {
+                ours = "waits for our dream";
+            }
+            Plugin.Log.LogInfo($"[world] {name} walked out of their hideout: the morning is over, sent to the others (ours {ours})");
         }
 
         /// <summary>Host, every frame: a joiner still in a morning after today's is over (it joined late, or its dawn

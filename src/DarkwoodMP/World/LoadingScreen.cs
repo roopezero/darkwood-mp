@@ -319,10 +319,29 @@ namespace DarkwoodMP.World
             var tm = t.GetComponent<tk2dTextMesh>();
             var sp = t.GetComponent<tk2dBaseSprite>();
             var r = t.GetComponent<Renderer>();
-            Plugin.Log.LogInfo($"[loading] {new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} pos={t.position} scale={t.lossyScale}"
-                + (tm != null ? $" text=\"{tm.text}\" font={tm.font?.name} tscale={tm.scale}" : "")
-                + (sp != null ? $" sprite={sp.CurrentSprite?.name}" : "")
-                + (r != null ? $" bounds={r.bounds.center}/{r.bounds.size} order={r.sortingOrder}" : ""));
+            string line = $"[loading] {new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} pos={t.position} scale={t.lossyScale}";
+            string mesh = "";
+            if (tm != null)
+            {
+                mesh = $" text=\"{tm.text}\" font={tm.font?.name} tscale={tm.scale}";
+            }
+            string sprite = "";
+            if (sp != null)
+            {
+                tk2dSpriteDefinition current = sp.CurrentSprite;
+                string spriteName = null;
+                if (current != null)
+                {
+                    spriteName = current.name;
+                }
+                sprite = $" sprite={spriteName}";
+            }
+            string box = "";
+            if (r != null)
+            {
+                box = $" bounds={r.bounds.center}/{r.bounds.size} order={r.sortingOrder}";
+            }
+            Plugin.Log.LogInfo(line + mesh + sprite + box);
             foreach (Transform c in t)
             {
                 LogTree(c, depth + 1);
