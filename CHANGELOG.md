@@ -2,6 +2,14 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## Unreleased
+
+*Notes for the next release, which comes after the code refactor. Protocol 29 so far.*
+
+- **Code no longer runs on a destroyed game object.** In 153 places the mod tested a Unity object with `?.` or `??`, which count a destroyed object as still there, so the code after them ran on the dead object, and anything in it that reached the game's native side threw an error. Each now uses Unity's own check, which counts a destroyed object as gone: that code is skipped, as it is for a missing object, and `a ?? b` gives `b` when `a` was destroyed. One place keeps the old check on purpose, because it relies on running for a destroyed object: the events a client's switch flip sets off on the host. 42 more are left for a later step of the refactor. Every changed place, with its old and new code, is listed in `tools/DarkwoodMP.Codemod/sites/unity-null.txt` in the commit "refactor(plugin): use Unity's null check where ?. and ?? skipped it". That folder is deleted at the end of the refactor, so read the list from the commit (`git show COMMIT:tools/DarkwoodMP.Codemod/sites/unity-null.txt`). If something that used to happen to an object as it was destroyed no longer happens, look there first.
+
+How it was tested: not in the game yet; the in-game tests run once the refactor is done. The tool that made the change ran the old and the new code side by side on small samples, with missing, live and destroyed objects, and the build was compared method by method with the one before.
+
 ## 0.28.0
 
 *Protocol 29: plays with 0.27.0 (a push from a 0.27.0 player is shown as a jump, as before).*
