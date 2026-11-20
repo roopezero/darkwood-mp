@@ -564,8 +564,28 @@ namespace DarkwoodMP.World
                     inv = prefab.GetComponent<InvItem>();
                 }
                 var jd = Singleton<JournalDatabase>.Instance;
-                sb.Append($"\n[item] {type}: prefab={(prefab != null)} important={inv?.isImportantItem} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}" +
-                          $" inJournal={Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(type)} carried={MapScenarioWorld.CarriedOf(type)}");
+                bool hasPrefab = prefab != null;
+                bool? important = null;
+                if (inv != null)
+                {
+                    important = inv.isImportantItem;
+                }
+                string head = $"\n[item] {type}: prefab={hasPrefab} important={important} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}";
+                UI ui = Singleton<UI>.Instance;
+                bool? inJournal = null;
+                if (ui != null)
+                {
+                    Journal journal = ui.journal;
+                    if (journal != null)
+                    {
+                        Dictionary<string, Journal.Item> items = journal.itemsDict;
+                        if (items != null)
+                        {
+                            inJournal = items.ContainsKey(type);
+                        }
+                    }
+                }
+                sb.Append(head + $" inJournal={inJournal} carried={MapScenarioWorld.CarriedOf(type)}");
             }
             // Every loaded step that acts on the player (ScriptedEvents.TargetsPlayer), by type and function, and how
             // many of them also name other targets.

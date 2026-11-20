@@ -1,0 +1,51 @@
+# The Unity sites of stage 8's batch q13 (World/ map scenarios: issues, gaps,
+# fix checks, diving), rewritten by hand: 1 rewrite of 2 sites (inv?. and the
+# chain Singleton<UI>.Instance?.journal?.itemsDict?., in one statement). Each
+# site tested a Unity object by reference. The new code tests it with
+# "x != null", which calls Unity's ==, so code that ran on a destroyed object
+# is now skipped, as it is for null. Neither site relies on running for a
+# destroyed object, so none is kept as it was. The old code is from the start
+# of its line; lines are those of the file before this rewrite, with the
+# site's line and column in the stage 8 queue in brackets. "destroyed:" says
+# what happens now when the object has been destroyed.
+
+World/MapScenarioDive.cs:567 [queue 505:83, ?.] and :568 [queue 506:41, ?.]
+member: DarkwoodMP.World.MapScenarioDive::Scan(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    sb.Append($"\n[item] {type}: prefab={(prefab != null)} important={inv?.isImportantItem} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}" +
+              $" inJournal={Singleton<UI>.Instance?.journal?.itemsDict?.ContainsKey(type)} carried={MapScenarioWorld.CarriedOf(type)}");
+new:
+    bool hasPrefab = prefab != null;
+    bool? important = null;
+    if (inv != null)
+    {
+        important = inv.isImportantItem;
+    }
+    string head = $"\n[item] {type}: prefab={hasPrefab} important={important} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}";
+    UI ui = Singleton<UI>.Instance;
+    bool? inJournal = null;
+    if (ui != null)
+    {
+        Journal journal = ui.journal;
+        if (journal != null)
+        {
+            Dictionary<string, Journal.Item> items = journal.itemsDict;
+            if (items != null)
+            {
+                inJournal = items.ContainsKey(type);
+            }
+        }
+    }
+    sb.Append(head + $" inJournal={inJournal} carried={MapScenarioWorld.CarriedOf(type)}");
+destroyed: a destroyed InvItem on the tank's prefab counts as none, so the
+    step's log line says "important=" (empty), as for a prefab without one,
+    where it gave the isImportantItem flag the dead component still held. A
+    destroyed UI or Journal (Singleton<UI>.Instance keeps the old UI after it
+    is destroyed, until a new one registers) gives "inJournal=" (empty), as
+    for no UI, where it looked the item up in the dead journal's dictionary.
+    The dictionary itself is a plain object and is still tested by reference.
+    Nothing reads these values: "dive-scan" only logs them. Everything runs
+    in its old order: prefab != null, the InvItem, the journal database's
+    lookup and the first string.Format, then Instance, journal, itemsDict,
+    ContainsKey, CarriedOf and the second format; both stay bool?, so a
+    missing value still prints as nothing.
