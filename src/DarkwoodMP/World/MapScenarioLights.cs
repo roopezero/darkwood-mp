@@ -246,7 +246,14 @@ namespace DarkwoodMP.World
             var byMesh = new Dictionary<Mesh, List<Light2D>>();
             foreach (var l in lights)
             {
-                foreach (var m in new[] { l._mesh, l.GetComponent<MeshFilter>()?.sharedMesh })
+                Mesh mesh = l._mesh;
+                MeshFilter filter = l.GetComponent<MeshFilter>();
+                Mesh filterMesh = null;
+                if (filter != null)
+                {
+                    filterMesh = filter.sharedMesh;
+                }
+                foreach (var m in new[] { mesh, filterMesh })
                 {
                     if (m == null)
                     {

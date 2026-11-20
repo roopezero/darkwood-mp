@@ -1422,7 +1422,18 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             var j = Singleton<UI>.Instance.journal;
-            r.Info = $"{_map}: " + string.Join(", ", ls.Select(l => $"{l.name} journal {j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name))}, map {(l.GetComponent<MapElement>()?.isOnMap.ToString() ?? "no element")}"));
+            r.Info = $"{_map}: " + string.Join(", ", ls.Select(l =>
+            {
+                string name = l.name;
+                bool inJournal = j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name));
+                MapElement element = l.GetComponent<MapElement>();
+                string onMap = "no element";
+                if (element != null)
+                {
+                    onMap = element.isOnMap.ToString();
+                }
+                return $"{name} journal {inJournal}, map {onMap}";
+            }));
             if (!ls.All(Shown))
             {
                 r.Fail(r.Info);
