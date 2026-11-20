@@ -267,12 +267,12 @@ namespace DarkwoodMP.Sync
                 var key = $"far {owner}";
                 var name = _s.NameOf(owner);
                 var position = puppet.position;
-                string ours = "nowhere";
+                string ourPosition = "nowhere";
                 if (Player.Instance != null)
                 {
-                    ours = Player.Instance.transform.position.ToString();
+                    ourPosition = Player.Instance.transform.position.ToString();
                 }
-                LogOnce(key, $"[fx] {name}'s sounds: too far away to hear (puppet at {position}, we're at {ours})");
+                LogOnce(key, $"[fx] {name}'s sounds: too far away to hear (puppet at {position}, we're at {ourPosition})");
             }
             for (int i = 0; i < n; i++)
             {

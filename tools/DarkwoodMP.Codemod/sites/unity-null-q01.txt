@@ -34,12 +34,13 @@ member: DarkwoodMP.Sync.PlayerCapture::Capture(DarkwoodMP.Sync.PlayerSnapshot)
 old (the previous commit moved it out of the [sprite] log line, unchanged, at
 line 309):
                         var coll = s.Collection?.spriteCollectionName;
-new:
+new (a later style commit renamed coll to collectionName, as here; the
+logged text is still "coll="):
                         var collection = s.Collection;
-                        string coll = null;
+                        string collectionName = null;
                         if (collection != null)
                         {
-                            coll = collection.spriteCollectionName;
+                            collectionName = collection.spriteCollectionName;
                         }
 destroyed: the "[sprite] ... coll=" line, logged only with the
 LogPlayerSprites setting, shows nothing after "coll=" for a sprite whose

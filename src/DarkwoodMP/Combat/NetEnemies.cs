@@ -1032,12 +1032,12 @@ namespace DarkwoodMP.Combat
             if (!_weaponEffects.TryGetValue(b, out var own))
             {
                 own = new List<InvItemEffect>();
-                UnityEngine.Object firearm = null;
+                UnityEngine.Object shot = null;
                 if (b.isFirearm)
                 {
-                    firearm = b.item;
+                    shot = b.item;
                 }
-                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, firearm, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
+                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, shot, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
                 {
                     GameObject go = o as GameObject;
                     if (go == null)
@@ -1664,12 +1664,12 @@ namespace DarkwoodMP.Combat
                 {
                     var log = Plugin.Log;
                     var kind = KindOf(c);
-                    string npc = " (an NPC)";
+                    string npcNote = " (an NPC)";
                     if (c.npc == null)
                     {
-                        npc = "";
+                        npcNote = "";
                     }
-                    log.LogInfo($"Save id {uid} is our {kind}{npc}, not the host's {name}: making it from its prefab");
+                    log.LogInfo($"Save id {uid} is our {kind}{npcNote}, not the host's {name}: making it from its prefab");
                     c = null;
                 }
             }

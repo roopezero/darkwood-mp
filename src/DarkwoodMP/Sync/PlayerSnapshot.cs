@@ -307,19 +307,19 @@ namespace DarkwoodMP.Sync
                         var layer = LayerMask.LayerToName(s.gameObject.layer);
                         var active = s.gameObject.activeInHierarchy;
                         var collection = s.Collection;
-                        string coll = null;
+                        string collectionName = null;
                         if (collection != null)
                         {
-                            coll = collection.spriteCollectionName;
+                            collectionName = collection.spriteCollectionName;
                         }
                         var definition = s.CurrentSprite;
-                        string sprite = null;
+                        string spriteName = null;
                         if (definition != null)
                         {
-                            sprite = definition.name;
+                            spriteName = definition.name;
                         }
                         log.LogInfo($"[sprite] {text} path={path} layer={layer} " +
-                                    $"active={active} coll={coll} sprite={sprite}");
+                                    $"active={active} coll={collectionName} sprite={spriteName}");
                     }
                     if (!ok)
                     {
