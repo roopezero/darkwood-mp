@@ -532,5 +532,45 @@ namespace DarkwoodMP
 
         /// A player joined while the host plays the ending.
         PlayingEnding,
+
+        // Hosting: why a player can't host the world they're in.
+
+        /// The player isn't in a world: hosting starts from inside one.
+        LoadWorldToHost,
+
+        /// The world is the player's copy of another host's world, which they
+        /// are still in after leaving that host's game.
+        HostsCopy,
+
+        /// The world is in the epilogue, which can't be shared once it has
+        /// begun.
+        EpilogueBegun,
+
+        // Steam: lobbies, P2P sessions, and messages too long or too many.
+
+        /// The Steam lobby's host runs another protocol version. The detail is
+        /// the lobby's "darkwoodmp" value (the host's mod version), which the
+        /// shell reads after leaving the lobby, so it can be empty.
+        OtherModVersion,
+
+        /// A P2P session request from someone who isn't the lobby's host (for
+        /// a client) or isn't a lobby member (for a host).
+        NotInLobby,
+
+        /// An unreliable message longer than Steam takes in one. The detail is
+        /// Refusals.Detail(KiB, type), the length in whole KiB and then the
+        /// message type's name.
+        TooLongForSteam,
+
+        /// Too much already waits for room in Steam's queue for that peer. The
+        /// detail is how much, in whole KiB.
+        QueueFull,
+
+        /// A long message's first piece gives a length out of range. The
+        /// detail is that length, -1 for a piece shorter than its header.
+        BadMessageLength,
+
+        /// A long message's pieces hold more bytes than its first piece said.
+        PiecesTooLong,
     }
 }
