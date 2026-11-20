@@ -454,7 +454,13 @@ namespace DarkwoodMP.World
             _known = true;
             if (first)
             {
-                Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {Player.Instance?.currentLevel}");
+                Player player = Player.Instance;
+                int? yours = null;
+                if (player != null)
+                {
+                    yours = player.currentLevel;
+                }
+                Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {yours}");
             }
             Apply(Player.Instance);
         }

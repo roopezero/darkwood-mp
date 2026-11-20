@@ -323,7 +323,14 @@ namespace DarkwoodMP.World
             string mesh = "";
             if (tm != null)
             {
-                mesh = $" text=\"{tm.text}\" font={tm.font?.name} tscale={tm.scale}";
+                string words = tm.text;
+                tk2dFontData fontData = tm.font;
+                string fontName = null;
+                if (fontData != null)
+                {
+                    fontName = fontData.name;
+                }
+                mesh = $" text=\"{words}\" font={fontName} tscale={tm.scale}";
             }
             string sprite = "";
             if (sp != null)

@@ -220,11 +220,27 @@ namespace DarkwoodMP.World
                 _nextWhy = Time.unscaledTime + 10f;
                 var ctl = Singleton<Controller>.Instance;
                 var o = Singleton<OutsideLocations>.Instance;
+                string location = null;
+                if (o != null)
+                {
+                    location = o.currentLocationName;
+                }
+                WorldGenerator wg = Singleton<WorldGenerator>.Instance;
+                bool? finished = null;
+                if (wg != null)
+                {
+                    finished = wg.finished;
+                }
+                bool? firstPlay = null;
+                if (p != null)
+                {
+                    firstPlay = p.firstPlay;
+                }
                 Plugin.Log.LogInfo($"[prologue] in {stage}, not ready: generated {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs forbidden {Core.forbidInputs} "
                     + $"(locked {Core.cantChangeForbidInputs}, cutscene {ctl != null && ctl.playingCutscene}, place loading {o != null && o.loading}, switching {d.switchingDream}, "
                     + $"entering {Core.EnteringDream}, dialogue {p != null && p.inDialogue}), first play set {_firstPlaySet}; "
-                    + $"dream prepared {d.dreamPrepared}, loading in dream {d.loadingSaveGameInDream}, want {d.wantToDream}, outside {o != null && o.playerInOutsideLocation} {o?.currentLocationName}, "
-                    + $"spawning {o != null && o.spawningLocations}, generator finished {Singleton<WorldGenerator>.Instance?.finished}, first play {p?.firstPlay}");
+                    + $"dream prepared {d.dreamPrepared}, loading in dream {d.loadingSaveGameInDream}, want {d.wantToDream}, outside {o != null && o.playerInOutsideLocation} {location}, "
+                    + $"spawning {o != null && o.spawningLocations}, generator finished {finished}, first play {firstPlay}");
             }
             if (stage != null && NetEnemies.ClientMode && !_firstPlaySet && WorldShare.WorldReady && p != null)
             {

@@ -680,7 +680,17 @@ namespace DarkwoodMP.World
         /// WorldGenerator's chunks, by their places, so a part of the map that's switched off counts too. True when
         /// that can't be told.
         /// </summary>
-        internal static bool OnMap(Vector3 at) => NearestChunk(at) <= 0.6f * (Singleton<WorldGenerator>.Instance?.chunkSize ?? 0f);
+        internal static bool OnMap(Vector3 at)
+        {
+            float nearest = NearestChunk(at);
+            WorldGenerator wg = Singleton<WorldGenerator>.Instance;
+            float size = 0f;
+            if (wg != null)
+            {
+                size = wg.chunkSize;
+            }
+            return nearest <= 0.6f * size;
+        }
 
         /// <summary>How far (the larger of x and z) the nearest of the world's chunks is from a place; 0 when not known.</summary>
         internal static float NearestChunk(Vector3 at)

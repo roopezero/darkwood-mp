@@ -1,0 +1,101 @@
+# The Unity sites of stage 8's batch q06 (World/: story, characters, saves and
+# screens), rewritten by hand: 4 rewrites of 7 sites (six ?. and the ?? that
+# held one of them). Each site tested a Unity object by reference. The new code
+# tests it with "x != null", which calls Unity's ==, so code that ran on a
+# destroyed object is now skipped, as it is for null. None of these sites
+# relies on running for a destroyed object, so none is kept as it was. The old
+# code is from the start of its line; lines are those of the file before this
+# rewrite, with the site's line and column in the stage 8 queue in brackets.
+# "destroyed:" says what happens now when the object has been destroyed.
+
+World/Characters.cs:683 [queue 665:79, ?? and ?.]
+member: DarkwoodMP.World.Characters::OnMap(UnityEngine.Vector3)
+old:
+    internal static bool OnMap(Vector3 at) => NearestChunk(at) <= 0.6f * (Singleton<WorldGenerator>.Instance?.chunkSize ?? 0f);
+new:
+    internal static bool OnMap(Vector3 at)
+    {
+        float nearest = NearestChunk(at);
+        WorldGenerator wg = Singleton<WorldGenerator>.Instance;
+        float size = 0f;
+        if (wg != null)
+        {
+            size = wg.chunkSize;
+        }
+        return nearest <= 0.6f * size;
+    }
+destroyed: a destroyed WorldGenerator counts as none, so the size is 0
+    instead of its old chunkSize. NearestChunk already gives 0 for it (it
+    tests the generator with Unity's ==), so OnMap stays true: 0 <= 0 now,
+    0 <= 0.6 * chunkSize before.
+
+World/LoadingScreen.cs:326 [queue 323:61, ?.]
+member: DarkwoodMP.World.LoadingScreen::LogTree(UnityEngine.Transform,System.Int32)
+old:
+    mesh = $" text=\"{tm.text}\" font={tm.font?.name} tscale={tm.scale}";
+new:
+    string words = tm.text;
+    tk2dFontData fontData = tm.font;
+    string fontName = null;
+    if (fontData != null)
+    {
+        fontName = fontData.name;
+    }
+    mesh = $" text=\"{words}\" font={fontName} tscale={tm.scale}";
+destroyed: a destroyed font is logged as "font=" with no name. Before, the
+    line asked the destroyed font for its name, which Unity's native GetName
+    refuses with an exception, so the dump of the tree stopped there.
+
+World/Progression.cs:457 [queue 440:105, ?.]
+member: DarkwoodMP.World.Progression::OnState(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {Player.Instance?.currentLevel}");
+new:
+    Player player = Player.Instance;
+    int? yours = null;
+    if (player != null)
+    {
+        yours = player.currentLevel;
+    }
+    Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {yours}");
+destroyed: a destroyed player is logged with no level after "yours" instead
+    of the level left in its managed field. Only the log line changes.
+
+World/Prologue.cs:226 and 227 [queue 226:176, 227:90 and 227:149, three ?.]
+member: DarkwoodMP.World.Prologue::Update()
+old:
+    Plugin.Log.LogInfo($"[prologue] in {stage}, not ready: generated {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs forbidden {Core.forbidInputs} "
+        + $"(locked {Core.cantChangeForbidInputs}, cutscene {ctl != null && ctl.playingCutscene}, place loading {o != null && o.loading}, switching {d.switchingDream}, "
+        + $"entering {Core.EnteringDream}, dialogue {p != null && p.inDialogue}), first play set {_firstPlaySet}; "
+        + $"dream prepared {d.dreamPrepared}, loading in dream {d.loadingSaveGameInDream}, want {d.wantToDream}, outside {o != null && o.playerInOutsideLocation} {o?.currentLocationName}, "
+        + $"spawning {o != null && o.spawningLocations}, generator finished {Singleton<WorldGenerator>.Instance?.finished}, first play {p?.firstPlay}");
+new:
+    string location = null;
+    if (o != null)
+    {
+        location = o.currentLocationName;
+    }
+    WorldGenerator wg = Singleton<WorldGenerator>.Instance;
+    bool? finished = null;
+    if (wg != null)
+    {
+        finished = wg.finished;
+    }
+    bool? firstPlay = null;
+    if (p != null)
+    {
+        firstPlay = p.firstPlay;
+    }
+    Plugin.Log.LogInfo($"[prologue] in {stage}, not ready: generated {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs forbidden {Core.forbidInputs} "
+        + $"(locked {Core.cantChangeForbidInputs}, cutscene {ctl != null && ctl.playingCutscene}, place loading {o != null && o.loading}, switching {d.switchingDream}, "
+        + $"entering {Core.EnteringDream}, dialogue {p != null && p.inDialogue}), first play set {_firstPlaySet}; "
+        + $"dream prepared {d.dreamPrepared}, loading in dream {d.loadingSaveGameInDream}, want {d.wantToDream}, outside {o != null && o.playerInOutsideLocation} {location}, "
+        + $"spawning {o != null && o.spawningLocations}, generator finished {finished}, first play {firstPlay}");
+destroyed: a destroyed OutsideLocations, WorldGenerator or player leaves its
+    value out of the log line (an empty place), the way the checks beside
+    them in the same line (o != null && o.loading, p != null && p.inDialogue)
+    already treated them. Before, the line showed what was left in their
+    managed fields. Only the log line changes. The three values are read
+    before the line now: everything the line read before them only reads
+    (Core.worldGenFinished, Core.forbidInputs, Unity's ==, the game's fields),
+    and the hoisted reads can't throw, so they see the same values.
