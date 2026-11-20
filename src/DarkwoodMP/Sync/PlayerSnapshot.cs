@@ -306,7 +306,12 @@ namespace DarkwoodMP.Sync
                         var log = Plugin.Log;
                         var layer = LayerMask.LayerToName(s.gameObject.layer);
                         var active = s.gameObject.activeInHierarchy;
-                        var coll = s.Collection?.spriteCollectionName;
+                        var collection = s.Collection;
+                        string coll = null;
+                        if (collection != null)
+                        {
+                            coll = collection.spriteCollectionName;
+                        }
                         var definition = s.CurrentSprite;
                         string sprite = null;
                         if (definition != null)

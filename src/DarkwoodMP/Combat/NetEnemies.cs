@@ -1039,7 +1039,15 @@ namespace DarkwoodMP.Combat
                 }
                 foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, firearm, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
                 {
-                    var go = o as GameObject ?? (o as Component)?.gameObject;
+                    GameObject go = o as GameObject;
+                    if (go == null)
+                    {
+                        Component component = o as Component;
+                        if (component != null)
+                        {
+                            go = component.gameObject;
+                        }
+                    }
                     if (go == null)
                     {
                         continue;
