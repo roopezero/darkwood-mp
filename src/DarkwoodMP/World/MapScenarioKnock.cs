@@ -104,7 +104,13 @@ namespace DarkwoodMP.World
             {
                 sb.Append(FormattableString.Invariant($" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
             }
-            sb.Append(" ").Append(DragSync.Instance != null ? DragSync.Instance.WatchInfo(b) : "no DragSync");
+            sb.Append(" ");
+            string watch = "no DragSync";
+            if (DragSync.Instance != null)
+            {
+                watch = DragSync.Instance.WatchInfo(b);
+            }
+            sb.Append(watch);
             return sb.ToString();
         }
 

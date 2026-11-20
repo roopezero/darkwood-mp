@@ -140,7 +140,13 @@ namespace DarkwoodMP.World
                     return name + "." + m.Name;
                 }));
                 string comps = string.Join("/", go.GetComponentsInChildren<MonoBehaviour>(true).Where(m => m != null).Select(m => m.GetType().Name).Distinct());
-                Plugin.Log.LogInfo($"[ee] made {n} at {Fmt(go.transform.position)} (parent {(go.transform.parent != null ? go.transform.parent.name : "none")}; {comps}) from {from}");
+                string place = Fmt(go.transform.position);
+                string parent = "none";
+                if (go.transform.parent != null)
+                {
+                    parent = go.transform.parent.name;
+                }
+                Plugin.Log.LogInfo($"[ee] made {n} at {place} (parent {parent}; {comps}) from {from}");
             }
         }
 
@@ -354,7 +360,18 @@ namespace DarkwoodMP.World
                     {
                         text = "";
                     }
-                    l.Add($"{it.name}{text} [{string.Join("/", it.GetComponents<MonoBehaviour>().Where(m => m != null).Select(m => m.GetType().Name + (m.enabled ? "" : "-off")))}]");
+                    string name = it.name;
+                    string components = string.Join("/", it.GetComponents<MonoBehaviour>().Where(m => m != null).Select(m =>
+                    {
+                        string type = m.GetType().Name;
+                        string off = "-off";
+                        if (m.enabled)
+                        {
+                            off = "";
+                        }
+                        return type + off;
+                    }));
+                    l.Add($"{name}{text} [{components}]");
                 }
             }
             if (l.Count == 0)
@@ -521,11 +538,31 @@ namespace DarkwoodMP.World
                     {
                         return "(gone)";
                     }
-                    return $"{m.name}{(NetEnemies.Instance.NetIdOf(m, out uint i) ? " #" + i : "")} {(NetEnemies.InPlay(m) ? "alive" : "dead")}";
+                    string name = m.name;
+                    string number = "";
+                    if (NetEnemies.Instance.NetIdOf(m, out uint i))
+                    {
+                        number = " #" + i;
+                    }
+                    string status = "dead";
+                    if (NetEnemies.InPlay(m))
+                    {
+                        status = "alive";
+                    }
+                    return $"{name}{number} {status}";
                 }));
             }
-            r.Info = $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, " +
-                     (w.C == null ? "gone" : $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}");
+            string summary = $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, ";
+            string state;
+            if (w.C == null)
+            {
+                state = "gone";
+            }
+            else
+            {
+                state = $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}";
+            }
+            r.Info = summary + state;
             if (w.Timeline.Count > 1)
             {
                 r.Info += $"; targets: {string.Join(", ", w.Timeline.Take(8))}";
@@ -750,7 +787,13 @@ namespace DarkwoodMP.World
                 if (best.c == null)
                 {
                     // Nothing left: unless something it left (a half cut off, a minion) shows up within a moment.
-                    if (Time.realtimeSinceStartup - lastSeen > (a.Contains("--minions") ? 8f : 3f))
+                    float sinceSeen = Time.realtimeSinceStartup - lastSeen;
+                    float grace = 3f;
+                    if (a.Contains("--minions"))
+                    {
+                        grace = 8f;
+                    }
+                    if (sinceSeen > grace)
                     {
                         break;
                     }
@@ -809,7 +852,17 @@ namespace DarkwoodMP.World
             var left = HostEnemies().Where(e => NetEnemies.InPlay(e.c) && !earlier.Contains(e.id) && Core.trueDistance(e.c.transform.position, p.transform.position) < 2500f).Select(e => $"{e.c.name} #{e.id}").ToList();
             var others = seen.Where(x => x != id).ToList();
             HealNow();
-            r.Info = $"{came}; then {swings} swing(s) and {direct} hit(s) of {dmg:0}; the host's here: {seen.Count} ({(others.Count == 0 ? "nothing it spawned" : "spawned " + string.Join(", ", HostEnemies().Where(e => others.Contains(e.id)).Select(e => $"{e.c.name} #{e.id}")))}), our player lost {lost:0} in all";
+            int count = seen.Count;
+            string spawned;
+            if (others.Count == 0)
+            {
+                spawned = "nothing it spawned";
+            }
+            else
+            {
+                spawned = "spawned " + string.Join(", ", HostEnemies().Where(e => others.Contains(e.id)).Select(e => $"{e.c.name} #{e.id}"));
+            }
+            r.Info = $"{came}; then {swings} swing(s) and {direct} hit(s) of {dmg:0}; the host's here: {count} ({spawned}), our player lost {lost:0} in all";
             if (moves && moved < 30f)
             {
                 r.Fail($"it didn't move here: {r.Info}");
@@ -924,7 +977,16 @@ namespace DarkwoodMP.World
             }
             if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
             {
-                r.Fail($"couldn't take the {type} out (holding {(InvItemClass.isNull(p.currentItem) ? "nothing" : p.currentItem.type)}, switching {p.switchingItem}; hotbar: " +
+                string holding;
+                if (InvItemClass.isNull(p.currentItem))
+                {
+                    holding = "nothing";
+                }
+                else
+                {
+                    holding = p.currentItem.type;
+                }
+                r.Fail($"couldn't take the {type} out (holding {holding}, switching {p.switchingItem}; hotbar: " +
                        string.Join(", ", p.Hotbar.slots.Select(s =>
                        {
                            if (InvItemClass.isNull(s.invItem))
@@ -1247,7 +1309,16 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"{dog.name}: shadow armour {s.health:0.#} (going to {dest(s):0.#}) of {s.maxHealth:0}, effect {(s.effectGO != null ? "shown" : "none")}";
+                string name = dog.name;
+                float health = s.health;
+                float goal = dest(s);
+                float full = s.maxHealth;
+                string effect = "none";
+                if (s.effectGO != null)
+                {
+                    effect = "shown";
+                }
+                r.Info = $"{name}: shadow armour {health:0.#} (going to {goal:0.#}) of {full:0}, effect {effect}";
             }
             if (!Ok())
             {

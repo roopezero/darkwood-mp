@@ -93,8 +93,20 @@ namespace DarkwoodMP.World
             {
                 text = "fired";
             }
-            return $"event {text}, {In}: {Desc(Find(In))}, "
-                + $"{Locked}: {Desc(Find(Locked))}, {Out}: {Desc(Find(Out))}, location {(loc == null ? "none" : $"{loc.name} entered={loc.entered}")}";
+            string inState = Desc(Find(In));
+            string lockedState = Desc(Find(Locked));
+            string outState = Desc(Find(Out));
+            string location;
+            if (loc == null)
+            {
+                location = "none";
+            }
+            else
+            {
+                location = $"{loc.name} entered={loc.entered}";
+            }
+            return $"event {text}, {In}: {inState}, "
+                + $"{Locked}: {lockedState}, {Out}: {outState}, location {location}";
         }
 
         private static string Desc(GameObject go)

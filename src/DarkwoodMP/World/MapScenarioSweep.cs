@@ -39,9 +39,15 @@ namespace DarkwoodMP.World
             // One the world's database has that isn't set yet (a fresh save has only a few set), and isn't about the
             // player, a chapter or a death.
             string[] skip = { "player", "chapter", "died", "dead", "kill", "dream" };
-            string name = f.database.worldFlags.Where(x => x != null && !string.IsNullOrEmpty(x.name) && !dict.ContainsKey(x.name)
+            IOrderedEnumerable<string> names = f.database.worldFlags.Where(x => x != null && !string.IsNullOrEmpty(x.name) && !dict.ContainsKey(x.name)
                     && !skip.Any(k => x.name.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
-                .Select(x => x.name).OrderBy(x => x, StringComparer.Ordinal).Skip(a.Length > 0 ? int.Parse(a[0]) : 0).FirstOrDefault();
+                .Select(x => x.name).OrderBy(x => x, StringComparer.Ordinal);
+            int offset = 0;
+            if (a.Length > 0)
+            {
+                offset = int.Parse(a[0]);
+            }
+            string name = names.Skip(offset).FirstOrDefault();
             if (name == null)
             {
                 r.Fail($"no such flag ({dict.Count} set)");

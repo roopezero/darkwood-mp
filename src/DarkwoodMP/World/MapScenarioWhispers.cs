@@ -149,7 +149,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{_sound} playing {Playing()} (want {(want ? "playing" : "stopped")}); entered {_et.entered}, left {_et.exited}, exit ran {_t.firedExit}";
+            string sound = _sound;
+            bool playing = Playing();
+            string wanted = "stopped";
+            if (want)
+            {
+                wanted = "playing";
+            }
+            r.Info = $"{sound} playing {playing} (want {wanted}); entered {_et.entered}, left {_et.exited}, exit ran {_t.firedExit}";
             if (Playing() != want)
             {
                 string why;
