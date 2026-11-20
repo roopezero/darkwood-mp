@@ -441,7 +441,13 @@ namespace DarkwoodMP.World
                 Authority.Refuse(why);
                 return;
             }
-            Plugin.Log.LogInfo($"[skills] {S.NameOf(from)} learned {good}{(negative.Length > 0 ? " with " + negative : "")} at level {level}");
+            string name = S.NameOf(from);
+            string withNegative = "";
+            if (negative.Length > 0)
+            {
+                withNegative = " with " + negative;
+            }
+            Plugin.Log.LogInfo($"[skills] {name} learned {good}{withNegative} at level {level}");
         }
 
         // ---- tests ----------------------------------------------------------------------------------

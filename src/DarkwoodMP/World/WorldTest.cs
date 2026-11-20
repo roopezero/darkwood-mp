@@ -77,7 +77,15 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var found = DbItems().Where(x => x.it.placeOnUse).Select(x => $"{x.key} -> {(x.it.item != null ? x.it.item.name : "nothing")}").ToList();
+            var found = DbItems().Where(x => x.it.placeOnUse).Select(x =>
+            {
+                string placed = "nothing";
+                if (x.it.item != null)
+                {
+                    placed = x.it.item.name;
+                }
+                return $"{x.key} -> {placed}";
+            }).ToList();
             string value = "";
             if (found.Count > 0)
             {
@@ -249,7 +257,17 @@ namespace DarkwoodMP.World
 
             // Traders: a restock (the host's to do), and an NPC dying.
             var npcs = Object.FindObjectsOfType<NPC>().Where(n => n.GetComponent<Character>() != null && n.GetComponent<Character>().alive).ToList();
-            Plugin.Log.LogInfo($"[world test] NPCs here: {string.Join(", ", npcs.Select(n => n.name + (n.trader ? " (trader)" : "")))}");
+            string names = string.Join(", ", npcs.Select(n =>
+            {
+                string npcName = n.name;
+                string mark = "";
+                if (n.trader)
+                {
+                    mark = " (trader)";
+                }
+                return npcName + mark;
+            }));
+            Plugin.Log.LogInfo($"[world test] NPCs here: {names}");
             var trader = npcs.FirstOrDefault(n => n.trader);
             if (trader != null)
             {
@@ -267,7 +285,14 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] killing {victim.name}");
                 victim.GetComponent<Character>().die();
                 yield return new WaitForSeconds(4f);
-                Plugin.Log.LogInfo($"[world test] {victim.name} dead in the flags: {Singleton<Flags>.Instance.getNPCState(victim.name)?.dead}");
+                string victimName = victim.name;
+                Flags.NPCState state = Singleton<Flags>.Instance.getNPCState(victim.name);
+                bool? dead = null;
+                if (state != null)
+                {
+                    dead = state.dead;
+                }
+                Plugin.Log.LogInfo($"[world test] {victimName} dead in the flags: {dead}");
             }
             // Dragging something: the player takes hold of it (itemBeingDragged, as Item.startDragging sets) and it moves.
             var drag = Nearest(Object.FindObjectsOfType<Item>().Where(i => i.draggable && !i.isLight && !i.hasInventory && i.GetComponent<Rigidbody>() != null), at);
@@ -396,8 +421,20 @@ namespace DarkwoodMP.World
                 // A sprite from a collection not loaded here, from a player whose body uses libName: that loads it.
                 Sync.SpriteCollections.Get(Net.StableHash.Of("not loaded here"), libName);
                 var lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == libName);
-                var colls = lib?.clips?.SelectMany(c => c.frames ?? new tk2dSpriteAnimationFrame[0]).Select(f => f.spriteCollection?.spriteCollectionName)
-                    .Where(n => n != null).Distinct().ToList() ?? new List<string>();
+                List<string> colls = lib?.clips?.SelectMany(c =>
+                {
+                    tk2dSpriteAnimationFrame[] frames = c.frames;
+                    if (frames != null)
+                    {
+                        return frames;
+                    }
+                    return new tk2dSpriteAnimationFrame[0];
+                }).Select(f => f.spriteCollection?.spriteCollectionName)
+                    .Where(n => n != null).Distinct().ToList();
+                if (colls == null)
+                {
+                    colls = new List<string>();
+                }
                 int inLib = colls.Count(n => Sync.SpriteCollections.Get(Net.StableHash.Of(n)) != null);
                 string text4 = "FAIL: not loaded";
                 if (lib != null)
@@ -422,7 +459,14 @@ namespace DarkwoodMP.World
                 lateHit = ObjRef.Resolve<SaveableObject>(new ObjRef { K = ObjRef.Kind.Saved, Id = late[0].uniqueId });
             }
             bool lateOk = lateSaved == 0 && (late.Count == 0 || late[0].uniqueId < SharedIds.ResolveLimit || lateHit == null);
-            Plugin.Log.LogInfo($"[world test] save ids: shared below {SharedIds.SendLimit} (resolved below {SharedIds.ResolveLimit}); {sharedSaved} named by save id, {late.Count} given out later, {lateSaved} of those named by save id: {(lateOk ? "ok" : "FAIL")}");
+            int sendLimit = SharedIds.SendLimit;
+            int resolveLimit = SharedIds.ResolveLimit;
+            string verdict = "FAIL";
+            if (lateOk)
+            {
+                verdict = "ok";
+            }
+            Plugin.Log.LogInfo($"[world test] save ids: shared below {sendLimit} (resolved below {resolveLimit}); {sharedSaved} named by save id, {late.Count} given out later, {lateSaved} of those named by save id: {verdict}");
             var placed = Object.FindObjectsOfType<Item>().Where(i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Placed).Take(20).ToList();
             int found = 0;
             foreach (var pi in placed)
@@ -495,7 +539,16 @@ namespace DarkwoodMP.World
                     player.openedItemInventory2 = null;
                     yield return new WaitForSeconds(6f); // the observer's turn
                     var got = storage.slots[free].invItem;
-                    Plugin.Log.LogInfo($"[world test] storage slot {free} now: {(InvItemClass.isNull(got) ? "empty" : got.type + " x" + got.amount)}; workbench level {Singleton<Controller>.Instance.workbenchLevel}");
+                    string contents;
+                    if (InvItemClass.isNull(got))
+                    {
+                        contents = "empty";
+                    }
+                    else
+                    {
+                        contents = got.type + " x" + got.amount;
+                    }
+                    Plugin.Log.LogInfo($"[world test] storage slot {free} now: {contents}; workbench level {Singleton<Controller>.Instance.workbenchLevel}");
 
                     // Sort & Stack (the observer pressed it too, as a client, during its turn): two partial stacks of
                     // one item in two free slots apart, then the button's action. They must end as one stack.
@@ -564,7 +617,15 @@ namespace DarkwoodMP.World
             }
             if (lck != null)
             {
-                Plugin.Log.LogInfo($"[world test] lock on {lck.name} {ObjRef.Of(lck.gameObject)} at {lck.transform.position} ({(lck.GetComponent<Door>() != null ? "door" : "item")}, key {lck.keyType})");
+                string lockName = lck.name;
+                ObjRef lockRef = ObjRef.Of(lck.gameObject);
+                Vector3 lockAt = lck.transform.position;
+                string kind = "item";
+                if (lck.GetComponent<Door>() != null)
+                {
+                    kind = "door";
+                }
+                Plugin.Log.LogInfo($"[world test] lock on {lockName} {lockRef} at {lockAt} ({kind}, key {lck.keyType})");
                 player.Inventory.addItemTypeToPlayer("lockpick", 1);
                 yield return null;
                 lck.tryToLockpick();
@@ -745,7 +806,15 @@ namespace DarkwoodMP.World
                 cfg.Value = 50;
             }
             yield return null;
-            void Check(bool ok, string what) => Plugin.Log.LogInfo($"[world test] stacks: {(ok ? "PASS" : "FAIL")} {what}");
+            void Check(bool ok, string what)
+            {
+                string verdict = "FAIL";
+                if (ok)
+                {
+                    verdict = "PASS";
+                }
+                Plugin.Log.LogInfo($"[world test] stacks: {verdict} {what}");
+            }
             var db = DbItems().ToList();
             foreach (var (k, it) in db.Where(x => x.it.stacksDurability || (x.it.stackable && x.it.maxAmount <= 1)))
             {
@@ -762,7 +831,20 @@ namespace DarkwoodMP.World
                 gas = db.Where(x => x.it.stacksDurability).Select(x => x.key).FirstOrDefault();
             }
 
-            List<InvSlot> Bags() => player.Inventory.slots.Concat(player.Hotbar != null ? player.Hotbar.slots : new List<InvSlot>()).ToList();
+            List<InvSlot> Bags()
+            {
+                List<InvSlot> slots = player.Inventory.slots;
+                List<InvSlot> hotbar;
+                if (player.Hotbar != null)
+                {
+                    hotbar = player.Hotbar.slots;
+                }
+                else
+                {
+                    hotbar = new List<InvSlot>();
+                }
+                return slots.Concat(hotbar).ToList();
+            }
             void Clear(string type)
             {
                 foreach (var sl in Bags())
@@ -944,7 +1026,20 @@ namespace DarkwoodMP.World
             foreach (var o in ovens)
             {
                 var l = o.transform.GetLocation();
-                Plugin.Log.LogInfo($"[world test] oven {o.name} {ObjRef.Of(o.gameObject)} on {o.isOn} at {(l != null ? l.name + " hideout " + l.hideoutId + " ward " + (l.shadowWard != null && l.shadowWard.activeSelf) : "no location")}{(o == player.experienceMachine ? " (ours)" : "")}");
+                string ovenName = o.name;
+                ObjRef ovenRef = ObjRef.Of(o.gameObject);
+                bool ovenOn = o.isOn;
+                string location = "no location";
+                if (l != null)
+                {
+                    location = l.name + " hideout " + l.hideoutId + " ward " + (l.shadowWard != null && l.shadowWard.activeSelf);
+                }
+                string ours = "";
+                if (o == player.experienceMachine)
+                {
+                    ours = " (ours)";
+                }
+                Plugin.Log.LogInfo($"[world test] oven {ovenName} {ovenRef} on {ovenOn} at {location}{ours}");
             }
             var mine = player.experienceMachine;
             ExperienceMachine other = ovens.FirstOrDefault(o => o != mine);
@@ -956,7 +1051,16 @@ namespace DarkwoodMP.World
             {
                 player.setExperienceMachine(other);
                 var l = other.transform.GetLocation();
-                Plugin.Log.LogInfo($"[world test] lit oven {other.name}: on {other.isOn}, ward {(l != null && l.shadowWard != null && l.shadowWard.activeSelf)}, ours {player.experienceMachine == other}; the old one {(mine != null ? mine.name + " on " + mine.isOn : "none")}");
+                string litName = other.name;
+                bool litOn = other.isOn;
+                bool ward = l != null && l.shadowWard != null && l.shadowWard.activeSelf;
+                bool isOurs = player.experienceMachine == other;
+                string oldOne = "none";
+                if (mine != null)
+                {
+                    oldOne = mine.name + " on " + mine.isOn;
+                }
+                Plugin.Log.LogInfo($"[world test] lit oven {litName}: on {litOn}, ward {ward}, ours {isOurs}; the old one {oldOne}");
                 yield return new WaitForSeconds(1f);
                 if (mine != null && mine != other)
                 {
@@ -971,7 +1075,13 @@ namespace DarkwoodMP.World
             var hideouts = Object.FindObjectsOfType<Location>().Where(l => l.hideoutId > 0 && !l.isSubLocation).OrderBy(l => l.hideoutId).ToList();
             player.whereAmI.checkWhereAmI();
             var here = player.whereAmI.bigLocation;
-            Plugin.Log.LogInfo($"[world test] hideouts: {string.Join(", ", hideouts.Select(l => $"{l.name} #{l.hideoutId} ({l.inventoriesList.Count} containers, delivery {(l.porterDeliveryPosition != null)})"))}; we're at {(here != null ? here.name : "none")}");
+            string listing = string.Join(", ", hideouts.Select(l => $"{l.name} #{l.hideoutId} ({l.inventoriesList.Count} containers, delivery {(l.porterDeliveryPosition != null)})"));
+            string place = "none";
+            if (here != null)
+            {
+                place = here.name;
+            }
+            Plugin.Log.LogInfo($"[world test] hideouts: {listing}; we're at {place}");
             if (here != null && hideouts.Contains(here))
             {
                 int before = ItemsIn(here);
@@ -1054,7 +1164,18 @@ namespace DarkwoodMP.World
                 {
                     pitem = pf.GetComponent<Item>();
                 }
-                Plugin.Log.LogInfo($"[world test] prefab {name}: {Parts(pf)}; removeWhenEmpty={(pinv != null ? pinv.removeWhenEmpty.ToString() : "-")}, isDroppedItem={(pitem != null ? pitem.isDroppedItem.ToString() : "-")}");
+                string components = Parts(pf);
+                string removeWhenEmpty = "-";
+                if (pinv != null)
+                {
+                    removeWhenEmpty = pinv.removeWhenEmpty.ToString();
+                }
+                string isDroppedItem = "-";
+                if (pitem != null)
+                {
+                    isDroppedItem = pitem.isDroppedItem.ToString();
+                }
+                Plugin.Log.LogInfo($"[world test] prefab {name}: {components}; removeWhenEmpty={removeWhenEmpty}, isDroppedItem={isDroppedItem}");
             }
             InvItem lureItem = null;
             if (Singleton<ItemsDatabase>.Instance != null)
@@ -1255,7 +1376,14 @@ namespace DarkwoodMP.World
                     name2 = sc.name;
                 }
                 Plugin.Log.LogInfo($"[world test] night scenario {name2}");
-                var ev = sc?.customEventAndInts.Select(e => e?.customEvent).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
+                var ev = sc?.customEventAndInts.Select(e =>
+                {
+                    if (e != null)
+                    {
+                        return e.customEvent;
+                    }
+                    return null;
+                }).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
                 var big = player.whereAmI.bigLocation;
                 if (ev != null && big != null)
                 {
@@ -1407,7 +1535,23 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[world test] world triggers (time, death, turned on): {worldTriggers.Count}, not fired {worldTriggers.Count(x => !x.t.fired)}");
             foreach (var x in worldTriggers.OrderBy(x => (x.et.transform.position - at).sqrMagnitude).Take(4))
             {
-                Plugin.Log.LogInfo($"[world test] world trigger {x.t.type} {x.et.name} {ObjRef.Of(x.et.gameObject)} #{x.i} active={x.et.gameObject.activeInHierarchy} disabled={x.t.disabled} events: {(x.t.gameEvents != null ? Steps(x.t.gameEvents) + (x.t.gameEvents.fired ? " (fired)" : "") : "none")}");
+                global::EventTrigger.Type kind = x.t.type;
+                string triggerName = x.et.name;
+                ObjRef triggerRef = ObjRef.Of(x.et.gameObject);
+                bool active = x.et.gameObject.activeInHierarchy;
+                bool disabled = x.t.disabled;
+                string script = "none";
+                if (x.t.gameEvents != null)
+                {
+                    string stepTypes = Steps(x.t.gameEvents);
+                    string fired = "";
+                    if (x.t.gameEvents.fired)
+                    {
+                        fired = " (fired)";
+                    }
+                    script = stepTypes + fired;
+                }
+                Plugin.Log.LogInfo($"[world test] world trigger {kind} {triggerName} {triggerRef} #{x.i} active={active} disabled={disabled} events: {script}");
             }
             var wt = worldTriggers
                 .Where(x => Unfired(x.t)
@@ -1502,7 +1646,16 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[client test] after the host's answer: open={door.opened} (was {wasOpen}), ropes={Ropes()}, rolled back {Authority.RolledBack}");
             // The scripted host refuses the door: it is shut or open as before, and the rope it used is back.
             bool back = door.opened == wasOpen && Ropes() == ropesBefore && Authority.RolledBack > refusedBefore;
-            Plugin.Log.LogInfo($"[client test] rollback: {(back ? "PASS" : $"FAIL (open={door.opened}, was {wasOpen}; ropes {Ropes()}, were {ropesBefore}; refusals {Authority.RolledBack - refusedBefore})")}");
+            string verdict;
+            if (back)
+            {
+                verdict = "PASS";
+            }
+            else
+            {
+                verdict = $"FAIL (open={door.opened}, was {wasOpen}; ropes {Ropes()}, were {ropesBefore}; refusals {Authority.RolledBack - refusedBefore})";
+            }
+            Plugin.Log.LogInfo($"[client test] rollback: {verdict}");
 
             // A trigger our player walks into: our part and the shared part run here, and the host is asked.
             var triggers = AreaTriggers(p.transform.position);

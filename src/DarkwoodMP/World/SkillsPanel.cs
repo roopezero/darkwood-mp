@@ -207,8 +207,28 @@ namespace DarkwoodMP.World
                 var t = tiers[i];
                 bool open = t.level <= level;
                 var c = new Rect(head.x + i * colW, head.y, colW, PixelFont.Line);
-                PixelFont.Draw(c, SkillTree.TierName(i), open ? MenuSkin.Bright : MenuSkin.Dim, TextAnchor.MiddleCenter, PixelFont.Kind.Title);
-                Ui.Label(new Rect(c.x, c.yMax + 2 * UiWindow.S, colW, PixelFont.Line), open ? "open" : $"level {t.level}", MenuSkin.Dim, TextAnchor.MiddleCenter);
+                string tier = SkillTree.TierName(i);
+                Color tierColor;
+                if (open)
+                {
+                    tierColor = MenuSkin.Bright;
+                }
+                else
+                {
+                    tierColor = MenuSkin.Dim;
+                }
+                PixelFont.Draw(c, tier, tierColor, TextAnchor.MiddleCenter, PixelFont.Kind.Title);
+                var under = new Rect(c.x, c.yMax + 2 * UiWindow.S, colW, PixelFont.Line);
+                string opens;
+                if (open)
+                {
+                    opens = "open";
+                }
+                else
+                {
+                    opens = $"level {t.level}";
+                }
+                Ui.Label(under, opens, MenuSkin.Dim, TextAnchor.MiddleCenter);
             }
             f.Space(2);
             var grid = f.Next(rows * (icon + gap));
@@ -270,7 +290,18 @@ namespace DarkwoodMP.World
             if (show != null)
             {
                 SkillTree.TierOf(show, out bool neg);
-                PixelFont.Draw(f.Next(PixelFont.Line + 2 * UiWindow.S), SkillName(show), neg ? MenuSkin.Warn : MenuSkin.Bright, TextAnchor.MiddleLeft, PixelFont.Kind.Title);
+                Rect line = f.Next(PixelFont.Line + 2 * UiWindow.S);
+                string title = SkillName(show);
+                Color nameColor;
+                if (neg)
+                {
+                    nameColor = MenuSkin.Warn;
+                }
+                else
+                {
+                    nameColor = MenuSkin.Bright;
+                }
+                PixelFont.Draw(line, title, nameColor, TextAnchor.MiddleLeft, PixelFont.Kind.Title);
                 string state;
                 if (chosen.Contains(show))
                 {
@@ -289,7 +320,14 @@ namespace DarkwoodMP.World
                     state = SkillTree.CantTake(level, chosen, show);
                     if (state == null)
                     {
-                        state = SkillTree.NeedsNegative(chosen, show) ? "Comes with a negative skill of its tier" : "Can be learned";
+                        if (SkillTree.NeedsNegative(chosen, show))
+                        {
+                            state = "Comes with a negative skill of its tier";
+                        }
+                        else
+                        {
+                            state = "Can be learned";
+                        }
                     }
                 }
                 Ui.Label(f, Capital(state), MenuSkin.Dim);
@@ -377,8 +415,28 @@ namespace DarkwoodMP.World
                     status = "";
                 }
             }
-            Ui.Label(c[0], PixelFont.Fit(status, c[0].width), _message != null ? MenuSkin.Warn : MenuSkin.Dim);
-            bool ready = _good != null && !SkillTree.Waiting && SkillTree.Check(level, chosen, _good, needNeg ? _negative : null) == null;
+            Rect cell = c[0];
+            string fitted = PixelFont.Fit(status, c[0].width);
+            Color tint;
+            if (_message != null)
+            {
+                tint = MenuSkin.Warn;
+            }
+            else
+            {
+                tint = MenuSkin.Dim;
+            }
+            Ui.Label(cell, fitted, tint);
+            bool ready = false;
+            if (_good != null && !SkillTree.Waiting)
+            {
+                string negative = null;
+                if (needNeg)
+                {
+                    negative = _negative;
+                }
+                ready = SkillTree.Check(level, chosen, _good, negative) == null;
+            }
             if (Event.current.type == EventType.Repaint)
             {
                 _learnRect = ToScreen(c[1]);
@@ -853,7 +911,29 @@ namespace DarkwoodMP.World
                     bool reached = false;
                     yield return RealMouse.MoveTo(rs[1].center, ok => reached = ok);
                     yield return RealMouse.Click();
-                    Plugin.Log.LogInfo($"[skills] real click {n} on {sk} (reached {reached}, mouse {RealMouse.Now}, cell {rs[1]}): over {_hover ?? "nothing"}, chosen {_good ?? "nothing"} with {_negative ?? "nothing"}, message {_message ?? "none"}");
+                    Vector2 mouse = RealMouse.Now;
+                    Rect cell = rs[1];
+                    string over = _hover;
+                    if (over == null)
+                    {
+                        over = "nothing";
+                    }
+                    string picked = _good;
+                    if (picked == null)
+                    {
+                        picked = "nothing";
+                    }
+                    string pickedNegative = _negative;
+                    if (pickedNegative == null)
+                    {
+                        pickedNegative = "nothing";
+                    }
+                    string why = _message;
+                    if (why == null)
+                    {
+                        why = "none";
+                    }
+                    Plugin.Log.LogInfo($"[skills] real click {n} on {sk} (reached {reached}, mouse {mouse}, cell {cell}): over {over}, chosen {picked} with {pickedNegative}, message {why}");
                 }
                 float until = Time.realtimeSinceStartup + 8f;
                 while (SkillTree.Waiting && Time.realtimeSinceStartup < until)
@@ -872,7 +952,32 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.3f);
                 var have = SkillTree.Chosen(p);
                 bool ok2 = have.Contains(choice[0]) && (choice[1] == null || have.Contains(choice[1]));
-                Plugin.Log.LogInfo($"[skills] real click {n} on Learn (mouse {RealMouse.Now}, button {_learnRect}): {(ok2 ? "learned" : "NOT learned")} {choice[0]}{(choice[1] != null ? " with " + choice[1] : "")}, points {before} -> {SkillTree.Points(p)}, panel open {Open}, chosen {_good ?? "nothing"}, message {_message ?? "none"}");
+                Vector2 pointer = RealMouse.Now;
+                Rect button = _learnRect;
+                string outcome = "NOT learned";
+                if (ok2)
+                {
+                    outcome = "learned";
+                }
+                string skill = choice[0];
+                string withNegative = "";
+                if (choice[1] != null)
+                {
+                    withNegative = " with " + choice[1];
+                }
+                int after = SkillTree.Points(p);
+                bool panelOpen = Open;
+                string stillPicked = _good;
+                if (stillPicked == null)
+                {
+                    stillPicked = "nothing";
+                }
+                string reason = _message;
+                if (reason == null)
+                {
+                    reason = "none";
+                }
+                Plugin.Log.LogInfo($"[skills] real click {n} on Learn (mouse {pointer}, button {button}): {outcome} {skill}{withNegative}, points {before} -> {after}, panel open {panelOpen}, chosen {stillPicked}, message {reason}");
                 if (!ok2)
                 {
                     string text = "";

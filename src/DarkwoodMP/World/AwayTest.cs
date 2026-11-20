@@ -161,7 +161,13 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            Plugin.Log.LogInfo($"--dwmp-test-away: locations loaded for the others: {Locations.LoadedForOthers}; our player is in {(PlayerCapture.LocalAway() ? Locations.Current() : "the world")}");
+            int loaded = Locations.LoadedForOthers;
+            string place = "the world";
+            if (PlayerCapture.LocalAway())
+            {
+                place = Locations.Current();
+            }
+            Plugin.Log.LogInfo($"--dwmp-test-away: locations loaded for the others: {loaded}; our player is in {place}");
             WorldGrid.Grid currentGrid2 = grid.currentGrid;
             string name2 = null;
             if (currentGrid2 != null)

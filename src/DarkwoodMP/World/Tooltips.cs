@@ -124,7 +124,16 @@ namespace DarkwoodMP.World
             int i = 0;
             while (i < text.Length)
             {
-                int a = text.IndexOf('{', i), b = a < 0 ? -1 : text.IndexOf('}', a);
+                int a = text.IndexOf('{', i);
+                int b;
+                if (a < 0)
+                {
+                    b = -1;
+                }
+                else
+                {
+                    b = text.IndexOf('}', a);
+                }
                 if (a < 0 || b < 0)
                 {
                     sb.Append(text, i, text.Length - i);
@@ -606,10 +615,19 @@ namespace DarkwoodMP.World
                     ["isWorldChunk"] = e.isWorldChunk,
                     ["isDeathDrop"] = e.isDeathDrop,
                     ["isOnMap"] = e.isOnMap,
-                    ["ui"] = string.IsNullOrEmpty(e.elementName) ? "" : global::Language.Get(e.elementName, "UI"),
-                    ["x"] = e.transform.position.x,
-                    ["z"] = e.transform.position.z,
                 };
+                string ui;
+                if (string.IsNullOrEmpty(e.elementName))
+                {
+                    ui = "";
+                }
+                else
+                {
+                    ui = global::Language.Get(e.elementName, "UI");
+                }
+                o["ui"] = ui;
+                o["x"] = e.transform.position.x;
+                o["z"] = e.transform.position.z;
                 string type = null;
                 foreach (var t in map.types)
                 {
