@@ -421,16 +421,31 @@ namespace DarkwoodMP.World
                 // A sprite from a collection not loaded here, from a player whose body uses libName: that loads it.
                 Sync.SpriteCollections.Get(Net.StableHash.Of("not loaded here"), libName);
                 var lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == libName);
-                List<string> colls = lib?.clips?.SelectMany(c =>
+                List<string> colls = null;
+                if (lib != null)
                 {
-                    tk2dSpriteAnimationFrame[] frames = c.frames;
-                    if (frames != null)
+                    tk2dSpriteAnimationClip[] clips = lib.clips;
+                    if (clips != null)
                     {
-                        return frames;
+                        colls = clips.SelectMany(c =>
+                        {
+                            tk2dSpriteAnimationFrame[] frames = c.frames;
+                            if (frames != null)
+                            {
+                                return frames;
+                            }
+                            return new tk2dSpriteAnimationFrame[0];
+                        }).Select(f =>
+                        {
+                            tk2dSpriteCollectionData collection = f.spriteCollection;
+                            if (collection != null)
+                            {
+                                return collection.spriteCollectionName;
+                            }
+                            return null;
+                        }).Where(n => n != null).Distinct().ToList();
                     }
-                    return new tk2dSpriteAnimationFrame[0];
-                }).Select(f => f.spriteCollection?.spriteCollectionName)
-                    .Where(n => n != null).Distinct().ToList();
+                }
                 if (colls == null)
                 {
                     colls = new List<string>();
@@ -1376,14 +1391,18 @@ namespace DarkwoodMP.World
                     name2 = sc.name;
                 }
                 Plugin.Log.LogInfo($"[world test] night scenario {name2}");
-                var ev = sc?.customEventAndInts.Select(e =>
+                CustomEvent ev = null;
+                if (sc != null)
                 {
-                    if (e != null)
+                    ev = sc.customEventAndInts.Select(e =>
                     {
-                        return e.customEvent;
-                    }
-                    return null;
-                }).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
+                        if (e != null)
+                        {
+                            return e.customEvent;
+                        }
+                        return null;
+                    }).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
+                }
                 var big = player.whereAmI.bigLocation;
                 if (ev != null && big != null)
                 {

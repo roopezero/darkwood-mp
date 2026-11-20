@@ -1,0 +1,91 @@
+# The Unity sites of stage 8's batch q07 (World/: the skills panel, tooltips
+# and the world test), rewritten by hand: 2 rewrites of 3 sites, all ?. (two
+# of them in one chain). Each site tested a Unity object by reference. The
+# new code tests it with "x != null", which calls Unity's ==, so code that
+# ran on a destroyed object is now skipped, as it is for null. None of these
+# sites relies on running for a destroyed object, so none is kept as it was.
+# The old code is from the start of its line; lines are those of the file
+# before this rewrite, with the site's line and column in the stage 8 queue
+# in brackets. "destroyed:" says what happens now when the object has been
+# destroyed.
+
+World/WorldTest.cs:424 [queue 399:29, two ?. in one chain; 399:114, ?.]
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    List<string> colls = lib?.clips?.SelectMany(c =>
+    {
+        tk2dSpriteAnimationFrame[] frames = c.frames;
+        if (frames != null)
+        {
+            return frames;
+        }
+        return new tk2dSpriteAnimationFrame[0];
+    }).Select(f => f.spriteCollection?.spriteCollectionName)
+        .Where(n => n != null).Distinct().ToList();
+new:
+    List<string> colls = null;
+    if (lib != null)
+    {
+        tk2dSpriteAnimationClip[] clips = lib.clips;
+        if (clips != null)
+        {
+            colls = clips.SelectMany(c =>
+            {
+                tk2dSpriteAnimationFrame[] frames = c.frames;
+                if (frames != null)
+                {
+                    return frames;
+                }
+                return new tk2dSpriteAnimationFrame[0];
+            }).Select(f =>
+            {
+                tk2dSpriteCollectionData collection = f.spriteCollection;
+                if (collection != null)
+                {
+                    return collection.spriteCollectionName;
+                }
+                return null;
+            }).Where(n => n != null).Distinct().ToList();
+        }
+    }
+destroyed: the animation library (lib) and a frame's sprite collection
+    are Unity objects; the clips array is tested by reference, as before.
+    A destroyed library now counts as none, so colls stays empty and the
+    look line says "FAIL: not loaded; 0 of 0", as its "loaded" test (also
+    Unity's ==) already said; before, the dead library's clips were still
+    read and counted. It can't happen here: the library comes from
+    Resources.FindObjectsOfTypeAll on the line before, with no yield
+    between. A destroyed sprite collection in a frame now gives no name,
+    so the Where leaves it out of the collections counted; before, its
+    spriteCollectionName was read from the dead object and counted.
+
+World/WorldTest.cs:1379 [queue 1258:26, ?.]
+member: DarkwoodMP.World.WorldTest::WorldEventsStep(Player)
+old:
+    var ev = sc?.customEventAndInts.Select(e =>
+    {
+        if (e != null)
+        {
+            return e.customEvent;
+        }
+        return null;
+    }).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
+new:
+    CustomEvent ev = null;
+    if (sc != null)
+    {
+        ev = sc.customEventAndInts.Select(e =>
+        {
+            if (e != null)
+            {
+                return e.customEvent;
+            }
+            return null;
+        }).FirstOrDefault(e => e != null && e.theEvent != null && e.theEvent.type == RandomEvent.Type.locationEvent);
+    }
+destroyed: a destroyed night scenario counts as none, so no event is
+    looked up in it and none is fired: the step logs "no night event
+    fired (event none, ...)", in step with the "night scenario none" line
+    above it, which already tested the scenario with Unity's ==. Before,
+    the dead scenario's event list was still searched, and its location
+    event fired when the player stood in a big location.
