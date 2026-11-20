@@ -159,7 +159,12 @@ namespace DarkwoodMP.World
             var t = ObjRef.Resolve<Transform>(obj);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (t != null ? t.name : "not found here"));
+                string name = "not found here";
+                if (t != null)
+                {
+                    name = t.name;
+                }
+                Plugin.Log.LogInfo($"[world] got {a} {obj}: " + name);
             }
             if (t == null)
             {

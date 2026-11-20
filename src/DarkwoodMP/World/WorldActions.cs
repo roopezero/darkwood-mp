@@ -227,13 +227,21 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (S.IsClient && OursAlone(ObjRef.Resolve<Transform>(r) is Transform t && t != null ? t.gameObject : null))
+            if (S.IsClient)
             {
-                if (Debug)
+                GameObject go = null;
+                if (ObjRef.Resolve<Transform>(r) is Transform t && t != null)
                 {
-                    Plugin.Log.LogInfo($"[world] {a} {r} ({name}): ours alone, not sent");
+                    go = t.gameObject;
                 }
-                return;
+                if (OursAlone(go))
+                {
+                    if (Debug)
+                    {
+                        Plugin.Log.LogInfo($"[world] {a} {r} ({name}): ours alone, not sent");
+                    }
+                    return;
+                }
             }
             if (S.IsClient && HammerStroke.Depth > 0)
             {
@@ -354,7 +362,20 @@ namespace DarkwoodMP.World
                     Authority.Result(result);
                     if (Debug)
                     {
-                        Plugin.Log.LogInfo($"[world] {s.NameOf(from)} picks the lock of {obj} ({crate.name}): {(was ? "already open" : worked ? "worked" : "failed")}");
+                        string pick;
+                        if (was)
+                        {
+                            pick = "already open";
+                        }
+                        else if (worked)
+                        {
+                            pick = "worked";
+                        }
+                        else
+                        {
+                            pick = "failed";
+                        }
+                        Plugin.Log.LogInfo($"[world] {s.NameOf(from)} picks the lock of {obj} ({crate.name}): {pick}");
                     }
                     if (!worked || was)
                     {
@@ -376,7 +397,12 @@ namespace DarkwoodMP.World
                     Authority.Result(result2);
                     if (Debug)
                     {
-                        Plugin.Log.LogInfo($"[world] {s.NameOf(from)} disarms {obj}: {(worked ? "worked" : "failed")}");
+                        string disarm = "failed";
+                        if (worked)
+                        {
+                            disarm = "worked";
+                        }
+                        Plugin.Log.LogInfo($"[world] {s.NameOf(from)} disarms {obj}: {disarm}");
                     }
                     if (item != null)
                     {
@@ -622,7 +648,12 @@ namespace DarkwoodMP.World
         {
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] got {a} {obj}: " + (found != null ? found.name : "not found here"));
+                string name = "not found here";
+                if (found != null)
+                {
+                    name = found.name;
+                }
+                Plugin.Log.LogInfo($"[world] got {a} {obj}: " + name);
             }
             return found;
         }
@@ -760,7 +791,16 @@ namespace DarkwoodMP.World
                 FlagsSync instance = FlagsSync.Instance;
                 if (instance != null)
                 {
-                    instance.DeathAllowed(npc.npc != null ? npc.npc.name : npc.name);
+                    string name;
+                    if (npc.npc != null)
+                    {
+                        name = npc.npc.name;
+                    }
+                    else
+                    {
+                        name = npc.name;
+                    }
+                    instance.DeathAllowed(name);
                 }
                 return true;
             }
@@ -1207,7 +1247,12 @@ namespace DarkwoodMP.World
             else if (go != null && go.GetComponent<Explodes>() != null)
             {
                 w.W.Write((byte)Kind.Explosive);
-                w.W.Write((byte)(BreakSync.Activated(go.GetComponent<Explodes>()) ? 1 : 0));
+                int activated = 0;
+                if (BreakSync.Activated(go.GetComponent<Explodes>()))
+                {
+                    activated = 1;
+                }
+                w.W.Write((byte)activated);
             }
             else
             {
@@ -1881,8 +1926,11 @@ namespace DarkwoodMP.World
                 {
                     Prefab = __state,
                     At = __instance.transform.position + new Vector3(0f, 1f, 0f),
-                    Target = __instance.isChainTrap && doConnectChain && other != null ? other.gameObject : null,
                 };
+                if (__instance.isChainTrap && doConnectChain && other != null)
+                {
+                    held.Target = other.gameObject;
+                }
             }
             if (held != null)
             {
@@ -1904,7 +1952,12 @@ namespace DarkwoodMP.World
             WorldActions.WriteAction(w, WorldActions.Action.TrapFired, r, 0f, 0f, false, false, "");
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent TrapFired {r} ({__instance.name}){(held != null ? ", its " + held.Prefab.name + " waits for the host" : "")}");
+                string waits = "";
+                if (held != null)
+                {
+                    waits = ", its " + held.Prefab.name + " waits for the host";
+                }
+                Plugin.Log.LogInfo($"[world] sent TrapFired {r} ({__instance.name}){waits}");
             }
             Authority.Request(w, $"TrapFired {r} ({__instance.name})", (ok, reason, result) =>
             {

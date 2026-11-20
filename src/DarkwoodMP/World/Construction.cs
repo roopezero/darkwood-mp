@@ -124,7 +124,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got build {obj} option {option}: " + (c != null ? c.name : "not found here (built already?)"));
+                string name = "not found here (built already?)";
+                if (c != null)
+                {
+                    name = c.name;
+                }
+                Plugin.Log.LogInfo($"[world] got build {obj} option {option}: " + name);
             }
             if (c != null && option >= 0 && option < c.options.Count)
             {

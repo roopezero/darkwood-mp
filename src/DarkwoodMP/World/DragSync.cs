@@ -465,7 +465,12 @@ namespace DarkwoodMP.World
             }
             if (sent > 0 || later > 0)
             {
-                Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {sent} loose objects that moved since their snapshot sent to them{(later > 0 ? $", {later} still moving (sent once at rest)" : "")}");
+                string moving = "";
+                if (later > 0)
+                {
+                    moving = $", {later} still moving (sent once at rest)";
+                }
+                Plugin.Log.LogInfo($"{_session.NameOf(who)} is in the world: {sent} loose objects that moved since their snapshot sent to them{moving}");
             }
         }
 
@@ -594,7 +599,15 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var p = new Loose { Item = item, Body = b, Ref = r, Col = col != null ? col : b.GetComponentInChildren<Collider>() };
+            var p = new Loose { Item = item, Body = b, Ref = r };
+            if (col != null)
+            {
+                p.Col = col;
+            }
+            else
+            {
+                p.Col = b.GetComponentInChildren<Collider>();
+            }
             Rebase(p);
             _loose[b] = p;
         }
@@ -659,22 +672,22 @@ namespace DarkwoodMP.World
                 Rebase(item.gameObject);
                 Recell(item.gameObject); // it goes into the culling node of where it is now
             }
-            int ch;
+            int channel;
             if (last)
             {
-                ch = Channel.Control;
+                channel = Channel.Control;
             }
             else
             {
-                ch = Channel.State;
+                channel = Channel.State;
             }
             if (_session.IsHost)
             {
-                _session.Broadcast(w, ch, reliable: last);
+                _session.Broadcast(w, channel, reliable: last);
             }
             else
             {
-                _session.SendToHost(w, ch, reliable: last);
+                _session.SendToHost(w, channel, reliable: last);
                 if (last)
                 {
                     if (!_unechoed.TryGetValue(item.gameObject, out var sent))
@@ -781,7 +794,15 @@ namespace DarkwoodMP.World
             // of its own for the same object at the same time, the mover got that one and would keep it.
             if (s.IsHost)
             {
-                s.Broadcast(Message(obj, pos, rot, last), last ? Channel.Control : Channel.State, reliable: last, except: last ? 0UL : from);
+                var w = Message(obj, pos, rot, last);
+                int channel = Channel.State;
+                ulong skip = from;
+                if (last)
+                {
+                    channel = Channel.Control;
+                    skip = 0UL;
+                }
+                s.Broadcast(w, channel, reliable: last, except: skip);
             }
 
             var item = ObjRef.Resolve<Item>(obj);
@@ -839,8 +860,17 @@ namespace DarkwoodMP.World
 
         // ---- who drags what --------------------------------------------------------------------------------------
 
-        private bool Stale(Owner o) =>
-            Time.unscaledTime - o.Heard > (_session.IsHost ? StaleAfter : StaleAfter + 2f); // a client waits for the host's word
+        private bool Stale(Owner o)
+        {
+            float now = Time.unscaledTime;
+            float heard = o.Heard;
+            float limit = StaleAfter + 2f; // a client waits for the host's word
+            if (_session.IsHost)
+            {
+                limit = StaleAfter;
+            }
+            return now - heard > limit;
+        }
 
         /// <summary>The name of someone else who is dragging this object now (as the host decided), or null.</summary>
         public string OtherOwner(ObjRef r)
@@ -894,7 +924,16 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    CancelLocal(item, reason.EndsWith("is moving it") ? reason : Language.Get("Playermsg_tooFar", "UI"));
+                    string why;
+                    if (reason.EndsWith("is moving it"))
+                    {
+                        why = reason;
+                    }
+                    else
+                    {
+                        why = Language.Get("Playermsg_tooFar", "UI");
+                    }
+                    CancelLocal(item, why);
                 }
             }, inventory: false);
         }
@@ -1216,7 +1255,17 @@ namespace DarkwoodMP.World
             }
             if (letGo)
             {
-                CancelLocal(_dragging, owner != 0 ? $"{_session.NameOf(owner)} is moving it" : Language.Get("Playermsg_tooFar", "UI"));
+                Item item = _dragging;
+                string why;
+                if (owner != 0)
+                {
+                    why = $"{_session.NameOf(owner)} is moving it";
+                }
+                else
+                {
+                    why = Language.Get("Playermsg_tooFar", "UI");
+                }
+                CancelLocal(item, why);
             }
         }
 

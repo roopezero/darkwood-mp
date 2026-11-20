@@ -108,7 +108,17 @@ namespace DarkwoodMP.World
             }
             if (_bareWarned.Add((from, type)))
             {
-                Plugin.Log.LogWarning($"[authority] dropped {type} from {S?.NameOf(from) ?? "#" + from}: it's only taken as a request");
+                Session session = S;
+                string name = null;
+                if (session != null)
+                {
+                    name = session.NameOf(from);
+                }
+                if (name == null)
+                {
+                    name = "#" + from;
+                }
+                Plugin.Log.LogWarning($"[authority] dropped {type} from {name}: it's only taken as a request");
             }
             return false;
         }
@@ -133,7 +143,13 @@ namespace DarkwoodMP.World
             }
             Buffer.BlockCopy(message.Buffer, 0, _copy, 0, n);
             uint seq = ++_seq;
-            _pending[seq] = new Pending { What = what, At = Time.realtimeSinceStartup, Inventory = inventory ? InventoryWatch.TakeChange() : null, Done = done };
+            var pending = new Pending { What = what, At = Time.realtimeSinceStartup };
+            if (inventory)
+            {
+                pending.Inventory = InventoryWatch.TakeChange();
+            }
+            pending.Done = done;
+            _pending[seq] = pending;
             var w = s.Begin(MsgType.Request);
             w.W.Write(seq);
             w.W.Write(_copy, 0, n);
@@ -275,7 +291,12 @@ namespace DarkwoodMP.World
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (_refusal != null)
             {
-                Plugin.Log.LogInfo($"[authority] refused {(inner.Length > 0 ? ((MsgType)inner[0]).ToString() : "nothing")} from {s.NameOf(from)}: {_refusal}");
+                string what = "nothing";
+                if (inner.Length > 0)
+                {
+                    what = ((MsgType)inner[0]).ToString();
+                }
+                Plugin.Log.LogInfo($"[authority] refused {what} from {s.NameOf(from)}: {_refusal}");
             }
         }
 
@@ -310,7 +331,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            Plugin.Log.LogInfo($"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({_refusal ?? "not here"}), so it's theirs alone: accepted, not applied here");
+            string refusal = _refusal;
+            if (refusal == null)
+            {
+                refusal = "not here";
+            }
+            Plugin.Log.LogInfo($"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({refusal}), so it's theirs alone: accepted, not applied here");
             _refusal = null;
             string result2 = result;
             if (result2 == null)

@@ -263,7 +263,12 @@ namespace DarkwoodMP.World
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[slots] {obj} contents sent to {s.NameOf(from)}: " + (inv != null ? inv.name : "not found here"));
+                string name = "not found here";
+                if (inv != null)
+                {
+                    name = inv.name;
+                }
+                Plugin.Log.LogInfo($"[slots] {obj} contents sent to {s.NameOf(from)}: " + name);
             }
         }
 
@@ -286,7 +291,12 @@ namespace DarkwoodMP.World
             bool waited = inv != null && _awaiting.Remove(inv);
             if (inv == null || contents.Length == 0)
             {
-                Plugin.Log.LogInfo($"[slots] {obj} contents from host: " + (inv == null ? "not found here" : "the host hasn't got it"));
+                string why = "the host hasn't got it";
+                if (inv == null)
+                {
+                    why = "not found here";
+                }
+                Plugin.Log.LogInfo($"[slots] {obj} contents from host: " + why);
                 return;
             }
             // Open and already sending changes (we stopped waiting, or this answers an earlier ask): the host's
@@ -330,7 +340,13 @@ namespace DarkwoodMP.World
                 {
                     WorldActions.Replaying = false;
                 }
-                Plugin.Log.LogInfo($"[slots] {obj} contents from host ({inv.slots.Count} slots): {state.invItems?.Count ?? 0} filled, loaded whole");
+                var items = state.invItems;
+                int filled = 0;
+                if (items != null)
+                {
+                    filled = items.Count;
+                }
+                Plugin.Log.LogInfo($"[slots] {obj} contents from host ({inv.slots.Count} slots): {filled} filled, loaded whole");
                 RemoveIfEmptied(inv);
                 return;
             }
@@ -392,7 +408,12 @@ namespace DarkwoodMP.World
 
         private void Merge(Inventory inv, Inventory.SaveState state, string[] seen, string what)
         {
-            int filled = state.invItems != null ? state.invItems.Count : 0, slotCount = inv.slots.Count;
+            int filled = 0;
+            if (state.invItems != null)
+            {
+                filled = state.invItems.Count;
+            }
+            int slotCount = inv.slots.Count;
             var host = new string[slotCount];
             for (int i = 0; i < slotCount; i++)
             {
@@ -802,7 +823,12 @@ namespace DarkwoodMP.World
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got {n} slot(s) of {obj}: " + (inv != null ? inv.name : "not found here"));
+                string name = "not found here";
+                if (inv != null)
+                {
+                    name = inv.name;
+                }
+                Plugin.Log.LogInfo($"[world] got {n} slot(s) of {obj}: " + name);
             }
             if (inv == null)
             {
@@ -1028,7 +1054,16 @@ namespace DarkwoodMP.World
             bool any = false;
             foreach (var kv in net)
             {
-                int put = kv.Value.n > 0 ? kv.Value.n : 0, took = kv.Value.n < 0 ? -kv.Value.n : 0;
+                int put = 0;
+                if (kv.Value.n > 0)
+                {
+                    put = kv.Value.n;
+                }
+                int took = 0;
+                if (kv.Value.n < 0)
+                {
+                    took = -kv.Value.n;
+                }
                 if (put == 0 && took == 0)
                 {
                     continue;

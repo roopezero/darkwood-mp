@@ -41,7 +41,13 @@ namespace DarkwoodMP.World
         internal static (GameObject go, string type) Holding(Player p)
         {
             var cur = p.currentItem;
-            return (HeldItem(p), InvItemClass.isNull(cur) ? null : cur.baseClass?.type);
+            GameObject held = HeldItem(p);
+            string type = null;
+            if (!InvItemClass.isNull(cur))
+            {
+                type = cur.baseClass?.type;
+            }
+            return (held, type);
         }
 
         /// <summary>The local player threw it (called after Player.throwItem).</summary>

@@ -733,7 +733,12 @@ namespace DarkwoodMP.World
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] got contents for {obj}: " + (inv != null ? inv.name : "not found here"));
+                string name = "not found here";
+                if (inv != null)
+                {
+                    name = inv.name;
+                }
+                Plugin.Log.LogInfo($"[world] got contents for {obj}: " + name);
             }
             // A client's whole contents (it sends an emptied container that went this way): refused if it couldn't
             // have changed it, and the host's contents go back to it to roll back to.
@@ -873,7 +878,12 @@ namespace DarkwoodMP.World
             }
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
-            _pending.Add(new Pending { Id = id, Go = go, Prefab = prefab, Placed = Placing, SendAt = Time.time + (Placing || prefab == GasolineTrail ? 0.2f : 1.5f) }); // dropped: once it has come to rest
+            float delay = 1.5f; // dropped: once it has come to rest
+            if (Placing || prefab == GasolineTrail)
+            {
+                delay = 0.2f;
+            }
+            _pending.Add(new Pending { Id = id, Go = go, Prefab = prefab, Placed = Placing, SendAt = Time.time + delay });
         }
 
         /// <summary>The Object overload of Core.AddPrefab made something: share it if our player is placing it.</summary>
@@ -1203,7 +1213,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] made {prefab} #{id} at {pos}: {(inv != null ? inv.getAllItems().Count : 0)} items");
+                int count = 0;
+                if (inv != null)
+                {
+                    count = inv.getAllItems().Count;
+                }
+                Plugin.Log.LogInfo($"[world] made {prefab} #{id} at {pos}: {count} items");
             }
             if (_session.IsHost)
             {
