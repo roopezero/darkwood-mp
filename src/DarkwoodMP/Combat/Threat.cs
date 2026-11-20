@@ -264,9 +264,10 @@ namespace DarkwoodMP.Combat
             }
             foreach (var p in NetPlayerProxy.All.Values)
             {
+                // invisible: as attackCharacter, nobody goes for them
                 if (p != null && p.alive && !p.invisible)
                 {
-                    candidates.Add(p); // invisible: as attackCharacter, nobody goes for them
+                    candidates.Add(p);
                 }
             }
             foreach (var p in candidates)
