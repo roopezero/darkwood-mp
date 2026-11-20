@@ -620,7 +620,7 @@ namespace DarkwoodMP.World
                     {
                         profDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
                     }
-                    // left the world meanwhile: nothing to offer
+                    // no save, or we left the world meanwhile: nothing to offer
                     string stamp;
                     if (profDir == null || !InWorld)
                     {
