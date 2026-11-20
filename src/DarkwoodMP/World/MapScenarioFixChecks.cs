@@ -495,12 +495,12 @@ namespace DarkwoodMP.World
                 ii = host.gameObject.AddComponent<InteractiveItem>();
             }
             ii.textureOn = tex[0].name;
-            int value = 0;
+            int offIndex = 0;
             if (tex.Length > 1)
             {
-                value = 1;
+                offIndex = 1;
             }
-            ii.textureOff = tex[value].name;
+            ii.textureOff = tex[offIndex].name;
             ii.switchSound = "";
             ii.doesNotPauseGame = true;
             ii.isOn = false;
@@ -564,12 +564,12 @@ namespace DarkwoodMP.World
             {
                 mine = _offT;
             }
-            string text2 = "off";
+            string side = "off";
             if (on)
             {
-                text2 = "on";
+                side = "on";
             }
-            r.Info = $"{_ii.name}: on {_ii.isOn}, its {text2} trigger fired {mine.fired}";
+            r.Info = $"{_ii.name}: on {_ii.isOn}, its {side} trigger fired {mine.fired}";
             if (_ii.isOn != on)
             {
                 r.Fail($"it didn't switch (refused?): {r.Info}");
@@ -967,13 +967,13 @@ namespace DarkwoodMP.World
                 {
                     count = skills.availableSkills.Count;
                 }
-                PlayerSkills skills2 = P.skills;
-                int? count2 = null;
-                if (skills2 != null)
+                PlayerSkills playerSkills = P.skills;
+                int? knownCount = null;
+                if (playerSkills != null)
                 {
-                    count2 = skills2.skills.Count;
+                    knownCount = playerSkills.skills.Count;
                 }
-                parts.Add($"no skills to lend ({count} available, {count2} known): the wheel wasn't opened");
+                parts.Add($"no skills to lend ({count} available, {knownCount} known): the wheel wasn't opened");
             }
             if (Time.timeScale != 1f && Time.timeScale > 0f)
             {

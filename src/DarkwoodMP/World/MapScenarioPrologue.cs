@@ -398,17 +398,17 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(1f);
-            string stage2 = Prologue.Stage;
-            if (stage2 == null)
+            string stageName = Prologue.Stage;
+            if (stageName == null)
             {
-                stage2 = "none";
+                stageName = "none";
             }
             string shared = DreamSync.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
-            r.Info = $"stage {stage2} (shared {shared}), first play {P.firstPlay}, antagonist {P.isAntagonist}, "
+            r.Info = $"stage {stageName} (shared {shared}), first play {P.firstPlay}, antagonist {P.isAntagonist}, "
                    + $"at {Locations.Current()} {Fmt(P.transform.position)}, carrying {Items()}, the other player seen {FriendSeen()}, time {Singleton<Controller>.Instance.CurrentTime}";
             if (Prologue.Stage != stage || DreamSync.Shared != stage)
             {

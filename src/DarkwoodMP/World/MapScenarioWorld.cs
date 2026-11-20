@@ -552,21 +552,21 @@ namespace DarkwoodMP.World
             var item = Carried().FirstOrDefault(i => a.Length < 2 || i.type == a[1]);
             if (item == null)
             {
-                string a2 = "anything";
+                string wantedType = "anything";
                 if (a.Length > 1)
                 {
-                    a2 = a[1];
+                    wantedType = a[1];
                 }
-                r.Fail($"not carrying {a2}");
+                r.Fail($"not carrying {wantedType}");
                 yield break;
             }
             string type = item.type;
-            int val1 = 1;
+            int asked = 1;
             if (a.Length > 2)
             {
-                val1 = int.Parse(a[2]);
+                asked = int.Parse(a[2]);
             }
-            int amount = Math.Min(val1, item.amount);
+            int amount = Math.Min(asked, item.amount);
             yield return Walk(inv.transform.position);
             P.openedItemInventory = inv;
             yield return new WaitForSeconds(0.8f); // a client asks what it holds first
@@ -1536,12 +1536,12 @@ namespace DarkwoodMP.World
             {
                 text = $"burning={it.GetComponent<Burn>() != null}";
             }
-            string text2 = "";
+            string explodedNote = "";
             if (explosive)
             {
-                text2 = $" exploded={exploded}";
+                explodedNote = $" exploded={exploded}";
             }
-            r.Info = $"{what}: {text}{text2}";
+            r.Info = $"{what}: {text}{explodedNote}";
             if (explosive && !exploded)
             {
                 r.Fail($"{r.Info}: lit, but it didn't go off");
@@ -1753,16 +1753,16 @@ namespace DarkwoodMP.World
             var lines = MapScenarioIssues.LogLines();
             string took = lines.LastOrDefault(l => l.Contains(" traded with ") && l.Contains(": took "));
             string refused = lines.LastOrDefault(l => l.Contains("[authority] refused TraderTrade"));
-            string took2 = took;
-            if (took2 == null)
+            string answer = took;
+            if (answer == null)
             {
-                took2 = refused;
+                answer = refused;
             }
-            if (took2 == null)
+            if (answer == null)
             {
-                took2 = "no client's trade here";
+                answer = "no client's trade here";
             }
-            r.Info = took2.Trim();
+            r.Info = answer.Trim();
             if (refused != null)
             {
                 r.Fail($"refused: {refused.Trim()}");
@@ -1914,12 +1914,12 @@ namespace DarkwoodMP.World
             r.Info = $"{npc.name}: bought {boughtType} ({boughtValue}), gave {text} ({giveValue}): [{was}] -> [{Contents(npc.inventory)}], reputation {npc.reputation}";
             if (ri >= 0)
             {
-                string value = "got ";
+                string outcome = "got ";
                 if (refused != null)
                 {
-                    value = "refused ";
+                    outcome = "refused ";
                 }
-                r.Info = value + r.Info;
+                r.Info = outcome + r.Info;
                 yield break;
             }
             if (refused != null)
@@ -1940,12 +1940,12 @@ namespace DarkwoodMP.World
                 r.Fail("enemies are the host's");
                 yield break;
             }
-            string typeValue = "Dog";
+            string kind = "Dog";
             if (a.Length > 0)
             {
-                typeValue = a[0];
+                kind = a[0];
             }
-            var c = TestWorld.SpawnEnemy(typeValue);
+            var c = TestWorld.SpawnEnemy(kind);
             yield return new WaitForSeconds(1f);
             if (c != null)
             {

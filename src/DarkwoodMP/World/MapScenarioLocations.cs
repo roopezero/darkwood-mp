@@ -258,16 +258,16 @@ namespace DarkwoodMP.World
                 side = p.transform.position - c.transform.position;
                 side.y = 0f;
             }
-            Vector3 value;
+            Vector3 heading;
             if (side.sqrMagnitude > 1e-4f)
             {
-                value = side.normalized;
+                heading = side.normalized;
             }
             else
             {
-                value = Vector3.right;
+                heading = Vector3.right;
             }
-            var at = c.transform.position + value * 70f;
+            var at = c.transform.position + heading * 70f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
             OutsideLocations instance = Singleton<OutsideLocations>.Instance;
@@ -276,12 +276,12 @@ namespace DarkwoodMP.World
             {
                 playerInOutsideLocation = instance.playerInOutsideLocation;
             }
-            bool playerInOutsideLocation2 = false;
+            bool stillOutside = false;
             if (playerInOutsideLocation.HasValue)
             {
-                playerInOutsideLocation2 = playerInOutsideLocation.Value;
+                stillOutside = playerInOutsideLocation.Value;
             }
-            if (!playerInOutsideLocation2)
+            if (!stillOutside)
             {
                 r.Fail("our player left the location on the way to the sleeper");
                 yield break;
@@ -473,16 +473,16 @@ namespace DarkwoodMP.World
             // so a fixed direction could put the dog past the exit, and walking to it would leave the location.
             var inward = proxy.InLocation.transform.position - proxy.transform.position;
             inward.y = 0f;
-            Vector3 value;
+            Vector3 heading;
             if (inward.sqrMagnitude > 1f)
             {
-                value = inward.normalized;
+                heading = inward.normalized;
             }
             else
             {
-                value = Vector3.right;
+                heading = Vector3.right;
             }
-            var at = proxy.transform.position + value * 250f;
+            var at = proxy.transform.position + heading * 250f;
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(proxy.gameObject, at, 1f, "Dog", nocturnal: false, attackPlayer: false);
             if (c == null)
             {
@@ -539,16 +539,16 @@ namespace DarkwoodMP.World
             // loc-sight), and a walk across the location can cross its way out (returnToWorld), which ends every step after.
             var side = p.transform.position - dog.transform.position;
             side.y = 0f;
-            Vector3 value;
+            Vector3 heading;
             if (side.sqrMagnitude > 1f)
             {
-                value = side.normalized;
+                heading = side.normalized;
             }
             else
             {
-                value = Vector3.right;
+                heading = Vector3.right;
             }
-            var at = dog.transform.position + value * 80f;
+            var at = dog.transform.position + heading * 80f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
             OutsideLocations instance = Singleton<OutsideLocations>.Instance;
@@ -557,12 +557,12 @@ namespace DarkwoodMP.World
             {
                 playerInOutsideLocation = instance.playerInOutsideLocation;
             }
-            bool playerInOutsideLocation2 = false;
+            bool stillOutside = false;
             if (playerInOutsideLocation.HasValue)
             {
-                playerInOutsideLocation2 = playerInOutsideLocation.Value;
+                stillOutside = playerInOutsideLocation.Value;
             }
-            if (!playerInOutsideLocation2)
+            if (!stillOutside)
             {
                 r.Fail("our player left the location on the way to the dog");
                 yield break;
@@ -683,12 +683,12 @@ namespace DarkwoodMP.World
                 r.Fail("no world location with a characters holder");
                 yield break;
             }
-            string typeValue = "Villager";
+            string kind = "Villager";
             if (a.Length > 0)
             {
-                typeValue = a[0];
+                kind = a[0];
             }
-            var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), typeValue);
+            var c = MapScenarioFixChecks.SpawnAt(p.transform.position + new Vector3(300f, 0f, 200f), kind);
             if (c == null)
             {
                 r.Fail("couldn't spawn the savage");

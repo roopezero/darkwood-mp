@@ -68,27 +68,27 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             var beam = OwnBeam(p);
-            string typeValue;
+            string heldType;
             if (InvItemClass.isNull(p.currentItem))
             {
-                typeValue = "nothing";
+                heldType = "nothing";
             }
             else
             {
-                typeValue = p.currentItem.type;
+                heldType = p.currentItem.type;
             }
             string text = "off";
             if (beam != null && beam.gameObject.activeSelf)
             {
                 text = $"on, radius {beam.LightRadius:0}";
             }
-            string text2 = "none";
+            string emitter = "none";
             if (p.itemLightEmitter != null)
             {
-                text2 = "on";
+                emitter = "on";
             }
-            r.Info = $"holding {typeValue}; our beam {text}, " +
-                     $"held light {text2}";
+            r.Info = $"holding {heldType}; our beam {text}, " +
+                     $"held light {emitter}";
         }
 
         /// <summary>

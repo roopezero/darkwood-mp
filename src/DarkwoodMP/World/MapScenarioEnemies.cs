@@ -253,16 +253,16 @@ namespace DarkwoodMP.World
             }
             var away = proxy.transform.position - P.transform.position;
             away.y = 0f;
-            Vector3 value;
+            Vector3 heading;
             if (away.sqrMagnitude > 1f)
             {
-                value = away.normalized;
+                heading = away.normalized;
             }
             else
             {
-                value = Vector3.forward;
+                heading = Vector3.forward;
             }
-            var spot = FreeSpot(proxy.transform.position + value * 450f);
+            var spot = FreeSpot(proxy.transform.position + heading * 450f);
             var w = new Watch { Kind = kind, SpawnedAt = Time.realtimeSinceStartup };
             foreach (var c0 in Object.FindObjectsOfType<Character>())
             {
@@ -617,12 +617,12 @@ namespace DarkwoodMP.World
                 }
             }
             yield return new WaitForSeconds(1.5f);
-            string value = "";
+            string othersNote = "";
             if (others.Count > 0)
             {
-                value = $" (and of others: {string.Join(", ", others)})";
+                othersNote = $" (and of others: {string.Join(", ", others)})";
             }
-            r.Info = $"removed {n}" + value;
+            r.Info = $"removed {n}" + othersNote;
         }
 
         // ---- client ------------------------------------------------------------------------------------------------
@@ -696,23 +696,23 @@ namespace DarkwoodMP.World
             float moved = 0f, lost = 0f, hp = p.health, closest = float.MaxValue;
             int hits = 0;
             // Let it come and attack.
-            float value = 1f;
+            float wait = 1f;
             if (hurts)
             {
                 if (needHits > 1)
                 {
-                    value = 18f;
+                    wait = 18f;
                 }
                 else
                 {
-                    value = 12f;
+                    wait = 12f;
                 }
             }
             else if (moves)
             {
-                value = 6f;
+                wait = 6f;
             }
-            float waitUntil = Time.realtimeSinceStartup + value;
+            float waitUntil = Time.realtimeSinceStartup + wait;
             while (Time.realtimeSinceStartup < waitUntil && c != null && NetEnemies.InPlay(c))
             {
                 moved = Mathf.Max(moved, Core.trueDistance(c.transform.position, from));
@@ -811,12 +811,12 @@ namespace DarkwoodMP.World
                     hits++;
                 }
                 bool first = swung.Add(best.id);
-                float value2 = 300f;
+                float nearEnough = 300f;
                 if (first)
                 {
-                    value2 = 90f;
+                    nearEnough = 90f;
                 }
-                if (bestD > value2)
+                if (bestD > nearEnough)
                 {
                     float within = 250f;
                     if (first)

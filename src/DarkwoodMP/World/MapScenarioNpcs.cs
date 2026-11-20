@@ -338,12 +338,12 @@ namespace DarkwoodMP.World
             };
             Singleton<Events>.Instance.addWorldEvent(AnimEvent, ge);
             var listener = npc.GetComponent<AnimationTriggerListener>();
-            AnimationTriggerListener addComponent = null;
+            AnimationTriggerListener added = null;
             if (listener == null)
             {
-                addComponent = npc.gameObject.AddComponent<AnimationTriggerListener>();
+                added = npc.gameObject.AddComponent<AnimationTriggerListener>();
             }
-            _anim = (npc, ge, addComponent);
+            _anim = (npc, ge, added);
             npc.disabled = true;
             yield return null;
             r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)} at {Fmt(npc.transform.position)}: switched off for talking";
@@ -363,12 +363,12 @@ namespace DarkwoodMP.World
             var listener = npc.GetComponent<AnimationTriggerListener>();
             listener.checkFrameTrigger(AnimEvent, 0, 0f, tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent, Vector3.zero, Vector3.zero, null, "", false);
             bool run = a.Length > 0 && a[0] == "run";
-            float value = 1.5f;
+            float wait = 1.5f;
             if (run)
             {
-                value = 5f;
+                wait = 5f;
             }
-            float until = Time.realtimeSinceStartup + value;
+            float until = Time.realtimeSinceStartup + wait;
             while (Time.realtimeSinceStartup < until && npc.disabled)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
@@ -378,12 +378,12 @@ namespace DarkwoodMP.World
             {
                 text = "switched off";
             }
-            string text2 = "didn't run";
+            string ran = "didn't run";
             if (ge.fired)
             {
-                text2 = "ran";
+                ran = "ran";
             }
-            r.Info = $"{npc.name}: {text}, the event {text2} here";
+            r.Info = $"{npc.name}: {text}, the event {ran} here";
             bool condition;
             if (run)
             {
@@ -593,12 +593,12 @@ namespace DarkwoodMP.World
             bool got = lines.Any(x => x.Contains("got NpcDied") && x.IndexOf("trader", StringComparison.OrdinalIgnoreCase) >= 0);
             var alive = UnityEngine.Object.FindObjectsOfType<Character>().Where(c => c.isNightTrader && c.alive && StateDump.Flat(c.transform.position - spot) < 600f).ToList();
             bool flag = Singleton<Flags>.Instance.isFlagTrue("nightTrader_killedYesterday");
-            string name2 = "the hideout";
+            string placeName = "the hideout";
             if (l != null)
             {
-                name2 = l.name;
+                placeName = l.name;
             }
-            r.Info = $"NpcDied came {got}, living night traders in {name2}: {alive.Count}, nightTrader_killedYesterday {flag}";
+            r.Info = $"NpcDied came {got}, living night traders in {placeName}: {alive.Count}, nightTrader_killedYesterday {flag}";
             if (refused.Count > 0)
             {
                 r.Fail($"{r.Info}; {refused[0].Trim()}");

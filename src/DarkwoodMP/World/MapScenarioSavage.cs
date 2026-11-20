@@ -282,22 +282,22 @@ namespace DarkwoodMP.World
                     string state = "";
                     if (host)
                     {
-                        string value = "";
+                        string attack = "";
                         if (c.attacking)
                         {
-                            value = "A";
+                            attack = "A";
                         }
-                        string value2 = "";
+                        string recover = "";
                         if (c.recoveringFromAttack)
                         {
-                            value2 = "R";
+                            recover = "R";
                         }
-                        string value3 = "";
+                        string hit = "";
                         if (c.recoveringFromHit || c.gettingHit)
                         {
-                            value3 = "H";
+                            hit = "H";
                         }
-                        state = value + value2 + value3;
+                        state = attack + recover + hit;
                         CharBase cb = null;
                         if (c.target != null)
                         {
@@ -409,18 +409,18 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() => c.getHit(3f, P.transform, false, true, false));
             }
-            string name2 = "none";
+            string targetName = "none";
             if (c != null && c.target != null)
             {
-                name2 = c.target.name;
+                targetName = c.target.name;
             }
-            Character c2 = c;
+            Character struck = c;
             string name = null;
-            if (c2 != null)
+            if (struck != null)
             {
-                name = c2.name;
+                name = struck.name;
             }
-            Plugin.Log.LogInfo($"[sv] hit {name} to draw it to the host; its target now {name2}");
+            Plugin.Log.LogInfo($"[sv] hit {name} to draw it to the host; its target now {targetName}");
             yield return new WaitForSeconds(secs * 0.4f);
             yield return Walk(home, 60f, detours: 0);
         }

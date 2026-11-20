@@ -157,12 +157,12 @@ namespace DarkwoodMP.World
             player.openedItemInventory = null;         // and closed
             yield return new WaitForSeconds(1f);
             var dropped = player.spawnDroppedInvItem(item);
-            string name2 = null;
+            string droppedName = null;
             if (dropped != null)
             {
-                name2 = dropped.name;
+                droppedName = dropped.name;
             }
-            Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {name2}");
+            Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {droppedName}");
             yield return new WaitForSeconds(3f);
 
             // The story: flip a flag, and an NPC's reputation.
@@ -202,12 +202,12 @@ namespace DarkwoodMP.World
             {
                 count = jdb.journalEntriesDict.Count;
             }
-            int? count2 = null;
+            int? noteCount = null;
             if (jdb != null)
             {
-                count2 = jdb.notesDict.Count;
+                noteCount = jdb.notesDict.Count;
             }
-            Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {count} and {count2}");
+            Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {count} and {noteCount}");
             if (entry != null)
             {
                 journal.addJournalEntry(entry);
@@ -318,17 +318,17 @@ namespace DarkwoodMP.World
                     {
                         text = "not started";
                     }
-                    string text2 = "kept";
+                    string ourDrag = "kept";
                     if (letGo)
                     {
-                        text2 = "let go";
+                        ourDrag = "let go";
                     }
-                    string text3 = "FAIL";
+                    string dragVerdict = "FAIL";
                     if (stopped && letGo)
                     {
-                        text3 = "PASS";
+                        dragVerdict = "PASS";
                     }
-                    Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {text}, ours {text2}: {text3}");
+                    Plugin.Log.LogInfo($"[world test] {drag.name} dragged by another player: the game's drag {text}, ours {ourDrag}: {dragVerdict}");
                     if (player.itemBeingDragged == drag)
                     {
                         player.itemBeingDragged = null;
@@ -451,12 +451,12 @@ namespace DarkwoodMP.World
                     colls = new List<string>();
                 }
                 int inLib = colls.Count(n => Sync.SpriteCollections.Get(Net.StableHash.Of(n)) != null);
-                string text4 = "FAIL: not loaded";
+                string libState = "FAIL: not loaded";
                 if (lib != null)
                 {
-                    text4 = "loaded";
+                    libState = "loaded";
                 }
-                Plugin.Log.LogInfo($"[world test] look: {libName} {text4}; {inLib} of {colls.Count} of its sprite collections found");
+                Plugin.Log.LogInfo($"[world test] look: {libName} {libState}; {inLib} of {colls.Count} of its sprite collections found");
             }
             // Objects named by where they stand (no save id) are still found when they lie a little off that spot,
             // as after physics settled differently in another game: nudge some, look each up by its old name.
@@ -603,12 +603,12 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        string stackType2 = stackType;
-                        if (stackType2 == null)
+                        string shownType = stackType;
+                        if (shownType == null)
                         {
-                            stackType2 = "none";
+                            shownType = "none";
                         }
-                        Plugin.Log.LogInfo($"[world test] sort & stack: skipped (stackable type {stackType2}, {frees.Count} free slots)");
+                        Plugin.Log.LogInfo($"[world test] sort & stack: skipped (stackable type {shownType}, {frees.Count} free slots)");
                     }
                 }
             }
@@ -724,16 +724,16 @@ namespace DarkwoodMP.World
                     {
                         it = made.GetComponent<Item>();
                     }
-                    string text5;
+                    string itemState;
                     if (it == null)
                     {
-                        text5 = "no item";
+                        itemState = "no item";
                     }
                     else
                     {
-                        text5 = $"destructible={it.destructible}, health {it.health} of {it.maxHealth}";
+                        itemState = $"destructible={it.destructible}, health {it.health} of {it.maxHealth}";
                     }
-                    Plugin.Log.LogInfo($"[world test] placed {prefab}: {text5}");
+                    Plugin.Log.LogInfo($"[world test] placed {prefab}: {itemState}");
                     if (it != null && it.destructible && !it.destroyed && it.health > 1)
                     {
                         furniture = it;
@@ -999,10 +999,10 @@ namespace DarkwoodMP.World
                         sl.invItem.refresh();
                     }
                     yield return new WaitForSeconds(0.8f);
-                    SlotShare instance2 = SlotShare.Instance;
-                    if (instance2 != null)
+                    SlotShare share = SlotShare.Instance;
+                    if (share != null)
                     {
-                        instance2.SortPressed(storage);
+                        share.SortPressed(storage);
                     }
                     yield return new WaitForSeconds(0.8f);
                     var cans = storage.slots.Where(sl => !InvItemClass.isNull(sl.invItem) && sl.invItem.type == gas).Select(sl => sl.invItem.durability).ToList();
@@ -1205,12 +1205,12 @@ namespace DarkwoodMP.World
                     }
                     if (it.item is GameObject ig && ig.GetComponent<Lure>() != null)
                     {
-                        string value = "";
+                        string recoverNote = "";
                         if (it.recoverableAfterThrown)
                         {
-                            value = " (recoverable)";
+                            recoverNote = " (recoverable)";
                         }
-                        lures.Add(k + value);
+                        lures.Add(k + recoverNote);
                         if (lureItem == null)
                         {
                             lureItem = it;
@@ -1385,12 +1385,12 @@ namespace DarkwoodMP.World
                     ns.setCurrentScenario();
                 }
                 var sc = ns.currentScenario;
-                string name2 = "none";
+                string scenario = "none";
                 if (sc != null)
                 {
-                    name2 = sc.name;
+                    scenario = sc.name;
                 }
-                Plugin.Log.LogInfo($"[world test] night scenario {name2}");
+                Plugin.Log.LogInfo($"[world test] night scenario {scenario}");
                 CustomEvent ev = null;
                 if (sc != null)
                 {
@@ -1411,17 +1411,17 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    string name3 = "none";
+                    string eventName = "none";
                     if (ev != null)
                     {
-                        name3 = ev.name;
+                        eventName = ev.name;
                     }
-                    string name4 = "none";
+                    string locationName = "none";
                     if (big != null)
                     {
-                        name4 = big.name;
+                        locationName = big.name;
                     }
-                    Plugin.Log.LogInfo($"[world test] no night event fired (event {name3}, location {name4})");
+                    Plugin.Log.LogInfo($"[world test] no night event fired (event {eventName}, location {locationName})");
                 }
             }
             var gen = Singleton<WorldGenerator>.Instance;
@@ -1703,19 +1703,19 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[client test] talking to {npc.name} {ObjRef.Of(npc.gameObject)}");
                 npc.talkTo();
                 var win = Singleton<UI>.Instance.dialogueWindow;
-                string name2 = "nobody";
+                string who = "nobody";
                 if (win.npc != null)
                 {
-                    name2 = win.npc.name;
+                    who = win.npc.name;
                 }
-                Plugin.Log.LogInfo($"[client test] dialogue open with {name2}");
+                Plugin.Log.LogInfo($"[client test] dialogue open with {who}");
                 yield return new WaitForSecondsRealtime(8f);
-                string text2 = "closed";
+                string dialogue = "closed";
                 if (win.npc != null)
                 {
-                    text2 = "still open with " + win.npc.name;
+                    dialogue = "still open with " + win.npc.name;
                 }
-                Plugin.Log.LogInfo($"[client test] after the host's answer: dialogue {text2}");
+                Plugin.Log.LogInfo($"[client test] after the host's answer: dialogue {dialogue}");
             }
             else
             {

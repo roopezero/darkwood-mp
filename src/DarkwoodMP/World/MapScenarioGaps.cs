@@ -536,12 +536,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(FlagsSync.Interval + 0.5f);
             if (Has() != want)
             {
-                string text2 = "back";
+                string way = "back";
                 if (want)
                 {
-                    text2 = "off";
+                    way = "off";
                 }
-                r.Fail($"{_jType} came {text2} after {FlagsSync.Interval + 0.5f:0.#} s");
+                r.Fail($"{_jType} came {way} after {FlagsSync.Interval + 0.5f:0.#} s");
             }
         }
 
@@ -705,17 +705,17 @@ namespace DarkwoodMP.World
                 npc = l.trader.GetComponent<NPC>();
             }
             bool frozen = Player.Instance.effects.hasEffectType(CharacterEffectType.timeFreeze);
-            string name2 = "gone";
+            string traderName = "gone";
             if (npc != null)
             {
-                name2 = npc.name;
+                traderName = npc.name;
             }
             string text = "";
             if (l != null && l.wolf != null)
             {
                 text = ", the wolf here";
             }
-            r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {name2}{text}";
+            r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {traderName}{text}";
             if (c.isAfterNight != want || (!want && (npc != null || frozen)))
             {
                 r.Fail(r.Info);
@@ -871,12 +871,12 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             if (win.npc == null || !win.npc.trader)
             {
-                string name2 = "no one";
+                string talkingTo = "no one";
                 if (win.npc != null)
                 {
-                    name2 = win.npc.name;
+                    talkingTo = win.npc.name;
                 }
-                r.Fail($"not talking to a trader ({name2})");
+                r.Fail($"not talking to a trader ({talkingTo})");
                 yield break;
             }
             float until = Time.realtimeSinceStartup + 8f;
@@ -1561,10 +1561,10 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() =>
                 {
-                    Item component = bag.GetComponent<Item>();
-                    if (component != null)
+                    Item bagItem = bag.GetComponent<Item>();
+                    if (bagItem != null)
                     {
-                        component.activate();
+                        bagItem.activate();
                     }
                 }); // a bag without items: its experience taken
             }
@@ -1575,12 +1575,12 @@ namespace DarkwoodMP.World
             {
                 text = "still here";
             }
-            string text2 = "gone";
+            string markerState = "gone";
             if (_marker != null)
             {
-                text2 = "still here";
+                markerState = "still here";
             }
-            r.Info = $"bag {text}, marker {text2}";
+            r.Info = $"bag {text}, marker {markerState}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");

@@ -529,12 +529,12 @@ namespace DarkwoodMP.World
                     {
                         yield return null;
                     }
-                    string value = ", ";
+                    string separator = ", ";
                     if (loads == "")
                     {
-                        value = "";
+                        separator = "";
                     }
-                    loads += value + $"{before}->{gun.ammo}";
+                    loads += separator + $"{before}->{gun.ammo}";
                     if (gun.ammo <= before)
                     {
                         int rounds = gun.ammo;
@@ -955,21 +955,21 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             float d = StateDump.Flat(last - near);
-            string name2;
+            string shownName;
             if (copy != null)
             {
-                name2 = copy.name;
+                shownName = copy.name;
             }
             else
             {
-                string value = "";
+                string goneNote = "";
                 if (gone)
                 {
-                    value = " (gone already)";
+                    goneNote = " (gone already)";
                 }
-                name2 = prefab + value;
+                shownName = prefab + goneNote;
             }
-            r.Info = $"{name2} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
+            r.Info = $"{shownName} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
             bool ok;
             if (want == "lands")
             {
@@ -1023,12 +1023,12 @@ namespace DarkwoodMP.World
         /// <summary>"i2-heard NAME" (host): the NAME dog heard a sound (not a dangerous one) from the thrown thing since i2-note.</summary>
         private static IEnumerator HeardStep(string[] a, Result r)
         {
-            string name2 = "meat";
+            string food = "meat";
             if (a.Length > 0)
             {
-                name2 = a[0];
+                food = a[0];
             }
-            var d = DogOf(name2);
+            var d = DogOf(food);
             if (d == null)
             {
                 r.Fail("no dog");
@@ -1060,12 +1060,12 @@ namespace DarkwoodMP.World
         /// <summary>"i2-eats NAME" (host): the NAME dog goes for the thrown lure and eats it up.</summary>
         private static IEnumerator Eats(string[] a, Result r)
         {
-            string name2 = "meat";
+            string food = "meat";
             if (a.Length > 0)
             {
-                name2 = a[0];
+                food = a[0];
             }
-            var d = DogOf(name2);
+            var d = DogOf(food);
             if (d == null)
             {
                 r.Fail("no dog");
@@ -1109,12 +1109,12 @@ namespace DarkwoodMP.World
             r.Info = $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {text}";
             if (lure != null && d != null)
             {
-                string name3 = "nothing";
+                string targetName = "nothing";
                 if (d.target != null)
                 {
-                    name3 = d.target.name;
+                    targetName = d.target.name;
                 }
-                r.Info += $"; the dog is {d.behaviour} after {name3}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
+                r.Info += $"; the dog is {d.behaviour} after {targetName}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
             }
             if (lure != null)
             {
@@ -1194,12 +1194,12 @@ namespace DarkwoodMP.World
             if (on && slot == null)
             {
                 // A free slot, else the last one not in hand (its item put back when the lantern comes off).
-                InvSlot slot2 = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected);
-                if (slot2 == null)
+                InvSlot free = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected);
+                if (free == null)
                 {
-                    slot2 = p.Hotbar.slots.LastOrDefault(s => !s.selected);
+                    free = p.Hotbar.slots.LastOrDefault(s => !s.selected);
                 }
-                slot = slot2;
+                slot = free;
                 if (slot == null)
                 {
                     r.Fail("no hotbar slot");
@@ -1237,12 +1237,12 @@ namespace DarkwoodMP.World
             {
                 text = "on";
             }
-            string text2 = "not lit";
+            string dot = "not lit";
             if (lit)
             {
-                text2 = "lit";
+                dot = "lit";
             }
-            r.Info = $"lantern {text}: our light dot {text2}, radius {p.lightDot.LightRadius:0}";
+            r.Info = $"lantern {text}: our light dot {dot}, radius {p.lightDot.LightRadius:0}";
             if (lit != on)
             {
                 r.Fail(r.Info);

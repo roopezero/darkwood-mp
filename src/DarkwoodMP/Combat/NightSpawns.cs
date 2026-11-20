@@ -381,12 +381,12 @@ namespace DarkwoodMP.Combat
             foreach (var proxy in LivingProxies())
             {
                 bool home = AtHideout(proxy.transform.position, out var loc);
-                string name2 = "none";
+                string locationName = "none";
                 if (loc != null)
                 {
-                    name2 = loc.name;
+                    locationName = loc.name;
                 }
-                Plugin.Log.LogInfo($"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {name2}, at a hideout: {home}");
+                Plugin.Log.LogInfo($"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {locationName}, at a hideout: {home}");
                 var worm = SpawnWorm(spawner, proxy);
                 var log = Plugin.Log;
                 string line;

@@ -481,12 +481,12 @@ namespace DarkwoodMP.Combat
             ex.affectsPlayer = true;
             ex.effect = new InvItemEffect();
             EnemyAreaHits.MarkEnemy(go);
-            string name2 = "no flash";
+            string flash = "no flash";
             if (ex.explosionPrefab != null)
             {
-                name2 = ex.explosionPrefab.name;
+                flash = ex.explosionPrefab.name;
             }
-            Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({name2}) beside {p.OwnerName}");
+            Plugin.Log.LogInfo($"--dwmp-test-blast: an enemy bomb ({flash}) beside {p.OwnerName}");
             ex.onActivate();
             Object.Destroy(go);
             yield return new WaitForSeconds(1f);

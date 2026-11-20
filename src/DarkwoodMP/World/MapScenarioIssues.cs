@@ -353,12 +353,12 @@ namespace DarkwoodMP.World
             {
                 r.Fail("no [spawn] line in the log");
             }
-            string value = "";
+            string spawnNote = "";
             if (spawn != null)
             {
-                value = " | " + spawn.Substring(spawn.IndexOf("[spawn]", StringComparison.Ordinal));
+                spawnNote = " | " + spawn.Substring(spawn.IndexOf("[spawn]", StringComparison.Ordinal));
             }
-            r.Info = string.Join(", ", parts) + value;
+            r.Info = string.Join(", ", parts) + spawnNote;
         }
 
         // ---- #3 re-equip after join ----------------------------------------------------------------------------
@@ -575,12 +575,12 @@ namespace DarkwoodMP.World
                 }
                 if (!InvItemClass.isNull(slot.invItem))
                 {
-                    InvSlot slot2 = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
-                    if (slot2 == null)
+                    InvSlot chosen = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                    if (chosen == null)
                     {
-                        slot2 = slot;
+                        chosen = slot;
                     }
-                    slot = slot2;
+                    slot = chosen;
                 }
                 slot.inventory = p.Hotbar;
                 if (InvItemClass.isNull(slot.invItem))
@@ -626,12 +626,12 @@ namespace DarkwoodMP.World
             r.Info = $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
             if (!(_dog.health < _dogHealth))
             {
-                string value = "it died of something else before the client's attack: ";
+                string cause = "it died of something else before the client's attack: ";
                 if (_dog.alive)
                 {
-                    value = "the client's attack did nothing here: ";
+                    cause = "the client's attack did nothing here: ";
                 }
-                r.Fail(value + r.Info);
+                r.Fail(cause + r.Info);
             }
         }
 
@@ -751,11 +751,11 @@ namespace DarkwoodMP.World
             {
                 foreach (var k in new[] { "Dog", "DogMutated", "Villager", "ChomperRed", "Mimic", "Banshee" }.Concat(Enum.GetNames(typeof(CharacterType))))
                 {
-                    GameObject gameObject2 = Resources.Load("Prefabs/Characters/" + k) as GameObject;
+                    GameObject prefab = Resources.Load("Prefabs/Characters/" + k) as GameObject;
                     CharacterSounds s = null;
-                    if (gameObject2 != null)
+                    if (prefab != null)
                     {
-                        s = gameObject2.GetComponent<CharacterSounds>();
+                        s = prefab.GetComponent<CharacterSounds>();
                     }
                     if (s != null && !string.IsNullOrEmpty(s.idleLoop))
                     {
@@ -764,12 +764,12 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            string kind2 = kind;
-            if (kind2 == null)
+            string wanted = kind;
+            if (wanted == null)
             {
-                kind2 = "Dog";
+                wanted = "Dog";
             }
-            var res = Resources.Load("Prefabs/Characters/" + kind2);
+            var res = Resources.Load("Prefabs/Characters/" + wanted);
             GameObject go = null;
             if (res != null)
             {
@@ -786,12 +786,12 @@ namespace DarkwoodMP.World
                 {
                     Object.Destroy(go);
                 }
-                string kind3 = kind;
-                if (kind3 == null)
+                string named = kind;
+                if (named == null)
                 {
-                    kind3 = "Dog";
+                    named = "Dog";
                 }
-                r.Fail($"couldn't make a {kind3} of our own here");
+                r.Fail($"couldn't make a {named} of our own here");
                 yield break;
             }
             var save = mine.GetComponent<SaveableObject>();
@@ -836,12 +836,12 @@ namespace DarkwoodMP.World
             {
                 text = "a dog";
             }
-            string idle2 = idle;
-            if (idle2 == null)
+            string idleName = idle;
+            if (idleName == null)
             {
-                idle2 = "none";
+                idleName = "none";
             }
-            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idle2} (a Dog's: {dogLoops}); " +
+            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idleName} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
             NetEnemies.Hidden.Remove(mine);
             NetEnemies.Frozen.Remove(mine);
@@ -1167,12 +1167,12 @@ namespace DarkwoodMP.World
         /// --from-other the log says the other game's break arrived (and whether it was culled here then).</summary>
         private static IEnumerator EggCheck(string[] a, Result r)
         {
-            string a2 = "station";
+            string spec = "station";
             if (a.Length > 0)
             {
-                a2 = a[0];
+                spec = a[0];
             }
-            var which = a2.Split(',');
+            var which = spec.Split(',');
             string[] fromOther;
             if (a.Length > 2 && a[1] == "--from-other")
             {
@@ -1199,12 +1199,12 @@ namespace DarkwoodMP.World
                 }
                 string rf = ObjRef.Of(e.gameObject).ToString();
                 var line = lines.LastOrDefault(l => l.Contains($"[world] egg {rf} destroyed"));
-                string value = "";
+                string lineNote = "";
                 if (line != null)
                 {
-                    value = $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
+                    lineNote = $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
                 }
-                parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + value);
+                parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + lineNote);
                 if (!e.destroyed)
                 {
                     r.Fail($"the {kv.Key} egg {rf} isn't broken here");
@@ -1301,11 +1301,11 @@ namespace DarkwoodMP.World
             // MeleeSensor hits a patch only if Core.canSeeAttack passes: rays from our player at a character's height
             // (14) towards the patch (at y -40), as long as the flat distance, must hit the patch's collider.
             // The sensor's check is against the collider it touched, which may be on a child of the patch.
-            Collider componentInChildren = inf.GetComponentInChildren<Collider>();
+            Collider hitCollider = inf.GetComponentInChildren<Collider>();
             Transform hitT = null;
-            if (componentInChildren != null)
+            if (hitCollider != null)
             {
-                hitT = componentInChildren.transform;
+                hitT = hitCollider.transform;
             }
             if (hitT == null)
             {
@@ -1395,12 +1395,12 @@ namespace DarkwoodMP.World
         /// <summary>"infection-check station[,infection:client] [--from-other]": those patches are gone here (and the log says the other game's clear arrived).</summary>
         private static IEnumerator InfectionCheck(string[] a, Result r)
         {
-            string a2 = "station";
+            string spec = "station";
             if (a.Length > 0)
             {
-                a2 = a[0];
+                spec = a[0];
             }
-            var which = a2.Split(',');
+            var which = spec.Split(',');
             var missing = new List<string>();
             if (a.Contains("--from-other"))
             {

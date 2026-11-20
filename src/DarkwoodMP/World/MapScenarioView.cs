@@ -254,12 +254,12 @@ namespace DarkwoodMP.World
                 }
                 return Alpha() < 0.1f;
             }
-            float value = 16f;
+            float wait = 16f;
             if (want == null)
             {
-                value = 0f;
+                wait = 0f;
             }
-            float until = Time.realtimeSinceStartup + value;
+            float until = Time.realtimeSinceStartup + wait;
             while (!Ok() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);

@@ -876,11 +876,11 @@ namespace DarkwoodMP
                 ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(shots, prefix + what + ".png"));
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            Slot slot2 = w._slots.FirstOrDefault(s => !s.Free);
+            Slot firstUsed = w._slots.FirstOrDefault(s => !s.Free);
             int firstSave = 0;
-            if (slot2 != null)
+            if (firstUsed != null)
             {
-                firstSave = slot2.Id;
+                firstSave = firstUsed.Id;
             }
             if (shots != null)
             {

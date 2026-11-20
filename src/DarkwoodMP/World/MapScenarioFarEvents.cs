@@ -460,12 +460,12 @@ namespace DarkwoodMP.World
             {
                 skill = instance.Electrician(j.Owner);
             }
-            string toString = "not known";
+            string skillText = "not known";
             if (skill.HasValue)
             {
-                toString = skill.Value.ToString();
+                skillText = skill.Value.ToString();
             }
-            r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {toString})";
+            r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {skillText})";
             if (clientNearer && skill.HasValue && GeneratorDrainSkillPatch.Last != null && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
             {
                 r.Fail("drained by our skill: " + r.Info);

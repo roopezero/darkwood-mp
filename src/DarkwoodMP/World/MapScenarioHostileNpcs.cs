@@ -395,10 +395,10 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} here");
                 yield break;
             }
-            string toString = "no state";
+            string deadText = "no state";
             if (st != null)
             {
-                toString = st.dead.ToString();
+                deadText = st.dead.ToString();
             }
             string part;
             if (a.Length > 2)
@@ -413,7 +413,7 @@ namespace DarkwoodMP.World
             {
                 part = a[0];
             }
-            r.Info = $"alive {c.alive}, story dead {toString}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(part)}";
+            r.Info = $"alive {c.alive}, story dead {deadText}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(part)}";
             if (c.alive || (st != null && !st.dead))
             {
                 r.Fail($"not dead here: {r.Info}");

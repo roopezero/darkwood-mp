@@ -291,12 +291,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
-            string value = "";
+            string doorNote = "";
             if (m.Thing != null && m.Thing.GetComponent<Door>() is Door d)
             {
-                value = $"; door open={d.opened} broken={d.destroyed} health={d.health}";
+                doorNote = $"; door open={d.opened} broken={d.destroyed} health={d.health}";
             }
-            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + value;
+            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + doorNote;
             if (got != own || m.C.N != shared)
             {
                 r.Fail(r.Info);

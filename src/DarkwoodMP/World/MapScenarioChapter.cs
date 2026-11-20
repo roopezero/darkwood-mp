@@ -322,14 +322,14 @@ namespace DarkwoodMP.World
             {
                 dreaming = d.dreaming;
             }
-            Dreams d2 = D;
-            string name2 = null;
-            if (d2 != null)
+            Dreams dreams = D;
+            string presetName = null;
+            if (dreams != null)
             {
-                DreamPreset preset = d2.preset;
+                DreamPreset preset = dreams.preset;
                 if (preset != null)
                 {
-                    name2 = preset.name;
+                    presetName = preset.name;
                 }
             }
             string shared = DreamSync.Shared;
@@ -337,7 +337,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
-            r.Info = $"dreaming {dreaming} ({name2}), entering {Core.EnteringDream}, shared {shared}, chapter {Chapter}";
+            r.Info = $"dreaming {dreaming} ({presetName}), entering {Core.EnteringDream}, shared {shared}, chapter {Chapter}";
             if (!(D != null && D.dreaming))
             {
                 r.Fail($"not in a dream: {r.Info}");
@@ -363,16 +363,16 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSecondsRealtime(0.5f);
             }
-            string line2 = line;
-            if (line2 == null)
+            string answer = line;
+            if (answer == null)
             {
-                line2 = refused;
+                answer = refused;
             }
-            if (line2 == null)
+            if (answer == null)
             {
-                line2 = "no answer from the host";
+                answer = "no answer from the host";
             }
-            r.Info = line2.Trim();
+            r.Info = answer.Trim();
             if (refused != null)
             {
                 r.Fail($"refused: {r.Info}");
@@ -388,12 +388,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(5f);
             var lines = Lines();
             string held = lines.LastOrDefault(l => l.Contains("which can't run here yet"));
-            string held2 = held;
-            if (held2 == null)
+            string heldText = held;
+            if (heldText == null)
             {
-                held2 = "nothing held";
+                heldText = "nothing held";
             }
-            r.Info = $"{held2.Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
+            r.Info = $"{heldText.Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
             if (held == null)
             {
                 r.Fail($"no chapter held: {r.Info}");

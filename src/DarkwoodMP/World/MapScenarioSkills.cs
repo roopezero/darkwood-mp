@@ -119,21 +119,21 @@ namespace DarkwoodMP.World
                 SkillsPanel.TestMouse = null;
                 if (atEdge != first)
                 {
-                    string atEdge2 = atEdge;
-                    if (atEdge2 == null)
+                    string overEdge = atEdge;
+                    if (overEdge == null)
                     {
-                        atEdge2 = "nothing";
+                        overEdge = "nothing";
                     }
-                    fails.Add($"mouse at {first}'s icon edge: over {atEdge2}");
+                    fails.Add($"mouse at {first}'s icon edge: over {overEdge}");
                 }
                 if (atGap != first && atGap != below)
                 {
-                    string atGap2 = atGap;
-                    if (atGap2 == null)
+                    string gapHover = atGap;
+                    if (gapHover == null)
                     {
-                        atGap2 = "nothing";
+                        gapHover = "nothing";
                     }
-                    fails.Add($"mouse between {first} and {below}: over {atGap2}");
+                    fails.Add($"mouse between {first} and {below}: over {gapHover}");
                 }
                 if (outside != null)
                 {
@@ -172,13 +172,13 @@ namespace DarkwoodMP.World
                 SkillsPanel.TestPressKey();
             }
             yield return new WaitForSecondsRealtime(1f);
-            string outside2 = outside;
-            if (outside2 == null)
+            string outsideHover = outside;
+            if (outsideHover == null)
             {
-                outside2 = "nothing";
+                outsideHover = "nothing";
             }
             r.Info = $"open {open} (backpack {bag}); {skills} skills, cell {firstCell} over icon {firstIcon}; mouse at the edge: {atEdge}, " +
-                $"between: {atGap}, outside: {outside2}; height {hBefore}; with the backpack both open {both}, " +
+                $"between: {atGap}, outside: {outsideHover}; height {hBefore}; with the backpack both open {both}, " +
                 $"after it closed panel open {stillOpen}; closed {!SkillsPanel.Open}";
             if (SkillsPanel.Open)
             {
@@ -270,12 +270,12 @@ namespace DarkwoodMP.World
                 {
                     text = "+" + choice[1];
                 }
-                string why2 = why;
-                if (why2 == null)
+                string outcome = why;
+                if (outcome == null)
                 {
-                    why2 = "ok";
+                    outcome = "ok";
                 }
-                log.Add($"{choice[0]}{text}: {why2} ({before} -> {SkillTree.Points(P)})");
+                log.Add($"{choice[0]}{text}: {outcome} ({before} -> {SkillTree.Points(P)})");
                 if (why != null)
                 {
                     fails.Add($"choice {n} ({choice[0]}): {why}");

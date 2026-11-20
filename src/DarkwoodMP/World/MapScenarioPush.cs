@@ -188,12 +188,12 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    string text2 = "";
+                    string bodyNote = "";
                     if (b.GetComponentInParent<Item>() != null)
                     {
-                        text2 = " on the body, one above it";
+                        bodyNote = " on the body, one above it";
                     }
-                    what = $"NOT SHARED (no Item{text2})";
+                    what = $"NOT SHARED (no Item{bodyNote})";
                     unwatched.Add($"{b.name} {Ref(b)}");
                 }
                 Plugin.Log.LogInfo(FormattableString.Invariant($"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));

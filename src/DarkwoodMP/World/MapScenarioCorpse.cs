@@ -209,17 +209,17 @@ namespace DarkwoodMP.World
                 r.Fail($"no corpse shown here (state dead {dead} deadID {deadID}): {all}");
                 yield break;
             }
-            bool? dead2 = null;
+            bool? stateDead = null;
             if (st != null)
             {
-                dead2 = st.dead;
+                stateDead = st.dead;
             }
-            int? deadID2 = null;
+            int? stateDeadId = null;
             if (st != null)
             {
-                deadID2 = st.deadID;
+                stateDeadId = st.deadID;
             }
-            r.Info = $"state dead {dead2} deadID {deadID2}; {Props(c)}";
+            r.Info = $"state dead {stateDead} deadID {stateDeadId}; {Props(c)}";
             if (c.GetComponent<Item>() == null)
             {
                 r.Fail($"not searchable: {r.Info}");

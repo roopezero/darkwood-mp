@@ -57,17 +57,17 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(3f); // the host's stand-in for us goes Away with our next snapshots
             DreamPreset preset = D.preset;
-            string name2 = null;
+            string presetName = null;
             if (preset != null)
             {
-                name2 = preset.name;
+                presetName = preset.name;
             }
             string shared = DreamSync.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
-            r.Info = $"dreaming {name2} (shared {shared}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+            r.Info = $"dreaming {presetName} (shared {shared}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
             if (!D.dreaming || DreamSync.Shared != null || Locations.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");
@@ -182,10 +182,10 @@ namespace DarkwoodMP.World
             {
                 text = "still there";
             }
-            string name2 = null;
+            string locationName = null;
             if (loc != null)
             {
-                name2 = loc.name;
+                locationName = loc.name;
             }
             string chomper = "not out";
             if (ours != null)
@@ -211,7 +211,7 @@ namespace DarkwoodMP.World
             {
                 answer = "refused: " + why;
             }
-            r.Info = $"in {name2}: wardrobe {opened}, {text}; our chomper {chomper}; {doorInfo}; " +
+            r.Info = $"in {locationName}: wardrobe {opened}, {text}; our chomper {chomper}; {doorInfo}; " +
                      $"forged request {answer}; refused {refused}";
             if (refused > 0)
             {
@@ -332,12 +332,12 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(2f);
             DreamPreset preset = D.preset;
-            string name2 = null;
+            string presetName = null;
             if (preset != null)
             {
-                name2 = preset.name;
+                presetName = preset.name;
             }
-            r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}";
+            r.Info = $"dreaming {presetName} (shared {DreamSync.Shared}) at {Locations.Current()}";
             if (DreamSync.Shared != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
@@ -370,12 +370,12 @@ namespace DarkwoodMP.World
                 }
             }
             DreamPreset preset = D.preset;
-            string name2 = null;
+            string presetName = null;
             if (preset != null)
             {
-                name2 = preset.name;
+                presetName = preset.name;
             }
-            r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
+            r.Info = $"dreaming {presetName} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
             if (D.preset == null || D.preset.name != name || DreamSync.Shared != name)
             {
                 r.Fail($"not in the host's dream {name}: {r.Info}");

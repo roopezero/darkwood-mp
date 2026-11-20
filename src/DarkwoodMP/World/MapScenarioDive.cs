@@ -597,10 +597,10 @@ namespace DarkwoodMP.World
                 {
                     if (e != null && ScriptedEvents.TargetsPlayer(e))
                     {
-                        string value = "";
+                        string argument = "";
                         if (e.type == GameEvent.Type.runFunction)
                         {
-                            value = " " + e.Value;
+                            argument = " " + e.Value;
                         }
                         GameEvent.Type kind = e.type;
                         string step = "";
@@ -608,13 +608,13 @@ namespace DarkwoodMP.World
                         {
                             step = " (player step)";
                         }
-                        string k = kind + value + step;
-                        int value2 = 0;
+                        string k = kind + argument + step;
+                        int seen = 0;
                         if (onPlayer.TryGetValue(k, out var c))
                         {
-                            value2 = c;
+                            seen = c;
                         }
-                        onPlayer[k] = value2 + 1;
+                        onPlayer[k] = seen + 1;
                         List<GameObject> targetGameObjects = e.targetGameObjects;
                         int count = 0;
                         if (targetGameObjects != null)
@@ -622,12 +622,12 @@ namespace DarkwoodMP.World
                             count = targetGameObjects.Count;
                         }
                         List<string> targetUniqueObjects = e.targetUniqueObjects;
-                        int count2 = 0;
+                        int uniqueCount = 0;
                         if (targetUniqueObjects != null)
                         {
-                            count2 = targetUniqueObjects.Count;
+                            uniqueCount = targetUniqueObjects.Count;
                         }
-                        if (count + count2 > 1)
+                        if (count + uniqueCount > 1)
                         {
                             mixed++;
                         }

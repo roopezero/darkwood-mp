@@ -757,20 +757,20 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
-            string value;
+            string answer;
             if (ok == null)
             {
-                value = "no answer";
+                answer = "no answer";
             }
             else if (ok.Value)
             {
-                value = "allowed";
+                answer = "allowed";
             }
             else
             {
-                value = "refused: " + why;
+                answer = "refused: " + why;
             }
-            r.Info = $"at {far.name}: " + value;
+            r.Info = $"at {far.name}: " + answer;
             if (ok != false)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");

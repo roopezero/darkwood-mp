@@ -291,17 +291,17 @@ namespace DarkwoodMP.World
             {
                 NetEnemies.Instance.NetIdOf(c, out id);
             }
-            string name2 = "-";
+            string enemyName = "-";
             if (c != null)
             {
-                name2 = c.name;
+                enemyName = c.name;
             }
             float health = 0f;
             if (c != null)
             {
                 health = c.health;
             }
-            r.Info = $"{name2} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
+            r.Info = $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
             if (kill && c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");
@@ -399,12 +399,12 @@ namespace DarkwoodMP.World
             var alive = HostEnemy(true, 2500f);
             if (c == null)
             {
-                string name2 = "none";
+                string livingName = "none";
                 if (alive != null)
                 {
-                    name2 = alive.name;
+                    livingName = alive.name;
                 }
-                r.Fail($"no dead enemy of the host's near us (a living one: {name2})");
+                r.Fail($"no dead enemy of the host's near us (a living one: {livingName})");
                 yield break;
             }
             var inv = c.GetComponentInChildren<Inventory>(true);
@@ -436,12 +436,12 @@ namespace DarkwoodMP.World
             }
             if (c == null || inv == null || c.GetComponent<Item>() == null)
             {
-                string name2 = "none";
+                string corpseName = "none";
                 if (c != null)
                 {
-                    name2 = c.name;
+                    corpseName = c.name;
                 }
-                r.Fail($"no searchable corpse near us ({name2})");
+                r.Fail($"no searchable corpse near us ({corpseName})");
                 yield break;
             }
             yield return Walk(c.transform.position, 90f);
@@ -628,12 +628,12 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             var win = Singleton<UI>.Instance.dialogueWindow;
             AsPlayer(() => npc.talkTo());
-            float value = 2.5f;
+            float wait = 2.5f;
             if (expectRefused)
             {
-                value = 8f;
+                wait = 8f;
             }
-            float until = Time.realtimeSinceStartup + value;
+            float until = Time.realtimeSinceStartup + wait;
             bool Told() => MapScenarioIssues.LogLines().Skip(mark).Any(l => !l.Contains("[map]") && (l.Contains("is talking to them") || l.Contains("just talked to them")));
             while (Time.realtimeSinceStartup < until && !(expectRefused && Told() && win.npc != npc))
             {
@@ -711,12 +711,12 @@ namespace DarkwoodMP.World
             }
             if (to == null)
             {
-                string name2 = "none";
+                string hideoutName = "none";
                 if (here != null)
                 {
-                    name2 = here.name;
+                    hideoutName = here.name;
                 }
-                r.Fail($"no other hideout (the centre's is {name2})");
+                r.Fail($"no other hideout (the centre's is {hideoutName})");
                 yield break;
             }
             yield return Walk(to.transform.position, 60f);

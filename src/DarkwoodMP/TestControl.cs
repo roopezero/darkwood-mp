@@ -258,12 +258,12 @@ namespace DarkwoodMP
                 yield return null;
             }
             _busy = false;
-            string value = "fail timeout";
+            string answer = "fail timeout";
             if (done())
             {
-                value = "ok";
+                answer = "ok";
             }
-            reply.WriteLine(value);
+            reply.WriteLine(answer);
         }
 
         /// <summary>Host: how many players have joined and are out of loading (their PlayerState no longer comes from
@@ -341,12 +341,12 @@ namespace DarkwoodMP
             Plugin.Instance.SetPanel(false);
             MapScenarioIssues.MarkLogStart(); // the next test's log scans start here
             _busy = false;
-            string value = "error: no main menu after 90 s";
+            string answer = "error: no main menu after 90 s";
             if (WorldShare.MainMenuReady())
             {
-                value = "ready";
+                answer = "ready";
             }
-            reply.WriteLine(value);
+            reply.WriteLine(answer);
         }
 
         /// <summary>Called from Plugin.OnGUI: the test's title along the top of the screen.</summary>

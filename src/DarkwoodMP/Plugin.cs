@@ -936,25 +936,25 @@ namespace DarkwoodMP
                 {
                     text = " with " + choice[1];
                 }
-                string text2;
+                string outcome;
                 if (why == null)
                 {
-                    text2 = "ok";
+                    outcome = "ok";
                 }
                 else
                 {
-                    text2 = "FAIL " + why;
+                    outcome = "FAIL " + why;
                 }
-                Log.LogInfo($"[solo] learned {choice[0]}{text}: {text2}, points {pointsBefore} -> {SkillTree.Points(p)}");
+                Log.LogInfo($"[solo] learned {choice[0]}{text}: {outcome}, points {pointsBefore} -> {SkillTree.Points(p)}");
                 yield return Shot("solo-skills-learned");
                 // Against the rules: the same skill again.
                 string again = SkillsPanel.TestLearn(choice[0], choice[1]);
-                string text3 = "FAIL learned";
+                string repeat = "FAIL learned";
                 if (again != null)
                 {
-                    text3 = "refused (" + again + ")";
+                    repeat = "refused (" + again + ")";
                 }
-                Log.LogInfo($"[solo] the same skill again: {text3}");
+                Log.LogInfo($"[solo] the same skill again: {repeat}");
 
                 // The mouse (the panel's test mouse) on the learned icon's bottom right pixel.
                 if (SkillsPanel.TestRects(choice[0], out var icon, out var cell))
@@ -978,17 +978,17 @@ namespace DarkwoodMP
                     int eaten = SkillsPanel.TestEaten;
                     Log.LogInfo($"[solo] real-mouse {Mathf.RoundToInt(nIcon.xMin + 1)} {Mathf.RoundToInt(nIcon.yMin + 1)} click (top left pixel of {next[0]})");
                     yield return new WaitForSecondsRealtime(6f);
-                    string testHover2 = SkillsPanel.TestHover;
-                    if (testHover2 == null)
+                    string hovered = SkillsPanel.TestHover;
+                    if (hovered == null)
                     {
-                        testHover2 = "nothing";
+                        hovered = "nothing";
                     }
                     string testChosen = SkillsPanel.TestChosen;
                     if (testChosen == null)
                     {
                         testChosen = "nothing";
                     }
-                    Log.LogInfo($"[solo] real mouse: over {testHover2}, chosen {testChosen}, the game's mouse reads eaten {SkillsPanel.TestEaten - eaten}");
+                    Log.LogInfo($"[solo] real mouse: over {hovered}, chosen {testChosen}, the game's mouse reads eaten {SkillsPanel.TestEaten - eaten}");
                     yield return Shot("solo-skills-real-mouse");
                 }
                 // Several points spent one after another with the real mouse: a skill, its negative one if needed, Learn.
@@ -1000,16 +1000,16 @@ namespace DarkwoodMP
                     List<string> clickFails = null;
                     yield return SkillsPanel.TestClickAll(f => clickFails = f);
                     yield return Shot("solo-skills-clicked");
-                    string text4;
+                    string result;
                     if (clickFails.Count == 0 && had >= 2)
                     {
-                        text4 = "PASS all learned";
+                        result = "PASS all learned";
                     }
                     else
                     {
-                        text4 = "FAIL " + string.Join("; ", clickFails);
+                        result = "FAIL " + string.Join("; ", clickFails);
                     }
-                    Log.LogInfo($"[solo] real clicks on {had} points: {text4}: {Progression.TestState()}");
+                    Log.LogInfo($"[solo] real clicks on {had} points: {result}: {Progression.TestState()}");
                 }
                 else
                 {

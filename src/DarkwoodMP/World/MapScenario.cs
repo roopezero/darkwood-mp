@@ -529,12 +529,12 @@ namespace DarkwoodMP.World
                 && !i.name.StartsWith("DroppedItem") && i.slots.Any(Has) && (locked || !(i.GetComponentInParent<Locked>() is Locked l && l.locked)) && i != p.Inventory && i != p.Hotbar && !i.transform.IsChildOf(p.transform)), Centre);
             if (inv == null)
             {
-                string type2 = type;
-                if (type2 == null)
+                string wanted = type;
+                if (wanted == null)
                 {
-                    type2 = "anything";
+                    wanted = "anything";
                 }
-                r.Fail($"no container with {type2} in it");
+                r.Fail($"no container with {wanted} in it");
                 yield break;
             }
             yield return Walk(inv.transform.position);
@@ -646,12 +646,12 @@ namespace DarkwoodMP.World
             var parts = new List<string> { $"we: health {health:0}" };
             if (p == null || !p.alive || p.health <= 0f)
             {
-                float health2 = 0f;
+                float playerHealth = 0f;
                 if (p != null)
                 {
-                    health2 = p.health;
+                    playerHealth = p.health;
                 }
-                r.Fail($"our player is dead (health {health2:0})");
+                r.Fail($"our player is dead (health {playerHealth:0})");
             }
             var ps = Sync.PlayerSync.Instance;
             if (ps != null)

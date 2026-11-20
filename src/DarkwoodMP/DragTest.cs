@@ -198,12 +198,12 @@ namespace DarkwoodMP
                 {
                     text = "PASS";
                 }
-                string text2 = "moved";
+                string change = "moved";
                 if (c.resize)
                 {
-                    text2 = "grew";
+                    change = "grew";
                 }
-                Log($"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {text2} ({got.x:0.##}, {got.y:0.##})");
+                Log($"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {change} ({got.x:0.##}, {got.y:0.##})");
                 _win.Close();
                 yield return null;
             }
