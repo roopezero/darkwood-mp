@@ -164,17 +164,17 @@ namespace DarkwoodMP.Combat
                     {
                         loc = NightSpawns.BigLocationAt(a.target.transform.position);
                     }
-                    string name2 = "none";
+                    string targetName = "none";
                     if (a.target != null)
                     {
-                        name2 = a.target.name;
+                        targetName = a.target.name;
                     }
-                    string name3 = "no location";
+                    string locationName = "no location";
                     if (loc != null)
                     {
-                        name3 = loc.name;
+                        locationName = loc.name;
                     }
-                    Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {name2}, in {name3}");
+                    Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {targetName}, in {locationName}");
                 }
                 Plugin.Log.LogInfo($"[joiner ai test] {c.name} has {c.activities.Count} activities");
 

@@ -169,11 +169,11 @@ namespace DarkwoodMP.World
             }
             _nextKeep = Time.unscaledTime + 0.5f;
             var want = new HashSet<Location>();
-            Dreams instance2 = Singleton<Dreams>.Instance;
+            Dreams dreams = Singleton<Dreams>.Instance;
             Location dream = null;
-            if (instance2 != null)
+            if (dreams != null)
             {
-                dream = instance2.dreamLocation;
+                dream = dreams.dreamLocation;
             }
             foreach (var p in Combat.NetPlayerProxy.All.Values)
             {
@@ -227,10 +227,10 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 loc.leave(force: true);
-                WorldGrid instance3 = Singleton<WorldGrid>.Instance;
-                if (instance3 != null)
+                WorldGrid worldGrid = Singleton<WorldGrid>.Instance;
+                if (worldGrid != null)
                 {
-                    WorldGrid.Grid grid = instance3.getGrid(name);
+                    WorldGrid.Grid grid = worldGrid.getGrid(name);
                     if (grid != null)
                     {
                         grid.leave();
@@ -669,12 +669,12 @@ namespace DarkwoodMP.World
             }
             var d = Singleton<Dreams>.Instance;
             var w = s.Begin(MsgType.LocationAsk);
-            int value = 0;
+            int dreamFlag = 0;
             if (d != null && (d.dreamPrepared || d.dreaming))
             {
-                value = 1;
+                dreamFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)dreamFlag);
             w.WriteStr(name);
             s.SendToHost(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo($"[locations] asked the host where {name} stands");

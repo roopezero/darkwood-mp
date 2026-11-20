@@ -271,10 +271,10 @@ namespace DarkwoodMP.World
             GameObject spawn = null;
             if (gen != null && gen.playerBase != null)
             {
-                Location component = gen.playerBase.GetComponent<Location>();
-                if (component != null)
+                Location baseLocation = gen.playerBase.GetComponent<Location>();
+                if (baseLocation != null)
                 {
-                    spawn = component.playerSpawn;
+                    spawn = baseLocation.playerSpawn;
                 }
                 else
                 {

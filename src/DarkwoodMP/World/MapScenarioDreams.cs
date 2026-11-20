@@ -683,12 +683,12 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            Door component = go.GetComponent<Door>();
-            if (component == null)
+            Door door = go.GetComponent<Door>();
+            if (door == null)
             {
-                component = go.GetComponentInChildren<Door>();
+                door = go.GetComponentInChildren<Door>();
             }
-            return component;
+            return door;
         }
 
         private static string DoorInfo(Door d)

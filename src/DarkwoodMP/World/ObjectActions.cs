@@ -98,12 +98,12 @@ namespace DarkwoodMP.World
                         }
                         if (ii.isOn == on)
                         {
-                            string reason2 = "it's already off";
+                            string already = "it's already off";
                             if (on)
                             {
-                                reason2 = "it's already on";
+                                already = "it's already on";
                             }
-                            Authority.Refuse(reason2);
+                            Authority.Refuse(already);
                             return false;
                         }
                         return true;
@@ -238,10 +238,10 @@ namespace DarkwoodMP.World
                     }
                     break;
                 case Action.FeederUsed:
-                    Feeder component = t.GetComponent<Feeder>();
-                    if (component != null)
+                    Feeder feeder = t.GetComponent<Feeder>();
+                    if (feeder != null)
                     {
-                        component.makeInactive();
+                        feeder.makeInactive();
                     }
                     break;
                 case Action.LiquidLit:
@@ -640,12 +640,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            string name2 = "shadow";
+            string armorName = "shadow";
             if (__instance != null)
             {
-                name2 = __instance.name;
+                armorName = __instance.name;
             }
-            WorldActions.Send(Action.ShadowArmorDied, __state, name2);
+            WorldActions.Send(Action.ShadowArmorDied, __state, armorName);
         }
     }
 }

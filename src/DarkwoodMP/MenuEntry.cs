@@ -613,36 +613,36 @@ namespace DarkwoodMP
                     on.Add(name);
                 }
             }
-            GameObject go2 = null;
+            GameObject backpack = null;
             if (p.Inventory != null)
             {
-                go2 = p.Inventory.thisUI;
+                backpack = p.Inventory.thisUI;
             }
-            Go("backpack", go2);
-            GameObject go3 = null;
+            Go("backpack", backpack);
+            GameObject hotbar = null;
             if (p.Hotbar != null)
             {
-                go3 = p.Hotbar.thisUI;
+                hotbar = p.Hotbar.thisUI;
             }
-            Go("hotbar", go3);
-            GameObject go4 = null;
+            Go("hotbar", hotbar);
+            GameObject crafting = null;
             if (p.Crafting != null)
             {
-                go4 = p.Crafting.thisUI;
+                crafting = p.Crafting.thisUI;
             }
-            Go("crafting", go4);
-            GameObject go5 = null;
+            Go("crafting", crafting);
+            GameObject container = null;
             if (p.openedItemInventory != null)
             {
-                go5 = p.openedItemInventory.thisUI;
+                container = p.openedItemInventory.thisUI;
             }
-            Go("container", go5);
-            GameObject go6 = null;
+            Go("container", container);
+            GameObject secondContainer = null;
             if (p.openedItemInventory2 != null)
             {
-                go6 = p.openedItemInventory2.thisUI;
+                secondContainer = p.openedItemInventory2.thisUI;
             }
-            Go("container2", go6);
+            Go("container2", secondContainer);
             if (ui.upgradeItemMenu != null && ui.upgradeItemMenu.opened)
             {
                 Go("upgrade", ui.upgradeItemMenu.gameObject);

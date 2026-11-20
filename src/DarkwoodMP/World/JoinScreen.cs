@@ -172,12 +172,12 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    string line2 = world.LoadStatus;
-                    if (line2 == null)
+                    string latest = world.LoadStatus;
+                    if (latest == null)
                     {
-                        line2 = _line;
+                        latest = _line;
                     }
-                    _line = line2;
+                    _line = latest;
                 }
                 Draw();
                 return;
@@ -219,12 +219,12 @@ namespace DarkwoodMP.World
 
             if (world.Progress is var p && p.HasValue)
             {
-                float value = 0f;
+                float fraction = 0f;
                 if (p.Value.Total > 0)
                 {
-                    value = (float)p.Value.Got / p.Value.Total;
+                    fraction = (float)p.Value.Got / p.Value.Total;
                 }
-                Raise(DownloadShare * value);
+                Raise(DownloadShare * fraction);
                 string progress = $"Downloading the host's world: {p.Value.Got / 1048576f:0.0} / {p.Value.Total / 1048576f:0.0} MB";
                 string unpacked = "";
                 if (world.UnpackedSize > 0)
@@ -236,12 +236,12 @@ namespace DarkwoodMP.World
             else if (session.Connected)
             {
                 Raise(DownloadShare);
-                string line3 = world.LoadStatus;
-                if (line3 == null)
+                string loadLine = world.LoadStatus;
+                if (loadLine == null)
                 {
-                    line3 = "Loading the host's world...";
+                    loadLine = "Loading the host's world...";
                 }
-                SetStage(Stage.Loading, line3);
+                SetStage(Stage.Loading, loadLine);
             }
             else if (world.LoadStatus != null)
             {

@@ -69,12 +69,12 @@ namespace DarkwoodMP.World
             string text = "-";
             if (c.npc != null)
             {
-                string value = "";
+                string oneNote = "";
                 if (c.npc.onlyOneInstance)
                 {
-                    value = ", one instance";
+                    oneNote = ", one instance";
                 }
-                text = c.npc.name + value;
+                text = c.npc.name + oneNote;
             }
             string head = $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), ";
             bool on = c.gameObject.activeInHierarchy;

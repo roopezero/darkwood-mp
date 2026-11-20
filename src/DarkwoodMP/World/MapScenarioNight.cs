@@ -176,16 +176,16 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        string value;
+                        string argument;
                         if (string.IsNullOrEmpty(re.Value))
                         {
-                            value = "";
+                            argument = "";
                         }
                         else
                         {
-                            value = " " + re.Value;
+                            argument = " " + re.Value;
                         }
-                        steps.Add("(" + re.type + value + ")");
+                        steps.Add("(" + re.type + argument + ")");
                     }
                     Plugin.Log.LogInfo($"[night] {sc.name} (difficulty {sc.difficulty}) / {ce.name}: {re.type}: {string.Join("; ", steps)}");
                 }
@@ -204,20 +204,20 @@ namespace DarkwoodMP.World
             switch (e.type)
             {
                 case GameEvent.Type.gameObject:
-                    string value = "";
+                    string spawned = "";
                     if (e.gameObjectModifyType == GameEvent.GameObjectModify.spawn && e.targetTransform != null)
                     {
-                        value = " " + e.targetTransform.name;
+                        spawned = " " + e.targetTransform.name;
                     }
-                    k += " " + e.gameObjectModifyType + value;
+                    k += " " + e.gameObjectModifyType + spawned;
                     break;
                 case GameEvent.Type.item:
-                    string value2 = "";
+                    string lightNote = "";
                     if (e.itemModifyType == GameEvent.ItemModify.light)
                     {
-                        value2 = " " + e.lightModify;
+                        lightNote = " " + e.lightModify;
                     }
-                    k += " " + e.itemModifyType + value2;
+                    k += " " + e.itemModifyType + lightNote;
                     break;
                 case GameEvent.Type.runFunction:
                     k += " " + e.Value;
@@ -252,12 +252,12 @@ namespace DarkwoodMP.World
                 .Concat(e.targetGameObjects.Where(g => g != null).Select(g => g.name)).Distinct().Take(4).ToList();
             if (e.getTargetFromLocation || targets.Count > 0)
             {
-                string value3 = "";
+                string fromLocation = "";
                 if (e.getTargetFromLocation)
                 {
-                    value3 = "location ";
+                    fromLocation = "location ";
                 }
-                k += " [" + value3 + string.Join(",", targets) + "]";
+                k += " [" + fromLocation + string.Join(",", targets) + "]";
             }
             return k;
         }

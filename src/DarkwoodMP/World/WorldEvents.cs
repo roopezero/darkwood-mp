@@ -193,21 +193,21 @@ namespace DarkwoodMP.World
             }
             w.WriteStr(s);
             w.WriteStr(ev.gameObject.name);
-            string s2 = "";
+            string sentName = "";
             if (big != null)
             {
-                s2 = big.name;
+                sentName = big.name;
             }
-            w.WriteStr(s2);
+            w.WriteStr(sentName);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                string name2 = "nowhere";
+                string shownName = "nowhere";
                 if (big != null)
                 {
-                    name2 = big.name;
+                    shownName = big.name;
                 }
-                Plugin.Log.LogInfo($"[world] sent night event {ev.gameObject.name} at {name2}");
+                Plugin.Log.LogInfo($"[world] sent night event {ev.gameObject.name} at {shownName}");
             }
         }
 
@@ -633,10 +633,10 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         Core.addToSaveable(go, isDynamic: true);
-                        WorldGrid instance2 = Singleton<WorldGrid>.Instance;
-                        if (instance2 != null)
+                        WorldGrid grid = Singleton<WorldGrid>.Instance;
+                        if (grid != null)
                         {
-                            instance2.registerToNode(go);
+                            grid.registerToNode(go);
                         }
                         RandomObjectsOf(chunk).Add(go);
                         ObjRef.RegisterSpawned(o.id, go);
@@ -670,11 +670,11 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                SaveManager instance3 = Singleton<SaveManager>.Instance;
+                SaveManager saves = Singleton<SaveManager>.Instance;
                 GameObject prefab = null;
-                if (instance3 != null)
+                if (saves != null)
                 {
-                    prefab = instance3.getPrefab(name);
+                    prefab = saves.getPrefab(name);
                 }
                 if (prefab == null)
                 {
@@ -1054,12 +1054,12 @@ namespace DarkwoodMP.World
             {
                 return true; // only the host's player could be ambushed: the game's own
             }
-            int value = 0;
+            int hostSlot = 0;
             if (hostCan)
             {
-                value = 1;
+                hostSlot = 1;
             }
-            int pick = UnityEngine.Random.Range(0, joiners.Count + value);
+            int pick = UnityEngine.Random.Range(0, joiners.Count + hostSlot);
             if (pick >= joiners.Count)
             {
                 return true; // the host's player: the game's own

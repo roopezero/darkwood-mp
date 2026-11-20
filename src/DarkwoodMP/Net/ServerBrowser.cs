@@ -152,16 +152,16 @@ namespace DarkwoodMP.Net
                         continue;
                     }
                     int eq = line.IndexOf('=');
-                    string substring;
+                    string rawKey;
                     if (eq >= 0)
                     {
-                        substring = line.Substring(0, eq);
+                        rawKey = line.Substring(0, eq);
                     }
                     else
                     {
-                        substring = line;
+                        rawKey = line;
                     }
-                    string key = substring.Trim();
+                    string key = rawKey.Trim();
                     string val = "";
                     if (eq >= 0)
                     {

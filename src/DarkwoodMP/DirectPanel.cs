@@ -389,19 +389,19 @@ namespace DarkwoodMP
                         _sortDown = false;
                     }
                 }
-                string value = "";
+                string arrow = "";
                 if (_sortColumn == c && c > 0)
                 {
                     if (_sortDown)
                     {
-                        value = "  v";
+                        arrow = "  v";
                     }
                     else
                     {
-                        value = "  ^";
+                        arrow = "  ^";
                     }
                 }
-                string name = Columns[c] + value;
+                string name = Columns[c] + arrow;
                 Color color;
                 if (r.Contains(Event.current.mousePosition))
                 {
@@ -666,16 +666,16 @@ namespace DarkwoodMP
                 }
             }
             var sorted = list.OrderBy(Key);
-            IEnumerable<string> reverse;
+            IEnumerable<string> ordered;
             if (_sortDown)
             {
-                reverse = sorted.Reverse();
+                ordered = sorted.Reverse();
             }
             else
             {
-                reverse = sorted;
+                ordered = sorted;
             }
-            return reverse.ToList();
+            return ordered.ToList();
         }
 
         private void BrowserButtons(Rect r)
@@ -768,12 +768,12 @@ namespace DarkwoodMP
             _session.LastRefusal = null;
             _browser.Joined(addr);
             Plugin.Cfg.LastAddress.Value = addr;
-            string password2 = password;
-            if (password2 == null)
+            string sentPassword = password;
+            if (sentPassword == null)
             {
-                password2 = "";
+                sentPassword = "";
             }
-            _tcp.Join(addr, password2);
+            _tcp.Join(addr, sentPassword);
             Action handler = OnJoining;
             if (handler != null)
             {

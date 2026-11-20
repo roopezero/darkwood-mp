@@ -522,16 +522,16 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                string value;
+                string stored;
                 if (kv.Key.StartsWith("r:"))
                 {
-                    value = "=" + kv.Value;
+                    stored = "=" + kv.Value;
                 }
                 else
                 {
-                    value = kv.Value;
+                    stored = kv.Value;
                 }
-                changed.Add(new KeyValuePair<string, string>(kv.Key, value));
+                changed.Add(new KeyValuePair<string, string>(kv.Key, stored));
             }
             bool shared = SharedDream; // as Flush: a dream entry the game dropped as the dream ended isn't sent
             foreach (var kv in _atSnapshot)
@@ -709,11 +709,11 @@ namespace DarkwoodMP.World
             bool dead;
             try
             {
-                bool? dead2 = JObject.Parse(value).Value<bool?>("dead");
+                bool? saved = JObject.Parse(value).Value<bool?>("dead");
                 dead = false;
-                if (dead2.HasValue)
+                if (saved.HasValue)
                 {
-                    dead = dead2.Value;
+                    dead = saved.Value;
                 }
             }
             catch
@@ -894,10 +894,10 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                Map instance2 = Singleton<Map>.Instance;
-                if (instance2 != null)
+                Map map = Singleton<Map>.Instance;
+                if (map != null)
                 {
-                    instance2.showElement(el);
+                    map.showElement(el);
                 }
                 Plugin.Log.LogInfo($"Journal: {name} shown on the map");
             }

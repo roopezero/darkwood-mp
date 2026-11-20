@@ -325,24 +325,24 @@ namespace DarkwoodMP.World
                     {
                         text = "/trigger";
                     }
-                    string text2 = "/off";
+                    string offNote = "/off";
                     if (c.enabled)
                     {
-                        text2 = "";
+                        offNote = "";
                     }
-                    sb.Append($" col:{c.GetType().Name}{text}{text2} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
+                    sb.Append($" col:{c.GetType().Name}{text}{offNote} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
                 }
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
                 {
                     foreach (var et in ets.eventTriggers)
                     {
-                        string text3 = "";
+                        string disabledNote = "";
                         if (et.disabled)
                         {
-                            text3 = " disabled";
+                            disabledNote = " disabled";
                         }
-                        sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{text3}");
+                        sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{disabledNote}");
                         foreach (var (label, ge) in new[] { ("do", et.gameEvents), ("exit", et.gameEventsExit), ("else", et.gameEventsElse) })
                         {
                             if (ge != null)
@@ -993,17 +993,17 @@ namespace DarkwoodMP.World
                 }
                 return string.Join(", ", s.OrderByDescending(x => x.Value).Take(3).Select(x => $"{x.Key} x{x.Value}"));
             }
-            float text = 0f;
+            float leftReach = 0f;
             if (nl > 0)
             {
-                text = left / nl;
+                leftReach = left / nl;
             }
             float rightReach = 0f;
             if (nr > 0)
             {
                 rightReach = right / nr;
             }
-            return $"reach left {text:P0} (stopped by {top(stopL)}), right {rightReach:P0} (stopped by {top(stopR)})";
+            return $"reach left {leftReach:P0} (stopped by {top(stopL)}), right {rightReach:P0} (stopped by {top(stopR)})";
         }
     }
 }

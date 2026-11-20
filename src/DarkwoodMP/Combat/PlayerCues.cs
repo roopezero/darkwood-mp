@@ -81,13 +81,13 @@ namespace DarkwoodMP.Combat
                 {
                     text = "swings";
                 }
-                string value = "within 350 told to be scared";
+                string effect = "within 350 told to be scared";
                 if (kind == Dodge)
                 {
-                    value = "within 150 may dodge";
+                    effect = "within 150 may dodge";
                 }
                 Plugin.Log.LogInfo($"[threat] {proxy.OwnerName} {text}: {n} characters " +
-                                   value);
+                                   effect);
             }
         }
 

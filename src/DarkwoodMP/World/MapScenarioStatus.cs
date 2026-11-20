@@ -190,17 +190,17 @@ namespace DarkwoodMP.World
                     {
                         name = info.Name;
                     }
-                    Net.ServerInfo info2 = f.e.Info;
+                    Net.ServerInfo playersInfo = f.e.Info;
                     int? players = null;
-                    if (info2 != null)
+                    if (playersInfo != null)
                     {
-                        players = info2.Players;
+                        players = playersInfo.Players;
                     }
-                    Net.ServerInfo info3 = f.e.Info;
+                    Net.ServerInfo maxInfo = f.e.Info;
                     int? maxPlayers = null;
-                    if (info3 != null)
+                    if (maxInfo != null)
                     {
-                        maxPlayers = info3.MaxPlayers;
+                        maxPlayers = maxInfo.MaxPlayers;
                     }
                     Net.ServerInfo answer = f.e.Info;
                     int? proto = null;

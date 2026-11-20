@@ -628,12 +628,12 @@ namespace DarkwoodMP.World
             {
                 text = ", away";
             }
-            string text2 = "";
+            string touched = "";
             if (p.Touched)
             {
-                text2 = ", touched";
+                touched = ", touched";
             }
-            return System.FormattableString.Invariant($"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{text}{text2}");
+            return System.FormattableString.Invariant($"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{text}{touched}");
         }
 
         private static void Rebase(Loose p)
@@ -741,12 +741,12 @@ namespace DarkwoodMP.World
             w.W.Write(rot.y);
             w.W.Write(rot.z);
             w.W.Write(rot.w);
-            int value = 0;
+            int lastFlag = 0;
             if (last)
             {
-                value = 1;
+                lastFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)lastFlag);
             return w;
         }
 
@@ -1019,12 +1019,12 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.DragOwner);
             r.Write(w);
             w.W.Write(owner);
-            int value = 0;
+            int letGoFlag = 0;
             if (letGo)
             {
-                value = 1;
+                letGoFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)letGoFlag);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);

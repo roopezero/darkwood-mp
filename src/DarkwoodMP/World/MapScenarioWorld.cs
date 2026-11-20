@@ -200,12 +200,12 @@ namespace DarkwoodMP.World
                 {
                     Messages.RemoveAt(0);
                 }
-                string message2 = message;
-                if (message2 == null)
+                string logged = message;
+                if (logged == null)
                 {
-                    message2 = "";
+                    logged = "";
                 }
-                Messages.Add((Time.realtimeSinceStartup, message2));
+                Messages.Add((Time.realtimeSinceStartup, logged));
             }
         }
 
@@ -1891,10 +1891,10 @@ namespace DarkwoodMP.World
                 }
                 npc.reputation += repChange;
                 // What TraderTradePatch does after acceptTrade.
-                TraderSync instance2 = TraderSync.Instance;
-                if (instance2 != null)
+                TraderSync traders = TraderSync.Instance;
+                if (traders != null)
                 {
-                    instance2.LocalTrade(npc, new Dictionary<string, int> { [boughtType] = 1 }, gave, repChange);
+                    traders.LocalTrade(npc, new Dictionary<string, int> { [boughtType] = 1 }, gave, repChange);
                 }
             });
             yield return new WaitForSeconds(1.5f);

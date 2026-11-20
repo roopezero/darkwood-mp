@@ -86,12 +86,12 @@ namespace DarkwoodMP.World
                 }
                 return $"{x.key} -> {placed}";
             }).ToList();
-            string value = "";
+            string foundList = "";
             if (found.Count > 0)
             {
-                value = ": " + string.Join(", ", found);
+                foundList = ": " + string.Join(", ", found);
             }
-            Plugin.Log.LogInfo($"[world test] items placed on use: {found.Count}" + value);
+            Plugin.Log.LogInfo($"[world test] items placed on use: {found.Count}" + foundList);
         }
 
         public static IEnumerator Run()

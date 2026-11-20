@@ -567,12 +567,12 @@ namespace DarkwoodMP.Combat
             {
                 var w = _one.Begin(MsgType.EnemyArmor);
                 w.W.Write(t.Id);
-                int value = 0;
+                int armorFlag = 0;
                 if (now)
                 {
-                    value = 1;
+                    armorFlag = 1;
                 }
-                w.W.Write((byte)value);
+                w.W.Write((byte)armorFlag);
                 _session.SendTo(peer, w, Channel.Control, reliable: true);
             }
             string text = "gone";
@@ -602,22 +602,22 @@ namespace DarkwoodMP.Combat
             }
             var w = _session.Begin(MsgType.EnemySpawn);
             w.W.Write(t.Id);
-            int uniqueId2 = 0;
+            int savedId = 0;
             if (save != null)
             {
-                uniqueId2 = save.uniqueId;
+                savedId = save.uniqueId;
             }
-            w.W.Write(uniqueId2);
+            w.W.Write(savedId);
             w.WriteStr(path);
             w.WriteStr(name);
             w.Write(c.transform.position);
             WriteRot(w, c.transform.rotation);
-            int value = 0;
+            int armorFlag = 0;
             if (t.Armor)
             {
-                value = 1;
+                armorFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)armorFlag);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             // The loop it's playing now (one that started before it was sent, e.g. an NPC's aggressive one as it
             // turned hostile): after the spawn, on the same channel, so it comes after it.
@@ -702,12 +702,12 @@ namespace DarkwoodMP.Combat
         {
             var w = _session.Begin(MsgType.EnemyDespawn);
             w.W.Write(id);
-            int value = 0;
+            int corpseFlag = 0;
             if (keepCorpse)
             {
-                value = 1;
+                corpseFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)corpseFlag);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
@@ -799,12 +799,12 @@ namespace DarkwoodMP.Combat
                 var w = _session.Begin(MsgType.EnemyBlood);
                 w.W.Write(t.Id);
                 w.W.Write(yRot);
-                int value = 0;
+                int waterFlag = 0;
                 if (c.inWater)
                 {
-                    value = 1;
+                    waterFlag = 1;
                 }
-                w.W.Write((byte)value);
+                w.W.Write((byte)waterFlag);
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
@@ -1116,12 +1116,12 @@ namespace DarkwoodMP.Combat
             // A gun fired one shot per click (oneShot, semiAuto) has its fireRate at 0 or near it: its pump or
             // bolt animation, and the clicks, keep it under about 7 shots a second.
             bool auto = b.fireMode == InvItem.FireMode.fullAuto || b.fireMode == InvItem.FireMode.burst;
-            float b2 = 0.15f;
+            float minRate = 0.15f;
             if (auto)
             {
-                b2 = 0.05f;
+                minRate = 0.05f;
             }
-            float shots = 1f / Mathf.Max(b.fireRate, b2);
+            float shots = 1f / Mathf.Max(b.fireRate, minRate);
             return Mathf.Max(MaxHitsPerSecond, Mathf.CeilToInt(Mathf.Max(1, b.projectileAmount) * shots * 1.5f));
         }
 
@@ -1321,11 +1321,11 @@ namespace DarkwoodMP.Combat
             try
             {
                 grid.registerToNode(c.gameObject);
-                CullableObject component = c.GetComponent<CullableObject>();
+                CullableObject cullable = c.GetComponent<CullableObject>();
                 WorldGrid.Node node = null;
-                if (component != null)
+                if (cullable != null)
                 {
-                    node = component.node;
+                    node = cullable.node;
                 }
                 if (node != null && !node.entered && c.gameObject.activeSelf)
                 {
@@ -1740,12 +1740,12 @@ namespace DarkwoodMP.Combat
             {
                 text = "made from its prefab";
             }
-            string text2 = "";
+            string switched = "";
             if (wasOff)
             {
-                text2 = ", switched on";
+                switched = ", switched on";
             }
-            Plugin.Log.LogInfo($"Showing the host's {name} #{id} ({text}{text2}); {Frozen.Count} of our own characters are frozen");
+            Plugin.Log.LogInfo($"Showing the host's {name} #{id} ({text}{switched}); {Frozen.Count} of our own characters are frozen");
             LogFovBlockers(c, $"#{id} shown");
         }
 
@@ -2216,12 +2216,12 @@ namespace DarkwoodMP.Combat
                 }
                 else
                 {
-                    string text2 = "";
+                    string cuts = "";
                     if ((mask & (1 << hit.layer)) != 0)
                     {
-                        text2 = " (cuts the view)";
+                        cuts = " (cuts the view)";
                     }
-                    text = $"{hit.name} layer {hit.layer}{text2}";
+                    text = $"{hit.name} layer {hit.layer}{cuts}";
                 }
                 Plugin.Log.LogInfo($"[enemy] {c.name} dies here: hit collider {text}, " +
                                    $"pre-death {c.hasPreDeath}; switched-off parts on the view's shadow layers (mask {mask}): [{string.Join(", ", off)}]");
@@ -2407,20 +2407,20 @@ namespace DarkwoodMP.Combat
                 {
                     text = "there";
                 }
-                string text2 = "none";
+                string colliderState = "none";
                 if (c.collider != null)
                 {
-                    text2 = "there";
+                    colliderState = "there";
                 }
-                string text3 = "none";
+                string capsuleState = "none";
                 if (c.capsuleCollider != null)
                 {
-                    text3 = "there";
+                    capsuleState = "there";
                 }
-                string clip2 = clip;
-                if (clip2 == null)
+                string shownClip = clip;
+                if (shownClip == null)
                 {
-                    clip2 = "none";
+                    shownClip = "none";
                 }
                 List<ColliderInfo> deathColliders = c.deathColliders;
                 int count = -1;
@@ -2439,8 +2439,8 @@ namespace DarkwoodMP.Combat
                     }
                 }
                 Plugin.Log.LogInfo($"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
-                                   $"animator {text}, clip {clip2}, collider {text2}, " +
-                                   $"capsule {text3}, death colliders {count}; at {trimmedLine}); trigger now {(c.collider != null && c.collider.isTrigger)}");
+                                   $"animator {text}, clip {shownClip}, collider {colliderState}, " +
+                                   $"capsule {capsuleState}, death colliders {count}; at {trimmedLine}); trigger now {(c.collider != null && c.collider.isTrigger)}");
             }
             catch (System.Exception e)
             {

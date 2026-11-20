@@ -443,16 +443,16 @@ namespace DarkwoodMP.World
             {
                 trap = go.GetComponent<Trigger>();
             }
-            int value = 0;
+            int armed = 0;
             if (trap == null)
             {
-                value = 255;
+                armed = 255;
             }
             else if (trap.active)
             {
-                value = 1;
+                armed = 1;
             }
-            return (byte)value;
+            return (byte)armed;
         }
 
         private static void Arm(GameObject go, byte armed)

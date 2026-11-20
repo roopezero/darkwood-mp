@@ -254,12 +254,12 @@ namespace DarkwoodMP.World
             }
             var w = s.Begin(MsgType.ContainerSlotsAll);
             obj.Write(w);
-            string s2 = "";
+            string doc = "";
             if (inv != null)
             {
-                s2 = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+                doc = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
             }
-            w.WriteBigStr(s2);
+            w.WriteBigStr(doc);
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -532,10 +532,10 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
-            int text = 0;
+            int recipe = 0;
             if (it.isRecipe)
             {
-                text = 1;
+                recipe = 1;
             }
             List<ItemUpgrade> upgrades = it.upgrades;
             int count = 0;
@@ -543,7 +543,7 @@ namespace DarkwoodMP.World
             {
                 count = upgrades.Count;
             }
-            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{text}|{count}";
+            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{recipe}|{count}";
         }
 
         /// <summary>
@@ -731,16 +731,16 @@ namespace DarkwoodMP.World
                 // A gun's saved amount is its loaded rounds (it.ammo); its amount stays the 1 the copy gives it, not 0.
                 if (it != null)
                 {
-                    int amount2;
+                    int created;
                     if (it.baseClass != null && it.baseClass.hasAmmo)
                     {
-                        amount2 = -1;
+                        created = -1;
                     }
                     else
                     {
-                        amount2 = it.amount;
+                        created = it.amount;
                     }
-                    slot.createItem(it, amount2);
+                    slot.createItem(it, created);
                 }
             }
             finally
@@ -1026,12 +1026,12 @@ namespace DarkwoodMP.World
             void Add(string type, int n, InvItemClass item)
             {
                 net.TryGetValue(type, out var was);
-                InvItemClass item2 = was.item;
-                if (item2 == null)
+                InvItemClass kept = was.item;
+                if (kept == null)
                 {
-                    item2 = item;
+                    kept = item;
                 }
-                net[type] = (was.n + n, item2);
+                net[type] = (was.n + n, kept);
             }
             if (any)
             {

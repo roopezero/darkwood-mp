@@ -420,11 +420,11 @@ namespace DarkwoodMP
             // "--dwmp-window WxH": play in a window of that size (to check the UI at other sizes); without it, the
             // size from before is put back.
             {
-                string arg = Arg("--dwmp-window");
+                string windowArg = Arg("--dwmp-window");
                 string[] wh = null;
-                if (arg != null)
+                if (windowArg != null)
                 {
-                    wh = arg.Split('x');
+                    wh = windowArg.Split('x');
                 }
                 if (wh != null && wh.Length == 2 && int.TryParse(wh[0], out int ww) && int.TryParse(wh[1], out int hh))
                 {
@@ -1805,10 +1805,10 @@ namespace DarkwoodMP
                     instance.HostUpdate();
                 }
             }
-            NpcSync instance2 = NpcSync.Instance;
-            if (instance2 != null)
+            NpcSync npcs = NpcSync.Instance;
+            if (npcs != null)
             {
-                instance2.Update();
+                npcs.Update();
             }
             ModProfiler.Mark("npcs");
             DialogueGuard.Update();
@@ -1894,12 +1894,12 @@ namespace DarkwoodMP
         /// <summary>Your name (General.PlayerName; empty: the Steam or OS user name), changed in Options.</summary>
         public void SetPlayerName(string name)
         {
-            string name2 = name;
-            if (name2 == null)
+            string stored = name;
+            if (stored == null)
             {
-                name2 = "";
+                stored = "";
             }
-            Cfg.PlayerName.Value = name2;
+            Cfg.PlayerName.Value = stored;
             UpdateLocalName();
         }
 
@@ -2062,17 +2062,17 @@ namespace DarkwoodMP
                 }
                 foreach (var kv in _session.Names)
                 {
-                    string value = "";
+                    string hostTag = "";
                     if (kv.Key == hostId)
                     {
-                        value = "  (host)";
+                        hostTag = "  (host)";
                     }
-                    string value2 = "";
+                    string youTag = "";
                     if (kv.Key == _session.LocalId)
                     {
-                        value2 = "  (you)";
+                        youTag = "  (you)";
                     }
-                    string tags = value + value2;
+                    string tags = hostTag + youTag;
                     Ui.Label(f, kv.Value + tags);
                 }
             }
@@ -2323,16 +2323,16 @@ namespace DarkwoodMP
                 return "";
             }
             // The game's sheet has biome_forest, _forest_mutated, _meadow and _swamp; dense forest is forest on its map.
-            Biome.Type value;
+            Biome.Type biomeType;
             if (b.type == Biome.Type.forest_dense)
             {
-                value = Biome.Type.forest;
+                biomeType = Biome.Type.forest;
             }
             else
             {
-                value = b.type;
+                biomeType = b.type;
             }
-            string key = "biome_" + value;
+            string key = "biome_" + biomeType;
             string name = "";
             try
             {

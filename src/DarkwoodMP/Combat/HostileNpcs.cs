@@ -244,16 +244,16 @@ namespace DarkwoodMP.Combat
             {
                 item = Player.Instance.currentItem;
             }
-            string s2;
+            string itemJson;
             if (InvItemClass.isNull(item))
             {
-                s2 = "";
+                itemJson = "";
             }
             else
             {
-                s2 = Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0));
+                itemJson = Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0));
             }
-            w.WriteStr(s2);
+            w.WriteStr(itemJson);
             List<InvItemEffect> mine = null;
             if (effects != null)
             {

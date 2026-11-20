@@ -376,21 +376,21 @@ namespace DarkwoodMP
                 text = "full screen";
             }
             Plugin.Log.LogInfo($"[options] screen {w}x{h} {text}, asking to keep it");
-            string text2 = "in a window";
+            string mode = "in a window";
             if (full)
             {
-                text2 = "full screen";
+                mode = "full screen";
             }
-            AskKeep($"The screen is now {w}x{h}, {text2}.", () =>
+            AskKeep($"The screen is now {w}x{h}, {mode}.", () =>
             {
                 GameSettings.SetInt("ScreenWidth", w);
                 GameSettings.SetInt("ScreenHeight", h);
-                int intValue = 0;
+                int fullFlag = 0;
                 if (full)
                 {
-                    intValue = 1;
+                    fullFlag = 1;
                 }
-                GameSettings.SetInt("Fullscreen", intValue);
+                GameSettings.SetInt("Fullscreen", fullFlag);
                 if (Menu != null)
                 {
                     if (full)
@@ -406,16 +406,16 @@ namespace DarkwoodMP
                 Plugin.Log.LogInfo("[options] screen kept");
             }, () =>
             {
-                FullScreenMode fullscreenMode2;
+                FullScreenMode oldMode;
                 if (ofull)
                 {
-                    fullscreenMode2 = FullScreenMode.FullScreenWindow;
+                    oldMode = FullScreenMode.FullScreenWindow;
                 }
                 else
                 {
-                    fullscreenMode2 = FullScreenMode.Windowed;
+                    oldMode = FullScreenMode.Windowed;
                 }
-                Screen.SetResolution(ow, oh, fullscreenMode2);
+                Screen.SetResolution(ow, oh, oldMode);
                 Plugin.Log.LogInfo($"[options] screen back to {ow}x{oh}");
             });
         }
@@ -653,16 +653,16 @@ namespace DarkwoodMP
                 {
                     SetVolume(music, nv);
                 }
-                float v2;
+                float volume;
                 if (music)
                 {
-                    v2 = _music;
+                    volume = _music;
                 }
                 else
                 {
-                    v2 = _sound;
+                    volume = _sound;
                 }
-                Ui.Label(cc[1], Percent(v2, min, max), MenuSkin.Bright, TextAnchor.MiddleRight);
+                Ui.Label(cc[1], Percent(volume, min, max), MenuSkin.Bright, TextAnchor.MiddleRight);
             }
             f.Space(6);
             Ui.Text(f, "You hear a new volume at once. Apply keeps it.", MenuSkin.Dim);
@@ -948,27 +948,27 @@ namespace DarkwoodMP
             int fitDown = Mathf.FloorToInt((_win.Rect.height - below.y - 8 * S) / rowH);
             int fitUp = Mathf.FloorToInt((top - PixelFont.Line - 12 * S) / rowH);
             bool up = fitDown < Mathf.Min(n, 6) && fitUp > fitDown;
-            int value;
+            int fit;
             if (up)
             {
-                value = fitUp;
+                fit = fitUp;
             }
             else
             {
-                value = fitDown;
+                fit = fitDown;
             }
-            int vis = Mathf.Clamp(value, 1, n);
+            int vis = Mathf.Clamp(fit, 1, n);
             float h = vis * rowH + 4 * S;
-            float y2;
+            float boxTop;
             if (up)
             {
-                y2 = top - h;
+                boxTop = top - h;
             }
             else
             {
-                y2 = below.y;
+                boxTop = below.y;
             }
-            var box = new Rect(below.x, y2, _drop.Width, h);
+            var box = new Rect(below.x, boxTop, _drop.Width, h);
             if (_drop.First < 0)
             {
                 _drop.First = Mathf.Clamp(_drop.Index - vis / 2, 0, Mathf.Max(0, n - vis));
@@ -1126,16 +1126,16 @@ namespace DarkwoodMP
                         label = a.descriptiveName + " +";
                     }
                     AddRow(maps, a, RW.AxisRange.Positive, label);
-                    string label2;
+                    string negativeLabel;
                     if (!string.IsNullOrEmpty(a.negativeDescriptiveName))
                     {
-                        label2 = a.negativeDescriptiveName;
+                        negativeLabel = a.negativeDescriptiveName;
                     }
                     else
                     {
-                        label2 = a.descriptiveName + " -";
+                        negativeLabel = a.descriptiveName + " -";
                     }
-                    AddRow(maps, a, RW.AxisRange.Negative, label2);
+                    AddRow(maps, a, RW.AxisRange.Negative, negativeLabel);
                 }
                 else if (a.type == RW.InputActionType.Button)
                 {
@@ -1223,23 +1223,23 @@ namespace DarkwoodMP
             bool wheel = GameSettings.GetInt("MouseScrollHotbar") == 1;
             if (Ui.Check(c[1], wheel, "Mouse wheel scrolls the hotbar") != wheel)
             {
-                int v2 = 1;
+                int wheelSetting = 1;
                 if (wheel)
                 {
-                    v2 = 0;
+                    wheelSetting = 0;
                 }
-                SetSetting("MouseScrollHotbar", v2);
+                SetSetting("MouseScrollHotbar", wheelSetting);
             }
             c = f.Row(Ui.RowH, 0, 90, 110);
             bool noPad = GameSettings.GetInt("DisableControllerMode") == 1;
             if (Ui.Check(c[0], noPad, "Turn the controller off") != noPad)
             {
-                int v3 = 1;
+                int padSetting = 1;
                 if (noPad)
                 {
-                    v3 = 0;
+                    padSetting = 0;
                 }
-                SetSetting("DisableControllerMode", v3);
+                SetSetting("DisableControllerMode", padSetting);
                 RW.ControllerMap pad = null;
                 if (Menu != null)
                 {
@@ -1364,17 +1364,17 @@ namespace DarkwoodMP
                 {
                     left = _mapper.timeRemaining;
                 }
-                string text2 = "Click the new mouse button";
+                string hint = "Click the new mouse button";
                 if (_mapCol == 0)
                 {
-                    text2 = "Press the new key";
+                    hint = "Press the new key";
                 }
-                string text3 = "";
+                string timer = "";
                 if (left > 0)
                 {
-                    text3 = $" ({Mathf.CeilToInt(left)} s)";
+                    timer = $" ({Mathf.CeilToInt(left)} s)";
                 }
-                status = $"{text2} for {_mapRow.Label}{text3}. Escape cancels.";
+                status = $"{hint} for {_mapRow.Label}{timer}. Escape cancels.";
             }
             if (status == null)
             {

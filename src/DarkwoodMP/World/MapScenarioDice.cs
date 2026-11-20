@@ -97,12 +97,12 @@ namespace DarkwoodMP.World
                                 try
                                 {
                                     List<GameObject> objects = loc.getObjects(g);
-                                    int count2 = 0;
+                                    int found = 0;
                                     if (objects != null)
                                     {
-                                        count2 = objects.Count;
+                                        found = objects.Count;
                                     }
-                                    count = count2;
+                                    count = found;
                                 }
                                 catch
                                 {
@@ -125,21 +125,21 @@ namespace DarkwoodMP.World
                             {
                                 text = "nearest-to-own-player";
                             }
-                            string toString;
+                            string countText;
                             if (count < 0)
                             {
-                                toString = "?";
+                                countText = "?";
                             }
                             else
                             {
-                                toString = count.ToString();
+                                countText = count.ToString();
                             }
-                            string name2 = "no location";
+                            string locationName = "no location";
                             if (loc != null)
                             {
-                                name2 = loc.name;
+                                locationName = loc.name;
                             }
-                            Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {toString} in {name2}");
+                            Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {countText} in {locationName}");
                         }
                     }
                 }

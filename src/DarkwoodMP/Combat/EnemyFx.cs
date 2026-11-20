@@ -118,12 +118,12 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
                 var w = s.Begin(MsgType.CombatMusic);
-                int value = 0;
+                int fightFlag = 0;
                 if (fight)
                 {
-                    value = 1;
+                    fightFlag = 1;
                 }
-                w.W.Write((byte)value);
+                w.W.Write((byte)fightFlag);
                 s.SendTo(proxy.Owner, w, Channel.Control, reliable: true);
             }
         }
@@ -151,12 +151,12 @@ namespace DarkwoodMP.Combat
             {
                 text = "on";
             }
-            string text2 = "none is";
+            string hostSays = "none is";
             if (HostSaysInCombat)
             {
-                text2 = "an enemy is after us";
+                hostSays = "an enemy is after us";
             }
-            Plugin.Log.LogInfo($"[enemyfx] combat music {text} (the host says {text2})");
+            Plugin.Log.LogInfo($"[enemyfx] combat music {text} (the host says {hostSays})");
         }
 
         // ---- effect prefabs -----------------------------------------------------------------------------

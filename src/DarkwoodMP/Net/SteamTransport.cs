@@ -194,16 +194,16 @@ namespace DarkwoodMP.Net
         {
             var ident = new SteamNetworkingIdentity();
             ident.SetSteamID(to);
-            int value;
+            int mode;
             if (reliable)
             {
-                value = Constants.k_nSteamNetworkingSend_Reliable;
+                mode = Constants.k_nSteamNetworkingSend_Reliable;
             }
             else
             {
-                value = Constants.k_nSteamNetworkingSend_UnreliableNoDelay;
+                mode = Constants.k_nSteamNetworkingSend_UnreliableNoDelay;
             }
-            int flags = value
+            int flags = mode
                         | Constants.k_nSteamNetworkingSend_AutoRestartBrokenSession;
             GCHandle h = GCHandle.Alloc(data, GCHandleType.Pinned);
             try
@@ -371,10 +371,10 @@ namespace DarkwoodMP.Net
                             }
                             else if (AddPiece(from, channel, _recvBuf, len) is Joining whole)
                             {
-                                MessageHandler handler2 = OnMessage;
-                                if (handler2 != null)
+                                MessageHandler receiver = OnMessage;
+                                if (receiver != null)
                                 {
-                                    handler2(from, whole.Data, whole.Data.Length, channel);
+                                    receiver(from, whole.Data, whole.Data.Length, channel);
                                 }
                             }
                         }

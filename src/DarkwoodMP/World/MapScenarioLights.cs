@@ -193,11 +193,11 @@ namespace DarkwoodMP.World
             var held = x.HeldLightShown;
             if (held != null)
             {
-                Sync.PlayerSnapshot last2 = x.Last;
+                Sync.PlayerSnapshot snapshot = x.Last;
                 string heldLight = null;
-                if (last2 != null)
+                if (snapshot != null)
                 {
-                    heldLight = last2.HeldLight;
+                    heldLight = snapshot.HeldLight;
                 }
                 parts.Add($"{heldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
             }
@@ -226,16 +226,16 @@ namespace DarkwoodMP.World
                 }
                 parts.Add($"beam r{lightRadius:0} (sent {beamRadius:0}) grey {grey:0.00} drawn {Drawn(l)}");
             }
-            string joinValue;
+            string listing;
             if (parts.Count == 0)
             {
-                joinValue = "no lights";
+                listing = "no lights";
             }
             else
             {
-                joinValue = string.Join(", ", parts);
+                listing = string.Join(", ", parts);
             }
-            return $"{x.Name}: {joinValue}";
+            return $"{x.Name}: {listing}";
         }
 
         /// <summary>Lights on our player or a puppet whose mesh another light also has ("" if none).</summary>
@@ -318,19 +318,19 @@ namespace DarkwoodMP.World
                 {
                     text = "on " + Sync.ViewWatch.Path(l.transform);
                 }
-                string text2 = "not its own";
+                string meshNote = "not its own";
                 if (own)
                 {
-                    text2 = "its own";
+                    meshNote = "its own";
                 }
-                parts.Add($"{name} {text} {d:0} from it, mesh {text2}");
+                parts.Add($"{name} {text} {d:0} from it, mesh {meshNote}");
             }
-            string text3 = "NOT ours";
+            string whose = "NOT ours";
             if (ours)
             {
-                text3 = "ours";
+                whose = "ours";
             }
-            return $"view: {text3} ({string.Join(", ", parts)})";
+            return $"view: {whose} ({string.Join(", ", parts)})";
         }
     }
 }

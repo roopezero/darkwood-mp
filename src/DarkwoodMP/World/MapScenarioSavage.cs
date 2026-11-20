@@ -448,12 +448,12 @@ namespace DarkwoodMP.World
                     {
                         text = " held";
                     }
-                    string text2 = "";
+                    string stateNote = "";
                     if (run[0].State != "")
                     {
-                        text2 = " " + run[0].State;
+                        stateNote = " " + run[0].State;
                     }
-                    seq.Add(FormattableString.Invariant($"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{text}{text2})"));
+                    seq.Add(FormattableString.Invariant($"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{text}{stateNote})"));
                     double playDur = 0;
                     if (playing.Count > 1)
                     {

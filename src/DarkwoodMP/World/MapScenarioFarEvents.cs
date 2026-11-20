@@ -497,12 +497,12 @@ namespace DarkwoodMP.World
             }
             if (MapScenarioFarEvents.PlayerStepsRun.Count < 50)
             {
-                string name2 = "?";
+                string objectName = "?";
                 if (thisGO != null)
                 {
-                    name2 = thisGO.name;
+                    objectName = thisGO.name;
                 }
-                MapScenarioFarEvents.PlayerStepsRun.Add($"{__instance.type} ({name2})");
+                MapScenarioFarEvents.PlayerStepsRun.Add($"{__instance.type} ({objectName})");
             }
         }
 

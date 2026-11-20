@@ -377,14 +377,14 @@ namespace DarkwoodMP.Combat
             }
             if (changed && Threat.Debug)
             {
-                string value = "";
+                string stopNote = "";
                 if (turnedInvisible)
                 {
-                    value = $"; {stopped} enemies stop attacking them";
+                    stopNote = $"; {stopped} enemies stop attacking them";
                 }
                 Plugin.Log.LogInfo($"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, shadow ward {proxy.ShadowWard}, forest spirit ward {proxy.ForestSpiritWard}, " +
                                    $"friend of the forest {proxy.FriendOfTheForest}, enemy of the forest {proxy.EnemyOfTheForest}" +
-                                   value +
+                                   stopNote +
                                    $"; night worms sent at them: {NightSpawns.WormWanted(proxy)}; in light here: {Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
             }
         }

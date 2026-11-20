@@ -126,12 +126,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.TraderStock);
             WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
-            string stock2 = stock;
-            if (stock2 == null)
+            string sent = stock;
+            if (sent == null)
             {
-                stock2 = StockOf(npc);
+                sent = StockOf(npc);
             }
-            w.WriteBigStr(stock2);
+            w.WriteBigStr(sent);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -358,10 +358,10 @@ namespace DarkwoodMP.World
             // the flush builds its message with Session.Begin, in the same writer the trade's is built in.
             if (!_session.IsHost)
             {
-                FlagsSync instance2 = FlagsSync.Instance;
-                if (instance2 != null)
+                FlagsSync flags = FlagsSync.Instance;
+                if (flags != null)
                 {
-                    instance2.FlushNow();
+                    flags.FlushNow();
                 }
             }
             var at = npc.transform.position;
@@ -526,10 +526,10 @@ namespace DarkwoodMP.World
                 return;
             }
             Apply(npc, stock);
-            FlagsSync instance2 = FlagsSync.Instance;
-            if (instance2 != null)
+            FlagsSync flags = FlagsSync.Instance;
+            if (flags != null)
             {
-                instance2.AddReputation(name, repChange);
+                flags.AddReputation(name, repChange);
             }
             Plugin.Log.LogInfo($"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
             _session.Broadcast(WriteTrade(name, ObjRef.Of(npc.gameObject), npc.transform.position, took, gave, stock, repChange), Channel.Control, reliable: true, except: from);

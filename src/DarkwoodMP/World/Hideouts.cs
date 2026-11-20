@@ -211,17 +211,17 @@ namespace DarkwoodMP.World
             string contents = r.ReadBigStr();
             if (Debug)
             {
-                string name2 = "?";
+                string fromName = "?";
                 if (src != null)
                 {
-                    name2 = src.name;
+                    fromName = src.name;
                 }
-                string name3 = "?";
+                string toName = "?";
                 if (dest != null)
                 {
-                    name3 = dest.name;
+                    toName = dest.name;
                 }
-                Plugin.Log.LogInfo($"[world] got porter delivery from {name2} to {name3}");
+                Plugin.Log.LogInfo($"[world] got porter delivery from {fromName} to {toName}");
             }
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
@@ -283,10 +283,10 @@ namespace DarkwoodMP.World
             var porter = Singleton<UniqueObjects>.Instance.getObject("porter");
             if (porter != null)
             {
-                Character component = porter.GetComponent<Character>();
-                if (component != null)
+                Character porterChar = porter.GetComponent<Character>();
+                if (porterChar != null)
                 {
-                    component.removeMe();
+                    porterChar.removeMe();
                 }
             }
             Singleton<Flags>.Instance.setFlag("porter_inTransit", activeModifier: true);
@@ -414,12 +414,12 @@ namespace DarkwoodMP.World
             }
             if (Debug)
             {
-                string name2 = "no porter's place here";
+                string placeName = "no porter's place here";
                 if (loc != null)
                 {
-                    name2 = loc.name;
+                    placeName = loc.name;
                 }
-                Plugin.Log.LogInfo($"[world] got porter call: " + name2);
+                Plugin.Log.LogInfo($"[world] got porter call: " + placeName);
             }
             if (loc == null)
             {
@@ -507,12 +507,12 @@ namespace DarkwoodMP.World
         {
             var w = S.Begin(MsgType.OvenLit);
             ObjRef.Of(lit.gameObject).Write(w);
-            ObjRef of = default;
+            ObjRef goesOut = default;
             if (other != null)
             {
-                of = ObjRef.Of(other.gameObject);
+                goesOut = ObjRef.Of(other.gameObject);
             }
-            of.Write(w);
+            goesOut.Write(w);
             return w;
         }
 
@@ -521,12 +521,12 @@ namespace DarkwoodMP.World
             var w = BeginOven(lit, putOut);
             if (Debug)
             {
-                string value = "";
+                string note = "";
                 if (putOut != null)
                 {
-                    value = $", {putOut.name} out";
+                    note = $", {putOut.name} out";
                 }
-                Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + value);
+                Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + note);
             }
             S.Broadcast(w, Channel.Control, reliable: true);
         }

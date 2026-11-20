@@ -284,12 +284,12 @@ namespace DarkwoodMP
         public static List<string> Wrap(string text, float width, Kind kind = Kind.Body)
         {
             var lines = new List<string>();
-            string text2 = text;
-            if (text2 == null)
+            string content = text;
+            if (content == null)
             {
-                text2 = "";
+                content = "";
             }
-            foreach (var para in text2.Split('\n'))
+            foreach (var para in content.Split('\n'))
             {
                 string line = "";
                 foreach (var word in para.Split(' '))

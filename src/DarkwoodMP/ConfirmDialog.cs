@@ -42,12 +42,12 @@ namespace DarkwoodMP
                     OnClose = Closed,
                 };
             }
-            string title2 = title;
-            if (title2 == null)
+            string shownTitle = title;
+            if (shownTitle == null)
             {
-                title2 = "";
+                shownTitle = "";
             }
-            _win.Title = title2;
+            _win.Title = shownTitle;
             _text = text;
             if (string.IsNullOrEmpty(yes))
             {

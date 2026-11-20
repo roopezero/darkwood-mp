@@ -99,20 +99,20 @@ namespace DarkwoodMP.Sync
                         s = p.burnPrefab.name;
                     }
                     w.WriteStr(s);
-                    string s2;
+                    string burnSound;
                     if (burn.noSound)
                     {
-                        s2 = "";
+                        burnSound = "";
                     }
                     else if (string.IsNullOrEmpty(burn.burnSoundOverride))
                     {
-                        s2 = "fire_loop_01";
+                        burnSound = "fire_loop_01";
                     }
                     else
                     {
-                        s2 = burn.burnSoundOverride;
+                        burnSound = burn.burnSoundOverride;
                     }
-                    w.WriteStr(s2);
+                    w.WriteStr(burnSound);
                 }
                 else
                 {
@@ -147,18 +147,18 @@ namespace DarkwoodMP.Sync
                 s = gun.muzzlePrefab.name;
             }
             w.WriteStr(s);
-            string s2 = "";
+            string particles = "";
             if (gun.muzzleParticles != null)
             {
-                s2 = gun.muzzleParticles.name;
+                particles = gun.muzzleParticles.name;
             }
-            w.WriteStr(s2);
-            int value = 1;
+            w.WriteStr(particles);
+            int flashFlag = 1;
             if (gun.noMuzzleFlash)
             {
-                value = 0;
+                flashFlag = 0;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)flashFlag);
             w.Write(gun.muzzleOffset);
             Send(w, reliable: false);
             LogOnce("sent shot", "[fx] sending our player's shots");

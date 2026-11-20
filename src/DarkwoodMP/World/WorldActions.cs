@@ -286,12 +286,12 @@ namespace DarkwoodMP.World
                 flags |= 4;
             }
             w.W.Write((byte)flags);
-            string str2 = str;
-            if (str2 == null)
+            string written = str;
+            if (written == null)
             {
-                str2 = "";
+                written = "";
             }
-            w.WriteStr(str2);
+            w.WriteStr(written);
         }
 
         private static void OnAction(ulong from, PacketReader r)
@@ -389,12 +389,12 @@ namespace DarkwoodMP.World
                     // Only ever a request to the host: roll it here, as the game rolls it for its own player.
                     var item = ObjRef.Resolve<Item>(obj);
                     bool worked = item != null && item.disarmChance > UnityEngine.Random.Range(0f, 1f);
-                    string result2 = "0";
+                    string outcome = "0";
                     if (worked)
                     {
-                        result2 = "1";
+                        outcome = "1";
                     }
-                    Authority.Result(result2);
+                    Authority.Result(outcome);
                     if (Debug)
                     {
                         string disarm = "failed";
@@ -544,10 +544,10 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        Item component = trap.GetComponent<Item>();
-                        if (component != null)
+                        Item trapItem = trap.GetComponent<Item>();
+                        if (trapItem != null)
                         {
-                            component.switchTriggerState();
+                            trapItem.switchTriggerState();
                         }
                     }
                 }
@@ -695,12 +695,12 @@ namespace DarkwoodMP.World
                     best = ch;
                 }
             }
-            Character best2 = best;
-            if (best2 == null)
+            Character chosen = best;
+            if (chosen == null)
             {
-                best2 = c;
+                chosen = c;
             }
-            return best2;
+            return chosen;
         }
 
         /// <summary>
@@ -950,16 +950,16 @@ namespace DarkwoodMP.World
                     return false;
                 }
                 // A hit can come from a shot or our flamethrower's flame (BreakSync.OwnFlame), which reach further than a hand.
-                float reach2;
+                float doorReach;
                 if (a == Action.DoorHit)
                 {
-                    reach2 = ShotReach;
+                    doorReach = ShotReach;
                 }
                 else
                 {
-                    reach2 = Reach;
+                    doorReach = Reach;
                 }
-                if (!Authority.InReach(door.transform.position, reach2, door.name))
+                if (!Authority.InReach(door.transform.position, doorReach, door.name))
                 {
                     return false;
                 }
@@ -1016,16 +1016,16 @@ namespace DarkwoodMP.World
                 Authority.Refuse("no such window here");
                 return false;
             }
-            float reach3;
+            float windowReach;
             if (a == Action.WindowHit)
             {
-                reach3 = ShotReach;
+                windowReach = ShotReach;
             }
             else
             {
-                reach3 = Reach;
+                windowReach = Reach;
             }
-            if (!Authority.InReach(window.transform.position, reach3, window.name))
+            if (!Authority.InReach(window.transform.position, windowReach, window.name))
             {
                 return false;
             }
@@ -1143,12 +1143,12 @@ namespace DarkwoodMP.World
             if (pad != null)
             {
                 w.W.Write((byte)Kind.Padlock);
-                int value = 0;
+                int lockedFlag = 0;
                 if (pad.locked)
                 {
-                    value = 1;
+                    lockedFlag = 1;
                 }
-                w.W.Write((byte)value);
+                w.W.Write((byte)lockedFlag);
             }
             else if (door != null)
             {
@@ -1192,23 +1192,23 @@ namespace DarkwoodMP.World
             else if (window != null)
             {
                 w.W.Write((byte)Kind.Window);
-                int value2 = 0;
+                int barricadedFlag = 0;
                 if (window.barricaded)
                 {
-                    value2 = 1;
+                    barricadedFlag = 1;
                 }
-                w.W.Write((byte)value2);
+                w.W.Write((byte)barricadedFlag);
                 w.W.Write(window.barricadeHealth);
             }
             else if (trap != null)
             {
                 w.W.Write((byte)Kind.Trap);
-                int value3 = 0;
+                int activeFlag = 0;
                 if (trap.active)
                 {
-                    value3 = 1;
+                    activeFlag = 1;
                 }
-                w.W.Write((byte)value3);
+                w.W.Write((byte)activeFlag);
             }
             else if (item != null)
             {
@@ -1216,32 +1216,32 @@ namespace DarkwoodMP.World
                 w.W.Write((byte)Kind.Item);
                 var ii = item.GetComponent<InteractiveItem>();
                 var feeder = item.GetComponent<Feeder>();
-                int flags2 = 0;
+                int itemFlags = 0;
                 if (item.isOn)
                 {
-                    flags2 |= 1;
+                    itemFlags |= 1;
                 }
                 if (l != null && l.locked)
                 {
-                    flags2 |= 2;
+                    itemFlags |= 2;
                 }
                 if (item.searched)
                 {
-                    flags2 |= 4;
+                    itemFlags |= 4;
                 }
                 if (item.destroyed)
                 {
-                    flags2 |= 8;
+                    itemFlags |= 8;
                 }
                 if (ii != null && ii.isOn)
                 {
-                    flags2 |= 16;
+                    itemFlags |= 16;
                 }
                 if (feeder != null && feeder.Active)
                 {
-                    flags2 |= 32;
+                    itemFlags |= 32;
                 }
-                w.W.Write((byte)flags2);
+                w.W.Write((byte)itemFlags);
                 w.W.Write(item.health);
             }
             else if (go != null && go.GetComponent<Explodes>() != null)
@@ -2286,10 +2286,10 @@ namespace DarkwoodMP.World
                 {
                     instance.FlushNow();
                 }
-                FlagsSync instance2 = FlagsSync.Instance;
-                if (instance2 != null)
+                FlagsSync flags = FlagsSync.Instance;
+                if (flags != null)
                 {
-                    instance2.SendKey(l.keyType);
+                    flags.SendKey(l.keyType);
                 }
             }
             var door = l.GetComponent<Door>();
@@ -2419,12 +2419,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            string str2 = "";
+            string combination = "";
             if (manually)
             {
-                str2 = __instance.currentCombination;
+                combination = __instance.currentCombination;
             }
-            WorldActions.Send(WorldActions.Action.PadlockUnlock, __instance.gameObject, f1: manually, str: str2);
+            WorldActions.Send(WorldActions.Action.PadlockUnlock, __instance.gameObject, f1: manually, str: combination);
         }
     }
 }

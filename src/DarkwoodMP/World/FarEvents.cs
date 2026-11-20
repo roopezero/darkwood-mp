@@ -251,12 +251,12 @@ namespace DarkwoodMP.World
                     {
                         text = "came into";
                     }
-                    string text2 = "exit";
+                    string which = "exit";
                     if (now)
                     {
-                        text2 = "enter";
+                        which = "enter";
                     }
-                    Plugin.Log.LogInfo($"[farevents] our player {text} {l.name}, kept entered for the others: its {text2} events, our player's part only");
+                    Plugin.Log.LogInfo($"[farevents] our player {text} {l.name}, kept entered for the others: its {which} events, our player's part only");
                 }
                 ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly, replaying: false, () =>
                 {

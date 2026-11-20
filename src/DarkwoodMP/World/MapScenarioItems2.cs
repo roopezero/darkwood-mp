@@ -660,16 +660,16 @@ namespace DarkwoodMP.World
             }
             var t = hit.collider.transform;
             clear = dog != null && (t.GetComponent<Character>() == dog || (t.parent != null && t.parent.GetComponent<Character>() == dog));
-            string name2;
+            string hitName;
             if (t.parent != null)
             {
-                name2 = t.parent.name;
+                hitName = t.parent.name;
             }
             else
             {
-                name2 = t.name;
+                hitName = t.name;
             }
-            return $"{name2}@{hit.distance:0}";
+            return $"{hitName}@{hit.distance:0}";
         }
 
         // ---- throwing ---------------------------------------------------------------------------------------------

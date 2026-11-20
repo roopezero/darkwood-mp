@@ -142,18 +142,18 @@ namespace DarkwoodMP.Net
                 byte what = r.R.ReadByte();
                 if (what == 0)
                 {
-                    Action<string> handler2 = OnPlayerJoining;
-                    if (handler2 != null)
+                    Action<string> joining = OnPlayerJoining;
+                    if (joining != null)
                     {
-                        handler2(name);
+                        joining(name);
                     }
                 }
                 else
                 {
-                    Action<string> handler3 = OnPlayerStoppedJoining;
-                    if (handler3 != null)
+                    Action<string> stopped = OnPlayerStoppedJoining;
+                    if (stopped != null)
                     {
-                        handler3(name);
+                        stopped(name);
                     }
                 }
             });
@@ -166,17 +166,17 @@ namespace DarkwoodMP.Net
                 ulong who = r.R.ReadUInt64();
                 if (Names.TryGetValue(who, out var gone))
                 {
-                    Action<string> handler4 = OnPlayerLeft;
-                    if (handler4 != null)
+                    Action<string> left = OnPlayerLeft;
+                    if (left != null)
                     {
-                        handler4(gone);
+                        left(gone);
                     }
                 }
                 Names.Remove(who);
-                Action<ulong> handler5 = OnPeerDisconnected;
-                if (handler5 != null)
+                Action<ulong> disconnected = OnPeerDisconnected;
+                if (disconnected != null)
                 {
-                    handler5(who);
+                    disconnected(who);
                 }
             });
         }
@@ -510,15 +510,15 @@ namespace DarkwoodMP.Net
 
             Peers.Add(from);
             Plugin.Log.LogInfo($"Player connected: {name} (#{from})");
-            Action<string> handler2 = OnPlayerJoined;
-            if (handler2 != null)
+            Action<string> joined = OnPlayerJoined;
+            if (joined != null)
             {
-                handler2(name);
+                joined(name);
             }
-            Action<ulong> handler3 = OnPeerConnected;
-            if (handler3 != null)
+            Action<ulong> connected = OnPeerConnected;
+            if (connected != null)
             {
-                handler3(from);
+                connected(from);
             }
         }
 
@@ -569,10 +569,10 @@ namespace DarkwoodMP.Net
             {
                 handler(HostId);
             }
-            Action handler2 = OnWelcomed;
-            if (handler2 != null)
+            Action welcomed = OnWelcomed;
+            if (welcomed != null)
             {
-                handler2();
+                welcomed();
             }
         }
 
@@ -619,20 +619,20 @@ namespace DarkwoodMP.Net
             else if (IsHost && _joining.TryGetValue(who, out var was))
             {
                 Plugin.Log.LogInfo($"{was} (#{who}) stopped joining");
-                Action<string> handler2 = OnPlayerStoppedJoining;
-                if (handler2 != null)
+                Action<string> stopped = OnPlayerStoppedJoining;
+                if (stopped != null)
                 {
-                    handler2(was);
+                    stopped(was);
                 }
                 BroadcastJoinNotice(was, 1);
             }
             _joining.Remove(who);
             Names.Remove(who);
             Keys.Remove(who);
-            Action<ulong> handler3 = OnPeerDisconnected;
-            if (handler3 != null)
+            Action<ulong> disconnected = OnPeerDisconnected;
+            if (disconnected != null)
             {
-                handler3(who);
+                disconnected(who);
             }
         }
 

@@ -299,13 +299,13 @@ namespace DarkwoodMP.Combat
                 {
                     p95 = _gaps[Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))];
                 }
-                float text = 0f;
+                float meanGap = 0f;
                 if (_gaps.Count > 0)
                 {
-                    text = SumGap / _gaps.Count * 1000f;
+                    meanGap = SumGap / _gaps.Count * 1000f;
                 }
                 string arrivals = FormattableString.Invariant(
-                    $"{Batches} batches, gap avg {text:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ");
+                    $"{Batches} batches, gap avg {meanGap:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ");
                 string motion = FormattableString.Invariant(
                     $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; moving enemy frames {Moving}: stalls {Stalls} ({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ");
                 float error = 0f;

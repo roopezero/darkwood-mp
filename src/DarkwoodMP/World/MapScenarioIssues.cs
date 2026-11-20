@@ -84,12 +84,12 @@ namespace DarkwoodMP.World
                 var dict = AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(Singleton<Flags>.Instance);
                 r.Info = string.Join(",", dict.Values.Where(f => f != null).Select(f =>
                 {
-                    string value = "=0";
+                    string bit = "=0";
                     if (f.isTrue)
                     {
-                        value = "=1";
+                        bit = "=1";
                     }
-                    return f.name + value;
+                    return f.name + bit;
                 }).OrderBy(x => x, StringComparer.Ordinal));
                 return Nothing();
             });

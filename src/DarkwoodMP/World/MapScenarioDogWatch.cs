@@ -87,17 +87,17 @@ namespace DarkwoodMP.World
                 {
                     text = " asleep";
                 }
-                string text2 = "";
+                string eatingNote = "";
                 if (c.eating)
                 {
-                    text2 = " eating";
+                    eatingNote = " eating";
                 }
-                string text3 = "";
+                string aniNote = "";
                 if (c.playingCustomAni)
                 {
-                    text3 = " ani:" + c.customAni;
+                    aniNote = " ani:" + c.customAni;
                 }
-                parts.Add($"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{text2}{text3}");
+                parts.Add($"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{eatingNote}{aniNote}");
             }
             Plugin.Log.LogInfo("[dogwatch] list: " + string.Join("; ", parts));
             return parts.Count + " enemies: " + string.Join("; ", parts.Take(30));

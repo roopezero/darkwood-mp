@@ -258,25 +258,25 @@ namespace DarkwoodMP.World
                 int c = Category(x).CompareTo(Category(y));
                 if (c == 0)
                 {
-                    string strA;
+                    string left;
                     if (x.State.isRecipe)
                     {
-                        strA = "~" + x.State.recipeFor;
+                        left = "~" + x.State.recipeFor;
                     }
                     else
                     {
-                        strA = x.State.type;
+                        left = x.State.type;
                     }
-                    string strB;
+                    string right;
                     if (y.State.isRecipe)
                     {
-                        strB = "~" + y.State.recipeFor;
+                        right = "~" + y.State.recipeFor;
                     }
                     else
                     {
-                        strB = y.State.type;
+                        right = y.State.type;
                     }
-                    c = string.CompareOrdinal(strA, strB);
+                    c = string.CompareOrdinal(left, right);
                 }
                 if (c == 0)
                 {

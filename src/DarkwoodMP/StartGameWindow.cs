@@ -103,21 +103,21 @@ namespace DarkwoodMP
             }
             // Five slots, as the game always has; a slot that isn't active (or whose character died for good) is free.
             _profiles = new List<GameProfile>();
-            int? count2 = null;
+            int? profileCount = null;
             if (state != null)
             {
                 List<GameProfile> profiles = state.profiles;
                 if (profiles != null)
                 {
-                    count2 = profiles.Count;
+                    profileCount = profiles.Count;
                 }
             }
-            int count3 = 0;
-            if (count2.HasValue)
+            int known = 0;
+            if (profileCount.HasValue)
             {
-                count3 = count2.Value;
+                known = profileCount.Value;
             }
-            int count = Math.Max(5, count3);
+            int count = Math.Max(5, known);
             for (int i = 0; i < count; i++)
             {
                 GameProfile p = null;
@@ -292,12 +292,12 @@ namespace DarkwoodMP
             {
                 with = "with " + string.Join(", ", s.PlayedWith);
             }
-            string value = "";
+            string nameTag = "";
             if (name != "")
             {
-                value = $": {name}";
+                nameTag = $": {name}";
             }
-            return $"Slot {s.Id}" + value + $"  -  {Summary(s.Profile)}  -  {with}";
+            return $"Slot {s.Id}" + nameTag + $"  -  {Summary(s.Profile)}  -  {with}";
         }
 
         private string NewGameLine()
@@ -376,12 +376,12 @@ namespace DarkwoodMP
                 textColor = MenuSkin.Text;
             }
             Ui.Label(textBox, fittedText, textColor);
-            string text2 = "v";
+            string caret = "v";
             if (_listOpen)
             {
-                text2 = "^";
+                caret = "^";
             }
-            Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), text2, MenuSkin.Bright, TextAnchor.MiddleCenter);
+            Ui.Label(new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), caret, MenuSkin.Bright, TextAnchor.MiddleCenter);
             if (!_listOpen)
             {
                 return;
@@ -760,12 +760,12 @@ namespace DarkwoodMP
                 string text = "";
                 if (host)
                 {
-                    string text2 = "Direct";
+                    string how = "Direct";
                     if (steam)
                     {
-                        text2 = "Steam";
+                        how = "Steam";
                     }
-                    text = $", then host with {text2}";
+                    text = $", then host with {how}";
                 }
                 Plugin.Log.LogInfo($"[start game] continue slot {p.id} (day {p.day}){text}");
                 mm.creatingProfile = false;

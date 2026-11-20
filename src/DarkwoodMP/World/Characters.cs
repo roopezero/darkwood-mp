@@ -80,12 +80,12 @@ namespace DarkwoodMP.World
         {
             using (var sha = SHA256.Create())
             {
-                string key2 = key;
-                if (key2 == null)
+                string hashed = key;
+                if (hashed == null)
                 {
-                    key2 = "";
+                    hashed = "";
                 }
-                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(key2))).Substring(0, 32);
+                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(0, 32);
             }
         }
 
@@ -195,24 +195,24 @@ namespace DarkwoodMP.World
             bool earlier = rec != null && rec.Chapter != 0 && chapter != 0 && rec.Chapter != chapter;
             bool dead = rec != null && rec.Dead;
             // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new, 3: yours, beside the host, 4: yours, dead for good
-            int value = 0;
+            int answer = 0;
             if (dead)
             {
-                value = 4;
+                answer = 4;
             }
             else if (earlier)
             {
-                value = 3;
+                answer = 3;
             }
             else if (rec != null)
             {
-                value = 1;
+                answer = 1;
             }
             else if (copy)
             {
-                value = 2;
+                answer = 2;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)answer);
             string player = null;
             if (rec != null)
             {
@@ -263,10 +263,10 @@ namespace DarkwoodMP.World
                 instance.JoinerInWorld(from);
             }
             // story changes made since the snapshot it loaded
-            FlagsSync instance2 = FlagsSync.Instance;
-            if (instance2 != null)
+            FlagsSync flags = FlagsSync.Instance;
+            if (flags != null)
             {
-                instance2.JoinerInWorld(from);
+                flags.JoinerInWorld(from);
             }
             if (dead)
             {

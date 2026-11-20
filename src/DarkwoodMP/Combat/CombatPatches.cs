@@ -51,12 +51,12 @@ namespace DarkwoodMP.Combat
             }
 
             var attacker = s.attackerTransform.GetComponent<CharBase>();
-            float strengthModifier2 = 1f;
+            float strength = 1f;
             if (attacker != null)
             {
-                strengthModifier2 = attacker.strengthModifier;
+                strength = attacker.strengthModifier;
             }
-            float damage = s.damage * strengthModifier2;
+            float damage = s.damage * strength;
             meleeSensorDelegate handler = s.onHit;
             if (handler != null)
             {

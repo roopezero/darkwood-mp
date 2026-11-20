@@ -468,12 +468,12 @@ namespace DarkwoodMP.World
             }
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Outcomes);
-            string s2 = "0";
+            string burnedText = "0";
             if (burned)
             {
-                s2 = "1";
+                burnedText = "1";
             }
-            w.WriteStr(s2);
+            w.WriteStr(burnedText);
             s.Broadcast(w, Channel.Control, reliable: true);
         }
 

@@ -40,12 +40,12 @@ namespace DarkwoodMP.Combat
             }
             if (owner == PlayerSync.DummyId)
             {
-                string value = "";
+                string effectNote = "";
                 if (effects != null && effects.Count > 0)
                 {
-                    value = $" (+{effects.Count} effects)";
+                    effectNote = $" (+{effects.Count} effects)";
                 }
-                Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + value);
+                Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + effectNote);
                 PlayerSync instance = PlayerSync.Instance;
                 if (instance != null)
                 {
@@ -60,12 +60,12 @@ namespace DarkwoodMP.Combat
             }
             var w = session.Begin(MsgType.PlayerDamage);
             w.W.Write(damage);
-            int value2 = 0;
+            int shadowFlag = 0;
             if (shadow)
             {
-                value2 = 1;
+                shadowFlag = 1;
             }
-            w.W.Write((byte)value2);
+            w.W.Write((byte)shadowFlag);
             w.WriteStr(from);
             WriteEffects(w, effects);
             session.SendTo(owner, w, Channel.Control, reliable: true);

@@ -185,16 +185,16 @@ namespace DarkwoodMP.World
             }
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
-            byte value;
+            byte kind;
             if (c is Generator)
             {
-                value = IsGenerator;
+                kind = IsGenerator;
             }
             else
             {
-                value = IsSaw;
+                kind = IsSaw;
             }
-            w.W.Write(value);
+            w.W.Write(kind);
             w.W.Write(p.Amount);
             w.W.Write((byte)0);
             string name = c.name;
@@ -272,23 +272,23 @@ namespace DarkwoodMP.World
             var g = c as Generator;
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
-            byte value;
+            byte kind;
             if (g != null)
             {
-                value = IsGenerator;
+                kind = IsGenerator;
             }
             else
             {
-                value = IsSaw;
+                kind = IsSaw;
             }
-            w.W.Write(value);
+            w.W.Write(kind);
             w.W.Write(FuelOf(c));
-            int value2 = 0;
+            int onFlag = 0;
             if (g != null && g.isOn)
             {
-                value2 = 1;
+                onFlag = 1;
             }
-            w.W.Write((byte)value2);
+            w.W.Write((byte)onFlag);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -644,23 +644,23 @@ namespace DarkwoodMP.World
             {
                 ownerName = nearest.OwnerName;
             }
-            float electricityModifier2;
+            float modifier;
             if (has.HasValue)
             {
                 if (has.Value)
                 {
-                    electricityModifier2 = 0.5f;
+                    modifier = 0.5f;
                 }
                 else
                 {
-                    electricityModifier2 = 1f;
+                    modifier = 1f;
                 }
             }
             else
             {
-                electricityModifier2 = p.electricityModifier;
+                modifier = p.electricityModifier;
             }
-            Last = $"{__instance.name}: {ownerName}'s skill, {electricityModifier2}";
+            Last = $"{__instance.name}: {ownerName}'s skill, {modifier}";
             if (has == null)
             {
                 return;

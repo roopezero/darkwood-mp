@@ -148,16 +148,16 @@ namespace DarkwoodMP.Sync
                 w.Write(c.b);
                 w.Write(c.a);
             }
-            int flags2 = 0;
+            int stateFlags = 0;
             if (Away)
             {
-                flags2 |= 1;
+                stateFlags |= 1;
             }
             if (AfterNight)
             {
-                flags2 |= 2;
+                stateFlags |= 2;
             }
-            w.Write((byte)flags2);
+            w.Write((byte)stateFlags);
             w.Write(Health);
             string place = Place;
             if (place == null)
@@ -424,12 +424,12 @@ namespace DarkwoodMP.Sync
             snap.Away = LocalAway();
             snap.AfterNight = World.AfterNight.Local;
             snap.Place = World.Locations.Current();
-            int clamp = 0;
+            int percent = 0;
             if (player.maxHealth > 0f)
             {
-                clamp = Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100);
+                percent = Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100);
             }
-            snap.Health = (byte)clamp;
+            snap.Health = (byte)percent;
             snap.Sprites.Clear();
             for (int i = 0; i < _sprites.Length && snap.Sprites.Count < 255; i++)
             {

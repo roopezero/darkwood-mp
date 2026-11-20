@@ -174,16 +174,16 @@ namespace DarkwoodMP.Net
                 hostPassword = "";
             }
             HostPassword = hostPassword;
-            int val1;
+            int cap;
             if (TestMaxPlayers > 0)
             {
-                val1 = TestMaxPlayers;
+                cap = TestMaxPlayers;
             }
             else
             {
-                val1 = Protocol.MaxPlayers;
+                cap = Protocol.MaxPlayers;
             }
-            MaxPlayers = Math.Max(2, Math.Min(val1, maxPlayers));
+            MaxPlayers = Math.Max(2, Math.Min(cap, maxPlayers));
             IsHost = true;
             InSession = true;
             Status = $"Hosting \"{ServerName}\" on port {port}";
@@ -640,10 +640,10 @@ namespace DarkwoodMP.Net
                     case EvKind.Message:
                         if (!ev.Conn.Closed)
                         {
-                            Action<ulong, byte[], int> handler2 = OnMessage;
-                            if (handler2 != null)
+                            Action<ulong, byte[], int> receiver = OnMessage;
+                            if (receiver != null)
                             {
-                                handler2(ev.Conn.Id, ev.Data, ev.Data.Length);
+                                receiver(ev.Conn.Id, ev.Data, ev.Data.Length);
                             }
                         }
                         break;

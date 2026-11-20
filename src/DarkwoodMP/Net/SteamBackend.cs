@@ -62,19 +62,19 @@ namespace DarkwoodMP.Net
             };
             _lobby.OnEntered += () =>
             {
-                Action handler2 = OnEntered;
-                if (handler2 != null)
+                Action entered = OnEntered;
+                if (entered != null)
                 {
-                    handler2();
+                    entered();
                 }
             };
             _lobby.OnLeft += () =>
             {
                 _transport.ClearPending();
-                Action handler3 = OnLeft;
-                if (handler3 != null)
+                Action left = OnLeft;
+                if (left != null)
                 {
-                    handler3();
+                    left();
                 }
             };
             // A player whose connection died without leaving the lobby (its PC lost power, its network dropped):
@@ -91,10 +91,10 @@ namespace DarkwoodMP.Net
                 {
                     Plugin.Log.LogInfo($"Lost the connection to #{who.m_SteamID}");
                     _transport.CloseSession(who);
-                    Action<ulong> handler4 = OnPeerLost;
-                    if (handler4 != null)
+                    Action<ulong> lost = OnPeerLost;
+                    if (lost != null)
                     {
-                        handler4(who.m_SteamID);
+                        lost(who.m_SteamID);
                     }
                 }
                 else if (!IsHost && who == _lobby.Owner && session.Connected)
@@ -111,10 +111,10 @@ namespace DarkwoodMP.Net
                     return;
                 }
                 _transport.CloseSession(who);
-                Action<ulong> handler5 = OnPeerLost;
-                if (handler5 != null)
+                Action<ulong> lost = OnPeerLost;
+                if (lost != null)
                 {
-                    handler5(who.m_SteamID);
+                    lost(who.m_SteamID);
                 }
             };
         }

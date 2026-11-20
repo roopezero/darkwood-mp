@@ -115,10 +115,10 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                INetBackend backend2 = _session.Backend;
-                if (backend2 != null)
+                INetBackend active = _session.Backend;
+                if (active != null)
                 {
-                    backend2.Leave();
+                    active.Leave();
                 }
                 LeaveHostWorld("The host went back to the main menu and stopped the server.");
             });
@@ -519,12 +519,12 @@ namespace DarkwoodMP.World
                 {
                     text = $"static part copied from your save in {copied} ms";
                 }
-                string text2 = "";
+                string locationNote = "";
                 if (newLocation)
                 {
-                    text2 = ", with a new location's static part";
+                    locationNote = ", with a new location's static part";
                 }
-                Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{text2})");
+                Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{locationNote})");
                 _lastSnapshot = Time.realtimeSinceStartup;
                 _lastSnapshotScene = ActiveScene;
                 if (File.Exists(Path.Combine(profDir, "sav.dat")))
@@ -1699,10 +1699,10 @@ namespace DarkwoodMP.World
             {
                 instance.HostToMainMenu();
             }
-            WorldShare instance2 = WorldShare.Instance;
-            if (instance2 != null)
+            WorldShare share = WorldShare.Instance;
+            if (share != null)
             {
-                instance2.ClientToMainMenu();
+                share.ClientToMainMenu();
             }
         }
     }

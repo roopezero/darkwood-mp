@@ -275,10 +275,10 @@ namespace DarkwoodMP.Net
             {
                 text = $", lease {LeaseSeconds} s";
             }
-            string ip2 = ip;
-            if (ip2 == null)
+            string shownIp = ip;
+            if (shownIp == null)
             {
-                ip2 = "unknown";
+                shownIp = "unknown";
             }
             string internalIp = m.InternalIp;
             int port = m.Port;
@@ -287,7 +287,7 @@ namespace DarkwoodMP.Net
             {
                 nat = " (private: another NAT in front)";
             }
-            Plugin.Log.LogInfo($"[port mapping] {how}: {internalIp}:{port} -> {ports}, external address {ip2}{text}{nat}");
+            Plugin.Log.LogInfo($"[port mapping] {how}: {internalIp}:{port} -> {ports}, external address {shownIp}{text}{nat}");
         }
 
         private void Remove(Mapping m)
@@ -594,16 +594,16 @@ namespace DarkwoodMP.Net
                 $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>" +
                 $"<NewInternalPort>{m.Port}</NewInternalPort><NewInternalClient>{m.InternalIp}</NewInternalClient><NewEnabled>1</NewEnabled>" +
                 $"<NewPortMappingDescription>{Description}</NewPortMappingDescription><NewLeaseDuration>{l}</NewLeaseDuration>";
-            int l2;
+            int askedLease;
             if (m.Permanent)
             {
-                l2 = 0;
+                askedLease = 0;
             }
             else
             {
-                l2 = lease;
+                askedLease = lease;
             }
-            if (Soap(m, "AddPortMapping", args(l2), out why) != null)
+            if (Soap(m, "AddPortMapping", args(askedLease), out why) != null)
             {
                 return true;
             }

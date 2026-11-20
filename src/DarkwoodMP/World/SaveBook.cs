@@ -75,12 +75,12 @@ namespace DarkwoodMP.World
                 }
                 string name = session.NameOf(id);
                 session.Keys.TryGetValue(id, out string key);
-                string key2 = key;
-                if (key2 == null)
+                string stored = key;
+                if (stored == null)
                 {
-                    key2 = "";
+                    stored = "";
                 }
-                AddPlayer(Core.currentProfile.id, name, key2);
+                AddPlayer(Core.currentProfile.id, name, stored);
             };
         }
 

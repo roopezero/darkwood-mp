@@ -272,12 +272,12 @@ namespace DarkwoodMP.World
         private static PlayerStepCounter Counter()
         {
             var p = Player.Instance;
-            PlayerStepCounter component = p.GetComponent<PlayerStepCounter>();
-            if (component == null)
+            PlayerStepCounter steps = p.GetComponent<PlayerStepCounter>();
+            if (steps == null)
             {
-                component = p.gameObject.AddComponent<PlayerStepCounter>();
+                steps = p.gameObject.AddComponent<PlayerStepCounter>();
             }
-            return component;
+            return steps;
         }
 
         private static GameObject Root(string name, Vector3 pos)

@@ -517,23 +517,23 @@ namespace DarkwoodMP.World
             }
             if (negative)
             {
-                float value = 0.3f;
+                float brightness = 0.3f;
                 if (have)
                 {
-                    value = 1f;
+                    brightness = 1f;
                 }
                 else if (can)
                 {
                     if (hover)
                     {
-                        value = 0.9f;
+                        brightness = 0.9f;
                     }
                     else
                     {
-                        value = 0.65f;
+                        brightness = 0.65f;
                     }
                 }
-                tint = new Color(1f, 0.4f, 0.4f) * value;
+                tint = new Color(1f, 0.4f, 0.4f) * brightness;
             }
             tint.a = 1f;
             if (!SkillIcons.Draw(r, sk.name, tint))
@@ -565,16 +565,16 @@ namespace DarkwoodMP.World
                 }
                 if (have)
                 {
-                    Color c2;
+                    Color markColor;
                     if (negative)
                     {
-                        c2 = LearnedNegFrame;
+                        markColor = LearnedNegFrame;
                     }
                     else
                     {
-                        c2 = LearnedFrame;
+                        markColor = LearnedFrame;
                     }
-                    CheckMark(new Vector2(frame.xMax, frame.y), S, c2);
+                    CheckMark(new Vector2(frame.xMax, frame.y), S, markColor);
                 }
                 _rects[sk.name] = new[] { ToScreen(r), ToScreen(cell) };
             }
@@ -720,24 +720,24 @@ namespace DarkwoodMP.World
                 // tk2d inline colours: ^cRGBA (hex) or ^CRRGGBBAA.
                 if (s[i] == '^' && i + 1 < s.Length && (s[i + 1] == 'c' || s[i + 1] == 'C'))
                 {
-                    int value = 8;
+                    int skip = 8;
                     if (s[i + 1] == 'c')
                     {
-                        value = 4;
+                        skip = 4;
                     }
-                    i += 1 + value;
+                    i += 1 + skip;
                     continue;
                 }
-                char s2;
+                char ch;
                 if (s[i] == '\r')
                 {
-                    s2 = ' ';
+                    ch = ' ';
                 }
                 else
                 {
-                    s2 = s[i];
+                    ch = s[i];
                 }
-                sb.Append(s2);
+                sb.Append(ch);
             }
             return sb.ToString().Trim();
         }
@@ -767,12 +767,12 @@ namespace DarkwoodMP.World
             }
             var chosen = SkillTree.Chosen(p);
             bool needNeg = SkillTree.NeedsNegative(chosen, good);
-            string negative2 = null;
+            string needed = null;
             if (needNeg)
             {
-                negative2 = negative;
+                needed = negative;
             }
-            return SkillTree.Check(p.currentLevel, chosen, good, negative2) == null;
+            return SkillTree.Check(p.currentLevel, chosen, good, needed) == null;
         }
 
         /// <summary>For tests: show this skill's details as if the mouse were over it.</summary>

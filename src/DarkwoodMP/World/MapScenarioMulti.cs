@@ -873,12 +873,12 @@ namespace DarkwoodMP.World
         {
             if (l != null)
             {
-                string value = "";
+                string hideoutNote = "";
                 if (l.playerBase)
                 {
-                    value = " (hideout)";
+                    hideoutNote = " (hideout)";
                 }
-                return l.name + value;
+                return l.name + hideoutNote;
             }
             return "none";
         }

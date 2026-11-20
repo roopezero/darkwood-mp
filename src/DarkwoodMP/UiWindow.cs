@@ -296,16 +296,16 @@ namespace DarkwoodMP
             {
                 inner -= 12 * S;
             }
-            GUIStyle verticalScrollbar2;
+            GUIStyle scrollbar;
             if (scrolls)
             {
-                verticalScrollbar2 = GUI.skin.verticalScrollbar;
+                scrollbar = GUI.skin.verticalScrollbar;
             }
             else
             {
-                verticalScrollbar2 = GUIStyle.none;
+                scrollbar = GUIStyle.none;
             }
-            _scroll = GUI.BeginScrollView(body, _scroll, new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)), false, false, GUIStyle.none, verticalScrollbar2);
+            _scroll = GUI.BeginScrollView(body, _scroll, new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)), false, false, GUIStyle.none, scrollbar);
             var flow = new Flow(new Rect(0, 0, inner, body.height));
             Body(flow);
             if (Event.current.type == EventType.Layout || Event.current.type == EventType.Repaint)
@@ -508,14 +508,14 @@ namespace DarkwoodMP
                 GUI.Box(new Rect(r.x, r.y, r.width, r.height + 2 * S), GUIContent.none, MenuSkin.Button);
             }
             bool clicked = !chosen && GUI.Button(new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S), GUIContent.none, MenuSkin.Pressed);
-            Rect r2;
+            Rect tab;
             if (chosen)
             {
-                r2 = r;
+                tab = r;
             }
             else
             {
-                r2 = new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S);
+                tab = new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S);
             }
             Color color;
             if (chosen || hover)
@@ -526,7 +526,7 @@ namespace DarkwoodMP
             {
                 color = MenuSkin.Text;
             }
-            PixelFont.Draw(r2, text, color, TextAnchor.MiddleCenter);
+            PixelFont.Draw(tab, text, color, TextAnchor.MiddleCenter);
             return clicked;
         }
 
@@ -538,12 +538,12 @@ namespace DarkwoodMP
             }
             if (password)
             {
-                string value2 = value;
-                if (value2 == null)
+                string shown = value;
+                if (shown == null)
                 {
-                    value2 = "";
+                    shown = "";
                 }
-                return GUI.PasswordField(r, value2, '*', max, MenuSkin.Field);
+                return GUI.PasswordField(r, shown, '*', max, MenuSkin.Field);
             }
             string text = value;
             if (text == null)

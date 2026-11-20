@@ -264,12 +264,12 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            string path2 = path;
-            if (path2 == null)
+            string shownPath = path;
+            if (shownPath == null)
             {
-                path2 = "(null)";
+                shownPath = "(null)";
             }
-            Plugin.Log.LogWarning($"Not deleting {path2}: {why}");
+            Plugin.Log.LogWarning($"Not deleting {shownPath}: {why}");
             return false;
         }
 
@@ -302,16 +302,16 @@ namespace DarkwoodMP.World
             }
             if (why != null)
             {
-                string dir2 = dir;
-                if (dir2 == null)
+                string shownDir = dir;
+                if (shownDir == null)
                 {
-                    dir2 = baseDir;
+                    shownDir = baseDir;
                 }
-                if (dir2 == null)
+                if (shownDir == null)
                 {
-                    dir2 = "(null)";
+                    shownDir = "(null)";
                 }
-                Plugin.Log.LogWarning($"Not deleting {dir2}: {why}");
+                Plugin.Log.LogWarning($"Not deleting {shownDir}: {why}");
                 return false;
             }
             if (!Exists(full))

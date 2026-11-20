@@ -130,12 +130,12 @@ namespace DarkwoodMP.World
                 if (s.UIInvSlot != null && s.UIInvSlot.sprite != null && s.UIInvSlot.sprite.CurrentSprite != null && !s.inHotbar)
                 {
                     string frame = s.UIInvSlot.sprite.CurrentSprite.name;
-                    string value = "fullInv";
+                    string wrongFrame = "fullInv";
                     if (full)
                     {
-                        value = "emptyInv";
+                        wrongFrame = "emptyInv";
                     }
-                    if (frame == value)
+                    if (frame == wrongFrame)
                     {
                         bad.Add($"slot {i} ({Slot(s)}): frame {frame}");
                     }
@@ -249,12 +249,12 @@ namespace DarkwoodMP.World
                     {
                         text = "red";
                     }
-                    string text2 = "not";
+                    string makeable = "not";
                     if (can)
                     {
-                        text2 = "makeable";
+                        makeable = "makeable";
                     }
-                    bad.Add($"{s.invItem.type} drawn {text}, is {text2} ({Needs(recipe)})");
+                    bad.Add($"{s.invItem.type} drawn {text}, is {makeable} ({Needs(recipe)})");
                 }
             }
             if (bad.Count == 0)

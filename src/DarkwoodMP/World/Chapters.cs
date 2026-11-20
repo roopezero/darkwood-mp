@@ -159,12 +159,12 @@ namespace DarkwoodMP.World
                 {
                     text = $" {e.intValue}";
                 }
-                string value = "not run here";
+                string action = "not run here";
                 if (ours)
                 {
-                    value = "asking the host";
+                    action = "asking the host";
                 }
-                Plugin.Log.LogInfo($"A story step ({kind}{text}) is the host's: " + value);
+                Plugin.Log.LogInfo($"A story step ({kind}{text}) is the host's: " + action);
                 if (ours)
                 {
                     SendStoryRequest(e, thisGO, kind);
@@ -226,12 +226,12 @@ namespace DarkwoodMP.World
             }
             w.W.Write((byte)index);
             w.W.Write((byte)kind);
-            int intValue2 = 0;
+            int chapter = 0;
             if (kind == StoryKind.Chapter)
             {
-                intValue2 = e.intValue;
+                chapter = e.intValue;
             }
-            w.W.Write(intValue2);
+            w.W.Write(chapter);
             string what = What(kind, e.intValue);
             Authority.Request(w, what, (ok, reason, result) =>
             {

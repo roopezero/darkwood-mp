@@ -326,12 +326,12 @@ namespace DarkwoodMP.World
                 var w = S.Begin(MsgType.SkillSpend);
                 w.W.Write((byte)Mathf.Clamp(level, 0, 255));
                 w.WriteStr(good);
-                string negative2 = negative;
-                if (negative2 == null)
+                string sentNegative = negative;
+                if (sentNegative == null)
                 {
-                    negative2 = "";
+                    sentNegative = "";
                 }
-                w.WriteStr(negative2);
+                w.WriteStr(sentNegative);
                 var had = chosen.ToList();
                 w.W.Write((byte)Math.Min(had.Count, 255));
                 for (int i = 0; i < had.Count && i < 255; i++)
@@ -383,10 +383,10 @@ namespace DarkwoodMP.World
             catch
             {
             }
-            SkillsMenu instance2 = Singleton<SkillsMenu>.Instance;
-            if (instance2 != null)
+            SkillsMenu menu = Singleton<SkillsMenu>.Instance;
+            if (menu != null)
             {
-                instance2.tryShowActiveSkillsHelpPopup();
+                menu.tryShowActiveSkillsHelpPopup();
             }
         }
 

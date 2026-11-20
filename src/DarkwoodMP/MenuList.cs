@@ -273,11 +273,11 @@ namespace DarkwoodMP
                     s = "What you did since the last save will be lost.";
                 }
             }
-            Plugin instance2 = Plugin.Instance;
+            Plugin plugin = Plugin.Instance;
             Net.Session session = null;
-            if (instance2 != null)
+            if (plugin != null)
             {
-                session = instance2.Session;
+                session = plugin.Session;
             }
             if (session != null && session.IsHost && session.Peers.Count > 0)
             {

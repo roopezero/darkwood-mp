@@ -87,12 +87,12 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write((byte)what);
             w.W.Write(b.burnTime);
-            int value = 0;
+            int onFlag = 0;
             if (on)
             {
-                value = 1;
+                onFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)onFlag);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -162,12 +162,12 @@ namespace DarkwoodMP.World
             var w = _session.Begin(MsgType.Burning);
             r.Write(w);
             w.W.Write((byte)what);
-            float burnTime2 = 20f;
+            float seconds = 20f;
             if (burn != null)
             {
-                burnTime2 = burn.burnTime;
+                seconds = burn.burnTime;
             }
-            w.W.Write(burnTime2);
+            w.W.Write(seconds);
             w.W.Write((byte)1);
             Authority.Request(w, $"set {go.name} alight", (ok, reason, result) =>
             {

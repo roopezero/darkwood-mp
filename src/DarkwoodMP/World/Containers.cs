@@ -550,12 +550,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.ContainerLock);
             r.Write(w);
-            int value = 0;
+            int openFlag = 0;
             if (open)
             {
-                value = 1;
+                openFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)openFlag);
             _session.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -1043,12 +1043,12 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                string name2 = "no such bag here";
+                string bagName = "no such bag here";
                 if (drop != null)
                 {
-                    name2 = drop.name;
+                    bagName = drop.name;
                 }
-                Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + name2);
+                Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + bagName);
             }
             if (drop == null || drop.additionalMapMarker != null)
             {
@@ -1079,12 +1079,12 @@ namespace DarkwoodMP.World
         {
             var w = _session.Begin(MsgType.ObjSpawn);
             w.W.Write(id);
-            int value = 0;
+            int placedFlag = 0;
             if (placed)
             {
-                value = 1;
+                placedFlag = 1;
             }
-            w.W.Write((byte)value);
+            w.W.Write((byte)placedFlag);
             w.WriteStr(prefab);
             w.Write(pos);
             w.W.Write(rot.x);
@@ -1181,10 +1181,10 @@ namespace DarkwoodMP.World
                 {
                     Core.addToSaveable(go, isDynamic: true, assignID: placed); // (the host's isn't saved either)
                 }
-                WorldGrid instance2 = Singleton<WorldGrid>.Instance;
-                if (instance2 != null)
+                WorldGrid grid = Singleton<WorldGrid>.Instance;
+                if (grid != null)
                 {
-                    instance2.registerToNode(go);
+                    grid.registerToNode(go);
                 }
                 var rb = go.GetComponent<Rigidbody>();
                 if (rb != null)
