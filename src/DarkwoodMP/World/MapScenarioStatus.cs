@@ -202,7 +202,13 @@ namespace DarkwoodMP.World
                     {
                         maxPlayers = info3.MaxPlayers;
                     }
-                    return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto {f.e.Info?.Proto} {f.e.PingMs} ms";
+                    Net.ServerInfo answer = f.e.Info;
+                    int? proto = null;
+                    if (answer != null)
+                    {
+                        proto = answer.Proto;
+                    }
+                    return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto {proto} {f.e.PingMs} ms";
                 }));
             }
             if (!found.Any(f => f.e.Info != null && f.e.Info.Proto == Net.Protocol.Version && f.e.Info.Players >= 2))

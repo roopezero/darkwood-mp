@@ -274,7 +274,13 @@ namespace DarkwoodMP.World
             bool max = a.Length > 0 && a[0] == "max";
             int first = Level, firstCount = st.slots.Count;
             var done = new List<string>();
-            for (int n = 0; n < (max ? 50 : 1); n++)
+            int limit = 1;
+            if (max)
+            {
+                limit = 50;
+            }
+
+            for (int n = 0; n < limit; n++)
             {
                 int level = Level;
                 CraftingRecipes up = null;
@@ -394,7 +400,20 @@ namespace DarkwoodMP.World
                 after = Slot(st.slots[i]);
             }
             r.Info = $"before: level {level}, {count} slots, slot {i} {before}; after: level {Level}, {st.slots.Count} slots, slot {i} {after}";
-            bool ok = a.Length >= 3 && after == (a[1] == "-" ? "-" : $"{a[1]}x{a[2]}");
+            bool ok = false;
+            if (a.Length >= 3)
+            {
+                string expected;
+                if (a[1] == "-")
+                {
+                    expected = "-";
+                }
+                else
+                {
+                    expected = $"{a[1]}x{a[2]}";
+                }
+                ok = after == expected;
+            }
             if (Level != level || st.slots.Count != count || after != before || !ok)
             {
                 r.Fail(r.Info);

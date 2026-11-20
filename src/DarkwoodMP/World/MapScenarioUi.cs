@@ -515,7 +515,19 @@ namespace DarkwoodMP.World
             yield return null;
             yield return null;
             string slots = string.Join(", ", want.Select(w => $"{w.i}={Slot(st.slots[w.i])}"));
-            var wrong = want.Where(w => !Matches(st.slots[w.i], w.type, w.n)).Select(w => $"slot {w.i} is {Slot(st.slots[w.i])}, not {(w.type == "-" ? "empty" : $"{w.type}x{w.n}")}").ToList();
+            var wrong = want.Where(w => !Matches(st.slots[w.i], w.type, w.n)).Select(w =>
+            {
+                string expected;
+                if (w.type == "-")
+                {
+                    expected = "empty";
+                }
+                else
+                {
+                    expected = $"{w.type}x{w.n}";
+                }
+                return $"slot {w.i} is {Slot(st.slots[w.i])}, not {expected}";
+            }).ToList();
             string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
             r.Info = $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, tint ok={rec == null}; redraws {UiRefresh.Redraws} (total)";
             if (wrong.Count > 0)

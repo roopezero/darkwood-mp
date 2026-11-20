@@ -296,7 +296,12 @@ namespace DarkwoodMP.World
             {
                 name2 = c.name;
             }
-            r.Info = $"{name2} #{id}: hits of {dmg:0}, health {was:0} -> {(c != null ? c.health : 0):0}, alive {c != null && c.alive}";
+            float health = 0f;
+            if (c != null)
+            {
+                health = c.health;
+            }
+            r.Info = $"{name2} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
             if (kill && c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");
@@ -404,7 +409,15 @@ namespace DarkwoodMP.World
             }
             var inv = c.GetComponentInChildren<Inventory>(true);
             NetEnemies.Instance.NetIdOf(c, out uint id);
-            r.Info = $"{c.name} #{id} dead at {Fmt(c.transform.position)}, searchable {c.GetComponent<Item>() != null}, loot [{(inv != null ? MapScenarioWorld.Contents(inv) : "-")}]";
+            string name = c.name;
+            string spot = Fmt(c.transform.position);
+            bool searchable = c.GetComponent<Item>() != null;
+            string loot = "-";
+            if (inv != null)
+            {
+                loot = MapScenarioWorld.Contents(inv);
+            }
+            r.Info = $"{name} #{id} dead at {spot}, searchable {searchable}, loot [{loot}]";
             if (c.GetComponent<Item>() == null || inv == null)
             {
                 r.Fail($"{r.Info}: its corpse can't be searched here");
@@ -586,7 +599,12 @@ namespace DarkwoodMP.World
                 P.openedItemInventory = null;
             }
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{inv.name} {MapScenarioWorld.Ref(inv)}: {msg ?? "free"}";
+            string status = msg;
+            if (status == null)
+            {
+                status = "free";
+            }
+            r.Info = $"{inv.name} {MapScenarioWorld.Ref(inv)}: {status}";
             if (msg != null)
             {
                 r.Fail(r.Info);
@@ -622,7 +640,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.25f);
             }
             bool told = Told();
-            r.Info = $"{npc.name} {ObjRef.Of(npc.gameObject)}: told someone's talking {told}, dialogue {(win.npc == npc ? "open" : "closed")}";
+            string name = npc.name;
+            ObjRef id = ObjRef.Of(npc.gameObject);
+            string dialogue = "closed";
+            if (win.npc == npc)
+            {
+                dialogue = "open";
+            }
+            r.Info = $"{name} {id}: told someone's talking {told}, dialogue {dialogue}";
             if (expectRefused)
             {
                 if (!told || win.npc == npc)
@@ -697,7 +722,13 @@ namespace DarkwoodMP.World
             yield return Walk(to.transform.position, 60f);
             yield return new WaitForSeconds(1.5f);
             var now = NightSpawns.BigLocationAt(P.transform.position);
-            r.Info = $"at {Fmt(P.transform.position)}: {(now != null ? now.name : "no location")} (went to {to.name}, {StateDump.Flat(to.transform.position - Centre):0} from the centre)";
+            string spot = Fmt(P.transform.position);
+            string location = "no location";
+            if (now != null)
+            {
+                location = now.name;
+            }
+            r.Info = $"at {spot}: {location} (went to {to.name}, {StateDump.Flat(to.transform.position - Centre):0} from the centre)";
             if (now != to)
             {
                 r.Fail($"{r.Info}: not in it");
@@ -732,7 +763,12 @@ namespace DarkwoodMP.World
             foreach (var px in NetPlayerProxy.All.Values.Where(x => x != null && x.alive))
             {
                 bool home = NightSpawns.AtHideout(px.transform.position, out var loc);
-                where.Add($"{px.OwnerName}: {Name(loc)}{(home ? "" : " (no hideout)")}");
+                string note = "";
+                if (!home)
+                {
+                    note = " (no hideout)";
+                }
+                where.Add($"{px.OwnerName}: {Name(loc)}{note}");
                 if (home)
                 {
                     hideouts.Add(loc.name);
@@ -780,7 +816,24 @@ namespace DarkwoodMP.World
             var sent = NightSpawns.SentLog.Skip(from).ToList();
             var per = sent.GroupBy(s => s.Hideout).ToDictionary(g => g.Key, g => g.ToList());
             r.Info = $"{string.Join("; ", where)} | {budget} | " +
-                     string.Join("; ", hideouts.Select(h => $"{h}: {(per.TryGetValue(h, out var l) ? l.Count : 0)} ({string.Join(",", per.TryGetValue(h, out var l2) ? l2.Select(s => s.At) : new string[0])})"));
+                     string.Join("; ", hideouts.Select(h =>
+                     {
+                         int count = 0;
+                         if (per.TryGetValue(h, out var l))
+                         {
+                             count = l.Count;
+                         }
+                         IEnumerable<string> spots;
+                         if (per.TryGetValue(h, out var l2))
+                         {
+                             spots = l2.Select(s => s.At);
+                         }
+                         else
+                         {
+                             spots = new string[0];
+                         }
+                         return $"{h}: {count} ({string.Join(",", spots)})";
+                     }));
             int want = Math.Min(n, max);
             foreach (var h in hideouts)
             {

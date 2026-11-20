@@ -42,7 +42,18 @@ namespace DarkwoodMP.World
         public static void Add(string name, Step step, float timeout = 20f) => _steps[name] = (step, timeout);
 
         /// <summary>The test area's centre: set by "centre X Z", else TestWorld's, else where our player stands.</summary>
-        public static Vector3 Centre => _centre ?? StateDump.DefaultCentre();
+        public static Vector3 Centre
+        {
+            get
+            {
+                Vector3? centre = _centre;
+                if (centre.HasValue)
+                {
+                    return centre.Value;
+                }
+                return StateDump.DefaultCentre();
+            }
+        }
         private static Vector3? _centre;
         public static void SetCentre(Vector3 at) => _centre = new Vector3(at.x, 0f, at.z);
         public static void ResetCentre()
@@ -386,7 +397,15 @@ namespace DarkwoodMP.World
                 return Info(r, Fmt(_centre.Value));
             });
             // "wait SECS": just wait.
-            Add("wait", (a, r) => Wait(a.Length > 0 ? F(a[0]) : 1f), timeout: 120f);
+            Add("wait", (a, r) =>
+            {
+                float seconds = 1f;
+                if (a.Length > 0)
+                {
+                    seconds = F(a[0]);
+                }
+                return Wait(seconds);
+            }, timeout: 120f);
             // "goto X Z": walk there.
             Add("goto", (a, r) => Walk(new Vector3(F(a[0]), 0f, F(a[1])), 60f), timeout: 60f);
             Add("toggle-door", ToggleDoor);
@@ -579,7 +598,17 @@ namespace DarkwoodMP.World
                 dropped = p.spawnDroppedInvItem(item);
             });
             yield return new WaitForSeconds(2.5f); // dropped things are shared once they've come to rest
-            r.Info = $"{type} x{amount} at {(dropped != null ? Fmt(dropped.position) : "?")} {(dropped != null ? ObjRef.Of(dropped.gameObject).ToString() : "")}";
+            string spot = "?";
+            if (dropped != null)
+            {
+                spot = Fmt(dropped.position);
+            }
+            string id = "";
+            if (dropped != null)
+            {
+                id = ObjRef.Of(dropped.gameObject).ToString();
+            }
+            r.Info = $"{type} x{amount} at {spot} {id}";
         }
 
         /// <summary>"heal": our player back to full health, flames put out, bleeding and other effects (infection's
@@ -609,7 +638,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Alive(string[] a, Result r)
         {
             var p = Player.Instance;
-            var parts = new List<string> { $"we: health {(p != null ? p.health : 0f):0}" };
+            float health = 0f;
+            if (p != null)
+            {
+                health = p.health;
+            }
+            var parts = new List<string> { $"we: health {health:0}" };
             if (p == null || !p.alive || p.health <= 0f)
             {
                 float health2 = 0f;
@@ -629,7 +663,12 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     var last = rp.Last;
-                    parts.Add($"{rp.Name}: alive {rp.Alive}, health {(last != null ? last.Health.ToString() : "?")}%");
+                    string percent = "?";
+                    if (last != null)
+                    {
+                        percent = last.Health.ToString();
+                    }
+                    parts.Add($"{rp.Name}: alive {rp.Alive}, health {percent}%");
                     if (!rp.Alive || (last != null && last.Health <= 0))
                     {
                         r.Fail($"{rp.Name} is dead");

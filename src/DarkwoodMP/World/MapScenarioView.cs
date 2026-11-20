@@ -168,7 +168,17 @@ namespace DarkwoodMP.World
             {
                 if (s != null && names.Contains(s.name) && StateDump.Flat(s.transform.position - _mark.Value) < 1500f)
                 {
-                    parts.Add($"{s.name} rgb {s.color.r:0.00},{s.color.g:0.00},{s.color.b:0.00} a{s.color.a:0.00}{(s.gameObject.activeInHierarchy ? "" : " (off)")}");
+                    string name = s.name;
+                    float red = s.color.r;
+                    float green = s.color.g;
+                    float blue = s.color.b;
+                    float alpha = s.color.a;
+                    string off = "";
+                    if (!s.gameObject.activeInHierarchy)
+                    {
+                        off = " (off)";
+                    }
+                    parts.Add($"{name} rgb {red:0.00},{green:0.00},{blue:0.00} a{alpha:0.00}{off}");
                 }
             }
             if (parts.Count == 0)
@@ -232,7 +242,18 @@ namespace DarkwoodMP.World
                     }
                     return 0f;
                 }).DefaultIfEmpty(0f).Max();
-            bool Ok() => want == null || (want == "dark" ? Alpha() > 0.5f : Alpha() < 0.1f);
+            bool Ok()
+            {
+                if (want == null)
+                {
+                    return true;
+                }
+                if (want == "dark")
+                {
+                    return Alpha() > 0.5f;
+                }
+                return Alpha() < 0.1f;
+            }
             float value = 16f;
             if (want == null)
             {
@@ -243,7 +264,17 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.25f);
             }
-            r.Info = $"{Me()} {StateDump.Flat(Player.Instance.transform.position - (_mark ?? Vector3.zero)):0} from the mark: {ColorsNow(names)}";
+            Vector3? mark = _mark;
+            Vector3 origin;
+            if (mark.HasValue)
+            {
+                origin = mark.Value;
+            }
+            else
+            {
+                origin = Vector3.zero;
+            }
+            r.Info = $"{Me()} {StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
             if (!Ok())
             {
                 r.Fail($"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
@@ -276,7 +307,17 @@ namespace DarkwoodMP.World
             {
                 var comps = string.Join(",", t.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(c => c.GetType().Name));
                 var so = t.GetComponent<SaveableObject>();
-                sb.Append($"\n{new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} layer={t.gameObject.layer} at {Fmt(t.position)} y {t.position.y:0}{(so != null ? $" saved={so.Active}" : "")} [{comps}]");
+                string name = t.name;
+                bool active = t.gameObject.activeSelf;
+                int layer = t.gameObject.layer;
+                string spot = Fmt(t.position);
+                float height = t.position.y;
+                string saved = "";
+                if (so != null)
+                {
+                    saved = $" saved={so.Active}";
+                }
+                sb.Append($"\n{new string(' ', depth * 2)}{name} active={active} layer={layer} at {spot} y {height:0}{saved} [{comps}]");
                 foreach (var c in t.GetComponents<Collider>())
                 {
                     string text = "";
@@ -315,7 +356,25 @@ namespace DarkwoodMP.World
                                         {
                                             targetGameObjects = new List<GameObject>();
                                         }
-                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{string.Join(",", targetGameObjects.Select(g => g == null ? "null" : g.name))}|{string.Join(",", e.targetUniqueObjects ?? new List<string>())}] fromParent={e.getTargetGameObjectsFromParent}{(e.disabled ? " disabled" : "")}");
+                                        string names = string.Join(",", targetGameObjects.Select(g =>
+                                        {
+                                            if (g == null)
+                                            {
+                                                return "null";
+                                            }
+                                            return g.name;
+                                        }));
+                                        List<string> ids = e.targetUniqueObjects;
+                                        if (ids == null)
+                                        {
+                                            ids = new List<string>();
+                                        }
+                                        string disabled = "";
+                                        if (e.disabled)
+                                        {
+                                            disabled = " disabled";
+                                        }
+                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{names}|{string.Join(",", ids)}] fromParent={e.getTargetGameObjectsFromParent}{disabled}");
                                     }
                                 }
                             }
@@ -372,9 +431,38 @@ namespace DarkwoodMP.World
         {
             var so = g.GetComponentInParent<SaveableObject>(true);
             var cols = g.GetComponentsInChildren<Collider>(true).Where(x => (Sync.ViewWatch.HideMask & (1 << x.gameObject.layer)) != 0).ToList();
-            return $"{Sync.ViewWatch.Path(g.transform)} at {Fmt(g.transform.position)} ({StateDump.Flat(g.transform.position - Centre):0} from the centre), " +
-                   $"active {g.activeInHierarchy}, saved {(so == null ? "-" : so.Active.ToString())}, " +
-                   $"view-layer colliders {cols.Count}{(cols.Count == 0 ? "" : $" [{string.Join(", ", cols.Take(4).Select(x => $"{x.name}:{x.gameObject.layer}{(x.enabled ? "" : ":off")}"))}]")}";
+            string path = Sync.ViewWatch.Path(g.transform);
+            string spot = Fmt(g.transform.position);
+            float distance = StateDump.Flat(g.transform.position - Centre);
+            bool active = g.activeInHierarchy;
+            string saved;
+            if (so == null)
+            {
+                saved = "-";
+            }
+            else
+            {
+                saved = so.Active.ToString();
+            }
+            string colliders = "";
+            if (cols.Count != 0)
+            {
+                string list = string.Join(", ", cols.Take(4).Select(x =>
+                {
+                    string name = x.name;
+                    int layer = x.gameObject.layer;
+                    string off = "";
+                    if (!x.enabled)
+                    {
+                        off = ":off";
+                    }
+                    return $"{name}:{layer}{off}";
+                }));
+                colliders = $" [{list}]";
+            }
+            return $"{path} at {spot} ({distance:0} from the centre), " +
+                   $"active {active}, saved {saved}, " +
+                   $"view-layer colliders {cols.Count}{colliders}";
         }
 
         private static IEnumerator Find(string[] a, Result r)
@@ -547,10 +635,31 @@ namespace DarkwoodMP.World
                 }
             }
 
-            public override string ToString() =>
-                $"{Frames} frames: black {Dark}{(DarkBy.Count == 0 ? "" : $" (by {string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})")}, " +
-                $"mesh audits {Audits} (worst {WorstMismatch:P0} not matching our rays{(WorstAt == "" ? "" : " at " + WorstAt)}, {BadAudits} over {MaxMismatch:P0}), " +
-                $"ghost blockers {(Ghosts.Count == 0 ? "none" : string.Join("; ", Ghosts.Take(6)))}";
+            public override string ToString()
+            {
+                string causes = "";
+                if (DarkBy.Count != 0)
+                {
+                    causes = $" (by {string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
+                }
+                string place = "";
+                if (WorstAt != "")
+                {
+                    place = " at " + WorstAt;
+                }
+                string ghosts;
+                if (Ghosts.Count == 0)
+                {
+                    ghosts = "none";
+                }
+                else
+                {
+                    ghosts = string.Join("; ", Ghosts.Take(6));
+                }
+                return $"{Frames} frames: black {Dark}{causes}, " +
+                    $"mesh audits {Audits} (worst {WorstMismatch:P0} not matching our rays{place}, {BadAudits} over {MaxMismatch:P0}), " +
+                    $"ghost blockers {ghosts}";
+            }
 
             public string Problem()
             {
@@ -672,7 +781,14 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[shots] {path}");
             }
             Mismatch(light, out string audit1);
-            r.Info = $"{Me()} at {Fmt(p.transform.position)}{(_mark == null ? "" : $", {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark")}: " +
+            string who = Me();
+            string spot = Fmt(p.transform.position);
+            string distance = "";
+            if (_mark != null)
+            {
+                distance = $", {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark";
+            }
+            r.Info = $"{who} at {spot}{distance}: " +
                      $"cone {light.LightConeAngle:0} (currentFOV {CurrentFov(p):0}), radius {light.LightRadius:0}; {Sides(p, light)}; mesh {audit1}; " +
                      $"{MapScenarioLights.ViewSource()}; {w}";
             Plugin.Log.LogInfo($"[view] vw-check: {r.Info}");
@@ -741,7 +857,18 @@ namespace DarkwoodMP.World
             {
                 if (c != null && (IsGhost(c) || IsOurs(c)))
                 {
-                    list.Add($"{Sync.ViewWatch.Path(c.transform)} [layer {c.gameObject.layer}{(IsOurs(c) ? ", the mod's" : ", switched off in the save")}]");
+                    string path = Sync.ViewWatch.Path(c.transform);
+                    int layer = c.gameObject.layer;
+                    string kind;
+                    if (IsOurs(c))
+                    {
+                        kind = ", the mod's";
+                    }
+                    else
+                    {
+                        kind = ", switched off in the save";
+                    }
+                    list.Add($"{path} [layer {layer}{kind}]");
                 }
             }
             return list;
@@ -871,7 +998,12 @@ namespace DarkwoodMP.World
             {
                 text = left / nl;
             }
-            return $"reach left {text:P0} (stopped by {top(stopL)}), right {(nr > 0 ? right / nr : 0f):P0} (stopped by {top(stopR)})";
+            float rightReach = 0f;
+            if (nr > 0)
+            {
+                rightReach = right / nr;
+            }
+            return $"reach left {text:P0} (stopped by {top(stopL)}), right {rightReach:P0} (stopped by {top(stopR)})";
         }
     }
 }

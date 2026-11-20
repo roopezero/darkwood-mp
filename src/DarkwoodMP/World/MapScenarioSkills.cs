@@ -365,7 +365,19 @@ namespace DarkwoodMP.World
             r.Info = $"skills {had} -> {left}, morning {Progression.InMorning(0)}: {Progression.TestState()}";
             menu.hide();
             yield return new WaitForSecondsRealtime(2f);
-            if (had == 0 || (want ? left != 0 : left != had))
+            bool wrong = had == 0;
+            if (!wrong)
+            {
+                if (want)
+                {
+                    wrong = left != 0;
+                }
+                else
+                {
+                    wrong = left != had;
+                }
+            }
+            if (wrong)
             {
                 r.Fail(r.Info);
             }
