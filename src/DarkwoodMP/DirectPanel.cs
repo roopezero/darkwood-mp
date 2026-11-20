@@ -204,15 +204,39 @@ namespace DarkwoodMP
                 }
                 else if (_publicIp != null)
                 {
-                    AddressRow(f, $"{_publicIp}:{_tcp.Port}", map.Mapped ? "internet" : "internet: forward the port");
+                    string address = $"{_publicIp}:{_tcp.Port}";
+                    string note = "internet: forward the port";
+                    if (map.Mapped)
+                    {
+                        note = "internet";
+                    }
+                    AddressRow(f, address, note);
                 }
-                else if (Ui.Button(f, _lookingUp ? "Looking up..." : "Show my public IP (asks api.ipify.org)") && !_lookingUp)
+                else
                 {
-                    LookUpPublicIp();
+                    string label = "Show my public IP (asks api.ipify.org)";
+                    if (_lookingUp)
+                    {
+                        label = "Looking up...";
+                    }
+                    if (Ui.Button(f, label) && !_lookingUp)
+                    {
+                        LookUpPublicIp();
+                    }
                 }
                 if (map.Status.Length > 0)
                 {
-                    Ui.Text(f, map.Status, map.Mapped && !map.BehindAnotherNat ? (Color?)null : MenuSkin.Warn);
+                    string status = map.Status;
+                    Color? color;
+                    if (map.Mapped && !map.BehindAnotherNat)
+                    {
+                        color = null;
+                    }
+                    else
+                    {
+                        color = MenuSkin.Warn;
+                    }
+                    Ui.Text(f, status, color);
                 }
             }
             if (!_tcp.IsHost && _session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
@@ -470,7 +494,12 @@ namespace DarkwoodMP
                     name = addr;
                 }
                 Ui.Label(C(1), PixelFont.Fit(name, C(1).width), col);
-                Ui.Label(C(2), info != null ? $"{info.Players}/{info.MaxPlayers}" : "", col);
+                string players = "";
+                if (info != null)
+                {
+                    players = $"{info.Players}/{info.MaxPlayers}";
+                }
+                Ui.Label(C(2), players, col);
                 string world = "";
                 if (info == null)
                 {
@@ -492,7 +521,12 @@ namespace DarkwoodMP
                     world = wl;
                 }
                 Ui.Label(C(3), PixelFont.Fit(world, C(3).width), col);
-                Ui.Label(C(4), info != null ? e.PingMs.ToString() : "", col);
+                string ping = "";
+                if (info != null)
+                {
+                    ping = e.PingMs.ToString();
+                }
+                Ui.Label(C(4), ping, col);
             }
             GUI.EndScrollView();
             f.Y = panel.yMax + f.Gap;
@@ -502,7 +536,20 @@ namespace DarkwoodMP
             if (_selected != null)
             {
                 var info = _browser.Get(_selected).Info;
-                status = _selected + (info?.Incompatibility is string why ? $"  -  {why}" : info != null ? $"  -  DarkwoodMP {info.Version}" : "");
+                string detail = "";
+                if (info != null)
+                {
+                    string why = info.Incompatibility;
+                    if (why != null)
+                    {
+                        detail = $"  -  {why}";
+                    }
+                    else
+                    {
+                        detail = $"  -  DarkwoodMP {info.Version}";
+                    }
+                }
+                status = _selected + detail;
             }
             else
             {
@@ -530,7 +577,17 @@ namespace DarkwoodMP
             {
                 hint = $"You're {_session.LocalName}: set a name in Options";
             }
-            float hintW = hint != null ? Mathf.Min(PixelFont.Width(hint) + 8 * s, f.Width * 0.6f) : 0f, statusW = f.Width - hintW - (hint != null ? 8 * s : 0f);
+            float hintW = 0f;
+            if (hint != null)
+            {
+                hintW = Mathf.Min(PixelFont.Width(hint) + 8 * s, f.Width * 0.6f);
+            }
+            float gap = 0f;
+            if (hint != null)
+            {
+                gap = 8 * s;
+            }
+            float statusW = f.Width - hintW - gap;
             Ui.Label(new Rect(f.Area.x + 2 * s, f.Y, statusW, statusH), PixelFont.Fit(status, statusW), MenuSkin.Dim);
             if (hint != null)
             {
@@ -682,13 +739,17 @@ namespace DarkwoodMP
             {
                 return;
             }
-            if (password == null && _browser.Get(addr).Info?.Password == true)
+            if (password == null)
             {
-                _passwordFor = addr;
-                _password = "";
-                _focusField = true;
-                _passwordWin.Show();
-                return;
+                var info = _browser.Get(addr).Info;
+                if (info != null && info.Password)
+                {
+                    _passwordFor = addr;
+                    _password = "";
+                    _focusField = true;
+                    _passwordWin.Show();
+                    return;
+                }
             }
             // Joining leaves the game we're in (a joiner's, Steam or direct; hosts get no join buttons while hosting).
             if (_session.Active && _session.IsHost)

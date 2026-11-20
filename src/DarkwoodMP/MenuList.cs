@@ -538,7 +538,18 @@ namespace DarkwoodMP
                 float w = PixelFont.Width(en.Label, PixelFont.Kind.Title, sc);
                 // The word, with a margin round it that takes the mouse too.
                 en.Rect = new Rect(x - 6 * sc, y - (step - line) / 2f, w + 12 * sc, step);
-                bool hover = active && (_selected >= 0 ? _selected == i : en.Rect.Contains(e.mousePosition));
+                bool hover = false;
+                if (active)
+                {
+                    if (_selected >= 0)
+                    {
+                        hover = _selected == i;
+                    }
+                    else
+                    {
+                        hover = en.Rect.Contains(e.mousePosition);
+                    }
+                }
                 if (active && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain))
                 {
                     Fire(en);

@@ -174,8 +174,14 @@ namespace DarkwoodMP
                 bool gameHeld = Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
                 OptionsWindow.TestEscape();
                 yield return null;
-                Check(listened && gameHeld && !OptionsWindow.TestMapping && OptionsWindow.TestMapperStatus == "Idle" && OptionsWindow.TestKeyOf(label) == orig,
-                    $"click on {label}'s key listens (Rewired's mapper {(listened ? "listening" : "not listening")}, the game's keys held {gameHeld}); Escape cancels, {label} still {orig}");
+                bool ok = listened && gameHeld && !OptionsWindow.TestMapping && OptionsWindow.TestMapperStatus == "Idle" && OptionsWindow.TestKeyOf(label) == orig;
+                string mapper = "not listening";
+                if (listened)
+                {
+                    mapper = "listening";
+                }
+                Check(ok,
+                    $"click on {label}'s key listens (Rewired's mapper {mapper}, the game's keys held {gameHeld}); Escape cancels, {label} still {orig}");
 
                 bool set = OptionsWindow.TestAssign(label, free);
                 var afterKey = ReadPrefs();
@@ -403,7 +409,12 @@ namespace DarkwoodMP
             {
                 if (!Unity(kv.Key) && (!b.TryGetValue(kv.Key, out var v) || v != kv.Value))
                 {
-                    diffs.Add($"{Short(kv.Key)} {kv.Value.value} -> {(b.ContainsKey(kv.Key) ? v.value : "gone")}");
+                    string now = "gone";
+                    if (b.ContainsKey(kv.Key))
+                    {
+                        now = v.value;
+                    }
+                    diffs.Add($"{Short(kv.Key)} {kv.Value.value} -> {now}");
                 }
             }
             foreach (var kv in b)

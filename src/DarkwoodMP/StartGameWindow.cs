@@ -126,11 +126,23 @@ namespace DarkwoodMP
                     p = state.profiles[i];
                 }
                 bool used = p != null && p.Active && !p.dead;
-                _profiles.Add(used ? p : new GameProfile(i + 1, _Active: false, 0));
-                var slot = new Slot { Id = i + 1, Profile = used ? p : null };
                 if (used)
                 {
+                    _profiles.Add(p);
+                }
+                else
+                {
+                    _profiles.Add(new GameProfile(i + 1, _Active: false, 0));
+                }
+                var slot = new Slot { Id = i + 1 };
+                if (used)
+                {
+                    slot.Profile = p;
                     slot.PlayedWith = SaveBook.PlayedWith(slot.Id);
+                }
+                else
+                {
+                    slot.Profile = null;
                 }
                 _slots.Add(slot);
             }
@@ -185,12 +197,11 @@ namespace DarkwoodMP
             get
             {
                 Slot freeSlot = FreeSlot;
-                int? id = null;
                 if (freeSlot != null)
                 {
-                    id = freeSlot.Id;
+                    return freeSlot.Id;
                 }
-                return id ?? _overwrite;
+                return _overwrite;
             }
         }
 
@@ -353,7 +364,18 @@ namespace DarkwoodMP
                 text = NewGameLine();
             }
             float pad = 6 * S, arrow = 14 * S;
-            Ui.Label(new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height), PixelFont.Fit(text, r.width - 2 * pad - arrow), hover ? MenuSkin.Bright : MenuSkin.Text);
+            var textBox = new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height);
+            string fittedText = PixelFont.Fit(text, r.width - 2 * pad - arrow);
+            Color textColor;
+            if (hover)
+            {
+                textColor = MenuSkin.Bright;
+            }
+            else
+            {
+                textColor = MenuSkin.Text;
+            }
+            Ui.Label(textBox, fittedText, textColor);
             string text2 = "v";
             if (_listOpen)
             {
@@ -383,7 +405,18 @@ namespace DarkwoodMP
                 {
                     Choose(rows[i].Item1);
                 }
-                Ui.Label(new Rect(row.x + pad - 2 * S, row.y, row.width - 2 * pad, row.height), PixelFont.Fit(rows[i].Item2, row.width - 2 * pad), over || chosen ? MenuSkin.Bright : MenuSkin.Text);
+                var rowBox = new Rect(row.x + pad - 2 * S, row.y, row.width - 2 * pad, row.height);
+                string fittedRow = PixelFont.Fit(rows[i].Item2, row.width - 2 * pad);
+                Color rowColor;
+                if (over || chosen)
+                {
+                    rowColor = MenuSkin.Bright;
+                }
+                else
+                {
+                    rowColor = MenuSkin.Text;
+                }
+                Ui.Label(rowBox, fittedRow, rowColor);
             }
             f.Y = box.yMax + f.Gap;
         }
@@ -608,10 +641,16 @@ namespace DarkwoodMP
                 {
                     cfg.NewCharacters.Value = "copy";
                 }
-                Ui.Text(f, steam
-                    ? "Friends join by your Steam invite, or Join Game in the Steam friends list. Hosting starts once your world has loaded."
-                    : DirectPanel.PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value) + " Hosting starts once your world has loaded.",
-                    MenuSkin.Dim);
+                string hint;
+                if (steam)
+                {
+                    hint = "Friends join by your Steam invite, or Join Game in the Steam friends list. Hosting starts once your world has loaded.";
+                }
+                else
+                {
+                    hint = DirectPanel.PortHint(cfg.DirectPort.Value, cfg.OpenPort.Value) + " Hosting starts once your world has loaded.";
+                }
+                Ui.Text(f, hint, MenuSkin.Dim);
             });
         }
 
@@ -737,7 +776,17 @@ namespace DarkwoodMP
             else
             {
                 int id = NewSlot;
-                Plugin.Log.LogInfo($"[start game] new game in slot {id} ({Difficulty(_difficulty)}, skip prologue {_skipPrologue}, backer content {_backer}){(host ? $", then host with {(steam ? "Steam" : "Direct")}" : "")}");
+                string hosting = "";
+                if (host)
+                {
+                    string via = "Direct";
+                    if (steam)
+                    {
+                        via = "Steam";
+                    }
+                    hosting = $", then host with {via}";
+                }
+                Plugin.Log.LogInfo($"[start game] new game in slot {id} ({Difficulty(_difficulty)}, skip prologue {_skipPrologue}, backer content {_backer}){hosting}");
                 // As the profiles screen does for a free slot (MainMenu.displayProfile), then its Play (Button.playProfile).
                 Core.currentProfile = _profiles[id - 1];
                 Singleton<SaveManager>.Instance.deleteCurrentProfile(creatingNewProfile: true);
@@ -795,7 +844,16 @@ namespace DarkwoodMP
             Plugin.Log.LogInfo($"[start window] clicked Start Game, window open: {w.Open}");
             foreach (var s in w._slots)
             {
-                Plugin.Log.LogInfo($"[start window] slot {s.Id}: " + (s.Free ? "free" : Line(s)));
+                string about;
+                if (s.Free)
+                {
+                    about = "free";
+                }
+                else
+                {
+                    about = Line(s);
+                }
+                Plugin.Log.LogInfo($"[start window] slot {s.Id}: " + about);
             }
             if (!w.Open)
             {
@@ -875,7 +933,26 @@ namespace DarkwoodMP
                 Plugin.Cfg.HostWith.Value = hostWith;
             }
             yield return Shot("start-go");
-            Plugin.Log.LogInfo($"[start window] pressing Start: {(slot == 0 ? $"new game in slot {w.NewSlot}" : $"slot {slot}")}, host {hostWith ?? "no"}; can start: {w.CantStart() ?? "yes"}");
+            string target;
+            if (slot == 0)
+            {
+                target = $"new game in slot {w.NewSlot}";
+            }
+            else
+            {
+                target = $"slot {slot}";
+            }
+            string hosting = hostWith;
+            if (hosting == null)
+            {
+                hosting = "no";
+            }
+            string answer = w.CantStart();
+            if (answer == null)
+            {
+                answer = "yes";
+            }
+            Plugin.Log.LogInfo($"[start window] pressing Start: {target}, host {hosting}; can start: {answer}");
             w.Start();
         }
 

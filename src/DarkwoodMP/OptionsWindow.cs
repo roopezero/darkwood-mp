@@ -393,7 +393,14 @@ namespace DarkwoodMP
                 GameSettings.SetInt("Fullscreen", intValue);
                 if (Menu != null)
                 {
-                    Menu.VideoMenu.destFulscreen = full ? 1 : 0;
+                    if (full)
+                    {
+                        Menu.VideoMenu.destFulscreen = 1;
+                    }
+                    else
+                    {
+                        Menu.VideoMenu.destFulscreen = 0;
+                    }
                 }
                 GameSettings.Save();
                 Plugin.Log.LogInfo("[options] screen kept");
@@ -555,7 +562,16 @@ namespace DarkwoodMP
             {
                 g = Menu.gammaSlider;
             }
-            float gmin = g != null ? g.minValue : 0.2f, gmax = g != null ? g.maxValue : 1.2f;
+            float gmin = 0.2f;
+            if (g != null)
+            {
+                gmin = g.minValue;
+            }
+            float gmax = 1.2f;
+            if (g != null)
+            {
+                gmax = g.maxValue;
+            }
             float gamma = GameSettings.GetFloat("Gamma");
             var gc = Ui.Split(c[1], 0, 44);
             float ng = Slider(gc[0], gamma, gmin, gmax);
@@ -606,7 +622,16 @@ namespace DarkwoodMP
                 {
                     slider = am.soundSlider;
                 }
-                float min = slider != null ? slider.minValue : 0f, max = slider != null ? slider.maxValue : 1f;
+                float min = 0f;
+                if (slider != null)
+                {
+                    min = slider.minValue;
+                }
+                float max = 1f;
+                if (slider != null)
+                {
+                    max = slider.maxValue;
+                }
                 float v;
                 if (music)
                 {
@@ -876,8 +901,19 @@ namespace DarkwoodMP
                 text = options[index];
             }
             bool hover = r.Contains(Event.current.mousePosition);
-            Ui.Label(new Rect(r.x + 6 * S, r.y, r.width - 20 * S, r.height), PixelFont.Fit(text, r.width - 22 * S), hover || open ? MenuSkin.Bright : MenuSkin.Text);
-            DrawArrow(new Rect(r.xMax - 14 * S, r.y, 9 * S, r.height), hover || open ? MenuSkin.Bright : MenuSkin.Text);
+            var textBox = new Rect(r.x + 6 * S, r.y, r.width - 20 * S, r.height);
+            string fittedText = PixelFont.Fit(text, r.width - 22 * S);
+            Color color;
+            if (hover || open)
+            {
+                color = MenuSkin.Bright;
+            }
+            else
+            {
+                color = MenuSkin.Text;
+            }
+            Ui.Label(textBox, fittedText, color);
+            DrawArrow(new Rect(r.xMax - 14 * S, r.y, 9 * S, r.height), color);
         }
 
         /// <summary>A small triangle pointing down.</summary>
@@ -992,8 +1028,18 @@ namespace DarkwoodMP
                             {
                                 GUI.Box(rr, GUIContent.none, MenuSkin.Selected);
                             }
-                            Ui.Label(new Rect(rr.x + 4 * S, rr.y, rr.width - 12 * S, rr.height), PixelFont.Fit(_drop.Options[i], rr.width - 14 * S),
-                                i == hover || i == _drop.Index ? MenuSkin.Bright : MenuSkin.Text);
+                            var optionBox = new Rect(rr.x + 4 * S, rr.y, rr.width - 12 * S, rr.height);
+                            string fittedOption = PixelFont.Fit(_drop.Options[i], rr.width - 14 * S);
+                            Color optionColor;
+                            if (i == hover || i == _drop.Index)
+                            {
+                                optionColor = MenuSkin.Bright;
+                            }
+                            else
+                            {
+                                optionColor = MenuSkin.Text;
+                            }
+                            Ui.Label(optionBox, fittedOption, optionColor);
                         }
                         if (vis < n)
                         {
@@ -1251,7 +1297,18 @@ namespace DarkwoodMP
                 {
                     GUI.Box(new Rect(0, y, view.width, rowH), GUIContent.none, MenuSkin.Selected);
                 }
-                Ui.Label(new Rect(rc[0].x + 4 * S, y, rc[0].width - 4 * S, rowH), PixelFont.Fit(b.Label, rc[0].width - 6 * S), mappingThis ? MenuSkin.Bright : MenuSkin.Text);
+                var labelBox = new Rect(rc[0].x + 4 * S, y, rc[0].width - 4 * S, rowH);
+                string fittedLabel = PixelFont.Fit(b.Label, rc[0].width - 6 * S);
+                Color labelColor;
+                if (mappingThis)
+                {
+                    labelColor = MenuSkin.Bright;
+                }
+                else
+                {
+                    labelColor = MenuSkin.Text;
+                }
+                Ui.Label(labelBox, fittedLabel, labelColor);
                 for (int col = 0; col < 3; col++)
                 {
                     var cell = new Rect(rc[col + 1].x, y + S, rc[col + 1].width, rowH - 2 * S);
@@ -1262,7 +1319,12 @@ namespace DarkwoodMP
                     if (col == 2 || maps[col] == null)
                     {
                         // The game doesn't let you change the controller's buttons: shown only.
-                        Ui.Label(new Rect(cell.x + 4 * S, cell.y, cell.width - 4 * S, cell.height), PixelFont.Fit(b.Keys[col] ?? "-", cell.width - 6 * S), MenuSkin.Dim);
+                        string key = b.Keys[col];
+                        if (key == null)
+                        {
+                            key = "-";
+                        }
+                        Ui.Label(new Rect(cell.x + 4 * S, cell.y, cell.width - 4 * S, cell.height), PixelFont.Fit(key, cell.width - 6 * S), MenuSkin.Dim);
                         continue;
                     }
                     bool active = mappingThis && _mapCol == col;
@@ -1318,7 +1380,18 @@ namespace DarkwoodMP
             {
                 status = "Click a key or mouse button to change it. Controller buttons can't be changed.";
             }
-            Ui.Label(new Rect(f.Area.x + 2 * S, f.Y, f.Width, statusH), PixelFont.Fit(status, f.Width - 4 * S), _statusWarn && _mapRow == null ? MenuSkin.Warn : MenuSkin.Dim);
+            var statusBox = new Rect(f.Area.x + 2 * S, f.Y, f.Width, statusH);
+            string fittedStatus = PixelFont.Fit(status, f.Width - 4 * S);
+            Color statusColor;
+            if (_statusWarn && _mapRow == null)
+            {
+                statusColor = MenuSkin.Warn;
+            }
+            else
+            {
+                statusColor = MenuSkin.Dim;
+            }
+            Ui.Label(statusBox, fittedStatus, statusColor);
             f.Y += statusH;
         }
 
@@ -1425,13 +1498,20 @@ namespace DarkwoodMP
                     StopMapping("That controller isn't there.", warn: true);
                     return;
                 }
-                bool started = _mapper.Start(new RW.InputMapper.Context
+                var mapper = _mapper;
+                var context = new RW.InputMapper.Context
                 {
                     actionId = _mapRow.Action.id,
                     controllerMap = map,
                     actionRange = _mapRow.Range,
-                    actionElementMapToReplace = _mapRow.MapIds[_mapCol] >= 0 ? map.GetElementMap(_mapRow.MapIds[_mapCol]) : null,
-                });
+                };
+                RW.ActionElementMap existing = null;
+                if (_mapRow.MapIds[_mapCol] >= 0)
+                {
+                    existing = map.GetElementMap(_mapRow.MapIds[_mapCol]);
+                }
+                context.actionElementMapToReplace = existing;
+                bool started = mapper.Start(context);
                 string text = "didn't start";
                 if (started)
                 {
@@ -1690,8 +1770,13 @@ namespace DarkwoodMP
             {
                 return false;
             }
+            RW.Pole pole = RW.Pole.Positive;
+            if (b.Range == RW.AxisRange.Negative)
+            {
+                pole = RW.Pole.Negative;
+            }
             bool ok = map.ReplaceOrCreateElementMap(new RW.ElementAssignment(RW.ControllerType.Keyboard, RW.ControllerElementType.Button, ident.id, b.Range,
-                key, RW.ModifierKeyFlags.None, b.Action.id, b.Range == RW.AxisRange.Negative ? RW.Pole.Negative : RW.Pole.Positive, false, b.MapIds[0]));
+                key, RW.ModifierKeyFlags.None, b.Action.id, pole, false, b.MapIds[0]));
             SaveControls();
             return ok;
         }
