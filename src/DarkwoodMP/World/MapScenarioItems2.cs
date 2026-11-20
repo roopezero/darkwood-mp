@@ -712,9 +712,9 @@ namespace DarkwoodMP.World
             float dist = 250f;
             if (type == "gasBomb")
             {
-                dist = 340f;
+                dist = 340f; // (out of a gas cloud's reach)
             }
-            yield return Walk(Stand(target, dist), 30f); // (out of a gas cloud's reach)
+            yield return Walk(Stand(target, dist), 30f);
             if (dog != null)
             {
                 target = dog.transform.position;
