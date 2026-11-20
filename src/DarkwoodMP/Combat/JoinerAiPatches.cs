@@ -318,7 +318,12 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
-            return NightSpawns.BigLocationAt(proxy.transform.position) ?? hostLoc;
+            Location bigLocationAt = NightSpawns.BigLocationAt(proxy.transform.position);
+            if (bigLocationAt == null)
+            {
+                bigLocationAt = hostLoc;
+            }
+            return bigLocationAt;
         }
 
         /// <summary>An activity aimed at "the player" (playerIsTarget): the joiner it was sent at, or the most-threat player.</summary>

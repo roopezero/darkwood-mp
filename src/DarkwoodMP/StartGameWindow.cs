@@ -91,7 +91,11 @@ namespace DarkwoodMP
             _slots.Clear();
             _problem = null;
             var sm = Singleton<SaveManager>.Instance;
-            var state = sm?.loadGameProfiles();
+            MainMenu.SaveState state = null;
+            if (sm != null)
+            {
+                state = sm.loadGameProfiles();
+            }
             bool any = state != null && state.profiles != null && state.profiles.Any(p => p != null && p.Active);
             if (!any && sm != null && sm.CheckIfWorldFilesExist())
             {

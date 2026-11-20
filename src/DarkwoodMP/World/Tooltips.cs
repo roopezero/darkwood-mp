@@ -376,7 +376,12 @@ namespace DarkwoodMP.World
                         continue;
                     }
                     popup.show(e.elementName, Vector2.zero, "GAME");
-                    var txt = Traverse.Create(popup).Field("descriptionText").GetValue<tk2dTextMesh>()?.text;
+                    tk2dTextMesh descriptionText = Traverse.Create(popup).Field("descriptionText").GetValue<tk2dTextMesh>();
+                    string txt = null;
+                    if (descriptionText != null)
+                    {
+                        txt = descriptionText.text;
+                    }
                     popup.hide();
                     if (txt != null && txt.StartsWith(LocationText(e.elementName)) && txt.EndsWith("\nGAME"))
                     {
@@ -482,7 +487,7 @@ namespace DarkwoodMP.World
                 catch
                 {
                 }
-                if (rec?.recipes == null)
+                if (rec == null || rec.recipes == null)
                 {
                     continue;
                 }

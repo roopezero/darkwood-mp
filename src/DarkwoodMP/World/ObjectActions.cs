@@ -233,7 +233,11 @@ namespace DarkwoodMP.World
                     }
                     break;
                 case Action.FeederUsed:
-                    t.GetComponent<Feeder>()?.makeInactive();
+                    Feeder component = t.GetComponent<Feeder>();
+                    if (component != null)
+                    {
+                        component.makeInactive();
+                    }
                     break;
                 case Action.LiquidLit:
                     {

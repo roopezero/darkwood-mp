@@ -56,7 +56,11 @@ namespace DarkwoodMP.World
                 _fraction = 0f;
                 _shownAt = Time.realtimeSinceStartup;
                 Plugin.Log.LogInfo("[join] loading screen shown");
-                Plugin.Instance?.SetPanel(false);
+                Plugin instance = Plugin.Instance;
+                if (instance != null)
+                {
+                    instance.SetPanel(false);
+                }
             }
             if (_stage == Stage.Game)
             {
@@ -104,7 +108,11 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[join] loading screen hidden: {why}");
             Clear();
             LoadingScreen.Hide();
-            Plugin.Instance?.OpenPanel();
+            Plugin instance = Plugin.Instance;
+            if (instance != null)
+            {
+                instance.OpenPanel();
+            }
         }
 
         private static void Clear()

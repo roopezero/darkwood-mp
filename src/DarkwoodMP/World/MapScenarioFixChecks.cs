@@ -481,7 +481,11 @@ namespace DarkwoodMP.World
                 r.Fail("no InteractiveItems textures");
                 yield break;
             }
-            var ii = host.GetComponent<InteractiveItem>() ?? host.gameObject.AddComponent<InteractiveItem>();
+            InteractiveItem ii = host.GetComponent<InteractiveItem>();
+            if (ii == null)
+            {
+                ii = host.gameObject.AddComponent<InteractiveItem>();
+            }
             ii.textureOn = tex[0].name;
             int value = 0;
             if (tex.Length > 1)
@@ -689,7 +693,12 @@ namespace DarkwoodMP.World
             {
                 ti = held.GetComponent<ThrownItem>();
             }
-            r.Info = $"{type} ({held?.name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
+            string name = null;
+            if (held != null)
+            {
+                name = held.name;
+            }
+            r.Info = $"{type} ({name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
             if (HeldItem(p) != null)
             {
                 r.Fail($"still held: {r.Info}");
@@ -931,7 +940,19 @@ namespace DarkwoodMP.World
             }
             else
             {
-                parts.Add($"no skills to lend ({P.skills?.availableSkills.Count} available, {P.skills?.skills.Count} known): the wheel wasn't opened");
+                PlayerSkills skills = P.skills;
+                int? count = null;
+                if (skills != null)
+                {
+                    count = skills.availableSkills.Count;
+                }
+                PlayerSkills skills2 = P.skills;
+                int? count2 = null;
+                if (skills2 != null)
+                {
+                    count2 = skills2.skills.Count;
+                }
+                parts.Add($"no skills to lend ({count} available, {count2} known): the wheel wasn't opened");
             }
             if (Time.timeScale != 1f && Time.timeScale > 0f)
             {

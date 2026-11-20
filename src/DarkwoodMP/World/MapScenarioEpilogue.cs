@@ -32,7 +32,20 @@ namespace DarkwoodMP.World
             Add("epilogue-menu", Menu, timeout: 120f);
         }
 
-        private static string Where() => $"preset {D?.preset?.name ?? "none"} dreaming {D != null && D.dreaming} inEpilogue {P != null && P.inEpilogue} shared {DreamSync.Shared ?? "none"} playing {EpilogueSync.Playing}";
+        private static string Where()
+        {
+            Dreams d = D;
+            string name = null;
+            if (d != null)
+            {
+                DreamPreset preset = d.preset;
+                if (preset != null)
+                {
+                    name = preset.name;
+                }
+            }
+            return $"preset {name ?? "none"} dreaming {D != null && D.dreaming} inEpilogue {P != null && P.inEpilogue} shared {DreamSync.Shared ?? "none"} playing {EpilogueSync.Playing}";
+        }
 
         private static bool InPart(string name) => P != null && P.inEpilogue && D != null && D.dreaming && !D.switchingDream && D.preset != null && D.preset.name == name;
 

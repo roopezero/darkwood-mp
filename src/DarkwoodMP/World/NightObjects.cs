@@ -404,7 +404,11 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        Singleton<WorldGrid>.Instance?.registerToNode(go);
+                        WorldGrid instance = Singleton<WorldGrid>.Instance;
+                        if (instance != null)
+                        {
+                            instance.registerToNode(go);
+                        }
                     }
                 }
             }

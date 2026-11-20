@@ -47,7 +47,12 @@ namespace DarkwoodMP.World
             var db = Singleton<ItemsDatabase>.Instance;
             foreach (var kv in db.itemsDict.OrderBy(k => k.Key, StringComparer.Ordinal))
             {
-                var item = (Resources.Load(kv.Value) as GameObject)?.GetComponent<InvItem>();
+                GameObject gameObject = Resources.Load(kv.Value) as GameObject;
+                InvItem item = null;
+                if (gameObject != null)
+                {
+                    item = gameObject.GetComponent<InvItem>();
+                }
                 if (item != null && item.canBePlaced && item.item != null && item.item.name == prefab)
                 {
                     return kv.Key;
@@ -625,7 +630,12 @@ namespace DarkwoodMP.World
             P.whereAmI.checkWhereAmI();
             if (P.whereAmI.bigLocation != loc)
             {
-                string name = P.whereAmI.bigLocation?.name;
+                Location bigLocation = P.whereAmI.bigLocation;
+                string name = null;
+                if (bigLocation != null)
+                {
+                    name = bigLocation.name;
+                }
                 if (name == null)
                 {
                     name = "no big location";

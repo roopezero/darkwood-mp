@@ -261,7 +261,11 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(0.5f);
 
-            var inv = w.GetComponent<Inventory>() ?? w.GetComponentInChildren<Inventory>();
+            Inventory inv = w.GetComponent<Inventory>();
+            if (inv == null)
+            {
+                inv = w.GetComponentInChildren<Inventory>();
+            }
             string food = RotFood(out string foods);
             // Not a failure here (that would stop the whole run): rot-open fails later instead.
             if (inv == null || food == null)
@@ -287,7 +291,11 @@ namespace DarkwoodMP.World
             }
 
             var item = crate.GetComponent<Item>();
-            var sa = crate.GetComponent<ShadowArmor>() ?? crate.AddComponent<ShadowArmor>();
+            ShadowArmor sa = crate.GetComponent<ShadowArmor>();
+            if (sa == null)
+            {
+                sa = crate.AddComponent<ShadowArmor>();
+            }
             sa.maxHealth = 30f;
             sa.health = 30f;
             sa.normalDamageMod = 1f;
@@ -522,8 +530,12 @@ namespace DarkwoodMP.World
                 return here;
             }
             var wg = Singleton<WorldGenerator>.Instance;
-            return wg?.locations.Where(l => l != null && l.playerBase && !l.isSubLocation)
-                .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+            if (wg != null)
+            {
+                return wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation)
+                    .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+            }
+            return null;
         }
 
         private static NPC MorningNpc(Location l)
@@ -825,7 +837,13 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return new WaitForSecondsRealtime(1f);
-            r.Info = $"{win.npc?.name}: inShop {p.inShop}";
+            NPC npc = win.npc;
+            string name = null;
+            if (npc != null)
+            {
+                name = npc.name;
+            }
+            r.Info = $"{name}: inShop {p.inShop}";
             if (!p.inShop)
             {
                 r.Fail(r.Info);
@@ -863,7 +881,11 @@ namespace DarkwoodMP.World
         private static IEnumerator TalkEnd(string[] a, Result r)
         {
             var win = Singleton<UI>.Instance.dialogueWindow;
-            var npc = _talkingTo ?? win.npc;
+            NPC npc = _talkingTo;
+            if (npc == null)
+            {
+                npc = win.npc;
+            }
             if (npc == null)
             {
                 r.Fail("not talking to anyone");
@@ -1450,7 +1472,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1.5f);
             if (bag != null)
             {
-                AsPlayer(() => bag.GetComponent<Item>()?.activate()); // a bag without items: its experience taken
+                AsPlayer(() =>
+                {
+                    Item component = bag.GetComponent<Item>();
+                    if (component != null)
+                    {
+                        component.activate();
+                    }
+                }); // a bag without items: its experience taken
             }
             yield return new WaitForSecondsRealtime(1.5f);
             var refused = Refused(mark);

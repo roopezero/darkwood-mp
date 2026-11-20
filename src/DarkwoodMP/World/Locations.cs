@@ -161,7 +161,12 @@ namespace DarkwoodMP.World
             }
             _nextKeep = Time.unscaledTime + 0.5f;
             var want = new HashSet<Location>();
-            var dream = Singleton<Dreams>.Instance?.dreamLocation;
+            Dreams instance2 = Singleton<Dreams>.Instance;
+            Location dream = null;
+            if (instance2 != null)
+            {
+                dream = instance2.dreamLocation;
+            }
             foreach (var p in Combat.NetPlayerProxy.All.Values)
             {
                 if (p != null && p.InLocation != null && p.InLocation != dream)
@@ -208,7 +213,15 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 loc.leave(force: true);
-                Singleton<WorldGrid>.Instance?.getGrid(name)?.leave();
+                WorldGrid instance3 = Singleton<WorldGrid>.Instance;
+                if (instance3 != null)
+                {
+                    WorldGrid.Grid grid = instance3.getGrid(name);
+                    if (grid != null)
+                    {
+                        grid.leave();
+                    }
+                }
             }
         }
 
@@ -358,7 +371,16 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
-            string g = Singleton<WorldGrid>.Instance?.currentGrid?.name;
+            WorldGrid instance = Singleton<WorldGrid>.Instance;
+            string g = null;
+            if (instance != null)
+            {
+                WorldGrid.Grid currentGrid = instance.currentGrid;
+                if (currentGrid != null)
+                {
+                    g = currentGrid.name;
+                }
+            }
             if (g == null)
             {
                 g = "?";
@@ -549,7 +571,17 @@ namespace DarkwoodMP.World
             }
             _spawning = name;
             _spawningSince = Time.realtimeSinceStartup;
-            _gridBefore = Singleton<WorldGrid>.Instance?.currentGrid?.name;
+            WorldGrid instance = Singleton<WorldGrid>.Instance;
+            string gridBefore = null;
+            if (instance != null)
+            {
+                WorldGrid.Grid currentGrid = instance.currentGrid;
+                if (currentGrid != null)
+                {
+                    gridBefore = currentGrid.name;
+                }
+            }
+            _gridBefore = gridBefore;
             Plugin.Log.LogInfo($"[locations] loading {name} for the others (we stay where we are)");
             o.StartCoroutine(o.spawnLocation(name, transportAfterSpawn: false));
         }

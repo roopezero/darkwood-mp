@@ -23,7 +23,12 @@ namespace DarkwoodMP.World
             {
                 _story = c.npc.name;
             }
-            return Singleton<Flags>.Instance?.getNPCState(_story ?? name);
+            Flags instance = Singleton<Flags>.Instance;
+            if (instance != null)
+            {
+                return instance.getNPCState(_story ?? name);
+            }
+            return null;
         }
 
         public static void Register()

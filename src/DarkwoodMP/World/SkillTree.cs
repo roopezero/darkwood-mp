@@ -348,7 +348,11 @@ namespace DarkwoodMP.World
                     Take(gs);
                     Take(ns);
                     Plugin.Log.LogInfo($"[skills] the host refused {good}: {reason}; taken back");
-                    Player.Instance?.displayMessage(reason);
+                    Player instance = Player.Instance;
+                    if (instance != null)
+                    {
+                        instance.displayMessage(reason);
+                    }
                 }, inventory: false);
             }
             return true;
@@ -364,7 +368,11 @@ namespace DarkwoodMP.World
             good.initialize(destBool: true);
             if (good.isActivatedManually)
             {
-                Singleton<Flags>.Instance?.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+                Flags instance = Singleton<Flags>.Instance;
+                if (instance != null)
+                {
+                    instance.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+                }
             }
             p.skills.refreshAll();
             p.gainExp(0);
@@ -375,7 +383,11 @@ namespace DarkwoodMP.World
             catch
             {
             }
-            Singleton<SkillsMenu>.Instance?.tryShowActiveSkillsHelpPopup();
+            SkillsMenu instance2 = Singleton<SkillsMenu>.Instance;
+            if (instance2 != null)
+            {
+                instance2.tryShowActiveSkillsHelpPopup();
+            }
         }
 
         private static void Take(PlayerSkill sk)
@@ -385,7 +397,15 @@ namespace DarkwoodMP.World
                 return;
             }
             sk.initialize(destBool: false);
-            Player.Instance?.skills?.refreshAll();
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                PlayerSkills skills = instance.skills;
+                if (skills != null)
+                {
+                    skills.refreshAll();
+                }
+            }
         }
 
         // ---- host -----------------------------------------------------------------------------------

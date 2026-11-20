@@ -175,7 +175,15 @@ namespace DarkwoodMP.World
             {
                 if (p.inShop || (w.trading != null && w.trading.gameObject.activeSelf))
                 {
-                    Singleton<InventoryController>.Instance?.itemPopup?.hide();
+                    InventoryController instance = Singleton<InventoryController>.Instance;
+                    if (instance != null)
+                    {
+                        ItemPopup itemPopup = instance.itemPopup;
+                        if (itemPopup != null)
+                        {
+                            itemPopup.hide();
+                        }
+                    }
                     if (w.trading != null)
                     {
                         w.trading.gameObject.SetActive(false);

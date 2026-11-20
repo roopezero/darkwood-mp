@@ -149,7 +149,12 @@ namespace DarkwoodMP.World
             player.openedItemInventory = null;         // and closed
             yield return new WaitForSeconds(1f);
             var dropped = player.spawnDroppedInvItem(item);
-            Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {dropped?.name}");
+            string name2 = null;
+            if (dropped != null)
+            {
+                name2 = dropped.name;
+            }
+            Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {name2}");
             yield return new WaitForSeconds(3f);
 
             // The story: flip a flag, and an NPC's reputation.
@@ -174,9 +179,27 @@ namespace DarkwoodMP.World
             {
                 jdb.populateDict();
             }
-            string entry = jdb?.journalEntriesDict.Keys.FirstOrDefault(k => !journal.journalEntriesDict.ContainsKey(k));
-            string note = jdb?.notesDict.Keys.FirstOrDefault(k => !journal.notesDict.ContainsKey(k));
-            Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {jdb?.journalEntriesDict.Count} and {jdb?.notesDict.Count}");
+            string entry = null;
+            if (jdb != null)
+            {
+                entry = jdb.journalEntriesDict.Keys.FirstOrDefault(k => !journal.journalEntriesDict.ContainsKey(k));
+            }
+            string note = null;
+            if (jdb != null)
+            {
+                note = jdb.notesDict.Keys.FirstOrDefault(k => !journal.notesDict.ContainsKey(k));
+            }
+            int? count = null;
+            if (jdb != null)
+            {
+                count = jdb.journalEntriesDict.Count;
+            }
+            int? count2 = null;
+            if (jdb != null)
+            {
+                count2 = jdb.notesDict.Count;
+            }
+            Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {count} and {count2}");
             if (entry != null)
             {
                 journal.addJournalEntry(entry);
@@ -234,7 +257,11 @@ namespace DarkwoodMP.World
                 HarmonyLib.AccessTools.Method(typeof(NPC), "randomizeTraderInv").Invoke(trader, null);
                 yield return new WaitForSeconds(2f);
             }
-            var victim = npcs.FirstOrDefault(n => n != trader) ?? trader;
+            NPC victim = npcs.FirstOrDefault(n => n != trader);
+            if (victim == null)
+            {
+                victim = trader;
+            }
             if (victim != null)
             {
                 Plugin.Log.LogInfo($"[world test] killing {victim.name}");
@@ -303,7 +330,11 @@ namespace DarkwoodMP.World
 
             // A molotov thrown a little way off: it flies, lands and burns, in every game.
             var db = Singleton<ItemsDatabase>.Instance;
-            string molotov = db?.itemsDict.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("molotov"));
+            string molotov = null;
+            if (db != null)
+            {
+                molotov = db.itemsDict.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("molotov"));
+            }
             InvItem mi = null;
             if (molotov != null)
             {
@@ -414,7 +445,10 @@ namespace DarkwoodMP.World
                 var genItem = gen.GetComponent<Item>();
                 if (gen.isOn)
                 {
-                    genItem?.turnOff();
+                    if (genItem != null)
+                    {
+                        genItem.turnOff();
+                    }
                     yield return new WaitForSeconds(1f);
                 }
                 for (int i = 0; i < 20; i++)
@@ -913,7 +947,11 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world test] oven {o.name} {ObjRef.Of(o.gameObject)} on {o.isOn} at {(l != null ? l.name + " hideout " + l.hideoutId + " ward " + (l.shadowWard != null && l.shadowWard.activeSelf) : "no location")}{(o == player.experienceMachine ? " (ours)" : "")}");
             }
             var mine = player.experienceMachine;
-            var other = ovens.FirstOrDefault(o => o != mine) ?? mine;
+            ExperienceMachine other = ovens.FirstOrDefault(o => o != mine);
+            if (other == null)
+            {
+                other = mine;
+            }
             if (other != null)
             {
                 player.setExperienceMachine(other);
@@ -960,7 +998,10 @@ namespace DarkwoodMP.World
                     }
                     return null;
                 }).FirstOrDefault(i => i != null && !i.transform.isLocked());
-                chest?.addItemType("bottle", 1);
+                if (chest != null)
+                {
+                    chest.addItemType("bottle", 1);
+                }
                 Plugin.Log.LogInfo($"[world test] porter from {src.name} ({ItemsIn(src)} items) to {dest.name}");
                 Hideouts.Deliver(src, dest);
                 Plugin.Log.LogInfo($"[world test] {src.name} has {ItemsIn(src)} items after");
@@ -1239,7 +1280,11 @@ namespace DarkwoodMP.World
             var gen = Singleton<WorldGenerator>.Instance;
             if (gen != null)
             {
-                Singleton<RandomWorldObjects>.Instance?.resetObjects();
+                RandomWorldObjects instance = Singleton<RandomWorldObjects>.Instance;
+                if (instance != null)
+                {
+                    instance.resetObjects();
+                }
                 gen.despawnRandomObjects();
                 gen.spawnRandomObjects();
                 var rwo = Singleton<RandomWorldObjects>.Instance;

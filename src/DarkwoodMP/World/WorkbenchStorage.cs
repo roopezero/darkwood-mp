@@ -60,7 +60,16 @@ namespace DarkwoodMP.World
                 Inventory inv = null;
                 if (go != null)
                 {
-                    inv = go.GetComponent<Workbench>()?.normalInventory ?? go.GetComponent<Inventory>();
+                    Workbench component = go.GetComponent<Workbench>();
+                    inv = null;
+                    if (component != null)
+                    {
+                        inv = component.normalInventory;
+                    }
+                    if (inv == null)
+                    {
+                        inv = go.GetComponent<Inventory>();
+                    }
                 }
                 if (inv != null && inv.slots != null && inv.slots.Count > 0)
                 {

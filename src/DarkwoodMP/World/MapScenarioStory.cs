@@ -37,7 +37,12 @@ namespace DarkwoodMP.World
         private static PlayerStepCounter Counter()
         {
             var p = Player.Instance;
-            return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
+            PlayerStepCounter component = p.GetComponent<PlayerStepCounter>();
+            if (component == null)
+            {
+                component = p.gameObject.AddComponent<PlayerStepCounter>();
+            }
+            return component;
         }
 
         /// <summary>
@@ -48,7 +53,12 @@ namespace DarkwoodMP.World
         {
             if (spec == "enemy")
             {
-                return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
+                Character hostEnemyNear = MapScenarioWorld.HostEnemyNear(1500f);
+                if (hostEnemyNear != null)
+                {
+                    return hostEnemyNear.gameObject;
+                }
+                return null;
             }
             if (spec.StartsWith("door:"))
             {
@@ -70,9 +80,19 @@ namespace DarkwoodMP.World
             }
             if (spec.StartsWith("trap:"))
             {
-                return MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null)?.gameObject;
+                Trigger trigger = MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null);
+                if (trigger != null)
+                {
+                    return trigger.gameObject;
+                }
+                return null;
             }
-            return MapScenarioWorld.Find<Item>(spec, i => i.switchable)?.gameObject;
+            Item item = MapScenarioWorld.Find<Item>(spec, i => i.switchable);
+            if (item != null)
+            {
+                return item.gameObject;
+            }
+            return null;
         }
 
         /// <summary>
@@ -124,7 +144,11 @@ namespace DarkwoodMP.World
             ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetUniqueObjects = new List<string> { "player" }, eventAmount = 1 });
             ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetGameObjects = new List<GameObject> { Player.Instance.gameObject }, eventAmount = 1 });
             ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpLaterCount", targetGameObjects = new List<GameObject> { root }, eventAmount = 1 });
-            var et = go.GetComponent<EventTriggers>() ?? go.AddComponent<EventTriggers>();
+            EventTriggers et = go.GetComponent<EventTriggers>();
+            if (et == null)
+            {
+                et = go.AddComponent<EventTriggers>();
+            }
             var t = new global::EventTrigger { type = type, multipleFire = multi, gameEvents = ge, thisEventTriggers = et };
             et.eventTriggers.Add(t);
             _made[id] = m;

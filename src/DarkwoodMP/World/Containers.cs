@@ -72,7 +72,12 @@ namespace DarkwoodMP.World
             _placeableTypes = new Dictionary<string, HashSet<string>>();
             foreach (var kv in db.itemsDict)
             {
-                var item = (Resources.Load(kv.Value) as GameObject)?.GetComponent<InvItem>();
+                GameObject gameObject = Resources.Load(kv.Value) as GameObject;
+                InvItem item = null;
+                if (gameObject != null)
+                {
+                    item = gameObject.GetComponent<InvItem>();
+                }
                 if (item == null || !item.canBePlaced || item.item == null)
                 {
                     continue;
@@ -288,7 +293,15 @@ namespace DarkwoodMP.World
                     Object.Destroy(inv.traderMessage.gameObject);
                 }
                 inv.open = false;
-                Singleton<UI>.Instance?.InventorySelectionPrompt?.Hide();
+                UI instance = Singleton<UI>.Instance;
+                if (instance != null)
+                {
+                    InventorySelectionPrompt inventorySelectionPrompt = instance.InventorySelectionPrompt;
+                    if (inventorySelectionPrompt != null)
+                    {
+                        inventorySelectionPrompt.Hide();
+                    }
+                }
                 if (inv.invType == Inventory.InvType.shop)
                 {
                     p.talkedToNPC = null;
@@ -597,7 +610,11 @@ namespace DarkwoodMP.World
             {
                 inv.hide();
             }
-            Player.Instance?.displayMessage($"{who} is using this");
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                instance.displayMessage($"{who} is using this");
+            }
             Plugin.Log.LogInfo($"{inv.name} is in use by {who}");
         }
 
@@ -1154,7 +1171,11 @@ namespace DarkwoodMP.World
                 {
                     Core.addToSaveable(go, isDynamic: true, assignID: placed); // (the host's isn't saved either)
                 }
-                Singleton<WorldGrid>.Instance?.registerToNode(go);
+                WorldGrid instance2 = Singleton<WorldGrid>.Instance;
+                if (instance2 != null)
+                {
+                    instance2.registerToNode(go);
+                }
                 var rb = go.GetComponent<Rigidbody>();
                 if (rb != null)
                 {

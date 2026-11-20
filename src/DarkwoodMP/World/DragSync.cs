@@ -967,7 +967,10 @@ namespace DarkwoodMP.World
             Cancelled++;
             if (!string.IsNullOrEmpty(message))
             {
-                player?.displayMessage(message);
+                if (player != null)
+                {
+                    player.displayMessage(message);
+                }
             }
             Plugin.Log.LogInfo($"[dragging] let go of {item.name} ({ObjRef.Of(go)}): {message}");
         }
@@ -1408,7 +1411,11 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            Player.Instance?.displayMessage($"{who} is moving it");
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                instance.displayMessage($"{who} is moving it");
+            }
             Blocked++;
             return false;
         }

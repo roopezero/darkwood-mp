@@ -280,7 +280,12 @@ namespace DarkwoodMP.Combat
                     best = p;
                 }
             }
-            return best ?? host;
+            CharBase best2 = best;
+            if (best2 == null)
+            {
+                best2 = host;
+            }
+            return best2;
         }
 
         /// <summary>For the game's code that aims an enemy at Player.Instance.transform (see ThreatPursuitTranspiler).</summary>

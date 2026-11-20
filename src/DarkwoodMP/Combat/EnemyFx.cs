@@ -354,7 +354,11 @@ namespace DarkwoodMP.Combat
             {
                 me.bansheeAgitatedSoundAO = AudioController.Play("banshee_agitated_player", me._transform);
             }
-            Singleton<CamMain>.Instance?.shake(0.5f, 1200f / nearestDist);
+            CamMain instance = Singleton<CamMain>.Instance;
+            if (instance != null)
+            {
+                instance.shake(0.5f, 1200f / nearestDist);
+            }
             var ui = Singleton<UI>.Instance;
             if (ui != null)
             {

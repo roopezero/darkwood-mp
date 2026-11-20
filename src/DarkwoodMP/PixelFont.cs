@@ -57,7 +57,7 @@ namespace DarkwoodMP
                     }
                     var d = f.inst;
                     Texture tex = null;
-                    if (d?.material != null)
+                    if (d != null && d.material != null)
                     {
                         tex = d.material.mainTexture;
                     }

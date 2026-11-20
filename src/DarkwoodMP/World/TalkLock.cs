@@ -128,7 +128,11 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            Player.Instance?.displayMessage($"{other} is talking to them");
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                instance.displayMessage($"{other} is talking to them");
+            }
             Plugin.Log.LogInfo($"{npc.name}: {other} is talking to them");
             return false;
         }
@@ -214,13 +218,22 @@ namespace DarkwoodMP.World
                 _oursRef = default;
                 _oursName = "";
             }
-            Player.Instance?.displayMessage(reason);
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                instance.displayMessage(reason);
+            }
             CloseWhenReady(npc, 40);
         }
 
         private static void CloseWhenReady(NPC npc, int tries)
         {
-            var win = Singleton<UI>.Instance?.dialogueWindow;
+            UI instance = Singleton<UI>.Instance;
+            DialogueWindow win = null;
+            if (instance != null)
+            {
+                win = instance.dialogueWindow;
+            }
             if (win == null || win.npc != npc || npc == null)
             {
                 return;
@@ -293,7 +306,12 @@ namespace DarkwoodMP.World
 
         static void Postfix(NPC __instance)
         {
-            var win = Singleton<UI>.Instance?.dialogueWindow;
+            UI instance = Singleton<UI>.Instance;
+            DialogueWindow win = null;
+            if (instance != null)
+            {
+                win = instance.dialogueWindow;
+            }
             if (win != null && win.npc == __instance)
             {
                 TalkLock.Opened(__instance);

@@ -284,8 +284,11 @@ namespace DarkwoodMP.World
                 var last = rp.Last;
                 if (last != null)
                 {
-                    var lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == last.Library)
-                              ?? Resources.Load(last.Library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
+                    tk2dSpriteAnimation lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == last.Library);
+                    if (lib == null)
+                    {
+                        lib = Resources.Load(last.Library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
+                    }
                     var frames = new HashSet<(int, int)>();
                     if (lib != null)
                     {

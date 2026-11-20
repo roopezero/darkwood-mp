@@ -460,7 +460,7 @@ namespace DarkwoodMP.World
             var d = new Dictionary<string, int>();
             void Add(Inventory inv)
             {
-                if (inv?.slots == null)
+                if (inv == null || inv.slots == null)
                 {
                     return;
                 }

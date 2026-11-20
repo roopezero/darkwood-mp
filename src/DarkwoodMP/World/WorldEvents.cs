@@ -627,7 +627,11 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         Core.addToSaveable(go, isDynamic: true);
-                        Singleton<WorldGrid>.Instance?.registerToNode(go);
+                        WorldGrid instance2 = Singleton<WorldGrid>.Instance;
+                        if (instance2 != null)
+                        {
+                            instance2.registerToNode(go);
+                        }
                         RandomObjectsOf(chunk).Add(go);
                         ObjRef.RegisterSpawned(o.id, go);
                         var inv = go.GetComponent<Inventory>();
@@ -660,7 +664,12 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                var prefab = Singleton<SaveManager>.Instance?.getPrefab(name);
+                SaveManager instance3 = Singleton<SaveManager>.Instance;
+                GameObject prefab = null;
+                if (instance3 != null)
+                {
+                    prefab = instance3.getPrefab(name);
+                }
                 if (prefab == null)
                 {
                     Plugin.Log.LogWarning($"No night object {name} here");

@@ -247,7 +247,11 @@ namespace DarkwoodMP
                 {
                     vm.destCameraZoom = _zoom;
                 }
-                Singleton<Controller>.Instance?.refreshZoom();
+                Controller instance = Singleton<Controller>.Instance;
+                if (instance != null)
+                {
+                    instance.refreshZoom();
+                }
             }
             if (!Mathf.Approximately(_music, GameSettings.GetFloat("MusicVolume")))
             {

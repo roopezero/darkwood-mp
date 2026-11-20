@@ -373,7 +373,13 @@ namespace DarkwoodMP.World
             {
                 name2 = c.target.name;
             }
-            Plugin.Log.LogInfo($"[sv] hit {c?.name} to draw it to the host; its target now {name2}");
+            Character c2 = c;
+            string name = null;
+            if (c2 != null)
+            {
+                name = c2.name;
+            }
+            Plugin.Log.LogInfo($"[sv] hit {name} to draw it to the host; its target now {name2}");
             yield return new WaitForSeconds(secs * 0.4f);
             yield return Walk(home, 60f, detours: 0);
         }

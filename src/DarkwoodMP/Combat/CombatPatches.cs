@@ -538,7 +538,11 @@ namespace DarkwoodMP.Combat
                     list.RemoveAt(i);
                     __instance.objects.Remove(c.gameObject);
                     c.disconnectFromLocation();
-                    var co = c.GetComponent<CullableObject>() ?? c.gameObject.AddComponent<CullableObject>();
+                    CullableObject co = c.GetComponent<CullableObject>();
+                    if (co == null)
+                    {
+                        co = c.gameObject.AddComponent<CullableObject>();
+                    }
                     co.registerMe();
                     Plugin.Log.LogInfo($"[enemy] {c.name}'s corpse at {c.transform.position} lies outside {Core.getTrueLocationName(__instance.name)}: kept as that location is left");
                 }

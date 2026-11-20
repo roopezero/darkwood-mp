@@ -227,7 +227,11 @@ namespace DarkwoodMP.World
             WorldActions.Replaying = true;
             try
             {
-                src?.getAllInvSlots(); // empties them as the host's did
+                // empties them as the host's did
+                if (src != null)
+                {
+                    src.getAllInvSlots();
+                }
                 if (dest == null || dest.porterDeliveryPosition == null)
                 {
                     Plugin.Log.LogWarning("The porter's hideout isn't here");
@@ -279,7 +283,11 @@ namespace DarkwoodMP.World
             var porter = Singleton<UniqueObjects>.Instance.getObject("porter");
             if (porter != null)
             {
-                porter.GetComponent<Character>()?.removeMe();
+                Character component = porter.GetComponent<Character>();
+                if (component != null)
+                {
+                    component.removeMe();
+                }
             }
             Singleton<Flags>.Instance.setFlag("porter_inTransit", activeModifier: true);
         }
@@ -711,7 +719,13 @@ namespace DarkwoodMP.World
             }
             if (Debug)
             {
-                Plugin.Log.LogInfo($"[world] moveInventory from {ge.sourceTransform?.name} done here; sent the containers");
+                Transform sourceTransform = ge.sourceTransform;
+                string name = null;
+                if (sourceTransform != null)
+                {
+                    name = sourceTransform.name;
+                }
+                Plugin.Log.LogInfo($"[world] moveInventory from {name} done here; sent the containers");
             }
         }
     }

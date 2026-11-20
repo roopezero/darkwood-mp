@@ -196,7 +196,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var j = Singleton<UI>.Instance?.journal;
+            UI instance = Singleton<UI>.Instance;
+            Journal j = null;
+            if (instance != null)
+            {
+                j = instance.journal;
+            }
             if (j == null || !j.keysDict.TryGetValue(type, out var k) || k == null)
             {
                 return;
@@ -216,7 +221,12 @@ namespace DarkwoodMP.World
         /// <summary>Our journal's entry for a "je:", "jn:", "jk:" or "ji:" key, as Snapshot writes it (null: none).</summary>
         private static string OwnJournal(string key)
         {
-            var j = Singleton<UI>.Instance?.journal;
+            UI instance = Singleton<UI>.Instance;
+            Journal j = null;
+            if (instance != null)
+            {
+                j = instance.journal;
+            }
             if (j == null || key.Length < 4)
             {
                 return null;
@@ -259,7 +269,12 @@ namespace DarkwoodMP.World
         /// <summary>Change this NPC's reputation here, without sending the change.</summary>
         internal void AddReputation(string npc, int delta)
         {
-            var st = Singleton<Flags>.Instance?.getNPCState(npc);
+            Flags instance = Singleton<Flags>.Instance;
+            Flags.NPCState st = null;
+            if (instance != null)
+            {
+                st = instance.getNPCState(npc);
+            }
             if (st == null || delta == 0)
             {
                 return;
@@ -385,7 +400,12 @@ namespace DarkwoodMP.World
                     d["d:" + dl.name] = JsonConvert.SerializeObject(new CharacterDialogue.SaveState(dl));
                 }
             }
-            var j = Singleton<UI>.Instance?.journal;
+            UI instance = Singleton<UI>.Instance;
+            Journal j = null;
+            if (instance != null)
+            {
+                j = instance.journal;
+            }
             if (j != null)
             {
                 bool dream = SharedDream; // what's found in a dream: only a shared dream's (see the class)
@@ -824,7 +844,12 @@ namespace DarkwoodMP.World
         {
             try
             {
-                var loc = Singleton<WorldGenerator>.Instance?.getLocation(name);
+                WorldGenerator instance = Singleton<WorldGenerator>.Instance;
+                Location loc = null;
+                if (instance != null)
+                {
+                    loc = instance.getLocation(name);
+                }
                 MapElement el = null;
                 if (loc != null)
                 {
@@ -834,7 +859,11 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                Singleton<Map>.Instance?.showElement(el);
+                Map instance2 = Singleton<Map>.Instance;
+                if (instance2 != null)
+                {
+                    instance2.showElement(el);
+                }
                 Plugin.Log.LogInfo($"Journal: {name} shown on the map");
             }
             catch (Exception e)
@@ -846,7 +875,12 @@ namespace DarkwoodMP.World
         /// <summary>Another player's new journal entry: added here if it isn't yet (removed, for "-").</summary>
         private static void ApplyJournal(char kind, string name, string value)
         {
-            var j = Singleton<UI>.Instance?.journal;
+            UI instance = Singleton<UI>.Instance;
+            Journal j = null;
+            if (instance != null)
+            {
+                j = instance.journal;
+            }
             if (j == null)
             {
                 return;
@@ -1084,7 +1118,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
+            Flags instance = Singleton<Flags>.Instance;
+            Flags.NPCState st = null;
+            if (instance != null)
+            {
+                st = instance.getNPCState(ev.Value);
+            }
             if (st != null)
             {
                 __state = st.reputation;
@@ -1098,7 +1137,12 @@ namespace DarkwoodMP.World
                 return;
             }
             var ev = (GameEvent)_this.GetValue(__instance);
-            var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
+            Flags instance = Singleton<Flags>.Instance;
+            Flags.NPCState st = null;
+            if (instance != null)
+            {
+                st = instance.getNPCState(ev.Value);
+            }
             if (st != null && st.reputation != __state)
             {
                 FlagsSync.Instance.Absorb(ev.Value, st.reputation - __state);

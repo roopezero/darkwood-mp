@@ -675,7 +675,12 @@ namespace DarkwoodMP.World
             {
                 kind = a[0];
             }
-            var dogSnd = (Resources.Load("Prefabs/Characters/Dog") as GameObject)?.GetComponent<CharacterSounds>();
+            GameObject gameObject = Resources.Load("Prefabs/Characters/Dog") as GameObject;
+            CharacterSounds dogSnd = null;
+            if (gameObject != null)
+            {
+                dogSnd = gameObject.GetComponent<CharacterSounds>();
+            }
             string dogLoops;
             if (dogSnd == null)
             {
@@ -689,7 +694,12 @@ namespace DarkwoodMP.World
             {
                 foreach (var k in new[] { "Dog", "DogMutated", "Villager", "ChomperRed", "Mimic", "Banshee" }.Concat(Enum.GetNames(typeof(CharacterType))))
                 {
-                    var s = (Resources.Load("Prefabs/Characters/" + k) as GameObject)?.GetComponent<CharacterSounds>();
+                    GameObject gameObject2 = Resources.Load("Prefabs/Characters/" + k) as GameObject;
+                    CharacterSounds s = null;
+                    if (gameObject2 != null)
+                    {
+                        s = gameObject2.GetComponent<CharacterSounds>();
+                    }
                     if (s != null && !string.IsNullOrEmpty(s.idleLoop))
                     {
                         kind = k;
@@ -1234,7 +1244,16 @@ namespace DarkwoodMP.World
             // MeleeSensor hits a patch only if Core.canSeeAttack passes: rays from our player at a character's height
             // (14) towards the patch (at y -40), as long as the flat distance, must hit the patch's collider.
             // The sensor's check is against the collider it touched, which may be on a child of the patch.
-            var hitT = inf.GetComponentInChildren<Collider>()?.transform ?? inf.transform;
+            Collider componentInChildren = inf.GetComponentInChildren<Collider>();
+            Transform hitT = null;
+            if (componentInChildren != null)
+            {
+                hitT = componentInChildren.transform;
+            }
+            if (hitT == null)
+            {
+                hitT = inf.transform;
+            }
             // The patch's collider is a ball of radius 70 around a point 50 above the patch itself, and a ray that
             // starts inside a collider doesn't hit it: so from closer than ~70 it never sees the patch. Stand just
             // outside it, where the torch still reaches into it.
@@ -1271,7 +1290,17 @@ namespace DarkwoodMP.World
                     float len = StateDump.Flat(to - from);
                     var hits = Physics.RaycastAll(from, (to - from).normalized, len, 44165635);
                     var cc = hitT.GetComponent<Collider>();
-                    tried.Add(FormattableString.Invariant($"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {cc?.bounds.center} ext {cc?.bounds.extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
+                    Vector3? center = null;
+                    if (cc != null)
+                    {
+                        center = cc.bounds.center;
+                    }
+                    Vector3? extents = null;
+                    if (cc != null)
+                    {
+                        extents = cc.bounds.extents;
+                    }
+                    tried.Add(FormattableString.Invariant($"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {center} ext {extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
                 }
                 Swing(p, inf.transform.position);
                 yield return new WaitForFixedUpdate();

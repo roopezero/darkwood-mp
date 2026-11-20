@@ -124,7 +124,12 @@ namespace DarkwoodMP.Sync
                 {
                     try
                     {
-                        var item = Singleton<ItemsDatabase>.Instance?.getItem(want, instantiate: false);
+                        ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+                        InvItem item = null;
+                        if (instance != null)
+                        {
+                            item = instance.getItem(want, instantiate: false);
+                        }
                         if (item != null && item.lightEmitter != null)
                         {
                             // As the game does for its own player (Player.onDoneSwitchingItem), on the puppet.

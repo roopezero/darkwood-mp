@@ -192,7 +192,12 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            var st = Singleton<Flags>.Instance?.getNPCState(name);
+            Flags instance = Singleton<Flags>.Instance;
+            Flags.NPCState st = null;
+            if (instance != null)
+            {
+                st = instance.getNPCState(name);
+            }
             if (st != null && st.dead)
             {
                 return false;
@@ -537,7 +542,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static string CheckReputation(string name, Dictionary<string, int> took, Dictionary<string, int> gave, int repChange)
         {
-            var st = Singleton<Flags>.Instance?.getNPCState(name);
+            Flags instance = Singleton<Flags>.Instance;
+            Flags.NPCState st = null;
+            if (instance != null)
+            {
+                st = instance.getNPCState(name);
+            }
             int rep = 0;
             if (st != null)
             {

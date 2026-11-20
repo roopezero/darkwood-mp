@@ -56,7 +56,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(3f); // the host's stand-in for us goes Away with our next snapshots
-            r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+            DreamPreset preset = D.preset;
+            string name2 = null;
+            if (preset != null)
+            {
+                name2 = preset.name;
+            }
+            r.Info = $"dreaming {name2} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
             if (!D.dreaming || DreamSync.Shared != null || Locations.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");
@@ -80,10 +86,19 @@ namespace DarkwoodMP.World
             }
             if (et == null)
             {
-                r.Fail($"no burnt wardrobe in {loc?.name}");
+                string name = null;
+                if (loc != null)
+                {
+                    name = loc.name;
+                }
+                r.Fail($"no burnt wardrobe in {name}");
                 yield break;
             }
-            var item = et.GetComponent<Item>() ?? et.GetComponentInParent<Item>();
+            Item item = et.GetComponent<Item>();
+            if (item == null)
+            {
+                item = et.GetComponentInParent<Item>();
+            }
             int rolledBefore = Authority.RolledBack;
             yield return MoveNear(et.transform);
 
@@ -162,7 +177,12 @@ namespace DarkwoodMP.World
             {
                 text = "still there";
             }
-            r.Info = $"in {loc?.name}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
+            string name2 = null;
+            if (loc != null)
+            {
+                name2 = loc.name;
+            }
+            r.Info = $"in {name2}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
                      $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
             if (refused > 0)
             {
@@ -282,7 +302,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(2f);
-            r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}";
+            DreamPreset preset = D.preset;
+            string name2 = null;
+            if (preset != null)
+            {
+                name2 = preset.name;
+            }
+            r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}";
             if (DreamSync.Shared != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
@@ -314,7 +340,13 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
+            DreamPreset preset = D.preset;
+            string name2 = null;
+            if (preset != null)
+            {
+                name2 = preset.name;
+            }
+            r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
             if (D.preset == null || D.preset.name != name || DreamSync.Shared != name)
             {
                 r.Fail($"not in the host's dream {name}: {r.Info}");
@@ -397,7 +429,12 @@ namespace DarkwoodMP.World
             }
             if (et == null)
             {
-                r.Fail($"no burnt wardrobe in {loc?.name}");
+                string name = null;
+                if (loc != null)
+                {
+                    name = loc.name;
+                }
+                r.Fail($"no burnt wardrobe in {name}");
                 yield break;
             }
             var p = P;
@@ -481,7 +518,7 @@ namespace DarkwoodMP.World
             var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
             ne.NetIdOf(c, out uint id);
             r.Info = $"{c.name} #{id} at {Fmt(c.transform.position)}, target {(c.target != null ? c.target.name : "none")}; " +
-                     $"the client's stand-in: away {proxy?.Away}, in {(proxy?.InLocation != null ? proxy.InLocation.name : "-")}" +
+                     $"the client's stand-in: away {proxy?.Away}, in {((proxy != null && proxy.InLocation != null) ? proxy.InLocation.name : "-")}" +
                      (proxy != null ? $", threat {Combat.Threat.Of(c).Get(proxy):0.#}" : "");
             if (proxy == null || proxy.Away || proxy.InLocation != D.dreamLocation)
             {
@@ -562,7 +599,12 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return go.GetComponent<Door>() ?? go.GetComponentInChildren<Door>();
+            Door component = go.GetComponent<Door>();
+            if (component == null)
+            {
+                component = go.GetComponentInChildren<Door>();
+            }
+            return component;
         }
 
         private static string DoorInfo(Door d)
@@ -578,7 +620,13 @@ namespace DarkwoodMP.World
             var door = HomeDoorOf(Knocking());
             if (door == null)
             {
-                r.Fail($"no knocking area or door in {D.dreamLocation?.name}");
+                Location dreamLocation = D.dreamLocation;
+                string name = null;
+                if (dreamLocation != null)
+                {
+                    name = dreamLocation.name;
+                }
+                r.Fail($"no knocking area or door in {name}");
                 yield break;
             }
             var l = door.GetComponent<Locked>();
@@ -601,7 +649,13 @@ namespace DarkwoodMP.World
             var et = Knocking();
             if (et == null)
             {
-                r.Fail($"no knocking area in {D.dreamLocation?.name}");
+                Location dreamLocation = D.dreamLocation;
+                string name = null;
+                if (dreamLocation != null)
+                {
+                    name = dreamLocation.name;
+                }
+                r.Fail($"no knocking area in {name}");
                 yield break;
             }
             var p = P;
@@ -624,7 +678,13 @@ namespace DarkwoodMP.World
             var door = HomeDoorOf(Knocking());
             if (door == null)
             {
-                r.Fail($"no door in {D.dreamLocation?.name}");
+                Location dreamLocation = D.dreamLocation;
+                string name = null;
+                if (dreamLocation != null)
+                {
+                    name = dreamLocation.name;
+                }
+                r.Fail($"no door in {name}");
                 yield break;
             }
             var p = P;

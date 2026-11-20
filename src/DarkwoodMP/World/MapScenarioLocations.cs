@@ -247,7 +247,12 @@ namespace DarkwoodMP.World
             var at = c.transform.position + value * 70f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+            OutsideLocations instance = Singleton<OutsideLocations>.Instance;
+            bool? playerInOutsideLocation = null;
+            if (instance != null)
+            {
+                playerInOutsideLocation = instance.playerInOutsideLocation;
+            }
             bool playerInOutsideLocation2 = false;
             if (playerInOutsideLocation.HasValue)
             {
@@ -488,7 +493,12 @@ namespace DarkwoodMP.World
             var at = dog.transform.position + value * 80f;
             PutAt(p, at);
             yield return new WaitForSeconds(0.3f);
-            bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+            OutsideLocations instance = Singleton<OutsideLocations>.Instance;
+            bool? playerInOutsideLocation = null;
+            if (instance != null)
+            {
+                playerInOutsideLocation = instance.playerInOutsideLocation;
+            }
             bool playerInOutsideLocation2 = false;
             if (playerInOutsideLocation.HasValue)
             {

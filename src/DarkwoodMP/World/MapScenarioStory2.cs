@@ -42,7 +42,15 @@ namespace DarkwoodMP.World
             EventTriggers et = null;
             if (a.Length > 0)
             {
-                et = GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>();
+                GameObject gameObject = GameObject.Find("dwmp_later_" + a[0]);
+                if (gameObject != null)
+                {
+                    et = gameObject.GetComponent<EventTriggers>();
+                }
+                else
+                {
+                    et = null;
+                }
             }
             if (et == null || et.eventTriggers.Count == 0)
             {
@@ -152,7 +160,11 @@ namespace DarkwoodMP.World
             m.T = new global::EventTrigger { type = global::EventTrigger.Type.refreshWhenTurnedOn, multipleFire = false, gameEvents = ge };
             m.Et.eventTriggers.Add(m.T);
             m.T.thisEventTriggers = m.Et;
-            var awto = lamp.GetComponent<ActionWhenTurnedOn>() ?? lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
+            ActionWhenTurnedOn awto = lamp.GetComponent<ActionWhenTurnedOn>();
+            if (awto == null)
+            {
+                awto = lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
+            }
             awto.actions.Add(new ActionWhenTurnedOn.Action
             {
                 type = ActionWhenTurnedOn.Action.Type.refreshWhenTurnedOn,

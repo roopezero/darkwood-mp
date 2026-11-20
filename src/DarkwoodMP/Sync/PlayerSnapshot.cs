@@ -368,7 +368,15 @@ namespace DarkwoodMP.Sync
             if (_flashlight == null || _flashlightOf != player)
             {
                 _flashlightOf = player;
-                _flashlight = root.Find("Flashlight")?.gameObject;
+                Transform transform = root.Find("Flashlight");
+                if (transform != null)
+                {
+                    _flashlight = transform.gameObject;
+                }
+                else
+                {
+                    _flashlight = null;
+                }
             }
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
             Light2D beam = null;

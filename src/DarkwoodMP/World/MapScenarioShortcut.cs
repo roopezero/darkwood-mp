@@ -78,7 +78,12 @@ namespace DarkwoodMP.World
         private static string State()
         {
             var ge = WorldEvent();
-            var loc = Find(In)?.transform.GetLocation();
+            GameObject gameObject = Find(In);
+            Location loc = null;
+            if (gameObject != null)
+            {
+                loc = gameObject.transform.GetLocation();
+            }
             string text = "not fired";
             if (ge == null)
             {
@@ -262,7 +267,11 @@ namespace DarkwoodMP.World
             {
                 ge.fired = false;
                 Find(In).setMeActive(false);
-                Find(Locked)?.setMeActive(true);
+                GameObject gameObject = Find(Locked);
+                if (gameObject != null)
+                {
+                    gameObject.setMeActive(true);
+                }
             }
             finally
             {

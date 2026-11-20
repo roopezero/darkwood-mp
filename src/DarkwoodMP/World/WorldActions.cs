@@ -518,7 +518,11 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        trap.GetComponent<Item>()?.switchTriggerState();
+                        Item component = trap.GetComponent<Item>();
+                        if (component != null)
+                        {
+                            component.switchTriggerState();
+                        }
                     }
                 }
                 else if (a < Action.WindowBarricade)
@@ -660,7 +664,12 @@ namespace DarkwoodMP.World
                     best = ch;
                 }
             }
-            return best ?? c;
+            Character best2 = best;
+            if (best2 == null)
+            {
+                best2 = c;
+            }
+            return best2;
         }
 
         /// <summary>
@@ -1006,7 +1015,16 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool HasKey(Locked l)
         {
-            var keys = Singleton<UI>.Instance?.journal?.keysDict;
+            UI instance = Singleton<UI>.Instance;
+            Dictionary<string, Journal.Key> keys = null;
+            if (instance != null)
+            {
+                Journal journal = instance.journal;
+                if (journal != null)
+                {
+                    keys = journal.keysDict;
+                }
+            }
             return l != null && keys != null && !string.IsNullOrEmpty(l.keyType) && keys.ContainsKey(l.keyType);
         }
 

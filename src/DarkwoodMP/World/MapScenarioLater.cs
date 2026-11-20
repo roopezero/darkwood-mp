@@ -213,7 +213,12 @@ namespace DarkwoodMP.World
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             int had = MapScenarioWorld.CarriedOf(Item);
-            int? n = m.C?.N;
+            LaterTestCounter c = m.C;
+            int? n = null;
+            if (c != null)
+            {
+                n = c.N;
+            }
             int ran = 0;
             if (n.HasValue)
             {

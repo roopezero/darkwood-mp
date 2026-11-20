@@ -186,7 +186,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var item = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
+            ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+            InvItem item = null;
+            if (instance != null)
+            {
+                item = instance.getItem(type, instantiate: false);
+            }
             if (item == null || item.item == null)
             {
                 Plugin.Log.LogWarning($"Someone threw a {type}, which this game doesn't know");

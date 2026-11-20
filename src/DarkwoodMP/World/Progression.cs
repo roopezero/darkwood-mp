@@ -729,7 +729,11 @@ namespace DarkwoodMP.World
                     }
                     else
                     {
-                        Player.Instance?.displayMessage(reason);
+                        Player instance = Player.Instance;
+                        if (instance != null)
+                        {
+                            instance.displayMessage(reason);
+                        }
                         Plugin.Log.LogInfo($"[progress] reset refused: {reason}");
                     }
                 }, inventory: false);

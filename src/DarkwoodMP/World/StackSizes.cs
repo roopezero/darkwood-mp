@@ -191,7 +191,12 @@ namespace DarkwoodMP.World
         /// <summary>For tests: the game's own stack size of an item type (before Apply), or its size now if never seen.</summary>
         internal static int OriginalOf(string type)
         {
-            var it = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
+            ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+            InvItem it = null;
+            if (instance != null)
+            {
+                it = instance.getItem(type, instantiate: false);
+            }
             if (it == null)
             {
                 return 0;

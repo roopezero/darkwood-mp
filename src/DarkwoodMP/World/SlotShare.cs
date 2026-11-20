@@ -693,7 +693,11 @@ namespace DarkwoodMP.World
             if (!string.IsNullOrEmpty(json) && !InvItemClass.isNull(held) && held.slot == slot && player != null)
             {
                 var keep = new InvItemClass(held);
-                held.UIInvItem?.despawn();
+                UIInvItem uiInvItem = held.UIInvItem;
+                if (uiInvItem != null)
+                {
+                    uiInvItem.despawn();
+                }
                 ctl.pickedUpItem = null;
                 int dropped = GiveBack(player, keep, keep.amount);
                 Plugin.Log.LogInfo($"[slots] the {keep.type} we held came from slot {i} of {inv.name}, filled by someone else: into our bags ({dropped} at our feet)");
@@ -1050,7 +1054,11 @@ namespace DarkwoodMP.World
                         left -= n;
                         if (n >= held.amount)
                         {
-                            held.UIInvItem?.despawn();
+                            UIInvItem uiInvItem = held.UIInvItem;
+                            if (uiInvItem != null)
+                            {
+                                uiInvItem.despawn();
+                            }
                             ctl.pickedUpItem = null;
                         }
                         else

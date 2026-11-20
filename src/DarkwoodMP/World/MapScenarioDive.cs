@@ -272,7 +272,12 @@ namespace DarkwoodMP.World
         private static PlayerStepCounter Counter()
         {
             var p = Player.Instance;
-            return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
+            PlayerStepCounter component = p.GetComponent<PlayerStepCounter>();
+            if (component == null)
+            {
+                component = p.gameObject.AddComponent<PlayerStepCounter>();
+            }
+            return component;
         }
 
         private static GameObject Root(string name, Vector3 pos)
@@ -542,7 +547,12 @@ namespace DarkwoodMP.World
                 }
             }
             sb.Append($"\n[on player] {string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
-            var uo = Singleton<UniqueObjects>.Instance?.getObject("player");
+            UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+            GameObject uo = null;
+            if (instance != null)
+            {
+                uo = instance.getObject("player");
+            }
             sb.Append($"\n[unique] player -> {Name(uo)} is Player.Instance: {uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");
             Plugin.Log.LogInfo($"[dive] scan {pat}:{sb}");
             r.Info = $"{n} triggers (in the log)";

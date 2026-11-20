@@ -182,7 +182,12 @@ namespace DarkwoodMP.World
             var p = Player.Instance;
             if (ge.targetUniqueObjects != null && ge.targetUniqueObjects.Count > 0)
             {
-                var objects = Singleton<UniqueObjects>.Instance?.objects;
+                UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+                Dictionary<string, UniqueObject> objects = null;
+                if (instance != null)
+                {
+                    objects = instance.objects;
+                }
                 foreach (var name in ge.targetUniqueObjects)
                 {
                     if (name == "player")
@@ -820,7 +825,12 @@ namespace DarkwoodMP.World
                     }
                     foreach (var o in e.prefabList)
                     {
-                        var item = (o as GameObject)?.GetComponent<InvItem>();
+                        GameObject gameObject = o as GameObject;
+                        InvItem item = null;
+                        if (gameObject != null)
+                        {
+                            item = gameObject.GetComponent<InvItem>();
+                        }
                         if (item != null && (item.isImportantItem || item.GetComponent<KeyReference>() != null))
                         {
                             return false;
@@ -1093,7 +1103,12 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            var objects = Singleton<UniqueObjects>.Instance?.objects;
+            UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+            Dictionary<string, UniqueObject> objects = null;
+            if (instance != null)
+            {
+                objects = instance.objects;
+            }
             if (e.targetUniqueObjects != null && objects != null)
             {
                 foreach (var name in e.targetUniqueObjects)

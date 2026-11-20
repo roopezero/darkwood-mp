@@ -269,7 +269,23 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             yield return new WaitForSecondsRealtime(1f);
-            r.Info = $"dreaming {D?.dreaming} ({D?.preset?.name}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
+            Dreams d = D;
+            bool? dreaming = null;
+            if (d != null)
+            {
+                dreaming = d.dreaming;
+            }
+            Dreams d2 = D;
+            string name2 = null;
+            if (d2 != null)
+            {
+                DreamPreset preset = d2.preset;
+                if (preset != null)
+                {
+                    name2 = preset.name;
+                }
+            }
+            r.Info = $"dreaming {dreaming} ({name2}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
             if (!(D != null && D.dreaming))
             {
                 r.Fail($"not in a dream: {r.Info}");

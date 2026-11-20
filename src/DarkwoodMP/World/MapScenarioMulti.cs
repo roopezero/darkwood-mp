@@ -678,8 +678,12 @@ namespace DarkwoodMP.World
         {
             var wg = Singleton<WorldGenerator>.Instance;
             var here = NightSpawns.BigLocationAt(Centre);
-            var to = wg?.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
-                .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
+            Location to = null;
+            if (wg != null)
+            {
+                to = wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
+                    .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
+            }
             if (to == null)
             {
                 string name2 = "none";

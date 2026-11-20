@@ -1,0 +1,1798 @@
+# The sites the rule unity-null rewrote: 146 rewrites of 153 sites.
+# Stage 7 of the formatting pass (guide section 4.7). Each site tested a Unity
+# object by reference, with ?., ?? or ??=. The new code tests it with
+# "x != null" or "x == null", which call Unity's ==, so code that ran on a
+# destroyed object is now skipped, as it is for null, and "a ?? b" gives b
+# for a destroyed a. The old code is from the start of its line; lines are
+# those before the rewrite.
+
+Combat/CombatPatches.cs:541
+member: DarkwoodMP.Combat.HostCorpsesOutsideLocationPatch::Prefix(Location,System.Boolean)
+old:
+    var co = c.GetComponent<CullableObject>() ?? c.gameObject.AddComponent<CullableObject>();
+new:
+    CullableObject co = c.GetComponent<CullableObject>();
+    if (co == null)
+    {
+        co = c.gameObject.AddComponent<CullableObject>();
+    }
+
+Combat/EnemyFx.cs:357
+member: DarkwoodMP.Combat.EnemyFx::BansheeSight()
+old:
+    Singleton<CamMain>.Instance?.shake(0.5f, 1200f / nearestDist);
+new:
+    CamMain instance = Singleton<CamMain>.Instance;
+    if (instance != null)
+    {
+        instance.shake(0.5f, 1200f / nearestDist);
+    }
+
+Combat/JoinerAiPatches.cs:321
+member: DarkwoodMP.Combat.JoinerAi::SpawnedLocation(Character/Activity)
+old:
+    return NightSpawns.BigLocationAt(proxy.transform.position) ?? hostLoc;
+new:
+    Location bigLocationAt = NightSpawns.BigLocationAt(proxy.transform.position);
+    if (bigLocationAt == null)
+    {
+        bigLocationAt = hostLoc;
+    }
+    return bigLocationAt;
+
+Combat/NetEnemies.cs:1217
+member: DarkwoodMP.Combat.NetEnemies::Uncull(DarkwoodMP.Combat.NetEnemies/Puppet)
+old:
+    var holder = Singleton<CharacterSpawner>.Instance?.charactersEscapedFromLocationHolder;
+new:
+    CharacterSpawner instance = Singleton<CharacterSpawner>.Instance;
+    GameObject holder = null;
+    if (instance != null)
+    {
+        holder = instance.charactersEscapedFromLocationHolder;
+    }
+
+Combat/NetEnemies.cs:1228
+member: DarkwoodMP.Combat.NetEnemies::Uncull(DarkwoodMP.Combat.NetEnemies/Puppet)
+old:
+    Plugin.Log.LogWarning($"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {go.transform.parent?.name})");
+new:
+    Transform parent = go.transform.parent;
+    string name = null;
+    if (parent != null)
+    {
+        name = parent.name;
+    }
+    Plugin.Log.LogWarning($"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {name})");
+
+Combat/NetEnemies.cs:1255
+member: DarkwoodMP.Combat.NetEnemies::Recull(DarkwoodMP.Combat.NetEnemies/Puppet)
+old:
+    var node = c.GetComponent<CullableObject>()?.node;
+new:
+    CullableObject component = c.GetComponent<CullableObject>();
+    WorldGrid.Node node = null;
+    if (component != null)
+    {
+        node = component.node;
+    }
+
+Combat/NightSpawns.cs:395
+member: DarkwoodMP.Combat.NightSpawns::TestAfterJoin()
+old:
+    var at = loc ?? (Player.Instance.whereAmI != null ? Player.Instance.whereAmI.bigLocation : null);
+new:
+    Location at = loc;
+    if (at == null)
+    {
+        at = Player.Instance.whereAmI != null ? Player.Instance.whereAmI.bigLocation : null;
+    }
+
+Combat/Threat.cs:283
+member: DarkwoodMP.Combat.Threat::BestPlayerFor(Character)
+old:
+    return best ?? host;
+new:
+    CharBase best2 = best;
+    if (best2 == null)
+    {
+        best2 = host;
+    }
+    return best2;
+
+MenuList.cs:227
+member: DarkwoodMP.MenuList::GameButton(UnityEngine.GameObject)
+old:
+    string name = go?.name;
+new:
+    string name = null;
+    if (go != null)
+    {
+        name = go.name;
+    }
+
+MenuList.cs:272
+member: DarkwoodMP.MenuList::LeaveText()
+old:
+    var session = Plugin.Instance?.Session;
+new:
+    Plugin instance2 = Plugin.Instance;
+    Net.Session session = null;
+    if (instance2 != null)
+    {
+        session = instance2.Session;
+    }
+
+MenuList.cs:296
+member: DarkwoodMP.MenuList::Quit()
+old:
+    Singleton<Controller>.Instance?.fadeAudio(fadeOut: true, 0f, musicToo: true);
+new:
+    Controller instance = Singleton<Controller>.Instance;
+    if (instance != null)
+    {
+        instance.fadeAudio(fadeOut: true, 0f, musicToo: true);
+    }
+
+MenuList.cs:325
+member: DarkwoodMP.MenuList::Visible(MainMenu,System.Single&)
+old:
+    var logo = mm.Menu0.transform.Find("Darkwood")?.GetComponent<tk2dBaseSprite>();
+new:
+    Transform transform = mm.Menu0.transform.Find("Darkwood");
+    tk2dBaseSprite logo = null;
+    if (transform != null)
+    {
+        logo = transform.GetComponent<tk2dBaseSprite>();
+    }
+
+MenuList.cs:430
+member: DarkwoodMP.MenuList::Keys()
+old:
+    var pad = Singleton<InputScript>.Instance?.rewiredPlayer;
+new:
+    InputScript instance = Singleton<InputScript>.Instance;
+    Rewired.Player pad = null;
+    if (instance != null)
+    {
+        pad = instance.rewiredPlayer;
+    }
+
+OptionsWindow.cs:250
+member: DarkwoodMP.OptionsWindow::ApplyNow()
+old:
+    Singleton<Controller>.Instance?.refreshZoom();
+new:
+    Controller instance = Singleton<Controller>.Instance;
+    if (instance != null)
+    {
+        instance.refreshZoom();
+    }
+
+PixelFont.cs:60
+member: DarkwoodMP.PixelFont::Get(DarkwoodMP.PixelFont/Kind)
+old:
+    if (d?.material != null
+new:
+    if (d != null && d.material != null
+
+Plugin.cs:62
+member: DarkwoodMP.Plugin::get_Browser()
+old:
+    internal static ServerBrowser Browser => Instance?._browser;
+new:
+    internal static ServerBrowser Browser
+    {
+        get
+        {
+            Plugin instance = Instance;
+            if (instance != null)
+            {
+                return instance._browser;
+            }
+            return null;
+        }
+    }
+
+Plugin.cs:1240
+member: DarkwoodMP.Plugin::DumpTree(UnityEngine.Transform,System.Int32)
+old:
+    extra += $" sprite={name} coll={sp.Collection?.spriteCollectionName} color={sp.color}";
+new:
+    tk2dSpriteCollectionData collection = sp.Collection;
+    string spriteCollectionName = null;
+    if (collection != null)
+    {
+        spriteCollectionName = collection.spriteCollectionName;
+    }
+    extra += $" sprite={name} coll={spriteCollectionName} color={sp.color}";
+
+StartGameWindow.cs:94
+member: DarkwoodMP.StartGameWindow::Refresh()
+old:
+    var state = sm?.loadGameProfiles();
+new:
+    MainMenu.SaveState state = null;
+    if (sm != null)
+    {
+        state = sm.loadGameProfiles();
+    }
+
+Sync/PlayerSnapshot.cs:371
+member: DarkwoodMP.Sync.PlayerCapture::Capture(DarkwoodMP.Sync.PlayerSnapshot)
+old:
+    _flashlight = root.Find("Flashlight")?.gameObject;
+new:
+    Transform transform = root.Find("Flashlight");
+    if (transform != null)
+    {
+        _flashlight = transform.gameObject;
+    }
+    else
+    {
+        _flashlight = null;
+    }
+
+Sync/RemotePlayer.cs:127
+member: DarkwoodMP.Sync.RemotePlayer::ApplyLights()
+old:
+    var item = Singleton<ItemsDatabase>.Instance?.getItem(want, instantiate: false);
+new:
+    ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+    InvItem item = null;
+    if (instance != null)
+    {
+        item = instance.getItem(want, instantiate: false);
+    }
+
+World/Authority.cs:463
+member: DarkwoodMP.World.InventoryWatch::Count()
+old:
+    if (inv?.slots == null
+new:
+    if (inv == null || inv.slots == null
+
+World/Containers.cs:75
+member: DarkwoodMP.World.Containers::EnsurePlaceables()
+old:
+    var item = (Resources.Load(kv.Value) as GameObject)?.GetComponent<InvItem>();
+new:
+    GameObject gameObject = Resources.Load(kv.Value) as GameObject;
+    InvItem item = null;
+    if (gameObject != null)
+    {
+        item = gameObject.GetComponent<InvItem>();
+    }
+
+World/Containers.cs:291
+member: DarkwoodMP.World.Containers::DropWindow(Player,Inventory)
+old:
+    Singleton<UI>.Instance?.InventorySelectionPrompt?.Hide();
+new:
+    UI instance = Singleton<UI>.Instance;
+    if (instance != null)
+    {
+        InventorySelectionPrompt inventorySelectionPrompt = instance.InventorySelectionPrompt;
+        if (inventorySelectionPrompt != null)
+        {
+            inventorySelectionPrompt.Hide();
+        }
+    }
+
+World/Containers.cs:600
+member: DarkwoodMP.World.Containers::Busy(Inventory,System.String)
+old:
+    Player.Instance?.displayMessage($"{who} is using this");
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage($"{who} is using this");
+    }
+
+World/Containers.cs:1157
+member: DarkwoodMP.World.Containers::OnSpawn(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    Singleton<WorldGrid>.Instance?.registerToNode(go);
+new:
+    WorldGrid instance2 = Singleton<WorldGrid>.Instance;
+    if (instance2 != null)
+    {
+        instance2.registerToNode(go);
+    }
+
+World/DialogueGuard.cs:178
+member: DarkwoodMP.World.DialogueGuard::ForceClose(DialogueWindow,System.String)
+old:
+    Singleton<InventoryController>.Instance?.itemPopup?.hide();
+new:
+    InventoryController instance = Singleton<InventoryController>.Instance;
+    if (instance != null)
+    {
+        ItemPopup itemPopup = instance.itemPopup;
+        if (itemPopup != null)
+        {
+            itemPopup.hide();
+        }
+    }
+
+World/DragSync.cs:970
+member: DarkwoodMP.World.DragSync::CancelLocal(Item,System.String)
+old:
+    player?.displayMessage(message);
+new:
+    if (player != null)
+    {
+        player.displayMessage(message);
+    }
+
+World/DragSync.cs:1411
+member: DarkwoodMP.World.DragStartPatch::Prefix(Item)
+old:
+    Player.Instance?.displayMessage($"{who} is moving it");
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage($"{who} is moving it");
+    }
+
+World/FlagsSync.cs:199
+member: DarkwoodMP.World.FlagsSync::SendKey(System.String)
+old:
+    var j = Singleton<UI>.Instance?.journal;
+new:
+    UI instance = Singleton<UI>.Instance;
+    Journal j = null;
+    if (instance != null)
+    {
+        j = instance.journal;
+    }
+
+World/FlagsSync.cs:219
+member: DarkwoodMP.World.FlagsSync::OwnJournal(System.String)
+old:
+    var j = Singleton<UI>.Instance?.journal;
+new:
+    UI instance = Singleton<UI>.Instance;
+    Journal j = null;
+    if (instance != null)
+    {
+        j = instance.journal;
+    }
+
+World/FlagsSync.cs:262
+member: DarkwoodMP.World.FlagsSync::AddReputation(System.String,System.Int32)
+old:
+    var st = Singleton<Flags>.Instance?.getNPCState(npc);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    Flags.NPCState st = null;
+    if (instance != null)
+    {
+        st = instance.getNPCState(npc);
+    }
+
+World/FlagsSync.cs:388
+member: DarkwoodMP.World.FlagsSync::Snapshot(System.Boolean)
+old:
+    var j = Singleton<UI>.Instance?.journal;
+new:
+    UI instance = Singleton<UI>.Instance;
+    Journal j = null;
+    if (instance != null)
+    {
+        j = instance.journal;
+    }
+
+World/FlagsSync.cs:827
+member: DarkwoodMP.World.FlagsSync::ShowOnMap(System.String)
+old:
+    var loc = Singleton<WorldGenerator>.Instance?.getLocation(name);
+new:
+    WorldGenerator instance = Singleton<WorldGenerator>.Instance;
+    Location loc = null;
+    if (instance != null)
+    {
+        loc = instance.getLocation(name);
+    }
+
+World/FlagsSync.cs:837
+member: DarkwoodMP.World.FlagsSync::ShowOnMap(System.String)
+old:
+    Singleton<Map>.Instance?.showElement(el);
+new:
+    Map instance2 = Singleton<Map>.Instance;
+    if (instance2 != null)
+    {
+        instance2.showElement(el);
+    }
+
+World/FlagsSync.cs:849
+member: DarkwoodMP.World.FlagsSync::ApplyJournal(System.Char,System.String,System.String)
+old:
+    var j = Singleton<UI>.Instance?.journal;
+new:
+    UI instance = Singleton<UI>.Instance;
+    Journal j = null;
+    if (instance != null)
+    {
+        j = instance.journal;
+    }
+
+World/FlagsSync.cs:1087
+member: DarkwoodMP.World.EventReputationPatch::Prefix(System.Object,System.Int32&)
+old:
+    var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    Flags.NPCState st = null;
+    if (instance != null)
+    {
+        st = instance.getNPCState(ev.Value);
+    }
+
+World/FlagsSync.cs:1101
+member: DarkwoodMP.World.EventReputationPatch::Postfix(System.Object,System.Int32)
+old:
+    var st = Singleton<Flags>.Instance?.getNPCState(ev.Value);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    Flags.NPCState st = null;
+    if (instance != null)
+    {
+        st = instance.getNPCState(ev.Value);
+    }
+
+World/FuelSync.cs:161
+member: DarkwoodMP.World.FuelSync::CanHolds()
+old:
+    var it = Singleton<ItemsDatabase>.Instance?.getItem("gasoline", instantiate: false);
+new:
+    ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+    InvItem it = null;
+    if (instance != null)
+    {
+        it = instance.getItem("gasoline", instantiate: false);
+    }
+
+World/Hideouts.cs:230
+member: DarkwoodMP.World.Hideouts::OnPorterDelivered(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    src?.getAllInvSlots(); // empties them as the host's did
+new:
+    // empties them as the host's did
+    if (src != null)
+    {
+        src.getAllInvSlots();
+    }
+
+World/Hideouts.cs:282
+member: DarkwoodMP.World.Hideouts::PorterLeaves()
+old:
+    porter.GetComponent<Character>()?.removeMe();
+new:
+    Character component = porter.GetComponent<Character>();
+    if (component != null)
+    {
+        component.removeMe();
+    }
+
+World/Hideouts.cs:714
+member: DarkwoodMP.World.Hideouts::SendAfter(System.Collections.IEnumerator,GameEvent)
+old:
+    Plugin.Log.LogInfo($"[world] moveInventory from {ge.sourceTransform?.name} done here; sent the containers");
+new:
+    Transform sourceTransform = ge.sourceTransform;
+    string name = null;
+    if (sourceTransform != null)
+    {
+        name = sourceTransform.name;
+    }
+    Plugin.Log.LogInfo($"[world] moveInventory from {name} done here; sent the containers");
+
+World/JoinScreen.cs:59
+member: DarkwoodMP.World.JoinScreen::Begin()
+old:
+    Plugin.Instance?.SetPanel(false);
+new:
+    Plugin instance = Plugin.Instance;
+    if (instance != null)
+    {
+        instance.SetPanel(false);
+    }
+
+World/JoinScreen.cs:107
+member: DarkwoodMP.World.JoinScreen::Fail(System.String)
+old:
+    Plugin.Instance?.OpenPanel();
+new:
+    Plugin instance = Plugin.Instance;
+    if (instance != null)
+    {
+        instance.OpenPanel();
+    }
+
+World/LoadingScreen.cs:224
+member: DarkwoodMP.World.LoadingScreen::Make(UI)
+old:
+    var tip = screen.Find("Tip")?.GetComponent<tk2dTextMesh>() ?? ui.percentLoadedText;
+new:
+    Transform transform = screen.Find("Tip");
+    tk2dTextMesh tip = null;
+    if (transform != null)
+    {
+        tip = transform.GetComponent<tk2dTextMesh>();
+    }
+    if (tip == null)
+    {
+        tip = ui.percentLoadedText;
+    }
+
+World/LoadingScreen.cs:418
+member: DarkwoodMP.World.LoadingScreen::HideTip()
+old:
+    _tip = ui.loadingScreen.transform.Find("Tip")?.GetComponent<Renderer>();
+new:
+    Transform transform = ui.loadingScreen.transform.Find("Tip");
+    if (transform != null)
+    {
+        _tip = transform.GetComponent<Renderer>();
+    }
+    else
+    {
+        _tip = null;
+    }
+
+World/Locations.cs:164
+member: DarkwoodMP.World.Locations::KeepRunning(OutsideLocations)
+old:
+    var dream = Singleton<Dreams>.Instance?.dreamLocation;
+new:
+    Dreams instance2 = Singleton<Dreams>.Instance;
+    Location dream = null;
+    if (instance2 != null)
+    {
+        dream = instance2.dreamLocation;
+    }
+
+World/Locations.cs:211
+member: DarkwoodMP.World.Locations::KeepRunning(OutsideLocations)
+old:
+    Singleton<WorldGrid>.Instance?.getGrid(name)?.leave();
+new:
+    WorldGrid instance3 = Singleton<WorldGrid>.Instance;
+    if (instance3 != null)
+    {
+        WorldGrid.Grid grid = instance3.getGrid(name);
+        if (grid != null)
+        {
+            grid.leave();
+        }
+    }
+
+World/Locations.cs:361
+member: DarkwoodMP.World.Locations::Current()
+old:
+    string g = Singleton<WorldGrid>.Instance?.currentGrid?.name;
+new:
+    WorldGrid instance = Singleton<WorldGrid>.Instance;
+    string g = null;
+    if (instance != null)
+    {
+        WorldGrid.Grid currentGrid = instance.currentGrid;
+        if (currentGrid != null)
+        {
+            g = currentGrid.name;
+        }
+    }
+
+World/Locations.cs:552
+member: DarkwoodMP.World.Locations::Update()
+old:
+    _gridBefore = Singleton<WorldGrid>.Instance?.currentGrid?.name;
+new:
+    WorldGrid instance = Singleton<WorldGrid>.Instance;
+    string gridBefore = null;
+    if (instance != null)
+    {
+        WorldGrid.Grid currentGrid = instance.currentGrid;
+        if (currentGrid != null)
+        {
+            gridBefore = currentGrid.name;
+        }
+    }
+    _gridBefore = gridBefore;
+
+World/MapScenarioChapter.cs:272
+member: DarkwoodMP.World.MapScenarioChapter::OwnDream(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"dreaming {D?.dreaming} ({D?.preset?.name}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
+new:
+    Dreams d = D;
+    bool? dreaming = null;
+    if (d != null)
+    {
+        dreaming = d.dreaming;
+    }
+    Dreams d2 = D;
+    string name2 = null;
+    if (d2 != null)
+    {
+        DreamPreset preset = d2.preset;
+        if (preset != null)
+        {
+            name2 = preset.name;
+        }
+    }
+    r.Info = $"dreaming {dreaming} ({name2}), entering {Core.EnteringDream}, shared {DreamSync.Shared ?? "none"}, chapter {Chapter}";
+
+World/MapScenarioCorpse.cs:26
+member: DarkwoodMP.World.MapScenarioCorpse::State(System.String)
+old:
+    return Singleton<Flags>.Instance?.getNPCState(_story ?? name);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    if (instance != null)
+    {
+        return instance.getNPCState(_story ?? name);
+    }
+    return null;
+
+World/MapScenarioDive.cs:275
+member: DarkwoodMP.World.MapScenarioDive::Counter()
+old:
+    return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
+new:
+    PlayerStepCounter component = p.GetComponent<PlayerStepCounter>();
+    if (component == null)
+    {
+        component = p.gameObject.AddComponent<PlayerStepCounter>();
+    }
+    return component;
+
+World/MapScenarioDive.cs:545
+member: DarkwoodMP.World.MapScenarioDive::Scan(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var uo = Singleton<UniqueObjects>.Instance?.getObject("player");
+new:
+    UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+    GameObject uo = null;
+    if (instance != null)
+    {
+        uo = instance.getObject("player");
+    }
+
+World/MapScenarioDreams.cs:59
+member: DarkwoodMP.World.MapScenarioDreams::OwnDream(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+new:
+    DreamPreset preset = D.preset;
+    string name2 = null;
+    if (preset != null)
+    {
+        name2 = preset.name;
+    }
+    r.Info = $"dreaming {name2} (shared {DreamSync.Shared ?? "none"}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+
+World/MapScenarioDreams.cs:83
+member: DarkwoodMP.World.MapScenarioDreams::OwnDreamUse(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Fail($"no burnt wardrobe in {loc?.name}");
+new:
+    string name = null;
+    if (loc != null)
+    {
+        name = loc.name;
+    }
+    r.Fail($"no burnt wardrobe in {name}");
+
+World/MapScenarioDreams.cs:86
+member: DarkwoodMP.World.MapScenarioDreams::OwnDreamUse(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var item = et.GetComponent<Item>() ?? et.GetComponentInParent<Item>();
+new:
+    Item item = et.GetComponent<Item>();
+    if (item == null)
+    {
+        item = et.GetComponentInParent<Item>();
+    }
+
+World/MapScenarioDreams.cs:165
+member: DarkwoodMP.World.MapScenarioDreams::OwnDreamUse(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"in {loc?.name}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
+             $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
+new:
+    string name2 = null;
+    if (loc != null)
+    {
+        name2 = loc.name;
+    }
+    r.Info = $"in {name2}: wardrobe {opened}, {text}; our chomper {(ours != null ? Fmt(ours.transform.position) + (Combat.NetEnemies.Frozen.Contains(ours) ? " (frozen)" : " running") : "not out")}; {doorInfo}; " +
+             $"forged request {(ok == null ? "no answer" : ok.Value ? "accepted" : "refused: " + why)}; refused {refused}";
+
+World/MapScenarioDreams.cs:285
+member: DarkwoodMP.World.MapScenarioDreams::LevelDream(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}";
+new:
+    DreamPreset preset = D.preset;
+    string name2 = null;
+    if (preset != null)
+    {
+        name2 = preset.name;
+    }
+    r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}";
+
+World/MapScenarioDreams.cs:317
+member: DarkwoodMP.World.MapScenarioDreams::InHostDream(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"dreaming {D.preset?.name} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
+new:
+    DreamPreset preset = D.preset;
+    string name2 = null;
+    if (preset != null)
+    {
+        name2 = preset.name;
+    }
+    r.Info = $"dreaming {name2} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
+
+World/MapScenarioDreams.cs:400
+member: DarkwoodMP.World.MapScenarioDreams::DreamWardrobe(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Fail($"no burnt wardrobe in {loc?.name}");
+new:
+    string name = null;
+    if (loc != null)
+    {
+        name = loc.name;
+    }
+    r.Fail($"no burnt wardrobe in {name}");
+
+World/MapScenarioDreams.cs:484
+member: DarkwoodMP.World.MapScenarioDreams::DreamMobHost(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    $"the client's stand-in: away {proxy?.Away}, in {(proxy?.InLocation != null
+new:
+    $"the client's stand-in: away {proxy?.Away}, in {((proxy != null && proxy.InLocation != null)
+
+World/MapScenarioDreams.cs:565
+member: DarkwoodMP.World.MapScenarioDreams::HomeDoorOf(EventTriggers)
+old:
+    return go.GetComponent<Door>() ?? go.GetComponentInChildren<Door>();
+new:
+    Door component = go.GetComponent<Door>();
+    if (component == null)
+    {
+        component = go.GetComponentInChildren<Door>();
+    }
+    return component;
+
+World/MapScenarioDreams.cs:581
+member: DarkwoodMP.World.MapScenarioDreams::HomeDoor(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Fail($"no knocking area or door in {D.dreamLocation?.name}");
+new:
+    Location dreamLocation = D.dreamLocation;
+    string name = null;
+    if (dreamLocation != null)
+    {
+        name = dreamLocation.name;
+    }
+    r.Fail($"no knocking area or door in {name}");
+
+World/MapScenarioDreams.cs:604
+member: DarkwoodMP.World.MapScenarioDreams::HomeKnock(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Fail($"no knocking area in {D.dreamLocation?.name}");
+new:
+    Location dreamLocation = D.dreamLocation;
+    string name = null;
+    if (dreamLocation != null)
+    {
+        name = dreamLocation.name;
+    }
+    r.Fail($"no knocking area in {name}");
+
+World/MapScenarioDreams.cs:627
+member: DarkwoodMP.World.MapScenarioDreams::HomeOpen(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Fail($"no door in {D.dreamLocation?.name}");
+new:
+    Location dreamLocation = D.dreamLocation;
+    string name = null;
+    if (dreamLocation != null)
+    {
+        name = dreamLocation.name;
+    }
+    r.Fail($"no door in {name}");
+
+World/MapScenarioEpilogue.cs:35
+member: DarkwoodMP.World.MapScenarioEpilogue::Where()
+old:
+    private static string Where() => $"preset {D?.preset?.name ?? "none"} dreaming {D != null && D.dreaming} inEpilogue {P != null && P.inEpilogue} shared {DreamSync.Shared ?? "none"} playing {EpilogueSync.Playing}";
+new:
+    {
+        Dreams d = D;
+        string name = null;
+        if (d != null)
+        {
+            DreamPreset preset = d.preset;
+            if (preset != null)
+            {
+                name = preset.name;
+            }
+        }
+        return $"preset {name ?? "none"} dreaming {D != null && D.dreaming} inEpilogue {P != null && P.inEpilogue} shared {DreamSync.Shared ?? "none"} playing {EpilogueSync.Playing}";
+    }
+
+World/MapScenarioFar.cs:66
+member: DarkwoodMP.World.MapScenarioFar::FarSpot(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    WorldGrid.Grid outside = grid?.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world);
+new:
+    WorldGrid.Grid outside = null;
+    if (grid != null)
+    {
+        outside = grid.grids.FirstOrDefault(g => g.type == WorldGrid.Grid.Type.world);
+    }
+
+World/MapScenarioFar.cs:69
+member: DarkwoodMP.World.MapScenarioFar::FarSpot(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    outside = grid?.currentGrid;
+new:
+    if (grid != null)
+    {
+        outside = grid.currentGrid;
+    }
+    else
+    {
+        outside = null;
+    }
+
+World/MapScenarioFarEvents.cs:114
+member: DarkwoodMP.World.MapScenarioFarEvents::Auto()
+old:
+    return far.FirstOrDefault(l => EventCount(l) > 0) ?? far.FirstOrDefault();
+new:
+    Location location = far.FirstOrDefault(l => EventCount(l) > 0);
+    if (location == null)
+    {
+        location = far.FirstOrDefault();
+    }
+    return location;
+
+World/MapScenarioFixChecks.cs:484
+member: DarkwoodMP.World.MapScenarioFixChecks::IiSetup(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var ii = host.GetComponent<InteractiveItem>() ?? host.gameObject.AddComponent<InteractiveItem>();
+new:
+    InteractiveItem ii = host.GetComponent<InteractiveItem>();
+    if (ii == null)
+    {
+        ii = host.gameObject.AddComponent<InteractiveItem>();
+    }
+
+World/MapScenarioFixChecks.cs:692
+member: DarkwoodMP.World.MapScenarioFixChecks::DropHeld(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"{type} ({held?.name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
+new:
+    string name = null;
+    if (held != null)
+    {
+        name = held.name;
+    }
+    r.Info = $"{type} ({name}) at {(held != null ? Fmt(held.transform.position) : "-")}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
+
+World/MapScenarioFixChecks.cs:934
+member: DarkwoodMP.World.MapScenarioFixChecks::Slowmo(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    parts.Add($"no skills to lend ({P.skills?.availableSkills.Count} available, {P.skills?.skills.Count} known): the wheel wasn't opened");
+new:
+    PlayerSkills skills = P.skills;
+    int? count = null;
+    if (skills != null)
+    {
+        count = skills.availableSkills.Count;
+    }
+    PlayerSkills skills2 = P.skills;
+    int? count2 = null;
+    if (skills2 != null)
+    {
+        count2 = skills2.skills.Count;
+    }
+    parts.Add($"no skills to lend ({count} available, {count2} known): the wheel wasn't opened");
+
+World/MapScenarioGaps.cs:264
+member: DarkwoodMP.World.MapScenarioGaps::Setup(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var inv = w.GetComponent<Inventory>() ?? w.GetComponentInChildren<Inventory>();
+new:
+    Inventory inv = w.GetComponent<Inventory>();
+    if (inv == null)
+    {
+        inv = w.GetComponentInChildren<Inventory>();
+    }
+
+World/MapScenarioGaps.cs:290
+member: DarkwoodMP.World.MapScenarioGaps::Setup(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var sa = crate.GetComponent<ShadowArmor>() ?? crate.AddComponent<ShadowArmor>();
+new:
+    ShadowArmor sa = crate.GetComponent<ShadowArmor>();
+    if (sa == null)
+    {
+        sa = crate.AddComponent<ShadowArmor>();
+    }
+
+World/MapScenarioGaps.cs:525
+member: DarkwoodMP.World.MapScenarioGaps::Hideout(Player)
+old:
+    return wg?.locations.Where(l => l != null && l.playerBase && !l.isSubLocation)
+        .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+new:
+    if (wg != null)
+    {
+        return wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation)
+            .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+    }
+    return null;
+
+World/MapScenarioGaps.cs:828
+member: DarkwoodMP.World.MapScenarioGaps::TradeOpen(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    r.Info = $"{win.npc?.name}: inShop {p.inShop}";
+new:
+    NPC npc = win.npc;
+    string name = null;
+    if (npc != null)
+    {
+        name = npc.name;
+    }
+    r.Info = $"{name}: inShop {p.inShop}";
+
+World/MapScenarioGaps.cs:866
+member: DarkwoodMP.World.MapScenarioGaps::TalkEnd(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var npc = _talkingTo ?? win.npc;
+new:
+    NPC npc = _talkingTo;
+    if (npc == null)
+    {
+        npc = win.npc;
+    }
+
+World/MapScenarioGaps.cs:1453
+member: DarkwoodMP.World.MapScenarioGaps::BagTake(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    AsPlayer(() => bag.GetComponent<Item>()?.activate()
+new:
+    {
+        Item component = bag.GetComponent<Item>();
+        if (component != null)
+        {
+            component.activate();
+        }
+    }
+
+World/MapScenarioIssues.cs:678
+member: DarkwoodMP.World.MapScenarioIssues::HiddenSilent(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var dogSnd = (Resources.Load("Prefabs/Characters/Dog") as GameObject)?.GetComponent<CharacterSounds>();
+new:
+    GameObject gameObject = Resources.Load("Prefabs/Characters/Dog") as GameObject;
+    CharacterSounds dogSnd = null;
+    if (gameObject != null)
+    {
+        dogSnd = gameObject.GetComponent<CharacterSounds>();
+    }
+
+World/MapScenarioIssues.cs:692
+member: DarkwoodMP.World.MapScenarioIssues::HiddenSilent(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var s = (Resources.Load("Prefabs/Characters/" + k) as GameObject)?.GetComponent<CharacterSounds>();
+new:
+    GameObject gameObject2 = Resources.Load("Prefabs/Characters/" + k) as GameObject;
+    CharacterSounds s = null;
+    if (gameObject2 != null)
+    {
+        s = gameObject2.GetComponent<CharacterSounds>();
+    }
+
+World/MapScenarioIssues.cs:1237
+member: DarkwoodMP.World.MapScenarioIssues::SwingInfection(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var hitT = inf.GetComponentInChildren<Collider>()?.transform ?? inf.transform;
+new:
+    Collider componentInChildren = inf.GetComponentInChildren<Collider>();
+    Transform hitT = null;
+    if (componentInChildren != null)
+    {
+        hitT = componentInChildren.transform;
+    }
+    if (hitT == null)
+    {
+        hitT = inf.transform;
+    }
+
+World/MapScenarioIssues.cs:1274
+member: DarkwoodMP.World.MapScenarioIssues::SwingInfection(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    tried.Add(FormattableString.Invariant($"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {cc?.bounds.center} ext {cc?.bounds.extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
+new:
+    Vector3? center = null;
+    if (cc != null)
+    {
+        center = cc.bounds.center;
+    }
+    Vector3? extents = null;
+    if (cc != null)
+    {
+        extents = cc.bounds.extents;
+    }
+    tried.Add(FormattableString.Invariant($"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {center} ext {extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
+
+World/MapScenarioItems1.cs:50
+member: DarkwoodMP.World.MapScenarioItems1::PlaceableType(System.String)
+old:
+    var item = (Resources.Load(kv.Value) as GameObject)?.GetComponent<InvItem>();
+new:
+    GameObject gameObject = Resources.Load(kv.Value) as GameObject;
+    InvItem item = null;
+    if (gameObject != null)
+    {
+        item = gameObject.GetComponent<InvItem>();
+    }
+
+World/MapScenarioItems1.cs:628
+member: DarkwoodMP.World.MapScenarioItems1::Whistle(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    string name = P.whereAmI.bigLocation?.name;
+new:
+    Location bigLocation = P.whereAmI.bigLocation;
+    string name = null;
+    if (bigLocation != null)
+    {
+        name = bigLocation.name;
+    }
+
+World/MapScenarioLater.cs:216
+member: DarkwoodMP.World.MapScenarioLater::Again(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    int? n = m.C?.N;
+new:
+    LaterTestCounter c = m.C;
+    int? n = null;
+    if (c != null)
+    {
+        n = c.N;
+    }
+
+World/MapScenarioLocations.cs:250
+member: DarkwoodMP.World.MapScenarioLocations::Approach(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+new:
+    OutsideLocations instance = Singleton<OutsideLocations>.Instance;
+    bool? playerInOutsideLocation = null;
+    if (instance != null)
+    {
+        playerInOutsideLocation = instance.playerInOutsideLocation;
+    }
+
+World/MapScenarioLocations.cs:491
+member: DarkwoodMP.World.MapScenarioLocations::Hit(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    bool? playerInOutsideLocation = Singleton<OutsideLocations>.Instance?.playerInOutsideLocation;
+new:
+    OutsideLocations instance = Singleton<OutsideLocations>.Instance;
+    bool? playerInOutsideLocation = null;
+    if (instance != null)
+    {
+        playerInOutsideLocation = instance.playerInOutsideLocation;
+    }
+
+World/MapScenarioMulti.cs:681
+member: DarkwoodMP.World.MapScenarioMulti::HideoutGo(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var to = wg?.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
+        .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
+new:
+    Location to = null;
+    if (wg != null)
+    {
+        to = wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
+            .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
+    }
+
+World/MapScenarioSavage.cs:376
+member: DarkwoodMP.World.MapScenarioSavage::Provoke(UnityEngine.Vector3,System.Single)
+old:
+    Plugin.Log.LogInfo($"[sv] hit {c?.name} to draw it to the host; its target now {name2}");
+new:
+    Character c2 = c;
+    string name = null;
+    if (c2 != null)
+    {
+        name = c2.name;
+    }
+    Plugin.Log.LogInfo($"[sv] hit {name} to draw it to the host; its target now {name2}");
+
+World/MapScenarioShortcut.cs:81
+member: DarkwoodMP.World.MapScenarioShortcut::State()
+old:
+    var loc = Find(In)?.transform.GetLocation();
+new:
+    GameObject gameObject = Find(In);
+    Location loc = null;
+    if (gameObject != null)
+    {
+        loc = gameObject.transform.GetLocation();
+    }
+
+World/MapScenarioShortcut.cs:265
+member: DarkwoodMP.World.MapScenarioShortcut::Reset(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    Find(Locked)?.setMeActive(true);
+new:
+    GameObject gameObject = Find(Locked);
+    if (gameObject != null)
+    {
+        gameObject.setMeActive(true);
+    }
+
+World/MapScenarioStatus.cs:287
+member: DarkwoodMP.World.MapScenarioStatus::PuppetCrouch(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == last.Library)
+              ?? Resources.Load(last.Library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
+new:
+    tk2dSpriteAnimation lib = Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>().FirstOrDefault(l => l.name == last.Library);
+    if (lib == null)
+    {
+        lib = Resources.Load(last.Library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
+    }
+
+World/MapScenarioStory.cs:40
+member: DarkwoodMP.World.MapScenarioStory::Counter()
+old:
+    return p.GetComponent<PlayerStepCounter>() ?? p.gameObject.AddComponent<PlayerStepCounter>();
+new:
+    PlayerStepCounter component = p.GetComponent<PlayerStepCounter>();
+    if (component == null)
+    {
+        component = p.gameObject.AddComponent<PlayerStepCounter>();
+    }
+    return component;
+
+World/MapScenarioStory.cs:51
+member: DarkwoodMP.World.MapScenarioStory::Thing(System.String)
+old:
+    return MapScenarioWorld.HostEnemyNear(1500f)?.gameObject;
+new:
+    Character hostEnemyNear = MapScenarioWorld.HostEnemyNear(1500f);
+    if (hostEnemyNear != null)
+    {
+        return hostEnemyNear.gameObject;
+    }
+    return null;
+
+World/MapScenarioStory.cs:73
+member: DarkwoodMP.World.MapScenarioStory::Thing(System.String)
+old:
+    return MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null)?.gameObject;
+new:
+    Trigger trigger = MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null);
+    if (trigger != null)
+    {
+        return trigger.gameObject;
+    }
+    return null;
+
+World/MapScenarioStory.cs:75
+member: DarkwoodMP.World.MapScenarioStory::Thing(System.String)
+old:
+    return MapScenarioWorld.Find<Item>(spec, i => i.switchable)?.gameObject;
+new:
+    Item item = MapScenarioWorld.Find<Item>(spec, i => i.switchable);
+    if (item != null)
+    {
+        return item.gameObject;
+    }
+    return null;
+
+World/MapScenarioStory.cs:127
+member: DarkwoodMP.World.MapScenarioStory::Setup(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var et = go.GetComponent<EventTriggers>() ?? go.AddComponent<EventTriggers>();
+new:
+    EventTriggers et = go.GetComponent<EventTriggers>();
+    if (et == null)
+    {
+        et = go.AddComponent<EventTriggers>();
+    }
+
+World/MapScenarioStory2.cs:45
+member: DarkwoodMP.World.MapScenarioStory2::OwedLoaded(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    et = GameObject.Find("dwmp_later_" + a[0])?.GetComponent<EventTriggers>();
+new:
+    GameObject gameObject = GameObject.Find("dwmp_later_" + a[0]);
+    if (gameObject != null)
+    {
+        et = gameObject.GetComponent<EventTriggers>();
+    }
+    else
+    {
+        et = null;
+    }
+
+World/MapScenarioStory2.cs:155
+member: DarkwoodMP.World.MapScenarioStory2::CausedSetup(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var awto = lamp.GetComponent<ActionWhenTurnedOn>() ?? lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
+new:
+    ActionWhenTurnedOn awto = lamp.GetComponent<ActionWhenTurnedOn>();
+    if (awto == null)
+    {
+        awto = lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
+    }
+
+World/MapScenarioWhispers.cs:183
+member: DarkwoodMP.World.MapScenarioWhispers::Stand(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var box = _et.gameObject.GetComponent<BoxCollider>() ?? _et.gameObject.AddComponent<BoxCollider>();
+new:
+    BoxCollider box = _et.gameObject.GetComponent<BoxCollider>();
+    if (box == null)
+    {
+        box = _et.gameObject.AddComponent<BoxCollider>();
+    }
+
+World/MapScenarioWhispers.cs:188
+member: DarkwoodMP.World.MapScenarioWhispers::Stand(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var rb = _et.gameObject.GetComponent<Rigidbody>() ?? _et.gameObject.AddComponent<Rigidbody>();
+new:
+    Rigidbody rb = _et.gameObject.GetComponent<Rigidbody>();
+    if (rb == null)
+    {
+        rb = _et.gameObject.AddComponent<Rigidbody>();
+    }
+
+World/MapScenarioWorld.cs:874
+member: DarkwoodMP.World.MapScenarioWorld::Fuel(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    Component c = (Component)g ?? s;
+new:
+    Component c = (Component)g;
+    if (c == null)
+    {
+        c = s;
+    }
+
+World/MapScenarioWorld.cs:1078
+member: DarkwoodMP.World.MapScenarioWorld::TrapFire(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var col = P.GetComponent<Collider>() ?? P.GetComponentInChildren<Collider>();
+new:
+    Collider col = P.GetComponent<Collider>();
+    if (col == null)
+    {
+        col = P.GetComponentInChildren<Collider>();
+    }
+
+World/MapScenarioWorld.cs:1111
+member: DarkwoodMP.World.MapScenarioWorld::TrapStep(System.String[],DarkwoodMP.World.MapScenario/Result)
+old:
+    var col = P.GetComponent<Collider>() ?? P.GetComponentInChildren<Collider>();
+new:
+    Collider col = P.GetComponent<Collider>();
+    if (col == null)
+    {
+        col = P.GetComponentInChildren<Collider>();
+    }
+
+World/NightObjects.cs:407
+member: DarkwoodMP.World.NightObjects::Apply(System.Byte,System.Int64,DarkwoodMP.World.NightObjects/Tag,UnityEngine.Vector3,UnityEngine.Quaternion,DarkwoodMP.World.ObjRef)
+old:
+    Singleton<WorldGrid>.Instance?.registerToNode(go);
+new:
+    WorldGrid instance = Singleton<WorldGrid>.Instance;
+    if (instance != null)
+    {
+        instance.registerToNode(go);
+    }
+
+World/ObjectActions.cs:236
+member: DarkwoodMP.World.ObjectActions::Apply(DarkwoodMP.World.WorldActions/Action,DarkwoodMP.World.ObjRef,System.Boolean,System.Single,System.Single&)
+old:
+    t.GetComponent<Feeder>()?.makeInactive();
+new:
+    Feeder component = t.GetComponent<Feeder>();
+    if (component != null)
+    {
+        component.makeInactive();
+    }
+
+World/Progression.cs:732
+member: DarkwoodMP.World.Progression::ResetHere()
+old:
+    Player.Instance?.displayMessage(reason);
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage(reason);
+    }
+
+World/Prologue.cs:258
+member: DarkwoodMP.World.Prologue::AfterEnd(Dreams,System.String)
+old:
+    spawn = gen.playerBase.GetComponent<Location>()?.playerSpawn;
+new:
+    Location component = gen.playerBase.GetComponent<Location>();
+    if (component != null)
+    {
+        spawn = component.playerSpawn;
+    }
+    else
+    {
+        spawn = null;
+    }
+
+World/ScriptedEvents.cs:185
+member: DarkwoodMP.World.ScriptedEvents::TargetsPlayer(GameEvent,System.Boolean)
+old:
+    var objects = Singleton<UniqueObjects>.Instance?.objects;
+new:
+    UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+    Dictionary<string, UniqueObject> objects = null;
+    if (instance != null)
+    {
+        objects = instance.objects;
+    }
+
+World/ScriptedEvents.cs:823
+member: DarkwoodMP.World.ScriptedEvents::LaterStep(GameEvent)
+old:
+    var item = (o as GameObject)?.GetComponent<InvItem>();
+new:
+    GameObject gameObject = o as GameObject;
+    InvItem item = null;
+    if (gameObject != null)
+    {
+        item = gameObject.GetComponent<InvItem>();
+    }
+
+World/ScriptedEvents.cs:1096
+member: DarkwoodMP.World.ScriptedEvents::FirstTarget(GameEvent)
+old:
+    var objects = Singleton<UniqueObjects>.Instance?.objects;
+new:
+    UniqueObjects instance = Singleton<UniqueObjects>.Instance;
+    Dictionary<string, UniqueObject> objects = null;
+    if (instance != null)
+    {
+        objects = instance.objects;
+    }
+
+World/SkillTree.cs:351
+member: DarkwoodMP.World.SkillTree::Learn(System.String,System.String,System.String&)
+old:
+    Player.Instance?.displayMessage(reason);
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage(reason);
+    }
+
+World/SkillTree.cs:367
+member: DarkwoodMP.World.SkillTree::Give(PlayerSkill,PlayerSkill)
+old:
+    Singleton<Flags>.Instance?.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    if (instance != null)
+    {
+        instance.setFlag("player_firstActiveSkillObtained", activeModifier: true);
+    }
+
+World/SkillTree.cs:378
+member: DarkwoodMP.World.SkillTree::Give(PlayerSkill,PlayerSkill)
+old:
+    Singleton<SkillsMenu>.Instance?.tryShowActiveSkillsHelpPopup();
+new:
+    SkillsMenu instance2 = Singleton<SkillsMenu>.Instance;
+    if (instance2 != null)
+    {
+        instance2.tryShowActiveSkillsHelpPopup();
+    }
+
+World/SkillTree.cs:388
+member: DarkwoodMP.World.SkillTree::Take(PlayerSkill)
+old:
+    Player.Instance?.skills?.refreshAll();
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        PlayerSkills skills = instance.skills;
+        if (skills != null)
+        {
+            skills.refreshAll();
+        }
+    }
+
+World/SlotShare.cs:696
+member: DarkwoodMP.World.SlotShare::Set(Inventory,System.Int32,System.String)
+old:
+    held.UIInvItem?.despawn();
+new:
+    UIInvItem uiInvItem = held.UIInvItem;
+    if (uiInvItem != null)
+    {
+        uiInvItem.despawn();
+    }
+
+World/SlotShare.cs:1053
+member: DarkwoodMP.World.SlotShare::Undo(System.Collections.Generic.Dictionary`2<System.String,System.ValueTuple`2<System.Int32,InvItemClass>>,System.Boolean)
+old:
+    held.UIInvItem?.despawn();
+new:
+    UIInvItem uiInvItem = held.UIInvItem;
+    if (uiInvItem != null)
+    {
+        uiInvItem.despawn();
+    }
+
+World/StackSizes.cs:194
+member: DarkwoodMP.World.StackSizes::OriginalOf(System.String)
+old:
+    var it = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
+new:
+    ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+    InvItem it = null;
+    if (instance != null)
+    {
+        it = instance.getItem(type, instantiate: false);
+    }
+
+World/TalkLock.cs:131
+member: DarkwoodMP.World.TalkLock::HostMayTalk(NPC)
+old:
+    Player.Instance?.displayMessage($"{other} is talking to them");
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage($"{other} is talking to them");
+    }
+
+World/TalkLock.cs:217
+member: DarkwoodMP.World.TalkLock::Refused(NPC,System.String)
+old:
+    Player.Instance?.displayMessage(reason);
+new:
+    Player instance = Player.Instance;
+    if (instance != null)
+    {
+        instance.displayMessage(reason);
+    }
+
+World/TalkLock.cs:223
+member: DarkwoodMP.World.TalkLock::CloseWhenReady(NPC,System.Int32)
+old:
+    var win = Singleton<UI>.Instance?.dialogueWindow;
+new:
+    UI instance = Singleton<UI>.Instance;
+    DialogueWindow win = null;
+    if (instance != null)
+    {
+        win = instance.dialogueWindow;
+    }
+
+World/TalkLock.cs:296
+member: DarkwoodMP.World.TalkToPatch::Postfix(NPC)
+old:
+    var win = Singleton<UI>.Instance?.dialogueWindow;
+new:
+    UI instance = Singleton<UI>.Instance;
+    DialogueWindow win = null;
+    if (instance != null)
+    {
+        win = instance.dialogueWindow;
+    }
+
+World/TestWorld.cs:340
+member: DarkwoodMP.World.TestWorld::GiveKit()
+old:
+    var inv = Player.Instance?.Inventory;
+new:
+    Player instance = Player.Instance;
+    Inventory inv = null;
+    if (instance != null)
+    {
+        inv = instance.Inventory;
+    }
+
+World/ThrowSync.cs:189
+member: DarkwoodMP.World.ThrowSync::OnThrown(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    var item = Singleton<ItemsDatabase>.Instance?.getItem(type, instantiate: false);
+new:
+    ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+    InvItem item = null;
+    if (instance != null)
+    {
+        item = instance.getItem(type, instantiate: false);
+    }
+
+World/Tooltips.cs:379
+member: DarkwoodMP.World.Tooltips::Test(System.String)
+old:
+    var txt = Traverse.Create(popup).Field("descriptionText").GetValue<tk2dTextMesh>()?.text;
+new:
+    tk2dTextMesh descriptionText = Traverse.Create(popup).Field("descriptionText").GetValue<tk2dTextMesh>();
+    string txt = null;
+    if (descriptionText != null)
+    {
+        txt = descriptionText.text;
+    }
+
+World/Tooltips.cs:485
+member: DarkwoodMP.World.Tooltips::Dump(ItemsDatabase,Map)
+old:
+    if (rec?.recipes == null
+new:
+    if (rec == null || rec.recipes == null
+
+World/TraderSync.cs:195
+member: DarkwoodMP.World.TraderSync::SpawnHostCopy(System.String,UnityEngine.Vector3,System.UInt64)
+old:
+    var st = Singleton<Flags>.Instance?.getNPCState(name);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    Flags.NPCState st = null;
+    if (instance != null)
+    {
+        st = instance.getNPCState(name);
+    }
+
+World/TraderSync.cs:540
+member: DarkwoodMP.World.TraderSync::CheckReputation(System.String,System.Collections.Generic.Dictionary`2<System.String,System.Int32>,System.Collections.Generic.Dictionary`2<System.String,System.Int32>,System.Int32)
+old:
+    var st = Singleton<Flags>.Instance?.getNPCState(name);
+new:
+    Flags instance = Singleton<Flags>.Instance;
+    Flags.NPCState st = null;
+    if (instance != null)
+    {
+        st = instance.getNPCState(name);
+    }
+
+World/WorkbenchStorage.cs:63
+member: DarkwoodMP.World.WorkbenchStorage::BaseSlots(Workbench)
+old:
+    inv = go.GetComponent<Workbench>()?.normalInventory ?? go.GetComponent<Inventory>();
+new:
+    Workbench component = go.GetComponent<Workbench>();
+    inv = null;
+    if (component != null)
+    {
+        inv = component.normalInventory;
+    }
+    if (inv == null)
+    {
+        inv = go.GetComponent<Inventory>();
+    }
+
+World/WorldActions.cs:521
+member: DarkwoodMP.World.WorldActions::OnAction(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    trap.GetComponent<Item>()?.switchTriggerState();
+new:
+    Item component = trap.GetComponent<Item>();
+    if (component != null)
+    {
+        component.switchTriggerState();
+    }
+
+World/WorldActions.cs:663
+member: DarkwoodMP.World.WorldActions::DyingNpc(DarkwoodMP.World.ObjRef,System.String,System.Single,System.Single)
+old:
+    return best ?? c;
+new:
+    Character best2 = best;
+    if (best2 == null)
+    {
+        best2 = c;
+    }
+    return best2;
+
+World/WorldActions.cs:1009
+member: DarkwoodMP.World.WorldActions::HasKey(Locked)
+old:
+    var keys = Singleton<UI>.Instance?.journal?.keysDict;
+new:
+    UI instance = Singleton<UI>.Instance;
+    Dictionary<string, Journal.Key> keys = null;
+    if (instance != null)
+    {
+        Journal journal = instance.journal;
+        if (journal != null)
+        {
+            keys = journal.keysDict;
+        }
+    }
+
+World/WorldEvents.cs:630
+member: DarkwoodMP.World.WorldEvents::OnRandomObjects(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    Singleton<WorldGrid>.Instance?.registerToNode(go);
+new:
+    WorldGrid instance2 = Singleton<WorldGrid>.Instance;
+    if (instance2 != null)
+    {
+        instance2.registerToNode(go);
+    }
+
+World/WorldEvents.cs:663
+member: DarkwoodMP.World.WorldEvents::OnRandomObjects(System.UInt64,DarkwoodMP.Net.PacketReader)
+old:
+    var prefab = Singleton<SaveManager>.Instance?.getPrefab(name);
+new:
+    SaveManager instance3 = Singleton<SaveManager>.Instance;
+    GameObject prefab = null;
+    if (instance3 != null)
+    {
+        prefab = instance3.getPrefab(name);
+    }
+
+World/WorldShare.cs:1583
+member: DarkwoodMP.World.WorldShare::RedirectWorks(System.String)
+old:
+    save = sm?.dynamicFile;
+new:
+    if (sm != null)
+    {
+        save = sm.dynamicFile;
+    }
+    else
+    {
+        save = null;
+    }
+
+World/WorldShare.cs:1587
+member: DarkwoodMP.World.WorldShare::RedirectWorks(System.String)
+old:
+    save = sm?.localProfilesFile;
+new:
+    if (sm != null)
+    {
+        save = sm.localProfilesFile;
+    }
+    else
+    {
+        save = null;
+    }
+
+World/WorldTest.cs:152
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {dropped?.name}");
+new:
+    string name2 = null;
+    if (dropped != null)
+    {
+        name2 = dropped.name;
+    }
+    Plugin.Log.LogInfo($"[world test] dropped {item.type} on the ground: {name2}");
+
+World/WorldTest.cs:177
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    string entry = jdb?.journalEntriesDict.Keys.FirstOrDefault(k => !journal.journalEntriesDict.ContainsKey(k));
+new:
+    string entry = null;
+    if (jdb != null)
+    {
+        entry = jdb.journalEntriesDict.Keys.FirstOrDefault(k => !journal.journalEntriesDict.ContainsKey(k));
+    }
+
+World/WorldTest.cs:178
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    string note = jdb?.notesDict.Keys.FirstOrDefault(k => !journal.notesDict.ContainsKey(k));
+new:
+    string note = null;
+    if (jdb != null)
+    {
+        note = jdb.notesDict.Keys.FirstOrDefault(k => !journal.notesDict.ContainsKey(k));
+    }
+
+World/WorldTest.cs:179
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {jdb?.journalEntriesDict.Count} and {jdb?.notesDict.Count}");
+new:
+    int? count = null;
+    if (jdb != null)
+    {
+        count = jdb.journalEntriesDict.Count;
+    }
+    int? count2 = null;
+    if (jdb != null)
+    {
+        count2 = jdb.notesDict.Count;
+    }
+    Plugin.Log.LogInfo($"[world test] journal: {journal.journalEntriesDict.Count} entries, {journal.notesDict.Count} notes; the game knows {count} and {count2}");
+
+World/WorldTest.cs:237
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    var victim = npcs.FirstOrDefault(n => n != trader) ?? trader;
+new:
+    NPC victim = npcs.FirstOrDefault(n => n != trader);
+    if (victim == null)
+    {
+        victim = trader;
+    }
+
+World/WorldTest.cs:306
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    string molotov = db?.itemsDict.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("molotov"));
+new:
+    string molotov = null;
+    if (db != null)
+    {
+        molotov = db.itemsDict.Keys.FirstOrDefault(k => k.ToLowerInvariant().Contains("molotov"));
+    }
+
+World/WorldTest.cs:417
+member: DarkwoodMP.World.WorldTest::Run()
+old:
+    genItem?.turnOff();
+new:
+    if (genItem != null)
+    {
+        genItem.turnOff();
+    }
+
+World/WorldTest.cs:916
+member: DarkwoodMP.World.WorldTest::HideoutsStep(Player)
+old:
+    var other = ovens.FirstOrDefault(o => o != mine) ?? mine;
+new:
+    ExperienceMachine other = ovens.FirstOrDefault(o => o != mine);
+    if (other == null)
+    {
+        other = mine;
+    }
+
+World/WorldTest.cs:963
+member: DarkwoodMP.World.WorldTest::HideoutsStep(Player)
+old:
+    chest?.addItemType("bottle", 1);
+new:
+    if (chest != null)
+    {
+        chest.addItemType("bottle", 1);
+    }
+
+World/WorldTest.cs:1242
+member: DarkwoodMP.World.WorldTest::WorldEventsStep(Player)
+old:
+    Singleton<RandomWorldObjects>.Instance?.resetObjects();
+new:
+    RandomWorldObjects instance = Singleton<RandomWorldObjects>.Instance;
+    if (instance != null)
+    {
+        instance.resetObjects();
+    }

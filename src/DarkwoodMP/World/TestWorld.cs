@@ -337,7 +337,12 @@ namespace DarkwoodMP.World
 
         public static void GiveKit()
         {
-            var inv = Player.Instance?.Inventory;
+            Player instance = Player.Instance;
+            Inventory inv = null;
+            if (instance != null)
+            {
+                inv = instance.Inventory;
+            }
             if (inv == null)
             {
                 return;

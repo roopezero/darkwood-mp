@@ -871,7 +871,11 @@ namespace DarkwoodMP.World
                 r.Fail($"no generator or saw {a[0]}");
                 yield break;
             }
-            Component c = (Component)g ?? s;
+            Component c = (Component)g;
+            if (c == null)
+            {
+                c = s;
+            }
             yield return Walk(c.transform.position);
             float before;
             if (g != null)
@@ -1075,7 +1079,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return Walk(t.transform.position);
-            var col = P.GetComponent<Collider>() ?? P.GetComponentInChildren<Collider>();
+            Collider col = P.GetComponent<Collider>();
+            if (col == null)
+            {
+                col = P.GetComponentInChildren<Collider>();
+            }
             AsPlayer(() => AccessTools.Method(typeof(Trigger), "OnAfterTrigger").Invoke(t, new object[] { col, false }));
             yield return new WaitForSeconds(1f);
             if (t == null)
@@ -1108,7 +1116,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return Walk(t.transform.position + new Vector3(40f, 0f, 0f));
-            var col = P.GetComponent<Collider>() ?? P.GetComponentInChildren<Collider>();
+            Collider col = P.GetComponent<Collider>();
+            if (col == null)
+            {
+                col = P.GetComponentInChildren<Collider>();
+            }
             float health = P.health;
             string name = t.name, at = Ref(t);
             int rolledBack = Authority.RolledBack;

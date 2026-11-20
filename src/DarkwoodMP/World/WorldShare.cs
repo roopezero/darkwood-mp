@@ -1580,11 +1580,25 @@ namespace DarkwoodMP.World
             string save;
             if (Core.currentProfile != null)
             {
-                save = sm?.dynamicFile;
+                if (sm != null)
+                {
+                    save = sm.dynamicFile;
+                }
+                else
+                {
+                    save = null;
+                }
             }
             else
             {
-                save = sm?.localProfilesFile;
+                if (sm != null)
+                {
+                    save = sm.localProfilesFile;
+                }
+                else
+                {
+                    save = null;
+                }
             }
             if (WorldFiles.IsUnder(save, saveDir))
             {

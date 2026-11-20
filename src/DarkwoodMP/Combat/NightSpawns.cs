@@ -392,7 +392,11 @@ namespace DarkwoodMP.Combat
                     ? $"[night test] worm for {proxy.OwnerName} at {worm.transform.position}, {Core.trueDistance(worm.transform.position, proxy.transform.position):0} from them, going for {(worm.target != null ? worm.target.name : "nobody")}"
                     : $"[night test] no worm for {proxy.OwnerName}");
                 // A night attacker as at a hideout: the host's own location if the proxy isn't at one.
-                var at = loc ?? (Player.Instance.whereAmI != null ? Player.Instance.whereAmI.bigLocation : null);
+                Location at = loc;
+                if (at == null)
+                {
+                    at = Player.Instance.whereAmI != null ? Player.Instance.whereAmI.bigLocation : null;
+                }
                 if (at != null)
                 {
                     var c = SpawnNightChar(spawner, proxy, at);

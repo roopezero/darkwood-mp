@@ -158,7 +158,12 @@ namespace DarkwoodMP.World
         {
             try
             {
-                var it = Singleton<ItemsDatabase>.Instance?.getItem("gasoline", instantiate: false);
+                ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
+                InvItem it = null;
+                if (instance != null)
+                {
+                    it = instance.getItem("gasoline", instantiate: false);
+                }
                 if (it != null && it.maxDurability > 0f)
                 {
                     return it.maxDurability;

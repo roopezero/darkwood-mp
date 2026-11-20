@@ -180,12 +180,20 @@ namespace DarkwoodMP.World
             yield return Walk(_et.transform.position + new Vector3(0f, 0f, -700f), 80f);
             _et.entered = 0;
             _et.exited = 0;
-            var box = _et.gameObject.GetComponent<BoxCollider>() ?? _et.gameObject.AddComponent<BoxCollider>();
+            BoxCollider box = _et.gameObject.GetComponent<BoxCollider>();
+            if (box == null)
+            {
+                box = _et.gameObject.AddComponent<BoxCollider>();
+            }
             box.isTrigger = true;
             // A cube, as the object it's on is turned (the game's sprites lie at 90 degrees) and may be scaled.
             float scale = Mathf.Max(0.01f, Mathf.Abs(_et.transform.lossyScale.x));
             box.size = Vector3.one * (500f / scale);
-            var rb = _et.gameObject.GetComponent<Rigidbody>() ?? _et.gameObject.AddComponent<Rigidbody>();
+            Rigidbody rb = _et.gameObject.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = _et.gameObject.AddComponent<Rigidbody>();
+            }
             rb.isKinematic = true;
             rb.useGravity = false;
             yield return Walk(_et.transform.position, 100f);

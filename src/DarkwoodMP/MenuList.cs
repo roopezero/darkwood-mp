@@ -224,7 +224,11 @@ namespace DarkwoodMP
             }
             if (b == null)
             {
-                string name = go?.name;
+                string name = null;
+                if (go != null)
+                {
+                    name = go.name;
+                }
                 if (name == null)
                 {
                     name = "entry";
@@ -269,7 +273,12 @@ namespace DarkwoodMP
                     s = "What you did since the last save will be lost.";
                 }
             }
-            var session = Plugin.Instance?.Session;
+            Plugin instance2 = Plugin.Instance;
+            Net.Session session = null;
+            if (instance2 != null)
+            {
+                session = instance2.Session;
+            }
             if (session != null && session.IsHost && session.Peers.Count > 0)
             {
                 s += " The players in your game go back to their menus.";
@@ -293,7 +302,11 @@ namespace DarkwoodMP
         {
             try
             {
-                Singleton<Controller>.Instance?.fadeAudio(fadeOut: true, 0f, musicToo: true);
+                Controller instance = Singleton<Controller>.Instance;
+                if (instance != null)
+                {
+                    instance.fadeAudio(fadeOut: true, 0f, musicToo: true);
+                }
             }
             catch
             {
@@ -322,7 +335,12 @@ namespace DarkwoodMP
                 }
             }
             alpha = 1f;
-            var logo = mm.Menu0.transform.Find("Darkwood")?.GetComponent<tk2dBaseSprite>();
+            Transform transform = mm.Menu0.transform.Find("Darkwood");
+            tk2dBaseSprite logo = null;
+            if (transform != null)
+            {
+                logo = transform.GetComponent<tk2dBaseSprite>();
+            }
             if (logo != null)
             {
                 alpha = Mathf.Min(alpha, logo.color.a);
@@ -427,7 +445,12 @@ namespace DarkwoodMP
             bool run = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
             try
             {
-                var pad = Singleton<InputScript>.Instance?.rewiredPlayer;
+                InputScript instance = Singleton<InputScript>.Instance;
+                Rewired.Player pad = null;
+                if (instance != null)
+                {
+                    pad = instance.rewiredPlayer;
+                }
                 if (pad != null)
                 {
                     float v = pad.GetAxisRaw("Dpad Vertical");

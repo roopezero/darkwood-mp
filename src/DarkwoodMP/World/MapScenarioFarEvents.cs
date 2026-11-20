@@ -111,7 +111,12 @@ namespace DarkwoodMP.World
         {
             var far = WorldLocations().Where(l => StateDump.Flat(l.transform.position - Centre) >= 5000f && Safe(l))
                 .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).ToList();
-            return far.FirstOrDefault(l => EventCount(l) > 0) ?? far.FirstOrDefault();
+            Location location = far.FirstOrDefault(l => EventCount(l) > 0);
+            if (location == null)
+            {
+                location = far.FirstOrDefault();
+            }
+            return location;
         }
 
         private static NetPlayerProxy Joiner() =>

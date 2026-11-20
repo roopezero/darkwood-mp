@@ -59,7 +59,18 @@ namespace DarkwoodMP
         private TcpBackend _tcp;
         private ServerBrowser _browser;
         /// <summary>The Direct panel's server browser (the map test's "lan-search" uses it).</summary>
-        internal static ServerBrowser Browser => Instance?._browser;
+        internal static ServerBrowser Browser
+        {
+            get
+            {
+                Plugin instance = Instance;
+                if (instance != null)
+                {
+                    return instance._browser;
+                }
+                return null;
+            }
+        }
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
@@ -1237,7 +1248,13 @@ namespace DarkwoodMP
                 {
                     name = currentSprite.name;
                 }
-                extra += $" sprite={name} coll={sp.Collection?.spriteCollectionName} color={sp.color}";
+                tk2dSpriteCollectionData collection = sp.Collection;
+                string spriteCollectionName = null;
+                if (collection != null)
+                {
+                    spriteCollectionName = collection.spriteCollectionName;
+                }
+                extra += $" sprite={name} coll={spriteCollectionName} color={sp.color}";
             }
             var mb = t.GetComponent<Button>();
             if (mb != null)

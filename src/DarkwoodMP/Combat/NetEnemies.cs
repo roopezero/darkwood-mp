@@ -1214,7 +1214,12 @@ namespace DarkwoodMP.Combat
             }
             // Under a location's characters holder it would go off with the location's children: put it where the
             // game puts characters that left their location (a holder that's never switched off).
-            var holder = Singleton<CharacterSpawner>.Instance?.charactersEscapedFromLocationHolder;
+            CharacterSpawner instance = Singleton<CharacterSpawner>.Instance;
+            GameObject holder = null;
+            if (instance != null)
+            {
+                holder = instance.charactersEscapedFromLocationHolder;
+            }
             if (holder != null && go.transform.parent != null && go.transform.parent != holder.transform)
             {
                 c.disconnectFromLocation();
@@ -1225,7 +1230,13 @@ namespace DarkwoodMP.Combat
             }
             if (!go.activeInHierarchy)
             {
-                Plugin.Log.LogWarning($"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {go.transform.parent?.name})");
+                Transform parent = go.transform.parent;
+                string name = null;
+                if (parent != null)
+                {
+                    name = parent.name;
+                }
+                Plugin.Log.LogWarning($"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {name})");
             }
         }
 
@@ -1252,7 +1263,12 @@ namespace DarkwoodMP.Combat
             try
             {
                 grid.registerToNode(c.gameObject);
-                var node = c.GetComponent<CullableObject>()?.node;
+                CullableObject component = c.GetComponent<CullableObject>();
+                WorldGrid.Node node = null;
+                if (component != null)
+                {
+                    node = component.node;
+                }
                 if (node != null && !node.entered && c.gameObject.activeSelf)
                 {
                     c.gameObject.SetActive(false);

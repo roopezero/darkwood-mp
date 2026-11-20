@@ -221,7 +221,16 @@ namespace DarkwoodMP.World
             }
             var screen = ui.loadingScreen.transform;
             var barR = ui.loadingBar.GetComponent<Renderer>();
-            var tip = screen.Find("Tip")?.GetComponent<tk2dTextMesh>() ?? ui.percentLoadedText;
+            Transform transform = screen.Find("Tip");
+            tk2dTextMesh tip = null;
+            if (transform != null)
+            {
+                tip = transform.GetComponent<tk2dTextMesh>();
+            }
+            if (tip == null)
+            {
+                tip = ui.percentLoadedText;
+            }
             if (barR == null || tip == null)
             {
                 return;
@@ -415,7 +424,15 @@ namespace DarkwoodMP.World
             if (ui != _tipUi)
             {
                 _tipUi = ui;
-                _tip = ui.loadingScreen.transform.Find("Tip")?.GetComponent<Renderer>();
+                Transform transform = ui.loadingScreen.transform.Find("Tip");
+                if (transform != null)
+                {
+                    _tip = transform.GetComponent<Renderer>();
+                }
+                else
+                {
+                    _tip = null;
+                }
             }
             if (_tip != null && _tip.enabled)
             {
