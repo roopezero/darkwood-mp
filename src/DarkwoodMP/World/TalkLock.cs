@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Talk;
 using HarmonyLib;
 
 namespace DarkwoodMP.World
@@ -202,9 +203,13 @@ namespace DarkwoodMP.World
             }
 
             var w = S.Begin(MsgType.TalkLock);
-            r.Write(w);
-            w.W.Write((byte)1);
-            w.WriteStr(_oursName);
+            TalkLockMessage.Write(w, new TalkHold
+            {
+                Npc = ObjRef.NameOf(r),
+                Talking = true,
+                Name = _oursName,
+            });
+
             Coop.Current.Authority.Request(
                 w, $"talk to {npc.name} {r}", (ok, reason, _) =>
             {
@@ -254,9 +259,13 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.TalkLock);
-            r.Write(w);
-            w.W.Write((byte)0);
-            w.WriteStr(name);
+            TalkLockMessage.Write(w, new TalkHold
+            {
+                Npc = ObjRef.NameOf(r),
+                Talking = false,
+                Name = name,
+            });
+
             s.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -335,10 +344,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            bool talking = r.R.ReadByte() != 0;
-            string key = Key(obj, r.ReadStr());
-            if (!talking)
+            TalkHold hold = TalkLockMessage.Read(r);
+            var obj = ObjRef.RefOf(hold.Npc);
+            string key = Key(obj, hold.Name);
+            if (!hold.Talking)
             {
                 Release(key, from);
                 return;
