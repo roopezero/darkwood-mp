@@ -11,11 +11,19 @@ namespace DarkwoodMP.Combat
     /// proxy (the core's PlayerDamageMessage has the bytes, DamageRules
     /// what becomes of the hit). The client applies it to its own Player as
     /// the game would have, effects (bleeding, poison...) included.
+    /// Send and the effects' bytes are static and keep no state: the test
+    /// dummy is hit with no session too, and NetEnemies and HostileNpcs
+    /// write and read effects with their own messages.
     /// </summary>
-    public static class PlayerDamage
+    internal sealed class PlayerDamage
     {
-        public static void Register(Session s) =>
-            s.Register(MsgType.PlayerDamage, OnDamage);
+        private readonly CoopSession _coop;
+
+        public PlayerDamage(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.PlayerDamage, OnDamage);
+        }
 
         public static void Send(
             ulong owner, float damage, Transform attacker, bool shadow,
@@ -172,12 +180,10 @@ namespace DarkwoodMP.Combat
             return effects;
         }
 
-        private static void OnDamage(ulong from, PacketReader r)
+        private void OnDamage(ulong from, PacketReader r)
         {
-            var session = Session.Instance;
-            if (!DamageRules.Reads(
-                    session != null && session.IsClient,
-                    session != null && from == session.HostId))
+            var session = _coop.Net;
+            if (!DamageRules.Reads(session.IsClient, from == session.HostId))
             {
                 return;
             }

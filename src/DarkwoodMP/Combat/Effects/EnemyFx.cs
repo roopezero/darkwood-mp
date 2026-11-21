@@ -36,46 +36,36 @@ namespace DarkwoodMP.Combat
     ///   `onBansheeSeePlayer` / `bansheeAgitated` do. Where the banshee goes is
     ///   the host's.
     /// </summary>
-    public static class EnemyFx
+    internal sealed class EnemyFx
     {
-        public static void Register(Session s)
+        private readonly CoopSession _coop;
+        private Seconds _next;
+
+        public EnemyFx(CoopSession coop)
         {
-            s.Register(MsgType.CombatMusic, OnCombatMusic);
-            s.Register(MsgType.EnemyEffect, OnEffect);
-            s.OnPeerDisconnected += id => _inCombat.Remove(id);
-            s.OnSessionEnded += Clear;
+            _coop = coop;
+            coop.Handle(MsgType.CombatMusic, OnCombatMusic);
+            coop.Handle(MsgType.EnemyEffect, OnEffect);
+            coop.Net.OnPeerDisconnected += OnPeerLeft;
+            coop.Hook(() => coop.Net.OnPeerDisconnected -= OnPeerLeft);
         }
 
-        public static void Clear()
-        {
-            _inCombat.Clear();
-            HostSaysInCombat = false;
-            _seen.Clear();
-        }
+        private Session Net => _coop.Net;
 
-        private static bool Hosting
-        {
-            get
-            {
-                var s = Session.Instance;
-                return s != null
-                    && EffectRules.Hosting(
-                        s.IsHost, s.Peers.Count, WorldShare.InWorld);
-            }
-        }
+        private bool Hosting => EffectRules.Hosting(
+            Net.IsHost, Net.Peers.Count, WorldShare.InWorld);
 
-        private static float _next;
+        private void OnPeerLeft(ulong id) => _inCombat.Remove(id);
 
-        public static void Update()
+        public void Update()
         {
-            var tick = EffectRules.Due(
-                new Seconds(Time.unscaledTime), new Seconds(_next));
+            var tick = EffectRules.Due(new Seconds(Time.unscaledTime), _next);
             if (!tick.Due)
             {
                 return;
             }
 
-            _next = tick.Next.Value;
+            _next = tick.Next;
             if (Hosting)
             {
                 HostCombat();
@@ -89,17 +79,17 @@ namespace DarkwoodMP.Combat
 
         // ---- combat music ---------------------------------------------------
 
-        private static readonly Dictionary<ulong, bool> _inCombat =
+        private readonly Dictionary<ulong, bool> _inCombat =
             new Dictionary<ulong, bool>();
 
         /// <summary>
         /// Client: the host says one of its enemies is after our player.
         /// </summary>
-        public static bool HostSaysInCombat;
+        public bool HostSaysInCombat { get; private set; }
 
-        private static void HostCombat()
+        private void HostCombat()
         {
-            var s = Session.Instance;
+            var s = Net;
             var chars = AllCharacters.Active();
             foreach (var proxy in NetPlayerProxy.All.Values)
             {
@@ -175,10 +165,10 @@ namespace DarkwoodMP.Combat
             };
         }
 
-        private static void OnCombatMusic(ulong from, PacketReader r)
+        private void OnCombatMusic(ulong from, PacketReader r)
         {
-            var s = Session.Instance;
-            if (s == null || !s.IsClient || from != s.HostId)
+            var s = Net;
+            if (!s.IsClient || from != s.HostId)
             {
                 return;
             }
@@ -224,7 +214,7 @@ namespace DarkwoodMP.Combat
         /// of attackers (in an area of our own) is skipped, so it doesn't
         /// turn off the host's combat music.
         /// </summary>
-        internal static bool KeepsMusic(Player me)
+        internal bool KeepsMusic(Player me)
         {
             if (!EffectRules.KeepsMusic(
                     HostSaysInCombat, NetEnemies.ClientMode))
@@ -247,7 +237,7 @@ namespace DarkwoodMP.Combat
         /// Host: one of its enemies made a prefab (kind 1) or a pooled FX
         /// effect (kind 2) here.
         /// </summary>
-        internal static void SendPrefab(
+        internal void SendPrefab(
             byte kind, string name, Vector3 pos, float rotY)
         {
             if (!EffectRules.Sends(Hosting, Coop.Guards.Replaying))
@@ -255,7 +245,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            var s = Session.Instance;
+            var s = Net;
             var w = s.Begin(MsgType.EnemyEffect);
             var fx = new EnemyEffect
             {
@@ -278,7 +268,7 @@ namespace DarkwoodMP.Combat
         /// Host, after Character.bansheeScream: FX/BansheeScream where it
         /// stands goes to the joiners too.
         /// </summary>
-        internal static void Screamed(Character c)
+        internal void Screamed(Character c)
         {
             if (NetEnemies.Eligible(c))
             {
@@ -293,7 +283,7 @@ namespace DarkwoodMP.Combat
         /// and spawn go to the joiners too. Not when the pool hasn't got it
         /// here (the call throws, so there is no result).
         /// </summary>
-        internal static void Pooled(
+        internal void Pooled(
             string pool, string prefab, Vector3 at, Transform made)
         {
             if (EffectRules.SpreadsPooled(made != null, pool, prefab))
@@ -306,7 +296,7 @@ namespace DarkwoodMP.Combat
         /// Host, after Character.modifyEmitter: an enemy's animation switched
         /// its particle emitter; the players that have it see it too.
         /// </summary>
-        internal static void EmitterSwitched(Character c, int toggle)
+        internal void EmitterSwitched(Character c, int toggle)
         {
             if (!EffectRules.SpreadsEmitter(
                     NetEnemies.Eligible(c), c._particleLight != null,
@@ -326,7 +316,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            var s = Session.Instance;
+            var s = Net;
             var fx = new EnemyEffect
             {
                 Kind = EffectRules.EmitterKind,
@@ -342,10 +332,10 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static void OnEffect(ulong from, PacketReader r)
+        private void OnEffect(ulong from, PacketReader r)
         {
-            var s = Session.Instance;
-            if (s == null || !s.IsClient || from != s.HostId
+            var s = Net;
+            if (!s.IsClient || from != s.HostId
                 || !WorldShare.InWorld)
             {
                 return;
@@ -461,10 +451,10 @@ namespace DarkwoodMP.Combat
 
         // ---- the banshee's sight (client) -----------------------------------
 
-        private static readonly HashSet<Character> _seen =
+        private readonly HashSet<Character> _seen =
             new HashSet<Character>();
 
-        private static void BansheeSight()
+        private void BansheeSight()
         {
             var me = Player.Instance;
             var e = NetEnemies.Instance;
@@ -638,136 +628,5 @@ namespace DarkwoodMP.Combat
                 t.gameObject.SetActive(on);
             }
         }
-    }
-
-    /// <summary>
-    /// "--dwmp-test-blast" (host), after AreaHitsTest: the nearest enemy to a
-    /// joined player screams as a banshee does (FX/BansheeScream, sent as
-    /// EnemyEffect), the forest spirit's effect is made beside the player
-    /// (pooled, sent as EnemyEffect), and the host's after-night is ended
-    /// (AfterNightEnded).
-    /// </summary>
-    static class EnemyFxTest
-    {
-        internal static System.Collections.IEnumerator Run()
-        {
-            NetPlayerProxy p;
-            while ((p = AreaHitsTest.Joined()) == null)
-            {
-                yield return null;
-            }
-
-            yield return new WaitForSeconds(8f);
-            if (p == null)
-            {
-                yield break;
-            }
-
-            var at = p.transform.position;
-            var c = AreaHitsTest.NearestEnemy(at);
-            if (c != null)
-            {
-                Plugin.Log.LogInfo(
-                    $"--dwmp-test-blast: {c.name} screams as a banshee");
-                try
-                {
-                    c.bansheeScream();
-                }
-                catch (System.Exception e)
-                {
-                    Plugin.Log.LogInfo(
-                        "--dwmp-test-blast: the scream failed here: "
-                            + $"{e.Message}");
-                }
-            }
-
-            Plugin.Log.LogInfo(
-                "--dwmp-test-blast: the forest spirit's effect beside "
-                    + $"{p.OwnerName}");
-            try
-            {
-                Core.AddPooledPrefab(
-                    "FX", EffectRules.ForestSpirit,
-                    at + new Vector3(100f, 0f, 0f), Quaternion.identity);
-            }
-            catch (System.Exception e)
-            {
-                // Chapter 1's FX pool hasn't got it: send it anyway, for the
-                // joiner's side of the message.
-                Plugin.Log.LogInfo(
-                    "--dwmp-test-blast: no such pooled effect here "
-                        + $"({e.Message}): sent without the patch");
-                EnemyFx.SendPrefab(
-                    EffectRules.PooledKind, EffectRules.ForestSpirit,
-                    at + new Vector3(100f, 0f, 0f), 0f);
-            }
-
-            yield return new WaitForSeconds(1f);
-            var ctl = Singleton<Controller>.Instance;
-            if (ctl != null)
-            {
-                Plugin.Log.LogInfo(
-                    "--dwmp-test-blast: the host's after-night ends");
-                ctl.isAfterNight = true;
-                ctl.endAfterNight();
-            }
-
-            Plugin.Log.LogInfo("--dwmp-test-blast: effects done");
-        }
-    }
-
-    /// <summary>
-    /// Client: the game's own count of attackers (in an area of our own)
-    /// mustn't turn off the host's combat music.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.checkInCombatChars))]
-    static class CombatMusicKeepPatch
-    {
-        static bool Prefix(Player __instance) =>
-            !EnemyFx.KeepsMusic(__instance);
-    }
-
-    /// <summary>
-    /// Host: the banshee's scream (FX/BansheeScream where it stands) goes to
-    /// the joiners too.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.bansheeScream))]
-    static class BansheeScreamPatch
-    {
-        static void Postfix(Character __instance) =>
-            EnemyFx.Screamed(__instance);
-    }
-
-    /// <summary>
-    /// Host: pooled effects of enemies (the forest spirit's teleport and spawn)
-    /// go to the joiners too.
-    /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPooledPrefab), new[]
-    {
-        typeof(string),
-        typeof(string),
-        typeof(Vector3),
-        typeof(Quaternion)
-    })]
-    static class EnemyPooledFxPatch
-    {
-        // A postfix: it isn't sent when the pool hasn't got it here (the call
-        // throws).
-        static void Postfix(
-            string pool, string prefab, Vector3 position, Transform __result)
-        {
-            EnemyFx.Pooled(pool, prefab, position, __result);
-        }
-    }
-
-    /// <summary>
-    /// Host: an enemy's animation switched its particle emitter
-    /// (Character.modifyEmitter).
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.modifyEmitter))]
-    static class EnemyEmitterPatch
-    {
-        static void Postfix(Character __instance, int _toggle) =>
-            EnemyFx.EmitterSwitched(__instance, _toggle);
     }
 }
