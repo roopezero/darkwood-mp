@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -231,8 +232,9 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            bool keepCorpse = r.R.ReadByte() != 0;
+            var mark = EnemyMarkMessage.Read(r);
+            uint id = mark.Id;
+            bool keepCorpse = mark.On;
             if (!_puppets.TryGetValue(id, out var p))
             {
                 // The host's corpse is gone (it was destroyed there): so is
@@ -311,9 +313,10 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            string audio = r.ReadStr();
-            float volume = r.R.ReadSingle();
+            var sound = EnemySoundMessage.Read(r);
+            uint id = sound.Id;
+            string audio = sound.Audio;
+            float volume = sound.Volume;
             if (!_puppets.TryGetValue(id, out var p) || p.C == null)
             {
                 return;
@@ -379,32 +382,27 @@ namespace DarkwoodMP.Combat
             uint id, float damage, bool cut, bool byPlayer, bool interrupt,
             bool normal, List<InvItemEffect> effects)
         {
-            var w = _session.Begin(MsgType.EnemyHit);
-            w.W.Write(id);
-            w.W.Write(damage);
             int flags = 0;
             if (cut)
             {
-                flags |= 1;
+                flags |= EnemyHitMessage.Cut;
             }
 
             if (byPlayer)
             {
-                flags |= 2;
+                flags |= EnemyHitMessage.ByPlayer;
             }
 
             if (interrupt)
             {
-                flags |= 4;
+                flags |= EnemyHitMessage.Interrupt;
             }
 
             if (normal)
             {
-                flags |= 8;
+                flags |= EnemyHitMessage.Normal;
             }
 
-            w.W.Write((byte)flags);
-            PlayerDamage.WriteEffects(w, effects);
             InvItemClass item = null;
             if (Player.Instance != null)
             {
@@ -422,7 +420,16 @@ namespace DarkwoodMP.Combat
                     new InvItemClass.SaveState(item, 0));
             }
 
-            w.WriteStr(s);
+            var w = _session.Begin(MsgType.EnemyHit);
+            EnemyHitMessage.Write(w, new EnemyHitRequest
+            {
+                Id = id,
+                Damage = damage,
+                Flags = (byte)flags,
+                Effects = PlayerDamage.SentOf(effects),
+                Weapon = s,
+            });
+
             _puppets.TryGetValue(id, out var p);
             Character hit = null;
             if (p != null)
@@ -529,16 +536,14 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static void WriteRot(PacketWriter w, Quaternion q)
-        {
-            w.W.Write(q.x);
-            w.W.Write(q.y);
-            w.W.Write(q.z);
-            w.W.Write(q.w);
-        }
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
 
-        private static Quaternion ReadRot(PacketReader r) => new Quaternion(
-            r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
-            r.R.ReadSingle());
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
+
+        private static Quat QuatOf(Quaternion q) =>
+            new Quat(q.x, q.y, q.z, q.w);
+
+        private static Quaternion QuaternionOf(Quat q) =>
+            new Quaternion(q.X, q.Y, q.Z, q.W);
     }
 }

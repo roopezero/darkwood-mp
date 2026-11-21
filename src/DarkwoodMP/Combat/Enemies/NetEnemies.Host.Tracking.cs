@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -176,9 +177,7 @@ namespace DarkwoodMP.Combat
                 var w = _batch.Begin(MsgType.EnemyState);
                 // the host's clock, which the client draws them by
                 // (EnemyMotion)
-                w.W.Write(now);
-                long countPos = w.Length;
-                w.W.Write((ushort)0);
+                int countAt = EnemyStateMessage.WriteHead(w, now);
                 int count = 0;
                 var drop = new List<(uint, bool)>();
                 foreach (var t in _byCharHost.Values)
@@ -257,9 +256,7 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
 
-                var buf = w.Buffer; // patch the count in
-                buf[countPos] = (byte)count;
-                buf[countPos + 1] = (byte)(count >> 8);
+                EnemyStateMessage.SetCount(w, countAt, count);
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }

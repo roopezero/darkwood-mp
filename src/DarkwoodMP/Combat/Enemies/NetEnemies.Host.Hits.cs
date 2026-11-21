@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -36,11 +37,12 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            float damage = r.R.ReadSingle();
-            byte f = r.R.ReadByte();
-            var effects = PlayerDamage.ReadEffects(r);
-            string weaponJson = r.ReadStr();
+            var hit = EnemyHitMessage.Read(r);
+            uint id = hit.Id;
+            float damage = hit.Damage;
+            byte f = hit.Flags;
+            var effects = PlayerDamage.GameOf(hit.Effects);
+            string weaponJson = hit.Weapon;
             _byIdHost.TryGetValue(id, out var t);
             if (t == null || t.C == null || !InPlay(t.C))
             {

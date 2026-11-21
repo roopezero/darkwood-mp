@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -111,13 +112,14 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            int uid = r.R.ReadInt32();
-            string prefab = r.ReadStr();
-            string name = r.ReadStr();
-            Vector3 pos = r.ReadVector3();
-            Quaternion rot = ReadRot(r);
-            bool armor = r.R.ReadByte() != 0;
+            var spawned = EnemySpawnMessage.Read(r);
+            uint id = spawned.Id;
+            int uid = spawned.SavedId;
+            string prefab = spawned.Prefab;
+            string name = spawned.Kind;
+            Vector3 pos = VectorOf(spawned.At);
+            Quaternion rot = QuaternionOf(spawned.Rot);
+            bool armor = spawned.Armor;
             if (_puppets.ContainsKey(id))
             {
                 return;
@@ -266,8 +268,9 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            bool on = r.R.ReadByte() != 0;
+            var mark = EnemyMarkMessage.Read(r);
+            uint id = mark.Id;
+            bool on = mark.On;
             if (_puppets.TryGetValue(id, out var p) && p.C != null)
             {
                 SetArmor(p.C, on, fade: true);
@@ -341,7 +344,8 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            float sent = r.R.ReadSingle();
+            var states = EnemyStateMessage.Read(r);
+            float sent = states.Sent;
             float now = Time.unscaledTime;
             var coop = Coop.Current;
             if (coop != null)
@@ -349,30 +353,24 @@ namespace DarkwoodMP.Combat
                 coop.Motion.Arrived(sent, now);
             }
 
-            int n = r.R.ReadUInt16();
-            for (int i = 0; i < n; i++)
+            foreach (var frame in states.Frames)
             {
-                uint id = r.R.ReadUInt32();
-                Vector3 pos = r.ReadVector3();
-                Quaternion rot = ReadRot(r);
-                int bits = r.R.ReadByte();
-                bool alive = (bits & 1) != 0,
-                    asleep = (bits & 2) != 0,
-                    cut = (bits & 4) != 0;
-                float healthFraction = r.R.ReadSingle();
-                int an = r.R.ReadByte();
+                uint id = frame.Id;
+                Vector3 pos = VectorOf(frame.At);
+                Quaternion rot = QuaternionOf(frame.Rot);
+                int bits = frame.Flags;
+                bool alive = (bits & EnemyStateMessage.Alive) != 0,
+                    asleep = (bits & EnemyStateMessage.Asleep) != 0,
+                    cut = (bits & EnemyStateMessage.Cut) != 0;
+                float healthFraction = frame.Health;
                 _puppets.TryGetValue(id, out var p);
-                for (int k = 0; k < an; k++)
+                foreach (var anim in frame.Anims)
                 {
-                    int path = r.R.ReadInt32();
-                    int clip = r.R.ReadInt32();
-                    int frame = r.R.ReadUInt16();
-                    bool playing = r.R.ReadByte() != 0;
                     if (p != null && !p.Settled
-                        && p.Animators.TryGetValue(path, out var a)
+                        && p.Animators.TryGetValue(anim.Animator, out var a)
                         && a != null)
                     {
-                        ApplyAnim(a, clip, frame, playing);
+                        ApplyAnim(a, anim.Clip, anim.Frame, anim.Playing);
                     }
                 }
 
