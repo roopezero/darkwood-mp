@@ -16,7 +16,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
-            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            if (Plugin.Instance.Host.Session.IsClient)
             {
                 r.Fail("enemies are the host's");
                 yield break;
@@ -51,7 +51,12 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static Character HostEnemyNear(float radius)
         {
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;

@@ -377,7 +377,7 @@ namespace DarkwoodMP.World
                 return default;
             }
 
-            bool host = Session.Instance != null && Session.Instance.IsHost;
+            bool host = Plugin.Instance.Host.Session.IsHost;
             var now = GuardsNow();
             var bomb = new Explosion
             {

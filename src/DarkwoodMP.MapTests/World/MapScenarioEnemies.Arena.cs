@@ -129,7 +129,7 @@ namespace DarkwoodMP.World
 
             Plugin.Instance.StartCoroutine(Monitor(w));
             yield return new WaitForSeconds(1f);
-            NetEnemies.Instance.NetIdOf(c, out w.Id);
+            Coop.Current.Enemies.NetIdOf(c, out w.Id);
             r.Info =
                 $"{c.name} #{w.Id} at {Fmt(spot)} "
                     + $"({Core.trueDistance(spot, proxy.transform.position):0} "
@@ -452,7 +452,7 @@ namespace DarkwoodMP.World
 
                     string name = m.name;
                     string number = "";
-                    if (NetEnemies.Instance.NetIdOf(m, out uint i))
+                    if (Coop.Current.Enemies.NetIdOf(m, out uint i))
                     {
                         number = " #" + i;
                     }

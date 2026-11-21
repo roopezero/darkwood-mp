@@ -236,7 +236,7 @@ namespace DarkwoodMP.Menus
                     "You're in the test world: your own saves are untouched.",
                     MenuSkin.Dim);
             }
-            else if (SaveRedirect.Active)
+            else if (Plugin.Instance.Host.SaveFolders.Active)
             {
                 Ui.Text(
                     f,

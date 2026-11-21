@@ -256,7 +256,7 @@ namespace DarkwoodMP.World
 
             string wanted = a[0];
             bool dreaming = D.dreaming;
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";

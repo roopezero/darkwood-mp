@@ -120,8 +120,8 @@ namespace DarkwoodMP.World
 
         internal static string Id(Character c)
         {
-            if (NetEnemies.Instance != null
-                && NetEnemies.Instance.NetIdOf(c, out uint id))
+            if (Coop.Current != null
+                && Coop.Current.Enemies.NetIdOf(c, out uint id))
             {
                 return id.ToString();
             }
@@ -205,7 +205,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s == null || !s.IsHost)
             {
                 return false;
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 }
 
                 _next = Time.unscaledTime + 0.1f;
-                var s = Net.Session.Instance;
+                var s = Plugin.Instance.Host.Session;
                 if (s == null)
                 {
                     return;
@@ -405,7 +405,12 @@ namespace DarkwoodMP.World
 
             private static void ClientTick()
             {
-                var ne = NetEnemies.Instance;
+                NetEnemies ne = null;
+                if (Coop.Current != null)
+                {
+                    ne = Coop.Current.Enemies;
+                }
+
                 var me = Player.Instance;
                 if (ne == null || me == null)
                 {

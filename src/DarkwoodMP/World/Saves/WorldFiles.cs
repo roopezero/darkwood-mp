@@ -195,7 +195,7 @@ namespace DarkwoodMP.World
             UserProfile = Environment.GetFolderPath(
                 Environment.SpecialFolder.UserProfile),
             CacheRoot = Path.Combine(BepInEx.Paths.CachePath, "DarkwoodMP"),
-            Redirect = SaveRedirect.Dir,
+            Redirect = Plugin.Instance.Host.SaveFolders.Dir,
             IgnoreCase = IgnoreCase,
         };
 

@@ -37,7 +37,7 @@ namespace DarkwoodMP.World
             // A client asks the host for the storage as it opens it, and its
             // window takes the answer.
             float seconds = 1f;
-            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            if (Plugin.Instance.Host.Session.IsClient)
             {
                 seconds = SlotRules.AskTimeout + 0.5f;
             }
@@ -156,7 +156,7 @@ namespace DarkwoodMP.World
         private static IEnumerator WbRace(string[] a, Result r)
         {
             bool host =
-                Net.Session.Instance == null || !Net.Session.Instance.IsClient;
+                !Plugin.Instance.Host.Session.IsClient;
             string[] args;
             if (host)
             {

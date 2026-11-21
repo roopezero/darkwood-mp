@@ -17,8 +17,6 @@ namespace DarkwoodMP.Net
     /// </summary>
     public sealed class Session : IDisposable
     {
-        public static Session Instance { get; private set; }
-
         public INetBackend Backend { get; private set; }
 
         public bool Active => Backend != null && Backend.InSession;
@@ -161,7 +159,6 @@ namespace DarkwoodMP.Net
 
         public Session(IClock clock, ILog log, string modVersion)
         {
-            Instance = this;
             _clock = clock;
             _log = log;
             _modVersion = modVersion;
@@ -947,7 +944,6 @@ namespace DarkwoodMP.Net
             }
 
             _backends.Clear();
-            Instance = null;
         }
     }
 }

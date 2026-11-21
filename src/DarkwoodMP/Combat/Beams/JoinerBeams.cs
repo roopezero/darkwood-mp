@@ -85,7 +85,7 @@ namespace DarkwoodMP.Combat
                     c.attackCharacter(proxy.transform);
                 }
 
-                if (Threat.Debug)
+                if (Plugin.Instance.Host.Threats.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[threat] {c.name}'s shadow armour is in "
@@ -101,7 +101,7 @@ namespace DarkwoodMP.Combat
                 return default;
             }
 
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             bool hosting = false;
             if (s != null)
             {

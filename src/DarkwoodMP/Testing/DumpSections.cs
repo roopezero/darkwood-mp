@@ -176,9 +176,9 @@ namespace DarkwoodMP.World
                     // with its renderers and colliders off: nobody sees or
                     // searches it; the host's copy is listed.
                     if (it.GetComponent<Character>() is Character ch
-                        && NetEnemies.Frozen.Contains(ch)
-                        && NetEnemies.Instance != null
-                        && !NetEnemies.Instance.NetIdOf(ch, out _))
+                        && Coop.Current != null
+                        && Coop.Current.Enemies.Frozen.Contains(ch)
+                        && !Coop.Current.Enemies.NetIdOf(ch, out _))
                     {
                         continue;
                     }
@@ -350,8 +350,8 @@ namespace DarkwoodMP.World
                     }
 
                     if (!ctx.Near(ch.transform.position)
-                        || (NetEnemies.Instance != null
-                            && NetEnemies.Instance.NetIdOf(ch, out _)))
+                        || (Coop.Current != null
+                            && Coop.Current.Enemies.NetIdOf(ch, out _)))
                     {
                         continue;
                     }
@@ -393,7 +393,12 @@ namespace DarkwoodMP.World
 
             AddSection("enemies", ctx =>
             {
-                var ne = NetEnemies.Instance;
+                NetEnemies ne = null;
+                if (Coop.Current != null)
+                {
+                    ne = Coop.Current.Enemies;
+                }
+
                 foreach (var c in All<Character>())
                 {
                     if (!NetEnemies.Eligible(c)

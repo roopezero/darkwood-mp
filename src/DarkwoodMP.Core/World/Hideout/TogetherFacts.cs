@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Hideout
     /// What decides whether players are playing together in a world.
     public readonly struct TogetherFacts
     {
-        /// Session.Instance exists.
+        /// ModHost.Session exists.
         public bool HasSession { get; init; }
 
         /// WorldShare.InWorld.

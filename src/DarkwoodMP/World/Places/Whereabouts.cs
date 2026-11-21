@@ -181,7 +181,7 @@ namespace DarkwoodMP.World.Places
 
         /// <summary>
         /// The dream location our player is in when it is the shared level
-        /// dream (DreamSync.SharedNow), else null. The host dreams it first
+        /// dream (DreamSync.Shared), else null. The host dreams it first
         /// and every player's copy stands at the host's spot (OnAsk), so, like
         /// a location the host placed, the host runs its characters and events
         /// and the others get the host's.
@@ -194,11 +194,17 @@ namespace DarkwoodMP.World.Places
                 return null;
             }
 
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
             var dream = new DreamFacts
             {
                 Dreaming = d.dreaming,
                 HasLocation = d.dreamLocation != null,
-                Shared = DreamSync.SharedNow,
+                Shared = shared,
                 HasPreset = d.preset != null,
                 Preset = PresetName(d),
             };
@@ -262,12 +268,18 @@ namespace DarkwoodMP.World.Places
         /// </summary>
         public static bool SamePlace(bool away, string place)
         {
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
             return PlaceRules.SamePlace(new SameFacts
             {
                 Away = away,
                 Place = place,
                 MeAway = Sync.Players.PlayerCapture.LocalAway(),
-                DreamShared = DreamSync.SharedNow != null,
+                DreamShared = shared != null,
                 Current = Current(),
             });
         }

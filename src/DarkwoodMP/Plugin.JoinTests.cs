@@ -67,7 +67,7 @@ namespace DarkwoodMP
             }
 
             Log.LogInfo(data);
-            if (c == null || !Threat.Debug)
+            if (c == null || !_host.Threats.Debug)
             {
                 yield break;
             }

@@ -77,8 +77,7 @@ namespace DarkwoodMP.World
         {
             float until = Time.realtimeSinceStartup + 240f;
             while (Time.realtimeSinceStartup < until
-                && (Net.Session.Instance == null
-                    || Net.Session.Instance.Peers.Count == 0))
+                && (Plugin.Instance.Host.Session.Peers.Count == 0))
             {
                 yield return null;
             }

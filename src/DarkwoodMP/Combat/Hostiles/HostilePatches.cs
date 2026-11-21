@@ -10,7 +10,15 @@ namespace DarkwoodMP.Combat
     static class CharacterAttackPlayer
     {
         [HarmonyPriority(Priority.First)]
-        static bool Prefix(Character __instance) => !HostileNpcs.ClientAttack(
-            __instance);
+        static bool Prefix(Character __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return !coop.Hostiles.ClientAttack(__instance);
+        }
     }
 }

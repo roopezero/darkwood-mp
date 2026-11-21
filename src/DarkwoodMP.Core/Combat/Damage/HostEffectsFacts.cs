@@ -4,7 +4,7 @@ namespace DarkwoodMP.Combat.Damage
     /// (CharacterEffectsActivateOnCopy).
     public readonly struct HostEffectsFacts
     {
-        /// NetEnemies.ClientMode and NetEnemies.Instance exists.
+        /// NetEnemies.ClientMode and a session (CoopSession.Enemies) exists.
         public bool Handled { get; init; }
 
         /// The CharacterEffects has a Character.

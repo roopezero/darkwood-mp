@@ -36,7 +36,8 @@ namespace DarkwoodMP.World
             {
                 // no redirect in the main menu: your own
                 string mine = Singleton<SaveManager>.Instance.baseSaveDirectory;
-                if (SaveRedirect.Active || string.IsNullOrEmpty(mine)
+                if (Plugin.Instance.Host.SaveFolders.Active
+                    || string.IsNullOrEmpty(mine)
                     || !Directory.Exists(mine))
                 {
                     Status =
@@ -63,7 +64,7 @@ namespace DarkwoodMP.World
             }
 
             // A living profile in the copy (the first one).
-            SaveRedirect.Begin(TestWorld.Dir);
+            Plugin.Instance.Host.SaveFolders.Begin(TestWorld.Dir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
             GameProfile profile = null;
             if (state != null)
@@ -79,7 +80,7 @@ namespace DarkwoodMP.World
 
             if (profile == null)
             {
-                SaveRedirect.End();
+                Plugin.Instance.Host.SaveFolders.End();
                 Status =
                     "The test world has no profile to load: reset it after "
                         + "playing a world.";

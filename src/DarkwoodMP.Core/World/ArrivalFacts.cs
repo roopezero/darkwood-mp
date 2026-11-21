@@ -5,7 +5,7 @@ namespace DarkwoodMP.World
     /// sent it.
     public readonly struct ArrivalFacts
     {
-        /// There is a session (Session.Instance isn't null).
+        /// There is a session (ModHost.Session isn't null).
         public bool Session { get; init; }
 
         /// The game is in a world (WorldShare.InWorld).

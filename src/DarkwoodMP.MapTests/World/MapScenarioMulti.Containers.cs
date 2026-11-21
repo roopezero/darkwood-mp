@@ -124,7 +124,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Leave(string[] a, Result r)
         {
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s == null || !s.IsClient)
             {
                 r.Fail("not a client");

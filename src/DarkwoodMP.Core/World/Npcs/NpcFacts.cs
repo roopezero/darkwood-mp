@@ -9,8 +9,8 @@ namespace DarkwoodMP.World.Npcs
         /// Character.alive.
         public bool Alive { get; init; }
 
-        /// NetEnemies runs it: NetEnemies.Instance exists and has a net id
-        /// for the Character.
+        /// NetEnemies runs it: a session (CoopSession.Enemies) exists and has
+        /// a net id for the Character.
         public bool RunByEnemies { get; init; }
     }
 }

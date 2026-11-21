@@ -158,11 +158,11 @@ namespace DarkwoodMP.World
             }
 
             string role;
-            if (Session.Instance == null)
+            if (Plugin.Instance.Host.Session == null)
             {
                 role = "alone";
             }
-            else if (Session.Instance.IsHost)
+            else if (Plugin.Instance.Host.Session.IsHost)
             {
                 role = "host";
             }

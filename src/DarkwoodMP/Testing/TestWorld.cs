@@ -42,7 +42,8 @@ namespace DarkwoodMP.World
 
         /// <summary>The world being played is the test world.</summary>
         public static bool Active =>
-            SaveRedirect.Active && SaveRedirect.Dir == Dir;
+            Plugin.Instance.Host.SaveFolders.Active
+                && Plugin.Instance.Host.SaveFolders.Dir == Dir;
 
         internal sealed class Station
         {

@@ -82,7 +82,7 @@ namespace DarkwoodMP.Combat
             }
             else
             {
-                if (Threat.Debug)
+                if (Plugin.Instance.Host.Threats.Debug)
                 {
                     n = CountCharacters(pos, CueRules.ScareRadius);
                 }
@@ -90,7 +90,7 @@ namespace DarkwoodMP.Combat
                 Character.scareInArea(pos, CueRules.ScareRadius);
             }
 
-            if (Threat.Debug)
+            if (Plugin.Instance.Host.Threats.Debug)
             {
                 string text = "aims";
                 if (reaction == CueReaction.Dodge)
@@ -117,7 +117,9 @@ namespace DarkwoodMP.Combat
         public static bool Reacts(Character c)
         {
             return CueRules.Reacts(
-                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(c));
+                NetEnemies.ClientMode,
+                Coop.Current != null
+                    && Coop.Current.Enemies.Frozen.Contains(c));
         }
 
         private static CueFacts FactsOf(

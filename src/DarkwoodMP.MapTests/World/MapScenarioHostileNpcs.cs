@@ -122,7 +122,7 @@ namespace DarkwoodMP.World
 
             bool hostile = Combat.HostileNpcs.TurnedHostile(c);
             bool byHost = Combat.NetEnemies.Eligible(c);
-            bool frozen = Combat.NetEnemies.Frozen.Contains(c);
+            bool frozen = Coop.Current.Enemies.Frozen.Contains(c);
             SaveableObject saveable = c.GetComponent<SaveableObject>();
             int id = 0;
             if (saveable != null)
@@ -188,7 +188,7 @@ namespace DarkwoodMP.World
 
             r.Info = Props(c);
             if (Combat.NetEnemies.Eligible(c)
-                || Combat.NetEnemies.Frozen.Contains(c))
+                || Coop.Current.Enemies.Frozen.Contains(c))
             {
                 r.Fail($"it isn't ours and friendly: {r.Info}");
             }
@@ -227,7 +227,12 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.6f);
             }
 
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             float until = Time.realtimeSinceStartup + 5f;
             while (Time.realtimeSinceStartup < until
                 && !(c != null && ne != null && ne.NetIdOf(c, out _)
@@ -279,8 +284,8 @@ namespace DarkwoodMP.World
                     proxy = c.target.GetComponent<Combat.NetPlayerProxy>();
                 }
 
-                bool tracked = Combat.NetEnemies.Instance != null
-                    && Combat.NetEnemies.Instance.IdOf(c, out _);
+                bool tracked = Coop.Current != null
+                    && Coop.Current.Enemies.IdOf(c, out _);
                 if (!tracked)
                 {
                     ok = false;
@@ -314,8 +319,8 @@ namespace DarkwoodMP.World
             string sent = MapScenarioIssues.LogLines().LastOrDefault(
                 l => l.Contains($"[npc] {c.name} sent after ")
                     || l.Contains($"[npc] {c.name} turned hostile"));
-            bool tracked2 = Combat.NetEnemies.Instance != null
-                && Combat.NetEnemies.Instance.IdOf(c, out _);
+            bool tracked2 = Coop.Current != null
+                && Coop.Current.Enemies.IdOf(c, out _);
             if (!ok && wantClient && tracked2 && sent != null
                 && !sent.Contains("the host's player"))
             {
@@ -412,7 +417,12 @@ namespace DarkwoodMP.World
 
             yield return Walk(c.transform.position, 300f);
             AsPlayer(() => c.attackPlayer());
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             float until = Time.realtimeSinceStartup + 5f;
             while (Time.realtimeSinceStartup < until
                 && !(c != null && ne != null && ne.NetIdOf(c, out _)))

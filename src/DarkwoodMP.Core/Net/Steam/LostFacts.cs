@@ -7,7 +7,7 @@ namespace DarkwoodMP.Net.Steam
         /// We're in a Steam lobby (Lobby.InLobby).
         public bool InLobby { get; init; }
 
-        /// A Session exists (Session.Instance isn't null).
+        /// A Session exists (ModHost.Session isn't null).
         public bool HasSession { get; init; }
 
         /// We host the lobby (Lobby.IsHost).

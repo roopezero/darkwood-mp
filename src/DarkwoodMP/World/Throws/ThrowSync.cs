@@ -483,9 +483,9 @@ namespace DarkwoodMP.World
                 return null;
             }
 
-            if (flame.effect != null)
+            if (flame.effect != null && Coop.Current != null)
             {
-                NetEnemies.HitEffects =
+                Coop.Current.Enemies.HitEffects =
                     new List<InvItemEffect> { flame.effect };
             }
 
@@ -532,7 +532,7 @@ namespace DarkwoodMP.World
             }
 
             ThrownHits.CurrentFlame = null;
-            NetEnemies.HitEffects = null;
+            Coop.Current.Enemies.HitEffects = null;
         }
 
 

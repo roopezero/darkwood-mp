@@ -87,7 +87,7 @@ namespace DarkwoodMP.Combat
             proxy = null;
             var chase = new ChaseFacts
             {
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
             };
 
             if (!chase.On)

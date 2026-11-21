@@ -56,9 +56,9 @@ namespace DarkwoodMP.Combat
             by = 0;
             var s = S;
             bool tracked = false;
-            if (thrower != null && NetEnemies.Instance != null)
+            if (thrower != null)
             {
-                tracked = NetEnemies.Instance.NetIdOf(thrower, out by);
+                tracked = _coop.Enemies.NetIdOf(thrower, out by);
             }
 
             return new ThrowWatchFacts

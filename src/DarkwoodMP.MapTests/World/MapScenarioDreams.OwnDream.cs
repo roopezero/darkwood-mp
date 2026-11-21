@@ -21,9 +21,10 @@ namespace DarkwoodMP.World
                 name = a[0];
             }
 
-            if (DreamSync.SharedNow != null)
+            if (Coop.Current.Dreaming.Shared != null)
             {
-                r.Fail($"already in the shared dream {DreamSync.SharedNow}");
+                r.Fail("already in the shared dream "
+                    + Coop.Current.Dreaming.Shared);
                 yield break;
             }
 
@@ -43,7 +44,7 @@ namespace DarkwoodMP.World
                 presetName = preset.name;
             }
 
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -53,7 +54,7 @@ namespace DarkwoodMP.World
                 $"dreaming {presetName} (shared {shared}) at "
                     + $"{Whereabouts.Current()}; host runs here "
                     + $"{Whereabouts.HostRunsHere()}";
-            if (!D.dreaming || DreamSync.SharedNow != null
+            if (!D.dreaming || Coop.Current.Dreaming.Shared != null
                 || Whereabouts.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");
@@ -130,7 +131,12 @@ namespace DarkwoodMP.World
                 () => et.fireEventTrigger(
                     global::EventTrigger.Type.onCloseContainer));
 
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             float until = Time.realtimeSinceStartup + 15f;
             Character ours = null;
             while (ours == null && Time.realtimeSinceStartup < until)
@@ -170,7 +176,8 @@ namespace DarkwoodMP.World
             string why = null;
             if (item != null)
             {
-                var w = Net.Session.Instance.Begin(Net.MsgType.WorldAction);
+                var w = Plugin.Instance.Host.Session.Begin(
+                    Net.MsgType.WorldAction);
                 WorldActions.WriteAction(
                     w, WorldActions.Action.ItemSearched,
                     ObjRef.Of(item.gameObject), 0f, 0f, false, false, "");
@@ -210,7 +217,7 @@ namespace DarkwoodMP.World
             {
                 string place = Fmt(ours.transform.position);
                 string state = " running";
-                if (Combat.NetEnemies.Frozen.Contains(ours))
+                if (Coop.Current.Enemies.Frozen.Contains(ours))
                 {
                     state = " (frozen)";
                 }
@@ -245,7 +252,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"our wardrobe was destroyed: {r.Info}");
             }
-            else if (ours == null || Combat.NetEnemies.Frozen.Contains(ours))
+            else if (ours == null || Coop.Current.Enemies.Frozen.Contains(ours))
             {
                 r.Fail($"the wardrobe's event didn't run here: {r.Info}");
             }

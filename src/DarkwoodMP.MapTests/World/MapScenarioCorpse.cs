@@ -77,7 +77,12 @@ namespace DarkwoodMP.World
         {
             var sv = c.GetComponent<SaveableObject>();
             var loc = c.transform.GetLocation();
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             uint id = 0;
             bool net = ne != null && ne.NetIdOf(c, out id);
             string text = "-";
@@ -128,8 +133,8 @@ namespace DarkwoodMP.World
                    $"on {on}, alive {alive}, save id {saveId}, in {place}, " +
                    $"searchable {searchable}, inventory {carried}, " +
                    $"host enemy {enemy}, frozen "
-                + $"{Combat.NetEnemies.Frozen.Contains(c)}, hidden "
-                + $"{Combat.NetEnemies.Hidden.Contains(c)}";
+                + $"{Coop.Current.Enemies.Frozen.Contains(c)}, hidden "
+                + $"{Coop.Current.Enemies.Hidden.Contains(c)}";
         }
 
         private static Character Nearest(string name) =>
@@ -288,7 +293,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"not searchable: {r.Info}");
             }
-            else if (Combat.NetEnemies.Hidden.Contains(c))
+            else if (Coop.Current.Enemies.Hidden.Contains(c))
             {
                 r.Fail(
                     "hidden (a frozen copy of ours, not shown as the host's): "
@@ -296,7 +301,12 @@ namespace DarkwoodMP.World
             }
             else if (Combat.NetEnemies.ClientMode)
             {
-                Combat.NetEnemies enemies = Combat.NetEnemies.Instance;
+                Combat.NetEnemies enemies = null;
+                if (Coop.Current != null)
+                {
+                    enemies = Coop.Current.Enemies;
+                }
+
                 if (enemies == null || !enemies.NetIdOf(c, out _))
                 {
                     r.Fail(
@@ -338,7 +348,7 @@ namespace DarkwoodMP.World
         private static IEnumerator SnSpawnOwn(string[] a, Result r)
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost
+            if (!Plugin.Instance.Host.Session.IsHost
                 && sm != null)
             {
                 sm.currentUniqueID += 5000;

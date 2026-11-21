@@ -4,7 +4,7 @@ namespace DarkwoodMP.Combat.Joiners
     /// (ViewRects.Update).
     public readonly struct RectSendFacts
     {
-        /// Session.Instance isn't null and is a client.
+        /// ModHost.Session isn't null and is a client.
         public bool Client { get; init; }
 
         /// The client plays the host's world (WorldShare.InWorld).

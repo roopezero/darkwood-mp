@@ -77,7 +77,8 @@ namespace DarkwoodMP.World
 
             float until = Time.realtimeSinceStartup + 90f;
             while (!(Prologue.InStage && Prologue.Stage == stage
-                    && DreamSync.SharedNow == stage && WorldShare.WorldReady
+                    && Coop.Current.Dreaming.Shared == stage
+                    && WorldShare.WorldReady
                     && FriendSeen())
                 && Time.realtimeSinceStartup < until)
             {
@@ -91,7 +92,7 @@ namespace DarkwoodMP.World
                 stageName = "none";
             }
 
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -105,7 +106,8 @@ namespace DarkwoodMP.World
                     + $"carrying {Items()}, the other player seen "
                     + $"{FriendSeen()}, time "
                     + $"{Singleton<Controller>.Instance.CurrentTime}";
-            if (Prologue.Stage != stage || DreamSync.SharedNow != stage)
+            if (Prologue.Stage != stage
+                || Coop.Current.Dreaming.Shared != stage)
             {
                 r.Fail($"not in the shared {stage}: {r.Info}");
             }
@@ -223,7 +225,7 @@ namespace DarkwoodMP.World
             bool active = Prologue.Active;
             bool dreaming = d.dreaming;
             bool first = P.firstPlay;
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -282,7 +284,7 @@ namespace DarkwoodMP.World
                 "[map] traders after the prologue: "
                     + $"{string.Join("; ", wolves)}");
             if (Prologue.Active || d.dreaming || P.firstPlay
-                || DreamSync.SharedNow != null)
+                || Coop.Current.Dreaming.Shared != null)
             {
                 r.Fail($"the prologue isn't over: {r.Info}");
             }

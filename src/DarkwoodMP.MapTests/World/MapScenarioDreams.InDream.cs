@@ -31,7 +31,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var sb = new System.Text.StringBuilder();
             sb.Append(
                 $"dream {loc.name} at {Fmt(loc.transform.position)}, us at "
@@ -173,7 +178,12 @@ namespace DarkwoodMP.World
             AsPlayer(
                 () => et.fireEventTrigger(
                     global::EventTrigger.Type.onCloseContainer));
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             float until = Time.realtimeSinceStartup + 15f;
             Character shown = null;
             while (shown == null && Time.realtimeSinceStartup < until)
@@ -210,7 +220,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator DreamMobHost(string[] a, Result r)
         {
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             Character c = null;
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until)
@@ -267,7 +282,8 @@ namespace DarkwoodMP.World
             string threat = "";
             if (proxy != null)
             {
-                threat = $", threat {Combat.Threat.Of(c).Get(proxy):0.#}";
+                float value = Plugin.Instance.Host.Threats.Of(c).Get(proxy);
+                threat = $", threat {value:0.#}";
             }
 
             r.Info = $"{chomper} #{id} at {spot}, target {target}; " +
@@ -291,13 +307,18 @@ namespace DarkwoodMP.World
         private static IEnumerator DreamMobCopies(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.5f);
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var all = DreamCharacters().ToList();
             int puppets = all.Count(
                 c => ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy);
             var running = all.Where(
                 c => !ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy
-                    && !Combat.NetEnemies.Frozen.Contains(c)).ToList();
+                    && !Coop.Current.Enemies.Frozen.Contains(c)).ToList();
             string line =
                 $"host runs it here {Whereabouts.HostRunsHere()}; the host's "
                     + $"shown {puppets}; ours running {running.Count}";

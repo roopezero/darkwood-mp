@@ -7,7 +7,7 @@ namespace DarkwoodMP.Combat.Damage
         /// EnemyAreaHits.ByEnemy(the explosion, objectThatSpawnedMe).
         public bool ByEnemy { get; init; }
 
-        /// Session.Instance is set and IsHost.
+        /// ModHost.Session is set and IsHost.
         public bool Host { get; init; }
 
         /// Session.Peers.Count.

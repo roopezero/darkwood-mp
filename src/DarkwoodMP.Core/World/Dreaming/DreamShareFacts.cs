@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Dreaming
     /// The session's side of a shared dream (DreamSync).
     public readonly struct DreamShareFacts
     {
-        /// Session.Instance is there.
+        /// ModHost.Session is there.
         public bool HasSession { get; init; }
 
         /// We host the session.

@@ -117,29 +117,18 @@ namespace DarkwoodMP.Combat
 
         /// <summary>
         /// Client: the effects of the weapon hitting right now (set around a
-        /// player's MeleeSensor hit), the session's: with no session it reads
-        /// null and keeps nothing.
+        /// player's MeleeSensor hit).
         /// </summary>
-        public static List<InvItemEffect> HitEffects
+        public List<InvItemEffect> HitEffects
         {
             get
             {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return null;
-                }
-
-                return enemies._hitEffects;
+                return _hitEffects;
             }
 
             set
             {
-                NetEnemies enemies = Instance;
-                if (enemies != null)
-                {
-                    enemies._hitEffects = value;
-                }
+                _hitEffects = value;
             }
         }
 
@@ -162,9 +151,17 @@ namespace DarkwoodMP.Combat
                 case HitWay.AskNpcs:
                     // A friendly NPC our player hits: the host's copy takes
                     // it, and turns on us there.
-                    return !HostileNpcs.ClientHit(
-                        c, hit.Damage, hit.Attacker, hit.CanCutInHalf,
-                        hit.ByPlayer, hit.CanInterrupt, hit.NormalHit);
+                    return !_coop.Hostiles.ClientHit(new HostileNpcs.Hit
+                    {
+                        Npc = c,
+                        Damage = hit.Damage,
+                        Attacker = hit.Attacker,
+                        Cut = hit.CanCutInHalf,
+                        ByPlayer = hit.ByPlayer,
+                        Interrupt = hit.CanInterrupt,
+                        Normal = hit.NormalHit,
+                    });
+
                 case HitWay.ToHost:
                     // Only what our own player does to it is ours to send.
                     ClientHit(
@@ -242,7 +239,7 @@ namespace DarkwoodMP.Combat
         public void MeleeTouched()
         {
             _hitEffects = null;
-            HostileNpcs.EndHit();
+            _coop.Hostiles.EndHit();
         }
 
         /// <summary>
@@ -273,7 +270,7 @@ namespace DarkwoodMP.Combat
                 Character = true,
                 Puppet = IsPuppet(c, out _),
                 Frozen = _frozen.Contains(c),
-                Forwarded = HostileNpcs.EffectsForwarded(c),
+                Forwarded = _coop.Hostiles.EffectsForwarded(c),
             };
         }
     }

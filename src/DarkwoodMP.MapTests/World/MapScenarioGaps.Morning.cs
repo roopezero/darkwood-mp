@@ -306,7 +306,7 @@ namespace DarkwoodMP.World
             var win = Singleton<UI>.Instance.dialogueWindow;
             AsPlayer(() => npc.talkTo());
             bool host =
-                Net.Session.Instance == null || Net.Session.Instance.IsHost;
+                Plugin.Instance.Host.Session.IsHost;
             if (expectRefused)
             {
                 float until = Time.realtimeSinceStartup + 12f;

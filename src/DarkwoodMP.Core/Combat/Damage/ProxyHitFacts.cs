@@ -14,7 +14,7 @@ namespace DarkwoodMP.Combat.Damage
         /// The stand-in's owner is PlayerSync.DummyId.
         public bool ToDummy { get; init; }
 
-        /// Session.Instance is set and IsHost.
+        /// ModHost.Session is set and IsHost.
         public bool Host { get; init; }
     }
 }

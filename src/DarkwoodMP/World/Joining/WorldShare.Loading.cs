@@ -129,14 +129,14 @@ namespace DarkwoodMP.World
         {
             if (saveDir != null)
             {
-                SaveRedirect.Begin(saveDir);
+                Plugin.Instance.Host.SaveFolders.Begin(saveDir);
             }
 
             Core.currentProfile = profile;
             if (saveDir != null && !RedirectWorks(saveDir))
             {
                 Core.currentProfile = null;
-                SaveRedirect.End();
+                Plugin.Instance.Host.SaveFolders.End();
                 return false;
             }
 
@@ -225,7 +225,7 @@ namespace DarkwoodMP.World
             // as 1_4Save), never your own.
             if (sandboxDir != null)
             {
-                SaveRedirect.Begin(sandboxDir);
+                Plugin.Instance.Host.SaveFolders.Begin(sandboxDir);
             }
 
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
@@ -245,7 +245,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogError($"--dwmp-continue: no saved profile {id}");
                 if (sandboxDir != null)
                 {
-                    SaveRedirect.End();
+                    Plugin.Instance.Host.SaveFolders.End();
                 }
 
                 yield break;
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
             if (sandboxDir != null && !RedirectWorks(sandboxDir))
             {
                 Core.currentProfile = null;
-                SaveRedirect.End();
+                Plugin.Instance.Host.SaveFolders.End();
                 yield break;
             }
 

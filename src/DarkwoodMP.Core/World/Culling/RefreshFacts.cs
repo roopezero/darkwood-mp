@@ -12,7 +12,7 @@ namespace DarkwoodMP.World.Culling
         /// The refresh's instant argument.
         public bool Instant { get; init; }
 
-        /// Session.Instance is set and Active.
+        /// ModHost.Session is set and Active.
         public bool Session { get; init; }
     }
 }

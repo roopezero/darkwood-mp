@@ -152,7 +152,8 @@ namespace DarkwoodMP.World.Hideout
             Location src = null;
             if (proxy != null)
             {
-                dest = NightSpawns.BigLocationAt(proxy.transform.position);
+                dest = Plugin.Instance.Host.Nights.BigLocationAt(
+                    proxy.transform.position);
                 src = Hideouts.HideoutById(hid);
             }
 
@@ -462,8 +463,8 @@ namespace DarkwoodMP.World.Hideout
 
             return facts with
             {
-                AtPlace =
-                    NightSpawns.BigLocationAt(p.transform.position) == loc,
+                AtPlace = Plugin.Instance.Host.Nights.BigLocationAt(
+                    p.transform.position) == loc,
                 IsDay = Core.isDay(),
                 InTransit = flags.isFlagTrue(PorterRules.InTransit),
                 Killed = flags.isFlagTrue(PorterRules.Killed),

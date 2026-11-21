@@ -157,7 +157,7 @@ namespace DarkwoodMP.Combat
             }
 
             spawner.nocturnalCharacters.Add(c.gameObject);
-            if (proxy != null && Threat.Debug)
+            if (proxy != null && Plugin.Instance.Host.Threats.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[night] night worm sent at {proxy.OwnerName}, "

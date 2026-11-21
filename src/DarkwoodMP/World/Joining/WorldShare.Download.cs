@@ -506,7 +506,8 @@ namespace DarkwoodMP.World
                 .OrderByDescending(x => x.LastWriteTimeUtc).Skip(KeepWorlds))
             {
                 if (WorldFiles.SamePath(old.FullName, keep)
-                    || WorldFiles.SamePath(old.FullName, SaveRedirect.Dir))
+                    || WorldFiles.SamePath(
+                        old.FullName, Plugin.Instance.Host.SaveFolders.Dir))
                 {
                     continue; // never the world being played
                 }
@@ -586,8 +587,9 @@ namespace DarkwoodMP.World
         /// after leaving their game. Hosting it would hand joiners that stale
         /// copy as if it were a world of its own, so the panel won't host it.
         /// </summary>
-        public bool PlayingHostCopy => SaveRedirect.Active
-            && WorldFiles.IsUnder(SaveRedirect.Dir, _cacheDir);
+        public bool PlayingHostCopy => Plugin.Instance.Host.SaveFolders.Active
+            && WorldFiles.IsUnder(
+                Plugin.Instance.Host.SaveFolders.Dir, _cacheDir);
 
         private void Fail(string why)
         {

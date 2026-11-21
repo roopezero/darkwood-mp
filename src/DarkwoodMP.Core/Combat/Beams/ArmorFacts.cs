@@ -13,7 +13,7 @@ namespace DarkwoodMP.Combat.Beams
         /// How many stand-ins the host has (NetPlayerProxy.All.Count).
         public int StandIns { get; init; }
 
-        /// Session.Instance isn't null and is the host.
+        /// ModHost.Session isn't null and is the host.
         public bool Hosting { get; init; }
     }
 }

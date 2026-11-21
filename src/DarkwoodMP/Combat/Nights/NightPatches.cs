@@ -15,7 +15,7 @@ namespace DarkwoodMP.Combat
     static class CharacterSpawnerSpawnNightChar
     {
         static bool Prefix(CharacterSpawner __instance) =>
-            NightSpawns.Nights.NightCharDue(__instance);
+            Plugin.Instance.Host.Nights.NightCharDue(__instance);
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ namespace DarkwoodMP.Combat
     static class CharacterSpawnerRemoveFromNightChars
     {
         static void Prefix(Character _character) =>
-            NightSpawns.Nights.Removed(_character);
+            Plugin.Instance.Host.Nights.Removed(_character);
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ namespace DarkwoodMP.Combat
         typeof(NightScenarios), nameof(NightScenarios.resetScenarios))]
     static class NightScenariosResetScenarios
     {
-        static void Postfix() => NightSpawns.Nights.NewDay();
+        static void Postfix() => Plugin.Instance.Host.Nights.NewDay();
     }
 
     /// <summary>
@@ -52,7 +52,7 @@ namespace DarkwoodMP.Combat
         static bool Prefix(
             CharacterSpawner __instance, ref IEnumerator __result)
         {
-            __result = NightSpawns.Nights.WormLoop(__instance);
+            __result = Plugin.Instance.Host.Nights.WormLoop(__instance);
             return false;
         }
     }

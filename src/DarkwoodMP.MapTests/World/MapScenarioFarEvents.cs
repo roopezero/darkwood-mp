@@ -83,7 +83,7 @@ namespace DarkwoodMP.World
             PlayerStepsRun.Clear();
             Dialogues = 0;
             WatchSteps = Plugin.Instance.Host.Players != null
-                && Net.Session.Instance != null && Net.Session.Instance.IsHost;
+                && Plugin.Instance.Host.Session.IsHost;
             _refreshesAtReset = Plugin.Instance.Host.Culling.LoadingRefreshes;
             var locs = WorldLocations()
                 .OrderBy(l => StateDump.Flat(l.transform.position - Centre))

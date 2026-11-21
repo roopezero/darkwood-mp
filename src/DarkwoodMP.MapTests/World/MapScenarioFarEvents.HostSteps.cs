@@ -39,7 +39,7 @@ namespace DarkwoodMP.World
             // The host watches round the client's stand-in; the client round
             // its own player.
             Component j;
-            if (Net.Session.Instance != null && Net.Session.Instance.IsHost)
+            if (Plugin.Instance.Host.Session.IsHost)
             {
                 j = (Component)Joiner();
             }

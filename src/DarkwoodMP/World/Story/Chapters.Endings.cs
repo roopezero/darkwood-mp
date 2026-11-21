@@ -37,7 +37,7 @@ namespace DarkwoodMP.World.Story
             }
 
             if (!EndingRules.ShowsEnding(
-                WorldShare.InWorld, SaveRedirect.Active))
+                WorldShare.InWorld, Plugin.Instance.Host.SaveFolders.Active))
             {
                 return;
             }

@@ -341,7 +341,7 @@ namespace DarkwoodMP.Combat
             // An NPC the host calmed down (or one out of our range): our copy
             // of it is ours to run again.
             if (p.C.npc != null
-                && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours))
+                && _coop.Hostiles.ClientStopped(p.C, id, ours: p.Ours))
             {
                 Recull(p);
                 return;

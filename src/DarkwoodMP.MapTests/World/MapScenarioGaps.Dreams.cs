@@ -28,7 +28,7 @@ namespace DarkwoodMP.World
             var d = Singleton<Dreams>.Instance;
             var c = Singleton<Controller>.Instance;
             bool client =
-                Net.Session.Instance != null && Net.Session.Instance.IsClient;
+                Plugin.Instance.Host.Session.IsClient;
             if (d == null || c == null)
             {
                 r.Fail("no Dreams or Controller");

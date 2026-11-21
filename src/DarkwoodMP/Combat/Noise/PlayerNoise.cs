@@ -27,12 +27,13 @@ namespace DarkwoodMP.Combat
         [MethodImpl(MethodImplOptions.NoInlining)]
         public CharBase Raised(in SentNoise noise)
         {
-            CharBase before = Threat.NoiseSource;
+            CharBase before = Plugin.Instance.Host.Threats.NoiseSource;
             // The stack is walked here, called from the patch's Prefix:
             // CalledFromPlayer skips its own frame, this one and the
             // Prefix's.
             bool fromPlayer = false;
-            if (Threat.NoiseSource == null && OwnNoise <= 0)
+            if (Plugin.Instance.Host.Threats.NoiseSource == null
+                && OwnNoise <= 0)
             {
                 fromPlayer = CalledFromPlayer();
             }
@@ -40,14 +41,14 @@ namespace DarkwoodMP.Combat
             switch (NoiseRules.Owner(FactsOf(fromPlayer)))
             {
                 case NoiseOwner.OursToHost:
-                    var s = Net.Session.Instance;
+                    var s = Plugin.Instance.Host.Session;
                     var w = s.Begin(Net.MsgType.PlayerNoise);
                     PlayerNoiseMessage.Write(w, noise);
                     s.SendToHost(w, Net.Channel.Control, reliable: true);
-                    Threat.NoiseSource = Player.Instance;
+                    Plugin.Instance.Host.Threats.NoiseSource = Player.Instance;
                     return before;
                 case NoiseOwner.Ours:
-                    Threat.NoiseSource = Player.Instance;
+                    Plugin.Instance.Host.Threats.NoiseSource = Player.Instance;
                     return before;
                 default:
                     // Set by whoever raised it (a remote player's noise), or
@@ -62,7 +63,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public void Done(CharBase before)
         {
-            Threat.NoiseSource = before;
+            Plugin.Instance.Host.Threats.NoiseSource = before;
         }
 
         /// <summary>
@@ -71,8 +72,8 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private NoiseFacts FactsOf(bool fromPlayer)
         {
-            bool set = Threat.NoiseSource != null;
-            var s = Net.Session.Instance;
+            bool set = Plugin.Instance.Host.Threats.NoiseSource != null;
+            var s = Plugin.Instance.Host.Session;
             return new NoiseFacts
             {
                 Set = set,

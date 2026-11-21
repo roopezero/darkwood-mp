@@ -133,9 +133,10 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.SharedNow}) at "
+                $"dreaming {presetName} (shared "
+                    + $"{Coop.Current.Dreaming.Shared}) at "
                     + $"{Whereabouts.Current()}";
-            if (DreamSync.SharedNow != name)
+            if (Coop.Current.Dreaming.Shared != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
             }
@@ -180,11 +181,12 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.SharedNow}) at "
+                $"dreaming {presetName} (shared "
+                    + $"{Coop.Current.Dreaming.Shared}) at "
                     + $"{Whereabouts.Current()}; a friend's puppet shown "
                     + $"{seen}";
             if (D.preset == null || D.preset.name != name
-                || DreamSync.SharedNow != name)
+                || Coop.Current.Dreaming.Shared != name)
             {
                 r.Fail($"not in the host's dream {name}: {r.Info}");
             }
@@ -211,7 +213,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -232,14 +234,14 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
 
             r.Info = $"back at {spot}; shared dream {shared}";
-            if (DreamSync.SharedNow != null)
+            if (Coop.Current.Dreaming.Shared != null)
             {
                 r.Fail($"still in a shared dream: {r.Info}");
             }

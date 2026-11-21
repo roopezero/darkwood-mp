@@ -48,7 +48,7 @@ namespace DarkwoodMP.World
             double at = double.Parse(a[0], CultureInfo.InvariantCulture);
             float secs = F(a[1]);
             string tag = a[2];
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             bool host = s != null && s.IsHost;
             while (Now < at)
             {
@@ -74,7 +74,12 @@ namespace DarkwoodMP.World
             }
 
             double end = at + secs;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             NetPlayerProxy proxy = null;
             if (host)
             {

@@ -14,7 +14,7 @@ namespace DarkwoodMP.World.Hideout
     /// </summary>
     public static class Hideouts
     {
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
         private static bool Debug => WorldActions.Debug;
 
         /// <summary>

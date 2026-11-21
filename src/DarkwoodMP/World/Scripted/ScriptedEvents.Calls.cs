@@ -49,7 +49,7 @@ namespace DarkwoodMP.World.Scripted
             }
 
             saved.Set = true;
-            if (Session.Instance.IsClient)
+            if (Plugin.Instance.Host.Session.IsClient)
             {
                 Parts.Current = EventPart.PlayerAndShared;
             }
@@ -148,7 +148,7 @@ namespace DarkwoodMP.World.Scripted
         {
             var t = f.Trigger;
             var et = f.Triggers;
-            var s = Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             bool hostWithPeers = s != null && s.IsHost && s.Peers.Count > 0;
             Remembered remembered = WorldTriggerRules.Remember(new RememberFacts
             {
@@ -235,7 +235,7 @@ namespace DarkwoodMP.World.Scripted
                 return false;
             }
 
-            bool client = Session.Instance.IsClient;
+            bool client = Plugin.Instance.Host.Session.IsClient;
             bool sent = SendTrigger(f.Triggers, f.Index, f.World,
                 AfterYes(ge, et, f.Index, client));
             // A joiner runs its part once the host says yes (Send).

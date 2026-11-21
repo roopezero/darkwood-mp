@@ -7,7 +7,7 @@ namespace DarkwoodMP.World.Story
         /// There is a baseline (FlagsSync._baseline isn't null).
         public bool Known { get; init; }
 
-        /// There is a session and it is active (Session.Instance isn't null
+        /// There is a session and it is active (ModHost.Session isn't null
         /// and Session.Active).
         public bool Active { get; init; }
 

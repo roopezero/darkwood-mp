@@ -53,8 +53,8 @@ namespace DarkwoodMP.World
             Object.FindObjectsOfType<Character>()
                 .Where(
                     c => c != null && !c.alive && c.name.StartsWith("Dog")
-                        && Combat.NetEnemies.Instance != null
-                        && Combat.NetEnemies.Instance.KeptCorpse(c)
+                        && Coop.Current != null
+                        && Coop.Current.Enemies.KeptCorpse(c)
                         && c.GetComponent<Item>() != null
                         && c.GetComponentInChildren<Inventory>(true) != null)
                 .OrderByDescending(c => MapScenarioFixChecks.IdOf(c))

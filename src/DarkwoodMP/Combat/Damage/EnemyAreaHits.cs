@@ -45,7 +45,7 @@ namespace DarkwoodMP.Combat
         internal static AreaSpawns Spawns => Plugin.Instance.Host.Spawns;
 
         private static bool Hosting => AreaHitRules.Hosting(
-            Proxies.Any, Session.Instance != null && Session.Instance.IsClient);
+            Proxies.Any, Plugin.Instance.Host.Session.IsClient);
 
         /// <summary>
         /// After the game made an object: whether it goes in the sets of
@@ -207,7 +207,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static void SendExplosion(Explodes ex)
         {
-            var s = Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             string sound = ex.explodeSound;
             if (sound == null)
             {

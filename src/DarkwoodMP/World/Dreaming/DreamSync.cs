@@ -74,23 +74,6 @@ namespace DarkwoodMP.World.Dreaming
         /// </summary>
         public string Shared { get; private set; }
 
-        /// <summary>
-        /// The running session's shared dream (null: none, or no session).
-        /// </summary>
-        public static string SharedNow
-        {
-            get
-            {
-                CoopSession coop = Coop.Current;
-                if (coop == null)
-                {
-                    return null;
-                }
-
-                return coop.Dreaming.Shared;
-            }
-        }
-
         private static DreamFacts DreamOf(Dreams d)
         {
             if (d == null)

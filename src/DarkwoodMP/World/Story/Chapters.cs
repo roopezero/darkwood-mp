@@ -49,7 +49,7 @@ namespace DarkwoodMP.World.Story
     /// </summary>
     internal sealed partial class Chapters
     {
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
 
         private readonly CoopSession _coop;
 

@@ -35,40 +35,16 @@ namespace DarkwoodMP.Combat
     /// and a joiner's from their PlayerState (NetPlayerProxy.ShadowWard), as
     /// the game's own loop checks Player.Instance's.
     /// The decisions are the core's NightRules; the host's budgets and the
-    /// attackers it sent are ModHost.Nights (NightSpawner). These statics pass
-    /// on to it, so their callers didn't change.
+    /// attackers it sent are ModHost.Nights (NightSpawner), which callers use
+    /// directly.
     /// </summary>
     public static class NightSpawns
     {
-        internal static NightSpawner Nights => Plugin.Instance.Host.Nights;
-
-        /// <summary>
-        /// A night attacker the host sent at a joiner's hideout: that joiner
-        /// and the hideout (JoinerAi uses them for its activities).
-        /// </summary>
-        public static bool SentAt(
-            Character c, out NetPlayerProxy proxy, out Location loc) =>
-            Nights.SentAt(c, out proxy, out loc);
-
-        /// <summary>
-        /// The big location at a position, found the way WhereAmI.checkWhereAmI
-        /// finds the player's.
-        /// </summary>
-        public static Location BigLocationAt(Vector3 pos) =>
-            Nights.BigLocationAt(pos);
-
         public static bool AtHideout(Vector3 pos, out Location loc)
         {
-            loc = BigLocationAt(pos);
+            loc = Plugin.Instance.Host.Nights.BigLocationAt(pos);
             return loc != null && loc.playerBase;
         }
-
-        /// <summary>
-        /// Every attacker sent while playing together since the day began
-        /// (for the map test).
-        /// </summary>
-        public static List<(string Hideout, string At, Character C)> SentLog =>
-            Nights.SentLog;
 
         internal static IEnumerable<NetPlayerProxy> LivingProxies()
         {
@@ -106,7 +82,7 @@ namespace DarkwoodMP.Combat
 
             yield return new WaitForSeconds(2f);
             var spawner = Singleton<CharacterSpawner>.Instance;
-            var nights = Nights;
+            var nights = Plugin.Instance.Host.Nights;
             foreach (var proxy in LivingProxies())
             {
                 bool home = AtHideout(proxy.transform.position, out var loc);

@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Progress
     /// Solo, HostSide and ClientActive).
     public readonly struct SideFacts
     {
-        /// A session is there and active (Session.Instance.Active).
+        /// A session is there and active (ModHost.Session.Active).
         public bool SessionActive { get; init; }
 
         /// A session is there and we host it.

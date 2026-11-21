@@ -132,7 +132,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Debug;
 
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
 
         public static void Register(Session s)
         {
@@ -220,7 +220,13 @@ namespace DarkwoodMP.World
             }
 
             var d = Singleton<Dreams>.Instance;
-            if (d != null && DreamSync.SharedNow == null
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
+            if (d != null && shared == null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream))
             {
                 return true;
@@ -252,10 +258,16 @@ namespace DarkwoodMP.World
             }
 
             var d = Singleton<Dreams>.Instance;
-            if (DreamSync.SharedNow != null && d != null
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
+            if (shared != null && d != null
                 && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
-                && (d.preset == null || d.preset.name == DreamSync.SharedNow)
+                && (d.preset == null || d.preset.name == shared)
                 && go.transform.IsChildOf(d.dreamLocation.transform))
             {
                 return false;

@@ -133,7 +133,7 @@ namespace DarkwoodMP.World
         {
             // A forced save: only into a copy of the saves (the test world or
             // --dwmp-sandbox), never the player's own.
-            if (!SaveRedirect.Active)
+            if (!Plugin.Instance.Host.SaveFolders.Active)
             {
                 r.Fail(
                     "the saves aren't a test copy (--dwmp-sandbox or the test "
@@ -245,7 +245,12 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Approach(string[] a, Result r)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var p = Player.Instance;
             var c = Object.FindObjectsOfType<Character>()
                 .Where(
@@ -320,7 +325,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Noise(string[] a, Result r)
         {
             var at = Player.Instance.transform.position;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             // Until the host's nearest sleeper (its copy here says it's asleep,
             // from EnemyState) wakes, or 20 steps.
             var sleeper = Object.FindObjectsOfType<Character>()
@@ -368,7 +378,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var c = LocationCharacters(proxy.InLocation)
                 .Where(
                     x => x.alive && x.gameObject.activeInHierarchy
@@ -394,10 +409,11 @@ namespace DarkwoodMP.World
             ne.NetIdOf(c, out uint id);
             float away = StateDump.Flat(
                 c.transform.position - proxy.transform.position);
+            float threat = Plugin.Instance.Host.Threats.Of(c).Get(proxy);
             r.Info =
                 $"{c.name} #{id} asleep {c.sleeping}, {Behaviour(c)}, "
                     + $"{away:0} from {proxy.OwnerName}, " +
-                     $"threat {Threat.Of(c).Get(proxy):0.#}";
+                     $"threat {threat:0.#}";
             _woken = c;
             if (c.sleeping || c.target != proxy.transform)
             {

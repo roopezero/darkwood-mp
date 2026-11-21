@@ -44,10 +44,11 @@ namespace DarkwoodMP.Combat
                 return true;
             }
 
-            bool copy = NetEnemies.Instance != null
-                && NetEnemies.Instance.IsPuppet(c, out _);
+            bool copy = _coop.Enemies.IsPuppet(c, out _);
             return LandingRules.MayThrow(
-                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(c), copy);
+                NetEnemies.ClientMode,
+                _coop.Enemies.Frozen.Contains(c),
+                copy);
         }
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = _coop.Enemies;
             Character thrower = null;
             if (instance != null)
             {
@@ -183,7 +184,7 @@ namespace DarkwoodMP.Combat
             float yaw = thrown.Throw.Yaw;
             var vel = VectorOf(thrown.Throw.Velocity);
             var land = new Vector3(thrown.Land.X, 0f, thrown.Land.Z);
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = _coop.Enemies;
             Character thrower = null;
             if (instance != null)
             {

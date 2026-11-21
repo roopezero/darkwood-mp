@@ -117,9 +117,10 @@ namespace DarkwoodMP.World
                 return "-";
             }
 
+            var table = Plugin.Instance.Host.Threats.Of(c);
             return string.Join(
                 ", ",
-                Threat.Of(c).Values.Where(kv => kv.Key != null).Select(
+                table.Values.Where(kv => kv.Key != null).Select(
                     kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
         }
 
@@ -128,7 +129,7 @@ namespace DarkwoodMP.World
         /// recorded.</summary>
         private static IEnumerator SpawnEnemy(string[] a, Result r)
         {
-            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            if (Plugin.Instance.Host.Session.IsClient)
             {
                 r.Fail("enemies are the host's");
                 yield break;
@@ -152,7 +153,7 @@ namespace DarkwoodMP.World
             _targets.Clear();
             _nearerWhile.Clear();
             yield return new WaitForSeconds(1.5f);
-            NetEnemies.Instance.NetIdOf(c, out _enemyId);
+            Coop.Current.Enemies.NetIdOf(c, out _enemyId);
             Plugin.Instance.StartCoroutine(WatchEnemy(c));
             r.Info =
                 $"{c.name} #{_enemyId} at {Fmt(c.transform.position)}, health "
@@ -165,7 +166,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static Character HostEnemy(bool alive, float within = 4000f)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;
@@ -221,7 +227,7 @@ namespace DarkwoodMP.World
             uint id = 0;
             if (c != null)
             {
-                NetEnemies.Instance.NetIdOf(c, out id);
+                Coop.Current.Enemies.NetIdOf(c, out id);
             }
 
             string enemyName = "-";
@@ -378,7 +384,7 @@ namespace DarkwoodMP.World
             }
 
             var inv = c.GetComponentInChildren<Inventory>(true);
-            NetEnemies.Instance.NetIdOf(c, out uint id);
+            Coop.Current.Enemies.NetIdOf(c, out uint id);
             string name = c.name;
             string spot = Fmt(c.transform.position);
             bool searchable = c.GetComponent<Item>() != null;

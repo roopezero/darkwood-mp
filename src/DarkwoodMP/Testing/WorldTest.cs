@@ -139,7 +139,7 @@ namespace DarkwoodMP.World
 
             // The test kills an NPC, burns a door, flips story flags and more:
             // only ever on a copy of the saves.
-            if (!SaveRedirect.Active)
+            if (!Plugin.Instance.Host.SaveFolders.Active)
             {
                 Plugin.Log.LogError(
                     "[world test] FAIL: not in a sandbox or the test world "
@@ -147,8 +147,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            while (Net.Session.Instance == null
-                || Net.Session.Instance.Peers.Count == 0)
+            while (Plugin.Instance.Host.Session.Peers.Count == 0)
             {
                 yield return null;
             }

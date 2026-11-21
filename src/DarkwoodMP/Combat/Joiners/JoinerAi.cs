@@ -143,7 +143,7 @@ namespace DarkwoodMP.Combat
 
         public static NetPlayerProxy ProxyOf(Transform t)
         {
-            if (t != null && Threat.Enabled)
+            if (t != null && Plugin.Instance.Host.Threats.Enabled)
             {
                 return t.GetComponent<NetPlayerProxy>();
             }
@@ -234,7 +234,7 @@ namespace DarkwoodMP.Combat
             // An NPC turns on the joiner here, and the host runs it as an enemy
             // from then on (Combat.HostileNpcs).
             GoFor(c, proxy.transform);
-            if (Threat.Debug)
+            if (Plugin.Instance.Host.Threats.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[threat] {c.name} reacts to {proxy.OwnerName}: goes for "
@@ -275,7 +275,7 @@ namespace DarkwoodMP.Combat
         public static Location HatchLocation(Character c)
         {
             var hostLoc = HostLocation();
-            bool on = Threat.Enabled;
+            bool on = Plugin.Instance.Host.Threats.Enabled;
             bool atHost = false;
             if (on && c != null)
             {
@@ -313,7 +313,8 @@ namespace DarkwoodMP.Combat
             Location at = null;
             if (asks && proxy != null)
             {
-                at = NightSpawns.BigLocationAt(proxy.transform.position);
+                at = Plugin.Instance.Host.Nights.BigLocationAt(
+                    proxy.transform.position);
                 activity = activity with { StandInLocation = at != null };
             }
 
@@ -343,7 +344,8 @@ namespace DarkwoodMP.Combat
                 && !(activity.Sent && activity.SentStandIn
                     && activity.SentAlive))
             {
-                best = Threat.BestPlayerFor(a.thisCharacter);
+                best = Plugin.Instance.Host.Threats.BestPlayerFor(
+                    a.thisCharacter);
                 activity = activity with { BestPlayer = best != null };
             }
 
@@ -379,7 +381,7 @@ namespace DarkwoodMP.Combat
 
             var activity = new ActivityFacts
             {
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
                 Exists = c != null,
             };
 
@@ -388,7 +390,8 @@ namespace DarkwoodMP.Combat
                 return activity;
             }
 
-            bool sent = NightSpawns.SentAt(c, out proxy, out loc);
+            bool sent = Plugin.Instance.Host.Nights.SentAt(
+                c, out proxy, out loc);
             return activity with
             {
                 Sent = sent,
@@ -402,7 +405,8 @@ namespace DarkwoodMP.Combat
         private static bool BestStandIn(
             Character.Activity a, out NetPlayerProxy proxy)
         {
-            proxy = Threat.BestPlayerFor(a.thisCharacter) as NetPlayerProxy;
+            proxy = Plugin.Instance.Host.Threats.BestPlayerFor(a.thisCharacter)
+                as NetPlayerProxy;
             return proxy != null;
         }
     }

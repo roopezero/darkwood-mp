@@ -47,9 +47,9 @@ namespace DarkwoodMP.Combat
     public static class CharacterCanSeeEnemyThreat
     {
         private static void Prefix(Character __instance) =>
-            Threat.BeforeSightCheck(__instance);
+            Plugin.Instance.Host.Threats.BeforeSightCheck(__instance);
         private static void Postfix(Character __instance) =>
-            Threat.AfterSightCheck(__instance);
+            Plugin.Instance.Host.Threats.AfterSightCheck(__instance);
     }
 
     /// <summary>Noise is threat for the player who made it.</summary>

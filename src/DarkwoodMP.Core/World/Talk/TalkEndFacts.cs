@@ -9,7 +9,7 @@ namespace DarkwoodMP.World.Talk
         /// The ObjRef kept as ours is valid.
         public bool OursValid { get; init; }
 
-        /// Session.Instance exists.
+        /// ModHost.Session exists.
         public bool HasSession { get; init; }
 
         /// Session.IsHost.
