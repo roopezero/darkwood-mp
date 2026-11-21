@@ -2,7 +2,7 @@ namespace DarkwoodMP.World.Locks
 {
     /// What a game knows when one of its combination padlocks may have
     /// just opened: Padlock.unlock(manually) returned (the plugin's
-    /// PadlockUnlockPatch).
+    /// PadlockUnlock patch).
     public readonly struct PadlockSentFacts
     {
         /// This is the outermost of the patched calls

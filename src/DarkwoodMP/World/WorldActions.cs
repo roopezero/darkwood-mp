@@ -465,48 +465,14 @@ namespace DarkwoodMP.World
                 if (a == Action.TrapDisarm
                     && Crate(ObjRef.Resolve<Item>(obj)) is Item crate)
                 {
-                    // A locked crate: the host rolls the pick, as the game
-                    // would for its own player. If it worked the crate is
-                    // searched here and the others are told (ItemSearched); a
-                    // failed pick changes nothing.
-                    bool was = crate.searched;
-                    bool worked = was
-                        || crate.disarmChance > UnityEngine.Random.Range(
-                            0f, 1f);
-                    string result = "0";
-                    if (worked)
-                    {
-                        result = "1";
-                    }
-
-                    Coop.Current.Authority.Result(result);
-                    if (Debug)
-                    {
-                        string pick;
-                        if (was)
-                        {
-                            pick = "already open";
-                        }
-                        else if (worked)
-                        {
-                            pick = "worked";
-                        }
-                        else
-                        {
-                            pick = "failed";
-                        }
-
-                        Plugin.Log.LogInfo(
-                            $"[world] {s.NameOf(from)} picks the lock of "
-                                + $"{obj} ({crate.name}): {pick}");
-                    }
-
-                    if (!worked || was)
+                    // A locked crate: the host rolls the pick
+                    // (LockShare.Pick), passed on as ItemSearched if it
+                    // worked.
+                    if (!Coop.Current.Locks.Pick(from, obj, crate))
                     {
                         return;
                     }
 
-                    crate.searched = true;
                     a = Action.ItemSearched;
                 }
                 else if (a == Action.TrapDisarm)
@@ -596,40 +562,13 @@ namespace DarkwoodMP.World
                         npc.die();
                     }
                 }
-                else if (a == Action.ItemUnlock)
+                else if (a == Action.ItemUnlock || a == Action.ItemSearched
+                    || a == Action.PadlockUnlock)
                 {
-                    var l = Got<Locked>(a, obj);
-                    if (l != null)
-                    {
-                        l.unlock();
-                    }
-                }
-                else if (a == Action.ItemSearched)
-                {
-                    var item = Got<Item>(a, obj);
-                    if (item == null)
+                    if (!Coop.Current.Locks.Apply(a, obj))
                     {
                         return;
                     }
-
-                    item.searched = true;
-                    var corpse = item.GetComponent<Character>();
-                    if (corpse != null)
-                    {
-                        corpse.searched = true;
-                    }
-                }
-                else if (a == Action.PadlockUnlock)
-                {
-                    var padlock = Got<Padlock>(a, obj);
-                    if (padlock == null)
-                    {
-                        return;
-                    }
-
-                    // without its window, message and events: those are the
-                    // opener's
-                    padlock.unlock(false);
                 }
                 else if (a >= Action.ItemOn)
                 {
@@ -956,114 +895,24 @@ namespace DarkwoodMP.World
 
             if (a == Action.ItemUnlock)
             {
-                var l = ObjRef.Resolve<Locked>(obj);
-                if (l == null)
-                {
-                    Coop.Current.Authority.Refuse("there's no lock on it here");
-                    return false;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    l.transform.position, Reach, l.name))
-                {
-                    return false;
-                }
-
-                if (!l.locked)
-                {
-                    Coop.Current.Authority.Refuse("it isn't locked");
-                    return false;
-                }
-
-                if (x == 0f)
-                {
-                    Coop.Current.Authority.Refuse(StoryOnly);
-                    return false;
-                }
-
-                if (x == 1f && !HasKey(l))
-                {
-                    Coop.Current.Authority.Refuse(
-                        $"nobody has the key ({l.keyType})");
-                    return false;
-                }
-
-                return true;
+                return Coop.Current.Locks.MayUnlock(obj, x);
             }
 
             if (a == Action.ItemSearched)
             {
-                // A client's player opened a container. Only the host says a
-                // crate was picked open (its TrapDisarm roll).
-                var item = ObjRef.Resolve<Item>(obj);
-                if (item == null)
-                {
-                    Coop.Current.Authority.Refuse("no such thing here");
-                    return false;
-                }
-
-                if (Crate(item) != null && !item.searched)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "a crate is picked open by the host's roll");
-                    return false;
-                }
-
-                if (item.GetComponent<Inventory>() == null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "there's nothing to search in it");
-                    return false;
-                }
-
-                return Coop.Current.Authority.InReach(
-                    item.transform.position, Reach, item.name);
+                return Coop.Current.Locks.MaySearch(obj);
             }
 
             if (a == Action.PadlockUnlock)
             {
-                var p = ObjRef.Resolve<Padlock>(obj);
-                if (p == null)
-                {
-                    Coop.Current.Authority.Refuse("no such padlock here");
-                    return false;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    p.transform.position, Reach, p.name))
-                {
-                    return false;
-                }
-
-                if (!f1)
-                {
-                    Coop.Current.Authority.Refuse(StoryOnly);
-                    return false;
-                }
-
-                if (p.locked && str != p.combination)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "that isn't the padlock's code");
-                    return false;
-                }
-
-                return true;
+                return Coop.Current.Locks.MayUnlockPadlock(obj, f1, str);
             }
 
             if (a == Action.TrapDisarm
                 && ObjRef.Resolve<Item>(obj) is Item picked
                 && picked.GetComponent<Trigger>() == null)
             {
-                if (Crate(picked) == null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "there's no lock to pick on it");
-                    return false;
-                }
-
-                return Coop.Current.Authority.InReach(
-                    picked.transform.position, Reach, picked.name);
+                return Coop.Current.Locks.MayPick(picked);
             }
 
             if (a >= Action.ItemOn)
@@ -1254,9 +1103,9 @@ namespace DarkwoodMP.World
         /// </summary>
         public static Item Crate(Item item)
         {
-            if (item != null && item.disarmTime > 0f
-                && item.GetComponent<Inventory>() != null
-                && item.GetComponent<Trigger>() == null)
+            if (item != null && World.Locks.LockRules.IsCrate(
+                item.disarmTime, item.GetComponent<Inventory>() != null,
+                item.GetComponent<Trigger>() != null))
             {
                 return item;
             }
@@ -1343,13 +1192,7 @@ namespace DarkwoodMP.World
             if (pad != null)
             {
                 w.W.Write((byte)Kind.Padlock);
-                int lockedFlag = 0;
-                if (pad.locked)
-                {
-                    lockedFlag = 1;
-                }
-
-                w.W.Write((byte)lockedFlag);
+                Coop.Current.Locks.WriteState(w, pad);
             }
             else if (door != null)
             {
@@ -1715,25 +1558,8 @@ namespace DarkwoodMP.World
                         }
 
                     case Kind.Padlock:
-                        {
-                            bool locked = (r.R.ReadByte() & 1) != 0;
-                            Padlock pad = null;
-                            if (go != null)
-                            {
-                                pad = go.GetComponent<Padlock>();
-                            }
-
-                            if (pad != null && pad.locked != locked)
-                            {
-                                pad.locked = locked;
-                                if (locked)
-                                {
-                                    pad.currentCombination = "0000";
-                                }
-                            }
-
-                            break;
-                        }
+                        Coop.Current.Locks.ReadState(r, go);
+                        break;
                 }
 
                 if (Debug)
@@ -2305,210 +2131,6 @@ namespace DarkwoodMP.World
                 "[world] the night trader was killed in another game: the "
                     + "killer's dream isn't ours");
             return false;
-        }
-    }
-}
-
-namespace DarkwoodMP.World
-{
-    /// <summary>
-    /// Locks opened with a key or a lockpick (Locked.tryToOpenWithKey /
-    /// tryToLockpick, which call Locked.unlock). Locked.unlock only clears
-    /// Locked.locked and never goes through Door.unlock, so it's patched
-    /// itself: a door's lock goes as DoorUnlock, any other's (a chest, a
-    /// cabinet) as ItemUnlock, with a = 1 for a key, 2 for a lockpick, 0 for
-    /// anything else (the story). The two try methods are patched too, so the
-    /// outermost call is the one sent: tryToLockpick takes the lockpick after
-    /// unlocking, and a refused request must give it back.
-    /// </summary>
-    static class LockShare
-    {
-        public static void Send(Locked l, float how)
-        {
-            // With a key: the host checks the key is in its journal, so our
-            // journal's news (the key just picked up) goes first, and the key
-            // itself again, in case the host didn't take it before.
-            if (how == 1f && Net.Session.Instance != null
-                && Net.Session.Instance.IsClient)
-            {
-                FlagsSync instance = FlagsSync.Instance;
-                if (instance != null)
-                {
-                    instance.FlushNow();
-                }
-
-                FlagsSync flags = FlagsSync.Instance;
-                if (flags != null)
-                {
-                    flags.SendKey(l.keyType);
-                }
-            }
-
-            var door = l.GetComponent<Door>();
-            if (door != null)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorUnlock, door.gameObject, how);
-            }
-            else
-            {
-                WorldActions.Send(
-                    WorldActions.Action.ItemUnlock, l.gameObject, how);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Locked), nameof(Locked.unlock))]
-    static class LockedUnlockPatch
-    {
-        static void Prefix(Locked __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.locked;
-        }
-
-        static void Postfix(Locked __instance, bool __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
-                && !__instance.locked)
-            {
-                LockShare.Send(__instance, 0f);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Locked), nameof(Locked.tryToOpenWithKey))]
-    static class LockedKeyPatch
-    {
-        static void Prefix(Locked __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.locked;
-        }
-
-        static void Postfix(Locked __instance, bool __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
-                && !__instance.locked)
-            {
-                LockShare.Send(__instance, 1f);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Locked), nameof(Locked.tryToLockpick))]
-    static class LockedLockpickPatch
-    {
-        static void Prefix(Locked __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.locked;
-        }
-
-        static void Postfix(Locked __instance, bool __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
-                && !__instance.locked)
-            {
-                LockShare.Send(__instance, 2f);
-            }
-        }
-    }
-
-    /// <summary>
-    /// A locked crate picked open in the host's game (Item.disarm on an item
-    /// with no Trigger sets searched and opens it): the others are told it's
-    /// searched, so nobody has to pick it again. A client's picks go to the
-    /// host as TrapDisarm requests instead (TrapDisarms.AskHost), and the host
-    /// sends ItemSearched itself. Not a Depth call: a trap's disarm goes
-    /// through switchTriggerState, which must stay the outermost call there.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.disarm))]
-    static class CrateSearchedPatch
-    {
-        static void Prefix(Item __instance, out bool __state) =>
-            __state = __instance != null && __instance.searched;
-        static void Postfix(Item __instance, bool __state)
-        {
-            if (__instance == null || __state || !__instance.searched
-                || WorldActions.Crate(__instance) == null)
-            {
-                return;
-            }
-
-            if (Coop.Guards.Depth == 0 && Coop.Guards.Sharing
-                && Session.Instance.IsHost)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.ItemSearched, __instance.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// A container opened the game's way (Item.openInventory: by the player, or
-    /// after a crate's lock was picked) sets Item.searched (and
-    /// Character.searched on a corpse) in the opener's game only; it's saved
-    /// and changes the hover text. Send it as ItemSearched when it changed. A
-    /// client sends only its own player's open (Send checks ByLocalPlayer;
-    /// openInventory uses Player.Instance, so it's always the local player's),
-    /// and the host checks reach. A picked crate is already searched when
-    /// disarm calls openInventory, so this sends nothing for it.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.openInventory))]
-    static class OpenSearchedPatch
-    {
-        static void Prefix(Item __instance, out bool __state) =>
-            __state = __instance != null && __instance.searched;
-        static void Postfix(Item __instance, bool __state)
-        {
-            if (__instance == null || __state || !__instance.searched
-                || !Coop.Guards.Sharing)
-            {
-                return;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.ItemSearched, __instance.gameObject);
-        }
-    }
-
-    /// <summary>
-    /// A combination padlock opened (Padlock.unlock, after checkCombination, or
-    /// by the story with manually false). The others' copies are unlocked
-    /// without the window or events (Padlock.unlock(false)). A client's player
-    /// sends the code it entered, and the host checks it and the reach. The
-    /// padlock's events (onTryToOpenLocked, onUnlockPadlock) run in the
-    /// opener's game, which sends them as scripted events of its own
-    /// (ScriptedEvents).
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Padlock), nameof(Padlock.unlock), new[] { typeof(bool) })]
-    static class PadlockUnlockPatch
-    {
-        static void Prefix(Padlock __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.locked;
-        }
-
-        static void Postfix(Padlock __instance, bool manually, bool __state)
-        {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing || !__state
-                || __instance.locked)
-            {
-                return;
-            }
-
-            string combination = "";
-            if (manually)
-            {
-                combination = __instance.currentCombination;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.PadlockUnlock, __instance.gameObject,
-                f1: manually, str: combination);
         }
     }
 }

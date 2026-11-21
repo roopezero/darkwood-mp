@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Locks
     /// What a game knows when one of its locks that has a Locked (a door's,
     /// a chest's, a cabinet's) may have just opened: Locked.unlock,
     /// tryToOpenWithKey or tryToLockpick returned (the plugin's
-    /// LockedUnlockPatch, LockedKeyPatch, LockedLockpickPatch).
+    /// LockedUnlock, TryToOpenWithKey, TryToLockpick).
     public readonly struct UnlockSentFacts
     {
         /// This is the outermost of the patched calls

@@ -44,6 +44,9 @@ namespace DarkwoodMP
         /// Traps going off, switched and disarmed, shared.
         public readonly World.TrapSync Traps;
 
+        /// Locks, containers searched and padlocks opened, shared.
+        public readonly World.LockShare Locks;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -59,6 +62,7 @@ namespace DarkwoodMP
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
             Traps = new World.TrapSync(this);
+            Locks = new World.LockShare(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
