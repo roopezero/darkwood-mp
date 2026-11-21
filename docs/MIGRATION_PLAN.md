@@ -600,6 +600,16 @@ Finish with `tools/run-test.sh full`.
 | 8.3 | `Plugin`, `SteamBackend`, `Lobby`, `SteamTransport`, `IGuiSection` | 2,060 | `net menus solo` |
 
 - [ ] 8.1 Menus and loading. This is mostly process state on `Plugin`.
+  - [x] Part b: the windows (`UiWindow`, `ConfirmDialog`, `OptionsWindow`,
+        `StartGameWindow`, `DirectPanel`, `GameCursor`, `CursorLock`,
+        `RealMouse`, `WideScreen`, `ModProfiler`). Done: they call the
+        core's `Menus` rules, live in `Menus/` (namespace
+        `DarkwoodMP.Menus`), and their state is on `ModHost` (`Confirm`,
+        `Cursor`, `Profiler`, `Options`, `StartGame`, `TestMouse`), as the
+        main menu has no session; nothing went on `CoopSession`. They have
+        no messages. `WideScreen`'s two patches run with no session, as the
+        zoom matters alone too; it has no core rules. `CursorLock` and
+        `RealMouse` keep no state and stay static.
 - [ ] 8.2 The in-game test code left in the plugin.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
