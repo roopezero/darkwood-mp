@@ -1237,7 +1237,7 @@ namespace DarkwoodMP.World
                     var w = SpawnMessage(
                         id, prefab, go.transform.position,
                         go.transform.rotation, contents, true, 0);
-                    Authority.Request(w, $"placing {prefab} #{id}",
+                    Coop.Current.Authority.Request(w, $"placing {prefab} #{id}",
                         (ok, why, result) =>
                     {
                         if (ok || go == null)
@@ -1416,7 +1416,7 @@ namespace DarkwoodMP.World
             {
                 // A client's player placed it: only as a request, within reach,
                 // and only a thing a player can place.
-                if (!Authority.Handling)
+                if (!Coop.Current.Authority.Handling)
                 {
                     Plugin.Log.LogWarning(
                         $"[world] {_session.NameOf(from)} placed {prefab} "
@@ -1426,12 +1426,13 @@ namespace DarkwoodMP.World
 
                 if (!IsPlaceable(prefab))
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         $"{prefab} isn't something a player can place");
                     return;
                 }
 
-                if (!Authority.InReach(pos, WorldActions.Reach, prefab))
+                if (!Coop.Current.Authority.InReach(
+                    pos, WorldActions.Reach, prefab))
                 {
                     return;
                 }
@@ -1449,7 +1450,7 @@ namespace DarkwoodMP.World
 
                 if (carried.HasValue && carried.Value < 1)
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         $"they don't carry anything that places {prefab}");
                     return;
                 }
@@ -1462,7 +1463,7 @@ namespace DarkwoodMP.World
 
             if (Resources.Load("Prefabs/" + prefab) == null)
             {
-                Authority.Refuse($"there's no {prefab} here");
+                Coop.Current.Authority.Refuse($"there's no {prefab} here");
                 Plugin.Log.LogWarning($"No prefab {prefab} here");
                 return;
             }

@@ -206,7 +206,7 @@ namespace DarkwoodMP.World
 
             w.W.Write(seconds);
             w.W.Write((byte)1);
-            Authority.Request(w, $"set {go.name} alight",
+            Coop.Current.Authority.Request(w, $"set {go.name} alight",
                 (ok, reason, result) =>
             {
                 if (ok || go == null)
@@ -237,14 +237,14 @@ namespace DarkwoodMP.World
         /// </summary>
         private void OnClientIgnited(ObjRef obj, What what, float time, bool on)
         {
-            if (!Authority.Handling)
+            if (!Coop.Current.Authority.Handling)
             {
                 return; // only as a request
             }
 
             if (!on)
             {
-                Authority.Refuse("players only light things");
+                Coop.Current.Authority.Refuse("players only light things");
                 return;
             }
 
@@ -260,24 +260,26 @@ namespace DarkwoodMP.World
 
             if (c == null)
             {
-                Authority.Refuse("there's no such thing here to burn");
+                Coop.Current.Authority.Refuse(
+                    "there's no such thing here to burn");
                 return;
             }
 
-            if (!Authority.InReach(c.transform.position, FlameReach, c.name))
+            if (!Coop.Current.Authority.InReach(
+                c.transform.position, FlameReach, c.name))
             {
                 return;
             }
 
             if (c is Item item && (!item.destructible || item.destroyed))
             {
-                Authority.Refuse($"{c.name} can't burn");
+                Coop.Current.Authority.Refuse($"{c.name} can't burn");
                 return;
             }
 
             if (c is Door door && door.destroyed)
             {
-                Authority.Refuse($"{c.name} is broken");
+                Coop.Current.Authority.Refuse($"{c.name} is broken");
                 return;
             }
 
@@ -291,8 +293,9 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {_session.NameOf(Authority.From)} set {c.name} "
-                        + $"alight ({obj})");
+                    "[world] "
+                        + _session.NameOf(Coop.Current.Authority.From)
+                        + $" set {c.name} alight ({obj})");
             }
         }
 

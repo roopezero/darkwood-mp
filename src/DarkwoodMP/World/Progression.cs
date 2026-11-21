@@ -404,14 +404,14 @@ namespace DarkwoodMP.World
             if (amount <= 0 || amount > 100000)
             {
                 SendState(from);
-                Authority.Refuse($"implausible essence {amount}");
+                Coop.Current.Authority.Refuse($"implausible essence {amount}");
                 return;
             }
 
             if (BarFull(p))
             {
                 SendState(from);
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     "the shared essence bar is full: someone has to take the "
                         + "level at a stove");
                 return;
@@ -544,7 +544,7 @@ namespace DarkwoodMP.World
 
             if (!TakeReset(KeyHash(key), from, out string why))
             {
-                Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(why);
                 return;
             }
 
@@ -637,7 +637,7 @@ namespace DarkwoodMP.World
                 SharedExp += amount;
                 var w = S.Begin(MsgType.EssenceAdd);
                 w.W.Write(amount);
-                Authority.Request(w, $"cook {amount} essence");
+                Coop.Current.Authority.Request(w, $"cook {amount} essence");
             }
             else if (HostSide)
             {
@@ -928,7 +928,8 @@ namespace DarkwoodMP.World
                 }
 
                 _waitingReset = true;
-                Authority.Request(S.Begin(MsgType.SkillReset), "reset skills",
+                Coop.Current.Authority.Request(
+                    S.Begin(MsgType.SkillReset), "reset skills",
                     (ok, reason, _) =>
                 {
                     _waitingReset = false;

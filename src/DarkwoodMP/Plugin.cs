@@ -455,7 +455,6 @@ namespace DarkwoodMP
             _enemies = new NetEnemies(_host.Session);
             _time = new TimeSync(_host.Session);
             WorldActions.Register(_host.Session);
-            Authority.Register(_host.Session);
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
@@ -2175,7 +2174,12 @@ namespace DarkwoodMP
         /// </summary>
         private void LateUpdate()
         {
-            InventoryWatch.LateUpdate();
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Authority.Inventory.LateUpdate();
+            }
+
             JoinScreen.LateUpdate();
             Sync.ViewWatch.LateUpdate(_host.Session.Active);
             CursorLock.LateUpdate(MenuWindows.AnyOpen);

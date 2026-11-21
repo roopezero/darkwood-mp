@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using DarkwoodMP.Net;
+
 namespace DarkwoodMP.World
 {
     /// The host decides what a client's player does to the shared world:
@@ -7,6 +10,28 @@ namespace DarkwoodMP.World
     {
         /// The most bytes a request's message may hold (Authority._copy).
         public const int MaxRequest = 1 << 16;
+
+        /// Messages an honest client sends only inside a Request: their
+        /// handlers check them only there (InReach, Refuse), so the host
+        /// drops one that comes from a client on its own.
+        static readonly HashSet<MsgType> RequestOnly = new HashSet<MsgType>
+        {
+            MsgType.WorldAction, MsgType.EnemyHit, MsgType.NpcHit,
+            MsgType.NpcAttack, MsgType.Burning,
+            MsgType.Construct, MsgType.EventFired, MsgType.StoryRequest,
+            MsgType.EggDestroyed, MsgType.InfectionCleared,
+            MsgType.TraderTrade, MsgType.StorageSort, MsgType.SkillSpend,
+            MsgType.EssenceAdd, MsgType.SkillReset,
+            MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit,
+            MsgType.Fuel, MsgType.DragClaim,
+        };
+
+        /// Host: whether a client's message may be handled as it came, not
+        /// inside a request. Inside one (handling) any message may.
+        public static bool TakesBare(MsgType type, bool handling)
+        {
+            return handling || !RequestOnly.Contains(type);
+        }
 
         /// Client: whether a message this long may go as a Request. A
         /// longer one isn't sent, and its callback never runs.

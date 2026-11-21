@@ -302,7 +302,7 @@ namespace DarkwoodMP.World
 
             w.W.Write(chapter);
             string what = What(kind, e.intValue);
-            Authority.Request(w, what, (ok, reason, result) =>
+            Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
             {
                 if (!ok)
                 {
@@ -339,7 +339,7 @@ namespace DarkwoodMP.World
             int index = r.R.ReadByte();
             var kind = (StoryKind)r.R.ReadByte();
             int chapter = r.R.ReadInt32();
-            if (!Authority.Handling)
+            if (!Coop.Current.Authority.Handling)
             {
                 return; // only as a Request
             }
@@ -366,10 +366,10 @@ namespace DarkwoodMP.World
             switch (Decide(h, out reason))
             {
                 case Verdict.Refuse:
-                    Authority.Refuse(reason);
+                    Coop.Current.Authority.Refuse(reason);
                     return;
                 case Verdict.Done:
-                    Authority.Result("done: " + reason);
+                    Coop.Current.Authority.Result("done: " + reason);
                     return;
                 case Verdict.Wait:
                     // A repeat of the one held keeps it (and when it was first
@@ -385,7 +385,7 @@ namespace DarkwoodMP.World
                         _readySince = -1f;
                     }
 
-                    Authority.Result("pending: " + reason);
+                    Coop.Current.Authority.Result("pending: " + reason);
                     return;
             }
 
@@ -394,7 +394,7 @@ namespace DarkwoodMP.World
                     + "here");
             if (!Run(h))
             {
-                Authority.Refuse("it couldn't run");
+                Coop.Current.Authority.Refuse("it couldn't run");
             }
         }
 
@@ -538,7 +538,8 @@ namespace DarkwoodMP.World
                 if (!h.ReachChecked)
                 {
                     h.ReachChecked = true;
-                    if (!Authority.Near(h.From, ge.transform.position, 3000f))
+                    if (!Coop.Current.Authority.Near(
+                        h.From, ge.transform.position, 3000f))
                     {
                         reason = $"{ge.name} is more than 3000 away from them";
                         return Verdict.Refuse;

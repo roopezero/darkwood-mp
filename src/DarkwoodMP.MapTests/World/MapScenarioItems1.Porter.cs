@@ -132,17 +132,18 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
-            while (!PorterThere(loc) && Authority.RolledBack == refused
+            while (!PorterThere(loc)
+                && Coop.Current.Authority.RolledBack == refused
                 && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
 
             r.Info = PorterInfo(loc);
-            if (Authority.RolledBack != refused)
+            if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused the call");
             }
@@ -202,7 +203,8 @@ namespace DarkwoodMP.World
             w.Write(far.porterPosition.transform.position);
             bool? ok = null;
             string why = null;
-            Authority.Request(w, $"forged porter call at {far.name}",
+            Coop.Current.Authority.Request(
+                w, $"forged porter call at {far.name}",
                 (o, reason, res) =>
             {
                 ok = o;

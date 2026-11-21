@@ -86,7 +86,7 @@ namespace DarkwoodMP.World
             }
 
             Waiting.Add(c);
-            Authority.Request(w, what, (ok, reason, _) =>
+            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
             {
                 Waiting.Remove(c);
                 if (!ok)
@@ -204,14 +204,14 @@ namespace DarkwoodMP.World
         {
             if (c == null)
             {
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     "there's nothing to build there (built already?)");
                 return false;
             }
 
             if (option < 0 || option >= c.options.Count)
             {
-                Authority.Refuse($"it has no option {option}");
+                Coop.Current.Authority.Refuse($"it has no option {option}");
                 return false;
             }
 
@@ -219,17 +219,17 @@ namespace DarkwoodMP.World
             bool broken = item != null && item.destroyed;
             if (c.onlyWhenDestroyed && !broken)
             {
-                Authority.Refuse("it isn't broken");
+                Coop.Current.Authority.Refuse("it isn't broken");
                 return false;
             }
 
             if (c.constructed && !broken)
             {
-                Authority.Refuse("it's built already");
+                Coop.Current.Authority.Refuse("it's built already");
                 return false;
             }
 
-            return Authority.InReach(
+            return Coop.Current.Authority.InReach(
                 c.transform.position, WorldActions.Reach, c.name);
         }
     }

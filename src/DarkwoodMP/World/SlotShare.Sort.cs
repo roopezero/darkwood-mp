@@ -98,7 +98,8 @@ namespace DarkwoodMP.World
                 var changed = Sort(inv);
                 var w = s.Begin(MsgType.StorageSort);
                 r.Write(w);
-                Authority.Request(w, $"sort {inv.name}", inventory: false);
+                Coop.Current.Authority.Request(
+                    w, $"sort {inv.name}", inventory: false);
                 Plugin.Log.LogInfo(
                     $"[slots] sorted {inv.name} here ({changed.Count} slot(s) "
                         + "changed); asked the host to sort it");
@@ -133,7 +134,7 @@ namespace DarkwoodMP.World
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv == null || !Is(inv))
             {
-                Authority.Refuse("no such workbench storage here");
+                Coop.Current.Authority.Refuse("no such workbench storage here");
                 return;
             }
 
@@ -174,7 +175,7 @@ namespace DarkwoodMP.World
             SendChanges(obj, all, from, toOnly: true);
             if (why != null)
             {
-                Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(why);
                 Plugin.Log.LogInfo(
                     $"[authority] {s.NameOf(from)} sorted {inv.name}: refused "
                         + $"({why})");

@@ -205,7 +205,8 @@ namespace DarkwoodMP.World
             r.Write(w);
             w.W.Write((byte)1);
             w.WriteStr(_oursName);
-            Authority.Request(w, $"talk to {npc.name} {r}", (ok, reason, _) =>
+            Coop.Current.Authority.Request(
+                w, $"talk to {npc.name} {r}", (ok, reason, _) =>
             {
                 if (!ok)
                 {
@@ -346,14 +347,14 @@ namespace DarkwoodMP.World
             string other = TalkingOther(key, from);
             if (other != null)
             {
-                Authority.Refuse($"{other} is talking to them");
+                Coop.Current.Authority.Refuse($"{other} is talking to them");
                 return;
             }
 
             if (_released.TryGetValue(key, out var rel) && rel.Key != from
                 && UnityEngine.Time.unscaledTime - rel.Value < Grace)
             {
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     $"{s.NameOf(rel.Key)} just talked to them: try again in a "
                         + "moment");
                 return;
@@ -361,7 +362,8 @@ namespace DarkwoodMP.World
 
             var npc = ObjRef.Resolve<NPC>(obj);
             if (npc != null
-                && !Authority.InReach(npc.transform.position, 1500f, npc.name))
+                && !Coop.Current.Authority.InReach(
+                    npc.transform.position, 1500f, npc.name))
             {
                 return;
             }

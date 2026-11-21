@@ -78,7 +78,7 @@ namespace DarkwoodMP.World
 
             yield return Walk(d.transform.position);
             var j = Singleton<UI>.Instance.journal;
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             if (a.Contains("--forged"))
             {
                 if (j.keysDict.ContainsKey(l.keyType))
@@ -89,7 +89,7 @@ namespace DarkwoodMP.World
 
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
-                while (Authority.RolledBack == refused
+                while (Coop.Current.Authority.RolledBack == refused
                     && Time.realtimeSinceStartup < giveUp)
                 {
                     yield return null;
@@ -99,7 +99,7 @@ namespace DarkwoodMP.World
                 r.Info =
                     $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: "
                         + $"locked={l.locked}";
-                if (Authority.RolledBack == refused)
+                if (Coop.Current.Authority.RolledBack == refused)
                 {
                     r.Fail($"{r.Info}: the host didn't refuse it");
                 }
@@ -124,7 +124,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: still locked");
             }
-            else if (Authority.RolledBack != refused)
+            else if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
             }
@@ -315,12 +315,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             AsPlayer(() => P.openCloseDoor(d, false));
             // a refusal would close it again
             yield return new WaitForSeconds(2f);
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
-            if (Authority.RolledBack != refused)
+            if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
             }

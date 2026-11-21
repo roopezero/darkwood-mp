@@ -352,7 +352,7 @@ namespace DarkwoodMP.Combat
 
             Plugin.Log.LogInfo(
                 $"[npc] our hit on {c.name} for {damage:0} goes to the host");
-            Authority.Request(w, $"hit on {c.name} for {damage:0}",
+            Coop.Current.Authority.Request(w, $"hit on {c.name} for {damage:0}",
                 (ok, reason, result) =>
             {
                 if (ok)
@@ -429,7 +429,8 @@ namespace DarkwoodMP.Combat
             var s = Session.Instance;
             var w = s.Begin(MsgType.NpcAttack);
             ObjRef.Of(c.gameObject).Write(w);
-            Authority.Request(w, $"{c.name} attacks us", (ok, reason, result) =>
+            Coop.Current.Authority.Request(
+                w, $"{c.name} attacks us", (ok, reason, result) =>
             {
                 if (ok || reason != NotHere || c == null || !c.alive)
                 {
@@ -459,7 +460,7 @@ namespace DarkwoodMP.Combat
             var c = ObjRef.Resolve<Character>(obj);
             if (c == null || c.npc == null)
             {
-                Authority.Refuse(NotHere);
+                Coop.Current.Authority.Refuse(NotHere);
                 return null;
             }
 
@@ -467,14 +468,15 @@ namespace DarkwoodMP.Combat
             // nothing for us to run, so it's the client's.
             if (!NetEnemies.InPlay(c))
             {
-                Authority.Refuse(NotHere);
+                Coop.Current.Authority.Refuse(NotHere);
                 return null;
             }
 
             if (!NetPlayerProxy.All.TryGetValue(from, out proxy)
                 || proxy == null)
             {
-                Authority.Refuse("no stand-in for that player yet");
+                Coop.Current.Authority.Refuse(
+                    "no stand-in for that player yet");
                 return null;
             }
 
@@ -524,7 +526,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            if (!Authority.InReach(
+            if (!Coop.Current.Authority.InReach(
                 c.transform.position, NetEnemies.RelevantRange, c.name))
             {
                 return;

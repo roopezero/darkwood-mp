@@ -25,6 +25,9 @@ namespace DarkwoodMP
         /// The host's check on where each client's player says it is.
         public readonly Sync.MoveCheck Moves;
 
+        /// The host's say over what a client's player does to the world.
+        public readonly World.Authority Authority;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -34,6 +37,7 @@ namespace DarkwoodMP
             Net = net;
             // Subsystems are made here, before the first message can arrive.
             Moves = new Sync.MoveCheck(this);
+            Authority = new World.Authority(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

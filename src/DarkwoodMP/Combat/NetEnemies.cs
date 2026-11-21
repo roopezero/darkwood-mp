@@ -1111,14 +1111,15 @@ namespace DarkwoodMP.Combat
             _byIdHost.TryGetValue(id, out var t);
             if (t == null || t.C == null || !InPlay(t.C))
             {
-                World.Authority.Refuse("that enemy isn't alive here");
+                Coop.Current.Authority.Refuse("that enemy isn't alive here");
                 return;
             }
 
             if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
                 || proxy == null)
             {
-                World.Authority.Refuse("no stand-in for that player yet");
+                Coop.Current.Authority.Refuse(
+                    "no stand-in for that player yet");
                 return;
             }
 
@@ -1149,7 +1150,8 @@ namespace DarkwoodMP.Combat
                 reach = MeleeReach;
             }
 
-            if (!World.Authority.InReach(c.transform.position, reach, c.name))
+            if (!Coop.Current.Authority.InReach(
+                c.transform.position, reach, c.name))
             {
                 return;
             }
@@ -1167,7 +1169,8 @@ namespace DarkwoodMP.Combat
                     type = "bare hands";
                 }
 
-                World.Authority.Refuse($"more hits a second than {type} makes");
+                Coop.Current.Authority.Refuse(
+                    $"more hits a second than {type} makes");
                 return;
             }
 
@@ -1194,7 +1197,7 @@ namespace DarkwoodMP.Combat
                         + $"more than {weaponType} can do; {applied:0}");
             }
 
-            World.Authority.Result(
+            Coop.Current.Authority.Result(
                 applied.ToString(
                     "0", System.Globalization.CultureInfo.InvariantCulture));
             // The bar isn't shown for another player's hit (getHit would, as
@@ -1228,7 +1231,7 @@ namespace DarkwoodMP.Combat
 
                 if (left > 0)
                 {
-                    World.Authority.Result(
+                    Coop.Current.Authority.Result(
                         applied.ToString(
                             "0",
                             System.Globalization.CultureInfo.InvariantCulture)
@@ -3404,7 +3407,8 @@ namespace DarkwoodMP.Combat
                 hit = p.C;
             }
 
-            World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}",
+            Coop.Current.Authority.Request(
+                w, $"hit on enemy #{id} for {damage:0}",
                 (ok, reason, result) =>
             {
                 if (ok)

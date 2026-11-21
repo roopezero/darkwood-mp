@@ -102,7 +102,7 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Authority.Request(w, what, inventory: false);
+                Coop.Current.Authority.Request(w, what, inventory: false);
             }
         }
 
@@ -150,7 +150,7 @@ namespace DarkwoodMP.World
                 // A client's player clears only what its burning weapon
                 // reached.
                 if (s.IsHost
-                    && !Authority.Near(
+                    && !Coop.Current.Authority.Near(
                         from, inf.transform.position, WorldActions.Reach))
                 {
                     continue;
@@ -188,7 +188,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(line + missed);
             if (s.IsHost && done.Count == 0 && n > 0)
             {
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     "none of that infection is within their reach");
                 return;
             }
