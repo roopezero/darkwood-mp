@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Culling
 {
-    /// The host's screen and camera (SharedCullingPatch.Distances).
+    /// The host's screen and camera (SharedCulling.Distances).
     public readonly struct ScreenFacts
     {
         /// Screen.width.

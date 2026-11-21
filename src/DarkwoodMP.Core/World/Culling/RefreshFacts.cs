@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Culling
 {
-    /// A call of WorldGrid.refreshPosition (SharedCullingPatch.Prefix).
+    /// A call of WorldGrid.refreshPosition (SharedCulling.Prefix).
     public readonly struct RefreshFacts
     {
         /// currentGrid isn't null.

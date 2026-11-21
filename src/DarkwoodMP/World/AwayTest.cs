@@ -13,7 +13,7 @@ namespace DarkwoodMP.World
     /// location (the world's grid is left and an empty stand-in grid is
     /// current), and comes back. Logs how many enemies near the dummy are
     /// active before and while the host is away (the world's grid is kept
-    /// entered around other players, SharedCullingPatch), and whether the
+    /// entered around other players, SharedCulling), and whether the
     /// dummy's puppet is hidden while the host is away (a player in the main
     /// world isn't shown in a location). Before that, once another player has
     /// joined, the draggable object nearest the host's player is knocked away

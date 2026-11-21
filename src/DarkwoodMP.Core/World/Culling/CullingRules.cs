@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Culling
 {
     /// The host keeps the world's culling grid entered round every player,
-    /// not only its own (SharedCullingPatch).
+    /// not only its own (SharedCulling).
     public static class CullingRules
     {
         /// How far past the screen the host's own area reaches, times the

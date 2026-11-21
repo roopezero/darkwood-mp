@@ -16,7 +16,7 @@ namespace DarkwoodMP.World
     /// players far apart.
     ///
     /// The host's culling keeps every player's area entered
-    /// (Combat.SharedCullingPatch), so a location near a joiner is entered in
+    /// (World.Culling.SharedCulling), so a location near a joiner is entered in
     /// the host's game even when the host's player is nowhere near it. Its
     /// events are then run on the host as the host's and the shared part only
     /// (ScriptedEvents.Part.HostAndShared): the world's side of them
@@ -95,12 +95,12 @@ namespace DarkwoodMP.World
         private static bool HostNear(Location l, bool was)
         {
             var p = Player.Instance;
-            if (p == null || SharedCullingPatch.HostAway)
+            if (p == null || Plugin.Instance.Host.Culling.HostAway)
             {
                 return false;
             }
 
-            SharedCullingPatch.Distances(out int dx, out int dy);
+            Culling.SharedCulling.Distances(out int dx, out int dy);
             float m = 0f;
             if (was)
             {
@@ -126,7 +126,7 @@ namespace DarkwoodMP.World
             }
 
             // theirs isn't known here: about ours
-            SharedCullingPatch.Distances(out int dx, out int dy);
+            Culling.SharedCulling.Distances(out int dx, out int dy);
             var b = l.transform.position;
             foreach (var r in sync.Remotes.Values)
             {

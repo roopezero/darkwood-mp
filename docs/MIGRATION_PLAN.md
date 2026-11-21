@@ -455,6 +455,12 @@ Finish with `tools/run-test.sh full`.
         `SentEffects`, which `NetEnemies` and `HostileNpcs` use too.
   - [ ] Part b: `CombatPatches` (melee on stand-ins, client hits, cut in
         half, threat, culling, freezing, noise and flee patches).
+        Partly done: split into feature folders, the rules called from
+        the shell, `PlayerNoiseMessage` in the core, and the culling
+        state on `ModHost.Culling` (`World/Culling/SharedCulling`). Left:
+        `PlayerNoisePatch.OwnNoise` and `ClientFreezeCharacterPatch.Starting`
+        to instances, the PlayerNoise handler to `coop.Handle`, and the
+        `<GameType><Method>` patch names.
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
 

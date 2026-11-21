@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Culling
 {
     /// The host, every frame, while its player may be being taken to a
-    /// place (SharedCullingPatch.RefreshWhileLoading).
+    /// place (SharedCulling.RefreshWhileLoading).
     public readonly struct LoadingFacts
     {
         /// Proxies.Any.
