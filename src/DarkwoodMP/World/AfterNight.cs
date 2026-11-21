@@ -156,7 +156,9 @@ namespace DarkwoodMP.World
 
             bool someoneOut = false;
             var sync = Plugin.Instance.Host.Players;
-            if (CoopPause.InCoop && sync != null
+            CoopSession coop = Coop.Current;
+            bool together = coop != null && coop.Pause.InCoop;
+            if (together && sync != null
                 && UnityEngine.Time.unscaledTime - _since >= Grace)
             {
                 foreach (var kv in sync.Remotes)

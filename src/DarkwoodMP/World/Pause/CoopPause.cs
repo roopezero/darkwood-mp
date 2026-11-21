@@ -1,8 +1,8 @@
-using DarkwoodMP.World.Pause;
-using HarmonyLib;
+using System.Collections;
+using DarkwoodMP.Net;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Pause
 {
     /// <summary>
     /// The game doesn't stop while others are playing in it. Darkwood pauses
@@ -19,15 +19,25 @@ namespace DarkwoodMP.World
     /// (Controller.alterTimeScale). On the host they would slow the enemies,
     /// fire and clock of everyone's world. In co-op the time scale stays 1 (the
     /// wheel still stops your own input).
+    ///
+    /// What happens is the core's PauseRules; PausePatches hand the game's
+    /// calls here.
     /// </summary>
-    public static class CoopPause
+    internal sealed class CoopPause
     {
+        private readonly CoopSession _coop;
+
+        public CoopPause(CoopSession coop)
+        {
+            _coop = coop;
+        }
+
         /// <summary>Whether other players share this world right now.</summary>
-        public static bool InCoop
+        public bool InCoop
         {
             get
             {
-                return PauseRules.InCoop(CoopOf(Net.Session.Instance));
+                return PauseRules.InCoop(CoopOf(_coop.Net));
             }
         }
 
@@ -36,7 +46,7 @@ namespace DarkwoodMP.World
         /// host in a menu as someone joins) starts running again; and a
         /// character standing still in a menu doesn't keep sliding.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var facts = new PauseFacts
             {
@@ -67,7 +77,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static CoopFacts CoopOf(Net.Session s)
+        private static CoopFacts CoopOf(Session s)
         {
             if (s == null)
             {
@@ -95,58 +105,48 @@ namespace DarkwoodMP.World
                 Kinematic = rb != null && rb.isKinematic,
             };
         }
-    }
 
-    [HarmonyPatch(typeof(Core), nameof(Core.pause))]
-    static class CoopPausePatch
-    {
-        static bool Prefix()
+        /// <summary>
+        /// Core.pause: whether the game's pause runs. In co-op it only marks
+        /// the game paused: menus and input behave as paused; time and sound
+        /// go on.
+        /// </summary>
+        public bool Pause()
         {
-            if (PauseRules.RunsGamePause(CoopPause.InCoop))
+            if (PauseRules.RunsGamePause(InCoop))
             {
                 return true;
             }
 
-            // menus and input behave as paused; time and sound go on
             Core.Paused = true;
             return false;
         }
-    }
 
-    /// <summary>
-    /// Slow motion (the active-skill wheel) keeps time at its normal rate in
-    /// co-op.
-    /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.setTimeScale), typeof(float))]
-    static class CoopTimeScalePatch
-    {
-        static void Prefix(ref float _timeScale)
+        /// <summary>
+        /// Core.setTimeScale: the scale it gets. Slow motion (the
+        /// active-skill wheel) keeps time at its normal rate in co-op.
+        /// </summary>
+        public float TimeScaleFor(float scale)
         {
-            _timeScale = PauseRules.TimeScaleFor(_timeScale, CoopPause.InCoop);
+            return PauseRules.TimeScaleFor(scale, InCoop);
         }
-    }
 
-    /// <summary>
-    /// A scripted event's slow motion (GameEvent timeScale) doesn't run in
-    /// co-op.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Controller), nameof(Controller.alterTimeScale), typeof(float),
-        typeof(float))]
-    static class CoopAlterTimeScalePatch
-    {
-        static bool Prefix(ref System.Collections.IEnumerator __result)
+        /// <summary>
+        /// Controller.alterTimeScale: whether a scripted event's slow motion
+        /// runs. When it doesn't, the coroutine it returns does nothing.
+        /// </summary>
+        public bool AlterTimeScale(ref IEnumerator result)
         {
-            if (PauseRules.RunsScriptedSlowMotion(CoopPause.InCoop))
+            if (PauseRules.RunsScriptedSlowMotion(InCoop))
             {
                 return true;
             }
 
-            __result = Nothing();
+            result = Nothing();
             return false;
         }
 
-        private static System.Collections.IEnumerator Nothing()
+        private static IEnumerator Nothing()
         {
             yield break;
         }

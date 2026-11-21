@@ -61,9 +61,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private static CrouchFacts CrouchOf(Player p, Item item)
         {
+            CoopSession coop = Coop.Current;
             var facts = new CrouchFacts
             {
-                InCoop = CoopPause.InCoop,
+                InCoop = coop != null && coop.Pause.InCoop,
                 HasItem = item != null,
             };
 

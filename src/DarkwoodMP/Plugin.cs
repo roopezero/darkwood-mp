@@ -2352,7 +2352,12 @@ namespace DarkwoodMP
                 coop.Infections.Update();
             }
 
-            CoopPause.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pause.Update();
+            }
+
             ModProfiler.Mark("pause");
             AfterNight.Update();
             coop = Coop.Current;

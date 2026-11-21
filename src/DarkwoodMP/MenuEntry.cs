@@ -14,7 +14,7 @@ namespace DarkwoodMP
     /// The pause menu doesn't hide the world: instead of the menu's painted
     /// backdrop the world shows through, dimmed by the menu's own black
     /// overlay. Alone the world is paused behind it as before; in co-op it goes
-    /// on (World.CoopPause) and the menu's music doesn't start.
+    /// on (World.Pause.CoopPause) and the menu's music doesn't start.
     /// </summary>
     public static class MenuEntry
     {
@@ -77,7 +77,9 @@ namespace DarkwoodMP
             PauseHud.Hide(); // the HUD would show through with the world
             // In co-op the game goes on, with its own sound; alone it's paused
             // and the menu's music plays as before.
-            if (World.CoopPause.InCoop && mm.menuMusic != null)
+            CoopSession coop = Coop.Current;
+            bool together = coop != null && coop.Pause.InCoop;
+            if (together && mm.menuMusic != null)
             {
                 mm.menuMusic.Stop(0.3f);
                 mm.menuMusic = null;

@@ -157,6 +157,9 @@ namespace DarkwoodMP
         /// Whether a death may reset the world, with others in it.
         public readonly World.Deaths.WorldResets Resets;
 
+        /// The game goes on while a player is in a menu, at its normal rate.
+        public readonly World.Pause.CoopPause Pause;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -213,6 +216,7 @@ namespace DarkwoodMP
             Owed = new World.Owed.OwedParts(this);
             FarEvents = new World.Scripted.FarEvents(this);
             Resets = new World.Deaths.WorldResets(this);
+            Pause = new World.Pause.CoopPause(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
