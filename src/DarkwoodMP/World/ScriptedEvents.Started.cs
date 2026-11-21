@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -223,12 +224,12 @@ namespace DarkwoodMP.World
         internal static bool LeftToActorNow(
             global::EventTrigger t, global::EventTrigger.Type type)
         {
-            if (LeftToActor == null || OwnAction || !LeftToActor.Contains(type))
+            if (!DoerRules.LeftToActor(FactsOf(type)))
             {
                 return false;
             }
 
-            if (t != null && t.type == type && !t.disabled)
+            if (t != null && DoerRules.CountsLeft(t.type == type, t.disabled))
             {
                 LeftCount++;
                 if (Debug)
@@ -248,20 +249,9 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        /// <summary>
-        /// Client: a trigger set off by applying the host's action on a thing
-        /// that no player did (the world's, an event's): only its shared part
-        /// runs here; the host's game ran the rest.
-        /// </summary>
         internal static bool SharedReplay(global::EventTrigger.Type type) =>
-            Coop.Guards.Replaying && LeftToActor == null && !OwnAction
-                && ActionTypes.Contains(type) && S != null && S.IsClient;
+            DoerRules.SharedReplay(FactsOf(type));
 
-        /// <summary>
-        /// Host: whether the shared action being sent now is our player's, so
-        /// the triggers it set off here are sent as our player's (and the
-        /// joiners leave them to that, LeftToActor).
-        /// </summary>
         internal static bool OurPlayersAction() =>
             ByOurPlayer(global::EventTrigger.Type.onOpenDoor);
 
@@ -271,32 +261,45 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool ByOurPlayer(global::EventTrigger.Type type)
         {
-            if (OwnAction
-                && (ActionTypes.Contains(type) || HitTypes.Contains(type)))
+            Doer doer = DoerRules.ByOurPlayer(FactsOf(type));
+            if (doer == Doer.Stack)
             {
-                return S != null && S.Active && WorldShare.InWorld
-                    && !WorldShare.Loading;
+                return WorldActions.ByLocalPlayer()
+                    || OnStack(typeof(DialogueWindow));
             }
 
-            if (Coop.Guards.Replaying || Current != Part.All
-                || !Coop.Guards.Sharing || WorldTypes.Contains(type))
-            {
-                return false;
-            }
+            return doer == Doer.Yes;
+        }
 
-            if (type == global::EventTrigger.Type.area)
+        /// <summary>
+        /// What DoerRules needs to know as a trigger of this type is set off
+        /// now.
+        /// </summary>
+        internal static DoerFacts FactsOf(global::EventTrigger.Type type)
+        {
+            var s = S;
+            bool leaving = LeftToActor != null;
+            return new DoerFacts
             {
-                return PlayerEntered || WorldActions.TestAsPlayer;
-            }
-
-            if (type == global::EventTrigger.Type.onInSightOfPlayer
-                || type == global::EventTrigger.Type.onOutOfSightOfPlayer)
-            {
-                return true;
-            }
-
-            return WorldActions.ByLocalPlayer()
-                || OnStack(typeof(DialogueWindow));
+                OwnAction = OwnAction,
+                ActionType = ActionTypes.Contains(type),
+                HitType = HitTypes.Contains(type),
+                WorldType = WorldTypes.Contains(type),
+                Area = type == global::EventTrigger.Type.area,
+                Sight = type == global::EventTrigger.Type.onInSightOfPlayer
+                    || type == global::EventTrigger.Type.onOutOfSightOfPlayer,
+                Active = s != null && s.Active,
+                Client = s != null && s.IsClient,
+                InWorld = WorldShare.InWorld,
+                Loading = WorldShare.Loading,
+                Replaying = Coop.Guards.Replaying,
+                Sharing = Coop.Guards.Sharing,
+                Current = (EventPart)Current,
+                PlayerEntered = PlayerEntered,
+                TestAsPlayer = WorldActions.TestAsPlayer,
+                Leaving = leaving,
+                LeftType = leaving && LeftToActor.Contains(type),
+            };
         }
 
         internal static bool OnStack(Type type)

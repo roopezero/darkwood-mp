@@ -82,19 +82,14 @@ namespace DarkwoodMP.World
         internal static ulong CauseFor(global::EventTrigger.Type type)
         {
             var s = S;
-            if (Cause == 0 || s == null || !s.IsHost
-                || !s.Peers.Contains(Cause))
+            return DoerRules.CauseFor(new CauseFacts
             {
-                return 0;
-            }
-
-            if (type == global::EventTrigger.Type.onDeath
-                || type == global::EventTrigger.Type.refreshWhenTurnedOn)
-            {
-                return Cause;
-            }
-
-            return 0;
+                Cause = Cause,
+                Host = s != null && s.IsHost,
+                Present = s != null && s.Peers.Contains(Cause),
+                Caused = type == global::EventTrigger.Type.onDeath
+                    || type == global::EventTrigger.Type.refreshWhenTurnedOn,
+            });
         }
 
         /// <summary>
