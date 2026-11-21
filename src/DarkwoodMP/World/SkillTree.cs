@@ -532,7 +532,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int most = Progression.MostLevels(Player.Instance);
+            int most = Plugin.Instance.Host.Progress.MostLevels(
+                Player.Instance);
             if (level > most)
             {
                 Coop.Current.Authority.Refuse(

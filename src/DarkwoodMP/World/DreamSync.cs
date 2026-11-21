@@ -549,7 +549,7 @@ namespace DarkwoodMP.World
             }
 
             DreamSync.AfterConfirm(d);
-            Progression.LevelTaken();
+            Plugin.Instance.Host.Progress.LevelTaken();
         }
     }
 

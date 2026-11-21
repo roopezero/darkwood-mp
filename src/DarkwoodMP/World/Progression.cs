@@ -55,13 +55,23 @@ namespace DarkwoodMP.World
     /// player's own essence and level, and from then on the game's essence is
     /// kept there, so the levels taken back can be taken again at the stove
     /// (one at a time, as the bar fills each time).
+    ///
+    /// So one lives as long as the game (ModHost.Progress). A session adds
+    /// its messages and forgets the record when it ends (Join).
     /// </summary>
-    public static class Progression
+    internal sealed class Progression
     {
-        private static Session S => Session.Instance;
+        private readonly Session _net;
+
+        public Progression(Session net)
+        {
+            _net = net;
+        }
+
+        private Session S => _net;
 
         /// <summary>Playing alone: no co-op session, in a world.</summary>
-        private static bool Solo => ProgressSideRules.Solo(Side());
+        private bool Solo => ProgressSideRules.Solo(Side());
 
         private sealed class Saved
         {
@@ -76,27 +86,33 @@ namespace DarkwoodMP.World
         /// The shared essence and level (host: its own; client: what the host
         /// last said).
         /// </summary>
-        public static int SharedExp { get; private set; }
-        public static int SharedLevel { get; private set; }
-        private static bool _known;       // client: the host has sent the state
-        private static Saved _saved;      // host
-        private static string _savedPath; // host: which world _saved is for
-        private static Seconds _nextSync;
+        public int SharedExp { get; private set; }
+        public int SharedLevel { get; private set; }
+        private bool _known;       // client: the host has sent the state
+        private Saved _saved;      // host
+        private string _savedPath; // host: which world _saved is for
+        private Seconds _nextSync;
 
-        public static void Register(Session s)
+        /// <summary>
+        /// A session started: handle its messages for as long as it runs,
+        /// and forget the client's state, the host's record and a waiting
+        /// reset when it ends.
+        /// </summary>
+        public void Join(CoopSession coop)
         {
-            s.Register(MsgType.ProgressState, OnState);
-            s.Register(MsgType.EssenceAdd, OnEssence);
-            s.Register(MsgType.LevelTaken, OnLevelTaken);
-            s.Register(MsgType.SkillReset, OnSkillReset);
-            SkillTree.Register(s);
-            s.OnSessionEnded += () =>
-            {
-                _known = false;
-                _saved = null;
-                _savedPath = null;
-                _waitingReset = false;
-            };
+            coop.Handle(MsgType.ProgressState, OnState);
+            coop.Handle(MsgType.EssenceAdd, OnEssence);
+            coop.Handle(MsgType.LevelTaken, OnLevelTaken);
+            coop.Handle(MsgType.SkillReset, OnSkillReset);
+            coop.Hook(Forget);
+        }
+
+        private void Forget()
+        {
+            _known = false;
+            _saved = null;
+            _savedPath = null;
+            _waitingReset = false;
         }
 
         // ---- levels ---------------------------------------------------------
@@ -105,7 +121,7 @@ namespace DarkwoodMP.World
         /// The shared numbers and this player's level requirements (none
         /// with no player): the only code that reads them for the rules.
         /// </summary>
-        private static ProgressFacts FactsOf(Player p)
+        private ProgressFacts FactsOf(Player p)
         {
             int[] requirements = null;
             if (p != null && p.levelRequirements != null)
@@ -125,7 +141,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Which side of the shared progression our game is on now.
         /// </summary>
-        private static SideFacts Side()
+        private SideFacts Side()
         {
             var s = S;
             return new SideFacts
@@ -160,7 +176,7 @@ namespace DarkwoodMP.World
             };
         }
 
-        private static int Req(Player p, int level)
+        private int Req(Player p, int level)
         {
             return ProgressRules.Requirement(FactsOf(p).Requirements, level);
         }
@@ -169,7 +185,7 @@ namespace DarkwoodMP.World
         /// The most levels a player can have now: the shared level, or what the
         /// shared essence allows.
         /// </summary>
-        internal static int MostLevels(Player p)
+        internal int MostLevels(Player p)
         {
             return ProgressRules.MostLevels(FactsOf(p));
         }
@@ -192,7 +208,7 @@ namespace DarkwoodMP.World
         /// Set our player's essence to what the shared essence shows them, and
         /// refresh an open stove menu.
         /// </summary>
-        private static void Apply(Player p)
+        private void Apply(Player p)
         {
             if (p == null)
             {
@@ -244,7 +260,7 @@ namespace DarkwoodMP.World
         /// Host: the shared progression of this world, loaded or started (when
         /// someone is playing with us); null: none.
         /// </summary>
-        private static Saved HostSaved(bool start, bool alone = false)
+        private Saved HostSaved(bool start, bool alone = false)
         {
             var s = S;
             var p = Player.Instance;
@@ -328,7 +344,7 @@ namespace DarkwoodMP.World
             return _saved;
         }
 
-        private static void SendState(ulong to)
+        private void SendState(ulong to)
         {
             var s = S;
             var w = s.Begin(MsgType.ProgressState);
@@ -349,7 +365,7 @@ namespace DarkwoodMP.World
         /// Host: someone's character was just sent; send them the shared
         /// progression after it.
         /// </summary>
-        public static void HostSendTo(ulong peer)
+        public void HostSendTo(ulong peer)
         {
             if (HostSaved(start: true) != null)
             {
@@ -361,7 +377,7 @@ namespace DarkwoodMP.World
         /// Host: take in our own player's essence and level, tell everyone when
         /// they changed, and show ours.
         /// </summary>
-        private static void HostSync()
+        private void HostSync()
         {
             var saved = HostSaved(start: true);
             var p = Player.Instance;
@@ -403,7 +419,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: the game saved; write the shared progression beside it.
         /// </summary>
-        public static void OnHostSaved()
+        public void OnHostSaved()
         {
             var write = new WriteFacts
             {
@@ -431,7 +447,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void OnEssence(ulong from, PacketReader r)
+        private void OnEssence(ulong from, PacketReader r)
         {
             int amount = Progress.EssenceAdd.Read(r);
             var p = Player.Instance;
@@ -457,7 +473,7 @@ namespace DarkwoodMP.World
             Apply(p);
         }
 
-        private static void OnLevelTaken(ulong from, PacketReader r)
+        private void OnLevelTaken(ulong from, PacketReader r)
         {
             int level = Progress.LevelTaken.Read(r);
             var p = Player.Instance;
@@ -492,7 +508,7 @@ namespace DarkwoodMP.World
         /// Host: whether it takes in a client's EssenceAdd or LevelTaken.
         /// The record (which can start here) is read only as the host.
         /// </summary>
-        private static bool Handles(Player p)
+        private bool Handles(Player p)
         {
             bool host = S.IsHost;
             bool record = host && HostSaved(start: true) != null;
@@ -532,7 +548,7 @@ namespace DarkwoodMP.World
         /// Host: whether this player (key hash, or "host"; peer 0: ours) may
         /// reset now; if so, it counts as today's.
         /// </summary>
-        private static Verdict TakeReset(string who, ulong peer)
+        private Verdict TakeReset(string who, ulong peer)
         {
             var morning = SkillResetRules.Morning(InMorning(peer));
             if (morning.Refused)
@@ -563,7 +579,7 @@ namespace DarkwoodMP.World
             return verdict;
         }
 
-        private static void OnSkillReset(ulong from, PacketReader r)
+        private void OnSkillReset(ulong from, PacketReader r)
         {
             bool host = S.IsHost;
             string key = null;
@@ -590,7 +606,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The host, or playing alone: our game keeps the shared progression.
         /// </summary>
-        private static void OnState(ulong from, PacketReader r)
+        private void OnState(ulong from, PacketReader r)
         {
             if (S == null || from != S.HostId || !NetEnemies.ClientMode)
             {
@@ -623,7 +639,7 @@ namespace DarkwoodMP.World
         /// Client: tell the host our own level (after a level, a reset, our
         /// character's arrival).
         /// </summary>
-        private static void SendLevel(Player p)
+        private void SendLevel(Player p)
         {
             if (!NetEnemies.ClientMode || p == null)
             {
@@ -638,7 +654,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Client: our character came from the host (World.Characters).
         /// </summary>
-        public static void AfterCharacter(Player p)
+        public void AfterCharacter(Player p)
         {
             SendLevel(p);
             if (_known)
@@ -651,7 +667,7 @@ namespace DarkwoodMP.World
         /// Either side: our player cooked essence (amount: what it added to
         /// Player.experience).
         /// </summary>
-        internal static void Cooked(int amount)
+        internal void Cooked(int amount)
         {
             var route = ProgressSideRules.Cooked(Side(), amount);
             if (route == ProgressRoute.Client)
@@ -671,7 +687,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Either side: our player took a level (SkillsMenu.confirmSkills).
         /// </summary>
-        internal static void LevelTaken()
+        internal void LevelTaken()
         {
             var p = Player.Instance;
             var route = ProgressSideRules.LevelTaken(Side());
@@ -690,7 +706,7 @@ namespace DarkwoodMP.World
         /// Call every frame: the host takes in what its own game did by itself
         /// (picked-up essence, a loaded save).
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var now = new Seconds(Time.unscaledTime);
             if (!ProgressSideRules.Due(now, _nextSync))
@@ -729,7 +745,7 @@ namespace DarkwoodMP.World
         /// full), and levels 2, 3, 5, 6 and 7 bring their dream (only the
         /// host's in co-op, World.DreamSync).
         /// </summary>
-        internal static void TakeLevelAtStove()
+        internal void TakeLevelAtStove()
         {
             var p = Player.Instance;
             var menu = StoveMenu;
@@ -953,14 +969,14 @@ namespace DarkwoodMP.World
                     + $"{p.currentLevel}");
         }
 
-        private static bool CanResetHere(Player p)
+        private bool CanResetHere(Player p)
         {
             return SkillResetRules.CanResetHere(StoveOf(p));
         }
 
-        private static bool _waitingReset;
+        private bool _waitingReset;
 
-        private static void ResetHere()
+        private void ResetHere()
         {
             var p = Player.Instance;
             if (!CanResetHere(p))
@@ -1013,7 +1029,7 @@ namespace DarkwoodMP.World
             DoReset(p);
         }
 
-        private static void DoReset(Player p)
+        private void DoReset(Player p)
         {
             if (p == null)
             {
@@ -1039,7 +1055,7 @@ namespace DarkwoodMP.World
         /// <summary>At our stove: the levels waiting, the points to spend, and
         /// the reset button in the morning, in the mod's menu style, with a
         /// window box behind them so they read over the world.</summary>
-        public static void OnGUI()
+        public void OnGUI()
         {
             var p = Player.Instance;
             if (!StoveRules.OverlayOpen(
@@ -1131,15 +1147,15 @@ namespace DarkwoodMP.World
         /// <summary>
         /// For tests: reset our skills at the stove as the button does.
         /// </summary>
-        internal static void TestReset() => ResetHere();
-        internal static bool TestCanReset => CanResetHere(Player.Instance);
-        internal static bool TestWaitingReset => _waitingReset;
+        internal void TestReset() => ResetHere();
+        internal bool TestCanReset => CanResetHere(Player.Instance);
+        internal bool TestWaitingReset => _waitingReset;
 
         /// <summary>
         /// For tests: give our player this many levels and the essence they
         /// need (and a skill chosen for each).
         /// </summary>
-        internal static void TestGiveLevels(int n, bool chooseSkills = true)
+        internal void TestGiveLevels(int n, bool chooseSkills = true)
         {
             var p = Player.Instance;
             var tiers = SkillTree.Tiers;
@@ -1173,7 +1189,7 @@ namespace DarkwoodMP.World
         /// For tests: our level, essence, the shared numbers and how many
         /// skills are chosen.
         /// </summary>
-        internal static string TestState()
+        internal string TestState()
         {
             var p = Player.Instance;
             if (p == null)
@@ -1219,7 +1235,12 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            Progression.TakeLevelAtStove();
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
+            {
+                plugin.Host.Progress.TakeLevelAtStove();
+            }
+
             return false;
         }
     }
@@ -1250,7 +1271,11 @@ namespace DarkwoodMP.World
 
             if (ProgressRules.Cooked(p != null, Coop.Guards.Replaying, added))
             {
-                Progression.Cooked(added);
+                Plugin plugin = Plugin.Instance;
+                if (plugin != null && plugin.Host != null)
+                {
+                    plugin.Host.Progress.Cooked(added);
+                }
             }
         }
     }
@@ -1258,6 +1283,13 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save))]
     static class ProgressSavedPatch
     {
-        static void Postfix() => Progression.OnHostSaved();
+        static void Postfix()
+        {
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
+            {
+                plugin.Host.Progress.OnHostSaved();
+            }
+        }
     }
 }

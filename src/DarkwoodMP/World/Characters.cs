@@ -323,7 +323,7 @@ namespace DarkwoodMP.World
             _session.SendTo(from, w, Channel.Control, reliable: true);
             // after the character: the shared essence and level
             // (World.Progression)
-            Progression.HostSendTo(from);
+            Plugin.Instance.Host.Progress.HostSendTo(from);
             // loose things that moved since the snapshot it loaded
             CoopSession coop = Coop.Current;
             if (coop != null)
@@ -869,7 +869,7 @@ namespace DarkwoodMP.World
                 PlaceFree(p, host);
                 p.refreshRecipes();
                 Reequip(p);
-                Progression.AfterCharacter(p);
+                Plugin.Instance.Host.Progress.AfterCharacter(p);
                 string data = "You start as a copy of the host's character";
                 if (prologue)
                 {

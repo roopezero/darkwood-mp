@@ -237,6 +237,9 @@ namespace DarkwoodMP
             Pause = new World.Pause.CoopPause(this);
             Mornings = new World.Mornings.AfterNight(this);
             WorldEvents = new World.Rolls.WorldEvents(this);
+            // the progression lives as long as the game (ModHost.Progress);
+            // this session brings its messages and forgets its record
+            Plugin.Instance.Host.Progress.Join(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
