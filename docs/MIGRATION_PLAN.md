@@ -381,8 +381,20 @@ with the baseline.
         `DialogueGuard`. They are `CoopSession.Time`, `.Npcs`, `.Followers`,
         `.Talk` and `.Dialogues`, in `World/Clock`, `World/Npcs` and
         `World/Talk`. `DialogueGuard` now runs only in a session.
-- [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
-      and splits into `Doors`, `Windows` and `Traps`.
+- [x] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
+      and splits into `Doors`, `Windows` and `Traps`. Done in slices, each a
+      `CoopSession` subsystem: `.Doors` and `.Leaves`/`.Pushes` in
+      `World/Doors`, `.Windows` in `World/Windows`, `.Traps` (with
+      `DisarmAnimation`) in `World/Traps`, `.Locks` in `World/Locks`,
+      `.Switches` in `World/Switches`, `.NpcDeaths` in `World/Npcs`,
+      `.Breaks` (`BreakActions`: item hits, breaks, repairs, explosions and
+      the item and explosive parts of `ObjState`) in `World/Breaking`, and
+      `.Objects` (`ObjectActions`, two files of one partial class, and
+      `ObjectPatches`) in `World/Objects`. `WorldActions` stays a static
+      class of shared plumbing (the `Action` enum, `Send`, the
+      `WorldAction` and `ObjState` dispatch, `HasKey`, `Crate`, the
+      `HammerStroke` patch) so its many callers don't change; it is still
+      about 1,000 lines.
 - [ ] 5.3 Items.
   - [x] Part b: `UiRefresh`, `TraderSync`, `ThrowSync`. `UiRefresh` and
         `TraderSync` are `CoopSession.Ui` and `.Traders`, `ThrowSync` is
