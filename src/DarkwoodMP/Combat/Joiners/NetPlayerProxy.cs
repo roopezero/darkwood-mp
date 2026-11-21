@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Joiners;
 using DarkwoodMP.Sync;
 using UnityEngine;
 
@@ -50,8 +51,11 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public int HealthPercent = 100;
 
-        public static readonly Dictionary<ulong, NetPlayerProxy> All =
-            new Dictionary<ulong, NetPlayerProxy>();
+        /// <summary>
+        /// The host's stand-ins by their player's id (ModHost.Proxies).
+        /// </summary>
+        public static Dictionary<ulong, NetPlayerProxy> All =>
+            Plugin.Instance.Host.Proxies.All;
 
         public static NetPlayerProxy Create(ulong owner, string name)
         {
@@ -134,9 +138,7 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static readonly Collider[] Near = new Collider[128];
-        // more than a stand-in moves in a frame, and its own size
-        private const float LooseRadius = 150f;
+        private readonly Collider[] _near = new Collider[ProxyRules.MaxLoose];
 
         private void Ignore(Collider c)
         {
@@ -161,11 +163,11 @@ namespace DarkwoodMP.Combat
         public void IgnoreLooseNear()
         {
             int n = Physics.OverlapSphereNonAlloc(
-                transform.position, LooseRadius, Near, ~0,
+                transform.position, ProxyRules.LooseRadius, _near, ~0,
                 QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
             {
-                var c = Near[i];
+                var c = _near[i];
                 if (c == null || _ignored.Contains(c.GetInstanceID()))
                 {
                     continue;
@@ -258,6 +260,12 @@ namespace DarkwoodMP.Combat
 
         public override void OnDestroy()
         {
+            Plugin plugin = Plugin.Instance;
+            if (plugin == null || plugin.Host == null)
+            {
+                return;
+            }
+
             if (All.TryGetValue(Owner, out var p) && p == this)
             {
                 All.Remove(Owner);
@@ -294,214 +302,5 @@ namespace DarkwoodMP.Combat
         public override CharacterMessage displayMessage(
             string message, bool verticallyCentered = false,
             bool isEpilogueMessage = false) => null;
-    }
-
-    /// <summary>
-    /// Host: keeps a proxy for every remote player (and the test dummy) where
-    /// their puppet stands.
-    /// </summary>
-    public static class Proxies
-    {
-        /// <summary>
-        /// True when the host has other players for the AI to consider: threat
-        /// and shared culling apply.
-        /// </summary>
-        public static bool Any => NetPlayerProxy.All.Count > 0;
-
-        public static void Update(PlayerSync sync, bool hosting)
-        {
-            bool wanted = hosting || sync.HasDummy;
-            // Remove proxies whose player is gone (or everything, when not
-            // hosting).
-            var gone = new List<ulong>();
-            foreach (var kv in NetPlayerProxy.All)
-            {
-                if (kv.Value == null || !wanted
-                    || !sync.Remotes.ContainsKey(kv.Key)
-                    || (!hosting && kv.Key != PlayerSync.DummyId))
-                {
-                    gone.Add(kv.Key);
-                }
-            }
-
-            foreach (var id in gone)
-            {
-                if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
-                {
-                    Object.Destroy(p.gameObject);
-                }
-
-                NetPlayerProxy.All.Remove(id);
-            }
-
-            if (!wanted || Player.Instance == null)
-            {
-                return;
-            }
-
-            foreach (var r in sync.Remotes.Values)
-            {
-                if (r.Root == null)
-                {
-                    continue;
-                }
-
-                if (!hosting && r.Owner != PlayerSync.DummyId)
-                {
-                    continue;
-                }
-
-                if (!NetPlayerProxy.All.TryGetValue(r.Owner, out var proxy)
-                    || proxy == null)
-                {
-                    proxy = NetPlayerProxy.Create(r.Owner, r.Name);
-                }
-
-                var t = proxy.transform;
-                t.SetPositionAndRotation(
-                    r.Root.transform.position, r.Root.transform.rotation);
-                proxy.IgnoreLooseNear();
-                proxy.IgnoreOurPlayer();
-                // The AI only looks for living characters. A joiner in a dream
-                // of their own, or in a separate location we haven't got, isn't
-                // in the host's world at all (their own game runs that area),
-                // so they count as not there, as dead ones do. One in a
-                // location we have at the same spot, or in the shared dream
-                // with our player, is in our world: our enemies there go for
-                // them.
-                var snap = r.Last;
-                Location loc = null;
-                if (hosting && r.Away && snap != null)
-                {
-                    loc = World.Locations.HostRunsAt(snap.Place, t.position);
-                }
-
-                bool away = r.Away && loc == null;
-                bool here = r.Alive && !away;
-                if (proxy.Away != away || proxy.InLocation != loc)
-                {
-                    string data;
-                    if (away)
-                    {
-                        string text = "a separate location we don't have";
-                        if (snap != null && snap.Place.StartsWith("dream:"))
-                        {
-                            text = "a dream";
-                        }
-
-                        data =
-                            $"{proxy.OwnerName} is away ({text}): the host's "
-                                + "enemies leave them be";
-                    }
-                    else if (loc != null)
-                    {
-                        data =
-                            $"{proxy.OwnerName} is in {snap.Place}, which we "
-                                + "run for them: the enemies there are ours "
-                                + "and go for them";
-                    }
-                    else
-                    {
-                        data = $"{proxy.OwnerName} is back in the world";
-                    }
-
-                    Plugin.Log.LogInfo(data);
-                    proxy.Away = away;
-                    proxy.InLocation = loc;
-                }
-
-                proxy.alive = here;
-                if (snap != null)
-                {
-                    Apply(proxy, snap);
-                }
-
-                var col = proxy.GetComponent<Collider>();
-                if (col != null && col.enabled != here)
-                {
-                    // a dead or away player (or a spectator) sets nothing off
-                    col.enabled = here;
-                    // a collider switched off and on can lose what it ignored
-                    proxy.ForgetIgnores();
-                }
-            }
-        }
-
-        /// <summary>
-        /// The player's state bits onto their proxy. Turning invisible does
-        /// here what Player.setInvisible does in the player's own game:
-        /// everything attacking them stops (and the sight checks skip
-        /// CharBase.invisible).
-        /// </summary>
-        private static void Apply(NetPlayerProxy proxy, PlayerSnapshot snap)
-        {
-            bool turnedInvisible = snap.Invisible && !proxy.invisible;
-            bool changed = proxy.invisible != snap.Invisible
-                || proxy.ShadowWard != snap.ShadowWard
-                || proxy.ForestSpiritWard != snap.ForestSpiritWard
-                || proxy.FriendOfTheForest
-                    != snap.FriendOfTheForest
-                || proxy.EnemyOfTheForest != snap.EnemyOfTheForest;
-            proxy.invisible = snap.Invisible;
-            proxy.ShadowWard = snap.ShadowWard;
-            proxy.ForestSpiritWard = snap.ForestSpiritWard;
-            proxy.FriendOfTheForest = snap.FriendOfTheForest;
-            proxy.EnemyOfTheForest = snap.EnemyOfTheForest;
-            proxy.HealthPercent = snap.Health;
-            int stopped = 0;
-            if (turnedInvisible)
-            {
-                var t = proxy.transform;
-                foreach (var c in Object.FindObjectsOfType<Character>())
-                {
-                    if (c == null || (c.target != t && c.superTarget != t))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        c.stopAttacking(t);
-                        stopped++;
-                    }
-                    catch (System.Exception e)
-                    {
-                        Plugin.Log.LogWarning(
-                            $"{c.name} couldn't stop attacking "
-                                + $"{proxy.OwnerName}: {e.Message}");
-                    }
-                }
-            }
-
-            if (changed && Threat.Debug)
-            {
-                string stopNote = "";
-                if (turnedInvisible)
-                {
-                    stopNote = $"; {stopped} enemies stop attacking them";
-                }
-
-                bool lit = Core.isInLight(
-                    proxy.transform.position, mustBeWalkable: false);
-                Plugin.Log.LogInfo(
-                    $"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, "
-                        + $"shadow ward {proxy.ShadowWard}, forest spirit ward "
-                        + $"{proxy.ForestSpiritWard}, " +
-                                   "friend of the forest "
-                        + $"{proxy.FriendOfTheForest}, enemy of the forest "
-                        + $"{proxy.EnemyOfTheForest}" +
-                                   stopNote +
-                                   "; night worms sent at them: "
-                        + $"{NightSpawns.WormWanted(proxy)}; in light here: "
-                        + $"{lit}");
-            }
-        }
-
-        /// <summary>
-        /// A CharBase that is a player: the host's own, or a remote one's
-        /// proxy.
-        /// </summary>
-        public static bool IsPlayer(CharBase c) =>
-            c != null && (c is Player || c is NetPlayerProxy);
     }
 }
