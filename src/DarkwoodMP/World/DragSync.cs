@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Dragging;
 using HarmonyLib;
 using UnityEngine;
 
@@ -953,21 +954,27 @@ namespace DarkwoodMP.World
             ObjRef r, Vector3 pos, Quaternion rot, bool last)
         {
             var w = _session.Begin(MsgType.ObjMove);
-            r.Write(w);
-            w.Write(pos);
-            w.W.Write(rot.x);
-            w.W.Write(rot.y);
-            w.W.Write(rot.z);
-            w.W.Write(rot.w);
-            int lastFlag = 0;
-            if (last)
+            var move = new Moved
             {
-                lastFlag = 1;
-            }
+                Name = ObjRef.NameOf(r),
+                Pos = VecOf(pos),
+                Rot = RotationOf(rot),
+                Last = last,
+            };
 
-            w.W.Write((byte)lastFlag);
+            ObjMove.Write(w, move);
             return w;
         }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
+
+        private static Rotation RotationOf(Quaternion q) =>
+            new Rotation(q.x, q.y, q.z, q.w);
+
+        private static Quaternion QuaternionOf(Rotation q) =>
+            new Quaternion(q.X, q.Y, q.Z, q.W);
 
         /// <summary>
         /// Host: a player drags only what they're at, to near where they are.
@@ -1014,12 +1021,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            var pos = r.ReadVector3();
-            var rot = new Quaternion(
-                r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
-                r.R.ReadSingle());
-            bool last = (r.R.ReadByte() & 1) != 0;
+            var move = ObjMove.Read(r);
+            var obj = ObjRef.RefOf(move.Name);
+            var pos = VectorOf(move.Pos);
+            var rot = QuaternionOf(move.Rot);
+            bool last = move.Last;
 
             if (s.IsHost && !TakeMove(from, obj, pos, last))
             {
@@ -1195,7 +1201,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.DragClaim);
-            _dragRef.Write(w);
+            DragClaim.Write(w, ObjRef.NameOf(_dragRef));
             Coop.Current.Authority.Request(w, $"drag {item.name} ({_dragRef})",
                 (ok, reason, _) =>
             {
@@ -1336,15 +1342,14 @@ namespace DarkwoodMP.World
         private void SendOwner(ObjRef r, ulong owner, bool letGo, ulong to = 0)
         {
             var w = _session.Begin(MsgType.DragOwner);
-            r.Write(w);
-            w.W.Write(owner);
-            int letGoFlag = 0;
-            if (letGo)
+            var word = new OwnerWord
             {
-                letGoFlag = 1;
-            }
+                Name = ObjRef.NameOf(r),
+                Owner = owner,
+                LetGo = letGo,
+            };
 
-            w.W.Write((byte)letGoFlag);
+            DragOwner.Write(w, word);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -1390,7 +1395,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
+            var obj = ObjRef.RefOf(DragClaim.Read(r));
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null)
             {
@@ -1611,9 +1616,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            ulong owner = r.R.ReadUInt64();
-            bool letGo = (r.R.ReadByte() & 1) != 0;
+            var word = DragOwner.Read(r);
+            var obj = ObjRef.RefOf(word.Name);
+            ulong owner = word.Owner;
+            bool letGo = word.LetGo;
             string key = obj.ToString();
             if (owner == 0)
             {
