@@ -254,10 +254,48 @@ join on the GOG build.
 | 4.4 | `ObjRef`, `SharedIds`, `HostIds` | 601 | `world map:world` |
 | 4.5 | The guards in `WorldActions` | part of 5.2 | `world authority solo map:core` |
 
-- [ ] **4.1 `CoopSession`.** Created before the first message of a session can
+- [x] **4.1 `CoopSession`.** Created before the first message of a session can
       arrive. `Dispose` removes its message handlers and event subscriptions:
       `Session.Register` has no way to remove a handler today, so that's added.
       Subsystems that haven't moved stay wired up in `Plugin.Awake`.
+
+  Where it lives: `ModHost` (made in `Plugin.Load`, the part of `Awake` after
+  the startup check) subscribes to the core's `Session.OnSessionStarted`,
+  which fires on the host once it's hosting and on a client before its Hello
+  goes out. Its handler ends any running `CoopSession` (a backend can take
+  over from another without the old session ending) and makes a new one,
+  which `Coop.Begin` sets as `Coop.Current`. `Session.OnSessionEnded` and
+  `ModHost.Dispose` (from `Plugin.OnDestroy`) call `Coop.End`, which sets
+  `Coop.Current` to null and then disposes the session. `ModHost` subscribes
+  first, so the `CoopSession` exists before any other start handler runs and
+  is gone before the old `OnSessionEnded` cleanups run.
+
+  `WorldScope` is replaced in `CoopSession.WatchWorld`, which the constructor
+  calls (hosting from the pause menu starts in a loaded world) and
+  `Plugin.Update` calls each frame before `Session.Update` handles the
+  messages. While `WorldShare.InWorld`, a `WorldScope` is kept for the
+  `Player.Instance` and active scene it was made for; when either changes the
+  old one is disposed and a new one made, and when the world is left it's
+  disposed and `World` is null.
+
+  **How to move a subsystem into `CoopSession`** (4.2 on):
+
+  1. Give `CoopSession` a `public readonly` field for it, made in the
+     constructor where the comment says, before `WatchWorld()`. Its
+     constructor takes the `CoopSession` (and the subsystems it uses, made
+     before it).
+  2. Register its messages with `coop.Handle(MsgType.X, OnX)`, not
+     `Session.Register`, so `Dispose` unregisters them (`Session.Unregister`
+     only removes a handler that's still the registered one).
+  3. Subscribe to an event and record the undo straight after:
+     `coop.Net.OnPeerConnected += OnPeer;`
+     `coop.Hook(() => coop.Net.OnPeerConnected -= OnPeer);`.
+     `Dispose` runs the undos newest first. Game events (`SceneManager`,
+     Unity callbacks) are hooked the same way.
+  4. State tied to the loaded world goes on `WorldScope`, read through
+     `coop.World` each time (null while no world is loaded), never kept.
+  5. Delete its line from `Plugin.Load` and its `OnSessionEnded` cleanup.
+     Patches reach it through `Coop.Current` and do nothing when it's null.
 - [ ] **4.2 `MoveCheck`.** It's small, already an instance, and has clear rules,
       so it tests the recipe. `Good` becomes `Accepted`. Adjust the recipe here
       if it doesn't fit.
