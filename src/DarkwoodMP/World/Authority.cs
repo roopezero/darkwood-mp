@@ -434,21 +434,26 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool InReach(Vector3 pos, float reach, string what)
         {
-            var facts = FactsOf(Requester, pos) with
-            {
-                Handling = Handling,
-                Reach = reach,
-                What = what,
-            };
+            var facts = ReachOf(pos) with { Reach = reach, What = what };
+            var verdict = ReachRules.InReach(facts);
+            Refuse(verdict);
+            return !verdict.Refused;
+        }
 
+        /// <summary>
+        /// Host, in a request's handler: what the reach rules know of the
+        /// requesting player and pos, for a subsystem's facts. The rule sets
+        /// the reach and the name.
+        /// </summary>
+        public ReachFacts ReachOf(Vector3 pos)
+        {
+            var facts = FactsOf(Requester, pos) with { Handling = Handling };
             if (_coop.Moves.TryAccepted(From, out var at))
             {
                 facts = facts with { Checked = true, Accepted = Flat(at) };
             }
 
-            var verdict = ReachRules.InReach(facts);
-            Refuse(verdict);
-            return !verdict.Refused;
+            return facts;
         }
 
         /// <summary>

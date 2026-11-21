@@ -579,7 +579,7 @@ namespace DarkwoodMP.Net
         /// the egg, f32 x, f32 z (where it stands, to find it by name if the
         /// ObjRef doesn't), str its GameObject's name. A larva egg (or another
         /// item broken open to get at its contents) was broken in the sender's
-        /// game; break yours (see World.EggSync).
+        /// game; break yours (see World.Eggs.Eggs).
         /// </summary>
         EggDestroyed = 0xD0,
         /// <summary>
