@@ -12,7 +12,7 @@ namespace DarkwoodMP.Combat
     /// proxy's player.
     /// </summary>
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
-    public static class MeleeSensorProxyPatch
+    public static class MeleeSensorHitsStandIn
     {
         private static bool Prefix(MeleeSensor __instance, Collider _collider)
         {

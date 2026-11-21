@@ -1,8 +1,8 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// A client's hits on the characters the host runs: which go to the
-    /// host, and what of them runs here (ClientForwardHitPatch,
-    /// ClientHitEffectsPatch and ClientNoPuppetEffectsPatch). The client
+    /// host, and what of them runs here (CharacterGetHitFromClient,
+    /// MeleeSensorNotesEffects and CharacterEffectsActivateOnCopy). The client
     /// predicts: the bar and the blood show at once (NetEnemies.ClientHit).
     public static class ClientHitRules
     {

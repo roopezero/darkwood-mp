@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// An enemy's melee hit on a remote player's stand-in, with the checks
-    /// the game makes for a player (MeleeSensorProxyPatch).
+    /// the game makes for a player (MeleeSensorHitsStandIn).
     public static class MeleeRules
     {
         /// Checked in this order: a stand-in, an enemy's sensor with an

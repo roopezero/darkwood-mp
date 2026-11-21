@@ -20,7 +20,7 @@ namespace DarkwoodMP.Combat
             typeof(bool),
             typeof(bool)
         })]
-    public static class CharacterGetHitThreatPatch
+    public static class CharacterGetHitThreat
     {
         private static void Prefix(Character __instance, out float __state) =>
             __state = __instance.health;
@@ -72,7 +72,7 @@ namespace DarkwoodMP.Combat
     /// credit being seen after it.
     /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    public static class CharacterSightThreatPatch
+    public static class CharacterCanSeeEnemyThreat
     {
         private static void Prefix(Character __instance) =>
             Threat.BeforeSightCheck(__instance);
@@ -82,7 +82,7 @@ namespace DarkwoodMP.Combat
 
     /// <summary>Noise is threat for the player who made it.</summary>
     [HarmonyPatch(typeof(Character), nameof(Character.heardSound))]
-    public static class CharacterHearingThreatPatch
+    public static class CharacterHeardSoundThreat
     {
         private static void Prefix(
             Character __instance, Vector3 Position, float volume)
@@ -99,7 +99,7 @@ namespace DarkwoodMP.Combat
     /// means the player with the most threat.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.attackPlayer))]
-    static class AttackPlayerThreatPatch
+    static class CharacterAttackPlayer
     {
         static bool Prefix(Character __instance)
         {
@@ -150,7 +150,7 @@ namespace DarkwoodMP.Combat
     /// (its wards) are about the host's player and stay.
     /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    static class ThreatPursuitTranspiler
+    static class CharacterCanSeeEnemyPursuit
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -161,8 +161,9 @@ namespace DarkwoodMP.Combat
                 AccessTools.Method(
                     typeof(Threat), nameof(Threat.PursuitTarget)),
                 "Character.canSeeEnemy",
-                none: "ThreatPursuitTranspiler: no Player.Instance.transform "
-                    + "in canSeeEnemy (game changed?)");
+                none: "CharacterCanSeeEnemyPursuit: no "
+                    + "Player.Instance.transform in canSeeEnemy (game "
+                    + "changed?)");
     }
 
     /// <summary>
@@ -219,7 +220,7 @@ namespace DarkwoodMP.Combat
     /// stays.
     /// </summary>
     [HarmonyPatch(typeof(Character), "checkStuff")]
-    static class DespawnByNearestPlayerPatch
+    static class CharacterCheckStuffDespawn
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>

@@ -14,7 +14,7 @@ namespace DarkwoodMP.Combat
     /// character being cut in half.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Update))]
-    static class CutInHalfUpdatePatch
+    static class CharacterUpdateCutInHalf
     {
         static System.Exception Finalizer(
             Character __instance, System.Exception __exception)

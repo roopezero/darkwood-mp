@@ -1,6 +1,6 @@
 namespace DarkwoodMP.Combat.Damage
 {
-    /// What Character.Update threw (CutInHalfUpdatePatch.Finalizer).
+    /// What Character.Update threw (CharacterUpdateCutInHalf.Finalizer).
     public readonly struct CutFacts
     {
         /// The exception is a NullReferenceException.

@@ -1,6 +1,6 @@
 namespace DarkwoodMP.Combat.Damage
 {
-    /// A hit on a character in a client's game (ClientForwardHitPatch).
+    /// A hit on a character in a client's game (CharacterGetHitFromClient).
     public readonly struct ClientHitFacts
     {
         /// NetEnemies.Instance exists and NetEnemies.ClientMode.

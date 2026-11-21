@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Noise
 {
     /// The game's code that makes noise only for its own player, outside
-    /// Player's code (PlayerNoiseSourcePatch's targets).
+    /// Player's code (OwnNoiseMakers's targets).
     public enum NoiseMaker : byte
     {
         /// Anything else: never counted.

@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Noise
 {
     /// One of the game's own-player noise makers starting
-    /// (PlayerNoiseSourcePatch.Prefix).
+    /// (OwnNoiseMakers.Prefix).
     public readonly struct OwnNoiseFacts
     {
         /// Player.Instance isn't null.

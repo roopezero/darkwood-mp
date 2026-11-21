@@ -13,7 +13,7 @@ namespace DarkwoodMP.Combat
     /// enemies hear remote players too.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.alertInArea))]
-    public static class PlayerNoisePatch
+    public static class CharacterAlertInArea
     {
         private static void Prefix(
             Vector3 _pos, float range, bool dangerousSound, float volume,
@@ -101,7 +101,7 @@ namespace DarkwoodMP.Combat
                     }
                 }
 
-                if (t == null || t == typeof(PlayerNoisePatch)
+                if (t == null || t == typeof(CharacterAlertInArea)
                     || t == typeof(Character))
                 {
                     continue;
@@ -125,7 +125,7 @@ namespace DarkwoodMP.Combat
     /// player's noise; on a client it's sent to the host like their steps.
     /// </summary>
     [HarmonyPatch]
-    static class PlayerNoiseSourcePatch
+    static class OwnNoiseMakers
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {

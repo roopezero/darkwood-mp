@@ -1851,8 +1851,8 @@ namespace DarkwoodMP.Combat
         /// stopped sending). They stay in their location's lists, so the game
         /// switches them off and on with their area, and each time
         /// CharacterSounds.OnEnable starts their idle loop again
-        /// (ClientHiddenSilentPatch keeps them silent): a dead dog camp's dogs
-        /// barked on in a joiner's game.
+        /// (CharacterSoundsPlayIdleLoopHidden keeps them silent): a dead dog
+        /// camp's dogs barked on in a joiner's game.
         /// The session's; with no session an empty set that keeps nothing.
         /// </summary>
         public static HashSet<Character> Hidden
@@ -3327,7 +3327,7 @@ namespace DarkwoodMP.Combat
             // while it chases, defensive, sleeping, escaping) takes the place
             // of the copy's loop, as on the host. Played as a sound it would go
             // on beside the copy's idle loop, and nothing would stop it. "" is
-            // the host's loop stopping (HostLoopStopPatch).
+            // the host's loop stopping (CharacterSoundsPlayIdleLoopStop).
             var snd = p.C.sounds;
             if (string.IsNullOrEmpty(audio))
             {

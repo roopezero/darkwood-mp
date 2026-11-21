@@ -8,7 +8,7 @@ namespace DarkwoodMP.Combat
     /// (see NetEnemies).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Start))]
-    public static class ClientFreezeCharacterPatch
+    public static class CharacterStart
     {
         private static bool Prefix(Character __instance)
         {
@@ -65,7 +65,7 @@ namespace DarkwoodMP.Combat
     /// NetEnemies.Thaw unfreezes the ones that are ours.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.enableComponents))]
-    public static class ClientFrozenStaysPatch
+    public static class CharacterEnableComponents
     {
         private static bool Prefix(Character __instance, bool enable)
         {
@@ -103,7 +103,7 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(
         typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop),
         new[] { typeof(string), typeof(bool) })]
-    public static class ClientHiddenSilentPatch
+    public static class CharacterSoundsPlayIdleLoopHidden
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
@@ -129,7 +129,7 @@ namespace DarkwoodMP.Combat
     /// </summary>
     [HarmonyPatch(
         typeof(CharacterSpawnPoint), nameof(CharacterSpawnPoint.actuallySpawn))]
-    public static class ClientNoOwnSpawnsPatch
+    public static class CharacterSpawnPointActuallySpawn
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
@@ -160,7 +160,7 @@ namespace DarkwoodMP.Combat
     /// like any other object from then on.
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
-    public static class HostCorpsesOutsideLocationPatch
+    public static class LocationActivateCharactersHost
     {
         private static void Prefix(Location __instance, bool active)
         {
@@ -216,7 +216,7 @@ namespace DarkwoodMP.Combat
     /// switched off and on with their location (NetEnemies.LocationCharacters).
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
-    public static class ClientCorpsesWithLocationPatch
+    public static class LocationActivateCharactersClient
     {
         private static void Postfix(Location __instance, bool active)
         {
@@ -235,7 +235,7 @@ namespace DarkwoodMP.Combat
     /// Client: frozen and host-driven characters don't hear anything here.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.heardSound))]
-    public static class ClientDeafPatch
+    public static class CharacterHeardSoundDeaf
     {
         [HarmonyPriority(Priority.First)]
         private static bool Prefix(Character __instance) =>
