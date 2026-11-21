@@ -401,8 +401,27 @@ namespace DarkwoodMP.World
         /// time), and active or allowed to run inactive.
         /// </summary>
         private static bool CanRun(GameEvents ge) =>
-            ge != null && (!ge.fired || ge.multipleFire)
-                && (ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive);
+            FiredEventRules.CanRun(FactsOf(ge));
+
+        /// <summary>
+        /// What the rules need to know of a GameEvents (ge may be null).
+        /// </summary>
+        internal static EventsFacts FactsOf(GameEvents ge)
+        {
+            if (ge == null)
+            {
+                return default;
+            }
+
+            return new EventsFacts
+            {
+                Exists = true,
+                Fired = ge.fired,
+                MultipleFire = ge.multipleFire,
+                Active = ge.gameObject.activeInHierarchy,
+                RunsInactive = !ge.dontRunIfInactive,
+            };
+        }
 
         /// <summary>
         /// Requirements the host can check against its own world. The others

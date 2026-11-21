@@ -247,14 +247,17 @@ namespace DarkwoodMP.World
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type type)
         {
-            if (t == null || et == null || t.type != type || !IsOwed(t))
-            {
-                return false;
-            }
-
             var s = S;
-            return s != null && s.Active && Coop.Guards.Sharing
-                && Current == Part.All && SettingOff;
+            bool matches = t != null && et != null && t.type == type;
+            return LaterRules.LaterFor(new LaterFacts
+            {
+                Matches = matches,
+                Owed = matches && IsOwed(t),
+                Active = s != null && s.Active,
+                Sharing = Coop.Guards.Sharing,
+                Current = (EventPart)Current,
+                SettingOff = SettingOff,
+            });
         }
 
         /// <summary>
@@ -272,32 +275,37 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(t.delay);
             }
 
-            if (t.disabled || !t.requirementsMet() || !IsOwed(t)
-                || Asking.Contains(t))
+            if (!LaterRules.MayStart(new LaterFacts
+            {
+                Disabled = t.disabled,
+                Met = t.requirementsMet(),
+                Owed = IsOwed(t),
+                Asking = Asking.Contains(t),
+            }))
             {
                 yield break;
             }
 
-            if (t.warmupTime != 0f && type == global::EventTrigger.Type.area)
+            if (LaterRules.WaitsWarmup(
+                t.warmupTime, type == global::EventTrigger.Type.area))
             {
                 yield return new WaitForSeconds(t.warmupTime);
-                if (et == null || et.entered <= et.exited)
+                if (et == null
+                    || !FiredEventRules.Entered(et.entered, et.exited))
                 {
                     yield break;
                 }
             }
 
-            if ((type == global::EventTrigger.Type.onTakeInvItem
-                    || type == global::EventTrigger.Type.onPlaceItem)
-                && !string.IsNullOrEmpty(t.reactsToItemType)
-                && t.reactsToItemType != value)
+            bool itemType = type == global::EventTrigger.Type.onTakeInvItem
+                || type == global::EventTrigger.Type.onPlaceItem;
+            if (!LaterRules.ItemFits(itemType, t.reactsToItemType, value))
             {
                 yield break;
             }
 
             var ge = t.gameEvents;
-            if (ge == null
-                || !(ge.gameObject.activeInHierarchy || !ge.dontRunIfInactive))
+            if (!LaterRules.EventsRun(FactsOf(ge)))
             {
                 yield break;
             }
