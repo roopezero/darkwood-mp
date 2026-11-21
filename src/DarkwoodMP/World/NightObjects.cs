@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Nights;
 using HarmonyLib;
 using UnityEngine;
 
@@ -221,23 +222,24 @@ namespace DarkwoodMP.World
         private static void Send(byte kind, Live l, ulong to)
         {
             var w = _session.Begin(MsgType.NightObject);
-            w.W.Write(kind);
-            w.W.Write(l.Id);
+            var night = new NightObjectBody { Kind = kind, Id = l.Id };
             if (kind != Gone)
             {
-                w.WriteStr(l.Tag.Scenario);
-                w.WriteStr(l.Tag.Event);
-                w.W.Write((byte)l.Tag.Group);
-                w.W.Write((byte)l.Tag.Step);
-                w.Write(l.Pos);
-                w.W.Write(l.Rot.x);
-                w.W.Write(l.Rot.y);
-                w.W.Write(l.Rot.z);
-                w.W.Write(l.Rot.w);
-                l.Parent.Write(w);
                 l.Armed = ArmedOf(l.Go);
-                w.W.Write(l.Armed);
+                night = night with
+                {
+                    Scenario = l.Tag.Scenario,
+                    Event = l.Tag.Event,
+                    Group = l.Tag.Group,
+                    Step = l.Tag.Step,
+                    Pos = new Vec3(l.Pos.x, l.Pos.y, l.Pos.z),
+                    Rot = new Quat(l.Rot.x, l.Rot.y, l.Rot.z, l.Rot.w),
+                    Parent = ObjRef.NameOf(l.Parent),
+                    Armed = l.Armed,
+                };
             }
+
+            NightObjectMessage.Write(w, night);
 
             if (to == 0)
             {
@@ -377,8 +379,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            byte kind = r.R.ReadByte();
-            long id = r.R.ReadInt64();
+            NightObjectBody night = NightObjectMessage.Read(r);
+            byte kind = night.Kind;
+            long id = night.Id;
             Tag tag = null;
             Vector3 pos = default;
             Quaternion rot = Quaternion.identity;
@@ -387,18 +390,17 @@ namespace DarkwoodMP.World
             {
                 tag = new Tag
                 {
-                    Scenario = r.ReadStr(),
-                    Event = r.ReadStr(),
-                    Group = r.R.ReadByte(),
-                    Step = r.R.ReadByte()
+                    Scenario = night.Scenario,
+                    Event = night.Event,
+                    Group = night.Group,
+                    Step = night.Step,
+                    Armed = night.Armed,
                 };
 
-                pos = r.ReadVector3();
+                pos = new Vector3(night.Pos.X, night.Pos.Y, night.Pos.Z);
                 rot = new Quaternion(
-                    r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
-                    r.R.ReadSingle());
-                parent = ObjRef.Read(r);
-                tag.Armed = r.R.ReadByte();
+                    night.Rot.X, night.Rot.Y, night.Rot.Z, night.Rot.W);
+                parent = ObjRef.RefOf(night.Parent);
             }
 
             // While our world loads (a player let in), they wait for it.

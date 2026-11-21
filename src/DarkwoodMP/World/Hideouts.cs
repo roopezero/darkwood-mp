@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Hideout;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -80,6 +81,8 @@ namespace DarkwoodMP.World
             }
         }
 
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
         private static Location HideoutById(int id)
         {
             if (id <= 0)
@@ -120,7 +123,7 @@ namespace DarkwoodMP.World
                     && !Coop.Guards.Replaying)
                 {
                     var w = s.Begin(MsgType.PorterTransport);
-                    w.W.Write((byte)src.hideoutId);
+                    PorterTransportMessage.Write(w, src.hideoutId);
                     if (Debug)
                     {
                         Plugin.Log.LogInfo(
@@ -190,7 +193,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int hid = r.R.ReadByte();
+            int hid = PorterTransportMessage.Read(r);
             if (!Coop.Current.Authority.Handling)
             {
                 return;
@@ -244,11 +247,15 @@ namespace DarkwoodMP.World
                     + $"to {dest.name}");
 
             var w = S.Begin(MsgType.PorterDelivered);
-            w.W.Write((byte)src.hideoutId);
-            w.W.Write((byte)dest.hideoutId);
-            w.W.Write(id);
-            w.W.Write(spawnerId);
-            w.WriteBigStr(contents);
+            PorterDeliveredMessage.Write(w, new PorterDelivery
+            {
+                Source = src.hideoutId,
+                Target = dest.hideoutId,
+                Id = id,
+                SpawnerId = spawnerId,
+                Contents = contents,
+            });
+
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
@@ -261,10 +268,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var src = HideoutById(r.R.ReadByte());
-            var dest = HideoutById(r.R.ReadByte());
-            long id = r.R.ReadInt64(), spawnerId = r.R.ReadInt64();
-            string contents = r.ReadBigStr();
+            PorterDelivery move = PorterDeliveredMessage.Read(r);
+            var src = HideoutById(move.Source);
+            var dest = HideoutById(move.Target);
+            long id = move.Id, spawnerId = move.SpawnerId;
+            string contents = move.Contents;
             if (Debug)
             {
                 string fromName = "?";
@@ -397,7 +405,8 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.PorterCalled);
-            w.Write(loc.porterPosition.transform.position);
+            PorterCalledMessage.Write(
+                w, VecOf(loc.porterPosition.transform.position));
             if (Debug)
             {
                 Plugin.Log.LogInfo($"[world] sent porter call at {loc.name}");
@@ -420,7 +429,8 @@ namespace DarkwoodMP.World
             }
 
             var w = S.Begin(MsgType.PorterCalled);
-            w.Write(loc.porterPosition.transform.position);
+            PorterCalledMessage.Write(
+                w, VecOf(loc.porterPosition.transform.position));
             S.Broadcast(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo($"[world] the porter was called at {loc.name}");
         }
@@ -460,7 +470,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var pos = r.ReadVector3();
+            Vec3 at = PorterCalledMessage.Read(r);
+            var pos = new Vector3(at.X, at.Y, at.Z);
             var loc = PorterLocationAt(pos);
             if (s.IsHost)
             {
@@ -648,14 +659,18 @@ namespace DarkwoodMP.World
             ExperienceMachine lit, ExperienceMachine other)
         {
             var w = S.Begin(MsgType.OvenLit);
-            ObjRef.Of(lit.gameObject).Write(w);
             ObjRef goesOut = default;
             if (other != null)
             {
                 goesOut = ObjRef.Of(other.gameObject);
             }
 
-            goesOut.Write(w);
+            OvenLitMessage.Write(w, new LitOven
+            {
+                Lit = ObjRef.NameOf(ObjRef.Of(lit.gameObject)),
+                Out = ObjRef.NameOf(goesOut),
+            });
+
             return w;
         }
 
@@ -690,8 +705,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var litRef = ObjRef.Read(r);
-            var otherRef = ObjRef.Read(r);
+            LitOven oven = OvenLitMessage.Read(r);
+            var litRef = ObjRef.RefOf(oven.Lit);
+            var otherRef = ObjRef.RefOf(oven.Out);
             var lit = ObjRef.Resolve<ExperienceMachine>(litRef);
             var other = ObjRef.Resolve<ExperienceMachine>(otherRef);
             if (s.IsHost)
