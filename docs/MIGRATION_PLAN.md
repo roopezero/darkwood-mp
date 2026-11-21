@@ -413,6 +413,17 @@ Finish with `tools/run-test.sh full`.
 - [ ] 6.1 Player puppets.
 - [ ] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
       by the closest player.
+  - [x] Part a: `Threat`, `NetPlayerProxy`, `ViewRects`. The threat tables
+        and the stand-ins are `ModHost.Threats` and `ModHost.Proxies`, since
+        the test dummy brings both into a game played alone; `Threat` and
+        `NetPlayerProxy.All` keep static members that pass on to them, so
+        their callers didn't change. `ViewRects` is `CoopSession.Views`, its
+        bytes the core's `ViewRectMessage`. The core's tests already pinned
+        down threat over closeness
+        (`Picks_a_far_player_with_more_threat_over_the_closest` in `Order`
+        and `Best`).
+  - [ ] Part b: `JoinerAiPatches`, `JoinerSight`, `WardPatches`,
+        `ShadowArmorLight`, `PlayerCues`.
 - [ ] 6.3 Damage. `DamageCap` becomes a rule.
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
