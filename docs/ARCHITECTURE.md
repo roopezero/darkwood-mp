@@ -11,10 +11,12 @@ rules in the core, its state is on `CoopSession` or `ModHost`, and its patches
 are thin. What stays static on purpose: `Plugin.Instance`, `Plugin.Log` and
 `Plugin.Cfg`, the process's entry point that BepInEx creates; `Coop.Current`,
 the running session; helpers that keep no state (such as `TestWorld`,
-`StateDump`, `CursorLock`); a few static front doors that pass on to an
+`StateDump`, `CursorLock`), lookup tables, reflection caches and
+`SpawnSpot`'s physics buffer; a few static front doors that pass on to an
 instance on `ModHost` because transpilers call them (`MenuSkin`, `PixelFont`,
-`MenuWindows`, parts of `Threat`); and the Harmony patch classes, which
-Harmony requires to be static. The in-game test run that checks the whole
+`MenuWindows`, parts of `Threat`); the map test steps' own fields, which are
+test-only; and the Harmony patch classes, which Harmony requires to be
+static. The in-game test run that checks the whole
 refactor is still to do; [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has what is
 left.
 
