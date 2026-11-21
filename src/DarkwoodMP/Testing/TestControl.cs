@@ -431,7 +431,8 @@ namespace DarkwoodMP
             }
 
             until = Time.realtimeSinceStartup + 90f;
-            while ((!WorldShare.MainMenuReady() || SaveRedirect.Active)
+            while ((!WorldShare.MainMenuReady()
+                    || Plugin.Instance.Host.SaveFolders.Active)
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;

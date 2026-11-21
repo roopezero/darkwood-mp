@@ -434,7 +434,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Reload(string[] a, Result r)
         {
-            if (!SaveRedirect.Active)
+            if (!Plugin.Instance.Host.SaveFolders.Active)
             {
                 r.Fail(
                     "the saves aren't a test copy (--dwmp-sandbox or the test "

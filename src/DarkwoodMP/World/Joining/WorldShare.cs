@@ -264,7 +264,7 @@ namespace DarkwoodMP.World
         {
             LoadStatus = why;
             Plugin.Log.LogInfo(why);
-            if (SaveRedirect.Active)
+            if (Plugin.Instance.Host.SaveFolders.Active)
             {
                 _runner.StartCoroutine(ToMainMenu());
             }
@@ -281,7 +281,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
 
-            if (_session.Active || !InWorld || !SaveRedirect.Active)
+            if (_session.Active || !InWorld
+                || !Plugin.Instance.Host.SaveFolders.Active)
             {
                 yield break; // joined again meanwhile, or already out
             }

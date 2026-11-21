@@ -46,7 +46,7 @@ namespace DarkwoodMP.Combat
                 HasSession = true,
                 Client = s.IsClient,
                 Connected = s.Connected,
-                Redirected = SaveRedirect.Active,
+                Redirected = Plugin.Instance.Host.SaveFolders.Active,
             };
         }
 

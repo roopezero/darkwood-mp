@@ -48,7 +48,9 @@ namespace DarkwoodMP.World
         /// (a host's world in the cache).
         /// </summary>
         public static string FilePath => RedirectRules.BookFile(
-            BepInEx.Paths.ConfigPath, SaveRedirect.Dir, HostCopy());
+            BepInEx.Paths.ConfigPath,
+            Plugin.Instance.Host.SaveFolders.Dir,
+            HostCopy());
 
         /// <summary>
         /// Whether we play a copy of a host's world, or null when that isn't

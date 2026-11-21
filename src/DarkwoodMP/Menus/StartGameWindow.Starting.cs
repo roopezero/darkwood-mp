@@ -134,10 +134,10 @@ namespace DarkwoodMP.Menus
 
             if (sandbox != null)
             {
-                SaveRedirect.Begin(sandbox);
+                Plugin.Instance.Host.SaveFolders.Begin(sandbox);
                 if (!WorldShare.RedirectWorks(sandbox))
                 {
-                    SaveRedirect.End();
+                    Plugin.Instance.Host.SaveFolders.End();
                     yield break;
                 }
             }
@@ -166,7 +166,7 @@ namespace DarkwoodMP.Menus
             {
                 if (sandbox != null)
                 {
-                    SaveRedirect.End();
+                    Plugin.Instance.Host.SaveFolders.End();
                 }
 
                 yield break;
@@ -228,7 +228,7 @@ namespace DarkwoodMP.Menus
                 w.Close();
                 if (sandbox != null)
                 {
-                    SaveRedirect.End();
+                    Plugin.Instance.Host.SaveFolders.End();
                 }
 
                 Plugin.Log.LogInfo("[start window] done");

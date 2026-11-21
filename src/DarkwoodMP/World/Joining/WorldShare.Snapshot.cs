@@ -201,7 +201,8 @@ namespace DarkwoodMP.World
                     }))
                 {
                     _snapshotting = true;
-                    SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
+                    Plugin.Instance.Host.SaveFolders.BeginTemporary(
+                        Path.GetFullPath(dir));
                     try
                     {
                         // the same frame the world is read in
@@ -223,7 +224,7 @@ namespace DarkwoodMP.World
                     }
                     finally
                     {
-                        SaveRedirect.EndTemporary();
+                        Plugin.Instance.Host.SaveFolders.EndTemporary();
                         // SnapshotSave.Begin set them to the snapshot folder's
                         sm.updateFilePaths();
                         _snapshotting = false;
@@ -326,7 +327,8 @@ namespace DarkwoodMP.World
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 _snapshotting = true;
-                SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
+                Plugin.Instance.Host.SaveFolders.BeginTemporary(
+                    Path.GetFullPath(dir));
                 sm.Save(
                     doJson: true, doSaveProfile: true, force: true,
                     forceSaveStatic: !haveStatic, showSavingIndicator: false,
@@ -367,7 +369,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                SaveRedirect.EndTemporary();
+                Plugin.Instance.Host.SaveFolders.EndTemporary();
                 sm.updateFilePaths();
                 _snapshotting = false;
             }
