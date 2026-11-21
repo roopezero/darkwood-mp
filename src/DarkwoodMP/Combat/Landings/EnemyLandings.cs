@@ -1,3 +1,4 @@
+using DarkwoodMP.Combat.Landings;
 using DarkwoodMP.World.Inventories;
 using System.Collections.Generic;
 using DarkwoodMP.World;
@@ -90,8 +91,9 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
 
-                var w = BeginThrow(
-                    MsgType.EnemyProjectile, ThrowingBy, Throwing, t);
+                var w = S.Begin(MsgType.EnemyProjectile);
+                EnemyProjectileMessage.Write(
+                    w, ThrowOf(ThrowingBy, Throwing, t));
                 S.Broadcast(w, Channel.State, reliable: true);
                 if (WorldActions.Debug)
                 {
@@ -105,18 +107,12 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host: the start of EnemyProjectile and EnemySensorThrown: thrower,
-        /// name, position, yaw, velocity.
+        /// Host: what EnemyProjectile and EnemySensorThrown say of a thrown
+        /// thing: thrower, name, position, yaw, velocity.
         /// </summary>
-        private static PacketWriter BeginThrow(
-            MsgType type, uint by, string name, Transform t)
+        private static EnemyThrow ThrowOf(uint by, string name, Transform t)
         {
             var rb = t.GetComponent<Rigidbody>();
-            var w = S.Begin(type);
-            w.W.Write(by);
-            w.WriteStr(name);
-            w.Write(t.position);
-            w.W.Write(t.eulerAngles.y);
             Vector3 v;
             if (rb != null)
             {
@@ -127,9 +123,19 @@ namespace DarkwoodMP.Combat
                 v = Vector3.zero;
             }
 
-            w.Write(v);
-            return w;
+            return new EnemyThrow
+            {
+                By = by,
+                Name = name,
+                At = VecOf(t.position),
+                Yaw = t.eulerAngles.y,
+                Velocity = VecOf(v),
+            };
         }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         /// <summary>
         /// Client: a copy of the host's enemy's projectile, made harmless and
@@ -169,11 +175,12 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint by = r.R.ReadUInt32();
-            string type = r.ReadStr();
-            var pos = r.ReadVector3();
-            float yaw = r.R.ReadSingle();
-            var vel = r.ReadVector3();
+            var thrown = EnemyProjectileMessage.Read(r);
+            uint by = thrown.By;
+            string type = thrown.Name;
+            var pos = VectorOf(thrown.At);
+            float yaw = thrown.Yaw;
+            var vel = VectorOf(thrown.Velocity);
             Transform t;
             try
             {
@@ -242,11 +249,14 @@ namespace DarkwoodMP.Combat
                     continue;
                 }
 
-                var w = BeginThrow(
-                    MsgType.EnemySensorThrown, SensorThrowingBy, SensorThrowing,
-                    ti.transform);
-                w.W.Write(ti.landTarget.x);
-                w.W.Write(ti.landTarget.z);
+                var w = S.Begin(MsgType.EnemySensorThrown);
+                EnemySensorThrownMessage.Write(w, new EnemySensorThrow
+                {
+                    Throw = ThrowOf(
+                        SensorThrowingBy, SensorThrowing, ti.transform),
+                    Land = new Vec2(ti.landTarget.x, ti.landTarget.z),
+                });
+
                 S.Broadcast(w, Channel.State, reliable: true);
                 if (WorldActions.Debug)
                 {
@@ -273,12 +283,13 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint by = r.R.ReadUInt32();
-            string name = r.ReadStr();
-            var pos = r.ReadVector3();
-            float yaw = r.R.ReadSingle();
-            var vel = r.ReadVector3();
-            var land = new Vector3(r.R.ReadSingle(), 0f, r.R.ReadSingle());
+            var thrown = EnemySensorThrownMessage.Read(r);
+            uint by = thrown.Throw.By;
+            string name = thrown.Throw.Name;
+            var pos = VectorOf(thrown.Throw.At);
+            float yaw = thrown.Throw.Yaw;
+            var vel = VectorOf(thrown.Throw.Velocity);
+            var land = new Vector3(thrown.Land.X, 0f, thrown.Land.Z);
             NetEnemies instance = NetEnemies.Instance;
             Character thrower = null;
             if (instance != null)
@@ -442,11 +453,15 @@ namespace DarkwoodMP.Combat
                 ObjRef.RegisterSpawned(id, go);
                 var p = go.transform.position;
                 var w = S.Begin(MsgType.EnemyLanded);
-                w.W.Write(id);
-                w.W.Write(LandingBy);
-                w.WriteStr(go.name);
-                w.Write(p);
-                w.W.Write(go.transform.eulerAngles.y);
+                EnemyLandedMessage.Write(w, new EnemyLanding
+                {
+                    Id = id,
+                    By = LandingBy,
+                    Name = go.name,
+                    At = VecOf(p),
+                    Yaw = go.transform.eulerAngles.y,
+                });
+
                 S.Broadcast(w, Channel.Control, reliable: true);
                 if (WorldActions.Debug)
                 {
@@ -500,7 +515,7 @@ namespace DarkwoodMP.Combat
                 {
                     _landed.Remove(id);
                     var w = s.Begin(MsgType.EnemyLandedGone);
-                    w.W.Write(id);
+                    EnemyLandedGoneMessage.Write(w, id);
                     s.Broadcast(w, Channel.Control, reliable: true);
                     if (WorldActions.Debug)
                     {
@@ -522,7 +537,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            long id = r.R.ReadInt64();
+            long id = EnemyLandedGoneMessage.Read(r);
             if (!ObjRef.Spawned.TryGetValue(id, out var go) || go == null)
             {
                 return;
@@ -604,11 +619,12 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            long id = r.R.ReadInt64();
-            uint by = r.R.ReadUInt32();
-            string name = r.ReadStr();
-            var pos = r.ReadVector3();
-            float yaw = r.R.ReadSingle();
+            var landed = EnemyLandedMessage.Read(r);
+            long id = landed.Id;
+            uint by = landed.By;
+            string name = landed.Name;
+            var pos = VectorOf(landed.At);
+            float yaw = landed.Yaw;
             if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null)
             {
                 return;
