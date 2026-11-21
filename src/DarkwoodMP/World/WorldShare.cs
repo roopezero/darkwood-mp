@@ -122,7 +122,7 @@ namespace DarkwoodMP.World
                 if (why == Preparing)
                 {
                     // it's on its way: the loading screen says so
-                    JoinScreen.Begin();
+                    Plugin.Instance.Host.Join.Begin();
                 }
 
                 _runner.StartCoroutine(HelloAgain());
@@ -150,7 +150,7 @@ namespace DarkwoodMP.World
                 $"Lost the host: {why}");
             session.OnRefused += why =>
             {
-                if (JoinScreen.Shown)
+                if (Plugin.Instance.Host.Join.Shown)
                 {
                     LoadStatus = $"The host refused you: {why}";
                 }
@@ -1547,7 +1547,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"Downloading the host's world ({size / 1024} KiB{text}, day "
                     + $"{d.Profile.day})");
-            JoinScreen.Begin();
+            Plugin.Instance.Host.Join.Begin();
             for (int i = 0; i < PiecesInFlight; i++)
             {
                 RequestNext();
@@ -1894,7 +1894,7 @@ namespace DarkwoodMP.World
             string dir = Path.Combine(_cacheDir, WorldFiles.Hex(_readyHash));
             // already up if we downloaded the world; this is the first sign if
             // we had it
-            JoinScreen.Begin();
+            Plugin.Instance.Host.Join.Begin();
             _runner.StartCoroutine(LoadWorld(dir));
         }
 
@@ -1910,7 +1910,7 @@ namespace DarkwoodMP.World
             {
                 LoadStatus = $"Couldn't read the host's world: {e.Message}";
                 Plugin.Log.LogError(LoadStatus);
-                JoinScreen.Fail(LoadStatus);
+                Plugin.Instance.Host.Join.Fail(LoadStatus);
                 yield break;
             }
 
@@ -1944,7 +1944,7 @@ namespace DarkwoodMP.World
                 if (Time.realtimeSinceStartup > until)
                 {
                     LoadStatus = "Timed out waiting for the main menu.";
-                    JoinScreen.Fail(LoadStatus);
+                    Plugin.Instance.Host.Join.Fail(LoadStatus);
                     yield break;
                 }
 
@@ -1966,7 +1966,7 @@ namespace DarkwoodMP.World
                 LoadStatus =
                     "Couldn't keep the host's world out of your own saves, so "
                         + "it wasn't loaded (see the log).";
-                JoinScreen.Fail(LoadStatus);
+                Plugin.Instance.Host.Join.Fail(LoadStatus);
                 INetBackend backend = _session.Backend;
                 if (backend != null)
                 {
@@ -1976,7 +1976,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            JoinScreen.HandOver();
+            Plugin.Instance.Host.Join.HandOver();
         }
 
         public static bool MainMenuReady()

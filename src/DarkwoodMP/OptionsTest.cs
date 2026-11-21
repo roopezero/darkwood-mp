@@ -108,7 +108,7 @@ namespace DarkwoodMP
                     + $"file {PrefsPath} with {before.Count} settings");
 
             // Through the menu's entry, as a click on it.
-            bool took = MenuList.Click("Options");
+            bool took = Plugin.Instance.Host.MenuList.Click("Options");
             yield return null;
             yield return null;
             Check(

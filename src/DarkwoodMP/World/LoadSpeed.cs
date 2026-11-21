@@ -39,14 +39,29 @@ namespace DarkwoodMP.World
     /// DOTween.KillAll. Cut short, the fade stops half-way and the whole game
     /// stays dim.)
     /// </summary>
-    public static class LoadSpeed
+    public sealed class LoadSpeed
     {
+        /// The one ModHost keeps, for the patches.
+        internal static LoadSpeed Current => Plugin.Instance.Host.LoadSpeed;
+
         // ---- 1. ElementAt on the dictionary's keys and values ---------------
 
-        private static readonly Dictionary<object, (int count, Array copy)>
+        private readonly Dictionary<object, (int count, Array copy)>
             _copies = new Dictionary<object, (int, Array)>();
 
+        // The calls the transpiler puts in the game's code: they must be
+        // static, so they pass on to the one ModHost keeps.
         public static T ElementAt<T>(IEnumerable<T> source, int index)
+        {
+            return Current.Indexed(source, index);
+        }
+
+        public static SaveManager.DynamicSave Dynamic(string text) =>
+            Current.Take(ref Current._dynamic, text);
+        public static SaveManager.StaticSave Static(string text) =>
+            Current.Take(ref Current._static, text);
+
+        private T Indexed<T>(IEnumerable<T> source, int index)
         {
             if (!(source is ICollection<T> c))
             {
@@ -72,15 +87,15 @@ namespace DarkwoodMP.World
             public System.Threading.Thread Thread;
         }
 
-        private static Ahead<SaveManager.DynamicSave> _dynamic;
-        private static Ahead<SaveManager.StaticSave> _static;
-        private static int AheadUsed, AheadMissed;
+        private Ahead<SaveManager.DynamicSave> _dynamic;
+        private Ahead<SaveManager.StaticSave> _static;
+        private int AheadUsed, AheadMissed;
 
         /// <summary>
         /// The game is about to load the current profile's world: start parsing
         /// its files.
         /// </summary>
-        internal static void ParseAhead()
+        internal void ParseAhead()
         {
             var sm = Singleton<SaveManager>.Instance;
             if (sm == null || Core.currentProfile == null)
@@ -92,7 +107,7 @@ namespace DarkwoodMP.World
             _static = Start<SaveManager.StaticSave>(sm.staticFile);
         }
 
-        private static Ahead<T> Start<T>(string path) where T : class
+        private Ahead<T> Start<T>(string path) where T : class
         {
             if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
             {
@@ -142,12 +157,7 @@ namespace DarkwoodMP.World
             return a;
         }
 
-        public static SaveManager.DynamicSave Dynamic(string text) =>
-            Take(ref _dynamic, text);
-        public static SaveManager.StaticSave Static(string text) =>
-            Take(ref _static, text);
-
-        private static T Take<T>(ref Ahead<T> slot, string text) where T : class
+        private T Take<T>(ref Ahead<T> slot, string text) where T : class
         {
             // each parse is used once: a later Load (the backup file) parses
             // itself
@@ -171,12 +181,12 @@ namespace DarkwoodMP.World
 
         // ---- 4. Resources.Load once per prefab path while loading -----------
 
-        internal static bool Loading;
-        private static readonly Dictionary<string, UnityEngine.Object>
+        internal bool Loading;
+        private readonly Dictionary<string, UnityEngine.Object>
             _prefabs = new Dictionary<string, UnityEngine.Object>();
-        private static int PrefabLookups, PrefabLoads;
+        private int PrefabLookups, PrefabLoads;
 
-        internal static UnityEngine.Object Prefab(string path)
+        internal UnityEngine.Object Prefab(string path)
         {
             PrefabLookups++;
             if (!_prefabs.TryGetValue(path, out var o) || o == null)
@@ -188,13 +198,13 @@ namespace DarkwoodMP.World
             return o;
         }
 
-        internal static void LoadStarted()
+        internal void LoadStarted()
         {
             Loading = true;
             PrefabLookups = PrefabLoads = 0;
         }
 
-        internal static void LoadEnded()
+        internal void LoadEnded()
         {
             Loading = false;
             _copies.Clear();
@@ -211,25 +221,25 @@ namespace DarkwoodMP.World
         // ---- 2. WorldGrid.registerToNode in registerCullablesOnLoad ---------
         // During a grid's registerCullablesOnLoad.
 
-        internal static bool Batch;
+        internal bool Batch;
         /// <summary>
         /// "--dwmp-verify-load": also run the game's own search for each object
         /// and count differences.
         /// </summary>
-        public static bool Verify;
-        public static int Checked, Mismatches;
-        private static WorldGrid.Grid _grid;
-        private static HashSet<CullableObject> _listed;
-        private static Dictionary<long, List<int>> _cells;
-        private static float _cell;
+        public bool Verify;
+        public int Checked, Mismatches;
+        private WorldGrid.Grid _grid;
+        private HashSet<CullableObject> _listed;
+        private Dictionary<long, List<int>> _cells;
+        private float _cell;
 
-        internal static void BeginBatch()
+        internal void BeginBatch()
         {
             Batch = true;
             _grid = null;
         }
 
-        internal static void EndBatch()
+        internal void EndBatch()
         {
             Batch = false;
             _grid = null;
@@ -237,7 +247,7 @@ namespace DarkwoodMP.World
             _cells = null;
         }
 
-        private static CullableObject CullableOf(GameObject go)
+        private CullableObject CullableOf(GameObject go)
         {
             var co = go.GetComponent<CullableObject>();
             if (co != null)
@@ -248,9 +258,9 @@ namespace DarkwoodMP.World
             return go.AddComponent<CullableObject>();
         }
 
-        private static long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
+        private long Key(int x, int z) => ((long)x << 32) ^ (uint)z;
 
-        private static void Index(WorldGrid w)
+        private void Index(WorldGrid w)
         {
             _grid = w.currentGrid;
             _listed = new HashSet<CullableObject>();
@@ -286,7 +296,7 @@ namespace DarkwoodMP.World
         /// same nodes, and they're listed on the object in the grid's order, as
         /// the game's loop over all nodes does.
         /// </summary>
-        internal static bool RegisterToNodes(
+        internal bool RegisterToNodes(
             WorldGrid w, GameObject GO, Vector2 size,
             WorldGrid.Cullable.Type type)
         {
@@ -415,7 +425,7 @@ namespace DarkwoodMP.World
         /// smallest distance (under 10,000), with the distance worked out in
         /// place instead of through Core.trueDistance's conversions.
         /// </summary>
-        internal static bool RegisterToClosestNode(WorldGrid w, GameObject GO)
+        internal bool RegisterToClosestNode(WorldGrid w, GameObject GO)
         {
             WorldGrid.Grid currentGrid = w.currentGrid;
             List<WorldGrid.Node> nodes = null;
@@ -451,7 +461,7 @@ namespace DarkwoodMP.World
         /// The same as WorldGrid.registerToNode, with its two searches looked
         /// up instead.
         /// </summary>
-        internal static bool RegisterToNode(
+        internal bool RegisterToNode(
             WorldGrid w, GameObject GO, WorldGrid.Cullable.Type type)
         {
             if (w.currentGrid == null)
@@ -652,9 +662,9 @@ namespace DarkwoodMP.World
 
         static void Prefix()
         {
-            if (!LoadSpeed.Loading)
+            if (!LoadSpeed.Current.Loading)
             {
-                LoadSpeed.LoadStarted();
+                LoadSpeed.Current.LoadStarted();
             }
         }
 
@@ -662,7 +672,7 @@ namespace DarkwoodMP.World
         {
             if (!__result)
             {
-                LoadSpeed.LoadEnded();
+                LoadSpeed.Current.LoadEnded();
             }
         }
     }
@@ -678,7 +688,7 @@ namespace DarkwoodMP.World
         {
             if (Core.loadingGame)
             {
-                LoadSpeed.ParseAhead();
+                LoadSpeed.Current.ParseAhead();
             }
         }
     }
@@ -701,14 +711,14 @@ namespace DarkwoodMP.World
             string prefab, Vector3 position, Quaternion quaternion,
             GameObject parentGO, bool worldSpace, ref GameObject __result)
         {
-            if (!LoadSpeed.Loading)
+            if (!LoadSpeed.Current.Loading)
             {
                 return true;
             }
 
             __result = Core.AddPrefab(
-                LoadSpeed.Prefab(prefab), position, quaternion, parentGO,
-                worldSpace);
+                LoadSpeed.Current.Prefab(prefab), position, quaternion,
+                parentGO, worldSpace);
             return false;
         }
     }
@@ -717,10 +727,10 @@ namespace DarkwoodMP.World
         typeof(WorldGrid.Grid), nameof(WorldGrid.Grid.registerCullablesOnLoad))]
     static class GridRegisterBatchPatch
     {
-        static void Prefix() => LoadSpeed.BeginBatch();
+        static void Prefix() => LoadSpeed.Current.BeginBatch();
         static Exception Finalizer(Exception __exception)
         {
-            LoadSpeed.EndBatch();
+            LoadSpeed.Current.EndBatch();
             return __exception;
         }
     }
@@ -737,21 +747,22 @@ namespace DarkwoodMP.World
             WorldGrid __instance, GameObject GO, Vector2 size,
             WorldGrid.Cullable.Type type)
         {
-            if (!LoadSpeed.Batch)
+            if (!LoadSpeed.Current.Batch)
             {
                 return true;
             }
 
             try
             {
-                return LoadSpeed.RegisterToNodes(__instance, GO, size, type);
+                return LoadSpeed.Current.RegisterToNodes(
+                    __instance, GO, size, type);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
                     $"LoadSpeed: {e.Message}; the game's own registerToNodes "
                         + "instead");
-                LoadSpeed.EndBatch();
+                LoadSpeed.Current.EndBatch();
                 return true;
             }
         }
@@ -761,7 +772,8 @@ namespace DarkwoodMP.World
     static class RegisterToClosestNodePatch
     {
         static bool Prefix(WorldGrid __instance, GameObject GO) =>
-            !LoadSpeed.Batch || LoadSpeed.RegisterToClosestNode(__instance, GO);
+            !LoadSpeed.Current.Batch
+            || LoadSpeed.Current.RegisterToClosestNode(__instance, GO);
     }
 
     [HarmonyPatch(
@@ -772,21 +784,21 @@ namespace DarkwoodMP.World
         static bool Prefix(
             WorldGrid __instance, GameObject GO, WorldGrid.Cullable.Type type)
         {
-            if (!LoadSpeed.Batch)
+            if (!LoadSpeed.Current.Batch)
             {
                 return true;
             }
 
             try
             {
-                return LoadSpeed.RegisterToNode(__instance, GO, type);
+                return LoadSpeed.Current.RegisterToNode(__instance, GO, type);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
                     $"LoadSpeed: {e.Message}; the game's own registerToNode "
                         + "instead");
-                LoadSpeed.EndBatch();
+                LoadSpeed.Current.EndBatch();
                 return true;
             }
         }

@@ -19,19 +19,6 @@ namespace DarkwoodMP
             Title
         }
 
-        private sealed class Face
-        {
-            public tk2dFontData Data;
-            public Texture Texture;
-            public float LineHeight;
-            // where a capital H's top is (y up) and how tall it is, in font
-            // pixels
-            public float CapTop, CapHeight;
-        }
-
-        private static Face _body, _title;
-        private static float _nextLook;
-        private static GUIStyle _fallback;
 
         public static int Scale
         {
@@ -49,92 +36,13 @@ namespace DarkwoodMP
         /// <summary>The height of a line of text, in screen pixels.</summary>
         public static float Line => LineAt(Scale);
 
-        private static Face Get(Kind kind)
+        private static FontFaces.Face Get(Kind kind)
         {
-            if ((_body == null || _title == null)
-                && Time.unscaledTime >= _nextLook)
-            {
-                _nextLook = Time.unscaledTime + 1f;
-                foreach (var f in Resources
-                    .FindObjectsOfTypeAll<tk2dFontData>())
-                {
-                    if (f == null)
-                    {
-                        continue;
-                    }
-
-                    var d = f.inst;
-                    Texture tex = null;
-                    if (d != null && d.material != null)
-                    {
-                        tex = d.material.mainTexture;
-                    }
-
-                    if (tex == null)
-                    {
-                        continue;
-                    }
-
-                    var face = new Face
-                    {
-                        Data = d,
-                        Texture = tex,
-                        LineHeight = d.lineHeight,
-                        CapTop = 0f,
-                        CapHeight = 8f
-                    };
-
-                    var h = Glyph(face, 'H');
-                    if (h != null && h.p0.y > h.p1.y)
-                    {
-                        face.CapTop = h.p0.y;
-                        face.CapHeight = h.p0.y - h.p1.y;
-                    }
-
-                    if (_body == null
-                        && f.name.StartsWith("tahoma_11px_light_AA")
-                        && !f.name.Contains("occluded"))
-                    {
-                        _body = face;
-                    }
-
-                    if (_title == null
-                        && f.name.StartsWith("tahoma_11px_bevel_white"))
-                    {
-                        _title = face;
-                    }
-                }
-
-                if (_body != null && _title != null)
-                {
-                    Plugin.Log.LogInfo(
-                        "Co-op windows use the game's fonts: line "
-                            + $"{_body.LineHeight}, H "
-                            + $"{_body.CapTop}/{_body.CapHeight}");
-                }
-            }
-
-            if (kind == Kind.Title)
-            {
-                Face title = _title;
-                if (title == null)
-                {
-                    title = _body;
-                }
-
-                return title;
-            }
-
-            Face body = _body;
-            if (body == null)
-            {
-                body = _title;
-            }
-
-            return body;
+            return Plugin.Instance.Host.Fonts.Get(kind);
         }
 
-        private static tk2dFontChar Glyph(Face f, char c)
+
+        internal static tk2dFontChar Glyph(FontFaces.Face f, char c)
         {
             var d = f.Data;
             if (d.useDictionary)
@@ -160,7 +68,7 @@ namespace DarkwoodMP
             return null;
         }
 
-        private static bool CanDraw(Face f, string s)
+        private static bool CanDraw(FontFaces.Face f, string s)
         {
             if (f == null)
             {
@@ -187,20 +95,7 @@ namespace DarkwoodMP
 
         private static GUIStyle Fallback(int scale)
         {
-            if (_fallback == null)
-            {
-                _fallback = new GUIStyle(GUI.skin.label)
-                {
-                    padding = new RectOffset(0, 0, 0, 0),
-                    margin = new RectOffset(0, 0, 0, 0),
-                    wordWrap = false,
-                    clipping = TextClipping.Clip
-                };
-            }
-
-            _fallback.font = MenuSkin.FieldFont;
-            _fallback.fontSize = 11 * scale;
-            return _fallback;
+            return Plugin.Instance.Host.Fonts.Fallback(scale);
         }
 
         /// <summary>

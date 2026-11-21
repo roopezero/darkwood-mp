@@ -467,7 +467,7 @@ namespace DarkwoodMP
             // was slowest once a world is ready.
             if (Array.IndexOf(args, "--dwmp-profile-load") >= 0)
             {
-                LoadProfiler.Start(_harmony);
+                _host.LoadProfiler.Start(_harmony);
             }
 
             // "--dwmp-test-control PORT": take test commands from
@@ -515,7 +515,7 @@ namespace DarkwoodMP
                 }
             }
 
-            LoadingScreen.ShotsDir = Arg("--dwmp-load-shots");
+            _host.Loading.ShotsDir = Arg("--dwmp-load-shots");
             // "--dwmp-window WxH": play in a window of that size (to check the
             // UI at other sizes); without it, the size from before is put back.
             {
@@ -614,7 +614,7 @@ namespace DarkwoodMP
 
             Threat.Debug = Has("--dwmp-debug-threat");
             ModProfiler.Enabled = Has("--dwmp-profile-mod");
-            LoadSpeed.Verify = Has("--dwmp-verify-load");
+            _host.LoadSpeed.Verify = Has("--dwmp-verify-load");
             WorldActions.Debug = Has("--dwmp-debug-world");
             if (Has("--dwmp-test-world"))
             {
@@ -821,7 +821,7 @@ namespace DarkwoodMP
             // lines).
             if (Arg("--dwmp-test-tooltips") is string tipDir)
             {
-                StartTest(World.Tooltips.Test(tipDir));
+                StartTest(_host.Tooltips.Test(tipDir));
             }
 
             // "--dwmp-test-drag-real": the test window open for two minutes for
@@ -892,7 +892,7 @@ namespace DarkwoodMP
 
             Threat.Debug = false;
             WorldActions.Debug = false;
-            LoadSpeed.Verify = false;
+            _host.LoadSpeed.Verify = false;
             Chapters.TestQuick = false;
             _spawnType = null;
             _testPresence = false;
@@ -944,15 +944,15 @@ namespace DarkwoodMP
                         + "after leaving the menu");
                 if (first)
                 {
-                    LoadProfiler.Report();
+                    _host.LoadProfiler.Report();
                 }
 
-                if (first && LoadSpeed.Verify)
+                if (first && _host.LoadSpeed.Verify)
                 {
                     Log.LogInfo(
-                        $"LoadSpeed: checked {LoadSpeed.Checked} objects' grid "
-                            + $"nodes, {LoadSpeed.Mismatches} different from "
-                            + "the game's search");
+                        $"LoadSpeed: checked {_host.LoadSpeed.Checked} objects'"
+                            + $" grid nodes, {_host.LoadSpeed.Mismatches}"
+                            + " different from the game's search");
                 }
 
                 first = false;
@@ -1010,11 +1010,11 @@ namespace DarkwoodMP
 
                 yield return new WaitForSecondsRealtime(4f);
                 yield return Shot("main-menu");
-                Log.LogInfo($"[shots] {MenuList.Check()}");
-                MenuList.Click("Quit");
+                Log.LogInfo($"[shots] {_host.MenuList.Check()}");
+                _host.MenuList.Click("Quit");
                 yield return Shot("main-menu-quit");
                 ConfirmDialog.Cancel();
-                MenuList.Click("Join Game");
+                _host.MenuList.Click("Join Game");
                 yield return Shot("main-menu-join");
                 SetPanel(false);
                 OpenPanel();
@@ -1044,7 +1044,7 @@ namespace DarkwoodMP
 
             yield return new WaitForSecondsRealtime(8f);
             yield return Shot("world");
-            string hudBefore = PauseHud.Shown();
+            string hudBefore = _host.PauseHud.Shown();
             Log.LogInfo($"[shots] world: HUD shown {hudBefore}");
             ShotsUi("world", hidden: false);
             // Core.HideUI left true by an earlier world (the epilogue, the
@@ -1055,10 +1055,10 @@ namespace DarkwoodMP
             Core.showHidePauseMenu();
             float clockBefore = Singleton<Controller>.Instance.CurrentTime;
             yield return Shot("pause-menu");
-            Log.LogInfo($"[shots] {MenuList.Check()}");
+            Log.LogInfo($"[shots] {_host.MenuList.Check()}");
             ShotsUi("pause-menu", hidden: true);
             ShotsHud("pause-menu", "none");
-            MenuList.Click("Back to main menu");
+            _host.MenuList.Click("Back to main menu");
             yield return Shot("pause-menu-confirm");
             ConfirmDialog.Cancel();
             yield return new WaitForSecondsRealtime(1.5f);
@@ -1082,7 +1082,7 @@ namespace DarkwoodMP
         /// </summary>
         private static void ShotsHud(string shot, string want)
         {
-            string now = PauseHud.Shown();
+            string now = Instance._host.PauseHud.Shown();
             string text = "FAIL";
             if (now == want)
             {
@@ -1429,12 +1429,12 @@ namespace DarkwoodMP
                         + $"{Screen.width}x{Screen.height}; mouse "
                         + $"{UnityEngine.Cursor.lockState}");
                 yield return Shot("menu");
-                MenuList.Click("Quit");
+                _host.MenuList.Click("Quit");
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Shot("quit");
                 ConfirmDialog.Cancel();
                 yield return new WaitForSecondsRealtime(0.5f);
-                MenuList.Click("Join Game");
+                _host.MenuList.Click("Join Game");
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Shot("panel");
                 _direct.ShowForShots(address: false);
@@ -1467,7 +1467,7 @@ namespace DarkwoodMP
             yield return Shot("pause");
             Log.LogInfo(
                 $"[screen] pause menu: mouse {UnityEngine.Cursor.lockState}");
-            MenuList.Click("Quit");
+            _host.MenuList.Click("Quit");
             yield return new WaitForSecondsRealtime(1f);
             yield return Shot("pause-quit");
             ConfirmDialog.Cancel();
@@ -1511,14 +1511,14 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator CheckMenuEntry(
             string where, string shots)
         {
-            Log.LogInfo($"[menu-entry] {where}: {MenuList.Check()}");
+            Log.LogInfo($"[menu-entry] {where}: {_host.MenuList.Check()}");
             string label = "Multiplayer";
             if (where == "main menu")
             {
                 label = "Join Game";
             }
 
-            bool took = MenuList.Click(label);
+            bool took = _host.MenuList.Click(label);
             yield return null;
             yield return null;
             Log.LogInfo(
@@ -2147,7 +2147,7 @@ namespace DarkwoodMP
                 coop.Authority.Inventory.LateUpdate();
             }
 
-            JoinScreen.LateUpdate();
+            _host.Join.LateUpdate();
             coop = Coop.Current;
             if (coop != null)
             {
@@ -2196,8 +2196,8 @@ namespace DarkwoodMP
                 SetPanel(false);
             }
 
-            MenuEntry.Update();
-            LoadProfiler.Frame();
+            _host.MenuEntry.Update();
+            _host.LoadProfiler.Frame();
             TestControl.Update();
             // Over the game's menus, its buttons (and its Escape) would take
             // the clicks and keys meant for our windows.
@@ -2223,7 +2223,7 @@ namespace DarkwoodMP
             // the menu's list (and a click on it).
             ConfirmDialog.Update();
             OptionsWindow.Update();
-            MenuList.Update();
+            _host.MenuList.Update();
             ModProfiler.Begin();
             CoopSession coop = Coop.Current;
             if (coop != null)
@@ -2345,8 +2345,8 @@ namespace DarkwoodMP
                 UpdatePresence();
             }
 
-            JoinScreen.Update(_host.Session, _world);
-            LoadingScreen.Update();
+            _host.Join.Update(_host.Session, _world);
+            _host.Loading.Update();
             Chapters.Update();
             _host.Progress.Update();
             SkillsPanel.Update(_showMenu);
@@ -2570,7 +2570,7 @@ namespace DarkwoodMP
             SkillsPanel.OnGUI();
             ShowSystemCursor(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
-            if (!_showMenu && !MenuList.Shown && !MenuWindows.AnyOpen)
+            if (!_showMenu && !_host.MenuList.Shown && !MenuWindows.AnyOpen)
             {
                 DragTest.OnGUI();
                 return;
@@ -2581,7 +2581,7 @@ namespace DarkwoodMP
             GUI.skin = MenuSkin.Skin;
             // The menu's list under the windows, then the co-op windows, the
             // other menu windows, and a question on top.
-            MenuList.OnGUI();
+            _host.MenuList.OnGUI();
             if (_showMenu)
             {
                 _panel.Title =

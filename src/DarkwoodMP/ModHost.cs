@@ -109,6 +109,47 @@ namespace DarkwoodMP
         /// playing alone. A session adds its messages (Progression.Join).
         public readonly World.Progress.Progression Progress;
 
+        /// The game's pixel fonts for the mod's windows (PixelFont).
+        internal readonly FontFaces Fonts = new FontFaces();
+
+        /// The mod's windows' IMGUI skin (MenuSkin).
+        internal readonly MenuStyles Styles = new MenuStyles();
+
+        /// The mod's windows' hooks into the menus (MenuWindows).
+        internal readonly MenuWindowList Windows = new MenuWindowList();
+
+        /// The main and pause menus' list of entries.
+        public readonly MenuList MenuList = new MenuList();
+
+        /// The main menu's backdrop dimmed behind the mod's windows.
+        public readonly MenuEntry MenuEntry = new MenuEntry();
+
+        /// The menus' words drawn over the game's pictures of them.
+        public readonly MenuWords MenuWords = new MenuWords();
+
+        /// Where the menus' logo and version lines go.
+        public readonly MenuLayout MenuLayout = new MenuLayout();
+
+        /// The game's HUD hidden while the pause menu is up.
+        public readonly PauseHud PauseHud = new PauseHud();
+
+        /// The loading screen's lines, bar and tips.
+        public readonly World.LoadingScreen Loading =
+            new World.LoadingScreen();
+
+        /// The screen a client sees while it joins a game.
+        public readonly World.JoinScreen Join = new World.JoinScreen();
+
+        /// The faster loading of a world, and its check (--dwmp-verify-load).
+        public readonly World.LoadSpeed LoadSpeed = new World.LoadSpeed();
+
+        /// Where a world's loading spends its time (--dwmp-profile-load).
+        public readonly World.LoadProfiler LoadProfiler =
+            new World.LoadProfiler();
+
+        /// The mod's tooltip texts for items and places the game left bare.
+        public readonly World.Tooltips Tooltips = new World.Tooltips();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

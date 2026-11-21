@@ -25,71 +25,41 @@ namespace DarkwoodMP
     /// </summary>
     public static class MenuWindows
     {
-        public static Action OpenStartGame;
-        public static Action OpenOptions;
-        public static event Action Draw;
+        private static MenuWindowList Windows =>
+            Plugin.Instance.Host.Windows;
 
-        private static readonly List<Func<bool>> _open = new List<Func<bool>>();
+        public static Action OpenStartGame
+        {
+            get => Windows.OpenStartGame;
+            set => Windows.OpenStartGame = value;
+        }
+
+        public static Action OpenOptions
+        {
+            get => Windows.OpenOptions;
+            set => Windows.OpenOptions = value;
+        }
+
+        public static event Action Draw
+        {
+            add => Windows.Draw += value;
+            remove => Windows.Draw -= value;
+        }
 
         public static void Register(Func<bool> isOpen)
         {
-            if (isOpen != null)
-            {
-                _open.Add(isOpen);
-            }
+            Windows.Register(isOpen);
         }
 
         /// <summary>
         /// One of the mod's windows is up over the menus (a registered one, the
         /// co-op panel or a ConfirmDialog).
         /// </summary>
-        public static bool AnyOpen
-        {
-            get
-            {
-                if (ConfirmDialog.Open
-                    || (Plugin.Instance != null && Plugin.Instance.PanelOpen))
-                {
-                    return true;
-                }
-
-                foreach (var f in _open)
-                {
-                    try
-                    {
-                        if (f())
-                        {
-                            return true;
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                return false;
-            }
-        }
+        public static bool AnyOpen => Windows.AnyOpen;
 
         internal static void DrawAll()
         {
-            if (Draw == null)
-            {
-                return;
-            }
-
-            foreach (Action d in Draw.GetInvocationList())
-            {
-                try
-                {
-                    d();
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning(
-                        $"A menu window failed to draw: {e.Message}");
-                }
-            }
+            Windows.DrawAll();
         }
     }
 
@@ -116,7 +86,7 @@ namespace DarkwoodMP
     /// and down (arrows, W/S, the d-pad) choose, Enter (or A) runs it; Escape
     /// is the game's (it closes the pause menu).
     /// </summary>
-    public static class MenuList
+    public sealed class MenuList
     {
         private sealed class Entry
         {
@@ -125,25 +95,25 @@ namespace DarkwoodMP
             public Rect Rect; // where it was last drawn, in GUI pixels
         }
 
-        private static readonly List<Entry> _entries = new List<Entry>();
-        private static bool _pause;
+        private readonly List<Entry> _entries = new List<Entry>();
+        private bool _pause;
         // chosen with the keyboard or controller (-1: none, the mouse decides)
-        private static int _selected = -1;
+        private int _selected = -1;
         // a click from OnGUI, run in the next Update
-        private static Action _pending;
-        private static float _alpha;
-        private static bool _shown;
-        private static float _nextPad;
-        private static Vector2 _lastMouse;
+        private Action _pending;
+        private float _alpha;
+        private bool _shown;
+        private float _nextPad;
+        private Vector2 _lastMouse;
 
         /// <summary>The list is on the screen now.</summary>
-        public static bool Shown => _shown;
+        public bool Shown => _shown;
 
         /// <summary>
         /// Screen pixels per font pixel for the entries: 3 at 1080 lines, 2 at
         /// 720.
         /// </summary>
-        private static int TextScale =>
+        private int TextScale =>
             Mathf.Max(1, Mathf.RoundToInt(Screen.height / 360f));
 
         // the last entry's middle above the bottom, as a share of the height
@@ -155,7 +125,7 @@ namespace DarkwoodMP
         /// Every frame (Plugin.Update): hide the game's entries, work out the
         /// list, take keys, run a click.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var mm = Singleton<MainMenu>.Instance;
             _shown = Visible(mm, out _alpha);
@@ -200,10 +170,10 @@ namespace DarkwoodMP
             }
         }
 
-        private static bool InWorldMenu() =>
+        private bool InWorldMenu() =>
             Singleton<WorldGenerator>.Instance != null;
 
-        private static void Build()
+        private void Build()
         {
             _entries.Clear();
             if (_pause)
@@ -243,10 +213,10 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Add(string label, Action run) =>
+        private void Add(string label, Action run) =>
             _entries.Add(new Entry { Label = label, Run = run });
 
-        private static void StartGame()
+        private void StartGame()
         {
             if (MenuWindows.OpenStartGame != null)
             {
@@ -258,7 +228,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Options()
+        private void Options()
         {
             if (MenuWindows.OpenOptions != null)
             {
@@ -274,7 +244,7 @@ namespace DarkwoodMP
         /// Click one of the game's own (hidden) entries, as a mouse click on it
         /// does (Button.getClicked).
         /// </summary>
-        private static void GameButton(GameObject go)
+        private void GameButton(GameObject go)
         {
             global::Button b = null;
             if (go != null)
@@ -306,14 +276,14 @@ namespace DarkwoodMP
         /// What leaving the world loses, as the game's own box said it (the
         /// time since the last save): the core's LeaveRules.
         /// </summary>
-        private static string LeaveText()
+        private string LeaveText()
         {
             return LeaveRules.Text(LeaveOf());
         }
 
         /// The facts for LeaveRules: whose world this is, when it was last
         /// saved and who else is in the game.
-        private static LeaveFacts LeaveOf()
+        private LeaveFacts LeaveOf()
         {
             WorldShare instance = WorldShare.Instance;
             bool copy = instance != null && instance.PlayingHostCopy;
@@ -362,14 +332,14 @@ namespace DarkwoodMP
         /// As the game's box did on Yes (MainMenu.confirmBoxYes): the sound
         /// faded, then back to the main menu.
         /// </summary>
-        private static void ToMainMenu()
+        private void ToMainMenu()
         {
             var c = Singleton<Controller>.Instance;
             c.fadeAudio(fadeOut: true, 0f, musicToo: true);
             c.waitFramesAndRun(Core.returnToMainMenu, 1);
         }
 
-        private static void Quit()
+        private void Quit()
         {
             try
             {
@@ -390,7 +360,7 @@ namespace DarkwoodMP
         /// The menu's first page is up with nothing of the game's over it; how
         /// visible (the logo's fade, the black screen's).
         /// </summary>
-        private static bool Visible(MainMenu mm, out float alpha)
+        private bool Visible(MainMenu mm, out float alpha)
         {
             alpha = 0f;
             if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy
@@ -399,7 +369,7 @@ namespace DarkwoodMP
                 return false;
             }
 
-            if (Core.forbidInputs || LoadingScreen.Up)
+            if (Core.forbidInputs || Plugin.Instance.Host.Loading.Up)
             {
                 return false; // credits starting, a world loading
             }
@@ -452,7 +422,7 @@ namespace DarkwoodMP
         /// The game's entries stay (its code places, fades and enables them)
         /// but aren't drawn and can't be clicked.
         /// </summary>
-        private static void HideGameButtons(MainMenu mm)
+        private void HideGameButtons(MainMenu mm)
         {
             foreach (var go in GameEntries(mm))
             {
@@ -471,7 +441,7 @@ namespace DarkwoodMP
         /// <summary>
         /// The game's own entries in both menus (some are null in one of them).
         /// </summary>
-        private static GameObject[] GameEntries(MainMenu mm) =>
+        private GameObject[] GameEntries(MainMenu mm) =>
             new[]
             {
                 mm.playBtn,
@@ -483,7 +453,7 @@ namespace DarkwoodMP
                 Go(mm.HelpBtn)
             };
 
-        private static GameObject Go(Component c)
+        private GameObject Go(Component c)
         {
             if (c != null)
             {
@@ -493,7 +463,7 @@ namespace DarkwoodMP
             return null;
         }
 
-        private static bool IsMenu0List(MainMenu mm)
+        private bool IsMenu0List(MainMenu mm)
         {
             foreach (var b in mm.controllerButtons)
             {
@@ -506,12 +476,12 @@ namespace DarkwoodMP
             return true;
         }
 
-        private static readonly List<Renderer> _renderers =
+        private readonly List<Renderer> _renderers =
             new List<Renderer>();
-        private static readonly List<Collider> _colliders =
+        private readonly List<Collider> _colliders =
             new List<Collider>();
 
-        private static void Hide(GameObject go)
+        private void Hide(GameObject go)
         {
             if (go == null || !go.activeInHierarchy)
             {
@@ -545,7 +515,7 @@ namespace DarkwoodMP
 
         // ---- keys and the controller ----------------------------------------
 
-        private static void Keys()
+        private void Keys()
         {
             int dir = 0;
             if (Input.GetKeyDown(KeyCode.UpArrow)
@@ -628,7 +598,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Fire(Entry e)
+        private void Fire(Entry e)
         {
             Plugin.Log.LogInfo($"[menu] {e.Label}");
             _pending = e.Run;
@@ -640,7 +610,7 @@ namespace DarkwoodMP
         /// Draw the list (Plugin.OnGUI, with MenuSkin's skin, before the
         /// windows).
         /// </summary>
-        public static void OnGUI()
+        public void OnGUI()
         {
             if (!_shown || _entries.Count == 0)
             {
@@ -721,7 +691,7 @@ namespace DarkwoodMP
         /// For the tests: the list, where each entry is and whether it would
         /// take a click now.
         /// </summary>
-        public static string Check()
+        public string Check()
         {
             var mm = Singleton<MainMenu>.Instance;
             var parts = new List<string>();
@@ -745,7 +715,7 @@ namespace DarkwoodMP
                 + $"{Screen.width}x{Screen.height}";
         }
 
-        private static bool GameEntriesHidden(MainMenu mm)
+        private bool GameEntriesHidden(MainMenu mm)
         {
             if (mm == null)
             {
@@ -783,7 +753,7 @@ namespace DarkwoodMP
         /// For the tests: click the entry with this word, as the mouse does.
         /// False if the list hasn't got it or isn't shown.
         /// </summary>
-        public static bool Click(string label)
+        public bool Click(string label)
         {
             if (!_shown || MenuWindows.AnyOpen)
             {

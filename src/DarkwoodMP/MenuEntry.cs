@@ -16,10 +16,10 @@ namespace DarkwoodMP
     /// overlay. Alone the world is paused behind it as before; in co-op it goes
     /// on (World.Pause.CoopPause) and the menu's music doesn't start.
     /// </summary>
-    public static class MenuEntry
+    public sealed class MenuEntry
     {
         /// <summary>Call every frame while a menu may be up.</summary>
-        public static void Update()
+        public void Update()
         {
             var mm = Singleton<MainMenu>.Instance;
             if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy)
@@ -27,7 +27,7 @@ namespace DarkwoodMP
                 return;
             }
 
-            MenuWords.Update(mm);
+            Plugin.Instance.Host.MenuWords.Update(mm);
             // The mod's version under the game's, both in the bottom right
             // corner (MenuLayout).
             var v = mm.CurrentVersion;
@@ -38,15 +38,15 @@ namespace DarkwoodMP
                 v.Commit();
             }
 
-            MenuLayout.Apply(mm);
+            Plugin.Instance.Host.MenuLayout.Apply(mm);
         }
 
         // ---- the pause menu in co-op ----------------------------------------
 
-        private static GameObject _hiddenBackdrop;
-        private static bool _dimmed;
+        private GameObject _hiddenBackdrop;
+        private bool _dimmed;
 
-        internal static void PauseMenuOpened(MainMenu mm)
+        internal void PauseMenuOpened(MainMenu mm)
         {
             if (!World.WorldShare.PauseMenuInWorld)
             {
@@ -74,7 +74,8 @@ namespace DarkwoodMP
                 _dimmed = true;
             }
 
-            PauseHud.Hide(); // the HUD would show through with the world
+            // the HUD would show through with the world
+            Plugin.Instance.Host.PauseHud.Hide();
             // In co-op the game goes on, with its own sound; alone it's paused
             // and the menu's music plays as before.
             CoopSession coop = Coop.Current;
@@ -86,9 +87,9 @@ namespace DarkwoodMP
             }
         }
 
-        internal static void PauseMenuClosed(MainMenu mm)
+        internal void PauseMenuClosed(MainMenu mm)
         {
-            PauseHud.Restore();
+            Plugin.Instance.Host.PauseHud.Restore();
             if (_hiddenBackdrop != null)
             {
                 _hiddenBackdrop.SetActive(true);
@@ -114,10 +115,10 @@ namespace DarkwoodMP
     /// fading and the button's hover. A language the font has no letters for
     /// keeps the pictures.
     /// </summary>
-    public static class MenuWords
+    public sealed class MenuWords
     {
         private const string LabelName = "DarkwoodMP_Label";
-        private static readonly Vector3 Scale = new Vector3(2.5f, 2.5f, 2.5f);
+        private readonly Vector3 Scale = new Vector3(2.5f, 2.5f, 2.5f);
         // as the pictures' words
         private static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f, 1f);
 
@@ -125,7 +126,7 @@ namespace DarkwoodMP
         /// The picture's name (without its "_0_EN" ending) and the UI sheet's
         /// key for its word.
         /// </summary>
-        private static readonly Dictionary<string, string> Keys =
+        private readonly Dictionary<string, string> Keys =
             new Dictionary<string, string>
             {
                 ["play"] = "Play",
@@ -148,11 +149,11 @@ namespace DarkwoodMP
             public tk2dTextMesh Text;
         }
 
-        private static readonly List<Word> _words = new List<Word>();
-        private static readonly HashSet<int> _seen = new HashSet<int>();
-        private static float _nextScan;
+        private readonly List<Word> _words = new List<Word>();
+        private readonly HashSet<int> _seen = new HashSet<int>();
+        private float _nextScan;
 
-        public static void Update(MainMenu mm)
+        public void Update(MainMenu mm)
         {
             if (Time.unscaledTime >= _nextScan)
             {
@@ -201,7 +202,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Scan(MainMenu mm)
+        private void Scan(MainMenu mm)
         {
             tk2dFontData font = null;
             if (mm.CurrentVersion != null)
@@ -233,7 +234,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Redraw(global::Button b, tk2dFontData font)
+        private void Redraw(global::Button b, tk2dFontData font)
         {
             var pic = b.GetComponent<tk2dBaseSprite>();
             if (pic == null || pic.Collection == null
@@ -302,7 +303,7 @@ namespace DarkwoodMP
             });
         }
 
-        private static bool HasLetters(tk2dFontData font, string word)
+        private bool HasLetters(tk2dFontData font, string word)
         {
             foreach (char ch in word)
             {
@@ -338,7 +339,7 @@ namespace DarkwoodMP
     static class MenuEntryLayoutPatch
     {
         static void Postfix(MainMenu __instance) =>
-            MenuEntry.PauseMenuOpened(__instance);
+            Plugin.Instance.Host.MenuEntry.PauseMenuOpened(__instance);
     }
 
     /// <summary>
@@ -357,7 +358,7 @@ namespace DarkwoodMP
                 return;
             }
 
-            MenuLayout.Apply(mm);
+            Plugin.Instance.Host.MenuLayout.Apply(mm);
         }
     }
 
@@ -370,7 +371,7 @@ namespace DarkwoodMP
     /// them after it, in screen pixels through the UI camera, so it fits any
     /// screen shape.
     /// </summary>
-    public static class MenuLayout
+    public sealed class MenuLayout
     {
         // the logo's left edge (and MenuList's), as a share of the screen's
         // width the logo's word's top below the screen's top, as a share of its
@@ -380,9 +381,9 @@ namespace DarkwoodMP
         private const float LogoTop = 0.12f;
         private const float Corner = 0.016f;
 
-        private static bool _busy;
+        private bool _busy;
 
-        public static void Apply(MainMenu mm)
+        public void Apply(MainMenu mm)
         {
             if (_busy || mm == null || mm.Menu0 == null
                 || !mm.Menu0.activeInHierarchy)
@@ -417,7 +418,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Lay(MainMenu mm, Camera cam)
+        private void Lay(MainMenu mm, Camera cam)
         {
             float W = Screen.width, H = Screen.height;
             float left = W * Left;
@@ -501,7 +502,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void ToFront(Transform t, float? y)
+        private void ToFront(Transform t, float? y)
         {
             if (y == null || Mathf.Abs(t.position.y - y.Value) < 0.01f)
             {
@@ -516,7 +517,7 @@ namespace DarkwoodMP
         /// Move a thing by this many screen pixels (whole pixels, so the bitmap
         /// font stays sharp).
         /// </summary>
-        private static void MoveBy(Camera cam, Transform t, float dx, float dy)
+        private void MoveBy(Camera cam, Transform t, float dx, float dy)
         {
             if (Mathf.Abs(dx) < 0.5f && Mathf.Abs(dy) < 0.5f)
             {
@@ -533,7 +534,7 @@ namespace DarkwoodMP
         /// A renderer's bounds as a rectangle in screen pixels (from the bottom
         /// left).
         /// </summary>
-        private static Rect ScreenRect(Camera cam, Bounds b)
+        private Rect ScreenRect(Camera cam, Bounds b)
         {
             Vector3 a = cam.WorldToScreenPoint(b.min),
                 c = cam.WorldToScreenPoint(b.max);
@@ -547,7 +548,7 @@ namespace DarkwoodMP
     static class MenuEntryClosePatch
     {
         static void Postfix(MainMenu __instance) =>
-            MenuEntry.PauseMenuClosed(__instance);
+            Plugin.Instance.Host.MenuEntry.PauseMenuClosed(__instance);
     }
 
     /// <summary>
@@ -557,7 +558,7 @@ namespace DarkwoodMP
     [HarmonyPatch(typeof(MainMenu), "OnDisable")]
     static class MenuEntryDisablePatch
     {
-        static void Postfix() => PauseHud.Restore();
+        static void Postfix() => Plugin.Instance.Host.PauseHud.Restore();
     }
 
     /// <summary>
@@ -574,7 +575,7 @@ namespace DarkwoodMP
     /// messages and the clock only have their renderers off, so their timers go
     /// on. Playing alone too: the world shows through there as well.
     /// </summary>
-    public static class PauseHud
+    public sealed class PauseHud
     {
         private sealed class Off
         {
@@ -582,12 +583,12 @@ namespace DarkwoodMP
             public Func<bool> Still;
         }
 
-        private static readonly List<Off> _off = new List<Off>();
-        private static readonly List<Renderer> _renderers =
+        private readonly List<Off> _off = new List<Off>();
+        private readonly List<Renderer> _renderers =
             new List<Renderer>();
-        private static bool _hidden;
+        private bool _hidden;
 
-        public static void Hide()
+        public void Hide()
         {
             if (_hidden)
             {
@@ -645,7 +646,7 @@ namespace DarkwoodMP
                     + "renderers");
         }
 
-        public static void Restore()
+        public void Restore()
         {
             if (!_hidden)
             {
@@ -693,7 +694,7 @@ namespace DarkwoodMP
             _renderers.Clear();
         }
 
-        private static void Window(Inventory inv, Func<bool> still)
+        private void Window(Inventory inv, Func<bool> still)
         {
             if (inv != null)
             {
@@ -701,7 +702,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Deactivate(GameObject go, Func<bool> still)
+        private void Deactivate(GameObject go, Func<bool> still)
         {
             if (go == null || !go.activeSelf || _off.Exists(o => o.Go == go))
             {
@@ -712,7 +713,7 @@ namespace DarkwoodMP
             _off.Add(new Off { Go = go, Still = still });
         }
 
-        private static void Renderers(GameObject go, bool self)
+        private void Renderers(GameObject go, bool self)
         {
             Renderer[] rs;
             if (self)
@@ -738,7 +739,7 @@ namespace DarkwoodMP
         /// For the tests: the parts of the HUD shown now, by name ("none" if
         /// none).
         /// </summary>
-        public static string Shown()
+        public string Shown()
         {
             var p = Player.Instance;
             var ui = Singleton<UI>.Instance;

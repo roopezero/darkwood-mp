@@ -27,27 +27,30 @@ namespace DarkwoodMP.World
     /// DRAFT is 1 when the text isn't taken from the game's data and waits for
     /// review; it isn't used in the game.
     /// </summary>
-    public static class Tooltips
+    public sealed class Tooltips
     {
+        /// The one ModHost keeps, for the patches.
+        internal static Tooltips Current => Plugin.Instance.Host.Tooltips;
+
         private const string ItemsSheet = "Items";
         private const string DescEnd = "_desc";
 
         /// <summary>Items/KEY_desc -> text.</summary>
-        internal static readonly Dictionary<string, string> Items =
+        internal readonly Dictionary<string, string> Items =
             new Dictionary<string, string>(StringComparer.Ordinal);
         /// <summary>Map element name -> text.</summary>
-        internal static readonly Dictionary<string, string> Locations =
+        internal readonly Dictionary<string, string> Locations =
             new Dictionary<string, string>(StringComparer.Ordinal);
         /// <summary>Item types that need no text, with why.</summary>
-        internal static readonly Dictionary<string, string> Skip =
+        internal readonly Dictionary<string, string> Skip =
             new Dictionary<string, string>(StringComparer.Ordinal);
 
-        static Tooltips()
+        public Tooltips()
         {
             Load();
         }
 
-        private static void Load()
+        private void Load()
         {
             try
             {
@@ -107,7 +110,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The mod's line for an item description key ("type_desc"), or null.
         /// </summary>
-        internal static string ItemText(string descKey)
+        internal string ItemText(string descKey)
         {
             if (descKey != null && Items.TryGetValue(descKey, out var t))
             {
@@ -120,11 +123,11 @@ namespace DarkwoodMP.World
         // Names in the lines are the game's own, in the current language:
         // "{item:TYPE}" is that item's name and "{ui:KEY}" the UI sheet's KEY
         // (a location's name). Each line is resolved once per language.
-        private static readonly Dictionary<string, string> _resolved =
+        private readonly Dictionary<string, string> _resolved =
             new Dictionary<string, string>(StringComparer.Ordinal);
-        private static LanguageCode _resolvedFor;
+        private LanguageCode _resolvedFor;
 
-        private static string Resolve(string text)
+        private string Resolve(string text)
         {
             if (text.IndexOf('{') < 0)
             {
@@ -192,7 +195,7 @@ namespace DarkwoodMP.World
         /// The mod's line for a map element (its "_done" form too, as
         /// Map.getElement matches both), or null.
         /// </summary>
-        internal static string LocationText(string element)
+        internal string LocationText(string element)
         {
             if (string.IsNullOrEmpty(element))
             {
@@ -218,7 +221,7 @@ namespace DarkwoodMP.World
         // a frame: the sheet is checked first (a reference compare for the
         // game's own "Items" literal, then the string), then the key's end, and
         // only then the table.
-        private static bool IsItemDesc(string key, string sheet) =>
+        private bool IsItemDesc(string key, string sheet) =>
             key != null && sheet != null
                 && (ReferenceEquals(sheet, ItemsSheet) || sheet == ItemsSheet)
                 && key.EndsWith(DescEnd, StringComparison.Ordinal);
@@ -233,7 +236,7 @@ namespace DarkwoodMP.World
             private static void Postfix(
                 string key, string sheetTitle, ref string __result)
             {
-                if (!IsItemDesc(key, sheetTitle))
+                if (!Current.IsItemDesc(key, sheetTitle))
                 {
                     return;
                 }
@@ -244,7 +247,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (ItemText(key) is string t)
+                if (Current.ItemText(key) is string t)
                 {
                     __result = t;
                 }
@@ -259,12 +262,12 @@ namespace DarkwoodMP.World
             private static void Postfix(
                 string key, string sheetTitle, ref bool __result)
             {
-                if (__result || !IsItemDesc(key, sheetTitle))
+                if (__result || !Current.IsItemDesc(key, sheetTitle))
                 {
                     return;
                 }
 
-                if (Items.ContainsKey(key))
+                if (Current.Items.ContainsKey(key))
                 {
                     __result = true;
                 }
@@ -281,7 +284,7 @@ namespace DarkwoodMP.World
         {
             private static void Prefix(string _name, ref string descText)
             {
-                if (LocationText(_name) is string t)
+                if (Current.LocationText(_name) is string t)
                 {
                     if (string.IsNullOrEmpty(descText))
                     {
@@ -306,7 +309,7 @@ namespace DarkwoodMP.World
         /// line, and that Tubular magazine's inventory popup shows a
         /// description. "[tooltips] PASS/FAIL" lines, then "[tooltips] done".
         /// </summary>
-        internal static IEnumerator Test(string dir)
+        internal IEnumerator Test(string dir)
         {
             while (!WorldShare.WorldReady)
             {
@@ -518,7 +521,7 @@ namespace DarkwoodMP.World
         /// The game's own text for an item's description, without the mod (null
         /// if there's no entry).
         /// </summary>
-        private static string RawDesc(string type)
+        private string RawDesc(string type)
         {
             var sheet = global::Language.GetAllKeysForSheet(ItemsSheet);
             if (sheet != null && sheet.TryGetValue(type + DescEnd, out var v))
@@ -532,7 +535,7 @@ namespace DarkwoodMP.World
         /// <summary>Puts one of the item in a free backpack slot, shows its
         /// popup as the inventory does, and takes it out again. Returns the
         /// popup's description.</summary>
-        private static string PopupDescription(string type)
+        private string PopupDescription(string type)
         {
             var inv = Player.Instance.Inventory;
             var slot = inv.slots.Find(s => InvItemClass.isNull(s.invItem));
@@ -556,7 +559,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static IEnumerable<MapElement> MapElements(Map map)
+        private IEnumerable<MapElement> MapElements(Map map)
         {
             var seen = new HashSet<MapElement>();
             foreach (var t in map.types)
@@ -584,7 +587,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static JObject Dump(ItemsDatabase idb, Map map)
+        private JObject Dump(ItemsDatabase idb, Map map)
         {
             var made = new Dictionary<string, JArray>();
             var usedIn = new Dictionary<string, JArray>();
@@ -814,7 +817,7 @@ namespace DarkwoodMP.World
         /// <summary>A component's public fields: numbers, text and enums as
         /// they are, other Unity objects as their name (or null), lists as
         /// their count.</summary>
-        private static JObject Fields(object c)
+        private JObject Fields(object c)
         {
             var o = new JObject();
             foreach (var f in c.GetType().GetFields(

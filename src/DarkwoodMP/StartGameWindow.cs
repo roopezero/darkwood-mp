@@ -1053,7 +1053,7 @@ namespace DarkwoodMP
             }
 
             var w = Instance;
-            MenuList.Click("Start Game");
+            Plugin.Instance.Host.MenuList.Click("Start Game");
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo(
                 $"[start window] clicked Start Game, window open: {w.Open}");
