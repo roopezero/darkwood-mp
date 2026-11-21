@@ -270,10 +270,10 @@ namespace DarkwoodMP.World
 
                 if (_noted.Add(loc))
                 {
-                    DragSync instance = DragSync.Instance;
-                    if (instance != null)
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
                     {
-                        instance.NoteAll(loc.gameObject);
+                        coop.Drags.NoteAll(loc.gameObject);
                     }
                 }
             }

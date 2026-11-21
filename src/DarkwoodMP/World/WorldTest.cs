@@ -406,14 +406,20 @@ namespace DarkwoodMP.World
                 // agreed to its DragClaim): our player's drag is let go of at
                 // once, and the game's own Item.startDragging doesn't start
                 // one.
-                var ds = DragSync.Instance;
+                DragSync ds = null;
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    ds = coop.Drags;
+                }
+
                 if (ds != null)
                 {
-                    int cancelled = DragSync.Cancelled;
+                    int cancelled = ds.Cancelled;
                     ds.TestOwner(drag.gameObject, 999);
-                    int blocked = DragStartPatch.Blocked;
+                    int blocked = ds.Blocked;
                     drag.startDragging();
-                    bool stopped = DragStartPatch.Blocked > blocked
+                    bool stopped = ds.Blocked > blocked
                         && !drag.beingDragged
                         && player.itemBeingDragged != drag;
                     // as a script takes hold of it
@@ -421,7 +427,7 @@ namespace DarkwoodMP.World
                     yield return null;
                     yield return null;
                     bool letGo = player.itemBeingDragged != drag
-                        && DragSync.Cancelled > cancelled;
+                        && ds.Cancelled > cancelled;
                     string text = "started";
                     if (stopped)
                     {

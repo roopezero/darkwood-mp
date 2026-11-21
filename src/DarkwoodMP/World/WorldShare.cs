@@ -477,6 +477,19 @@ namespace DarkwoodMP.World
         private const float SnapshotReuse = 20f;
 
         /// <summary>
+        /// Where every loose object is in the snapshot being read
+        /// (DragSync.NoteSnapshot), while a session runs.
+        /// </summary>
+        private static void NoteDragSnapshot()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Drags.NoteSnapshot();
+            }
+        }
+
+        /// <summary>
         /// The world as it is now, for someone joining: the host's game saves
         /// it, as it would save it, into a folder of the mod's (its own save is
         /// left as it was), with the night-time and loading checks forced past.
@@ -558,7 +571,7 @@ namespace DarkwoodMP.World
                     try
                     {
                         // the same frame the world is read in
-                        DragSync.NoteSnapshot();
+                        NoteDragSnapshot();
                         FlagsSync.NoteSnapshot();
                         writing = SnapshotSave.Begin(
                             sm, Path.Combine(profDir, "sav.dat"));
@@ -640,7 +653,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            DragSync.NoteSnapshot();
+            NoteDragSnapshot();
             FlagsSync.NoteSnapshot();
             _snapshotDir = SaveSnapshotOnMainThread(
                 sm, dir, profDir, haveStatic, copied, newLocation);
@@ -812,7 +825,12 @@ namespace DarkwoodMP.World
                     }
                     else // the last save: what was where then isn't known
                     {
-                        DragSync.ForgetSnapshot();
+                        CoopSession coop = Coop.Current;
+                        if (coop != null)
+                        {
+                            coop.Drags.ForgetSnapshot();
+                        }
+
                         FlagsSync.ForgetSnapshot();
                     }
 

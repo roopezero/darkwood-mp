@@ -10,6 +10,18 @@ namespace DarkwoodMP.World
     /// <summary>Steps that walk into loose things and push them.</summary>
     public static partial class MapScenarioPush
     {
+        /// This session's DragSync; null without a session.
+        private static DragSync Drags()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return null;
+            }
+
+            return coop.Drags;
+        }
+
         /// <summary>
         /// Our player's body moved along dir at PushSpeed by the physics (its
         /// rigidbody's velocity, set every physics step, as the game's own
@@ -369,7 +381,7 @@ namespace DarkwoodMP.World
             string pos = Fmt1(it.transform.position);
             float yaw = it.transform.rotation.eulerAngles.y;
             string watch = null;
-            DragSync drag = DragSync.Instance;
+            DragSync drag = Drags();
             if (drag != null)
             {
                 watch = drag.WatchInfo(rb);

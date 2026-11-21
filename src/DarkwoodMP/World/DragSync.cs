@@ -63,7 +63,7 @@ namespace DarkwoodMP.World
     /// take hold of something someone else is moving is stopped before the
     /// game starts the drag (Item.startDragging).
     /// </summary>
-    public sealed class DragSync
+    internal sealed class DragSync
     {
         // the times and distances are the rules' (OurDragRules, DragRules,
         // GlideRules, PushRules)
@@ -105,10 +105,16 @@ namespace DarkwoodMP.World
             new Dictionary<string, float>();
         private float _nextFree;
         /// <summary>
-        /// Drags of ours cancelled because someone else had it (for the tests'
-        /// log).
+        /// Drags of ours cancelled because someone else had it, this session
+        /// (for the tests' log).
         /// </summary>
-        public static int Cancelled;
+        public int Cancelled { get; private set; }
+
+        /// <summary>
+        /// Drags the game didn't start because someone else had the thing
+        /// (DragPatches), this session (for the tests).
+        /// </summary>
+        public int Blocked { get; private set; }
 
         // others' drags, shown here
         private sealed class Moving
@@ -154,37 +160,36 @@ namespace DarkwoodMP.World
         private readonly Collider[] _near = new Collider[PushRules.LookMost];
         private float _nextPushWatch;
         /// <summary>
-        /// Pushed objects this game sent (for the tests' log).
+        /// Pushed objects this game sent this session (for the tests' log).
         /// </summary>
-        public static int PushesSent;
+        public int PushesSent { get; private set; }
 
-        public static DragSync Instance { get; private set; }
-
-        public DragSync(Session session)
+        public DragSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.ObjMove, OnMove);
-            session.Register(MsgType.DragClaim, OnClaim);
-            session.Register(MsgType.DragOwner, OnDragOwner);
-            session.OnPeerDisconnected += FreeOwnedBy;
-            session.OnSessionEnded += () =>
-            {
-                foreach (var m in _moving.Values)
-                {
-                    Release(m);
-                }
+            _session = coop.Net;
+            coop.Handle(MsgType.ObjMove, OnMove);
+            coop.Handle(MsgType.DragClaim, OnClaim);
+            coop.Handle(MsgType.DragOwner, OnDragOwner);
+            _session.OnPeerDisconnected += FreeOwnedBy;
+            coop.Hook(() => _session.OnPeerDisconnected -= FreeOwnedBy);
+            // what others were moving is let go of where it is
+            coop.Hook(ReleaseShown);
+        }
 
-                _moving.Clear();
-                ForgetLoose();
-                _dragging = null;
-                _settling = null;
-                _owners.Clear();
-                _corrected.Clear();
-                _hostAt.Clear();
-                _unechoed.Clear();
-                _claimed = false;
-            };
+        /// The game's drag of a thing someone else drags was stopped.
+        internal void NoteBlocked()
+        {
+            Blocked++;
+        }
+
+        private void ReleaseShown()
+        {
+            foreach (var m in _moving.Values)
+            {
+                Release(m);
+            }
+
+            _moving.Clear();
         }
 
         private void ForgetLoose()
@@ -527,14 +532,14 @@ namespace DarkwoodMP.World
 
         // Host: every loose object where the last snapshot for joiners has it
         // (WorldShare.SaveSnapshot).
-        private static readonly
+        private readonly
             Dictionary<Rigidbody, (Vector3 pos, Quaternion rot)> _atSnapshot =
                 new Dictionary<Rigidbody, (Vector3, Quaternion)>();
         /// <summary>
         /// When the last snapshot's positions were noted (Time.unscaledTime;
         /// -1: none). For the tests.
         /// </summary>
-        public static float SnapshotAt = -1f;
+        public float SnapshotAt { get; private set; } = -1f;
 
         /// <summary>
         /// Host, in the frame the world is read for a joiner's snapshot: where
@@ -545,7 +550,7 @@ namespace DarkwoodMP.World
         /// (ObjMove is only taken in the world). JoinerInWorld sends the
         /// difference.
         /// </summary>
-        public static void NoteSnapshot()
+        public void NoteSnapshot()
         {
             _atSnapshot.Clear();
             foreach (var b in Object.FindObjectsOfType<Rigidbody>(true))
@@ -568,7 +573,7 @@ namespace DarkwoodMP.World
         /// Host: the world offered to joiners isn't a snapshot (LiveWorld off:
         /// the last save), so nothing is known of it.
         /// </summary>
-        public static void ForgetSnapshot()
+        public void ForgetSnapshot()
         {
             _atSnapshot.Clear();
             SnapshotAt = -1f;
@@ -2087,16 +2092,15 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.startDragging))]
     internal static class DragStartPatch
     {
-        /// <summary>Drags not started (for the tests).</summary>
-        internal static int Blocked;
-
         private static bool Prefix(Item __instance)
         {
-            var d = DragSync.Instance;
-            if (d == null || !Coop.Guards.Sharing || __instance == null)
+            CoopSession coop = Coop.Current;
+            if (coop == null || !Coop.Guards.Sharing || __instance == null)
             {
                 return true;
             }
+
+            var d = coop.Drags;
 
             string who = d.OtherOwner(ObjRef.Of(__instance.gameObject));
             if (who == null)
@@ -2110,7 +2114,7 @@ namespace DarkwoodMP.World
                 instance.displayMessage(DragSync.MovingText(who));
             }
 
-            Blocked++;
+            d.NoteBlocked();
             return false;
         }
     }

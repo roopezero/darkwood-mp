@@ -41,6 +41,9 @@ namespace DarkwoodMP
         /// Host: the save id counters of the joiners let in to the world.
         public readonly JoinerSaveIds Joiners;
 
+        /// Things dragged and pushed, shared.
+        public readonly DragSync Drags;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -55,6 +58,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
+            Drags = new DragSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

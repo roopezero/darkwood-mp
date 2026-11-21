@@ -188,10 +188,10 @@ namespace DarkwoodMP.World
             // doing, however far away they stood.
             if (BreakSync.OurPlayers(attackerTransform))
             {
-                DragSync instance = DragSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.Hit(__instance);
+                    coop.Drags.Hit(__instance);
                 }
             }
 
