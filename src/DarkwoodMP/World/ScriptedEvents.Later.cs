@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -317,10 +318,14 @@ namespace DarkwoodMP.World
 
             FlushPosition();
             var w = s.Begin(MsgType.EventFired);
-            w.W.Write((byte)Kind.PlayerPart);
-            r.Write(w);
-            w.W.Write((byte)index);
-            w.WriteStr("");
+            EventFiredMessage.Write(w, new FiredEvent
+            {
+                Kind = EventKind.PlayerPart,
+                Trigger = ObjRef.NameOf(r),
+                Index = index,
+                Name = "",
+            });
+
             Asking.Add(t);
             if (Debug)
             {

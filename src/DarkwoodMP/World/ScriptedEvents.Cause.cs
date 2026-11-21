@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -13,16 +14,6 @@ namespace DarkwoodMP.World
     public static partial class ScriptedEvents
     {
         // ---- sending --------------------------------------------------------
-
-        private enum Kind : byte
-        {
-            Trigger = 1,
-            WorldEvent = 2,
-            WorldTrigger = 3,
-            TriggerExit = 4,
-            PlayerPart = 5,
-            WorldTriggerCaused = 6
-        }
 
         // ---- who caused a world trigger -------------------------------------
         //
@@ -132,16 +123,20 @@ namespace DarkwoodMP.World
             string names = WorldEventsOf(t);
             foreach (var kind in new[]
             {
-                Kind.WorldTrigger,
-                Kind.WorldTriggerCaused
+                EventKind.WorldTrigger,
+                EventKind.WorldTriggerCaused
             })
             {
                 var w = s.Begin(MsgType.EventFired);
-                w.W.Write((byte)kind);
-                r.Write(w);
-                w.W.Write((byte)index);
-                w.WriteStr(names);
-                if (kind == Kind.WorldTrigger)
+                EventFiredMessage.Write(w, new FiredEvent
+                {
+                    Kind = kind,
+                    Trigger = ObjRef.NameOf(r),
+                    Index = index,
+                    Name = names,
+                });
+
+                if (kind == EventKind.WorldTrigger)
                 {
                     s.Broadcast(
                         w, Channel.Control, reliable: true, except: cause);

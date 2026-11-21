@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -49,21 +50,25 @@ namespace DarkwoodMP.World
             }
 
             FlushPosition();
-            var w = S.Begin(MsgType.EventFired);
-            Kind kind;
+            EventKind kind;
             if (world)
             {
-                kind = Kind.WorldTrigger;
+                kind = EventKind.WorldTrigger;
             }
             else
             {
-                kind = Kind.Trigger;
+                kind = EventKind.Trigger;
             }
 
-            w.W.Write((byte)kind);
-            r.Write(w);
-            w.W.Write((byte)index);
-            w.WriteStr(WorldEventsOf(TriggerAt(et, index)));
+            var w = S.Begin(MsgType.EventFired);
+            EventFiredMessage.Write(w, new FiredEvent
+            {
+                Kind = kind,
+                Trigger = ObjRef.NameOf(r),
+                Index = index,
+                Name = WorldEventsOf(TriggerAt(et, index)),
+            });
+
             string text = "event";
             if (world)
             {
@@ -103,10 +108,14 @@ namespace DarkwoodMP.World
 
             FlushPosition();
             var w = S.Begin(MsgType.EventFired);
-            w.W.Write((byte)Kind.TriggerExit);
-            r.Write(w);
-            w.W.Write((byte)index);
-            w.WriteStr("");
+            EventFiredMessage.Write(w, new FiredEvent
+            {
+                Kind = EventKind.TriggerExit,
+                Trigger = ObjRef.NameOf(r),
+                Index = index,
+                Name = "",
+            });
+
             if (Debug)
             {
                 Plugin.Log.LogInfo(
@@ -390,10 +399,14 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.EventFired);
-            w.W.Write((byte)Kind.WorldEvent);
-            default(ObjRef).Write(w);
-            w.W.Write((byte)0);
-            w.WriteStr(name);
+            EventFiredMessage.Write(w, new FiredEvent
+            {
+                Kind = EventKind.WorldEvent,
+                Trigger = default(ObjName),
+                Index = 0,
+                Name = name,
+            });
+
             if (Debug)
             {
                 Plugin.Log.LogInfo(
@@ -409,10 +422,14 @@ namespace DarkwoodMP.World
         internal static void SendWorldEvent(string name, Action accepted)
         {
             var w = S.Begin(MsgType.EventFired);
-            w.W.Write((byte)Kind.WorldEvent);
-            default(ObjRef).Write(w);
-            w.W.Write((byte)0);
-            w.WriteStr(name);
+            EventFiredMessage.Write(w, new FiredEvent
+            {
+                Kind = EventKind.WorldEvent,
+                Trigger = default(ObjName),
+                Index = 0,
+                Name = name,
+            });
+
             Send(w, $"world event {name}", accepted);
         }
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -27,12 +28,14 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var kind = (Kind)r.R.ReadByte();
-            var obj = ObjRef.Read(r);
-            int index = r.R.ReadByte();
-            string name = r.ReadStr();
+            FiredEvent fired = EventFiredMessage.Read(r);
+            EventKind kind = fired.Kind;
+            var obj = ObjRef.RefOf(fired.Trigger);
+            int index = fired.Index;
+            string name = fired.Name;
 
-            if (kind == Kind.WorldTrigger || kind == Kind.WorldTriggerCaused)
+            if (kind == EventKind.WorldTrigger
+                || kind == EventKind.WorldTriggerCaused)
             {
                 // Only the host's world sends these; a joiner runs the shared
                 // part (and the messages, if near), and the joiner who caused
@@ -44,7 +47,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                bool ours = kind == Kind.WorldTriggerCaused;
+                bool ours = kind == EventKind.WorldTriggerCaused;
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
                 if (Debug || ours)
@@ -133,7 +136,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (kind == Kind.PlayerPart)
+            if (kind == EventKind.PlayerPart)
             {
                 // Only a request to the host; nothing runs here and it isn't
                 // passed on.
@@ -146,7 +149,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (kind == Kind.TriggerExit)
+            if (kind == EventKind.TriggerExit)
             {
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
@@ -180,7 +183,7 @@ namespace DarkwoodMP.World
                     By = wasBy;
                 }
             }
-            else if (kind == Kind.Trigger)
+            else if (kind == EventKind.Trigger)
             {
                 var et = ObjRef.Resolve<EventTriggers>(obj);
                 var t = TriggerAt(et, index);
@@ -370,10 +373,14 @@ namespace DarkwoodMP.World
             if (s.IsHost)
             {
                 var w = s.Begin(MsgType.EventFired);
-                w.W.Write((byte)kind);
-                obj.Write(w);
-                w.W.Write((byte)index);
-                w.WriteStr(name);
+                EventFiredMessage.Write(w, new FiredEvent
+                {
+                    Kind = kind,
+                    Trigger = ObjRef.NameOf(obj),
+                    Index = index,
+                    Name = name,
+                });
+
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
         }
