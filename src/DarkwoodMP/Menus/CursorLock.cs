@@ -1,7 +1,7 @@
 using DarkwoodMP.World;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// The game confines the mouse to its window from the start (Core.Start,

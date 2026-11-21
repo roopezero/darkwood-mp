@@ -1,3 +1,4 @@
+using DarkwoodMP.Menus;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,6 +33,8 @@ namespace DarkwoodMP
     /// </summary>
     internal static class OptionsTest
     {
+        private static OptionsWindow Options => Plugin.Instance.Host.Options;
+
         private static string PrefsPath =>
             Path.Combine(Application.persistentDataPath, "prefs");
         private static void Log(string s) =>
@@ -112,16 +115,16 @@ namespace DarkwoodMP
             yield return null;
             yield return null;
             Check(
-                took && OptionsWindow.IsOpen,
+                took && Options.IsOpen,
                 $"the menu's Options opens the window (entry taken {took}, "
-                    + $"open {OptionsWindow.IsOpen})");
-            if (!OptionsWindow.IsOpen)
+                    + $"open {Options.IsOpen})");
+            if (!Options.IsOpen)
             {
-                OptionsWindow.Open();
+                Options.Open();
             }
 
             // A volume: changed, applied, and stored where the game keeps it.
-            OptionsWindow.TestTab(1);
+            Options.TestTab(1);
             yield return null;
             float m0 = GameSettings.GetFloat("MusicVolume");
             float m1;
@@ -134,12 +137,12 @@ namespace DarkwoodMP
                 m1 = m0 + 0.3f;
             }
 
-            OptionsWindow.SetVolume(music: true, m1);
-            bool pending = OptionsWindow.Pending;
+            Options.SetVolume(music: true, m1);
+            bool pending = Options.Pending;
             var slider = Singleton<MainMenu>.Instance.AudioMenu.musicSlider;
             bool heard =
                 slider == null || Mathf.Approximately(slider.Magnitude, m1);
-            bool applied = OptionsWindow.Apply();
+            bool applied = Options.Apply();
             yield return null;
             var after = ReadPrefs();
             float onDisk = -1f;
@@ -161,8 +164,8 @@ namespace DarkwoodMP
                     + $"file {onDisk:0.00}");
             // Back at once, so nothing after this can leave the player's volume
             // changed.
-            OptionsWindow.SetVolume(music: true, m0);
-            OptionsWindow.Apply();
+            Options.SetVolume(music: true, m0);
+            Options.Apply();
             Check(
                 Mathf.Approximately(GameSettings.GetFloat("MusicVolume"), m0),
                 "music volume back at "
@@ -170,10 +173,10 @@ namespace DarkwoodMP
 
             // A key: listened for and cancelled with Escape, then put on an
             // action and stored.
-            OptionsWindow.TestTab(3);
+            Options.TestTab(3);
             yield return null;
             yield return null;
-            var rows = OptionsWindow.TestRows();
+            var rows = Options.TestRows();
             string label = null;
             foreach (var r in rows)
             {
@@ -206,7 +209,7 @@ namespace DarkwoodMP
                 KeyCode.Home
             })
             {
-                if (!OptionsWindow.TestKeyUsed(k))
+                if (!Options.TestKeyUsed(k))
                 {
                     free = k;
                     break;
@@ -216,23 +219,23 @@ namespace DarkwoodMP
             Log($"{rows.Count} keyboard rows; trying {label} with {free}");
             if (label != null && free != KeyCode.None)
             {
-                KeyCode orig = OptionsWindow.TestKeyOf(label);
-                OptionsWindow.TestBeginMapping(label);
+                KeyCode orig = Options.TestKeyOf(label);
+                Options.TestBeginMapping(label);
                 float until = Time.realtimeSinceStartup + 3f;
-                while (OptionsWindow.TestMapperStatus != "Listening"
+                while (Options.TestMapperStatus != "Listening"
                     && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
 
-                bool listened = OptionsWindow.TestMapperStatus == "Listening";
+                bool listened = Options.TestMapperStatus == "Listening";
                 bool gameHeld =
                     Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
-                OptionsWindow.TestEscape();
+                Options.TestEscape();
                 yield return null;
-                bool ok = listened && gameHeld && !OptionsWindow.TestMapping
-                    && OptionsWindow.TestMapperStatus == "Idle"
-                    && OptionsWindow.TestKeyOf(label) == orig;
+                bool ok = listened && gameHeld && !Options.TestMapping
+                    && Options.TestMapperStatus == "Idle"
+                    && Options.TestKeyOf(label) == orig;
                 string mapper = "not listening";
                 if (listened)
                 {
@@ -244,7 +247,7 @@ namespace DarkwoodMP
                         + $"{mapper}, the game's keys held {gameHeld}); Escape "
                         + $"cancels, {label} still {orig}");
 
-                bool set = OptionsWindow.TestAssign(label, free);
+                bool set = Options.TestAssign(label, free);
                 var afterKey = ReadPrefs();
                 bool keyStored = false;
                 foreach (var kv in afterKey)
@@ -258,8 +261,8 @@ namespace DarkwoodMP
                     }
                 }
 
-                OptionsWindow.TestReloadControls();
-                KeyCode loaded = OptionsWindow.TestKeyOf(label);
+                Options.TestReloadControls();
+                KeyCode loaded = Options.TestKeyOf(label);
                 Check(
                     set && keyStored && loaded == free,
                     $"{label} put on {free}: the keyboard map in the prefs "
@@ -268,9 +271,9 @@ namespace DarkwoodMP
 
                 // Back as it was, in the player's map too (the store is put
                 // back below).
-                OptionsWindow.TestAssign(label, orig);
+                Options.TestAssign(label, orig);
                 Check(
-                    OptionsWindow.TestKeyOf(label) == orig,
+                    Options.TestKeyOf(label) == orig,
                     $"{label} back on {orig}");
             }
             else
@@ -289,31 +292,31 @@ namespace DarkwoodMP
                         + $"{Screen.width}x{Screen.height}");
                 string P(string n) =>
                     Path.Combine(dir, $"{where}-{w}x{h}-{n}.png");
-                var names = OptionsWindow.TestTabNames;
+                var names = Options.TestTabNames;
                 for (int t = 0; t < names.Length; t++)
                 {
-                    OptionsWindow.TestTab(t);
+                    Options.TestTab(t);
                     yield return Shot(
                         P($"{t + 1}-{names[t].ToLowerInvariant()}"));
                 }
 
-                OptionsWindow.TestTab(0);
-                OptionsWindow.TestOpenDrop("res");
+                Options.TestTab(0);
+                Options.TestOpenDrop("res");
                 yield return Shot(P("video-resolution-list"));
-                OptionsWindow.TestTab(2);
-                OptionsWindow.TestOpenDrop("lang");
+                Options.TestTab(2);
+                Options.TestOpenDrop("lang");
                 yield return Shot(P("game-language-list"));
-                OptionsWindow.TestTab(3);
+                Options.TestTab(3);
                 yield return null;
                 if (label != null)
                 {
-                    OptionsWindow.TestBeginMapping(label);
+                    Options.TestBeginMapping(label);
                     yield return Shot(P("controls-listening"));
-                    OptionsWindow.TestEscape();
+                    Options.TestEscape();
                 }
 
-                OptionsWindow.TestTab(0);
-                OptionsWindow
+                Options.TestTab(0);
+                Options
                     .AskKeep("The screen is now "
                         + $"{Screen.width}x{Screen.height}, in a window.", () =>
                 {
@@ -322,36 +325,36 @@ namespace DarkwoodMP
                 });
 
                 yield return Shot(P("video-keep"));
-                ConfirmDialog.Cancel();
-                OptionsWindow.TestTab(1);
+                Plugin.Instance.Host.Confirm.Cancel();
+                Options.TestTab(1);
                 float v = 0.8f;
                 if (GameSettings.GetFloat("SoundVolume") > 0.5f)
                 {
                     v = 0.3f;
                 }
 
-                OptionsWindow.SetVolume(music: false, v);
-                OptionsWindow.RequestClose();
+                Options.SetVolume(music: false, v);
+                Options.RequestClose();
                 yield return Shot(P("audio-apply-question"));
                 // Discard: the sound volume back, the window closed
-                ConfirmDialog.Choose(false);
+                Plugin.Instance.Host.Confirm.Choose(false);
                 yield return null;
                 yield return null;
                 Check(
-                    !OptionsWindow.IsOpen && !OptionsWindow.Pending,
+                    !Options.IsOpen && !Options.Pending,
                     "Discard closes the window with nothing left to apply "
-                        + $"(open {OptionsWindow.IsOpen})");
-                OptionsWindow.Open();
+                        + $"(open {Options.IsOpen})");
+                Options.Open();
                 yield return null;
             }
 
             // Everything back as it was.
-            OptionsWindow.RequestClose();
+            Options.RequestClose();
             Screen.SetResolution(sizeBefore.w, sizeBefore.h, sizeBefore.mode);
             yield return new WaitForSecondsRealtime(1f);
             RestorePrefs(before);
-            OptionsWindow.Revert();       // the volumes heard as stored
-            OptionsWindow.TestReloadControls();
+            Options.Revert();       // the volumes heard as stored
+            Options.TestReloadControls();
             _before = null;
             var diffs = Compare(before, ReadPrefs());
             string what;
@@ -426,8 +429,8 @@ namespace DarkwoodMP
 
             try
             {
-                OptionsWindow.Revert();
-                OptionsWindow.TestReloadControls();
+                Options.Revert();
+                Options.TestReloadControls();
             }
             catch (Exception e)
             {

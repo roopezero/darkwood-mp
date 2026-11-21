@@ -1,3 +1,4 @@
+using DarkwoodMP.Menus;
 using System;
 using System.Collections.Generic;
 using BepInEx;
@@ -194,6 +195,33 @@ namespace DarkwoodMP
         /// The mod's tooltip texts for items and places the game left bare.
         public readonly World.Texts.Tooltips Tooltips =
             new World.Texts.Tooltips();
+
+        /// The yes-or-no question over the menus and windows.
+        public readonly ConfirmDialog Confirm = new ConfirmDialog();
+
+        /// Hides the game's cursor while the mod's windows show their own.
+        public readonly GameCursor Cursor = new GameCursor();
+
+        /// The mod's per-frame cost (--dwmp-profile-mod).
+        public readonly ModProfiler Profiler = new ModProfiler();
+
+        /// DragTest's made-up mouse, which the windows read instead of the
+        /// real one while it's set (UiWindow).
+        public Func<UnityEngine.Vector2> TestMouse;
+
+        /// The Start Game window, made by AddWindows.
+        public StartGameWindow StartGame { get; private set; }
+
+        /// The Options window, made by AddWindows.
+        public OptionsWindow Options { get; private set; }
+
+        /// Plugin.Load, where it made the two windows before, so they hook
+        /// into the menus in the same order.
+        public void AddWindows()
+        {
+            StartGame = new StartGameWindow();
+            Options = new OptionsWindow();
+        }
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>

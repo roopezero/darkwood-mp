@@ -32,8 +32,9 @@ namespace DarkwoodMP.Menus
         {
             get
             {
-                if (ConfirmDialog.Open
-                    || (Plugin.Instance != null && Plugin.Instance.PanelOpen))
+                var plugin = Plugin.Instance;
+                if (plugin != null
+                    && (plugin.Host.Confirm.Open || plugin.PanelOpen))
                 {
                     return true;
                 }

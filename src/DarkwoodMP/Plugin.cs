@@ -428,8 +428,7 @@ namespace DarkwoodMP
                 OnClose = () => SetPanel(false),
             };
 
-            new StartGameWindow();
-            OptionsWindow.Init();
+            _host.AddWindows();
             _host.AddPlayers();
             _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
             _host.Session.OnPlayerLeft += n => Notice($"{n} left");
@@ -609,7 +608,7 @@ namespace DarkwoodMP
             }
 
             Threat.Debug = Has("--dwmp-debug-threat");
-            ModProfiler.Enabled = Has("--dwmp-profile-mod");
+            _host.Profiler.Enabled = Has("--dwmp-profile-mod");
             _host.LoadSpeed.Verify = Has("--dwmp-verify-load");
             WorldActions.Debug = Has("--dwmp-debug-world");
             if (Has("--dwmp-test-world"))
@@ -877,7 +876,7 @@ namespace DarkwoodMP
             WorldShare.TestHoldSecs = 0f;
 
             SkillsPanel.TestMouse = null;
-            UiWindow.TestMouse = null;
+            _host.TestMouse = null;
             WorldActions.TestAsPlayer = false;
             var player = Player.Instance;
             if (player != null)
@@ -893,7 +892,7 @@ namespace DarkwoodMP
             _spawnType = null;
             _testPresence = false;
             TcpBackend.TestMaxPlayers = 0;
-            ConfirmDialog.Cancel();
+            _host.Confirm.Cancel();
             if (_host.Session.Active)
             {
                 _host.Session.Backend.Leave();
@@ -1009,7 +1008,7 @@ namespace DarkwoodMP
                 Log.LogInfo($"[shots] {_host.MenuList.Check()}");
                 _host.MenuList.Click("Quit");
                 yield return Shot("main-menu-quit");
-                ConfirmDialog.Cancel();
+                _host.Confirm.Cancel();
                 _host.MenuList.Click("Join Game");
                 yield return Shot("main-menu-join");
                 SetPanel(false);
@@ -1056,7 +1055,7 @@ namespace DarkwoodMP
             ShotsHud("pause-menu", "none");
             _host.MenuList.Click("Back to main menu");
             yield return Shot("pause-menu-confirm");
-            ConfirmDialog.Cancel();
+            _host.Confirm.Cancel();
             yield return new WaitForSecondsRealtime(1.5f);
             Log.LogInfo(
                 $"[shots] pause menu open: time scale {Time.timeScale}, paused "
@@ -1428,7 +1427,7 @@ namespace DarkwoodMP
                 _host.MenuList.Click("Quit");
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Shot("quit");
-                ConfirmDialog.Cancel();
+                _host.Confirm.Cancel();
                 yield return new WaitForSecondsRealtime(0.5f);
                 _host.MenuList.Click("Join Game");
                 yield return new WaitForSecondsRealtime(1f);
@@ -1466,7 +1465,7 @@ namespace DarkwoodMP
             _host.MenuList.Click("Quit");
             yield return new WaitForSecondsRealtime(1f);
             yield return Shot("pause-quit");
-            ConfirmDialog.Cancel();
+            _host.Confirm.Cancel();
             yield return new WaitForSecondsRealtime(0.5f);
             Core.showHidePauseMenu();
             Log.LogInfo("[screen] done");
@@ -2151,7 +2150,7 @@ namespace DarkwoodMP
             }
 
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
-            GameCursor.LateUpdate(
+            _host.Cursor.LateUpdate(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
         }
 
@@ -2179,7 +2178,7 @@ namespace DarkwoodMP
 
             // Escape closes the panel, unless a question over it takes it
             // (ConfirmDialog answers No).
-            if (_showMenu && !ConfirmDialog.Open
+            if (_showMenu && !_host.Confirm.Open
                 && Input.GetKeyDown(KeyCode.Escape))
             {
                 SetPanel(false);
@@ -2217,10 +2216,10 @@ namespace DarkwoodMP
 
             // After the buttons are let go: an answered question's action, then
             // the menu's list (and a click on it).
-            ConfirmDialog.Update();
-            OptionsWindow.Update();
+            _host.Confirm.Update();
+            _host.Options.Update();
             _host.MenuList.Update();
-            ModProfiler.Begin();
+            _host.Profiler.Begin();
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
@@ -2228,34 +2227,34 @@ namespace DarkwoodMP
             }
 
             _host.Session.Update();
-            ModProfiler.Mark("session");
+            _host.Profiler.Mark("session");
             _host.Browser.Update();
-            ModProfiler.Mark("browser");
+            _host.Profiler.Mark("browser");
             _host.Players.Update();
-            ModProfiler.Mark("players");
+            _host.Profiler.Mark("players");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.PlayerFx.Update();
             }
 
-            ModProfiler.Mark("player fx");
+            _host.Profiler.Mark("player fx");
             _host.Proxies.Update(_host.Players, _host.Session.IsHost);
-            ModProfiler.Mark("proxies");
+            _host.Profiler.Mark("proxies");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.Enemies.Update();
             }
 
-            ModProfiler.Mark("enemies");
+            _host.Profiler.Mark("enemies");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.Time.Update();
             }
 
-            ModProfiler.Mark("time");
+            _host.Profiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
             _host.Workbenches.Update();
             // also without co-op: see Containers.EachFrame
@@ -2266,16 +2265,16 @@ namespace DarkwoodMP
                 coop.Containers.Update();
             }
 
-            ModProfiler.Mark("containers");
+            _host.Profiler.Mark("containers");
             _characters.Update();
-            ModProfiler.Mark("characters");
+            _host.Profiler.Mark("characters");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.Story.Update();
             }
 
-            ModProfiler.Mark("flags");
+            _host.Profiler.Mark("flags");
             // also without co-op: the flag is kept for when others join
             _host.Tank.Update();
             coop = Coop.Current;
@@ -2284,50 +2283,50 @@ namespace DarkwoodMP
                 coop.Drags.Update();
             }
 
-            ModProfiler.Mark("drag");
+            _host.Profiler.Mark("drag");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.Pushes.Update();
             }
 
-            ModProfiler.Mark("door push");
+            _host.Profiler.Mark("door push");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.Fuel.Update();
             }
 
-            ModProfiler.Mark("fuel");
+            _host.Profiler.Mark("fuel");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.WorldEvents.Update();
             }
 
-            ModProfiler.Mark("events");
+            _host.Profiler.Mark("events");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.HostIds.Update();
             }
 
-            ModProfiler.Mark("host ids");
+            _host.Profiler.Mark("host ids");
             if (coop != null)
             {
                 coop.Nights.Update();
             }
 
-            ModProfiler.Mark("night objects");
+            _host.Profiler.Mark("night objects");
             coop = Coop.Current;
             if (coop != null)
             {
                 coop.EnemyFx.Update();
             }
 
-            ModProfiler.Mark("enemy fx");
+            _host.Profiler.Mark("enemy fx");
             _world.Update();
-            ModProfiler.Mark("world");
+            _host.Profiler.Mark("world");
             if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
             {
                 _nextWorldLabel = Time.unscaledTime + 2f;
@@ -2372,7 +2371,7 @@ namespace DarkwoodMP
                 coop.Pause.Update();
             }
 
-            ModProfiler.Mark("pause");
+            _host.Profiler.Mark("pause");
             if (coop != null)
             {
                 coop.Mornings.Update();
@@ -2390,7 +2389,7 @@ namespace DarkwoodMP
                 coop.Npcs.Update();
             }
 
-            ModProfiler.Mark("npcs");
+            _host.Profiler.Mark("npcs");
             // also alone: a dialogue's NPC can go away then too
             _host.Dialogues.Update();
 
@@ -2407,7 +2406,7 @@ namespace DarkwoodMP
             }
 
             _wasInWorld = WorldShare.InWorld;
-            ModProfiler.EndFrame();
+            _host.Profiler.EndFrame();
         }
 
         /// <summary>
@@ -2587,7 +2586,7 @@ namespace DarkwoodMP
             }
 
             MenuWindows.DrawAll();
-            ConfirmDialog.OnGUI();
+            _host.Confirm.OnGUI();
             GUI.skin = skin;
             DragTest.OnGUI();
         }

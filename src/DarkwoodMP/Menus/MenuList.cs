@@ -131,13 +131,13 @@ namespace DarkwoodMP.Menus
                 Add("Options", Options);
                 Add(
                     "Back to main menu",
-                    () => ConfirmDialog.Ask(
+                    () => Plugin.Instance.Host.Confirm.Ask(
                         "Back to main menu",
                         "Leave this world for the main menu? " + LeaveText(),
                         "Yes", ToMainMenu));
                 Add(
                     "Quit",
-                    () => ConfirmDialog.Ask(
+                    () => Plugin.Instance.Host.Confirm.Ask(
                         "Quit", "Quit Darkwood? " + LeaveText(), "Yes", Quit));
             }
             else
@@ -150,7 +150,7 @@ namespace DarkwoodMP.Menus
                     () => GameButton(Singleton<MainMenu>.Instance.creditsBtn));
                 Add(
                     "Quit",
-                    () => ConfirmDialog.Ask(
+                    () => Plugin.Instance.Host.Confirm.Ask(
                         "Quit", "Quit Darkwood?", "Yes", Quit));
             }
         }

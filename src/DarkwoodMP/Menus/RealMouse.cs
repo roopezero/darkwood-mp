@@ -3,7 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// For tests on Linux: moves the system's real mouse pointer with ydotool
