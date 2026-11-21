@@ -50,6 +50,12 @@ namespace DarkwoodMP
         /// Host: which joiner each recruited follower follows.
         public readonly NpcFollowers Followers;
 
+        /// One player at a time talks to an NPC.
+        public readonly World.Talk.TalkLock Talk;
+
+        /// Keeps a dialogue closable when its NPC goes away.
+        public readonly World.Talk.DialogueGuard Dialogues;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -67,6 +73,8 @@ namespace DarkwoodMP
             Time = new TimeSync(this);
             Npcs = new NpcSync(this);
             Followers = new NpcFollowers(this);
+            Talk = new World.Talk.TalkLock(this);
+            Dialogues = new World.Talk.DialogueGuard(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
