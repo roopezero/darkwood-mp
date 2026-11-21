@@ -464,7 +464,6 @@ namespace DarkwoodMP
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
             FarEvents.Register(_host.Session);
-            ViewRects.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
@@ -2328,10 +2327,10 @@ namespace DarkwoodMP
             DreamSync.Update();
             Prologue.Update();
             Locations.Update();
-            ViewRects.Update();
             coop = Coop.Current;
             if (coop != null)
             {
+                coop.Views.Update();
                 coop.Infections.Update();
             }
 

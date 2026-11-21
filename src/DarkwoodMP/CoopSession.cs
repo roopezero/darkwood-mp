@@ -87,6 +87,9 @@ namespace DarkwoodMP
         /// The fuel in generators and saws.
         public readonly World.Fuel.Fuel Fuel;
 
+        /// Host: how much of the world each joiner's game keeps running.
+        public readonly Combat.ViewRects Views;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -116,6 +119,7 @@ namespace DarkwoodMP
             Infections = new World.Infections.Infections(this);
             Fire = new World.Fire.Fire(this);
             Fuel = new World.Fuel.Fuel(this);
+            Views = new Combat.ViewRects(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
