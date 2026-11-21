@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Progress;
@@ -63,8 +61,7 @@ namespace DarkwoodMP.World
         private static Session S => Session.Instance;
 
         /// <summary>Playing alone: no co-op session, in a world.</summary>
-        private static bool Solo => (S == null || !S.Active)
-            && WorldShare.InWorld && !NetEnemies.ClientMode;
+        private static bool Solo => ProgressSideRules.Solo(Side());
 
         private sealed class Saved
         {
@@ -84,7 +81,7 @@ namespace DarkwoodMP.World
         private static bool _known;       // client: the host has sent the state
         private static Saved _saved;      // host
         private static string _savedPath; // host: which world _saved is for
-        private static float _nextSync;
+        private static Seconds _nextSync;
 
         public static void Register(Session s)
         {
@@ -104,42 +101,68 @@ namespace DarkwoodMP.World
 
         // ---- levels ---------------------------------------------------------
 
-        private static int Req(Player p, int level)
+        /// <summary>
+        /// The shared numbers and this player's level requirements (none
+        /// with no player): the only code that reads them for the rules.
+        /// </summary>
+        private static ProgressFacts FactsOf(Player p)
         {
-            var reqs = p.levelRequirements;
-            if (reqs == null || reqs.Count == 0)
+            int[] requirements = null;
+            if (p != null && p.levelRequirements != null)
             {
-                return 0;
+                requirements = p.levelRequirements.ToArray();
             }
 
-            return reqs[Mathf.Clamp(level, 0, reqs.Count - 1)];
+            return new ProgressFacts
+            {
+                SharedExp = SharedExp,
+                SharedLevel = SharedLevel,
+                Requirements = requirements,
+                HasPlayer = p != null,
+            };
         }
 
         /// <summary>
-        /// The essence a player with this own level sees: the shared essence,
-        /// up to their next level.
+        /// Which side of the shared progression our game is on now.
         /// </summary>
-        private static int Display(Player p, int ownLevel) =>
-            Math.Min(SharedExp, Req(p, ownLevel));
+        private static SideFacts Side()
+        {
+            var s = S;
+            return new SideFacts
+            {
+                SessionActive = s != null && s.Active,
+                IsHost = s != null && s.IsHost,
+                InWorld = WorldShare.InWorld,
+                ClientMode = NetEnemies.ClientMode,
+                Known = _known,
+                Together = Hideouts.Together,
+                HasRecord = _saved != null,
+                HasPath = _savedPath != null,
+                HasPlayer = Player.Instance != null,
+            };
+        }
 
         /// <summary>
-        /// The most levels the shared essence allows: level L needs Req(L - 1).
+        /// Our player at the stove's menu.
         /// </summary>
-        private static int Allowed(Player p)
+        private static StoveFacts StoveOf(Player p)
         {
-            int max = 0;
-            if (p.levelRequirements != null)
+            var menu = StoveMenu;
+            var skills = Singleton<SkillsMenu>.Instance;
+            return new StoveFacts
             {
-                max = p.levelRequirements.Count;
-            }
+                HasPlayer = p != null,
+                InLevelingMenu = p != null && p.inLevelingMenu,
+                HasMenu = menu != null,
+                OpenedAndTweened = menu != null && menu.openedAndTweened,
+                WantToLevel = menu != null && menu.wantToLevel,
+                SkillsMenuOpen = skills != null && skills.opened,
+            };
+        }
 
-            int l = 0;
-            while (l < max && SharedExp >= Req(p, l))
-            {
-                l++;
-            }
-
-            return l;
+        private static int Req(Player p, int level)
+        {
+            return ProgressRules.Requirement(FactsOf(p).Requirements, level);
         }
 
         /// <summary>
@@ -148,12 +171,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static int MostLevels(Player p)
         {
-            if (p == null)
-            {
-                return SharedLevel;
-            }
-
-            return Math.Max(SharedLevel, Allowed(p));
+            return ProgressRules.MostLevels(FactsOf(p));
         }
 
         /// <summary>The stove's menu (LevelingMenu), or null.</summary>
@@ -170,9 +188,6 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool BarFull(Player p) =>
-            SharedLevel > 7 || SharedExp >= Req(p, SharedLevel);
-
         /// <summary>
         /// Set our player's essence to what the shared essence shows them, and
         /// refresh an open stove menu.
@@ -184,7 +199,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int want = Display(p, p.currentLevel);
+            int want = ProgressRules.Display(FactsOf(p), p.currentLevel);
             if (p.experience == want)
             {
                 return;
@@ -234,14 +249,19 @@ namespace DarkwoodMP.World
             var s = S;
             var p = Player.Instance;
             bool solo = Solo;
-            if ((!solo && (s == null || !s.IsHost)) || !WorldShare.InWorld
-                || WorldShare.Loading || p == null || NetEnemies.ClientMode)
-            {
-                return null;
-            }
-
             string path = SavedPath();
-            if (path == null)
+            var record = new RecordFacts
+            {
+                Solo = solo,
+                IsHost = s != null && s.IsHost,
+                InWorld = WorldShare.InWorld,
+                Loading = WorldShare.Loading,
+                HasPlayer = p != null,
+                ClientMode = NetEnemies.ClientMode,
+                HasPath = path != null,
+            };
+
+            if (!RecordRules.Keeps(record))
             {
                 return null;
             }
@@ -279,20 +299,22 @@ namespace DarkwoodMP.World
                 }
             }
 
-            bool begin = false;
-            if (_saved == null && start)
+            int peers = 0;
+            if (s != null)
             {
-                if (solo)
-                {
-                    begin = alone;
-                }
-                else
-                {
-                    begin = s.Peers.Count > 0;
-                }
+                peers = s.Peers.Count;
             }
 
-            if (begin)
+            var starting = new RecordFacts
+            {
+                Solo = solo,
+                HasRecord = _saved != null,
+                Start = start,
+                Alone = alone,
+                Peers = peers,
+            };
+
+            if (RecordRules.Starts(starting))
             {
                 _saved =
                     new Saved { Exp = p.experience, Level = p.currentLevel };
@@ -348,12 +370,20 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int exp = Math.Max(SharedExp, p.experience),
-                level = Math.Max(SharedLevel, p.currentLevel);
-            if (exp != SharedExp || level != SharedLevel)
+            var shared =
+                new ProgressNumbers { Exp = SharedExp, Level = SharedLevel };
+            var merged = ProgressRules.Merge(
+                shared,
+                new ProgressNumbers
+                {
+                    Exp = p.experience,
+                    Level = p.currentLevel,
+                });
+
+            if (merged != shared)
             {
-                SharedExp = saved.Exp = exp;
-                SharedLevel = saved.Level = level;
+                SharedExp = saved.Exp = merged.Exp;
+                SharedLevel = saved.Level = merged.Level;
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
@@ -375,9 +405,16 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void OnHostSaved()
         {
-            if (WorldShare.Snapshotting || NetEnemies.ClientMode
-                || _saved == null || _savedPath == null
-                || _savedPath != SavedPath())
+            var write = new WriteFacts
+            {
+                Snapshotting = WorldShare.Snapshotting,
+                ClientMode = NetEnemies.ClientMode,
+                HasRecord = _saved != null,
+                HasPath = _savedPath != null,
+                PathCurrent = _savedPath == SavedPath(),
+            };
+
+            if (!RecordRules.Writes(write))
             {
                 return;
             }
@@ -398,24 +435,16 @@ namespace DarkwoodMP.World
         {
             int amount = Progress.EssenceAdd.Read(r);
             var p = Player.Instance;
-            if (!S.IsHost || HostSaved(start: true) == null || p == null)
+            if (!Handles(p))
             {
                 return;
             }
 
-            if (amount <= 0 || amount > 100000)
+            var verdict = ProgressRules.MayAddEssence(FactsOf(p), amount);
+            if (verdict.Refused)
             {
                 SendState(from);
-                Coop.Current.Authority.Refuse($"implausible essence {amount}");
-                return;
-            }
-
-            if (BarFull(p))
-            {
-                SendState(from);
-                Coop.Current.Authority.Refuse(
-                    "the shared essence bar is full: someone has to take the "
-                        + "level at a stove");
+                Coop.Current.Authority.Refuse(verdict);
                 return;
             }
 
@@ -432,12 +461,13 @@ namespace DarkwoodMP.World
         {
             int level = Progress.LevelTaken.Read(r);
             var p = Player.Instance;
-            if (!S.IsHost || HostSaved(start: true) == null || p == null)
+            if (!Handles(p))
             {
                 return;
             }
 
-            int allowed = Allowed(p);
+            var facts = FactsOf(p);
+            int allowed = ProgressRules.Allowed(facts);
             if (level > allowed)
             {
                 Plugin.Log.LogInfo(
@@ -445,8 +475,8 @@ namespace DarkwoodMP.World
                         + $"shared essence allows {allowed}");
             }
 
-            level = Math.Min(level, allowed);
-            if (level <= SharedLevel)
+            level = ProgressRules.AcceptedLevel(facts, level);
+            if (!ProgressRules.Raises(facts, level))
             {
                 return;
             }
@@ -458,20 +488,15 @@ namespace DarkwoodMP.World
             SendState(0);
         }
 
-        private static string KeyHash(string key)
+        /// <summary>
+        /// Host: whether it takes in a client's EssenceAdd or LevelTaken.
+        /// The record (which can start here) is read only as the host.
+        /// </summary>
+        private static bool Handles(Player p)
         {
-            using (var sha = SHA256.Create())
-            {
-                string hashed = key;
-                if (hashed == null)
-                {
-                    hashed = "";
-                }
-
-                return WorldFiles.Hex(
-                    sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
-                        0, 32);
-            }
+            bool host = S.IsHost;
+            bool record = host && HostSaved(start: true) != null;
+            return ProgressRules.Handles(host, record, p != null);
         }
 
         private static int Today
@@ -486,10 +511,6 @@ namespace DarkwoodMP.World
                 return 0;
             }
         }
-
-        public const string NotMorning =
-            "Skills can only be reset in the morning, before you leave your "
-                + "hideout";
 
         /// <summary>
         /// Whether this player (0: ours) is in their morning: after dawn, not
@@ -511,42 +532,51 @@ namespace DarkwoodMP.World
         /// Host: whether this player (key hash, or "host"; peer 0: ours) may
         /// reset now; if so, it counts as today's.
         /// </summary>
-        private static bool TakeReset(string who, ulong peer, out string why)
+        private static Verdict TakeReset(string who, ulong peer)
         {
-            why = null;
-            if (!InMorning(peer))
+            var morning = SkillResetRules.Morning(InMorning(peer));
+            if (morning.Refused)
             {
-                why = NotMorning;
-                return false;
+                return morning;
             }
 
-            var saved = HostSaved(start: true, alone: who == "host");
-            if (saved == null)
+            var saved =
+                HostSaved(start: true, alone: SkillResetRules.Alone(who));
+            int day = 0;
+            bool hasDay =
+                saved != null && saved.Resets.TryGetValue(who, out day);
+            var reset = new ResetFacts
             {
-                why = "nobody shares the progression";
-                return false;
-            }
+                HasRecord = saved != null,
+                HasDay = hasDay,
+                Day = day,
+                Today = Today,
+            };
 
-            if (saved.Resets.TryGetValue(who, out int day) && day == Today)
+            var verdict = SkillResetRules.Today(reset);
+            if (verdict.Refused)
             {
-                why = "you already reset your skills today";
-                return false;
+                return verdict;
             }
 
             saved.Resets[who] = Today;
-            return true;
+            return verdict;
         }
 
         private static void OnSkillReset(ulong from, PacketReader r)
         {
-            if (!S.IsHost || !S.Keys.TryGetValue(from, out var key))
+            bool host = S.IsHost;
+            string key = null;
+            bool hasKey = host && S.Keys.TryGetValue(from, out key);
+            if (!SkillResetRules.Handles(host, hasKey))
             {
                 return;
             }
 
-            if (!TakeReset(KeyHash(key), from, out string why))
+            var verdict = TakeReset(SkillResetRules.Who(key), from);
+            if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(verdict);
                 return;
             }
 
@@ -560,11 +590,6 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The host, or playing alone: our game keeps the shared progression.
         /// </summary>
-        private static bool HostSide => (S != null && S.IsHost) || Solo;
-
-        private static bool ClientActive =>
-            NetEnemies.ClientMode && WorldShare.InWorld && _known;
-
         private static void OnState(ulong from, PacketReader r)
         {
             if (S == null || from != S.HostId || !NetEnemies.ClientMode)
@@ -628,13 +653,8 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void Cooked(int amount)
         {
-            var p = Player.Instance;
-            if (amount <= 0 || p == null)
-            {
-                return;
-            }
-
-            if (ClientActive)
+            var route = ProgressSideRules.Cooked(Side(), amount);
+            if (route == ProgressRoute.Client)
             {
                 // predicted; the host's ProgressState follows
                 SharedExp += amount;
@@ -642,7 +662,7 @@ namespace DarkwoodMP.World
                 Progress.EssenceAdd.Write(w, amount);
                 Coop.Current.Authority.Request(w, $"cook {amount} essence");
             }
-            else if (HostSide)
+            else if (route == ProgressRoute.Host)
             {
                 HostSync();
             }
@@ -654,12 +674,13 @@ namespace DarkwoodMP.World
         internal static void LevelTaken()
         {
             var p = Player.Instance;
-            if (ClientActive)
+            var route = ProgressSideRules.LevelTaken(Side());
+            if (route == ProgressRoute.Client)
             {
                 SendLevel(p);
                 Apply(p);
             }
-            else if (HostSide)
+            else if (route == ProgressRoute.Host)
             {
                 HostSync();
             }
@@ -671,31 +692,27 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update()
         {
-            if (Time.unscaledTime < _nextSync)
+            var now = new Seconds(Time.unscaledTime);
+            if (!ProgressSideRules.Due(now, _nextSync))
             {
                 return;
             }
 
-            _nextSync = Time.unscaledTime + 1f;
-            var s = S;
+            _nextSync = ProgressSideRules.Next(now);
+            var tick = ProgressSideRules.Update(Side());
             // Back at the main menu: forget the world's file, so a reload
             // (maybe of an older save) reads it again.
-            if (!WorldShare.InWorld && (s == null || !s.Active)
-                && _savedPath != null)
+            if (tick.Forgets)
             {
                 _saved = null;
                 _savedPath = null;
             }
 
-            if (s != null && s.IsHost && Hideouts.Together)
+            if (tick.Route == ProgressRoute.Host)
             {
                 HostSync();
             }
-            else if (Solo && _saved != null)
-            {
-                HostSync();
-            }
-            else if (ClientActive)
+            else if (tick.Route == ProgressRoute.Client)
             {
                 Apply(Player.Instance);
             }
@@ -722,7 +739,7 @@ namespace DarkwoodMP.World
             }
 
             p.currentLevel++;
-            p.gainSaturation(5f);
+            p.gainSaturation(StoveRules.Saturation);
             var d = Singleton<Dreams>.Instance;
             bool client = d != null && NetEnemies.ClientMode
                 && Hideouts.Together,
@@ -745,46 +762,20 @@ namespace DarkwoodMP.World
                 {
                 }
 
-                if (d != null && !d.disabled)
+                int l = p.currentLevel;
+                if (d != null
+                    && StoveRules.BringsDream(l, HadDream(d, l), d.disabled))
                 {
-                    int l = p.currentLevel;
-                    if (l == 2 && !d.hadDreamAtLvl2)
+                    d.wantToDream = true;
+                    MarkDream(d, l);
+                    if (l == StoveRules.FirstDreamLevel)
                     {
-                        d.wantToDream = true;
-                        d.hadDreamAtLvl2 = true;
                         d.startTransition.dreamToTransitionTo =
-                            "dream_bunker_underground_01";
-                    }
-
-                    if (l == 3 && !d.hadDreamAtLvl3)
-                    {
-                        d.wantToDream = true;
-                        d.hadDreamAtLvl3 = true;
-                    }
-
-                    if (l == 5 && !d.hadDreamAtLvl5)
-                    {
-                        d.wantToDream = true;
-                        d.hadDreamAtLvl5 = true;
-                    }
-
-                    if (l == 6 && !d.hadDreamAtLvl6)
-                    {
-                        d.wantToDream = true;
-                        d.hadDreamAtLvl6 = true;
-                    }
-
-                    if (l == 7 && !d.hadDreamAtLvl7)
-                    {
-                        d.wantToDream = true;
-                        d.hadDreamAtLvl7 = true;
+                            StoveRules.FirstDream;
                     }
                 }
 
-                if (d != null && d.wantToDream
-                    && (!Core.randomGeneration
-                        || d.hasUnspawnedRandomPresetForChapter(
-                            Singleton<WorldGenerator>.Instance.chapterID)))
+                if (d != null && Transitions(d))
                 {
                     Core.forbidInputs = true;
                     if (Singleton<CamMain>.Instance != null)
@@ -817,6 +808,64 @@ namespace DarkwoodMP.World
             p.displayMessage(
                 $"A skill point to spend: press {SkillsPanel.KeyName} for the "
                     + "Skills");
+        }
+
+        /// <summary>
+        /// Whether the level's dream was had (Dreams.hadDreamAtLvlN).
+        /// </summary>
+        private static bool HadDream(Dreams d, int level)
+        {
+            switch (level)
+            {
+                case 2:
+                    return d.hadDreamAtLvl2;
+                case 3:
+                    return d.hadDreamAtLvl3;
+                case 5:
+                    return d.hadDreamAtLvl5;
+                case 6:
+                    return d.hadDreamAtLvl6;
+                case 7:
+                    return d.hadDreamAtLvl7;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The level's dream counts as had.</summary>
+        private static void MarkDream(Dreams d, int level)
+        {
+            switch (level)
+            {
+                case 2:
+                    d.hadDreamAtLvl2 = true;
+                    break;
+                case 3:
+                    d.hadDreamAtLvl3 = true;
+                    break;
+                case 5:
+                    d.hadDreamAtLvl5 = true;
+                    break;
+                case 6:
+                    d.hadDreamAtLvl6 = true;
+                    break;
+                case 7:
+                    d.hadDreamAtLvl7 = true;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Whether the wanted dream's transition starts; the game is asked
+        /// for a preset only in a random world.
+        /// </summary>
+        private static bool Transitions(Dreams d)
+        {
+            bool random = Core.randomGeneration;
+            bool preset = d.wantToDream && random
+                && d.hasUnspawnedRandomPresetForChapter(
+                    Singleton<WorldGenerator>.Instance.chapterID);
+            return StoveRules.Transitions(d.wantToDream, random, preset);
         }
 
         // ---- skill reset ----------------------------------------------------
@@ -906,11 +955,7 @@ namespace DarkwoodMP.World
 
         private static bool CanResetHere(Player p)
         {
-            var menu = StoveMenu;
-            var skills = Singleton<SkillsMenu>.Instance;
-            return p != null && p.inLevelingMenu && menu != null
-                && menu.openedAndTweened && !menu.wantToLevel
-                && (skills == null || !skills.opened);
+            return SkillResetRules.CanResetHere(StoveOf(p));
         }
 
         private static bool _waitingReset;
@@ -925,7 +970,7 @@ namespace DarkwoodMP.World
 
             if (NetEnemies.ClientMode)
             {
-                if (_waitingReset)
+                if (!SkillResetRules.Asks(_waitingReset))
                 {
                     return;
                 }
@@ -956,8 +1001,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (!TakeReset("host", 0, out string why))
+            var verdict = TakeReset(SkillResetRules.HostWho, 0);
+            if (verdict.Refused)
             {
+                string why = Refusals.Text(verdict);
                 p.displayMessage(why);
                 Plugin.Log.LogInfo($"[progress] reset refused: {why}");
                 return;
@@ -974,7 +1021,7 @@ namespace DarkwoodMP.World
             }
 
             ClearSkills(p, keepLevel: true);
-            if (NetEnemies.ClientMode)
+            if (ProgressSideRules.AfterReset(Side()) == ProgressRoute.Client)
             {
                 SendLevel(p);
                 Apply(p);
@@ -995,17 +1042,14 @@ namespace DarkwoodMP.World
         public static void OnGUI()
         {
             var p = Player.Instance;
-            if (!WorldShare.InWorld || UiState.MenuOver || !CanResetHere(p))
+            if (!StoveRules.OverlayOpen(
+                WorldShare.InWorld, UiState.MenuOver, CanResetHere(p)))
             {
                 return;
             }
 
-            int waiting = 0;
-            if (Hideouts.Together || Solo)
-            {
-                waiting = Math.Max(0, SharedLevel - p.currentLevel);
-            }
-
+            int waiting = StoveRules.LevelsToTake(
+                Hideouts.Together || Solo, SharedLevel, p.currentLevel);
             int points = SkillTree.Points(p);
             bool morning = InMorning(0);
             var lines = new List<string>(2);
@@ -1021,7 +1065,7 @@ namespace DarkwoodMP.World
                         + "Skills)");
             }
 
-            if (lines.Count == 0 && !morning)
+            if (!StoveRules.OverlayShows(waiting, points, morning))
             {
                 return;
             }
@@ -1170,7 +1214,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(SkillsMenu __instance, bool onlyShow)
         {
-            if (onlyShow || __instance.opened)
+            if (StoveRules.RunsGame(onlyShow, __instance.opened))
             {
                 return true;
             }
@@ -1197,13 +1241,14 @@ namespace DarkwoodMP.World
 
         static void Postfix(int __state)
         {
-            if (Player.Instance == null || Coop.Guards.Replaying)
+            Player p = Player.Instance;
+            int added = 0;
+            if (p != null)
             {
-                return;
+                added = p.experience - __state;
             }
 
-            int added = Player.Instance.experience - __state;
-            if (added > 0)
+            if (ProgressRules.Cooked(p != null, Coop.Guards.Replaying, added))
             {
                 Progression.Cooked(added);
             }
