@@ -13,6 +13,9 @@ class Breaks
 
     static bool Wrapped(int r, bool on, string text, bool enabled) => Check(r, on, text, enabled && Enabled);
 
+    static bool Placing => Enabled && Count > 0 && Something > 1 && Count < Something + 1
+                           && (Count < 0 || Something - Count < Something * Count + Count * Count);
+
     static void Run(int box, int vis, int n, int from, int to, int reach)
     {
         float height = (box - 4 * Count) * vis / (n + 1), top = box + 2 * Count + Something * vis;
@@ -51,6 +54,11 @@ class Breaks
 
     static bool Wrapped(int r, bool on, string text, bool enabled) =>
         Check(r, on, text, enabled && Enabled);
+
+    static bool Placing => Enabled && Count > 0 && Something > 1
+        && Count < Something + 1
+        && (Count < 0
+                || Something - Count < Something * Count + Count * Count);
 
     static void Run(int box, int vis, int n, int from, int to, int reach)
     {

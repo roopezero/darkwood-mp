@@ -134,6 +134,14 @@ other. A line is never touched when it matches `ushort Version = (\d+);`, when
 it starts inside a string or a comment that spans lines, or when it is a
 preprocessor directive or disabled code.
 
+After a pass's breaks, and before the layout pass, every line of the file
+that starts with a binary operator or a chain's dot is moved to the column
+its syntax gives it (`WrapLine.ContinuationIndent`): one level in from the
+line where its expression starts, one more for a bracket opened mid-line on
+that line, and one more for an operator that binds tighter than the chain it
+sits in. Old hand-aligned continuation lines move too, and the lines of the
+operand under each one move with it.
+
 Comments (`Format/WrapComments.cs`):
 
 - A long `//` or `///` line is reflowed with the rest of its paragraph: the

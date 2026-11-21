@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace DarkwoodMP.Codemod.Format;
@@ -69,7 +70,115 @@ static class Wrap
             return text;
         }
         var changed = tree.GetText().WithChanges(edits).ToString();
+        changed = Reindent(changed, parse);
         return Format.Passes.Layout(changed, parse);
+    }
+
+    /// Every line that continues an expression with a binary operator or a
+    /// chain's dot moved to the column its syntax gives it
+    /// (WrapLine.ContinuationIndent), old hand-aligned lines included, so a
+    /// chain the stage broke again doesn't keep two indents. The lines of
+    /// its operand below it move with it.
+    static string Reindent(string text, CSharpParseOptions parse)
+    {
+        var tree = CSharpSyntaxTree.ParseText(text, parse);
+        var root = tree.GetRoot();
+        var source = tree.GetText();
+        var lines = source.Lines;
+        var wanted = new Dictionary<int, int>();
+        int IndentOf(int n)
+        {
+            if (wanted.TryGetValue(n, out var indent))
+            {
+                return indent;
+            }
+            return WrapLine.IndentOf(lines[n]);
+        }
+        foreach (var line in lines)
+        {
+            var at = new WrapLine(root, source, line);
+            if (line.Span.Length == 0 || at.InsideToken() != null)
+            {
+                continue;
+            }
+            var first = root.FindToken(line.Start + at.Indent);
+            if (first.SpanStart != line.Start + at.Indent
+                || WrapLine.InInterpolation(first))
+            {
+                continue;
+            }
+            var scope = Continues(first);
+            if (scope == null)
+            {
+                continue;
+            }
+            int want = at.ContinuationIndent(first, IndentOf);
+            int delta = want - at.Indent;
+            if (delta == 0 && !wanted.ContainsKey(line.LineNumber))
+            {
+                continue;
+            }
+            var below = new List<int>();
+            bool movable = true;
+            for (int n = line.LineNumber + 1;
+                n < lines.Count && lines[n].Start < scope.Span.End; n++)
+            {
+                var next = new WrapLine(root, source, lines[n]);
+                if (next.InsideToken() != null)
+                {
+                    movable = false;
+                    break;
+                }
+                var lead = root.FindToken(lines[n].Start + next.Indent);
+                if (lines[n].Span.Length == 0 || Continues(lead) != null)
+                {
+                    continue;
+                }
+                below.Add(n);
+            }
+            if (!movable)
+            {
+                continue;
+            }
+            wanted[line.LineNumber] = want;
+            foreach (var n in below)
+            {
+                wanted[n] = Math.Max(0, WrapLine.IndentOf(lines[n]) + delta);
+            }
+        }
+        var edits = new List<TextChange>();
+        foreach (var (n, indent) in wanted.OrderBy(w => w.Key))
+        {
+            int old = WrapLine.IndentOf(lines[n]);
+            if (old != indent)
+            {
+                edits.Add(new TextChange(
+                    new TextSpan(lines[n].Start, old), new string(' ', indent)));
+            }
+        }
+        return source.WithChanges(edits).ToString();
+    }
+
+    /// The operand or call a line that starts with token continues: the
+    /// right side of a binary operator, or the call behind a chain's dot.
+    /// Null when the token doesn't continue an expression that way.
+    static SyntaxNode Continues(SyntaxToken token)
+    {
+        if (token.Parent is BinaryExpressionSyntax binary
+            && binary.OperatorToken == token)
+        {
+            return binary.Right;
+        }
+        if (token.IsKind(SyntaxKind.DotToken)
+            && token.Parent is MemberAccessExpressionSyntax access)
+        {
+            if (access.Parent is InvocationExpressionSyntax call)
+            {
+                return call;
+            }
+            return access;
+        }
+        return null;
     }
 
     /// One plan per line over the limit, in the order of the lines. A plan

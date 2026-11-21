@@ -178,6 +178,19 @@ sealed class WrapLine
     /// column, and a nested group goes deeper than the chain around it.
     public int ContinuationIndent(SyntaxToken token)
     {
+        return ContinuationIndent(token, n => IndentOf(Source.Lines[n]));
+    }
+
+    public static int IndentOf(TextLine line)
+    {
+        var text = line.ToString();
+        return text.Length - text.TrimStart().Length;
+    }
+
+    /// ContinuationIndent with the indentation of each earlier line given
+    /// by indentOf, for a pass that re-indents several lines at once.
+    public int ContinuationIndent(SyntaxToken token, Func<int, int> indentOf)
+    {
         int level = 0;
         SyntaxNode anchor = token.Parent;
         if (anchor is BinaryExpressionSyntax binary)
@@ -215,15 +228,19 @@ sealed class WrapLine
             {
                 continue;
             }
-            if (lines.GetLineFromPosition(open.SpanStart).LineNumber != home)
+            var openLine = lines.GetLineFromPosition(open.SpanStart);
+            if (openLine.LineNumber != home)
             {
                 break;
             }
-            level++;
+            // A bracket that starts its line holds what follows it at
+            // that line's own level.
+            if (open.SpanStart > openLine.Start + IndentOf(openLine))
+            {
+                level++;
+            }
         }
-        var text = lines[home].ToString();
-        int indent = text.Length - text.TrimStart().Length;
-        return indent + Wrap.Step * (1 + level);
+        return indentOf(home) + Wrap.Step * (1 + level);
     }
 
     /// True when node is the receiver of its parent's member access, call
