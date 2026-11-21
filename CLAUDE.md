@@ -16,14 +16,15 @@ A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1
 ```
 src/DarkwoodMP/
   Plugin.cs, DirectPanel.cs     entry point, config, F7 panel, --dwmp-* test arguments
-  Net/                          Session (handshake, relay), backends (TcpBackend + PortMapper (UPnP/NAT-PMP), SteamBackend + Lobby + SteamTransport),
-                                Packets (MsgType list + Protocol.Version), ServerBrowser/ServerInfo, PlayerKey
+  Net/                          SteamBackend + Lobby + SteamTransport, IGuiSection, the core's adapters (UnityClock, BepInLog, PacketVectors)
   Sync/                         player puppets: PlayerSnapshot (tk2d sprites), RemotePlayer, PlayerSync
   Combat/                       NetPlayerProxy (remote players for the host's AI), Threat, NetEnemies (enemy replication),
                                 PlayerDamage, CombatPatches
   World/                        WorldShare (save transfer, snapshot, world reload), SaveRedirect, TimeSync, WorldActions
                                 (doors, windows, traps, switches, NPC deaths), Containers (contents, locks, drops, loot),
                                 Characters (per-player characters), FlagsSync (story state), DeathPatches, WorldTest, ObjRef
+src/DarkwoodMP.Core/Net/        Session (handshake, relay), TcpBackend + PortMapper (UPnP/NAT-PMP), MsgType (the message list),
+                                Protocol (Version), PacketWriter/PacketReader, ServerBrowser/ServerInfo, PlayerKey
 src/DarkwoodMP.Core/            rules and small types with no Unity or game references (netstandard2.0); ships as a second DLL
 src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0007
 src/GameReferences.props        the game's paths and DLL references
@@ -69,7 +70,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 ## Rules the code depends on
 
 - **Steamworks stays inside `SteamBackend`, `Lobby` and `SteamTransport`.** Nothing else may name a Steamworks type: on GOG, Steam isn't there, and a type reference in a shared class would stop the mod loading. Steam is detected through reflection on the game's `SteamManager` (see `Plugin.SteamReady`).
-- **Wire format:** messages are `u8 type` + payload, little-endian. Strings use `PacketWriter.WriteStr` (u16 length + UTF-8), never `BinaryWriter.Write(string)`. TCP adds `u32 length` framing. **Any change to a message's bytes bumps `Protocol.Version`** in `Net/Packets.cs`; the Python tests read it from there. Keep each `MsgType`'s `///` comment as the authoritative description of its bytes.
+- **Wire format:** messages are `u8 type` + payload, little-endian. Strings use `PacketWriter.WriteStr` (u16 length + UTF-8), never `BinaryWriter.Write(string)`. TCP adds `u32 length` framing. **Any change to a message's bytes bumps `Protocol.Version`** in `src/DarkwoodMP.Core/Net/Protocol.cs`; the Python tests read it from there. Keep each `MsgType`'s `///` comment (`Net/MsgType.cs`) as the authoritative description of its bytes.
 - **Who decides:** the host runs enemies, the clock, trader restocks, world resets on death, and anything the world does by itself. A client sends only what **its own player** did: `WorldActions.ByLocalPlayer()`, `byPlayerKnown`, and a "fromPlayer" check for hits on enemies. A client's frozen copies of the host's enemies must never act (no AI, no animation events, no traps, no effects, no hearing).
 - **The host decides, clients predict (`World/Authority.cs`):** a client does its player's action at once and sends it as a `Request` (`Authority.Request(writer, what, done)`); the host's handler for that message checks it against the host's world (`Authority.InReach`, the thing's state, plausible numbers) and calls `Authority.Refuse(reason)` (after sending the state to roll back to, e.g. `WorldActions.SendState`) or `Authority.Result(...)` for what only the host decides. Anything left to chance that changes the shared world is rolled on the host (trap disarms), and damage to the host's enemies is capped by the weapon (`NetEnemies.DamageCap`). A refused request is rolled back on the client: the host's `ObjState`, and `InventoryWatch` undoes that frame's inventory change. Containers go slot by slot (`SlotShare`), refused per slot. Movement is capped by `Sync/MoveCheck` (`PlayerCorrection`). It's server reconciliation, not frame re-simulation: Darkwood isn't deterministic.
 - **Replays:** when applying something from another game, set `WorldActions.Replaying = true` so it isn't sent back, and have the host relay a client's change to the others (`except: from`).
