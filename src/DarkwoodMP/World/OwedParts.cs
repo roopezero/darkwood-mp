@@ -70,9 +70,10 @@ namespace DarkwoodMP.World
                 return $"s{save.uniqueId}#{index}";
             }
 
+            string scene = et.gameObject.scene.name;
             var p = et.transform.position;
             return FormattableString.Invariant(
-                $"{et.gameObject.scene.name}/{et.name}@{p.x:0},{p.z:0}#{index}");
+                $"{scene}/{et.name}@{p.x:0},{p.z:0}#{index}");
         }
 
         // ---- a joiner's game ------------------------------------------------

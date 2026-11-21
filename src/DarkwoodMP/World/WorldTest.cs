@@ -629,10 +629,16 @@ namespace DarkwoodMP.World
             // name.
             var draggable = Object.FindObjectsOfType<Item>()
                 .Where(i => i.draggable).ToList();
+            int bySave = draggable.Count(
+                i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Saved);
+            int byPlace = draggable.Count(
+                i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Placed);
+            string examples = string.Join(
+                ", ", draggable.Take(6).Select(i => i.name));
             Plugin.Log.LogInfo(
                 $"[world test] draggable things: {draggable.Count}, named by "
                     + "save id "
-                    + $"{draggable.Count(i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Saved)}, by place {draggable.Count(i => ObjRef.Of(i.gameObject).K == ObjRef.Kind.Placed)}; e.g. {string.Join(", ", draggable.Take(6).Select(i => i.name))}");
+                    + $"{bySave}, by place {byPlace}; e.g. {examples}");
             // Save ids this game gave out after the joiner's snapshot aren't
             // the joiner's: never named by save id, and a Saved ref to one
             // names nothing here.
@@ -784,7 +790,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(
                         $"[world test] storage slot {free} now: {contents}; "
                             + "workbench level "
-                            + $"{Singleton<Controller>.Instance.workbenchLevel}");
+                            + Singleton<Controller>.Instance.workbenchLevel);
 
                     // Sort & Stack (the observer pressed it too, as a client,
                     // during its turn): two partial stacks of one item in two
@@ -835,11 +841,15 @@ namespace DarkwoodMP.World
                         bool packed = firstEmpty < 0
                             || storage.slots.Skip(firstEmpty).All(
                                 sl => InvItemClass.isNull(sl.invItem));
+                        string amounts = string.Join(
+                            ", ", mine.Select(sl => "x" + sl.invItem.amount));
                         Plugin.Log.LogInfo(
                             $"[world test] sort & stack: {stackType} in "
                                 + $"{stacksBefore} stack(s) before, "
                                 + $"{mine.Count} after "
-                                + $"({string.Join(", ", mine.Select(sl => "x" + sl.invItem.amount))}); filled slots {filledBefore} -> {Filled()}; items packed from slot 0: {packed}");
+                                + $"({amounts}); filled slots "
+                                + $"{filledBefore} -> {Filled()}; "
+                                + $"items packed from slot 0: {packed}");
                         player.openedItemInventory2 = null;
                         yield return new WaitForSeconds(1f);
                     }
@@ -919,7 +929,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] still locked: {l.name} "
-                        + $"{ObjRef.Of(l.gameObject)} at {l.transform.position}");
+                        + $"{ObjRef.Of(l.gameObject)} "
+                        + $"at {l.transform.position}");
             }
 
             // A combination padlock: open its window, set the code's numbers
@@ -932,7 +943,9 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] padlock {pad.name} "
-                        + $"{ObjRef.Of(pad.gameObject)} at {pad.transform.position}, code {pad.combination}");
+                        + $"{ObjRef.Of(pad.gameObject)} "
+                        + $"at {pad.transform.position}, "
+                        + $"code {pad.combination}");
                 pad.activate();
                 yield return new WaitForSecondsRealtime(0.5f);
                 PadlockNumber[] numbers;
@@ -975,7 +988,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] another locked crate: {c.name} "
-                        + $"{ObjRef.Of(c.gameObject)} at {c.transform.position}");
+                        + $"{ObjRef.Of(c.gameObject)} "
+                        + $"at {c.transform.position}");
             }
 
             if (crate.Count > 0)
@@ -983,7 +997,9 @@ namespace DarkwoodMP.World
                 var c = crate[0];
                 Plugin.Log.LogInfo(
                     $"[world test] picking crate {c.name} "
-                        + $"{ObjRef.Of(c.gameObject)} at {c.transform.position} (chance {c.disarmChance})");
+                        + $"{ObjRef.Of(c.gameObject)} "
+                        + $"at {c.transform.position} "
+                        + $"(chance {c.disarmChance})");
                 c.disarm();
                 Plugin.Log.LogInfo($"[world test] crate searched={c.searched}");
                 yield return new WaitForSeconds(1.5f);
@@ -1068,7 +1084,9 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] smashing {furniture.name} "
-                        + $"{ObjRef.Of(furniture.gameObject)} at {furniture.transform.position}: health {furniture.health}");
+                        + $"{ObjRef.Of(furniture.gameObject)} "
+                        + $"at {furniture.transform.position}: "
+                        + $"health {furniture.health}");
                 furniture.getHit(furniture.health / 2, player.transform);
                 yield return new WaitForSeconds(1f);
                 furniture.getHit(furniture.health + 1, player.transform);
@@ -1132,7 +1150,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] setting off {barrel.name} "
-                        + $"{ObjRef.Of(barrel.gameObject)} at {barrel.transform.position}");
+                        + $"{ObjRef.Of(barrel.gameObject)} "
+                        + $"at {barrel.transform.position}");
                 barrel.onActivate();
                 yield return new WaitForSeconds(3f);
             }
@@ -1417,7 +1436,8 @@ namespace DarkwoodMP.World
                         cans.Count == 1
                             && Mathf.Abs(cans[0] - max * 0.45f) < 0.01f * max,
                         $"sort & stack of {gas} at 10% + 15% + 20% of {max}: "
-                            + $"{string.Join(", ", cans.Select(d => d.ToString("0.#")))}");
+                            + string.Join(
+                                ", ", cans.Select(d => d.ToString("0.#"))));
                     ClearGas();
                     yield return new WaitForSeconds(0.8f);
                 }
@@ -1768,7 +1788,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] picking up note {noteItem.name} "
-                        + $"{ObjRef.Of(noteItem.gameObject)} at {noteItem.transform.position}");
+                        + $"{ObjRef.Of(noteItem.gameObject)} "
+                        + $"at {noteItem.transform.position}");
                 noteItem.GetComponent<Item>().activate();
                 yield return new WaitForSeconds(0.5f);
                 Singleton<UI>.Instance.journal.hideNote();
@@ -1812,7 +1833,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] feeder {feeder.name} "
-                        + $"{ObjRef.Of(feeder.gameObject)}: enabled={feeder.isEnabled}, full={feeder.Active}");
+                        + $"{ObjRef.Of(feeder.gameObject)}: "
+                        + $"enabled={feeder.isEnabled}, full={feeder.Active}");
                 if (!feeder.isEnabled)
                 {
                     // as building it does (Scripted builds it first, shared as
@@ -1880,7 +1902,8 @@ namespace DarkwoodMP.World
 
                 Plugin.Log.LogInfo(
                     $"[world test] saw {saw.name} "
-                        + $"{ObjRef.Of(saw.gameObject)}: fuel {before:0.0} -> {saw.fuel:0.0}");
+                        + $"{ObjRef.Of(saw.gameObject)}: "
+                        + $"fuel {before:0.0} -> {saw.fuel:0.0}");
                 yield return new WaitForSeconds(1f);
             }
             else
@@ -2071,7 +2094,9 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[world test] trigger {et.eventTriggers[i].type} "
                         + $"{et.name} "
-                        + $"{ObjRef.Of(et.gameObject)} #{i} at {et.transform.position}: {Steps(et.eventTriggers[i].gameEvents)}");
+                        + $"{ObjRef.Of(et.gameObject)} "
+                        + $"#{i} at {et.transform.position}: "
+                        + $"{Steps(et.eventTriggers[i].gameEvents)}");
             }
 
             var cons = Object.FindObjectsOfType<Constructible>()
@@ -2085,7 +2110,9 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] buildable {c.name} "
-                        + $"{ObjRef.Of(c.gameObject)} at {c.transform.position}: {c.options.Count} options");
+                        + $"{ObjRef.Of(c.gameObject)} "
+                        + $"at {c.transform.position}: "
+                        + $"{c.options.Count} options");
             }
 
             foreach (var n in Object.FindObjectsOfType<NPC>().Where(
@@ -2096,7 +2123,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] NPC with dialogue {n.name} "
-                        + $"{ObjRef.Of(n.gameObject)} at {n.transform.position}");
+                        + $"{ObjRef.Of(n.gameObject)} "
+                        + $"at {n.transform.position}");
             }
 
             if (triggers.Count > 0)
@@ -2160,14 +2188,14 @@ namespace DarkwoodMP.World
             // something dying), not our player: the host runs it and sends it
             // as kind 3. One whose events have no steps of a player's own and
             // spawn nothing.
+            var turnedOn = global::EventTrigger.Type.refreshWhenTurnedOn;
             var worldTriggers = Object.FindObjectsOfType<EventTriggers>(true)
                 .SelectMany(et => et.eventTriggers.Select((t, i) => (et, t, i)))
                 .Where(
                     x => x.t != null
                         && (x.t.type == global::EventTrigger.Type.onTime
                             || x.t.type == global::EventTrigger.Type.onDeath
-                            || x.t.type
-                                == global::EventTrigger.Type.refreshWhenTurnedOn))
+                            || x.t.type == turnedOn))
                 .ToList();
             Plugin.Log.LogInfo(
                 "[world test] world triggers (time, death, turned on): "
@@ -2214,7 +2242,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world test] the world sets off {wt.t.type} {wt.et.name} "
-                        + $"{ObjRef.Of(wt.et.gameObject)} #{wt.i}: {Steps(wt.t.gameEvents)}");
+                        + $"{ObjRef.Of(wt.et.gameObject)} "
+                        + $"#{wt.i}: {Steps(wt.t.gameEvents)}");
                 // Started as fireEventTrigger would, also for one whose object
                 // is culled (inactive) here.
                 try
@@ -2299,7 +2328,8 @@ namespace DarkwoodMP.World
             int ropesBefore = Ropes(), refusedBefore = Authority.RolledBack;
             Plugin.Log.LogInfo(
                 $"[client test] {door.name} "
-                    + $"{ObjRef.Of(door.gameObject)} {best:0} away, open={wasOpen}, ropes={ropesBefore}");
+                    + $"{ObjRef.Of(door.gameObject)} "
+                    + $"{best:0} away, open={wasOpen}, ropes={ropesBefore}");
             AsPlayer(() =>
             {
                 p.Inventory.removeItemAmountFromPlayer("rope", 1);
@@ -2348,7 +2378,8 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[client test] setting off {et.eventTriggers[i].type} "
                         + $"{et.name} "
-                        + $"{ObjRef.Of(et.gameObject)} #{i}: {Steps(et.eventTriggers[i].gameEvents)}");
+                        + $"{ObjRef.Of(et.gameObject)} "
+                        + $"#{i}: {Steps(et.eventTriggers[i].gameEvents)}");
                 AsPlayer(() => et.fireEventTrigger(et.eventTriggers[i].type));
                 yield return new WaitForSeconds(
                     et.eventTriggers[i].delay + et.eventTriggers[i].warmupTime

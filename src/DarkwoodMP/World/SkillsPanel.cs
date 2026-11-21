@@ -1472,9 +1472,13 @@ namespace DarkwoodMP.World
                 else
                 {
                     var d0 = _coll.spriteDefinitions[id];
+                    string corners = string.Join(
+                        " ",
+                        Array.ConvertAll(
+                            d0.uvs, u => $"({u.x:0.###},{u.y:0.###})"));
                     Plugin.Log.LogInfo(
                         $"[skills] icon for {skill}: flipped {d0.flipped}, uvs "
-                            + $"{string.Join(" ", Array.ConvertAll(d0.uvs, u => $"({u.x:0.###},{u.y:0.###})"))}");
+                            + $"{corners}");
                 }
             }
 

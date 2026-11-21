@@ -731,7 +731,9 @@ namespace DarkwoodMP.World
                     if (loc != null)
                     {
                         at = "at "
-                            + $"{loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}";
+                            + $"{loc.transform.position.x:0},"
+                            + $"{loc.transform.position.z:0}, turned "
+                            + Mathf.RoundToInt(loc.transform.eulerAngles.y);
                     }
 
                     string promised = "nothing";

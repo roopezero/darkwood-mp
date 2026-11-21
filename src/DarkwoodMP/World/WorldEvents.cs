@@ -1317,9 +1317,11 @@ namespace DarkwoodMP.World
                 c.attackType = AttackType.hitAndRun;
                 c.wantToDespawn = true;
                 c.maxStamina = 1000f;
+                float distance = Core.trueDistance(
+                    c.transform.position, proxy.transform.position);
                 Plugin.Log.LogInfo(
                     $"[events] the day's redneck ambush is {proxy.OwnerName}'s "
-                        + $"({Core.trueDistance(c.transform.position, proxy.transform.position):0} from them)");
+                        + $"({distance:0} from them)");
             }
 
             e.randomizeStartTime();

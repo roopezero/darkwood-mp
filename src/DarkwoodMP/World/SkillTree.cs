@@ -574,11 +574,16 @@ namespace DarkwoodMP.World
             for (int i = 0; i < tiers.Count; i++)
             {
                 var t = tiers[i];
+                string skills = string.Join(
+                    ", ", t.skills.Where(s => s != null).Select(s => s.name));
+                string negatives = string.Join(
+                    ", ",
+                    t.negativeSkills.Where(s => s != null).Select(s => s.name));
                 parts.Add(
                     $"tier {TierName(i)} (level {t.level}): "
-                        + $"{string.Join(", ", t.skills.Where(s => s != null).Select(s => s.name))}; " +
+                        + $"{skills}; " +
                           "negative: "
-                        + $"{string.Join(", ", t.negativeSkills.Where(s => s != null).Select(s => s.name))}");
+                        + $"{negatives}");
             }
 
             return string.Join(" | ", parts);

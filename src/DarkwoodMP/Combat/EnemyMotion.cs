@@ -140,7 +140,12 @@ namespace DarkwoodMP.Combat
                 _nextLog = Time.unscaledTime + 30f;
                 Plugin.Log.LogInfo(
                     FormattableString.Invariant(
-                        $"[enemy] drawn {_delay * 1000f:0} ms behind the host (interval {_interval * 1000f:0} ms, arrivals vary by {_jitter * 1000f:0} ms)"));
+                            $"[enemy] drawn {_delay * 1000f:0} ms ")
+                        + "behind the host "
+                        + FormattableString.Invariant(
+                            $"(interval {_interval * 1000f:0} ms, ")
+                        + FormattableString.Invariant(
+                            $"arrivals vary by {_jitter * 1000f:0} ms)"));
             }
         }
 
@@ -373,9 +378,19 @@ namespace DarkwoodMP.Combat
                 }
 
                 string arrivals = FormattableString.Invariant(
-                    $"{Batches} batches, gap avg {meanGap:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ");
+                        $"{Batches} batches, gap avg {meanGap:0} ms ")
+                    + FormattableString.Invariant(
+                        $"p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} ")
+                    + FormattableString.Invariant(
+                        $"(over 150 ms: {LateGaps}; ")
+                    + FormattableString.Invariant(
+                        $"host's max {MaxHostGap * 1000f:0}); ");
                 string motion = FormattableString.Invariant(
-                    $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; moving enemy frames {Moving}: stalls {Stalls} ({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ");
+                        $"{Frames} frames, slowest {MaxFrame * 1000f:0} ms; ")
+                    + FormattableString.Invariant(
+                        $"moving enemy frames {Moving}: stalls {Stalls} ")
+                    + FormattableString.Invariant(
+                        $"({Pct(Stalls)}), jumps {Jumps} ({Pct(Jumps)}), ");
                 float error = 0f;
                 if (Moving > 0)
                 {
@@ -383,7 +398,13 @@ namespace DarkwoodMP.Combat
                 }
 
                 return arrivals + motion + FormattableString.Invariant(
-                    $"speed error avg {error:0}%; delay {_delay * 1000f:0} ms (interval {_interval * 1000f:0}, jitter {_jitter * 1000f:0})");
+                        $"speed error avg {error:0}%; ")
+                    + FormattableString.Invariant(
+                        $"delay {_delay * 1000f:0} ms ")
+                    + FormattableString.Invariant(
+                        $"(interval {_interval * 1000f:0}, ")
+                    + FormattableString.Invariant(
+                        $"jitter {_jitter * 1000f:0})");
             }
 
             private static string Pct(int n)

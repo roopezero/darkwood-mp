@@ -187,13 +187,19 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogInfo(
                         $"[workbench] {wb.name} "
-                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} storage {before} -> {wb.normalInventory.slots.Count} slots (level {level}, {why})");
+                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} "
+                            + $"storage {before} -> "
+                            + $"{wb.normalInventory.slots.Count} slots "
+                            + $"(level {level}, {why})");
                 }
                 else if (why == "world loaded")
                 {
                     Plugin.Log.LogInfo(
                         $"[workbench] {wb.name} "
-                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} storage {before} slots (level {level}, base {BaseSlots(wb)}, {wb.normalInventory.maxColumns} columns)");
+                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} "
+                            + $"storage {before} slots (level {level}, "
+                            + $"base {BaseSlots(wb)}, "
+                            + $"{wb.normalInventory.maxColumns} columns)");
                 }
             }
         }

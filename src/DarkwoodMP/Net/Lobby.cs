@@ -196,9 +196,9 @@ namespace DarkwoodMP.Net
                 || r.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse
                     .k_EChatRoomEnterResponseSuccess)
             {
-                Status =
-                    "Failed to join lobby "
-                        + $"({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";
+                EChatRoomEnterResponse response =
+                    (EChatRoomEnterResponse)r.m_EChatRoomEnterResponse;
+                Status = "Failed to join lobby " + $"({response})";
                 Plugin.Log.LogError(Status);
                 return;
             }

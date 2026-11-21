@@ -1378,10 +1378,12 @@ namespace DarkwoodMP.World
             }
 
             HadOurPart(t);
+            string steps = string.Join(
+                ", ", ge.events.Where(LaterStep).Select(e => e.type));
             Plugin.Log.LogInfo(
                 $"[world] {what}: it fired for another player, running only "
                     + "our player's steps "
-                    + $"({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
+                    + $"({steps})");
             RunAs(Part.LaterPlayer, replaying: false, () =>
             {
                 foreach (var e in ge.events)
@@ -2824,9 +2826,10 @@ namespace DarkwoodMP.World
                 && !(__instance.fired && !__instance.multipleFire)
                 && !__instance.disabled)
             {
+                int index = thisEventTriggers.eventTriggers.IndexOf(__instance);
                 Plugin.Log.LogInfo(
                     $"[world] left {thisEventTriggers.name} "
-                        + $"#{thisEventTriggers.eventTriggers.IndexOf(__instance)} ({TriggerType}) to the host");
+                        + $"#{index} ({TriggerType}) to the host");
             }
 
             __state = true;

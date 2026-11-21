@@ -1045,7 +1045,8 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo(
                 $"[ui] {inv.name} "
-                    + $"{ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
+                    + $"{ObjRef.Of(inv.gameObject)}: contents loaded into "
+                    + $"its open window ({inv.getAllItems().Count} items)");
             UiRefresh.Changed(inv);
         }
 

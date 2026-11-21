@@ -1151,7 +1151,9 @@ namespace DarkwoodMP.World
                    $"skills chosen {chosen}, points {SkillTree.Points(p)}, "
                 + $"morning {InMorning(0)}, kept in a file {_saved != null}, " +
                    "reset today "
-                + $"{(_saved != null && _saved.Resets.TryGetValue("host", out int d) && d == Today)}";
+                + (_saved != null
+                    && _saved.Resets.TryGetValue("host", out int d)
+                    && d == Today);
         }
     }
 

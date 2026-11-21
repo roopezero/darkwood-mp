@@ -199,9 +199,13 @@ namespace DarkwoodMP.World
 
             if (WorldActions.Debug)
             {
+                string changes = string.Join(
+                    ", ",
+                    changed.ConvertAll(
+                        c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"));
                 Plugin.Log.LogInfo(
                     $"[world] sent {changed.Count} slot(s) of {inv.name} "
-                        + $"{r}: {string.Join(", ", changed.ConvertAll(c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"))}");
+                        + $"{r}: {changes}");
             }
 
             _watched[inv] = keys;
@@ -420,7 +424,8 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogWarning(
                     "[slots] "
-                        + $"{obj} has {state.slotCount} slots on the host, {inv.slots.Count} here");
+                        + $"{obj} has {state.slotCount} slots on the host, "
+                        + $"{inv.slots.Count} here");
             }
 
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
@@ -695,7 +700,8 @@ namespace DarkwoodMP.World
                 count = upgrades.Count;
             }
 
-            return $"{it.type}|{it.amount}|{Mathf.RoundToInt(it.durability * 1000f)}|{recipe}|{count}";
+            int durability = Mathf.RoundToInt(it.durability * 1000f);
+            return $"{it.type}|{it.amount}|{durability}|{recipe}|{count}";
         }
 
         /// <summary>
@@ -1227,7 +1233,9 @@ namespace DarkwoodMP.World
             var inv = ObjRef.Resolve<Inventory>(obj);
             Plugin.Log.LogInfo(
                 "[slots] "
-                    + $"{obj} slot {slot}: the host refused our change '{oldKey}' -> '{Key(Item(triedJson))}' (it holds '{Key(Item(hostJson))}' there)");
+                    + $"{obj} slot {slot}: the host refused our change "
+                    + $"'{oldKey}' -> '{Key(Item(triedJson))}' "
+                    + $"(it holds '{Key(Item(hostJson))}' there)");
             // Something we changed in that slot after this change and haven't
             // sent yet: Set replaces it too, so it's undone as well. (A later
             // change already sent is refused, and undone, by its own answer.)

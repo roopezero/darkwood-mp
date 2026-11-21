@@ -1932,7 +1932,8 @@ namespace DarkwoodMP.Combat
                 }
 
                 list.Add(
-                    $"{path}:{col.GetType().Name}:{col.gameObject.layer}{text}");
+                    $"{path}:{col.GetType().Name}:"
+                        + $"{col.gameObject.layer}{text}");
             }
 
             list.Sort(System.StringComparer.Ordinal);

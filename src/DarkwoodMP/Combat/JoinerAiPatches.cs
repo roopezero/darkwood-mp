@@ -244,9 +244,11 @@ namespace DarkwoodMP.Combat
                 c.transform.position =
                     proxy.transform.position + new Vector3(800f, 0f, 0f);
                 bool near = c.inSightOrCloseToPlayer();
+                float distance = Core.trueDistance(
+                    c.transform.position, Player.Instance.transform.position);
                 Plugin.Log.LogInfo(
                     $"[joiner ai test] near the joiner: {near}, "
-                        + $"{Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
+                        + $"{distance:0} from the host");
 
                 var onCollide =
                     AccessTools.Method(typeof(Character), "onCollideWith");

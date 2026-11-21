@@ -604,9 +604,12 @@ namespace DarkwoodMP.World
                 sent++;
                 if (WorldActions.Debug)
                 {
+                    float moved = (t.position - kv.Value.pos).magnitude;
                     Plugin.Log.LogInfo(
                         $"[world] {item.name} "
-                            + $"({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
+                            + $"({r}) moved {moved:0.0} units since "
+                            + $"{_session.NameOf(who)}'s snapshot: "
+                            + "sent where it is");
                 }
             }
 
@@ -711,7 +714,10 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     System.FormattableString.Invariant(
-                        $"[world] {go.name} ({r}) put where the host has it, {d:0.0} units from where it settled here"));
+                            $"[world] {go.name} ({r}) ")
+                        + System.FormattableString.Invariant(
+                            $"put where the host has it, {d:0.0} units ")
+                        + "from where it settled here");
             }
 
             return true;
@@ -829,7 +835,8 @@ namespace DarkwoodMP.World
             }
 
             return System.FormattableString.Invariant(
-                $"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{text}{touched}");
+                    $"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}")
+                + System.FormattableString.Invariant($"{text}{touched}");
         }
 
         private static void Rebase(Loose p)

@@ -311,7 +311,8 @@ namespace DarkwoodMP.Combat
                 {
                     where =
                         "too far (at "
-                            + $"{me.transform.position.x:0},{me.transform.position.z:0})";
+                            + $"{me.transform.position.x:0},"
+                            + $"{me.transform.position.z:0})";
                 }
 
                 log.LogInfo(

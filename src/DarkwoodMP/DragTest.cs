@@ -126,6 +126,7 @@ namespace DarkwoodMP
 
                 if (down || held)
                 {
+                    Vector2 off = _win.Rect.position - start - (m - grab);
                     Plugin.Log.LogInfo(
                         $"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} "
                             + $"mouse {m.x:0.#},{m.y:0.#} ev "
@@ -133,7 +134,8 @@ namespace DarkwoodMP
                             + $"win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size "
                             + $"{_win.Rect.width:0.#}x{_win.Rect.height:0.#} "
                             + "off "
-                            + $"{(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
+                            + $"{off.x:0.#},{off.y:0.#} "
+                            + $"lock {UnityEngine.Cursor.lockState}");
                 }
 
                 _drags = 0;

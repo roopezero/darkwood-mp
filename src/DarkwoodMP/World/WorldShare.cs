@@ -876,9 +876,15 @@ namespace DarkwoodMP.World
                                 packing = " (Deflate)";
                             }
 
+                            string hash = WorldFiles.Hex(world.Hash)
+                                .Substring(0, 12);
+                            string files = string.Join(
+                                ", ",
+                                world.Files.Select(
+                                    f => $"{f.Name} {f.Size / 1024} KiB"));
                             Plugin.Log.LogInfo(
                                 "Host world "
-                                    + $"{WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
+                                    + $"{hash}, day {day}: {files}; " +
                                                "sent as "
                                     + $"{world.Sent.Length / 1024} "
                                     + $"KiB{packing}; {world.Timing}");

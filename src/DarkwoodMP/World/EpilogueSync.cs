@@ -246,7 +246,8 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo(
                 "[epilogue] test: in the epilogue: "
-                    + $"{Player.Instance != null && Player.Instance.inEpilogue}, shared dream {DreamSync.Shared}");
+                    + (Player.Instance != null && Player.Instance.inEpilogue)
+                    + $", shared dream {DreamSync.Shared}");
             yield return new WaitForSecondsRealtime(8f);
             Plugin.Log.LogInfo("[epilogue] test: skipping to the credits");
             BeforeCredits();

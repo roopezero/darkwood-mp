@@ -305,12 +305,14 @@ namespace DarkwoodMP.Combat
                 }
 
                 SentLog.Add((where, who, c));
+                float distance = Core.trueDistance(
+                    c.transform.position, at.transform.position);
                 Plugin.Log.LogInfo(
                     $"[night] {c.name} sent at {who}'s hideout {where} "
                         + $"({OutAt(loc, toSpawn.characterName)} of "
                         + $"{toSpawn.amount} {toSpawn.characterName} out "
                         + "there), " +
-                                   $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
+                                   $"{distance:0} from them");
                 return c;
             }
 

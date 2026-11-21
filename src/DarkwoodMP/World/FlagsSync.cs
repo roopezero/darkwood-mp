@@ -770,7 +770,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     $"[world] sent {entries.Count} story changes: "
-                        + $"{string.Join(", ", entries.ConvertAll(e => e.Key))}");
+                        + string.Join(", ", entries.ConvertAll(e => e.Key)));
             }
         }
 
@@ -1288,9 +1288,18 @@ namespace DarkwoodMP.World
                     return;
             }
 
+            string what = kind switch
+            {
+                'e' => "entry",
+                'n' => "note",
+                'k' => "key",
+                'i' => "item",
+                'l' => "place",
+                _ => "direction",
+            };
+
             Plugin.Log.LogInfo(
-                "Journal: another player's "
-                    + $"{kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
+                "Journal: another player's " + $"{what} {name}");
             if (popup != null && WorldShare.WorldReady)
             {
                 try

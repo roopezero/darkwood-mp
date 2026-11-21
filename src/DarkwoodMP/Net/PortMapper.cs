@@ -765,9 +765,15 @@ namespace DarkwoodMP.Net
             }
 
             string args(int l) =>
-                $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>" +
-                $"<NewInternalPort>{m.Port}</NewInternalPort><NewInternalClient>{m.InternalIp}</NewInternalClient><NewEnabled>1</NewEnabled>" +
-                $"<NewPortMappingDescription>{Description}</NewPortMappingDescription><NewLeaseDuration>{l}</NewLeaseDuration>";
+                "<NewRemoteHost></NewRemoteHost>"
+                    + $"<NewExternalPort>{ext}</NewExternalPort>"
+                    + $"<NewProtocol>{proto}</NewProtocol>"
+                    + $"<NewInternalPort>{m.Port}</NewInternalPort>"
+                    + $"<NewInternalClient>{m.InternalIp}</NewInternalClient>"
+                    + "<NewEnabled>1</NewEnabled>"
+                    + "<NewPortMappingDescription>"
+                    + $"{Description}</NewPortMappingDescription>"
+                    + $"<NewLeaseDuration>{l}</NewLeaseDuration>";
             int askedLease;
             if (m.Permanent)
             {
@@ -804,7 +810,9 @@ namespace DarkwoodMP.Net
 
             Soap(
                 m, "DeletePortMapping",
-                $"<NewRemoteHost></NewRemoteHost><NewExternalPort>{ext}</NewExternalPort><NewProtocol>{proto}</NewProtocol>",
+                "<NewRemoteHost></NewRemoteHost>"
+                    + $"<NewExternalPort>{ext}</NewExternalPort>"
+                    + $"<NewProtocol>{proto}</NewProtocol>",
                 out _);
         }
 
@@ -821,7 +829,8 @@ namespace DarkwoodMP.Net
                     + "s:encodingStyle="
                     + "\"http://schemas.xmlsoap.org/soap/encoding/\">" +
                 $"<s:Body><u:{action} "
-                    + $"xmlns:u=\"{m.ServiceType}\">{args}</u:{action}></s:Body></s:Envelope>";
+                    + $"xmlns:u=\"{m.ServiceType}\">{args}"
+                    + $"</u:{action}></s:Body></s:Envelope>";
             string text = Http(
                 "POST", m.ControlUrl, body, $"\"{m.ServiceType}#{action}\"",
                 out int status);

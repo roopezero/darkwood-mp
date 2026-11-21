@@ -114,7 +114,8 @@ namespace DarkwoodMP.Net
 
                 Plugin.Log.LogWarning(
                     "Send to "
-                        + $"{to} failed: an unreliable {(MsgType)data[0]} of {length / 1024} KiB is too long for Steam");
+                        + $"{to} failed: an unreliable {(MsgType)data[0]} "
+                        + $"of {length / 1024} KiB is too long for Steam");
                 return false;
             }
 

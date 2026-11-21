@@ -350,9 +350,9 @@ namespace DarkwoodMP.World
             string which;
             if (rec != null)
             {
-                which =
-                    "theirs, from "
-                        + $"{DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}";
+                DateTime saved = DateTimeOffset
+                    .FromUnixTimeSeconds(rec.Saved).LocalDateTime;
+                which = "theirs, from " + $"{saved}";
                 if (earlier)
                 {
                     which += $" in chapter {rec.Chapter}: beside you";
@@ -972,9 +972,11 @@ namespace DarkwoodMP.World
                 body.velocity = Vector3.zero;
             }
 
+            float distance =
+                new Vector2(at.x - want.x, at.z - want.z).magnitude;
             Plugin.Log.LogInfo(
                 $"[spawn] placed at {at}, "
-                    + $"{new Vector2(at.x - want.x, at.z - want.z).magnitude:0} from {want}, which wasn't free");
+                    + $"{distance:0} from {want}, which wasn't free");
         }
 
         private static void ApplyRecord(

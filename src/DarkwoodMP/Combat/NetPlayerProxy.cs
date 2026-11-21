@@ -481,6 +481,8 @@ namespace DarkwoodMP.Combat
                     stopNote = $"; {stopped} enemies stop attacking them";
                 }
 
+                bool lit = Core.isInLight(
+                    proxy.transform.position, mustBeWalkable: false);
                 Plugin.Log.LogInfo(
                     $"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, "
                         + $"shadow ward {proxy.ShadowWard}, forest spirit ward "
@@ -491,7 +493,7 @@ namespace DarkwoodMP.Combat
                                    stopNote +
                                    "; night worms sent at them: "
                         + $"{NightSpawns.WormWanted(proxy)}; in light here: "
-                        + $"{Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
+                        + $"{lit}");
             }
         }
 
