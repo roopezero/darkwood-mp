@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using DarkwoodMP.Combat;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -97,7 +98,8 @@ namespace DarkwoodMP.World
             r.Info =
                 $"stage {stageName} (shared {shared}), first play "
                     + $"{P.firstPlay}, antagonist {P.isAntagonist}, "
-                    + $"at {Locations.Current()} {Fmt(P.transform.position)}, "
+                    + $"at {Whereabouts.Current()} "
+                    + $"{Fmt(P.transform.position)}, "
                     + $"carrying {Items()}, the other player seen "
                     + $"{FriendSeen()}, time "
                     + $"{Singleton<Controller>.Instance.CurrentTime}";
@@ -171,7 +173,7 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"ended {stage} ({picked} of {names}): now {now} at "
-                    + $"{Locations.Current()} {Fmt(P.transform.position)}";
+                    + $"{Whereabouts.Current()} {Fmt(P.transform.position)}";
             if (Prologue.Stage == stage)
             {
                 r.Fail($"still in {stage}: {r.Info}");
@@ -228,7 +230,7 @@ namespace DarkwoodMP.World
             string line =
                 $"in the prologue {active}, dreaming {dreaming}, first play "
                     + $"{first}, shared dream {shared}, at "
-                    + $"{Locations.Current()} {Fmt(P.transform.position)}, ";
+                    + $"{Whereabouts.Current()} {Fmt(P.transform.position)}, ";
             string other;
             if (nearest == float.MaxValue)
             {
@@ -282,7 +284,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"the prologue isn't over: {r.Info}");
             }
-            else if (Locations.Current() != "")
+            else if (Whereabouts.Current() != "")
             {
                 r.Fail($"not in the world: {r.Info}");
             }

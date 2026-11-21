@@ -52,8 +52,8 @@ namespace DarkwoodMP.Sync.Players
                         continue;
                     }
 
-                    bool same =
-                        World.Locations.SamePlace(last.Away, last.Place);
+                    bool same = World.Places.Whereabouts.SamePlace(
+                        last.Away, last.Place);
                     if (SpawnRules.KeepsClear(true, last.Spectating, same))
                     {
                         others.Add(Flat(last.Position));

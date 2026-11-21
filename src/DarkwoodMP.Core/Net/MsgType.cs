@@ -68,7 +68,7 @@ namespace DarkwoodMP.Net
         /// hideout after dawn), u8 health (percent of the maximum, 0 to 100),
         /// str where ("" in the shared world, the location's name in a separate
         /// location, "dream:" and its name in a dream; see
-        /// World.Locations.Current), vec3 where the held light's flames are,
+        /// Whereabouts.Current), vec3 where the held light's flames are,
         /// relative to the player and in its rotation (zero if none; see
         /// PlayerSnapshot.HeldFlames), f32 the radius of a hotbar lantern's
         /// light around the player (0 if none; see PlayerSnapshot.Lantern),
@@ -564,14 +564,14 @@ namespace DarkwoodMP.Net
         /// Client -> host: u8 flags (1 a dream), str the location's name. Our
         /// player is about to load a separate location (or a dream) our game
         /// hasn't got: where does it stand? The host answers with LocationSlot
-        /// (see World.Locations).
+        /// (see World.Places.Locations).
         /// </summary>
         LocationAsk = 115,
         /// <summary>
         /// Host -> client: str the location's name, vec3 its marker's spot,
         /// i16 its turn in degrees (what Core.getRandomHalfRotation would have
         /// rolled). Load that location there, turned so, as the host has it or
-        /// will (see World.Locations).
+        /// will (see World.Places.Locations).
         /// </summary>
         LocationSlot = 116,
         /// <summary>

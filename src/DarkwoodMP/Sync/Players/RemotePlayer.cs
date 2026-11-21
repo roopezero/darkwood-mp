@@ -559,10 +559,10 @@ namespace DarkwoodMP.Sync.Players
             // separate location or a dream while we aren't in the same location
             // (or the other way round), where their coordinates are in an area
             // this game hasn't loaded, or is another place. A location stands
-            // in the same place in every game (World.Locations).
+            // in the same place in every game (World.Places.Locations).
             bool shown = PuppetRules.Shown(
                 _last.Spectating,
-                World.Locations.SamePlace(_last.Away, _last.Place));
+                World.Places.Whereabouts.SamePlace(_last.Away, _last.Place));
             if (Root.activeSelf != shown)
             {
                 Root.SetActive(shown);

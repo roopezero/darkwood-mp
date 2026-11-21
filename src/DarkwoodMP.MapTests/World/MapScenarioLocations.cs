@@ -3,6 +3,7 @@ using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Sync.Players;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -117,13 +118,13 @@ namespace DarkwoodMP.World
             string name = a[0];
             if (o.playerInOutsideLocation)
             {
-                r.Fail($"already in {Locations.Current()}");
+                r.Fail($"already in {Whereabouts.Current()}");
                 yield break;
             }
 
             AsPlayer(() => o.prepareLocation(name, null));
             while (!(o.playerInOutsideLocation && !o.loading
-                    && Locations.Current() == name))
+                    && Whereabouts.Current() == name))
             {
                 yield return new WaitForSeconds(0.25f);
             }
@@ -132,7 +133,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             var p = Player.Instance;
             var loc = o.getLocation(name);
-            string current = Locations.Current();
+            string current = Whereabouts.Current();
             string spot = Fmt(p.transform.position);
             string place = "?";
             if (loc != null)
@@ -141,7 +142,7 @@ namespace DarkwoodMP.World
             }
 
             r.Info = $"in {current} at {spot} (the location at {place}), " +
-                     $"host runs it here: {Locations.HostRunsHere()}";
+                     $"host runs it here: {Whereabouts.HostRunsHere()}";
         }
 
         private static IEnumerator Back(string[] a, Result r)
@@ -153,7 +154,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            string was = Locations.Current();
+            string was = Whereabouts.Current();
             AsPlayer(() => o.returnToWorld());
             while (o.playerInOutsideLocation || o.returningToWorld)
             {

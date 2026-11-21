@@ -18,7 +18,7 @@ namespace DarkwoodMP.World
     /// shared, see World.Progression). When the host's game draws the dream,
     /// the host sends its name (DreamStart), and every client goes into that
     /// same dream through the game's own transition. The dream's place is the
-    /// host's (World.Locations), so the players see each other there.
+    /// host's (World.Places.Locations), so the players see each other there.
     ///
     /// The dream ends together: when any player's dream ends (they died in it,
     /// or reached its end: Dreams.initiateEndDreaming), everyone's ends with
@@ -27,7 +27,7 @@ namespace DarkwoodMP.World
     /// so everyone goes on into the same next dream.
     ///
     /// The shared dream is run by the host, as a separate location the host
-    /// placed is (World.Locations.SharedDream): its enemies (the church dream's
+    /// placed is (Whereabouts.SharedDream): its enemies (the church dream's
     /// chomper) and its events are the host's, a client's own copies of them
     /// are frozen and hidden and the host's are shown, and the host's enemies
     /// there go for whoever has the most threat. Dreams that come from the

@@ -145,7 +145,7 @@ namespace DarkwoodMP.Combat
                 return true;
             }
 
-            if (World.Locations.HostRunsHere())
+            if (World.Places.Whereabouts.HostRunsHere())
             {
                 return false;
             }

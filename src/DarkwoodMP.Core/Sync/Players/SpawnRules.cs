@@ -86,7 +86,7 @@ namespace DarkwoodMP.Sync.Players
 
         /// A puppet's last position is kept clear when it has one, isn't a
         /// spectator, and is in our player's place
-        /// (Locations.SamePlace(Away, Place)).
+        /// (Whereabouts.SamePlace(Away, Place)).
         public static bool KeepsClear(bool hasLast, bool spectating, bool same)
         {
             if (!hasLast || spectating)

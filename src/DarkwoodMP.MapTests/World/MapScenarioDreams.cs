@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -131,7 +132,7 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"dreaming {presetName} (shared {DreamSync.Shared}) at "
-                    + $"{Locations.Current()}";
+                    + $"{Whereabouts.Current()}";
             if (DreamSync.Shared != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
@@ -178,7 +179,8 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"dreaming {presetName} (shared {DreamSync.Shared}) at "
-                    + $"{Locations.Current()}; a friend's puppet shown {seen}";
+                    + $"{Whereabouts.Current()}; a friend's puppet shown "
+                    + $"{seen}";
             if (D.preset == null || D.preset.name != name
                 || DreamSync.Shared != name)
             {

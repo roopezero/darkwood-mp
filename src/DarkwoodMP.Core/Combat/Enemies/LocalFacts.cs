@@ -22,7 +22,7 @@ namespace DarkwoodMP.Combat.Enemies
         /// stage (Prologue.IsStage).
         public bool OwnDream { get; init; }
 
-        /// Locations.HostRunsHere().
+        /// Whereabouts.HostRunsHere().
         public bool HostRunsHere { get; init; }
 
         /// Player.Instance isn't null.
