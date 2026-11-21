@@ -161,6 +161,17 @@ namespace DarkwoodMP.World
         private int _hostWorldKey;
 
         /// <summary>
+        /// Going back to the main menu (Core.returnToMainMenu) ends the
+        /// session: the host's stops its server, a joiner's leaves the host's
+        /// game.
+        /// </summary>
+        public void ReturnToMainMenu()
+        {
+            HostToMainMenu();
+            ClientToMainMenu();
+        }
+
+        /// <summary>
         /// Host, going back to the main menu (Core.returnToMainMenu: the pause
         /// menu's Main menu, the permadeath screen, the credits): the world the
         /// players are in is gone, so the server stops and they're sent to
@@ -2238,36 +2249,6 @@ namespace DarkwoodMP.World
             Core.profiles = state.profiles;
             Singleton<UI>.Instance.StartCoroutine(
                 Singleton<UI>.Instance.initLoadGame());
-        }
-    }
-}
-
-namespace DarkwoodMP.World
-{
-    /// <summary>
-    /// Going back to the main menu ends the session: the host's stops its
-    /// server (WorldShare.HostToMainMenu), a joiner's leaves the host's game
-    /// (WorldShare.ClientToMainMenu). The game only goes back to the main menu
-    /// when its player chose to (the pause menu, the permadeath screen, the
-    /// credits); the mod's own reloads and chapter changes load the next world
-    /// without it.
-    /// </summary>
-    [HarmonyLib.HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
-    static class HostToMainMenuPatch
-    {
-        static void Prefix()
-        {
-            WorldShare instance = Plugin.Instance.Host.Share;
-            if (instance != null)
-            {
-                instance.HostToMainMenu();
-            }
-
-            WorldShare share = Plugin.Instance.Host.Share;
-            if (share != null)
-            {
-                share.ClientToMainMenu();
-            }
         }
     }
 }
