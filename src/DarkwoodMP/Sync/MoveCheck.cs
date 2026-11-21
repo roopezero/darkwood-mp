@@ -22,9 +22,10 @@ namespace DarkwoodMP.Sync
     /// back as a speed hack.
     ///
     /// The core decides (MoveRules) and remembers (MoveTracker); this reads
-    /// the game's clock, logs, and sends or applies the correction.
+    /// the game's clock, logs, and sends or applies the correction. One
+    /// lives for each session, in CoopSession.Moves.
     /// </summary>
-    public sealed class MoveCheck
+    internal sealed class MoveCheck
     {
         /// <summary>
         /// Units a second; running is about a quarter of this.
@@ -40,14 +41,22 @@ namespace DarkwoodMP.Sync
         private readonly MoveTracker _tracker = new MoveTracker();
         private readonly Session _session;
 
-        public static int Corrections { get; private set; }
+        /// <summary>
+        /// Corrections this session: sent (host) or applied (client).
+        /// </summary>
+        public int Corrections { get; private set; }
 
-        public MoveCheck(Session session)
+        public MoveCheck(CoopSession coop)
         {
-            _session = session;
-            session.OnPeerDisconnected += id => _tracker.Leave(id);
-            session.OnSessionEnded += () => _tracker.Clear();
-            session.Register(MsgType.PlayerCorrection, OnCorrection);
+            _session = coop.Net;
+            _session.OnPeerDisconnected += OnPeerLeft;
+            coop.Hook(() => _session.OnPeerDisconnected -= OnPeerLeft);
+            coop.Handle(MsgType.PlayerCorrection, OnCorrection);
+        }
+
+        private void OnPeerLeft(ulong id)
+        {
+            _tracker.Leave(id);
         }
 
         private static Seconds Now => new Seconds(Time.realtimeSinceStartup);

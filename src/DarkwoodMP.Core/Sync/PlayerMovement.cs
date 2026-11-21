@@ -1,10 +1,10 @@
 namespace DarkwoodMP.Sync
 {
     /// What the host remembers about one client's movement, measured over
-    /// half a second (the plugin's MoveCheck.Track).
+    /// half a second (kept by MoveTracker).
     public readonly struct PlayerMovement
     {
-        /// Where the host let them be (Track.Good). Its y is kept: a
+        /// Where the host let them be. Its y is kept: a
         /// correction sends it, and the others are sent it.
         public Vec3 Accepted { get; init; }
 

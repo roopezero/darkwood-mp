@@ -1485,8 +1485,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void ExpectTrips(ulong from, GameEvents ge)
         {
-            var sync = Sync.PlayerSync.Instance;
-            if (sync == null || ge == null)
+            var coop = Coop.Current;
+            if (coop == null || ge == null)
             {
                 return;
             }
@@ -1514,7 +1514,7 @@ namespace DarkwoodMP.World
 
                 // The step fades the screen to black first (floatValue seconds,
                 // 0.5 by default), then moves the player.
-                sync.ExpectTrip(
+                coop.Moves.ExpectTrip(
                     from, to.transform.position,
                     10f + delay + Mathf.Max(e.floatValue, 0.5f));
                 if (Debug)

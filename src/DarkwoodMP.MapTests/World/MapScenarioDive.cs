@@ -114,6 +114,20 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// Corrections this session (MoveCheck.Corrections), 0 without one.
+        /// </summary>
+        private static int Corrections()
+        {
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return 0;
+            }
+
+            return coop.Moves.Corrections;
+        }
+
+        /// <summary>
         /// "trip-go ID": our player sets off trip ID, arrives at its marker and
         /// must stay there: the host may not put it back (PlayerCorrection) as
         /// if it had moved too fast.
@@ -129,7 +143,7 @@ namespace DarkwoodMP.World
 
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(1f);
-            int corrections = Sync.MoveCheck.Corrections;
+            int corrections = Corrections();
             var p = Player.Instance;
             bool There() =>
                 StateDump.Flat(p.transform.position - m.To.position) < 150f;
@@ -149,13 +163,13 @@ namespace DarkwoodMP.World
             r.Info =
                 $"arrived {arrived}, now at {Fmt(p.transform.position)} "
                     + $"({off:0} from the marker), "
-                    + $"put back {Sync.MoveCheck.Corrections - corrections} "
+                    + $"put back {Corrections() - corrections} "
                     + "time(s)";
             if (!arrived)
             {
                 r.Fail($"the trip didn't take us there: {r.Info}");
             }
-            else if (!There() || Sync.MoveCheck.Corrections != corrections)
+            else if (!There() || Corrections() != corrections)
             {
                 r.Fail($"the host put us back: {r.Info}");
             }

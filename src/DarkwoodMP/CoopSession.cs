@@ -22,6 +22,9 @@ namespace DarkwoodMP
         // constructor. It takes this CoopSession and hooks into the network
         // through Handle and Hook below, so Dispose undoes it all.
 
+        /// The host's check on where each client's player says it is.
+        public readonly Sync.MoveCheck Moves;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -30,6 +33,7 @@ namespace DarkwoodMP
         {
             Net = net;
             // Subsystems are made here, before the first message can arrive.
+            Moves = new Sync.MoveCheck(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

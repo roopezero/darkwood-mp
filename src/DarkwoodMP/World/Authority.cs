@@ -460,8 +460,9 @@ namespace DarkwoodMP.World
             // this request, Sync.PlayerSync.FlushNow) has already been through
             // MoveCheck, so it's as trustworthy as the stand-in and newer.
             // Either will do.
-            if (d > reach && Sync.PlayerSync.Instance != null
-                && Sync.PlayerSync.Instance.TryChecked(From, out var at))
+            var coop = Coop.Current;
+            if (d > reach && coop != null
+                && coop.Moves.TryAccepted(From, out var at))
             {
                 d = Mathf.Min(
                     d, new Vector2(at.x - pos.x, at.z - pos.z).magnitude);

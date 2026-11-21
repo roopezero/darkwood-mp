@@ -22,7 +22,6 @@ namespace DarkwoodMP.Sync
         private readonly PlayerCapture _capture = new PlayerCapture();
         private readonly PlayerSnapshot _snap = new PlayerSnapshot();
         private readonly PlayerSnapshot _incoming = new PlayerSnapshot();
-        private readonly MoveCheck _moves;
         private float _nextSend;
         // Players who left, and when. Over Steam a PlayerState sent before
         // PlayerLeft can arrive after it (they go on different channels, which
@@ -66,7 +65,6 @@ namespace DarkwoodMP.Sync
             Instance = this;
             _session = session;
             session.Register(MsgType.PlayerState, OnPlayerState);
-            _moves = new MoveCheck(session);
             session.OnPeerDisconnected += id =>
             {
                 RemoveRemote(id);
@@ -165,20 +163,6 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        /// <summary>
-        /// Host: where this client's player last said it was, as MoveCheck let
-        /// it be (false if not known).
-        /// </summary>
-        public bool TryChecked(ulong from, out Vector3 pos) =>
-            _moves.TryAccepted(from, out pos);
-
-        /// <summary>
-        /// Host: an event it agreed to takes this client's player to `to`
-        /// (MoveCheck.ExpectTrip).
-        /// </summary>
-        public void ExpectTrip(ulong from, Vector3 to, float seconds) =>
-            _moves.ExpectTrip(from, to, seconds);
-
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
@@ -205,13 +189,15 @@ namespace DarkwoodMP.Sync
                 // A spectator (dead for good, World.Spectator) goes along with
                 // whoever it watches and can't touch anything: it's not
                 // checked, and starts afresh if it ever plays again.
-                if (_incoming.Spectating)
+                var coop = Coop.Current;
+                if (coop != null && _incoming.Spectating)
                 {
-                    _moves.Forget(from);
+                    coop.Moves.Forget(from);
                 }
-                else
+                else if (coop != null)
                 {
-                    _incoming.Position = _moves.Check(from, _incoming.Position);
+                    _incoming.Position =
+                        coop.Moves.Check(from, _incoming.Position);
                 }
 
                 var w = _session.Begin(MsgType.PlayerState);

@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace DarkwoodMP.Sync
 {
     /// The host's memory of each client's movement and of the trips it
-    /// agreed to (the plugin's MoveCheck._tracks and _trips). MoveRules
-    /// decides; this keeps what it decided, per player.
+    /// agreed to; the plugin's MoveCheck owns one. MoveRules decides; this
+    /// keeps what it decided, per player.
     public sealed class MoveTracker
     {
         readonly Dictionary<ulong, PlayerMovement> _tracks =
