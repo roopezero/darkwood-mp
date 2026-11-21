@@ -135,7 +135,9 @@ namespace DarkwoodMP.World
         /// </summary>
         public struct ItemState
         {
-            public int Health; public bool Destroyed; public float Shadow;
+            public int Health;
+            public bool Destroyed;
+            public float Shadow;
             public static ItemState Of(Item i) => new ItemState
             {
                 Health = i.health,

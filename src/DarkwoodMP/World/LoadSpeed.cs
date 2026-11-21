@@ -65,8 +65,9 @@ namespace DarkwoodMP.World
 
         private sealed class Ahead<T> where T : class
         {
-            public string Path,
-                Text; public T Result; public System.Threading.Thread Thread;
+            public string Path, Text;
+            public T Result;
+            public System.Threading.Thread Thread;
         }
         private static Ahead<SaveManager.DynamicSave> _dynamic;
         private static Ahead<SaveManager.StaticSave> _static;

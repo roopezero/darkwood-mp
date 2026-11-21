@@ -49,7 +49,8 @@ namespace DarkwoodMP.Combat
         {
             public readonly List<Sample> Samples = new List<Sample>(MaxSamples);
             // where it was drawn last frame (for the stats)
-            public Vector3 Drawn; public bool HasDrawn;
+            public Vector3 Drawn;
+            public bool HasDrawn;
             // the host's speed between the two states it's drawn between (for
             // the stats)
             public float Speed;

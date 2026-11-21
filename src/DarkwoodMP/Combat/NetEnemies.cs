@@ -1412,12 +1412,14 @@ namespace DarkwoodMP.Combat
                 new Dictionary<int, tk2dSpriteAnimator>();
             public bool Has; // it has had a state
             // dead: the corpse made lootable once its death has played
-            public float DiedAt = -1f; public bool Settled;
+            public float DiedAt = -1f;
+            public bool Settled;
             // cut in half on the host (Character.cutMeInHalf): its lower half
             // is a new enemy, this part no corpse
             public bool Cut;
             // taken out of our culling while the host sends it (Uncull)
-            public bool Unculled; public Location HomeLoc;
+            public bool Unculled;
+            public Location HomeLoc;
             public readonly EnemyMotion.Track Motion = new EnemyMotion.Track();
         }
 

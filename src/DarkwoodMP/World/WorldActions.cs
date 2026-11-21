@@ -23,8 +23,8 @@ namespace DarkwoodMP.World
     {
         public enum Action : byte
         {
-            DoorOpen = 1, DoorClose = 2, DoorBarricade =
-                3, DoorDestroyBarricade = 4, DoorDestroy = 5, DoorHit = 6,
+            DoorOpen = 1, DoorClose = 2, DoorBarricade = 3,
+            DoorDestroyBarricade = 4, DoorDestroy = 5, DoorHit = 6,
             /// <summary>
             /// DoorLock: s the key type. DoorUnlock: a is 0 by the story, 1
             /// with a key, 2 with a lockpick (Locked.unlock).
@@ -1743,9 +1743,8 @@ namespace DarkwoodMP.World
 
         public struct DoorState
         {
-            public bool Opened,
-                Barricaded,
-                Destroyed; public int Health, BarricadeHealth;
+            public bool Opened, Barricaded, Destroyed;
+            public int Health, BarricadeHealth;
             public static DoorState Of(Door d) => new DoorState
             {
                 Opened = d.opened,
@@ -1761,7 +1760,8 @@ namespace DarkwoodMP.World
 
         public struct WindowState
         {
-            public bool Barricaded; public int BarricadeHealth;
+            public bool Barricaded;
+            public int BarricadeHealth;
             public static WindowState Of(Window w) => new WindowState
             {
                 Barricaded = w.barricaded,
