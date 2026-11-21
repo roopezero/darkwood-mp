@@ -313,7 +313,8 @@ namespace DarkwoodMP.Combat
             Location at = null;
             if (asks && proxy != null)
             {
-                at = NightSpawns.BigLocationAt(proxy.transform.position);
+                at = Plugin.Instance.Host.Nights.BigLocationAt(
+                    proxy.transform.position);
                 activity = activity with { StandInLocation = at != null };
             }
 
@@ -389,7 +390,8 @@ namespace DarkwoodMP.Combat
                 return activity;
             }
 
-            bool sent = NightSpawns.SentAt(c, out proxy, out loc);
+            bool sent = Plugin.Instance.Host.Nights.SentAt(
+                c, out proxy, out loc);
             return activity with
             {
                 Sent = sent,

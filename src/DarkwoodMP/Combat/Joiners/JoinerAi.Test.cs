@@ -48,7 +48,7 @@ namespace DarkwoodMP.Combat
                     Location loc = null;
                     if (a.target != null)
                     {
-                        loc = NightSpawns.BigLocationAt(
+                        loc = Plugin.Instance.Host.Nights.BigLocationAt(
                             a.target.transform.position);
                     }
 

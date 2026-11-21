@@ -140,7 +140,8 @@ namespace DarkwoodMP.World.Rolls
 
                 if (p.alive && !inside)
                 {
-                    atLocation = NightSpawns.BigLocationAt(pos) != null;
+                    atLocation =
+                        Plugin.Instance.Host.Nights.BigLocationAt(pos) != null;
                 }
 
                 if (AmbushRules.JoinerCan(p.alive, inside, atLocation))

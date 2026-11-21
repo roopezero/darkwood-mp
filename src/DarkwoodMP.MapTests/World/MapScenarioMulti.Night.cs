@@ -21,7 +21,7 @@ namespace DarkwoodMP.World
         private static IEnumerator HideoutGo(string[] a, Result r)
         {
             var wg = Singleton<WorldGenerator>.Instance;
-            var here = NightSpawns.BigLocationAt(Centre);
+            var here = Plugin.Instance.Host.Nights.BigLocationAt(Centre);
             Location to = null;
             if (wg != null)
             {
@@ -46,7 +46,8 @@ namespace DarkwoodMP.World
 
             yield return Walk(to.transform.position, 60f);
             yield return new WaitForSeconds(1.5f);
-            var now = NightSpawns.BigLocationAt(P.transform.position);
+            var now = Plugin.Instance.Host.Nights.BigLocationAt(
+                P.transform.position);
             string spot = Fmt(P.transform.position);
             string location = "no location";
             if (now != null)
@@ -148,7 +149,7 @@ namespace DarkwoodMP.World
                             x => Math.Max(0, x.amount));
             }
 
-            int from = NightSpawns.SentLog.Count;
+            int from = Plugin.Instance.Host.Nights.SentLog.Count;
             bool was = spawner.spawnNocturnalCharacters;
             // Put back in a finally: left on, night attackers would spawn in
             // the daytime of every later step.
@@ -166,7 +167,7 @@ namespace DarkwoodMP.World
                 spawner.spawnNocturnalCharacters = was;
             }
 
-            var sent = NightSpawns.SentLog.Skip(from).ToList();
+            var sent = Plugin.Instance.Host.Nights.SentLog.Skip(from).ToList();
             var per = sent.GroupBy(s => s.Hideout).ToDictionary(
                 g => g.Key, g => g.ToList());
             r.Info = $"{string.Join("; ", where)} | {budget} | " +
