@@ -1427,9 +1427,11 @@ namespace DarkwoodMP.World
                     targetName = d.target.name;
                 }
 
+                float away = StateDump.Flat(
+                    lure.transform.position - d.transform.position);
                 r.Info +=
                     $"; the dog is {d.behaviour} after {targetName}, "
-                        + $"{StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
+                        + $"{away:0} from the lure";
             }
 
             if (lure != null)
@@ -1764,9 +1766,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
+            string places =
+                string.Join(", ", PlacesOf(_map).Select(l => l.name));
             r.Info =
                 $"{_map}: "
-                    + $"{string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
+                    + $"{places}";
         }
 
         /// <summary>

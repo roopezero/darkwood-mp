@@ -122,7 +122,8 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"area on {host.name} "
-                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, sound {_sound}";
+                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, "
+                    + $"sound {_sound}";
         }
 
         /// <summary>

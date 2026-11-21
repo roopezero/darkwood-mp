@@ -351,8 +351,14 @@ namespace DarkwoodMP.World
                 frac = c.health / c.maxHealth;
             }
 
-            r.Info = FormattableString.Invariant(
-                $"{c.name} #{IdOf(c)}: health {before:0} -> {c.health:0} of {c.maxHealth:0}; bar on it {bar.currentObj == c.gameObject} (at once {shownAtOnce}), bar {BarFraction(bar):0.00}");
+            r.Info =
+                FormattableString.Invariant(
+                    $"{c.name} #{IdOf(c)}: health {before:0} -> {c.health:0} ")
+                + FormattableString.Invariant($"of {c.maxHealth:0}; ")
+                + FormattableString.Invariant(
+                    $"bar on it {bar.currentObj == c.gameObject} ")
+                + FormattableString.Invariant(
+                    $"(at once {shownAtOnce}), bar {BarFraction(bar):0.00}");
             if (!shownAtOnce)
             {
                 r.Fail($"our hit didn't show its health bar: {r.Info}");
@@ -373,8 +379,18 @@ namespace DarkwoodMP.World
             if (c.shadow != null && r.Failure == null)
             {
                 var sh = c.shadow;
-                r.Info += FormattableString.Invariant(
-                    $"; shadow rot {sh.eulerAngles.x:0},{sh.eulerAngles.y:0} (rotateShadow {c.rotateShadow}), dy {sh.position.y - c.transform.position.y:0}, off {StateDump.Flat(sh.position - c.transform.position - new Vector3(c.shadowOffset.x, 0f, c.shadowOffset.z)):0}");
+                Vector3 rot = sh.eulerAngles;
+                float dy = sh.position.y - c.transform.position.y;
+                var lift =
+                    new Vector3(c.shadowOffset.x, 0f, c.shadowOffset.z);
+                float off = StateDump.Flat(
+                    sh.position - c.transform.position - lift);
+                r.Info +=
+                    FormattableString.Invariant(
+                        $"; shadow rot {rot.x:0},{rot.y:0}")
+                    + FormattableString.Invariant(
+                        $" (rotateShadow {c.rotateShadow}),")
+                    + FormattableString.Invariant($" dy {dy:0}, off {off:0}");
                 if (!c.rotateShadow
                     && (Mathf.Abs(Mathf.DeltaAngle(sh.eulerAngles.x, 90f))
                             > 1f
@@ -565,8 +581,11 @@ namespace DarkwoodMP.World
                 alpha = sp.color.a;
             }
 
-            r.Info = FormattableString.Invariant(
-                $"{name} #{id}: searchable {searchable}, shadow alpha {alpha:0.00}, emitting particles {emitting}");
+            r.Info =
+                FormattableString.Invariant(
+                    $"{name} #{id}: searchable {searchable}, shadow alpha ")
+                + FormattableString.Invariant(
+                    $"{alpha:0.00}, emitting particles {emitting}");
             if (c.GetComponent<Item>() == null)
             {
                 r.Fail($"its corpse isn't searchable: {r.Info}");
@@ -649,7 +668,9 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"{host.name} "
-                    + $"{ObjRef.Of(host.gameObject)} at {Fmt(host.transform.position)} (textures {ii.textureOn}/{ii.textureOff})";
+                    + $"{ObjRef.Of(host.gameObject)} "
+                    + $"at {Fmt(host.transform.position)} "
+                    + $"(textures {ii.textureOn}/{ii.textureOff})";
         }
 
         private static EventTriggers MakeTrigger(
@@ -1208,7 +1229,9 @@ namespace DarkwoodMP.World
 
                 parts.Add(
                     FormattableString.Invariant(
-                        $"the wheel open {wheel.opened}: {Time.timeScale:0.00}"));
+                            $"the wheel open {wheel.opened}: ")
+                        + FormattableString.Invariant(
+                            $"{Time.timeScale:0.00}"));
                 if (wheel.opened)
                 {
                     wheel.hide();

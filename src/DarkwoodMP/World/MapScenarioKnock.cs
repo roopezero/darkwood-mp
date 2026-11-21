@@ -109,9 +109,12 @@ namespace DarkwoodMP.World
             }
 
             var b = i.GetComponent<Rigidbody>();
+            Vector3 pos = i.transform.position;
             sb.Append(
-                FormattableString.Invariant(
-                    $"{Ref(i)} {type} at {i.transform.position.x:0.0} {i.transform.position.y:0.0} {i.transform.position.z:0.0} active={i.gameObject.activeInHierarchy}"));
+                FormattableString.Invariant($"{Ref(i)} {type} at {pos.x:0.0} ")
+                    + FormattableString.Invariant($"{pos.y:0.0} {pos.z:0.0} ")
+                    + FormattableString.Invariant(
+                        $"active={i.gameObject.activeInHierarchy}"));
             if (b == null)
             {
                 sb.Append(" no body");
@@ -120,7 +123,13 @@ namespace DarkwoodMP.World
             {
                 sb.Append(
                     FormattableString.Invariant(
-                        $" body kin={b.isKinematic} cons={b.constraints} sleep={b.IsSleeping()} v={b.velocity.magnitude:0.0} mass={b.mass:0.##} drag={b.drag:0.##}"));
+                            $" body kin={b.isKinematic} cons={b.constraints} ")
+                        + FormattableString.Invariant(
+                            $"sleep={b.IsSleeping()} ")
+                        + FormattableString.Invariant(
+                            $"v={b.velocity.magnitude:0.0} mass={b.mass:0.##} ")
+                        + FormattableString.Invariant(
+                            $"drag={b.drag:0.##}"));
             }
 
             foreach (var c in i.GetComponentsInChildren<Collider>(true))
@@ -142,7 +151,9 @@ namespace DarkwoodMP.World
             {
                 sb.Append(
                     FormattableString.Invariant(
-                        $" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
+                            $" bodypos {b.position.x:0.0} {b.position.z:0.0}")
+                        + FormattableString.Invariant(
+                            $" interp={b.interpolation}"));
             }
 
             sb.Append(" ");
@@ -245,7 +256,8 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(KeepSliding(b, since));
             yield return new WaitForSeconds(0.5f);
             r.Info =
-                $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt1(t.position)}";
+                $"{ObjRef.Of(t.gameObject)} {type} "
+                    + $"sliding from {Fmt1(t.position)}";
         }
 
         private static IEnumerator KeepSliding(Rigidbody b, float since)
@@ -271,13 +283,16 @@ namespace DarkwoodMP.World
             b.velocity = new Vector3(0f, 0f, 250f);
             Plugin.Log.LogInfo(
                 "[knock] "
-                    + $"{ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
+                    + $"{ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} "
+                    + $"after the snapshot (at {DragSync.SnapshotAt:0.0}, "
+                    + $"now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
             if (b != null)
             {
                 Plugin.Log.LogInfo(
                     "[knock] "
-                        + $"{ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
+                        + $"{ObjRef.Of(b.gameObject)} "
+                        + $"at rest at {Fmt1(b.position)}");
             }
         }
 

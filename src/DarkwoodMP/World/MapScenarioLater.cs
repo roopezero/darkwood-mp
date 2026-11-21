@@ -200,7 +200,8 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"trigger {id} "
-                    + $"{ObjRef.Of(go)} at {Fmt(pos)}: {string.Join(", ", parts)}";
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}: "
+                    + $"{string.Join(", ", parts)}";
         }
 
         /// <summary>

@@ -331,8 +331,10 @@ namespace DarkwoodMP.World
             {
                 if (q.amount > 0)
                 {
-                    return $"{q.item.type}x{q.amount} have "
-                        + $"{P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}";
+                    var have = P.Inventory.haveItemAmountInPlayer(
+                        q.item.type,
+                        includeAdditionalInventory: true);
+                    return $"{q.item.type}x{q.amount} have " + $"{have:0}";
                 }
 
                 return $"{q.item.type} dur {q.durabilityAmount:0.##}";
@@ -451,7 +453,14 @@ namespace DarkwoodMP.World
                     && s.invItem.baseClass.GetComponent<CraftingRecipes>()
                         != null)
                 .Select(
-                    s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
+                    s =>
+                    {
+                        var book = s.invItem.baseClass
+                            .GetComponent<CraftingRecipes>();
+                        var recipe = book.recipes[s.invItem.usedRecipe];
+                        return $"{s.invItem.type}[{Needs(recipe)}]";
+                    });
+
             r.Info =
                 $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, "
                     + $"{st.getAllItems().Count} filled; {met}/{total} recipes "

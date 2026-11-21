@@ -86,7 +86,8 @@ namespace DarkwoodMP.World
                     e.gameObject.SetActive(a.Length > 1 && a[1] == "off");
                     r.Info =
                         $"{a[0]} egg "
-                            + $"{ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
+                            + $"{ObjRef.Of(e.gameObject)} "
+                            + $"active {e.gameObject.activeSelf}";
                 }
 
                 return Nothing();
@@ -1230,9 +1231,13 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
             Plugin.Instance.StartCoroutine(WbLateChange(wb, free));
+            string items = string.Join(
+                ", ",
+                WbItems.Select((t, i) => $"{free[i]}={t} x3"));
             r.Info =
                 $"{st.name} "
-                    + $"{ObjRef.Of(st.gameObject)}: {string.Join(", ", WbItems.Select((t, i) => $"{free[i]}={t} x3"))}; a change follows once a player joins";
+                    + $"{ObjRef.Of(st.gameObject)}: {items}; "
+                    + "a change follows once a player joins";
         }
 
         private static IEnumerator WbLateChange(Workbench wb, List<int> slots)
@@ -1508,7 +1513,9 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"{which} egg {egg.gameObject.name} "
-                    + $"{ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
+                    + $"{ObjRef.Of(egg.gameObject)} "
+                    + $"at {Fmt(egg.transform.position)}: "
+                    + $"broken {egg.destroyed}, health {egg.health}";
             if (!egg.destroyed)
             {
                 r.Fail(r.Info);
@@ -1556,7 +1563,8 @@ namespace DarkwoodMP.World
                 w => eggs[w] != null)
                 .Select(
                     w => @"\[world\] egg "
-                        + $@"{Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())} destroyed \(from ").ToArray();
+                        + Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())
+                        + @" destroyed \(from ").ToArray();
             yield return WaitLog(0, pats, 6f, missing);
             var lines = LogLines();
             var parts = new List<string>();
@@ -1575,8 +1583,8 @@ namespace DarkwoodMP.World
                 string lineNote = "";
                 if (line != null)
                 {
-                    lineNote =
-                        $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
+                    int at = line.IndexOf("[world]", StringComparison.Ordinal);
+                    lineNote = $" '{line.Substring(at)}'";
                 }
 
                 parts.Add(
@@ -1631,9 +1639,12 @@ namespace DarkwoodMP.World
                             <= 40f).ToList();
             AsPlayer(() => inf.gameObject.AddComponent<Burn>().burnTime = 5f);
             yield return new WaitForSeconds(1f);
+            int cleared = near.Count(i => i == null || i.disappearing);
             r.Info =
                 $"{inf.name} "
-                    + $"{ObjRef.Of(inf.gameObject)} at {Fmt(inf.transform.position)}: {near.Count(i => i == null || i.disappearing)} of {near.Count} patches cleared";
+                    + $"{ObjRef.Of(inf.gameObject)} "
+                    + $"at {Fmt(inf.transform.position)}: "
+                    + $"{cleared} of {near.Count} patches cleared";
             if (near.Any(i => i != null && !i.disappearing))
             {
                 r.Fail(r.Info);
@@ -1790,9 +1801,25 @@ namespace DarkwoodMP.World
                         extents = cc.bounds.extents;
                     }
 
-                    tried.Add(
+                    bool triggers = Physics.queriesHitTriggers;
+                    string names = string.Join(
+                        ",",
+                        hits.Select(h => $"{h.collider.name} L"
+                            + $"{h.collider.gameObject.layer}"));
+                    string text =
                         FormattableString.Invariant(
-                            $"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {center} ext {extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
+                            $"queriesHitTriggers {triggers}, ")
+                        + FormattableString.Invariant(
+                            $"player y {p.transform.position.y:0.0}, ")
+                        + FormattableString.Invariant(
+                            $"ray y {from.y:0.0}, patch y {to.y:0.0} ")
+                        + FormattableString.Invariant(
+                            $"(inf {inf.transform.position.y:0.0}), ")
+                        + FormattableString.Invariant(
+                            $"collider {hitT.name} bounds {center} ")
+                        + FormattableString.Invariant(
+                            $"ext {extents}, ray {len:0.0} hits [{names}]");
+                    tried.Add(text);
                 }
 
                 Swing(p, inf.transform.position);
@@ -1803,15 +1830,38 @@ namespace DarkwoodMP.World
                 var col = inf.GetComponentsInChildren<Collider>(true);
                 if (i == 0)
                 {
-                    seen =
-                        $"; melee {p.currentItem.baseClass.isMelee}, "
-                            + $"{sensors.Count} sensor(s) " + string.Join(
-                                ",", sensors.Select(m =>
+                    var notes = new List<string>();
+                    foreach (var m in sensors)
+                    {
+                        bool ignores = Physics.GetIgnoreLayerCollision(
+                            m.gameObject.layer,
+                            1);
+                        bool overlaps = m.GetComponentsInChildren<Collider>()
+                            .Any(mc => col.Any(
+                                ic => mc.bounds.Intersects(ic.bounds)));
+                        float away = StateDump.Flat(
+                            m.transform.position - inf.transform.position);
+                        bool sees =
+                            Core.canSeeAttack(p.transform, inf.transform);
+                        notes.Add(
                             $"{m.name} flaming {m.flaming} layer "
                                 + $"{m.gameObject.layer} ignores layer 1: "
-                                + $"{Physics.GetIgnoreLayerCollision(m.gameObject.layer, 1)}, overlaps {m.GetComponentsInChildren<Collider>().Any(mc => col.Any(ic => mc.bounds.Intersects(ic.bounds)))} at {StateDump.Flat(m.transform.position - inf.transform.position):0}, sees it {Core.canSeeAttack(p.transform, inf.transform)}"))
+                                + $"{ignores}, overlaps {overlaps} "
+                                + $"at {away:0}, sees it {sees}");
+                    }
+
+                    string sensed = string.Join(",", notes);
+                    var shapes = col.Select(
+                        c => $"{c.GetType().Name} on {c.enabled} trigger "
+                            + $"{c.isTrigger} layer {c.gameObject.layer}");
+                    string colliders = string.Join(",", shapes);
+                    float apart = StateDump.Flat(
+                        p.transform.position - inf.transform.position);
+                    seen =
+                        $"; melee {p.currentItem.baseClass.isMelee}, "
+                            + $"{sensors.Count} sensor(s) " + sensed
                             + "; patch colliders "
-                            + $"{string.Join(",", col.Select(c => $"{c.GetType().Name} on {c.enabled} trigger {c.isTrigger} layer {c.gameObject.layer}"))}; player at {StateDump.Flat(p.transform.position - inf.transform.position):0}";
+                            + $"{colliders}; player at {apart:0}";
                 }
 
                 yield return new WaitForSeconds(0.6f);
@@ -1883,9 +1933,10 @@ namespace DarkwoodMP.World
                 parts.Add($"{w}: {near.Count} left at {Fmt(at)}");
                 if (near.Count > 0)
                 {
-                    r.Fail(
-                        $"{w}'s infection is still here "
-                            + $"({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
+                    string refs = string.Join(
+                        ", ",
+                        near.Select(i => ObjRef.Of(i.gameObject)));
+                    r.Fail($"{w}'s infection is still here " + $"({refs})");
                 }
             }
 

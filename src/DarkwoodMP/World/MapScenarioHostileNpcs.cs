@@ -63,9 +63,11 @@ namespace DarkwoodMP.World
 
             var to = c.transform.position + away.normalized * dist;
             yield return Walk(to, 60f);
+            float apart =
+                StateDump.Flat(P.transform.position - c.transform.position);
             r.Info =
                 $"at {Fmt(P.transform.position)}, "
-                    + $"{StateDump.Flat(P.transform.position - c.transform.position):0} from {a[0]}";
+                    + $"{apart:0} from {a[0]}";
         }
 
         /// <summary>
@@ -458,9 +460,11 @@ namespace DarkwoodMP.World
 
             // a client settles the corpse 2 s after it dies
             yield return new WaitForSecondsRealtime(3f);
+            bool alive = c != null && c.alive;
+            bool searchable = c != null && c.GetComponent<Item>() != null;
             r.Info =
-                $"{a[0]}: alive={(c != null && c.alive)} after {hits} hits, "
-                    + $"searchable={(c != null && c.GetComponent<Item>() != null)}";
+                $"{a[0]}: alive={alive} after {hits} hits, "
+                    + $"searchable={searchable}";
             if (c != null && c.alive)
             {
                 r.Fail($"still alive: {r.Info}");

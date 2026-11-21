@@ -265,7 +265,11 @@ namespace DarkwoodMP.World
 
                 Plugin.Log.LogInfo(
                     FormattableString.Invariant(
-                        $"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
+                            $"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} ")
+                        + FormattableString.Invariant(
+                            $"mass {b.mass:0.##} drag {b.drag:0.##} ")
+                        + FormattableString.Invariant(
+                            $"layer {b.gameObject.layer}: {what}"));
             }
 
             if (_order.Count == 0 || a.Contains("new"))
@@ -507,8 +511,15 @@ namespace DarkwoodMP.World
 
             // seen at rest (four checks a second) and sent
             yield return new WaitForSeconds(1.5f);
-            r.Info = FormattableString.Invariant(
-                $"{it.name} {Ref(it)} pushed towards {Mathf.Atan2(-dir.z, dir.x) * Mathf.Rad2Deg:0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved():0.0} units), we are at {Fmt1(P.transform.position)}");
+            float heading = Mathf.Atan2(-dir.z, dir.x) * Mathf.Rad2Deg;
+            r.Info =
+                FormattableString.Invariant(
+                    $"{it.name} {Ref(it)} pushed towards {heading:0}: ")
+                + FormattableString.Invariant(
+                    $"from {Fmt1(start)} to {Fmt1(it.transform.position)} ")
+                + FormattableString.Invariant($"({moved():0.0} units), ")
+                + FormattableString.Invariant(
+                    $"we are at {Fmt1(P.transform.position)}");
             if (moved() < 3f)
             {
                 r.Fail($"{r.Info}: it didn't move");
@@ -603,7 +614,9 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"{d.name} "
-                    + $"{ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
+                    + $"{ObjRef.Of(d.gameObject)}: "
+                    + $"leaf {before:0} -> {DoorLeaf.Signed(d):0}, "
+                    + $"we are at {Fmt1(P.transform.position)}";
             if (Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f)
             {
                 r.Fail($"{r.Info}: the leaf didn't turn");
@@ -653,9 +666,13 @@ namespace DarkwoodMP.World
                 yield return null;
             }
 
+            float gap = StateDump.Flat(near.Root.transform.position - on);
             r.Info =
                 $"put on {near.Name} "
-                    + $"({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
+                    + $"({gap:0.0} apart): {dist():0.0} apart after "
+                    + $"{4f - (until - Time.unscaledTime):0.0} s, "
+                    + $"eased {Sync.PlayerSeparation.Eased - eased:0.0} here "
+                    + $"(apart at {Sync.PlayerSeparation.Distance:0})";
             if (dist() < want)
             {
                 r.Fail($"{r.Info}: not eased apart");

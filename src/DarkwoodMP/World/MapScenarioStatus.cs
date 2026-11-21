@@ -199,9 +199,10 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info =
-                    "waited "
-                        + $"({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
+                int hellos = lines.Skip(wait).Count(
+                    l => l.Contains("Sent Hello")
+                        || l.Contains("sending it again"));
+                r.Info = "waited " + $"({hellos} Hellos), then joined";
             }
 
             yield break;
@@ -399,9 +400,10 @@ namespace DarkwoodMP.World
                             {
                                 if (f.spriteCollection != null)
                                 {
-                                    frames.Add((Net.StableHash.Of(f
-                                                    .spriteCollection.spriteCollectionName),
-                                        f.spriteId));
+                                    string sheet = f.spriteCollection
+                                        .spriteCollectionName;
+                                    frames.Add(
+                                        (Net.StableHash.Of(sheet), f.spriteId));
                                 }
                             }
                         }

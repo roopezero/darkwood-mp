@@ -206,7 +206,8 @@ namespace DarkwoodMP.World
                     }
 
                     string k =
-                        $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}";
+                        $"{x.name.Replace("(Clone)", "")}->"
+                            + $"{x.spawnObject.name} x{x.objectAmount}";
                     if (!x.gameObject.scene.IsValid())
                     {
                         k += " (prefab)";

@@ -899,8 +899,10 @@ namespace DarkwoodMP.World
         private static string DoorInfo(Door d)
         {
             var l = d.GetComponent<Locked>();
+            bool locked = l != null && l.locked;
             return $"{d.name} at {Fmt(d.transform.position)} "
-                + $"{ObjRef.Of(d.gameObject)} locked {(l != null && l.locked)} blocked {d.blocked} open {d.opened}";
+                + $"{ObjRef.Of(d.gameObject)} locked {locked} "
+                + $"blocked {d.blocked} open {d.opened}";
         }
 
         /// <summary>

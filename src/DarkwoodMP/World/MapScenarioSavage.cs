@@ -138,9 +138,12 @@ namespace DarkwoodMP.World
             foreach (var c in made)
             {
                 NetEnemies.Instance.NetIdOf(c, out uint id);
+                float range = Core.trueDistance(
+                    c.transform.position,
+                    proxy.transform.position);
                 sb.Append(
                     $"{c.name} #{id} at {Fmt(c.transform.position)} "
-                        + $"({Core.trueDistance(c.transform.position, proxy.transform.position):0} from the client): {Anatomy(c)}; ");
+                        + $"({range:0} from the client): {Anatomy(c)}; ");
             }
 
             r.Info = sb.ToString().TrimEnd(' ', ';');
@@ -394,8 +397,10 @@ namespace DarkwoodMP.World
 
                         if (c.target != null)
                         {
-                            state += FormattableString.Invariant(
-                                $"{Core.trueDistance(c.transform.position, c.target.position):0}");
+                            float away = Core.trueDistance(
+                                c.transform.position,
+                                c.target.position);
+                            state += FormattableString.Invariant($"{away:0}");
                         }
                     }
 
@@ -455,7 +460,10 @@ namespace DarkwoodMP.World
                     }
 
                     return FormattableString.Invariant(
-                        $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{playing}\t{x.State}");
+                            $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t")
+                        + FormattableString.Invariant(
+                            $"{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t")
+                        + FormattableString.Invariant($"{playing}\t{x.State}");
                 }));
             }
             catch (Exception e)
@@ -557,7 +565,9 @@ namespace DarkwoodMP.World
 
                     seq.Add(
                         FormattableString.Invariant(
-                            $"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{text}{stateNote})"));
+                                $"{run[0].Clip}({dur:0.0}s {frames}/")
+                            + FormattableString.Invariant(
+                                $"{run[0].Frames}f{text}{stateNote})"));
                     double playDur = 0;
                     if (playing.Count > 1)
                     {
@@ -566,8 +576,18 @@ namespace DarkwoodMP.World
 
                     if (run[0].Frames > 2 && playDur >= 1.0 && sprites <= 2)
                     {
-                        string line = FormattableString.Invariant(
-                            $"{run[0].Kind} #{g.Key.Id} {g.Key.Path} {run[0].Clip} played {playDur:0.0}s showing {sprites} sprite(s) of {run[0].Frames} frames (frames {string.Join(",", playing.Select(x => x.Frame).Distinct().Take(6))})");
+                        string shown = string.Join(
+                            ",",
+                            playing.Select(x => x.Frame).Distinct().Take(6));
+                        string line =
+                            FormattableString.Invariant(
+                                $"{run[0].Kind} #{g.Key.Id} {g.Key.Path} ")
+                            + FormattableString.Invariant(
+                                $"{run[0].Clip} played {playDur:0.0}s ")
+                            + FormattableString.Invariant(
+                                $"showing {sprites} sprite(s) ")
+                            + FormattableString.Invariant(
+                                $"of {run[0].Frames} frames (frames {shown})");
                         if (run[0].State != "")
                         {
                             line += ", AI " + run[0].State;
@@ -748,8 +768,11 @@ namespace DarkwoodMP.World
                             .Select(kv => $"{kv.Key} x{kv.Value}")) + ")";
                 }
 
-                string line = FormattableString.Invariant(
-                    $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {rate:P0} of {mine.Count} match{worst}");
+                string line =
+                    FormattableString.Invariant(
+                        $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: ")
+                    + FormattableString.Invariant(
+                        $"{rate:P0} of {mine.Count} match{worst}");
                 if (missing.Count > 0)
                 {
                     line += "; never shown here: " + string.Join("/", missing);
