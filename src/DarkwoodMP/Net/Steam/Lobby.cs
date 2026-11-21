@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.Net.Steam;
 using Steamworks;
 
 namespace DarkwoodMP.Net
@@ -10,9 +11,6 @@ namespace DarkwoodMP.Net
     /// </summary>
     public sealed class Lobby : IDisposable
     {
-        private const string KeyMod = "darkwoodmp";
-        private const string KeyProto = "proto";
-
         public CSteamID Id { get; private set; } = CSteamID.Nil;
         public bool InLobby => Id != CSteamID.Nil;
         // The host is whoever owned the lobby when we entered it. Steam hands
@@ -37,7 +35,7 @@ namespace DarkwoodMP.Net
         private bool _iAmHost;
         // the lobby we just left for running another version
         private CSteamID _refused = CSteamID.Nil;
-        public string Status { get; private set; } = "Not connected";
+        public string Status { get; private set; } = LobbyRules.NotConnected;
 
         public event Action OnEntered;
         public event Action OnLeft;
@@ -64,15 +62,11 @@ namespace DarkwoodMP.Net
             // Game launched by accepting an invite while not running:
             // "+connect_lobby <id>"
             var args = Environment.GetCommandLineArgs();
-            for (int i = 0; i < args.Length - 1; i++)
+            foreach (var lobbyId in LobbyRules.LaunchLobbies(args))
             {
-                if (args[i] == "+connect_lobby"
-                    && ulong.TryParse(args[i + 1], out var lobbyId))
-                {
-                    Plugin.Log.LogInfo(
-                        $"Launched with +connect_lobby {lobbyId}");
-                    Join(new CSteamID(lobbyId));
-                }
+                Plugin.Log.LogInfo(
+                    $"Launched with {LobbyRules.ConnectArg} {lobbyId}");
+                Join(new CSteamID(lobbyId));
             }
         }
 
@@ -81,13 +75,13 @@ namespace DarkwoodMP.Net
 
         public void Host()
         {
-            if (InLobby)
+            if (!LobbyRules.MayHost(InLobby))
             {
                 return;
             }
 
             HostLost = false;
-            Status = "Creating lobby...";
+            Status = LobbyRules.Creating;
             _createResult.Set(
                 SteamMatchmaking.CreateLobby(
                     ELobbyType.k_ELobbyTypeFriendsOnly, Protocol.MaxPlayers));
@@ -102,7 +96,7 @@ namespace DarkwoodMP.Net
 
             HostLost = false;
             _refused = CSteamID.Nil;
-            Status = "Joining lobby...";
+            Status = LobbyRules.Joining;
             _enterResult.Set(SteamMatchmaking.JoinLobby(lobby));
         }
 
@@ -117,10 +111,8 @@ namespace DarkwoodMP.Net
             Id = CSteamID.Nil;
             _hostId = CSteamID.Nil;
             _iAmHost = false;
-            if (!HostLost)
-            {
-                Status = "Not connected"; // else keep why, for the notice
-            }
+            // when the host was lost, Status keeps why, for the notice
+            Status = LobbyRules.LeftStatus(HostLost, Status);
 
             Action handler = OnLeft;
             if (handler != null)
@@ -135,7 +127,7 @@ namespace DarkwoodMP.Net
         /// </summary>
         public void LoseHost(string why)
         {
-            if (!InLobby || _iAmHost)
+            if (!LobbyRules.MayLoseHost(InLobby, _iAmHost))
             {
                 return;
             }
@@ -182,19 +174,41 @@ namespace DarkwoodMP.Net
             }
 
             var id = new CSteamID(r.m_ulSteamIDLobby);
-            SteamMatchmaking.SetLobbyData(id, KeyMod, PluginInfo.Version);
             SteamMatchmaking.SetLobbyData(
-                id, KeyProto, Protocol.Version.ToString());
+                id, LobbyRules.KeyMod, PluginInfo.Version);
+            SteamMatchmaking.SetLobbyData(
+                id, LobbyRules.KeyProto, Protocol.Version.ToString());
             // LobbyEnter_t also fires for the creator; OnLobbyEntered handles
             // the rest.
             Plugin.Log.LogInfo($"Lobby created {id}");
         }
 
+        /// <summary>
+        /// A lobby Steam says we entered, for LobbyRules.Enter.
+        /// </summary>
+        private EnterFacts EnterOf(LobbyEnter_t r, bool ioFailure)
+        {
+            var id = new CSteamID(r.m_ulSteamIDLobby);
+            uint success = (uint)EChatRoomEnterResponse
+                .k_EChatRoomEnterResponseSuccess;
+            return new EnterFacts
+            {
+                IoFailure = ioFailure,
+                Success = r.m_EChatRoomEnterResponse == success,
+                Lobby = id.m_SteamID,
+                Current = Id.m_SteamID,
+                Refused = _refused.m_SteamID,
+                Proto = SteamMatchmaking.GetLobbyData(
+                    id,
+                    LobbyRules.KeyProto),
+                Ours = Protocol.Version,
+            };
+        }
+
         private void OnLobbyEntered(LobbyEnter_t r, bool ioFailure)
         {
-            if (ioFailure
-                || r.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse
-                    .k_EChatRoomEnterResponseSuccess)
+            var step = LobbyRules.Enter(EnterOf(r, ioFailure));
+            if (step == EnterStep.Failed)
             {
                 EChatRoomEnterResponse response =
                     (EChatRoomEnterResponse)r.m_EChatRoomEnterResponse;
@@ -203,42 +217,40 @@ namespace DarkwoodMP.Net
                 return;
             }
 
-            var id = new CSteamID(r.m_ulSteamIDLobby);
             // Told twice: as JoinLobby's result and as the callback. After a
             // refusal (below) the second one must not let us in: we've left, so
             // the lobby's data reads empty then and the version check would
             // pass.
-            if (id == Id || id == _refused)
+            if (step == EnterStep.Ignore)
             {
                 return;
             }
 
-            string proto = SteamMatchmaking.GetLobbyData(id, KeyProto);
-            if (!string.IsNullOrEmpty(proto)
-                && proto != Protocol.Version.ToString())
+            var id = new CSteamID(r.m_ulSteamIDLobby);
+            if (step == EnterStep.OtherVersion)
             {
                 SteamMatchmaking.LeaveLobby(id);
                 _refused = id;
-                Status =
-                    "Host runs a different DarkwoodMP version "
-                        + $"({SteamMatchmaking.GetLobbyData(id, KeyMod)})";
+                string mod = SteamMatchmaking.GetLobbyData(
+                    id,
+                    LobbyRules.KeyMod);
+                Status = Refusals.Text(LobbyRules.OtherVersion(mod));
                 Plugin.Log.LogError(Status);
                 return;
             }
 
             Id = id;
             _hostId = SteamMatchmaking.GetLobbyOwner(id);
-            _iAmHost = _hostId == SteamUser.GetSteamID();
-            if (IsHost)
+            _iAmHost = LobbyRules.IsHost(
+                _hostId.m_SteamID,
+                SteamUser.GetSteamID().m_SteamID);
+            string owner = "";
+            if (!IsHost)
             {
-                Status = "Hosting";
-            }
-            else
-            {
-                Status =
-                    $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
+                owner = SteamFriends.GetFriendPersonaName(Owner);
             }
 
+            Status = LobbyRules.EnteredStatus(IsHost, owner);
             Plugin.Log.LogInfo($"Entered lobby {id}, host={IsHost}");
             Action handler = OnEntered;
             if (handler != null)
@@ -247,18 +259,40 @@ namespace DarkwoodMP.Net
             }
         }
 
+        /// <summary>
+        /// Whether Steam made us the lobby's owner, for LobbyRules.MadeOwner.
+        /// Steam's owner is read only for a client in the lobby.
+        /// </summary>
+        private OwnerFacts OwnerOf()
+        {
+            ulong owner = 0;
+            if (InLobby && !_iAmHost)
+            {
+                owner = SteamMatchmaking.GetLobbyOwner(Id).m_SteamID;
+            }
+
+            return new OwnerFacts
+            {
+                InLobby = InLobby,
+                IAmHost = _iAmHost,
+                Owner = owner,
+                Me = SteamUser.GetSteamID().m_SteamID,
+            };
+        }
+
         private void OnChatUpdate(LobbyChatUpdate_t u)
         {
-            if (new CSteamID(u.m_ulSteamIDLobby) != Id)
+            var change = LobbyRules.Change(
+                u.m_ulSteamIDLobby,
+                Id.m_SteamID,
+                u.m_rgfChatMemberStateChange);
+            if (change == LobbyChange.Ignore)
             {
                 return;
             }
 
             var who = new CSteamID(u.m_ulSteamIDUserChanged);
-            var change = (EChatMemberStateChange)u.m_rgfChatMemberStateChange;
-            if ((change
-                    & EChatMemberStateChange.k_EChatMemberStateChangeEntered)
-                != 0)
+            if (change == LobbyChange.Joined)
             {
                 Plugin.Log.LogInfo(
                     $"{SteamFriends.GetFriendPersonaName(who)} joined the "
@@ -276,24 +310,30 @@ namespace DarkwoodMP.Net
 
                 // Host left: lobby ownership moves in Steam, but the game world
                 // can't; end the session.
-                if (!_iAmHost && who == _hostId)
+                if (LobbyRules.HostLeftUs(
+                    _iAmHost,
+                    who.m_SteamID,
+                    _hostId.m_SteamID))
                 {
-                    HostLost = true;
-                    Status = "Host left the game";
-                    Leave();
+                    LeaveHostLost();
                     return;
                 }
             }
 
             // Steam made this joiner the owner (the host is gone and we missed
             // it): it isn't a host either.
-            if (InLobby && !_iAmHost
-                && SteamMatchmaking.GetLobbyOwner(Id) == SteamUser.GetSteamID())
+            if (LobbyRules.MadeOwner(OwnerOf()))
             {
-                HostLost = true;
-                Status = "Host left the game";
-                Leave();
+                LeaveHostLost();
             }
+        }
+
+        /// <summary>Client: leave because the host left the game.</summary>
+        private void LeaveHostLost()
+        {
+            HostLost = true;
+            Status = LobbyRules.HostLeft;
+            Leave();
         }
 
         public void Dispose()

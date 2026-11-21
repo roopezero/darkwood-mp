@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using DarkwoodMP.Net.Steam;
 using Steamworks;
 
 namespace DarkwoodMP.Net
@@ -18,9 +19,11 @@ namespace DarkwoodMP.Net
         public event MessageHandler OnMessage;
 
         /// <summary>
-        /// Return true to accept a P2P session request from this user.
+        /// Whether to accept a P2P session request from this user
+        /// (SteamPeerRules.MayAccept).
         /// </summary>
-        public Func<CSteamID, bool> ShouldAccept = _ => false;
+        public Func<CSteamID, Verdict> ShouldAccept =
+            _ => Verdict.Refuse(Refusal.NotInLobby);
 
         private Callback<SteamNetworkingMessagesSessionRequest_t>
             _sessionRequest;
@@ -44,7 +47,8 @@ namespace DarkwoodMP.Net
             SteamNetworkingMessagesSessionRequest_t req)
         {
             var id = req.m_identityRemote.GetSteamID();
-            if (ShouldAccept(id))
+            Verdict why = ShouldAccept(id);
+            if (!why.Refused)
             {
                 var ident = req.m_identityRemote;
                 SteamNetworkingMessages.AcceptSessionWithUser(ref ident);
@@ -53,7 +57,8 @@ namespace DarkwoodMP.Net
             else
             {
                 Plugin.Log.LogWarning(
-                    $"Rejected P2P session from {id} (not in lobby)");
+                    $"Rejected P2P session from {id} "
+                        + $"({Refusals.Text(why)})");
             }
         }
 
@@ -91,31 +96,27 @@ namespace DarkwoodMP.Net
             new Dictionary<CSteamID, Queue<Pending>>();
         private readonly Dictionary<CSteamID, long> _pendingBytes =
             new Dictionary<CSteamID, long>();
-        // past this the peer isn't taking anything: give up on it
-        private const long MaxPendingBytes = 64L << 20;
 
         // Steam refuses any one message over 512 KiB
         // (k_cbMaxSteamNetworkingSocketsMessageSizeSend) with
         // k_EResultInvalidParam; TCP takes up to Protocol.MaxMessage. A longer
-        // reliable message goes as SteamPiece messages of PieceSize bytes each,
-        // and is joined again on the other side before it's handled.
-        private const int PieceSize = 256 << 10;
-        private const int MaxSteamMessage = 512 << 10;
-
+        // reliable message goes as SteamPiece messages (SteamPieces), and is
+        // joined again on the other side before it's handled.
         public bool Send(
             CSteamID to, byte[] data, int length, int channel, bool reliable)
         {
-            if (length > MaxSteamMessage)
+            if (SteamSendRules.TooLongForOne(length))
             {
                 if (reliable)
                 {
                     return SendPieces(to, data, length, channel);
                 }
 
+                var why = SteamSendRules.TooLong(
+                    length,
+                    ((MsgType)data[0]).ToString());
                 Plugin.Log.LogWarning(
-                    "Send to "
-                        + $"{to} failed: an unreliable {(MsgType)data[0]} "
-                        + $"of {length / 1024} KiB is too long for Steam");
+                    $"Send to {to} failed: {Refusals.Text(why)}");
                 return false;
             }
 
@@ -128,119 +129,69 @@ namespace DarkwoodMP.Net
             bool ok = true;
             // Every piece is tried even after one fails, so the other side
             // never joins one message's start to another's end.
-            for (int off = 0; off < length; off += PieceSize)
+            var message = new ArraySegment<byte>(data, 0, length);
+            var pieces = SteamPieces.Split(
+                message,
+                (byte)MsgType.SteamPiece);
+            foreach (var piece in pieces)
             {
-                int n = Math.Min(PieceSize, length - off);
-                int head = 1;
-                if (off == 0)
-                {
-                    head = 5;
-                }
-
-                var piece = new byte[head + n];
-                piece[0] = (byte)MsgType.SteamPiece;
-                if (off == 0)
-                {
-                    piece[1] = (byte)length;
-                    piece[2] = (byte)(length >> 8);
-                    piece[3] = (byte)(length >> 16);
-                    piece[4] = (byte)(length >> 24);
-                }
-
-                Buffer.BlockCopy(data, off, piece, head, n);
                 ok &= SendOne(to, piece, piece.Length, channel, reliable: true);
             }
 
             return ok;
         }
 
-        // A long message coming in as SteamPiece messages, per sender and
+        // The long messages coming in as SteamPiece messages, per sender and
         // channel.
-        private sealed class Joining
-        {
-            public byte[] Data;
-            public int Got;
-        }
-
-        private readonly Dictionary<(CSteamID, int), Joining> _joining =
-            new Dictionary<(CSteamID, int), Joining>();
-
-        /// <summary>
-        /// Add a SteamPiece; returns the whole message once its last piece is
-        /// in, else null.
-        /// </summary>
-        private Joining AddPiece(
-            CSteamID from, int channel, byte[] buf, int len)
-        {
-            var key = (from, channel);
-            if (!_joining.TryGetValue(key, out var j))
-            {
-                int total = -1;
-                if (len >= 5)
-                {
-                    total = buf[1] | buf[2] << 8 | buf[3] << 16 | buf[4] << 24;
-                }
-
-                if (total <= 0 || total > Protocol.MaxMessage)
-                {
-                    Plugin.Log.LogWarning(
-                        $"Dropped a piece from {from}: a message of {total} "
-                            + "bytes");
-                    return null;
-                }
-
-                _joining[key] = j = new Joining { Data = new byte[total] };
-                return Append(key, j, buf, 5, len - 5);
-            }
-
-            return Append(key, j, buf, 1, len - 1);
-        }
-
-        private Joining Append(
-            (CSteamID, int) key, Joining j, byte[] buf, int at, int n)
-        {
-            if (j.Got + n > j.Data.Length)
-            {
-                Plugin.Log.LogWarning(
-                    $"Dropped a long message from {key.Item1}: its pieces ran "
-                        + "past its length");
-                _joining.Remove(key);
-                return null;
-            }
-
-            Buffer.BlockCopy(buf, at, j.Data, j.Got, n);
-            j.Got += n;
-            if (j.Got < j.Data.Length)
-            {
-                return null;
-            }
-
-            _joining.Remove(key);
-            return j;
-        }
+        private readonly PieceJoiner _joiner =
+            new PieceJoiner(Protocol.MaxMessage);
 
         private bool SendOne(
             CSteamID to, byte[] data, int length, int channel, bool reliable)
         {
             // Reliable messages keep their order: once one waits, the ones
             // after it wait behind it.
-            if (reliable && _pending.TryGetValue(to, out var q) && q.Count > 0)
+            if (reliable && _pending.TryGetValue(to, out var q)
+                && SteamSendRules.WaitsBehind(q.Count))
             {
                 return Enqueue(to, data, length, channel);
             }
 
             var res = SendNow(to, data, length, channel, reliable);
-            if (res == EResult.k_EResultLimitExceeded && reliable)
+            if (!reliable)
+            {
+                return SteamSendRules.AfterUnreliable(ResultOf(res));
+            }
+
+            var step = SteamSendRules.AfterReliable(ResultOf(res));
+            if (step == SendStep.Queue)
             {
                 return Enqueue(to, data, length, channel);
             }
 
-            if (res != EResult.k_EResultOK && reliable)
+            if (step == SendStep.Failed)
             {
                 Plugin.Log.LogWarning($"Send to {to} failed: {res}");
+                return false;
             }
 
-            return res == EResult.k_EResultOK;
+            return true;
+        }
+
+        /// <summary>Steam's answer to a send, for SteamSendRules.</summary>
+        private static SendResult ResultOf(EResult res)
+        {
+            if (res == EResult.k_EResultOK)
+            {
+                return SendResult.Sent;
+            }
+
+            if (res == EResult.k_EResultLimitExceeded)
+            {
+                return SendResult.Full;
+            }
+
+            return SendResult.Failed;
         }
 
         private EResult SendNow(
@@ -281,11 +232,11 @@ namespace DarkwoodMP.Net
             }
 
             _pendingBytes.TryGetValue(to, out long bytes);
-            if (bytes + length > MaxPendingBytes)
+            var why = SteamSendRules.MayQueue(bytes, length);
+            if (why.Refused)
             {
                 Plugin.Log.LogWarning(
-                    $"Send to {to} failed: {bytes / 1024} KiB already waiting "
-                        + "for room");
+                    $"Send to {to} failed: {Refusals.Text(why)}");
                 return false;
             }
 
@@ -304,7 +255,7 @@ namespace DarkwoodMP.Net
         {
             _pending.Clear();
             _pendingBytes.Clear();
-            _joining.Clear();
+            _joiner.Clear();
             _closing.Clear();
         }
 
@@ -312,10 +263,9 @@ namespace DarkwoodMP.Net
         // joiner must get its Refused first). The value is when to close: -1
         // while messages still wait in _pending, then CloseDelay seconds after
         // they all went to Steam, which gives Steam time to deliver its own
-        // queue before the session closes.
+        // queue before the session closes (SteamSendRules.Close).
         private readonly Dictionary<CSteamID, float> _closing =
             new Dictionary<CSteamID, float>();
-        private const float CloseDelay = 1f;
 
         /// <summary>
         /// Close the session with this peer once what was sent to it has gone
@@ -336,24 +286,32 @@ namespace DarkwoodMP.Net
                 return;
             }
 
-            float now = UnityEngine.Time.unscaledTime;
+            var now = new Seconds(UnityEngine.Time.unscaledTime);
             foreach (var id in new List<CSteamID>(_closing.Keys))
             {
-                if (_pending.ContainsKey(id))
+                var step = SteamSendRules.Close(CloseOf(id, now));
+                if (step == CloseStep.Arm)
                 {
-                    continue;
+                    _closing[id] = SteamSendRules.CloseAt(now).Value;
                 }
-
-                float at = _closing[id];
-                if (at < 0f)
-                {
-                    _closing[id] = now + CloseDelay;
-                }
-                else if (now >= at)
+                else if (step == CloseStep.Close)
                 {
                     CloseSession(id);
                 }
             }
+        }
+
+        /// <summary>A peer waiting to be closed, for SteamSendRules.</summary>
+        private CloseFacts CloseOf(CSteamID id, Seconds now)
+        {
+            float at = _closing[id];
+            return new CloseFacts
+            {
+                Waiting = _pending.ContainsKey(id),
+                Armed = at >= 0f,
+                At = new Seconds(at),
+                Now = now,
+            };
         }
 
         /// <summary>
@@ -377,12 +335,13 @@ namespace DarkwoodMP.Net
                     var res = SendNow(
                         kv.Key, m.Data, m.Data.Length, m.Channel,
                         reliable: true);
-                    if (res == EResult.k_EResultLimitExceeded)
+                    var step = SteamSendRules.AfterFlush(ResultOf(res));
+                    if (step == FlushStep.Stop)
                     {
                         break; // still full: next frame
                     }
 
-                    if (res != EResult.k_EResultOK)
+                    if (step == FlushStep.Drop)
                     {
                         Plugin.Log.LogWarning(
                             $"Send to {kv.Key} failed: {res}");
@@ -461,16 +420,9 @@ namespace DarkwoodMP.Net
                                     handler(from, _recvBuf, len, channel);
                                 }
                             }
-                            else if (AddPiece(from, channel, _recvBuf, len)
-                                is Joining whole)
+                            else
                             {
-                                MessageHandler receiver = OnMessage;
-                                if (receiver != null)
-                                {
-                                    receiver(
-                                        from, whole.Data, whole.Data.Length,
-                                        channel);
-                                }
+                                AddPiece(from, channel, len);
                             }
                         }
                     }
@@ -491,13 +443,48 @@ namespace DarkwoodMP.Net
             }
         }
 
+        /// <summary>
+        /// Add a SteamPiece from _recvBuf; hand on the whole message once its
+        /// last piece is in.
+        /// </summary>
+        private void AddPiece(CSteamID from, int channel, int len)
+        {
+            var piece = new ArraySegment<byte>(_recvBuf, 0, len);
+            var answer = _joiner.Add(from.m_SteamID, channel, piece);
+            if (answer.Why.Refused)
+            {
+                string what = "a piece";
+                if (answer.Why.Reason == Refusal.PiecesTooLong)
+                {
+                    what = "a long message";
+                }
+
+                Plugin.Log.LogWarning(
+                    $"Dropped {what} from {from}: "
+                        + Refusals.Text(answer.Why));
+                return;
+            }
+
+            var whole = answer.Whole;
+            if (whole == null)
+            {
+                return;
+            }
+
+            MessageHandler receiver = OnMessage;
+            if (receiver != null)
+            {
+                receiver(from, whole, whole.Length, channel);
+            }
+        }
+
         public void CloseSession(CSteamID peer)
         {
             _closing.Remove(peer);
             _pending.Remove(peer);
             _pendingBytes.Remove(peer);
-            _joining.Remove((peer, Channel.Control));
-            _joining.Remove((peer, Channel.State));
+            _joiner.Forget(peer.m_SteamID, Channel.Control);
+            _joiner.Forget(peer.m_SteamID, Channel.State);
             var ident = new SteamNetworkingIdentity();
             ident.SetSteamID(peer);
             SteamNetworkingMessages.CloseSessionWithUser(ref ident);
