@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Npcs;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -65,10 +64,40 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// A scripted step starts (GameEvent.fire). Host: a joiner's step
+        /// that makes characters followers records the joiner as their
+        /// recruiter.
+        /// </summary>
+        internal void Firing(GameEvent ge)
+        {
+            if (ge == null)
+            {
+                return;
+            }
+
+            ulong by = ScriptedEvents.By;
+            StepFacts step = FactsOf(ge, by);
+            if (!FollowerRules.Recruits(step))
+            {
+                return;
+            }
+
+            foreach (var go in Targets(ge))
+            {
+                var c = go.GetComponent<Character>();
+                FollowerFacts target = TargetFactsOf(c);
+                if (FollowerRules.Counts(step, target))
+                {
+                    Recruited(go, step.By);
+                }
+            }
+        }
+
+        /// <summary>
         /// Host: note that this joiner recruited this character, if it's a
         /// follower now or about to be.
         /// </summary>
-        internal void Recruited(GameObject go, ulong by)
+        private void Recruited(GameObject go, ulong by)
         {
             Character c = null;
             if (go != null)
@@ -218,7 +247,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// A scripted step as it starts, by the peer whose event it is.
         /// </summary>
-        internal static StepFacts FactsOf(GameEvent ge, ulong by)
+        private static StepFacts FactsOf(GameEvent ge, ulong by)
         {
             Session session = Session.Instance;
             return new StepFacts
@@ -241,7 +270,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// A target of a recruiting step, as one that may be recruited.
         /// </summary>
-        internal static FollowerFacts TargetFactsOf(Character c)
+        private static FollowerFacts TargetFactsOf(Character c)
         {
             if (c == null)
             {
@@ -255,7 +284,7 @@ namespace DarkwoodMP.World
             };
         }
 
-        internal static IEnumerable<GameObject> Targets(GameEvent ge)
+        private static IEnumerable<GameObject> Targets(GameEvent ge)
         {
             foreach (var go in ge.targetGameObjects)
             {
@@ -277,45 +306,6 @@ namespace DarkwoodMP.World
                 if (go != null)
                 {
                     yield return go;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Host: a joiner's event step that makes characters followers records the
-    /// joiner as their recruiter.
-    /// </summary>
-    [HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire))]
-    static class FollowerRecruitPatch
-    {
-        static void Prefix(GameEvent __instance)
-        {
-            if (__instance == null)
-            {
-                return;
-            }
-
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            ulong by = ScriptedEvents.By;
-            StepFacts step = NpcFollowers.FactsOf(__instance, by);
-            if (!FollowerRules.Recruits(step))
-            {
-                return;
-            }
-
-            foreach (var go in NpcFollowers.Targets(__instance))
-            {
-                var c = go.GetComponent<Character>();
-                FollowerFacts target = NpcFollowers.TargetFactsOf(c);
-                if (FollowerRules.Counts(step, target))
-                {
-                    coop.Followers.Recruited(go, step.By);
                 }
             }
         }
