@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Damage;
 using HarmonyLib;
 using UnityEngine;
 
@@ -27,65 +28,92 @@ namespace DarkwoodMP.Combat
             Character __instance, float Damage, Transform attackerTransform,
             bool canCutInHalf, bool byPlayer, bool canInterrupt, bool normalHit)
         {
+            var hit = new GameHit
+            {
+                Damage = Damage,
+                Attacker = attackerTransform,
+                CanCutInHalf = canCutInHalf,
+                ByPlayer = byPlayer,
+                CanInterrupt = canInterrupt,
+                NormalHit = normalHit,
+            };
+
             var ne = NetEnemies.Instance;
-            if (ne == null || !NetEnemies.ClientMode)
+            uint id = 0;
+            bool puppet = ne != null && NetEnemies.ClientMode
+                && ne.IsPuppet(__instance, out id);
+            ClientHitFacts facts = FactsOf(__instance, hit, puppet);
+            switch (ClientHitRules.Forward(facts))
             {
-                return true;
+                case ClientHit.Game:
+                    return true;
+                case ClientHit.AskNpcs:
+                    // A friendly NPC our player hits: the host's copy takes
+                    // it, and turns on us there.
+                    return !HostileNpcs.ClientHit(
+                        __instance, Damage, attackerTransform, canCutInHalf,
+                        byPlayer, canInterrupt, normalHit);
+                case ClientHit.ToHost:
+                    // Only what our own player does to it is ours to send.
+                    ne.ClientHit(
+                        id, Damage, canCutInHalf,
+                        ClientHitRules.FromPlayer(facts), canInterrupt,
+                        normalHit, NetEnemies.HitEffects);
+                    return false;
+                default:
+                    // A frozen copy isn't really there. A flame of no damage
+                    // can still set it alight (its burn goes with the hit),
+                    // so only a hit of no damage and no effects stops here.
+                    // Something thrown hits it in the host's copy of the
+                    // throw; of flames only our own weapon's are ours to
+                    // send (Flame calls every hit byPlayer); anything else
+                    // not by our player (a trap, fire, an explosion)
+                    // happened on the host too, where it hurt the enemy
+                    // already.
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// The hit as the rule sees it. Read only on a client with
+        /// NetEnemies, as the game's getHit runs untouched otherwise.
+        /// </summary>
+        private static ClientHitFacts FactsOf(
+            Character c, in GameHit hit, bool puppet)
+        {
+            if (NetEnemies.Instance == null || !NetEnemies.ClientMode)
+            {
+                return new ClientHitFacts { Handled = false };
             }
 
-            if (!ne.IsPuppet(__instance, out uint id))
+            int effects = 0;
+            if (NetEnemies.HitEffects != null)
             {
-                if (NetEnemies.Frozen.Contains(__instance))
-                {
-                    return false; // a frozen one isn't really there
-                }
-
-                // A friendly NPC our player hits: the host's copy takes it, and
-                // turns on us there.
-                return !HostileNpcs.ClientHit(
-                    __instance, Damage, attackerTransform, canCutInHalf,
-                    byPlayer, canInterrupt, normalHit);
+                effects = NetEnemies.HitEffects.Count;
             }
 
-            // A flame of no damage can still set it alight (its burn goes with
-            // the hit).
-            if (Damage <= 0f
-                && (NetEnemies.HitEffects == null
-                    || NetEnemies.HitEffects.Count == 0))
-            {
-                return false;
-            }
-
-            // Something thrown (its impact, explosion or the fire it left) hits
-            // the enemy in the host's copy of the throw.
-            if (World.ThrownHits.Now())
-            {
-                return false;
-            }
-
-            // Of flames, only our own weapon's are ours to send (Flame calls
-            // every hit byPlayer); any other fire burns on the host.
             var flame = World.ThrownHits.CurrentFlame;
-            if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame))
+            bool ours = false;
+            if (flame != null)
             {
-                return false;
+                ours = EnemyAreaHits.ByLocalPlayer(flame);
             }
 
-            // Only what our own player does to it is ours to send. Anything
-            // else here (a trap, fire, an explosion) happened on the host too,
-            // where it hurt the enemy already.
-            bool fromPlayer = byPlayer
-                || (attackerTransform != null
-                    && attackerTransform.GetComponent<Player>() != null);
-            if (!fromPlayer)
+            Transform attacker = hit.Attacker;
+            return new ClientHitFacts
             {
-                return false;
-            }
-
-            ne.ClientHit(
-                id, Damage, canCutInHalf, fromPlayer, canInterrupt, normalHit,
-                NetEnemies.HitEffects);
-            return false;
+                Handled = true,
+                Puppet = puppet,
+                Frozen = NetEnemies.Frozen.Contains(c),
+                Damage = hit.Damage,
+                Effects = effects,
+                Thrown = World.ThrownHits.Now(),
+                Flame = flame != null,
+                OurFlame = ours,
+                ByPlayer = hit.ByPlayer,
+                PlayerAttacker = attacker != null
+                    && attacker.GetComponent<Player>() != null,
+            };
         }
     }
 
@@ -98,8 +126,9 @@ namespace DarkwoodMP.Combat
     {
         static void Prefix(MeleeSensor __instance)
         {
-            if (NetEnemies.ClientMode
-                && __instance.type == MeleeSensor.MeleeSensorType.player)
+            bool player =
+                __instance.type == MeleeSensor.MeleeSensorType.player;
+            if (ClientHitRules.NotesEffects(NetEnemies.ClientMode, player))
             {
                 NetEnemies.HitEffects = __instance.effects;
             }
@@ -135,16 +164,35 @@ namespace DarkwoodMP.Combat
 
         static bool Prefix(CharacterEffects __instance)
         {
-            if (!NetEnemies.ClientMode || NetEnemies.Instance == null)
+            return ClientHitRules.RunsEffects(FactsOf(__instance));
+        }
+
+        /// <summary>
+        /// The effects' character as the rule sees it, read only on a
+        /// client with NetEnemies.
+        /// </summary>
+        static HostEffectsFacts FactsOf(CharacterEffects effects)
+        {
+            var ne = NetEnemies.Instance;
+            if (!NetEnemies.ClientMode || ne == null)
             {
-                return true;
+                return new HostEffectsFacts { Handled = false };
             }
 
-            var c = __instance.GetComponent<Character>();
-            return c == null
-                || (!NetEnemies.Instance.IsPuppet(c, out _)
-                    && !NetEnemies.Frozen.Contains(c)
-                    && !HostileNpcs.EffectsForwarded(c));
+            var c = effects.GetComponent<Character>();
+            if (c == null)
+            {
+                return new HostEffectsFacts { Handled = true };
+            }
+
+            return new HostEffectsFacts
+            {
+                Handled = true,
+                Character = true,
+                Puppet = ne.IsPuppet(c, out _),
+                Frozen = NetEnemies.Frozen.Contains(c),
+                Forwarded = HostileNpcs.EffectsForwarded(c),
+            };
         }
     }
 }

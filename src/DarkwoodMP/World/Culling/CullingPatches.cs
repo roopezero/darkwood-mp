@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections;
+using DarkwoodMP.World.Culling;
 using HarmonyLib;
 using UnityEngine;
 
@@ -47,42 +48,57 @@ namespace DarkwoodMP.Combat
 
         private struct Centre
         {
-            public Vector3 Pos;
-            public int Dx, Dy;
+            public Vec2 Pos;
+            public ViewSize Area;
         }
 
         private static bool Prefix(
             WorldGrid __instance, Vector3 pos, bool instant, bool force)
         {
-            if (__instance.currentGrid == null)
+            switch (CullingRules.Which(FactsOf(__instance, instant)))
             {
-                return true;
-            }
+                case RefreshKind.OwnPass:
+                    // Alone (or a joiner): the game's own refresh, except that
+                    // its passes don't overlap either. A jump (a respawn, a
+                    // trip back from a place) otherwise has an older pass
+                    // leave what the newer one entered.
+                    Distances(out int dx, out int dy);
+                    Run(__instance, __instance.currentGrid, new List<Centre>
+                    {
+                        CentreAt(pos, dx, dy)
+                    }, false, force);
 
-            if (!Proxies.Any)
-            {
-                // Alone (or a joiner): the game's own refresh, except that its
-                // passes don't overlap either. A jump (a respawn, a trip back
-                // from a place) otherwise has an older pass leave what the
-                // newer one entered.
-                var s = Net.Session.Instance;
-                if (instant || s == null || !s.Active)
-                {
+                    return false;
+                case RefreshKind.Shared:
+                    RefreshAll(
+                        __instance, __instance.currentGrid, pos, instant,
+                        force);
+                    World.FarEvents.Tick();
+                    return false;
+                default:
                     return true;
-                }
-
-                Distances(out int dx, out int dy);
-                Run(__instance, __instance.currentGrid, new List<Centre>
-                {
-                    new Centre { Pos = pos, Dx = dx, Dy = dy }
-                }, false, force);
-
-                return false;
             }
+        }
 
-            RefreshAll(__instance, __instance.currentGrid, pos, instant, force);
-            World.FarEvents.Tick();
-            return false;
+        private static RefreshFacts FactsOf(WorldGrid wg, bool instant)
+        {
+            var s = Net.Session.Instance;
+            return new RefreshFacts
+            {
+                Grid = wg.currentGrid != null,
+                StandIns = Proxies.Any,
+                Instant = instant,
+                Session = s != null && s.Active,
+            };
+        }
+
+        private static Centre CentreAt(Vector3 pos, int dx, int dy)
+        {
+            return new Centre
+            {
+                Pos = new Vec2(pos.x, pos.z),
+                Area = new ViewSize { Dx = dx, Dy = dy },
+            };
         }
 
         /// <summary>
@@ -97,26 +113,14 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void RefreshWhileLoading()
         {
-            if (!Proxies.Any)
-            {
-                return;
-            }
-
-            var o = Singleton<OutsideLocations>.Instance;
             var wg = Singleton<WorldGrid>.Instance;
-            if (o == null || !o.loading || wg == null || wg.disableRefresh
-                || Player.Instance == null || Core.loadingGame
-                || !Core.worldGenFinished())
+            Tick tick = CullingRules.WhileLoading(LoadingFactsOf(wg));
+            _loadingRefreshAt = tick.Next.Value;
+            if (!tick.Due)
             {
                 return;
             }
 
-            if (Time.realtimeSinceStartup < _loadingRefreshAt)
-            {
-                return;
-            }
-
-            _loadingRefreshAt = Time.realtimeSinceStartup + 0.5f;
             var world = wg.getGrid("World");
             var grids = new Dictionary<WorldGrid.Grid, List<Centre>>();
             foreach (var p in NetPlayerProxy.All.Values)
@@ -157,6 +161,34 @@ namespace DarkwoodMP.Combat
             }
         }
 
+        /// <summary>
+        /// Read every frame: with no other players nothing more is read.
+        /// </summary>
+        private static LoadingFacts LoadingFactsOf(WorldGrid wg)
+        {
+            if (!Proxies.Any)
+            {
+                return new LoadingFacts
+                {
+                    StandIns = false,
+                    Next = new Seconds(_loadingRefreshAt),
+                };
+            }
+
+            var o = Singleton<OutsideLocations>.Instance;
+            return new LoadingFacts
+            {
+                StandIns = Proxies.Any,
+                Loading = o != null && o.loading,
+                Refreshes = wg != null && !wg.disableRefresh,
+                Player = Player.Instance != null,
+                LoadingGame = Core.loadingGame,
+                WorldMade = Core.worldGenFinished(),
+                Now = new Seconds(Time.realtimeSinceStartup),
+                Next = new Seconds(_loadingRefreshAt),
+            };
+        }
+
         private static IEnumerator EnterSpread(
             WorldGrid.Grid g, List<Centre> centres)
         {
@@ -182,8 +214,7 @@ namespace DarkwoodMP.Combat
             bool force)
         {
             Distances(out int hx, out int hy);
-            var centres =
-                new List<Centre> { new Centre { Pos = pos, Dx = hx, Dy = hy } };
+            var centres = new List<Centre> { CentreAt(pos, hx, hy) };
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p != null)
@@ -193,7 +224,7 @@ namespace DarkwoodMP.Combat
             }
 
             var world = wg.getGrid("World");
-            bool away = world != null && world != current;
+            bool away = CullingRules.HostAway(world != null, world == current);
             // The other grids, each with the players in it: the world's (only
             // while we're away), and the locations run for joiners.
             var others = new Dictionary<WorldGrid.Grid, List<Centre>>();
@@ -282,11 +313,17 @@ namespace DarkwoodMP.Combat
 
         internal static void Distances(out int dx, out int dy)
         {
-            float m = Mathf.Max(
-                Core.ResolutionWidthModifier, Core.ResolutionHeightModifier);
-            float zoom = Singleton<Controller>.Instance.cameraZoom;
-            dx = (int)((Screen.width + 500f * m) / zoom);
-            dy = (int)((Screen.height + 500f * m) / zoom);
+            ViewSize area = CullingRules.HostArea(new ScreenFacts
+            {
+                Width = Screen.width,
+                Height = Screen.height,
+                WidthModifier = Core.ResolutionWidthModifier,
+                HeightModifier = Core.ResolutionHeightModifier,
+                Zoom = Singleton<Controller>.Instance.cameraZoom,
+            });
+
+            dx = area.Dx;
+            dy = area.Dy;
         }
 
         /// <summary>
@@ -296,17 +333,16 @@ namespace DarkwoodMP.Combat
         private static WorldGrid.Grid GridOf(
             WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p)
         {
-            if (p.InLocation != null)
+            switch (CullingRules.GridOf(p.InLocation != null, p.Away))
             {
-                return wg.getGrid(Core.getTrueLocationName(p.InLocation.name));
+                case PlayerGrid.Location:
+                    return wg.getGrid(
+                        Core.getTrueLocationName(p.InLocation.name));
+                case PlayerGrid.None:
+                    return null;
+                default:
+                    return world;
             }
-
-            if (p.Away)
-            {
-                return null;
-            }
-
-            return world;
         }
 
         /// <summary>
@@ -316,15 +352,15 @@ namespace DarkwoodMP.Combat
         private static Centre Of(NetPlayerProxy p)
         {
             ViewRects.For(p.Owner, out int dx, out int dy);
-            return new Centre { Pos = p.transform.position, Dx = dx, Dy = dy };
+            return CentreAt(p.transform.position, dx, dy);
         }
 
         private static bool Near(Vector2 node, List<Centre> centres)
         {
+            var at = new Vec2(node.x, node.y);
             foreach (var c in centres)
             {
-                if (Mathf.Abs(c.Pos.x - node.x) <= c.Dx
-                    && Mathf.Abs(c.Pos.z - node.y) <= c.Dy)
+                if (CullingRules.Near(at, c.Pos, c.Area))
                 {
                     return true;
                 }
@@ -368,7 +404,7 @@ namespace DarkwoodMP.Combat
             {
                 if (Near(nodes[i].position, centres))
                 {
-                    if (force || !nodes[i].entered)
+                    if (CullingRules.Enters(force, nodes[i].entered))
                     {
                         nodes[i].enter(force);
                         yield return null;

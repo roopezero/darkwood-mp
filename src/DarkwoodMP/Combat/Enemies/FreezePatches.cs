@@ -1,3 +1,4 @@
+using DarkwoodMP.Combat.Enemies;
 using HarmonyLib;
 
 namespace DarkwoodMP.Combat
@@ -14,9 +15,7 @@ namespace DarkwoodMP.Combat
 
         private static bool Prefix(Character __instance)
         {
-            if (Starting || !NetEnemies.ClientMode
-                || !NetEnemies.Eligible(__instance)
-                || NetEnemies.LocalOnly(__instance))
+            if (!FreezeRules.FreezesAtStart(FactsOf(__instance)))
             {
                 return true;
             }
@@ -25,6 +24,38 @@ namespace DarkwoodMP.Combat
                 && NetEnemies.Instance.IsPuppet(__instance, out _);
             NetEnemies.Freeze(__instance, hide: !puppet);
             return false;
+        }
+
+        /// <summary>
+        /// The character as the rule sees it. Whether it's eligible and a
+        /// local one are read only on a client, outside Thaw, as before.
+        /// </summary>
+        private static StartFacts FactsOf(Character c)
+        {
+            bool client = NetEnemies.ClientMode;
+            if (Starting || !client)
+            {
+                return new StartFacts
+                {
+                    Thawing = Starting,
+                    ClientMode = client,
+                };
+            }
+
+            bool eligible = NetEnemies.Eligible(c);
+            bool local = false;
+            if (eligible)
+            {
+                local = NetEnemies.LocalOnly(c);
+            }
+
+            return new StartFacts
+            {
+                Thawing = false,
+                ClientMode = true,
+                Eligible = eligible,
+                Local = local,
+            };
         }
     }
 

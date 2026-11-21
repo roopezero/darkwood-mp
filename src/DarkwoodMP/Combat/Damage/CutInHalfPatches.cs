@@ -1,3 +1,4 @@
+using DarkwoodMP.Combat.Damage;
 using HarmonyLib;
 using UnityEngine;
 
@@ -18,14 +19,35 @@ namespace DarkwoodMP.Combat
         static System.Exception Finalizer(
             Character __instance, System.Exception __exception)
         {
-            if (__exception is System.NullReferenceException
-                && __instance != null && __instance.cuttingInHalf
-                && __instance.GetComponent<Rigidbody>() == null)
+            if (__exception == null)
+            {
+                return null;
+            }
+
+            if (CutInHalfRules.Drops(FactsOf(__instance, __exception)))
             {
                 return null;
             }
 
             return __exception;
+        }
+
+        static CutFacts FactsOf(Character c, System.Exception thrown)
+        {
+            bool cutting = c != null && c.cuttingInHalf;
+            bool body = false;
+            if (cutting)
+            {
+                body = c.GetComponent<Rigidbody>() != null;
+            }
+
+            return new CutFacts
+            {
+                NullReference = thrown is System.NullReferenceException,
+                Character = c != null,
+                Cutting = cutting,
+                Body = body,
+            };
         }
     }
 }

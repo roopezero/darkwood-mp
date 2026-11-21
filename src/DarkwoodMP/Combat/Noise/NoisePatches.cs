@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Noise;
 using HarmonyLib;
 using UnityEngine;
 
@@ -19,39 +20,55 @@ namespace DarkwoodMP.Combat
             bool gunshot, out CharBase __state)
         {
             __state = Threat.NoiseSource;
-            if (Threat.NoiseSource != null)
+            var noise = new SentNoise
             {
-                return; // set by whoever raised it (a remote player's noise)
-            }
+                At = new Vec3(_pos.x, _pos.y, _pos.z),
+                Range = range,
+                Volume = volume,
+                Dangerous = dangerousSound,
+                Gunshot = gunshot,
+            };
 
-            if (OwnNoise <= 0 && !CalledFromPlayer())
+            switch (NoiseRules.Owner(FactsOf()))
             {
-                return;
+                case NoiseOwner.OursToHost:
+                    var s = Net.Session.Instance;
+                    var w = s.Begin(Net.MsgType.PlayerNoise);
+                    PlayerNoiseMessage.Write(w, noise);
+                    s.SendToHost(w, Net.Channel.Control, reliable: true);
+                    Threat.NoiseSource = Player.Instance;
+                    return;
+                case NoiseOwner.Ours:
+                    Threat.NoiseSource = Player.Instance;
+                    return;
+                default:
+                    // Set by whoever raised it (a remote player's noise), or
+                    // not our player's.
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// The noise as the rule sees it. The stack is walked only when no
+        /// source is set and no own-noise method is running.
+        /// </summary>
+        private static NoiseFacts FactsOf()
+        {
+            bool set = Threat.NoiseSource != null;
+            bool fromPlayer = false;
+            if (!set && OwnNoise <= 0)
+            {
+                fromPlayer = CalledFromPlayer();
             }
 
             var s = Net.Session.Instance;
-            if (s != null && s.IsClient && NetEnemies.ClientMode)
+            return new NoiseFacts
             {
-                var w = s.Begin(Net.MsgType.PlayerNoise);
-                w.Write(_pos);
-                w.W.Write(range);
-                w.W.Write(volume);
-                int flags = 0;
-                if (dangerousSound)
-                {
-                    flags |= 1;
-                }
-
-                if (gunshot)
-                {
-                    flags |= 2;
-                }
-
-                w.W.Write((byte)flags);
-                s.SendToHost(w, Net.Channel.Control, reliable: true);
-            }
-
-            Threat.NoiseSource = Player.Instance;
+                Set = set,
+                OwnNoise = OwnNoise,
+                FromPlayer = fromPlayer,
+                Client = s != null && s.IsClient && NetEnemies.ClientMode,
+            };
         }
 
         // A Finalizer rather than a Postfix: it runs when a listener's
@@ -113,32 +130,44 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            Vector3 pos = r.ReadVector3();
-            float range = Mathf.Clamp(r.R.ReadSingle(), 0f, 2000f);
-            float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 5f);
-            byte f = r.R.ReadByte();
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
-                || proxy == null)
-            {
-                return;
-            }
-
-            if ((proxy.transform.position - pos).sqrMagnitude > 500f * 500f)
+            SentNoise noise = PlayerNoiseMessage.Read(r);
+            NetPlayerProxy proxy;
+            NetPlayerProxy.All.TryGetValue(from, out proxy);
+            if (!NoiseRules.Raises(FactsOf(proxy, noise)))
             {
                 return; // it's meant to be where they are
             }
 
+            Vector3 pos = new Vector3(noise.At.X, noise.At.Y, noise.At.Z);
             var before = Threat.NoiseSource;
             Threat.NoiseSource = proxy;
             try
             {
                 Character.alertInArea(
-                    pos, range, (f & 1) != 0, volume, (f & 2) != 0);
+                    pos, NoiseRules.Range(noise.Range), noise.Dangerous,
+                    NoiseRules.Volume(noise.Volume), noise.Gunshot);
             }
             finally
             {
                 Threat.NoiseSource = before;
             }
+        }
+
+        private static RemoteNoiseFacts FactsOf(
+            NetPlayerProxy proxy, in SentNoise noise)
+        {
+            if (proxy == null)
+            {
+                return new RemoteNoiseFacts { StandIn = false };
+            }
+
+            Vector3 at = proxy.transform.position;
+            return new RemoteNoiseFacts
+            {
+                StandIn = true,
+                At = new Vec3(at.x, at.y, at.z),
+                Noise = noise.At,
+            };
         }
     }
 
@@ -168,44 +197,60 @@ namespace DarkwoodMP.Combat
 
         static void Prefix(object __instance, object[] __args, out bool __state)
         {
-            __state = false;
-            var player = Player.Instance;
-            if (player == null)
-            {
-                return;
-            }
-
-            switch (__instance)
-            {
-                case Door _:
-                    if (__args.Length > 0)
-                    {
-                        int index = 0;
-                        if (__args.Length > 1)
-                        {
-                            index = 1;
-                        }
-
-                        __state = __args[index] is Transform t && t != null
-                            && t.GetComponent<Player>() != null;
-                    }
-                    else
-                    {
-                        __state = false;
-                    }
-
-                    break;
-                case MeleeSensor m:
-                    __state = m.type == MeleeSensor.MeleeSensorType.player;
-                    break;
-                case ItemSounds _:
-                    __state = true; // it checks our player itself
-                    break;
-            }
-
+            __state = NoiseRules.CountsAsOurs(FactsOf(__instance, __args));
             if (__state)
             {
                 PlayerNoisePatch.OwnNoise++;
+            }
+        }
+
+        /// <summary>
+        /// The noise maker as the rule sees it: which method from
+        /// __instance's type, and its opener or sensor type.
+        /// </summary>
+        static OwnNoiseFacts FactsOf(object instance, object[] args)
+        {
+            if (Player.Instance == null)
+            {
+                return new OwnNoiseFacts { Player = false };
+            }
+
+            switch (instance)
+            {
+                case Door _:
+                    int at = NoiseRules.OpenerAt(args.Length);
+                    bool opener = at >= 0 && args[at] is Transform t
+                        && t != null && t.GetComponent<Player>() != null;
+                    return new OwnNoiseFacts
+                    {
+                        Player = true,
+                        Maker = NoiseMaker.Door,
+                        PlayerOpener = opener,
+                    };
+
+                case MeleeSensor m:
+                    return new OwnNoiseFacts
+                    {
+                        Player = true,
+                        Maker = NoiseMaker.Sensor,
+                        PlayerSensor =
+                            m.type == MeleeSensor.MeleeSensorType.player,
+                    };
+
+                case ItemSounds _:
+                    // It checks our player itself.
+                    return new OwnNoiseFacts
+                    {
+                        Player = true,
+                        Maker = NoiseMaker.Furniture,
+                    };
+
+                default:
+                    return new OwnNoiseFacts
+                    {
+                        Player = true,
+                        Maker = NoiseMaker.Other,
+                    };
             }
         }
 

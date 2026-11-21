@@ -1,3 +1,4 @@
+using DarkwoodMP.Combat.Enemies;
 using HarmonyLib;
 using UnityEngine;
 
@@ -42,8 +43,8 @@ namespace DarkwoodMP.Combat
         private static void Postfix(
             CharacterSounds __instance, string loopName, bool __state)
         {
-            if (!__state || !string.IsNullOrEmpty(loopName)
-                || __instance.idleAudioObject != null)
+            bool after = __instance.idleAudioObject != null;
+            if (!EnemyLoopRules.Stopped(__state, loopName, after))
             {
                 return;
             }
