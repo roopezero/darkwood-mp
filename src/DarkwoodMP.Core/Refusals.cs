@@ -422,6 +422,35 @@ namespace DarkwoodMP
                     return "Choose a save to overwrite.";
                 case Refusal.NameLocked:
                     return "You can change it when you're in no game.";
+                case Refusal.LoadWorldToHost:
+                    return "To host, load your world first (Start Game), then"
+                        + " press Esc and choose Multiplayer in the pause"
+                        + " menu.";
+                case Refusal.HostsCopy:
+                    return "This is your copy of another host's world. To"
+                        + " host, go back to the main menu and load your own"
+                        + " world.";
+                case Refusal.EpilogueBegun:
+                    return "This world is in the epilogue, which can't be"
+                        + " shared once it has begun. Host from a save before"
+                        + " the end of the game.";
+                case Refusal.OtherModVersion:
+                    return "Host runs a different DarkwoodMP version ("
+                        + detail
+                        + ")";
+                case Refusal.NotInLobby:
+                    return "not in lobby";
+                case Refusal.TooLongForSteam:
+                    return Fill(
+                        "an unreliable {1} of {0} KiB is too long for Steam",
+                        detail,
+                        2);
+                case Refusal.QueueFull:
+                    return detail + " KiB already waiting for room";
+                case Refusal.BadMessageLength:
+                    return "a message of " + detail + " bytes";
+                case Refusal.PiecesTooLong:
+                    return "its pieces ran past its length";
                 default:
                     return verdict.Reason.ToString();
             }

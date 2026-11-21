@@ -565,6 +565,50 @@ namespace DarkwoodMP.Tests
                     Refusal.NameLocked,
                     null,
                     "You can change it when you're in no game."
+                {
+                    Refusal.LoadWorldToHost,
+                    null,
+                    "To host, load your world first (Start Game), then press"
+                        + " Esc and choose Multiplayer in the pause menu."
+                },
+                {
+                    Refusal.HostsCopy,
+                    null,
+                    "This is your copy of another host's world. To host, go"
+                        + " back to the main menu and load your own world."
+                },
+                {
+                    Refusal.EpilogueBegun,
+                    null,
+                    "This world is in the epilogue, which can't be shared once"
+                        + " it has begun. Host from a save before the end of"
+                        + " the game."
+                },
+                {
+                    Refusal.OtherModVersion,
+                    "0.28.0",
+                    "Host runs a different DarkwoodMP version (0.28.0)"
+                },
+                { Refusal.NotInLobby, null, "not in lobby" },
+                {
+                    Refusal.TooLongForSteam,
+                    Refusals.Detail("640", "SaveData"),
+                    "an unreliable SaveData of 640 KiB is too long for Steam"
+                },
+                {
+                    Refusal.QueueFull,
+                    "65536",
+                    "65536 KiB already waiting for room"
+                },
+                {
+                    Refusal.BadMessageLength,
+                    "-1",
+                    "a message of -1 bytes"
+                },
+                {
+                    Refusal.PiecesTooLong,
+                    null,
+                    "its pieces ran past its length"
                 },
             };
     }
