@@ -15,7 +15,7 @@ namespace DarkwoodMP.World
     /// in is tools/tests/map_scenario_farevents.py): the client jumps to a far
     /// world location, and the host checks how it ran that location's enter and
     /// exit events (World.FarEvents) and that its culling didn't make locations
-    /// flicker (Combat.SharedCullingPatch).
+    /// flicker (World.Culling.SharedCulling).
     /// </summary>
     public static partial class MapScenarioFarEvents
     {
@@ -81,7 +81,7 @@ namespace DarkwoodMP.World
             Dialogues = 0;
             WatchSteps = Sync.PlayerSync.Instance != null
                 && Net.Session.Instance != null && Net.Session.Instance.IsHost;
-            _refreshesAtReset = SharedCullingPatch.LoadingRefreshes;
+            _refreshesAtReset = Plugin.Instance.Host.Culling.LoadingRefreshes;
             var locs = WorldLocations()
                 .OrderBy(l => StateDump.Flat(l.transform.position - Centre))
                 .ToList();

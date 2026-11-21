@@ -73,7 +73,7 @@ namespace DarkwoodMP.World.Fuel
             {
                 Generator = Flat(generator.transform.position),
                 Host = Flat(p.transform.position),
-                HostAway = SharedCullingPatch.HostAway,
+                HostAway = Plugin.Instance.Host.Culling.HostAway,
                 Players = players,
             });
 

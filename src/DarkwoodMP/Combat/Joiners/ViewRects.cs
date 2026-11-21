@@ -9,7 +9,7 @@ namespace DarkwoodMP.Combat
     /// game's cull rect, which comes from the screen's size and the camera's
     /// zoom (WorldGrid.refreshNodes). A joiner sends its own (ViewRect) when
     /// it's in the world and whenever it changes, and the host keeps that much
-    /// entered round them (SharedCullingPatch). Until it's known, the host uses
+    /// entered round them (SharedCulling). Until it's known, the host uses
     /// its own. One per session (CoopSession.Views).
     /// </summary>
     internal sealed class ViewRects
@@ -37,7 +37,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            SharedCullingPatch.Distances(out int dx, out int dy);
+            World.Culling.SharedCulling.Distances(out int dx, out int dy);
             var rect = new ViewRect(dx, dy);
             if (!_sender.Sends(rect))
             {
@@ -64,7 +64,7 @@ namespace DarkwoodMP.Combat
             }
             else
             {
-                SharedCullingPatch.Distances(out dx, out dy);
+                World.Culling.SharedCulling.Distances(out dx, out dy);
             }
         }
 

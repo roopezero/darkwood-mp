@@ -246,8 +246,8 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Loading(string[] a, Result r)
         {
-            int refreshes =
-                SharedCullingPatch.LoadingRefreshes - _refreshesAtReset;
+            int refreshes = Plugin.Instance.Host.Culling.LoadingRefreshes
+                - _refreshesAtReset;
             r.Info =
                 $"{refreshes} culling refreshes round the others while our "
                     + "player was taken to a place, since fe-reset";

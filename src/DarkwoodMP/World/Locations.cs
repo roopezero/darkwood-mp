@@ -722,7 +722,7 @@ namespace DarkwoodMP.World
 
             // The game doesn't refresh its culling while our player is taken to
             // a place: keep the others' areas entered.
-            Combat.SharedCullingPatch.RefreshWhileLoading();
+            Plugin.Instance.Host.Culling.RefreshWhileLoading();
             if (_spawning != null)
             {
                 if (o.spawnedLocations.TryGetValue(_spawning, out var loc))

@@ -12,7 +12,7 @@ namespace DarkwoodMP.World
     /// the host and from each other. WorldGrid switches on only the nodes
     /// within about (screen width + 500) / zoom of its player
     /// (WorldGrid.refreshNodes), a few thousand units at most. The host's game
-    /// also switches them on around every other player (SharedCullingPatch),
+    /// also switches them on around every other player (SharedCulling),
     /// but a client's game only around its own, so a spot 6000 or more away is
     /// switched off in the other clients' games, and was in the host's until
     /// that player came. The world steps (toggle-door, take-item, ...) pick

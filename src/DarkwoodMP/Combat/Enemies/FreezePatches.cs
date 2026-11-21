@@ -154,7 +154,7 @@ namespace DarkwoodMP.Combat
     /// location is left. Location.activateCharacters(false) switches off every
     /// dead character in its list; a living one that chased our player out is
     /// disconnected first, but in co-op the location stays entered while any
-    /// player is near it (SharedCullingPatch), so a savage can chase someone
+    /// player is near it (SharedCulling), so a savage can chase someone
     /// far out of it, die there still connected, and vanish from beside the
     /// host once everyone has left the location (clients kept showing it). Such
     /// a corpse is let go of the location, as the game does with a character
@@ -168,7 +168,8 @@ namespace DarkwoodMP.Combat
         {
             var s = Net.Session.Instance;
             if (active || s == null || !s.IsHost || !s.Active
-                || __instance.isOutsideLocation || SharedCullingPatch.HostAway)
+                || __instance.isOutsideLocation
+                || Plugin.Instance.Host.Culling.HostAway)
             {
                 return;
             }

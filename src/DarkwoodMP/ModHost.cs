@@ -46,6 +46,11 @@ namespace DarkwoodMP
         /// test dummy's in a game played alone.
         public readonly Combat.Proxies Proxies = new Combat.Proxies();
 
+        /// The host's culling grid kept entered round every player. The
+        /// test dummy needs it with no session.
+        public readonly World.Culling.SharedCulling Culling =
+            new World.Culling.SharedCulling();
+
         /// Each enemy's threat for each player, while there are stand-ins.
         public readonly Combat.Threats Threats;
 
