@@ -23,12 +23,12 @@ namespace DarkwoodMP.World
         // found it marked fired and got nothing: stuck on the wrong side. So a
         // trigger marked fired by another game's player stays owed to ours
         // (IsOwed), and when our player sets it off, the steps a later player
-        // gets (LaterStep) run for them alone (Part.LaterPlayer), after the
-        // host's yes (kind 5) in a joiner's game. The host remembers who had
-        // their part, by player key, so each player gets it once. What is owed
-        // is worked out from the loaded world and that record (OwedParts), so
-        // it also holds for a mid-game joiner and after the world is loaded
-        // again.
+        // gets (LaterStep) run for them alone (EventPart.LaterPlayer), after
+        // the host's yes (kind 5) in a joiner's game. The host remembers
+        // who had their part, by player key, so each player gets it once.
+        // What is owed is worked out from the loaded world and that record
+        // (OwedParts), so it also holds for a mid-game joiner and after the
+        // world is loaded again.
 
         /// <summary>
         /// Joiner: owed triggers asked for and not answered yet.
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 Owed = matches && IsOwed(t),
                 Active = s != null && s.Active,
                 Sharing = Coop.Guards.Sharing,
-                Current = (EventPart)Current,
+                Current = Current,
                 SettingOff = SettingOff,
             });
         }
@@ -390,7 +390,7 @@ namespace DarkwoodMP.World
                 $"[world] {what}: it fired for another player, running only "
                     + "our player's steps "
                     + $"({steps})");
-            RunAs(Part.LaterPlayer, replaying: false, () =>
+            RunAs(EventPart.LaterPlayer, replaying: false, () =>
             {
                 foreach (var e in ge.events)
                 {

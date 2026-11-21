@@ -346,14 +346,14 @@ namespace DarkwoodMP.World
                 r.Fail("not entered here for the client: " + info);
             }
             else if (es.Any(
-                e => e.Part == ScriptedEvents.Part.All
-                    || e.Part == ScriptedEvents.Part.PlayerOnly))
+                e => e.Part == EventPart.All
+                    || e.Part == EventPart.PlayerOnly))
             {
                 r.Fail("its events ran for our player: " + info);
             }
             else if (!es.Any(
                 e => e.Kind == "enter"
-                    && e.Part == ScriptedEvents.Part.HostAndShared))
+                    && e.Part == EventPart.HostAndShared))
             {
                 r.Fail(
                     "its enter events didn't run (as the host's and shared "
@@ -398,13 +398,13 @@ namespace DarkwoodMP.World
                 $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
             if (!es.Any(
                 e => e.Kind == "enter"
-                    && e.Part == ScriptedEvents.Part.PlayerAndShared))
+                    && e.Part == EventPart.PlayerAndShared))
             {
                 r.Fail(
                     "its enter events didn't run as our player's and the "
                         + "shared part: " + r.Info);
             }
-            else if (es.Any(e => e.Part != ScriptedEvents.Part.PlayerAndShared))
+            else if (es.Any(e => e.Part != EventPart.PlayerAndShared))
             {
                 r.Fail("its events ran in another part: " + r.Info);
             }

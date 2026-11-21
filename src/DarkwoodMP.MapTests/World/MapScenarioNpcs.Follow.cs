@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
+using DarkwoodMP.World.Scripted;
 
 namespace DarkwoodMP.World
 {
@@ -64,7 +65,7 @@ namespace DarkwoodMP.World
                 targetGameObjects = new List<GameObject> { npc.gameObject },
             };
 
-            ScriptedEvents.RunAs(ScriptedEvents.Part.HostAndShared,
+            ScriptedEvents.RunAs(EventPart.HostAndShared,
                 replaying: true, () =>
             {
                 var was = ScriptedEvents.By;

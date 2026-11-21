@@ -51,7 +51,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (ScriptedEvents.Current != ScriptedEvents.Part.All)
+            if (ScriptedEvents.Current != EventPart.All)
             {
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
@@ -103,7 +103,7 @@ namespace DarkwoodMP.World
 
         static void Prefix(
             object __instance,
-            out (ScriptedEvents.Part, ScriptedEvents.Started, bool, ulong)
+            out (EventPart, ScriptedEvents.Started, bool, ulong)
                 __state)
         {
             __state = (ScriptedEvents.Current, ScriptedEvents.Firing, false,
@@ -134,7 +134,7 @@ namespace DarkwoodMP.World
 
         static Exception Finalizer(
             object __instance, Exception __exception,
-            (ScriptedEvents.Part, ScriptedEvents.Started, bool, ulong) __state)
+            (EventPart, ScriptedEvents.Started, bool, ulong) __state)
         {
             if (__instance.GetType().DeclaringType == typeof(GameEvent)
                 && ScriptedEvents.StepDepth > 0)
@@ -205,7 +205,7 @@ namespace DarkwoodMP.World
         static void Prefix(
             global::EventTrigger __instance,
             global::EventTrigger.Type TriggerType,
-            out (bool, ScriptedEvents.Part) __state)
+            out (bool, EventPart) __state)
         {
             __state = (false, ScriptedEvents.Current);
             if (TriggerType != global::EventTrigger.Type.area
@@ -224,13 +224,13 @@ namespace DarkwoodMP.World
             __state.Item1 = true;
             if (Session.Instance.IsClient)
             {
-                ScriptedEvents.Current = ScriptedEvents.Part.PlayerAndShared;
+                ScriptedEvents.Current = EventPart.PlayerAndShared;
             }
         }
 
         static void Postfix(
             global::EventTrigger __instance,
-            (bool, ScriptedEvents.Part) __state)
+            (bool, EventPart) __state)
         {
             if (!__state.Item1)
             {
@@ -257,7 +257,7 @@ namespace DarkwoodMP.World
         }
 
         static Exception Finalizer(
-            Exception __exception, (bool, ScriptedEvents.Part) __state)
+            Exception __exception, (bool, EventPart) __state)
         {
             if (__state.Item1)
             {
@@ -374,7 +374,7 @@ namespace DarkwoodMP.World
                 OutOfSight = __instance.type
                     == global::EventTrigger.Type.onOutOfSightOfPlayer,
                 MultipleFire = __instance.multipleFire,
-                Current = (EventPart)ScriptedEvents.Current,
+                Current = ScriptedEvents.Current,
                 SharedReplay = ScriptedEvents.SharedReplay(TriggerType),
             });
 
@@ -387,7 +387,7 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
-                    Part = ScriptedEvents.Part.All,
+                    Part = EventPart.All,
                     ByPlayer = true,
                     World = true,
                     // a joiner behind it gets its player part (SendCaused)
@@ -407,7 +407,7 @@ namespace DarkwoodMP.World
 
             ScriptedEvents.Remember(__result, new ScriptedEvents.Started
             {
-                Part = (ScriptedEvents.Part)remembered.Part,
+                Part = remembered.Part,
                 By = ScriptedEvents.By,
                 ByPlayer = remembered.ByPlayer,
                 Triggers = thisEventTriggers,
@@ -451,7 +451,7 @@ namespace DarkwoodMP.World
                 && ScriptedEvents.SendCaused(et, f.Index, f.By))
             {
                 ScriptedEvents.RunAs(
-                    ScriptedEvents.Part.HostAndShared, replaying: false,
+                    EventPart.HostAndShared, replaying: false,
                     ge.fire);
                 return false;
             }
@@ -489,7 +489,7 @@ namespace DarkwoodMP.World
                         repeatableArea, exitedBefore, et.exited))
                 {
                     ScriptedEvents.RunAs(
-                        ScriptedEvents.Part.SharedOnly, replaying: false,
+                        EventPart.SharedOnly, replaying: false,
                         ge.fire);
                 }
                 else

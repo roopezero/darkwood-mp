@@ -75,7 +75,7 @@ namespace DarkwoodMP.World
 
                 if (t == null)
                 {
-                    var triggerPart = (Part)FiredEventRules.WorldTriggerPart(
+                    var triggerPart = FiredEventRules.WorldTriggerPart(
                         ours, near: false);
                     RunWorldEvents(
                         name, triggerPart, replaying: true,
@@ -101,7 +101,7 @@ namespace DarkwoodMP.World
                     bool near = NearTrigger(et);
                     try
                     {
-                        var eventPart = (Part)FiredEventRules.WorldTriggerPart(
+                        var eventPart = FiredEventRules.WorldTriggerPart(
                             ours, near);
                         RunAs(eventPart, replaying: true, ge.fire);
                     }
@@ -146,14 +146,14 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    Part exitPart;
+                    EventPart exitPart;
                     if (s.IsHost)
                     {
-                        exitPart = Part.HostAndShared;
+                        exitPart = EventPart.HostAndShared;
                     }
                     else
                     {
-                        exitPart = Part.SharedOnly;
+                        exitPart = EventPart.SharedOnly;
                     }
 
                     ExitArrived(et, t, index, exitPart, replaying: s.IsClient);
@@ -220,14 +220,14 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    Part part;
+                    EventPart part;
                     if (s.IsHost)
                     {
-                        part = Part.HostAndShared;
+                        part = EventPart.HostAndShared;
                     }
                     else
                     {
-                        part = Part.SharedOnly;
+                        part = EventPart.SharedOnly;
                     }
 
                     if (t == null)
@@ -316,14 +316,14 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    Part worldPart;
+                    EventPart worldPart;
                     if (s.IsHost)
                     {
-                        worldPart = Part.HostAndShared;
+                        worldPart = EventPart.HostAndShared;
                     }
                     else
                     {
-                        worldPart = Part.SharedOnly;
+                        worldPart = EventPart.SharedOnly;
                     }
 
                     RunAs(

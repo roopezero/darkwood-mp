@@ -148,7 +148,7 @@ namespace DarkwoodMP.World
         /// exit runs it as they leave.
         /// </summary>
         private static void ExitArrived(
-            EventTriggers et, global::EventTrigger t, int index, Part part,
+            EventTriggers et, global::EventTrigger t, int index, EventPart part,
             bool replaying)
         {
             var arrival = FiredEventRules.OnExit(
@@ -293,7 +293,7 @@ namespace DarkwoodMP.World
         /// in the given part.
         /// </summary>
         private static void RunWorldEvents(
-            string list, Part part, bool replaying, string what)
+            string list, EventPart part, bool replaying, string what)
         {
             var events = Singleton<Events>.Instance;
             if (events == null)
@@ -418,7 +418,7 @@ namespace DarkwoodMP.World
             {
                 Active = s.Active,
                 InWorld = WorldShare.InWorld,
-                Current = (EventPart)Current,
+                Current = Current,
                 Replaying = Coop.Guards.Replaying,
                 Character = character,
                 Known = ge != null,
@@ -454,7 +454,7 @@ namespace DarkwoodMP.World
             var ge = WorldEventOf(events, name);
             var facts = new WorldEventFacts
             {
-                Current = (EventPart)Current,
+                Current = Current,
                 Replaying = Coop.Guards.Replaying,
                 Sharing = Coop.Guards.Sharing,
                 AnimationSent = AnimationSent,
@@ -543,8 +543,8 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                var part = (Part)FiredEventRules.PartAfterYes(result);
-                if (part == Part.All)
+                var part = FiredEventRules.PartAfterYes(result);
+                if (part == EventPart.All)
                 {
                     // We were somewhere the host doesn't run
                     // (Authority.AcceptAway): every part of it is ours.

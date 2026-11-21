@@ -45,7 +45,7 @@ namespace DarkwoodMP.World
     /// run again for the next player. Its player steps that a later player gets
     /// (a trip somewhere, its messages, ordinary items: LaterStep) are still
     /// owed to each other player, and run for them alone when they set it off
-    /// (kind 5, Part.LaterPlayer), once each. If the host says no (it had
+    /// (kind 5, EventPart.LaterPlayer), once each. If the host says no (it had
     /// already happened there), nothing of it ran in the joiner's game, so
     /// there is nothing to undo. Waiting costs one round trip; running the
     /// shared part early and undoing it on a refusal can't be done reliably,
@@ -60,7 +60,7 @@ namespace DarkwoodMP.World
     /// doesn't run its own copy of them, and the host sends each one as it runs
     /// it (EventFired kind 3). A joiner then runs the shared part, and of its
     /// player's own part only the messages, and only if its player is near the
-    /// trigger (Part.SharedAndMessages, FiredEventRules.NearMessages): a
+    /// trigger (EventPart.SharedAndMessages, FiredEventRules.NearMessages): a
     /// dialogue, an item given or a trip somewhere stays the host's player's,
     /// as it was in the host's single-player world, unless a joiner caused it
     /// (killed the NPC, broke the item, switched on the machine: Cause), whose
@@ -91,50 +91,10 @@ namespace DarkwoodMP.World
     public static partial class ScriptedEvents
     {
         /// <summary>
-        /// Which steps of a GameEvents run in this game right now.
-        /// </summary>
-        public enum Part : byte
-        {
-            /// <summary>All of them (nothing shared is going on).</summary>
-            All = 0,
-            /// <summary>
-            /// A joiner's player set it off: its own part and the shared part.
-            /// </summary>
-            PlayerAndShared = 1,
-            /// <summary>
-            /// The host, for a joiner's event: the host's part and the shared
-            /// part.
-            /// </summary>
-            HostAndShared = 2,
-            /// <summary>Another player's event: only the shared part.</summary>
-            SharedOnly = 3,
-            /// <summary>
-            /// The host's player came into (or went out of) a place the world
-            /// already had running for another player (World.FarEvents): only
-            /// its own part; the host's and the shared parts ran when the place
-            /// was entered.
-            /// </summary>
-            PlayerOnly = 4,
-            /// <summary>
-            /// The host's world set it off by itself, and our player is near
-            /// it: the shared part, and of the player's own part only the
-            /// messages.
-            /// </summary>
-            SharedAndMessages = 5,
-            /// <summary>
-            /// Our player set off a once-only trigger that already fired for
-            /// another player: only the steps a later player gets (LaterStep:
-            /// its trip, its messages, ordinary items given); everything else
-            /// ran once.
-            /// </summary>
-            LaterPlayer = 6,
-        }
-
-        /// <summary>
         /// The part being run now (set around a GameEvents.fire, and inside the
         /// coroutines it started).
         /// </summary>
-        public static Part Current = Part.All;
+        public static EventPart Current = EventPart.All;
 
         /// <summary>
         /// Host: the joiner whose event is being run now (the peer that sent
@@ -306,17 +266,17 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Whether this step runs in the part being run now
-        /// (StepRules.Runs). With nothing shared going on (Part.All) every
+        /// (StepRules.Runs). With nothing shared going on (EventPart.All) every
         /// step runs, so its facts aren't read.
         /// </summary>
         public static bool Runs(GameEvent ge, GameObject thisGO)
         {
-            if (Current == Part.All)
+            if (Current == EventPart.All)
             {
                 return true;
             }
 
-            return StepRules.Runs((EventPart)Current, FactsOf(ge, thisGO));
+            return StepRules.Runs(Current, FactsOf(ge, thisGO));
         }
 
         /// <summary>
@@ -526,7 +486,7 @@ namespace DarkwoodMP.World
         /// Run something with Current set to part (and Replaying, for a change
         /// that came from another game).
         /// </summary>
-        public static void RunAs(Part part, bool replaying, Action a)
+        public static void RunAs(EventPart part, bool replaying, Action a)
         {
             var was = Current;
             bool wasReplaying = Coop.Guards.Replaying;
