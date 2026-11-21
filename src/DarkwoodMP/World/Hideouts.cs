@@ -56,7 +56,9 @@ namespace DarkwoodMP.World
             // it lights another.
             s.OnPeerConnected += id =>
             {
-                if (S != null && S.IsHost && Player.Instance != null)
+                if (S != null
+                    && OvenRules.GivesHostsOven(
+                        S.IsHost, Player.Instance != null))
                 {
                     _ovens[id] = Player.Instance.experienceMachine;
                 }
@@ -74,11 +76,29 @@ namespace DarkwoodMP.World
         {
             get
             {
-                var s = S;
-                return s != null && WorldShare.InWorld && !WorldShare.Loading
-                    && ((s.IsHost && s.Peers.Count > 0)
-                        || NetEnemies.ClientMode);
+                return TogetherRules.Together(TogetherOf(S));
             }
+        }
+
+        /// <summary>
+        /// What TogetherRules knows of the session and the world.
+        /// </summary>
+        private static TogetherFacts TogetherOf(Session s)
+        {
+            if (s == null)
+            {
+                return default;
+            }
+
+            return new TogetherFacts
+            {
+                HasSession = true,
+                InWorld = WorldShare.InWorld,
+                Loading = WorldShare.Loading,
+                IsHost = s.IsHost,
+                Peers = s.Peers.Count,
+                ClientMode = NetEnemies.ClientMode,
+            };
         }
 
         private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
@@ -92,7 +112,9 @@ namespace DarkwoodMP.World
 
             foreach (var loc in Object.FindObjectsOfType<Location>())
             {
-                if (loc != null && loc.hideoutId == id && !loc.isSubLocation)
+                if (loc != null
+                    && PorterRules.IsHideout(
+                        id, loc.hideoutId, loc.isSubLocation))
                 {
                     return loc;
                 }
@@ -109,50 +131,57 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool Transport(Location src)
         {
-            if (!Together)
+            var part = ScriptedEvents.Current;
+            var step = PorterRules.Transport(new TransportFacts
+            {
+                Together = Together,
+                IsClient = S != null && S.IsClient,
+                OthersPart = part == ScriptedEvents.Part.SharedOnly,
+                JoinersPart = part == ScriptedEvents.Part.HostAndShared,
+                Replaying = Coop.Guards.Replaying,
+            });
+
+            if (step == TransportStep.RunGame)
             {
                 return true;
             }
 
             var s = S;
-            if (s.IsClient)
-            {
-                // Our player's doing (our own part of the event): ask the host.
-                // Another player's: the host's result comes.
-                if (ScriptedEvents.Current != ScriptedEvents.Part.SharedOnly
-                    && !Coop.Guards.Replaying)
-                {
-                    var w = s.Begin(MsgType.PorterTransport);
-                    PorterTransportMessage.Write(w, src.hideoutId);
-                    if (Debug)
-                    {
-                        Plugin.Log.LogInfo(
-                            "[world] sent porter transport from hideout "
-                                + $"{src.hideoutId}");
-                    }
 
-                    Coop.Current.Authority.Request(
-                        w, $"porter transport from hideout {src.hideoutId}",
-                        inventory: false);
+            // A client: our player's doing (our own part of the event) asks
+            // the host; another player's waits for the host's result. The
+            // host: a joiner's event is done when its own PorterTransport
+            // comes, for its hideout.
+            if (step == TransportStep.Request)
+            {
+                var w = s.Begin(MsgType.PorterTransport);
+                PorterTransportMessage.Write(w, src.hideoutId);
+                if (Debug)
+                {
+                    Plugin.Log.LogInfo(
+                        "[world] sent porter transport from hideout "
+                            + $"{src.hideoutId}");
                 }
 
+                Coop.Current.Authority.Request(
+                    w, $"porter transport from hideout {src.hideoutId}",
+                    inventory: false);
                 return false;
             }
 
-            // Host: a joiner's event is done when its own PorterTransport
-            // comes, for its hideout.
-            if (ScriptedEvents.Current == ScriptedEvents.Part.HostAndShared)
+            if (step == TransportStep.Nothing)
             {
                 return false;
             }
 
             Player.Instance.whereAmI.checkWhereAmI();
             var dest = Player.Instance.whereAmI.bigLocation;
-            if (Why(src, dest) is string why)
+            Verdict why = PorterRules.Why(FactsOf(src, dest));
+            if (why.Refused)
             {
                 Plugin.Log.LogInfo(
                     $"[world] porter transport from {src.name}: not done "
-                        + $"({why})");
+                        + $"({Refusals.Text(why)})");
                 return false;
             }
 
@@ -160,29 +189,35 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        private static string Why(Location src, Location dest)
+        /// <summary>
+        /// What PorterRules knows of a move from src to dest (either may be
+        /// null): the only code that reads the two hideouts for it.
+        /// </summary>
+        private static HideoutFacts FactsOf(Location src, Location dest)
         {
-            if (src == null || src.hideoutId <= 0)
+            var facts = new HideoutFacts { Same = dest == src };
+            if (src != null)
             {
-                return "no such hideout to take things from";
+                facts = facts with
+                {
+                    HasSource = true,
+                    SourceId = src.hideoutId,
+                };
             }
 
-            if (dest == null || !dest.playerBase || dest.hideoutId <= 0)
+            if (dest != null)
             {
-                return "not at a hideout";
+                facts = facts with
+                {
+                    HasTarget = true,
+                    TargetBase = dest.playerBase,
+                    TargetId = dest.hideoutId,
+                    HasPackagePlace = dest.porterDeliveryPosition != null,
+                    TargetName = dest.name,
+                };
             }
 
-            if (dest == src)
-            {
-                return "already at that hideout";
-            }
-
-            if (dest.porterDeliveryPosition == null)
-            {
-                return $"{dest.name} has no place for the porter's package";
-            }
-
-            return null;
+            return facts;
         }
 
         private static void OnPorterTransport(ulong from, PacketReader r)
@@ -200,17 +235,19 @@ namespace DarkwoodMP.World
             }
 
             var proxy = Coop.Current.Authority.Requester;
-            if (proxy == null)
+            Location dest = null;
+            Location src = null;
+            if (proxy != null)
             {
-                Coop.Current.Authority.Refuse("where they are isn't known yet");
-                return;
+                dest = NightSpawns.BigLocationAt(proxy.transform.position);
+                src = HideoutById(hid);
             }
 
-            var dest = NightSpawns.BigLocationAt(proxy.transform.position);
-            var src = HideoutById(hid);
-            if (Why(src, dest) is string why)
+            Verdict may =
+                PorterRules.MayTransport(proxy != null, FactsOf(src, dest));
+            if (may.Refused)
             {
-                Coop.Current.Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(may);
                 return;
             }
 
@@ -228,11 +265,11 @@ namespace DarkwoodMP.World
             long id = HostIds.NewId(), spawnerId = HostIds.NewId();
             var inv = MakePackage(dest, id);
             Inventory.moveSlots(slots, inv.slots);
-            foreach (var item in inv.getAllItems("alcohol"))
+            foreach (var item in inv.getAllItems(PorterRules.Alcohol))
             {
                 if (!InvItemClass.isNull(item))
                 {
-                    item.type = "bottle";
+                    item.type = PorterRules.Bottle;
                     item.assignClass();
                 }
             }
@@ -378,7 +415,7 @@ namespace DarkwoodMP.World
             }
 
             Singleton<Flags>.Instance.setFlag(
-                "porter_inTransit", activeModifier: true);
+                PorterRules.InTransit, activeModifier: true);
         }
 
         // ---- the porter whistle ---------------------------------------------
@@ -390,17 +427,20 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool CallPorter(Location loc)
         {
-            if (!Together || Coop.Guards.Replaying
-                || loc.porterPosition == null)
-            {
-                return true;
-            }
-
             var s = S;
-            if (s.IsHost)
+
+            // The host's own (or a joiner's, from OnPorterCalled):
+            // PorterCalledHere tells the others.
+            var step = PorterRules.Call(new CallFacts
             {
-                // ours (or a joiner's, from OnPorterCalled): PorterCalledHere
-                // tells the others
+                Together = Together,
+                Replaying = Coop.Guards.Replaying,
+                HasPorterPlace = loc.porterPosition != null,
+                IsHost = s != null && s.IsHost,
+            });
+
+            if (step == CallStep.RunGame)
+            {
                 return true;
             }
 
@@ -423,7 +463,16 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void PorterCalledHere(Location loc)
         {
-            if (!Together || !S.IsHost || loc.porterPosition == null)
+            var called = PorterRules.CalledHere(new CalledFacts
+            {
+                SpawnerMade = true,
+                RanGame = true,
+                Together = Together,
+                IsHost = S != null && S.IsHost,
+                HasPorterPlace = loc.porterPosition != null,
+            });
+
+            if (!called)
             {
                 return;
             }
@@ -441,8 +490,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static Location PorterLocationAt(Vector3 pos)
         {
-            Location best = null;
-            float bestD = 50f;
+            var locs = new List<Location>();
+            var places = new List<Vec3>();
             foreach (var loc in Object.FindObjectsOfType<Location>())
             {
                 if (loc == null || loc.porterPosition == null)
@@ -450,16 +499,53 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                float d = Vector3.Distance(
-                    loc.porterPosition.transform.position, pos);
-                if (d < bestD)
-                {
-                    best = loc;
-                    bestD = d;
-                }
+                locs.Add(loc);
+                places.Add(VecOf(loc.porterPosition.transform.position));
             }
 
-            return best;
+            int best = PorterRules.NearestPorterPlace(places, VecOf(pos));
+            if (best < 0)
+            {
+                return null;
+            }
+
+            return locs[best];
+        }
+
+        /// <summary>
+        /// What PorterRules knows of a joiner's porter call at loc (null for
+        /// no porter's place there): the only code that reads the place, the
+        /// flags and the stand-in for it.
+        /// </summary>
+        private static CallCheckFacts FactsOf(Location loc, NetPlayerProxy p)
+        {
+            if (loc == null)
+            {
+                return default;
+            }
+
+            var flags = Singleton<Flags>.Instance;
+            var facts = new CallCheckFacts
+            {
+                HasPlace = true,
+                Known = p != null,
+                PlaceName = loc.name,
+            };
+
+            if (p == null)
+            {
+                return facts;
+            }
+
+            return facts with
+            {
+                AtPlace =
+                    NightSpawns.BigLocationAt(p.transform.position) == loc,
+                IsDay = Core.isDay(),
+                InTransit = flags.isFlagTrue(PorterRules.InTransit),
+                Killed = flags.isFlagTrue(PorterRules.Killed),
+                PorterThere = loc.porter != null,
+            };
         }
 
         private static void OnPorterCalled(ulong from, PacketReader r)
@@ -480,52 +566,11 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (loc == null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "there's no porter's place there");
-                    return;
-                }
-
                 var proxy = Coop.Current.Authority.Requester;
-                if (proxy == null)
+                Verdict may = PorterRules.MayCall(FactsOf(loc, proxy));
+                if (may.Refused)
                 {
-                    Coop.Current.Authority.Refuse(
-                        "where they are isn't known yet");
-                    return;
-                }
-
-                if (NightSpawns.BigLocationAt(proxy.transform.position) != loc)
-                {
-                    Coop.Current.Authority.Refuse($"they aren't at {loc.name}");
-                    return;
-                }
-
-                if (!Core.isDay())
-                {
-                    Coop.Current.Authority.Refuse(
-                        "the porter comes in the daytime only");
-                    return;
-                }
-
-                var flags = Singleton<Flags>.Instance;
-                if (flags.isFlagTrue("porter_inTransit"))
-                {
-                    Coop.Current.Authority.Refuse(
-                        "the porter is on the way already");
-                    return;
-                }
-
-                if (flags.isFlagTrue("porter_killed"))
-                {
-                    Coop.Current.Authority.Refuse("the porter is dead");
-                    return;
-                }
-
-                if (loc.porter != null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "the porter is there already");
+                    Coop.Current.Authority.Refuse(may);
                     return;
                 }
 
@@ -591,18 +636,21 @@ namespace DarkwoodMP.World
             Coop.Current.Authority.Request(BeginOven(machine, prev),
                 $"light the oven {machine.name}", (ok, reason, result) =>
             {
-                if (ok || machine == null)
+                var back = OvenRules.Rollback(new RollbackFacts
                 {
-                    return;
-                }
+                    Allowed = ok,
+                    Exists = machine != null,
+                    WasOn = wasOn,
+                    StillOurs = Player.Instance != null
+                        && Player.Instance.experienceMachine == machine,
+                });
 
-                if (!wasOn)
+                if (back.PutOut)
                 {
                     machine.disable();
                 }
 
-                if (Player.Instance != null
-                    && Player.Instance.experienceMachine == machine)
+                if (back.GiveBack)
                 {
                     Player.Instance.experienceMachine = prev;
                 }
@@ -618,23 +666,27 @@ namespace DarkwoodMP.World
         private static ExperienceMachine PutOut(
             ExperienceMachine prev, ExperienceMachine lit, ulong except)
         {
-            if (prev == null || prev == lit)
-            {
-                return null;
-            }
-
-            if (Player.Instance != null
-                && Player.Instance.experienceMachine == prev)
-            {
-                return null;
-            }
-
+            bool others = false;
             foreach (var kv in _ovens)
             {
                 if (kv.Key != except && kv.Value == prev)
                 {
-                    return null;
+                    others = true;
                 }
+            }
+
+            var old = new PutOutFacts
+            {
+                HasOld = prev != null,
+                OldIsLit = prev == lit,
+                OldIsHosts = Player.Instance != null
+                    && Player.Instance.experienceMachine == prev,
+                OldIsOthers = others,
+            };
+
+            if (!OvenRules.PutsOut(old))
+            {
+                return null;
             }
 
             bool was = Coop.Guards.Replaying;
@@ -717,22 +769,10 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (lit == null)
+                Verdict may = OvenRules.MayLight(FactsOf(lit));
+                if (may.Refused)
                 {
-                    Coop.Current.Authority.Refuse("no such oven here");
-                    return;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    lit.transform.position, WorldActions.Reach, lit.name))
-                {
-                    return;
-                }
-
-                if (lit.transform.GetLocation() == null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "that oven isn't at a hideout");
+                    Coop.Current.Authority.Refuse(may);
                     return;
                 }
 
@@ -766,13 +806,13 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(line + otherOut + missing);
             }
 
-            if (lit != null && !lit.isOn)
+            var change = OvenRules.FromHost(FactsOf(lit, other));
+            if (change.Light)
             {
                 LightHere(lit);
             }
 
-            if (other != null && other != lit && Player.Instance != null
-                && Player.Instance.experienceMachine != other)
+            if (change.PutOut)
             {
                 Coop.Guards.Replaying = true;
                 try
@@ -784,6 +824,59 @@ namespace DarkwoodMP.World
                     Coop.Guards.Replaying = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Host: what OvenRules knows of a joiner's lit oven (null for none
+        /// here): the only code that reads it for MayLight.
+        /// </summary>
+        private static OvenFacts FactsOf(ExperienceMachine lit)
+        {
+            if (lit == null)
+            {
+                return default;
+            }
+
+            var reach = Coop.Current.Authority.ReachOf(
+                lit.transform.position, lit.name);
+            return new OvenFacts
+            {
+                Exists = true,
+                Reach = reach with { Reach = WorldActions.Reach },
+                AtLocation = lit.transform.GetLocation() != null,
+            };
+        }
+
+        /// <summary>
+        /// A client: what OvenRules knows of the host's lit oven and the one
+        /// it put out (either may be null).
+        /// </summary>
+        private static HostOvenFacts FactsOf(
+            ExperienceMachine lit, ExperienceMachine other)
+        {
+            var p = Player.Instance;
+            var facts = new HostOvenFacts
+            {
+                Found = lit != null,
+                HasOther = other != null,
+                OtherIsLit = other == lit,
+                HasPlayer = p != null,
+            };
+
+            if (lit != null)
+            {
+                facts = facts with { On = lit.isOn };
+            }
+
+            if (p != null)
+            {
+                facts = facts with
+                {
+                    OtherIsOurs = p.experienceMachine == other,
+                };
+            }
+
+            return facts;
         }
 
         /// <summary>
@@ -826,25 +919,56 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool IsWorldMove(GameEvent ge)
         {
-            if (ge.type != GameEvent.Type.moveInventory
-                || ge.sourceTransform == null)
+            return WorldMoveRules.IsWorldMove(FactsOf(ge));
+        }
+
+        /// <summary>
+        /// What WorldMoveRules knows of a GameEvent step: the only code that
+        /// reads the step and its containers for it. The source and targets
+        /// are read only for a moveInventory step from a fixed source.
+        /// </summary>
+        private static WorldMoveFacts FactsOf(GameEvent ge)
+        {
+            int objects = 0;
+            if (ge.locationObjects != null)
             {
-                return false;
+                objects = ge.locationObjects.Count;
             }
 
-            if (ge.getTargetGameObjectsFromParent || ge.getTargetFromLocation
-                || (ge.locationObjects != null && ge.locationObjects.Count > 0))
+            var facts = new WorldMoveFacts
             {
-                return false;
+                MovesInventory = ge.type == GameEvent.Type.moveInventory,
+                HasSource = ge.sourceTransform != null,
+                FromParent = ge.getTargetGameObjectsFromParent,
+                FromLocation = ge.getTargetFromLocation,
+                LocationObjects = objects,
+            };
+
+            if (!facts.MovesInventory || !facts.HasSource || facts.FromParent
+                || facts.FromLocation || objects > 0)
+            {
+                return facts;
             }
 
             var src = ge.sourceTransform.GetComponent<Inventory>();
-            if (src == null || IsPlayers(src))
+            if (src == null)
             {
-                return false;
+                return facts;
+            }
+
+            facts = facts with
+            {
+                SourceInventory = true,
+                SourcePlayers = IsPlayers(src),
+            };
+
+            if (facts.SourcePlayers)
+            {
+                return facts;
             }
 
             int n = 0;
+            bool players = false;
             foreach (var go in Targets(ge))
             {
                 var inv = go.GetComponent<Inventory>();
@@ -855,13 +979,18 @@ namespace DarkwoodMP.World
 
                 if (IsPlayers(inv))
                 {
-                    return false;
+                    players = true;
+                    break;
                 }
 
                 n++;
             }
 
-            return n > 0;
+            return facts with
+            {
+                TargetInventories = n,
+                TargetPlayers = players,
+            };
         }
 
         private static IEnumerable<GameObject> Targets(GameEvent ge)
@@ -891,11 +1020,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool IsPlayers(Inventory inv) =>
-            inv.GetComponentInParent<Player>() != null
-                || (Player.Instance != null
-                    && (inv == Player.Instance.Inventory
-                        || inv == Player.Instance.Hotbar));
+        private static bool IsPlayers(Inventory inv)
+        {
+            var p = Player.Instance;
+            bool under = inv.GetComponentInParent<Player>() != null;
+            bool bag = p != null && inv == p.Inventory;
+            bool hotbar = p != null && inv == p.Hotbar;
+            return WorldMoveRules.IsPlayers(under, bag, hotbar);
+        }
 
         /// <summary>
         /// Host: run a world move's coroutine, then send the source's and the
@@ -909,7 +1041,8 @@ namespace DarkwoodMP.World
             }
 
             CoopSession coop = Coop.Current;
-            if (!Together || !S.IsHost || coop == null)
+            bool host = S != null && S.IsHost;
+            if (!WorldMoveRules.SendsAfter(Together, host, coop != null))
             {
                 yield break;
             }
@@ -970,9 +1103,10 @@ namespace DarkwoodMP.World
         static bool Prefix(Location __instance, out bool __state)
         {
             // Whether it will make the porter's spawner (its own conditions).
-            __state = __instance.porterPosition != null
-                && __instance.porter == null
-                && !Singleton<Flags>.Instance.isFlagTrue("porter_killed");
+            __state = PorterRules.SpawnerMade(
+                __instance.porterPosition != null,
+                __instance.porter != null,
+                Singleton<Flags>.Instance.isFlagTrue(PorterRules.Killed));
             if (Hideouts.CallPorter(__instance))
             {
                 return true;
@@ -999,8 +1133,15 @@ namespace DarkwoodMP.World
         static bool Prefix(
             Player __instance, ExperienceMachine machine, bool doEnable)
         {
-            if (machine == null || !doEnable || Coop.Guards.Replaying
-                || !Hideouts.Together)
+            var call = new OvenCallFacts
+            {
+                HasOven = machine != null,
+                Enable = doEnable,
+                Replaying = Coop.Guards.Replaying,
+                Together = Hideouts.Together,
+            };
+
+            if (!OvenRules.TakesOver(call))
             {
                 return true;
             }
