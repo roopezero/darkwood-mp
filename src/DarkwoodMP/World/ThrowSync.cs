@@ -71,60 +71,66 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The local player threw it (called after Player.throwItem).
         /// </summary>
-        internal void Thrown(
-            string type, GameObject go, Vector3 from, bool dropped = false)
+        internal void Thrown(string type, GameObject go, Vector3 from)
         {
-            if (!Coop.Guards.Sharing || go == null
-                || string.IsNullOrEmpty(type))
+            if (!ThrowRules.Shares(FactsOf(go, type)))
             {
                 return;
             }
 
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
-            if (ti == null || rb == null)
+            ThrowShot shot = ThrowRules.Thrown(
+                VecOf(rb.velocity), VecOf(ti.landTarget), VecOf(from));
+            Send(type, go, shot);
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo($"[world] threw {type}");
+            }
+        }
+
+        /// <summary>
+        /// The local player dropped it at their feet (after
+        /// Player.dropItem).
+        /// </summary>
+        internal void Dropped(string type, GameObject go)
+        {
+            if (!ThrowRules.Shares(FactsOf(go, type)))
             {
                 return;
             }
 
-            var w = _session.Begin(MsgType.ItemThrown);
-            Vector3 vel;
-            if (dropped)
+            Send(type, go, ThrowRules.Dropped(VecOf(go.transform.position)));
+            if (WorldActions.Debug)
             {
-                vel = Vector3.zero;
+                Plugin.Log.LogInfo($"[world] dropped {type}");
             }
-            else
-            {
-                vel = rb.velocity;
-            }
+        }
 
-            Vector3 target;
-            if (dropped)
+        private static ThrowFacts FactsOf(GameObject go, string type)
+        {
+            var facts = new ThrowFacts
             {
-                target = go.transform.position;
-            }
-            else
-            {
-                target = ti.landTarget;
-            }
-
-            float distance;
-            if (dropped)
-            {
-                distance = Dropped;
-            }
-            else
-            {
-                distance = Vector3.Distance(ti.landTarget, from);
-            }
-
-            var shot = new ThrowShot
-            {
-                Velocity = VecOf(vel),
-                Target = VecOf(target),
-                Distance = distance,
+                Sharing = Coop.Guards.Sharing,
+                Type = type,
             };
 
+            if (go == null)
+            {
+                return facts;
+            }
+
+            return facts with
+            {
+                Held = true,
+                Thrown = go.GetComponent<ThrownItem>() != null,
+                Body = go.GetComponent<Rigidbody>() != null,
+            };
+        }
+
+        private void Send(string type, GameObject go, ThrowShot shot)
+        {
+            var w = _session.Begin(MsgType.ItemThrown);
             ItemThrown.Write(
                 w, Report(_session.LocalId, type, go.transform, shot));
             if (_session.IsHost)
@@ -134,17 +140,6 @@ namespace DarkwoodMP.World
             else
             {
                 _session.SendToHost(w, Channel.Control, reliable: true);
-            }
-
-            if (WorldActions.Debug)
-            {
-                string text = "threw";
-                if (dropped)
-                {
-                    text = "dropped";
-                }
-
-                Plugin.Log.LogInfo($"[world] {text} {type}");
             }
         }
 
@@ -187,12 +182,6 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>
-        /// The distance sent for something dropped at the player's feet
-        /// (Player.dropItem), not thrown.
-        /// </summary>
-        private const float Dropped = -1f;
-
         private static ThrowReport Report(
             ulong by, string type, Transform at, ThrowShot shot)
         {
@@ -211,29 +200,43 @@ namespace DarkwoodMP.World
 
         private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
+        /// <summary>
+        /// What OnThrown decides from: this game, the sender, and where the
+        /// sender's stand-in is (the host's check of where it was thrown
+        /// from).
+        /// </summary>
+        private ThrownFacts FactsOf(ulong from, in ThrowReport report)
+        {
+            var s = _session;
+            var facts = new ThrownFacts
+            {
+                InWorld = WorldShare.InWorld,
+                IsHost = s.IsHost,
+                IsClient = s.IsClient,
+                From = from,
+                HostId = s.HostId,
+                LocalId = s.LocalId,
+                ReportedBy = report.By,
+                Pos = report.Pos.Ground,
+            };
+
+            NetPlayerProxy.All.TryGetValue(from, out var proxy);
+            if (proxy == null)
+            {
+                return facts;
+            }
+
+            Vector3 at = proxy.transform.position;
+            return facts with { Known = true, StandIn = new Vec2(at.x, at.z) };
+        }
+
         private void OnThrown(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!WorldShare.InWorld)
-            {
-                return;
-            }
-
-            if (s.IsClient && from != s.HostId)
-            {
-                return;
-            }
-
             ThrowReport report = ItemThrown.Read(r);
-            ulong by = report.By;
+            ThrowReceipt receipt = ThrowRules.Receive(FactsOf(from, report));
             string type = report.Type;
-            var pos = VectorOf(report.Pos);
-            var rot = new Quaternion(
-                report.Rot.X, report.Rot.Y, report.Rot.Z, report.Rot.W);
-            var vel = VectorOf(report.Shot.Velocity);
-            var target = VectorOf(report.Shot.Target);
-            float distance = report.Shot.Distance;
-            if (s.IsHost && !Coop.Current.Authority.Near(from, pos, 400f))
+            if (receipt.Refused)
             {
                 Plugin.Log.LogInfo(
                     $"[authority] {s.NameOf(from)} threw a {type} from where "
@@ -241,19 +244,25 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (s.IsHost)
+            ulong by = receipt.By;
+            if (receipt.Relays)
             {
-                by = from; // never trust who a client says threw it
                 var w = s.Begin(MsgType.ItemThrown);
                 ItemThrown.Write(w, report with { By = by });
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
 
-            if (by == s.LocalId)
+            if (!receipt.Copies)
             {
                 return;
             }
 
+            var pos = VectorOf(report.Pos);
+            var rot = new Quaternion(
+                report.Rot.X, report.Rot.Y, report.Rot.Z, report.Rot.W);
+            var vel = VectorOf(report.Shot.Velocity);
+            var target = VectorOf(report.Shot.Target);
+            float distance = report.Shot.Distance;
             ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
             InvItem item = null;
             if (instance != null)
@@ -320,7 +329,14 @@ namespace DarkwoodMP.World
             // same, a molotov or gas bomb broke on the thrower at once and set
             // them alight.
             IgnoreThrower(go, by);
-            if (distance < 0f)
+            CopyEnd end = ThrowRules.Landing(new ThrowCopyFacts
+            {
+                Distance = distance,
+                Recoverable = item.recoverableAfterThrown,
+                IsHost = s.IsHost,
+            });
+
+            if (ThrowRules.IsDrop(distance))
             {
                 // Dropped, as Player.dropItem does it: it lies where it fell
                 // and goes off after its delay.
@@ -334,10 +350,7 @@ namespace DarkwoodMP.World
 
                 ThrownHits.Copies.Add(go);
                 ti.dropMe();
-                if (s.IsHost)
-                {
-                    Core.addToSaveable(go, isDynamic: true);
-                }
+                Land(go, ti, end);
 
                 if (WorldActions.Debug)
                 {
@@ -370,21 +383,28 @@ namespace DarkwoodMP.World
             }
 
             ThrownHits.Copies.Add(go);
-            if (item.recoverableAfterThrown)
-            {
-                // the thrower's lands; this one goes
-                Object.Destroy(go, ti.flyTime + 2f);
-            }
-            else if (s.IsHost)
-            {
-                // a flare left burning, a spent molotov: the host's world keeps
-                // it
-                Core.addToSaveable(go, isDynamic: true);
-            }
-
+            Land(go, ti, end);
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] {s.NameOf(by)} threw {type}");
+            }
+        }
+
+        /// <summary>
+        /// What becomes of the copy (ThrowRules.Landing): one that can be
+        /// picked up again goes after its flight (the thrower's lands); the
+        /// host keeps the rest (a flare left burning, a spent molotov) in
+        /// its save.
+        /// </summary>
+        private static void Land(GameObject go, ThrownItem ti, CopyEnd end)
+        {
+            if (end == CopyEnd.Goes)
+            {
+                Object.Destroy(go, ThrowRules.GoesAfter(ti.flyTime).Value);
+            }
+            else if (end == CopyEnd.Saved)
+            {
+                Core.addToSaveable(go, isDynamic: true);
             }
         }
     }
@@ -405,14 +425,14 @@ namespace DarkwoodMP.World
         static void Postfix(
             Player __instance, (GameObject go, string type) __state)
         {
-            if (__state.go != null && ThrowSync.Held(__instance) == null)
+            bool before = __state.go != null;
+            bool now = ThrowSync.Held(__instance) != null;
+            if (ThrowRules.WasDropped(before, now))
             {
                 ThrowSync instance = ThrowSync.Instance;
                 if (instance != null)
                 {
-                    instance.Thrown(
-                        __state.type, __state.go, __instance.transform.position,
-                        dropped: true);
+                    instance.Dropped(__state.type, __state.go);
                 }
             }
         }
@@ -476,17 +496,26 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Now()
         {
-            if (Depth > 0)
+            return ThrownHitRules.Now(new ThrownHitFacts
             {
-                return true;
-            }
+                Depth = Depth,
+                Flame = CurrentFlame != null,
+                UnderSpawned = UnderSpawned(CurrentFlame),
+            });
+        }
 
-            if (CurrentFlame == null)
+        /// <summary>
+        /// Whether the flame, or a parent of it, is something a thrown thing
+        /// spawned.
+        /// </summary>
+        private static bool UnderSpawned(Flame flame)
+        {
+            if (flame == null)
             {
                 return false;
             }
 
-            for (var t = CurrentFlame.transform; t != null; t = t.parent)
+            for (var t = flame.transform; t != null; t = t.parent)
             {
                 if (Spawned.Contains(t.gameObject))
                 {
@@ -676,9 +705,29 @@ namespace DarkwoodMP.World
         /// explosions there happen only here.
         /// </summary>
         internal static bool HostReports() =>
-            NetEnemies.ClientMode && ThrownHits.Depth > 0
-                && ThrownHits.CurrentFlame == null
-                && !EnemyAreaHits.PlayerAway() && InExplosion();
+            ThrownHitRules.HostMayReport(SelfHit()) && InExplosion();
+
+        /// <summary>
+        /// What the client looks at for an explosion on its own player.
+        /// </summary>
+        internal static SelfHitFacts SelfHit()
+        {
+            var facts = new SelfHitFacts
+            {
+                ClientMode = NetEnemies.ClientMode,
+                Depth = ThrownHits.Depth,
+                Flame = ThrownHits.CurrentFlame != null,
+            };
+
+            // Only a client inside something thrown asks: where the player
+            // is costs singleton lookups on every hit.
+            if (!facts.ClientMode || facts.Depth <= 0)
+            {
+                return facts;
+            }
+
+            return facts with { Away = EnemyAreaHits.PlayerAway() };
+        }
 
         private static bool InExplosion()
         {
@@ -713,10 +762,18 @@ namespace DarkwoodMP.World
             AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(
                 m => m.Name == nameof(CharacterEffects.activate));
 
-        static bool Prefix(CharacterEffects __instance) =>
-            !(ThrownHits.Depth > 0 && __instance != null
-                    && Player.Instance != null
-                    && __instance == Player.Instance.effects
-                    && ClientExplosionSelfHitPatch.HostReports());
+        static bool Prefix(CharacterEffects __instance)
+        {
+            var player = Player.Instance;
+            bool ours = __instance != null && player != null
+                && __instance == player.effects;
+            if (!ThrownHitRules.HostMayReportEffect(
+                ClientExplosionSelfHitPatch.SelfHit(), ours))
+            {
+                return true;
+            }
+
+            return !ClientExplosionSelfHitPatch.HostReports();
+        }
     }
 }
