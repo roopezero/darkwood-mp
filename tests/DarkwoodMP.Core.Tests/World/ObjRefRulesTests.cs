@@ -2,7 +2,7 @@ using DarkwoodMP.World;
 
 namespace DarkwoodMP.Tests.World
 {
-    public class ObjRefRulesTests
+    public partial class ObjRefRulesTests
     {
         const int Hash = 0x123456;
 

@@ -65,6 +65,19 @@ namespace DarkwoodMP.World
             return new ObjName(ObjKind.Placed, key);
         }
 
+        /// Whether Of names the object by its name and position, so the
+        /// shell reads those (NameHash, Pos) only then: it is alive, and
+        /// nothing before them names it.
+        public static bool NeedsPlace(in NamingFacts obj)
+        {
+            if (!obj.Exists || obj.Pinned)
+            {
+                return false;
+            }
+
+            return Of(obj).Kind == ObjKind.Placed;
+        }
+
         /// The part of a name's StableHash that a Placed key holds.
         public static int NameKey(int hash)
         {

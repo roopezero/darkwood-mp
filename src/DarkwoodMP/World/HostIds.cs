@@ -38,10 +38,7 @@ namespace DarkwoodMP.World
     {
         private static Session _session;
         // how far apart in time the host's object and a client's copy may start
-        // how long after it starts an object is looked at
-        public const float Window = 30f;
-        private const float Settle = 1f;
-        private const byte MadeBefore = 1;
+        public const float Window = HostIdRules.Window;
         private const int MaxPerMessage = HostIdsMessage.MaxPerMessage;
 
         private static readonly List<(GameObject go, float at)> _started =
@@ -75,7 +72,7 @@ namespace DarkwoodMP.World
         /// ids made in the same millisecond differ.
         /// </summary>
         internal static long NewId() =>
-            ((long)_rng.Next() << 31) | (uint)_rng.Next();
+            HostIdRules.NewId(_rng.Next(), _rng.Next());
 
         /// <summary>
         /// How many ids this game gave out (host) or tied (client); for the
@@ -133,7 +130,7 @@ namespace DarkwoodMP.World
             float now = Time.unscaledTime;
             if (now >= _nextPrune)
             {
-                _nextPrune = now + 10f;
+                _nextPrune = now + HostIdRules.PruneEvery;
                 ObjRef.PruneShared();
             }
 
@@ -147,13 +144,13 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < _started.Count; i++)
                 {
                     var (go, at) = _started[i];
-                    if (now - at < Settle)
+                    if (!HostIdRules.Settled(new Seconds(now - at)))
                     {
                         continue;
                     }
 
                     _started.RemoveAt(i--);
-                    if (go == null || !ObjRef.Unnamed(go))
+                    if (!HostIdRules.NeedsId(go != null, ObjRef.Unnamed(go)))
                     {
                         continue;
                     }
@@ -197,7 +194,9 @@ namespace DarkwoodMP.World
                 {
                     _pending.RemoveAt(i--);
                 }
-                else if (now > p.until)
+                else if (HostIdRules.Expired(
+                    new Seconds(now),
+                    new Seconds(p.until)))
                 {
                     AddLate(p.id, p.name, p.pos, p.place);
                     _pending.RemoveAt(i--);
@@ -210,7 +209,8 @@ namespace DarkwoodMP.World
             {
                 foreach (var (go, at) in _started)
                 {
-                    if (go != null && now - at >= Settle
+                    if (go != null
+                        && HostIdRules.Settled(new Seconds(now - at))
                         && _lateChecked.Add(go))
                     {
                         TryBindLate(go);
@@ -219,7 +219,9 @@ namespace DarkwoodMP.World
             }
 
             // Forget what started too long ago to be anyone's copy.
-            _started.RemoveAll(s => s.go == null || now - s.at > Window);
+            _started.RemoveAll(
+                s => s.go == null
+                    || HostIdRules.Forgotten(new Seconds(now - s.at)));
             if (_started.Count == 0)
             {
                 _lateChecked.Clear();
@@ -249,28 +251,24 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static int PlaceOf(GameObject go)
         {
-            var sb = new System.Text.StringBuilder();
-            // The root's own index is left out: it is its place among the
-            // scene's roots, which differs between games.
+            var levels = new List<PlaceLevel>();
             for (var t = go.transform; t != null; t = t.parent)
             {
-                sb.Append(t.name);
-                if (t.parent != null)
-                {
-                    sb.Append(':').Append(t.GetSiblingIndex());
-                }
-
-                sb.Append('/');
+                levels.Add(
+                    new PlaceLevel
+                    {
+                        Name = t.name,
+                        Index = t.GetSiblingIndex(),
+                    });
             }
 
-            return StableHash.Of(sb.ToString());
+            return StableHash.Of(HostIdRules.PlacePath(levels));
         }
 
-        // Nearer wins; at the same distance (within a unit), the one in the
-        // same place in its hierarchy.
-        private static bool Better(
-            float d, bool samePlace, float bestD, bool bestSame) =>
-            d < bestD - 1f || (d <= bestD + 1f && samePlace && !bestSame);
+        private static Vec2 GroundOf(Vector3 p)
+        {
+            return new Vec2(p.x, p.z);
+        }
 
         private static void TryBindLate(GameObject go)
         {
@@ -280,30 +278,23 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var q = go.transform.position;
-            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack + 2f;
-            bool bestSame = false;
+            var q = GroundOf(go.transform.position);
+            var bestOne = default(Candidate);
             int best = -1, place = PlaceOf(go);
             for (int i = 0; i < list.Count; i++)
             {
                 var (id, pos, p) = list[i];
-                if (ObjRef.IsBound(id))
+                float d = HostIdRules.SquaredDistance(q, GroundOf(pos));
+                if (!HostIdRules.IsLateCandidate(ObjRef.IsBound(id), d))
                 {
                     continue;
                 }
 
-                float d = (q.x - pos.x) * (q.x - pos.x)
-                    + (q.z - pos.z) * (q.z - pos.z);
-                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack)
+                var one = new Candidate { Squared = d, SamePlace = p == place };
+                if (best < 0 || HostIdRules.Better(one, bestOne))
                 {
-                    continue;
-                }
-
-                if (best < 0 || Better(d, p == place, bestD, bestSame))
-                {
-                    bestD = d;
+                    bestOne = one;
                     best = i;
-                    bestSame = p == place;
                 }
             }
 
@@ -323,40 +314,58 @@ namespace DarkwoodMP.World
             }
         }
 
+        /// <summary>
+        /// What TryBind looks at in an object that started at at: whether it
+        /// may be the copy of the id announced for name.
+        /// </summary>
+        private static CopyFacts CopyOf(GameObject go, float at, string name)
+        {
+            if (go == null)
+            {
+                return default;
+            }
+
+            return new CopyFacts
+            {
+                Alive = true,
+                Age = new Seconds(Time.unscaledTime - at),
+                SameName = go.name == name,
+                Unnamed = ObjRef.Unnamed(go),
+                LateTied = _lateTied.Contains(go),
+            };
+        }
+
         private static bool TryBind(
             long id, string name, Vector3 pos, int place)
         {
             GameObject best = null;
-            bool bestSame = false;
-            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack,
-                now = Time.unscaledTime;
+            var bestOne = default(Candidate);
+            var spot = GroundOf(pos);
             foreach (var (go, at) in _started)
             {
-                if (go == null || now - at > Window || go.name != name
-                    || now - at < Settle / 2)
-                {
-                    continue; // a moment for our own replays to be named
-                }
-
-                if (!ObjRef.Unnamed(go) && !_lateTied.Contains(go))
+                if (!HostIdRules.MayBeCopy(CopyOf(go, at, name)))
                 {
                     continue;
                 }
 
-                var q = go.transform.position;
-                float d = (q.x - pos.x) * (q.x - pos.x)
-                    + (q.z - pos.z) * (q.z - pos.z);
-                if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack)
+                float d = HostIdRules.SquaredDistance(
+                    GroundOf(go.transform.position),
+                    spot);
+                if (!HostIdRules.InSlack(d))
                 {
                     continue;
                 }
 
-                bool same = PlaceOf(go) == place;
-                if (best == null || Better(d, same, bestD, bestSame))
+                var one = new Candidate
                 {
-                    bestD = d;
+                    Squared = d,
+                    SamePlace = PlaceOf(go) == place,
+                };
+
+                if (best == null || HostIdRules.Better(one, bestOne))
+                {
+                    bestOne = one;
                     best = go;
-                    bestSame = same;
                 }
             }
 
@@ -495,7 +504,7 @@ namespace DarkwoodMP.World
 
             if (all.Count > 0)
             {
-                Send(all, MadeBefore, peer);
+                Send(all, HostIdRules.MadeBefore, peer);
             }
         }
 
@@ -518,7 +527,7 @@ namespace DarkwoodMP.World
                 _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it
                 // loaded, found by name and position when named.
-                if ((flags & MadeBefore) != 0)
+                if (HostIdRules.GoesLate(flags))
                 {
                     AddLate(id, name, pos, place);
                     continue;

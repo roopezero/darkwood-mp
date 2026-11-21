@@ -34,10 +34,9 @@ namespace DarkwoodMP.World
         private static int _saved;
         // ... in the last snapshot the host wrote for a joiner
         private static int _snapshot;
-        // host: over the joiners let in to this world
-        private static int _hostMin = int.MaxValue, _hostMax;
-        // ... which is this loaded scene (its handle)
-        private static int _hostScene;
+        // host: over the joiners let in to this world, which is the loaded
+        // scene its Scene names (its handle)
+        private static JoinerIds _joiners;
 
         private static int Scene =>
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
@@ -51,39 +50,23 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Save ids below this are named as Saved in refs this game sends.
         /// </summary>
-        public static int SendLimit
-        {
-            get
-            {
-                if (_session != null && _session.IsHost)
-                {
-                    if (_hostMax == 0)
-                    {
-                        return 0;
-                    }
-
-                    return _hostMin;
-                }
-
-                return _loaded;
-            }
-        }
+        public static int SendLimit => SharedIdRules.SendLimit(FactsOf());
 
         /// <summary>
         /// Saved refs that come in with an id below this are looked up; others
         /// are dropped.
         /// </summary>
-        public static int ResolveLimit
-        {
-            get
-            {
-                if (_session != null && _session.IsHost)
-                {
-                    return _hostMax;
-                }
+        public static int ResolveLimit =>
+            SharedIdRules.ResolveLimit(FactsOf());
 
-                return _loaded;
-            }
+        private static IdLimitFacts FactsOf()
+        {
+            return new IdLimitFacts
+            {
+                Host = _session != null && _session.IsHost,
+                Joiners = _joiners,
+                Loaded = _loaded,
+            };
         }
 
         /// <summary>
@@ -105,30 +88,14 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Joined(ulong peer, int n)
         {
-            if (n <= 0)
+            // joiners let in to an earlier world don't count here
+            _joiners = SharedIdRules.Joined(_joiners, n, Scene);
+            if (n > 0)
             {
-                return;
+                Plugin.Log.LogInfo(
+                    $"#{peer} joined with save ids below {n}; save ids below "
+                        + $"{_joiners.Min} are shared with every player");
             }
-
-            if (_hostScene != Scene)
-            {
-                // joiners let in to an earlier world don't count here
-                ResetHost();
-            }
-
-            if (n < _hostMin)
-            {
-                _hostMin = n;
-            }
-
-            if (n > _hostMax)
-            {
-                _hostMax = n;
-            }
-
-            Plugin.Log.LogInfo(
-                $"#{peer} joined with save ids below {n}; save ids below "
-                    + $"{_hostMin} are shared with every player");
         }
 
         /// <summary>
@@ -137,9 +104,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void ResetHost()
         {
-            _hostMin = int.MaxValue;
-            _hostMax = 0;
-            _hostScene = Scene;
+            _joiners = SharedIdRules.Reset(Scene);
         }
 
         internal static void OnLoaded(int n)

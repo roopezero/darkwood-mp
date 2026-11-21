@@ -117,18 +117,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool BindShared(long id, GameObject go)
         {
-            if (go == null)
-            {
-                return false;
-            }
-
-            if (_shared.TryGetValue(id, out var had) && had != null
-                && had != go)
-            {
-                return false;
-            }
-
-            if (_sharedIds.TryGetValue(go, out long hadId) && hadId != id)
+            if (!ObjRefRules.MayTie(TieOf(id, go)))
             {
                 return false;
             }
@@ -136,6 +125,27 @@ namespace DarkwoodMP.World
             _shared[id] = go;
             _sharedIds[go] = id;
             return true;
+        }
+
+        /// What tying go to the host's id looks at.
+        private static TieFacts TieOf(long id, GameObject go)
+        {
+            if (go == null)
+            {
+                return new TieFacts { Id = id };
+            }
+
+            bool idTied = _shared.TryGetValue(id, out var had) && had != null;
+            bool objectTied = _sharedIds.TryGetValue(go, out long hadId);
+            return new TieFacts
+            {
+                Id = id,
+                Exists = true,
+                IdTied = idTied,
+                IdTiedHere = idTied && had == go,
+                ObjectTied = objectTied,
+                ObjectId = hadId,
+            };
         }
 
         /// <summary>
@@ -264,69 +274,79 @@ namespace DarkwoodMP.World
 
         public static ObjRef Of(GameObject go)
         {
+            NamingFacts facts = FactsOf(go);
+            if (ObjRefRules.NeedsPlace(facts))
+            {
+                facts = facts with
+                {
+                    NameHash = StableHash.Of(go.name),
+                    Pos = GroundOf(go.transform.position),
+                };
+            }
+
+            return RefOf(ObjRefRules.Of(facts));
+        }
+
+        /// <summary>
+        /// What naming go looks at, apart from its name and position
+        /// (ObjRefRules.NeedsPlace says when those are read).
+        /// </summary>
+        private static NamingFacts FactsOf(GameObject go)
+        {
             if (go == null)
             {
                 return default;
             }
 
-            if (_spawnedIds.TryGetValue(go, out long sid))
-            {
-                return new ObjRef { K = Kind.Spawned, Id = sid };
-            }
-
+            bool spawned = _spawnedIds.TryGetValue(go, out long sid);
+            uint eid = 0;
+            bool enemy = false;
             var c = go.GetComponent<Character>();
-            if (c != null && NetEnemies.Instance != null
-                && NetEnemies.Instance.NetIdOf(c, out uint eid))
+            NetEnemies enemies = NetEnemies.Instance;
+            if (c != null && enemies != null)
             {
-                return new ObjRef { K = Kind.Enemy, Id = eid };
+                enemy = enemies.NetIdOf(c, out eid);
             }
 
+            int saveId = 0;
             var save = go.GetComponent<SaveableObject>();
-            if (save != null && save.uniqueId > 0
-                && save.uniqueId < SharedIds.SendLimit)
+            if (save != null)
             {
-                return new ObjRef { K = Kind.Saved, Id = save.uniqueId };
+                saveId = save.uniqueId;
             }
 
-            if (_sharedIds.TryGetValue(go, out long hid))
+            bool shared = _sharedIds.TryGetValue(go, out long hid);
+            bool pinned = _pinnedIds.TryGetValue(go, out long pid);
+            return new NamingFacts
             {
-                // stays as it moves
-                return new ObjRef { K = Kind.Spawned, Id = hid };
-            }
-
-            if (_pinnedIds.TryGetValue(go, out long pid))
-            {
-                return new ObjRef { K = Kind.Placed, Id = pid };
-            }
-
-            return new ObjRef { K = Kind.Placed, Id = PlacedKey(go) };
+                Exists = true,
+                Spawned = spawned,
+                SpawnedId = sid,
+                Enemy = enemy,
+                EnemyId = eid,
+                SaveId = saveId,
+                SendLimit = SharedIds.SendLimit,
+                Shared = shared,
+                SharedId = hid,
+                Pinned = pinned,
+                PinnedKey = pid,
+            };
         }
 
         /// <summary>
         /// How far from its named spot a Placed object is still found.
         /// </summary>
-        public const float PlacedSlack = 50f;
-        private const int Bits = 20,
-            Half = 1 << (Bits - 1),
-            Mask = (1 << Bits) - 1;
+        public const float PlacedSlack = ObjRefRules.PlacedSlack;
 
-        private static int NameHash(string name) =>
-            StableHash.Of(name) & 0xFFFFFF;
-
-        private static long PlacedKey(GameObject go) =>
-            PlacedKeyOf(go.name, go.transform.position);
+        private static Vec2 GroundOf(Vector3 p)
+        {
+            return new Vec2(p.x, p.z);
+        }
 
         private static long PlacedKeyOf(string name, Vector3 p)
         {
-            long x = (Mathf.RoundToInt(p.x) + Half) & Mask,
-                z = (Mathf.RoundToInt(p.z) + Half) & Mask;
-            return ((long)NameHash(name) << (2 * Bits)) | (x << Bits) | z;
+            return ObjRefRules.PlacedKey(StableHash.Of(name), GroundOf(p));
         }
-
-        private static (int name, float x, float z) Unpack(long id) =>
-            ((int)(id >> (2 * Bits))
-                & 0xFFFFFF, (int)((id >> Bits) & Mask)
-                    - Half, (int)(id & Mask) - Half);
 
         // Placed objects with a component T, by their name's hash, from a scan
         // of the scene for T at most every PlacedRescan seconds. There's one
@@ -338,45 +358,49 @@ namespace DarkwoodMP.World
         {
             public readonly Dictionary<int, List<GameObject>> ByName =
                 new Dictionary<int, List<GameObject>>();
-            public float At = -999f;
+            public float At = ObjRefRules.NeverScanned;
         }
 
         private static readonly Dictionary<System.Type, PlacedScan> _placed =
             new Dictionary<System.Type, PlacedScan>();
-        private const float PlacedRescan = 0.25f;
 
-        // The nearest within PlacedSlack; exact is whether it stands on the
-        // named spot (the key rounds to whole units).
+        // The live objects of one name in a scan, and where each stands, for
+        // ObjRefRules.Nearest.
+        private static readonly List<GameObject> _near =
+            new List<GameObject>();
+        private static readonly List<Vec2> _nearAt = new List<Vec2>();
+
+        // The nearest within PlacedSlack, and whether it stands on the named
+        // spot (the key rounds to whole units).
         private static GameObject NearestPlaced(
             PlacedScan scan, long id, out bool exact)
         {
             exact = false;
-            var (name, x, z) = Unpack(id);
-            if (!scan.ByName.TryGetValue(name, out var list))
+            PlacedSpot spot = ObjRefRules.Unpack(id);
+            if (!scan.ByName.TryGetValue(spot.Name, out var list))
             {
                 return null;
             }
 
-            GameObject best = null;
-            float bestD = PlacedSlack * PlacedSlack;
+            _near.Clear();
+            _nearAt.Clear();
             foreach (var go in list)
             {
-                if (go == null)
+                if (go != null)
                 {
-                    continue;
-                }
-
-                var p = go.transform.position;
-                float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
-                if (d <= bestD)
-                {
-                    bestD = d;
-                    best = go;
+                    _near.Add(go);
+                    _nearAt.Add(GroundOf(go.transform.position));
                 }
             }
 
-            exact = best != null && bestD <= 1f;
-            return best;
+            PlacedMatch match = ObjRefRules.Nearest(spot.Spot, _nearAt);
+            if (!match.Found)
+            {
+                return null;
+            }
+
+            exact = match.OnSpot;
+            return _near[match.Index];
         }
 
         private static int _unsharedLogged;
@@ -388,133 +412,31 @@ namespace DarkwoodMP.World
         public static T Resolve<T>(ObjRef r) where T : Component
         {
             GameObject go = null;
-            switch (r.K)
+            switch (ObjRefRules.SourceOf(LookupOf(r)))
             {
-                case Kind.Spawned:
-                    if (Spawned.TryGetValue(r.Id, out go) && go != null)
-                    {
-                        break;
-                    }
-
-                    if (_shared.TryGetValue(r.Id, out go) && go != null)
-                    {
-                        break;
-                    }
-
-                    // An id the host gave out that this game hasn't tied to its
-                    // copy yet: find it as Placed, and tie it.
-                    if (_announced.TryGetValue(r.Id, out long key))
-                    {
-                        var found = Resolve<T>(new ObjRef
-                        {
-                            K = Kind.Placed,
-                            Id = key
-                        });
-
-                        if (found != null)
-                        {
-                            go = found.gameObject;
-                        }
-                        else
-                        {
-                            go = null;
-                        }
-
-                        if (go != null && !_sharedIds.ContainsKey(go)
-                            && BindShared(r.Id, go))
-                        {
-                            HostIds.Place(r.Id, go);
-                        }
-                    }
-
+                case ObjSource.Spawned:
+                    go = Spawned[r.Id];
                     break;
-                case Kind.Enemy:
-                    NetEnemies instance = NetEnemies.Instance;
-                    Character c = null;
-                    if (instance != null)
-                    {
-                        c = instance.CharacterOf((uint)r.Id);
-                    }
-
-                    if (c != null)
-                    {
-                        go = c.gameObject;
-                    }
-                    else
-                    {
-                        go = null;
-                    }
-
+                case ObjSource.Shared:
+                    go = _shared[r.Id];
                     break;
-                case Kind.Saved:
-                    if (r.Id >= SharedIds.ResolveLimit)
-                    {
-                        if (_unsharedLogged++ < 20)
-                        {
-                            Plugin.Log.LogWarning(
-                                $"A ref to save id {r.Id} came in, but only "
-                                    + $"ids below {SharedIds.ResolveLimit} are "
-                                    + "the same in every game: ignored");
-                        }
-
-                        break;
-                    }
-
-                    var sm = Singleton<SaveManager>.Instance;
-                    if (sm != null
-                        && sm.uniqueIdDict.TryGetValue((int)r.Id, out var t)
-                        && t != null)
-                    {
-                        go = t.gameObject;
-                    }
-
+                case ObjSource.Announced:
+                    go = FromAnnounced<T>(r.Id);
                     break;
-                case Kind.Placed:
-                    if (_pinned.TryGetValue(r.Id, out go) && go != null)
-                    {
-                        break;
-                    }
-
-                    if (!_placed.TryGetValue(typeof(T), out var scan))
-                    {
-                        _placed[typeof(T)] = scan = new PlacedScan();
-                    }
-
-                    go = NearestPlaced(scan, r.Id, out bool exact);
-                    // Scan again when it isn't on its spot too: one made since
-                    // the last scan (a swamper's splats and their traps spread
-                    // over a few seconds) was otherwise taken for its neighbour
-                    // within PlacedSlack, and the host set off the neighbour's
-                    // trap event instead of the one stepped on.
-                    if ((go == null || !exact || go.GetComponent<T>() == null)
-                        && Time.unscaledTime - scan.At > PlacedRescan)
-                    {
-                        scan.At = Time.unscaledTime;
-                        scan.ByName.Clear();
-                        // inactive too: a location the host loaded for a joiner
-                        // but isn't in
-                        foreach (var comp in Object.FindObjectsOfType<T>(true))
-                        {
-                            int h = NameHash(comp.gameObject.name);
-                            if (!scan.ByName.TryGetValue(h, out var list))
-                            {
-                                scan.ByName[h] = list = new List<GameObject>();
-                            }
-
-                            list.Add(comp.gameObject);
-                        }
-
-                        go = NearestPlaced(scan, r.Id, out exact);
-                    }
-
-                    if (go != null && !exact && WorldActions.Debug)
-                    {
-                        Plugin.Log.LogInfo(
-                            $"[world] Placed:{r.Id} ({typeof(T).Name}) taken "
-                                + $"as {go.name} at {go.transform.position}, "
-                                + "off its spot");
-                    }
-
+                case ObjSource.Enemy:
+                    go = EnemyOf(r.Id);
+                    break;
+                case ObjSource.Unshared:
+                    WarnUnshared(r.Id);
+                    break;
+                case ObjSource.SaveId:
+                    go = SavedOf(r.Id);
+                    break;
+                case ObjSource.Pinned:
+                    go = _pinned[r.Id];
+                    break;
+                case ObjSource.Nearest:
+                    go = NearestOf<T>(r.Id);
                     break;
             }
 
@@ -524,6 +446,152 @@ namespace DarkwoodMP.World
             }
 
             return null;
+        }
+
+        /// What Resolve looks at to choose where to find r.
+        private static LookupFacts LookupOf(ObjRef r)
+        {
+            bool spawned = Spawned.TryGetValue(r.Id, out var made)
+                && made != null;
+            bool shared = _shared.TryGetValue(r.Id, out var tied)
+                && tied != null;
+            bool pinned = _pinned.TryGetValue(r.Id, out var kept)
+                && kept != null;
+            return new LookupFacts
+            {
+                Kind = (ObjKind)r.K,
+                Id = r.Id,
+                SpawnedAlive = spawned,
+                SharedAlive = shared,
+                Announced = _announced.ContainsKey(r.Id),
+                PinnedAlive = pinned,
+                ResolveLimit = SharedIds.ResolveLimit,
+            };
+        }
+
+        // An id the host gave out that this game hasn't tied to its copy yet:
+        // find it as Placed, and tie it.
+        private static GameObject FromAnnounced<T>(long id) where T : Component
+        {
+            var found = Resolve<T>(new ObjRef
+            {
+                K = Kind.Placed,
+                Id = _announced[id]
+            });
+
+            GameObject go = null;
+            if (found != null)
+            {
+                go = found.gameObject;
+            }
+
+            if (ObjRefRules.TiesAnnounced(TieOf(id, go)))
+            {
+                _shared[id] = go;
+                _sharedIds[go] = id;
+                HostIds.Place(id, go);
+            }
+
+            return go;
+        }
+
+        private static GameObject EnemyOf(long id)
+        {
+            NetEnemies instance = NetEnemies.Instance;
+            Character c = null;
+            if (instance != null)
+            {
+                c = instance.CharacterOf(ObjRefRules.EnemyIdOf(id));
+            }
+
+            if (c != null)
+            {
+                return c.gameObject;
+            }
+
+            return null;
+        }
+
+        private static void WarnUnshared(long id)
+        {
+            if (_unsharedLogged++ < 20)
+            {
+                Plugin.Log.LogWarning(
+                    $"A ref to save id {id} came in, but only "
+                        + $"ids below {SharedIds.ResolveLimit} are "
+                        + "the same in every game: ignored");
+            }
+        }
+
+        private static GameObject SavedOf(long id)
+        {
+            var sm = Singleton<SaveManager>.Instance;
+            if (sm != null
+                && sm.uniqueIdDict.TryGetValue(
+                    ObjRefRules.SaveIdOf(id),
+                    out var t)
+                && t != null)
+            {
+                return t.gameObject;
+            }
+
+            return null;
+        }
+
+        private static GameObject NearestOf<T>(long id) where T : Component
+        {
+            if (!_placed.TryGetValue(typeof(T), out var scan))
+            {
+                _placed[typeof(T)] = scan = new PlacedScan();
+            }
+
+            var go = NearestPlaced(scan, id, out bool exact);
+            // Scan again when it isn't on its spot too: one made since the
+            // last scan (a swamper's splats and their traps spread over a few
+            // seconds) was otherwise taken for its neighbour within
+            // PlacedSlack, and the host set off the neighbour's trap event
+            // instead of the one stepped on.
+            float now = Time.unscaledTime;
+            var facts = new ScanFacts
+            {
+                Found = go != null,
+                OnSpot = exact,
+                HasComponent = go != null && exact
+                    && go.GetComponent<T>() != null,
+                Now = new Seconds(now),
+                ScannedAt = new Seconds(scan.At),
+            };
+
+            if (ObjRefRules.ScanAgain(facts))
+            {
+                scan.At = now;
+                scan.ByName.Clear();
+                // inactive too: a location the host loaded for a joiner but
+                // isn't in
+                foreach (var comp in Object.FindObjectsOfType<T>(true))
+                {
+                    int h = ObjRefRules.NameKey(
+                        StableHash.Of(comp.gameObject.name));
+                    if (!scan.ByName.TryGetValue(h, out var list))
+                    {
+                        scan.ByName[h] = list = new List<GameObject>();
+                    }
+
+                    list.Add(comp.gameObject);
+                }
+
+                go = NearestPlaced(scan, id, out exact);
+            }
+
+            if (go != null && !exact && WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] Placed:{id} ({typeof(T).Name}) taken "
+                        + $"as {go.name} at {go.transform.position}, "
+                        + "off its spot");
+            }
+
+            return go;
         }
     }
 }
