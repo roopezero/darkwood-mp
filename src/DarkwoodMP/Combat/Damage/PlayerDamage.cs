@@ -44,7 +44,7 @@ namespace DarkwoodMP.Combat
                     // doesn't run as an enemy (Combat.HostileNpcs) hits the
                     // joiner with the joiner's own copy, so the host's
                     // copy's hit on the proxy would be a second one.
-                    if (Threat.Debug)
+                    if (Plugin.Instance.Host.Threats.Debug)
                     {
                         Plugin.Log.LogInfo(
                             $"[threat] {from} (an NPC) hit a remote player's "

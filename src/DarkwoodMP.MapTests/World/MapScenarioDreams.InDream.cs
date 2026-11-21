@@ -282,7 +282,8 @@ namespace DarkwoodMP.World
             string threat = "";
             if (proxy != null)
             {
-                threat = $", threat {Combat.Threat.Of(c).Get(proxy):0.#}";
+                float value = Plugin.Instance.Host.Threats.Of(c).Get(proxy);
+                threat = $", threat {value:0.#}";
             }
 
             r.Info = $"{chomper} #{id} at {spot}, target {target}; " +

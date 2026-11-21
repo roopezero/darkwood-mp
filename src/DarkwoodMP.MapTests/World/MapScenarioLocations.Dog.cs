@@ -199,9 +199,10 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
 
+            float threat = Plugin.Instance.Host.Threats.Of(_dog).Get(proxy);
             r.Info =
                 $"{_dog.name}: {Behaviour(_dog)}, threat from "
-                    + $"{proxy.OwnerName}: {Threat.Of(_dog).Get(proxy):0.#}";
+                    + $"{proxy.OwnerName}: {threat:0.#}";
             if (_dog.target != proxy.transform)
             {
                 r.Fail($"it doesn't go for {proxy.OwnerName}: {r.Info}");

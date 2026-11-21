@@ -134,7 +134,7 @@ namespace DarkwoodMP.Combat
         {
             var spirit = new TeleportFacts
             {
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
                 ClientMode = NetEnemies.ClientMode,
                 HasTarget = c.target != null,
             };
@@ -170,7 +170,7 @@ namespace DarkwoodMP.Combat
             seer = null;
             var banshee = new BansheeFacts
             {
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
                 ClientMode = NetEnemies.ClientMode,
                 Banshee = c.banshee,
                 Alive = c.alive,
@@ -205,7 +205,7 @@ namespace DarkwoodMP.Combat
             target = null;
             var banshee = new BansheeFacts
             {
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
                 ClientMode = NetEnemies.ClientMode,
                 HasTarget = c.target != null,
             };
@@ -306,7 +306,7 @@ namespace DarkwoodMP.Combat
                 c.goToPos(proxy.transform);
             }
 
-            if (Threat.Debug)
+            if (Plugin.Instance.Host.Threats.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[threat] banshee {c.name} seen by {proxy.OwnerName}: "

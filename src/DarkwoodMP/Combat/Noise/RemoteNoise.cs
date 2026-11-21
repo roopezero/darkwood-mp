@@ -38,8 +38,8 @@ namespace DarkwoodMP.Combat
             }
 
             Vector3 pos = new Vector3(noise.At.X, noise.At.Y, noise.At.Z);
-            var before = Threat.NoiseSource;
-            Threat.NoiseSource = proxy;
+            var before = Plugin.Instance.Host.Threats.NoiseSource;
+            Plugin.Instance.Host.Threats.NoiseSource = proxy;
             try
             {
                 Character.alertInArea(
@@ -48,7 +48,7 @@ namespace DarkwoodMP.Combat
             }
             finally
             {
-                Threat.NoiseSource = before;
+                Plugin.Instance.Host.Threats.NoiseSource = before;
             }
         }
 

@@ -30,78 +30,13 @@ namespace DarkwoodMP.Combat
     /// targeting follows it.
     ///
     /// The numbers and choices are the core's ThreatRules; the state is
-    /// ModHost.Threats. These static methods only pass the game's calls on to
-    /// it, so the patches that call them didn't change.
+    /// ModHost.Threats, which callers use directly. The game's code that the
+    /// transpilers in ThreatPatches and JoinerAiPatches rewrite calls the
+    /// static methods left here: a transpiler puts in a static call.
     /// </summary>
     public static class Threat
     {
-        /// <summary>
-        /// Who's making the noise being broadcast right now (set around
-        /// Character.alertInArea), or null.
-        /// </summary>
-        public static CharBase NoiseSource
-        {
-            get => Current.NoiseSource;
-            set => Current.NoiseSource = value;
-        }
-
-        /// <summary>
-        /// Only while the host has other players; alone, the game's own AI is
-        /// left exactly as it was.
-        /// </summary>
-        public static bool Enabled => Current.Enabled;
-
-        /// <summary>
-        /// Log every target change with its scores ("--dwmp-debug-threat").
-        /// </summary>
-        public static bool Debug
-        {
-            get => Current.Debug;
-            set => Current.Debug = value;
-        }
-
         private static Threats Current => Plugin.Instance.Host.Threats;
-
-        public static ThreatTable<CharBase> Of(Character c) =>
-            Current.Of(c);
-
-        public static void OnDamaged(
-            Character victim, CharBase attacker, float damage)
-        {
-            Current.OnDamaged(victim, attacker, damage);
-        }
-
-        public static void OnHeard(
-            Character listener, Vector3 position, float volume)
-        {
-            Current.OnHeard(listener, position, volume);
-        }
-
-        /// <summary>
-        /// Before the game's sight check: the players in its view-range list
-        /// put at its end by threat (Threats.BeforeSightCheck).
-        /// </summary>
-        public static void BeforeSightCheck(Character c)
-        {
-            Current.BeforeSightCheck(c);
-        }
-
-        /// <summary>
-        /// After the game's sight check: every player it saw gains a little
-        /// threat for being seen.
-        /// </summary>
-        public static void AfterSightCheck(Character c)
-        {
-            Current.AfterSightCheck(c);
-        }
-
-        /// <summary>
-        /// The player an enemy goes for when the game sends it after
-        /// "the player": the one it has the most threat for, closeness
-        /// counting, seen or not.
-        /// </summary>
-        public static CharBase BestPlayerFor(Character c) =>
-            Current.BestPlayerFor(c);
 
         /// <summary>
         /// For the game's code that aims an enemy at Player.Instance.transform
@@ -109,7 +44,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static Transform PursuitTarget(Character c)
         {
-            var best = BestPlayerFor(c);
+            var best = Current.BestPlayerFor(c);
             if (best != null)
             {
                 return best.transform;

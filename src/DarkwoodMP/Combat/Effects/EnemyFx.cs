@@ -108,7 +108,7 @@ namespace DarkwoodMP.Combat
                 }
 
                 _inCombat[proxy.Owner] = fight;
-                if (Threat.Debug || WorldActions.Debug)
+                if (Plugin.Instance.Host.Threats.Debug || WorldActions.Debug)
                 {
                     string text = "is no longer";
                     if (fight)

@@ -409,10 +409,11 @@ namespace DarkwoodMP.World
             ne.NetIdOf(c, out uint id);
             float away = StateDump.Flat(
                 c.transform.position - proxy.transform.position);
+            float threat = Plugin.Instance.Host.Threats.Of(c).Get(proxy);
             r.Info =
                 $"{c.name} #{id} asleep {c.sleeping}, {Behaviour(c)}, "
                     + $"{away:0} from {proxy.OwnerName}, " +
-                     $"threat {Threat.Of(c).Get(proxy):0.#}";
+                     $"threat {threat:0.#}";
             _woken = c;
             if (c.sleeping || c.target != proxy.transform)
             {

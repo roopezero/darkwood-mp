@@ -43,7 +43,7 @@ namespace DarkwoodMP.Combat
 
             if (step == BumpStep.Banshee)
             {
-                if (Threat.Debug)
+                if (Plugin.Instance.Host.Threats.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[threat] {c.name} (banshee) touched by "
@@ -56,7 +56,7 @@ namespace DarkwoodMP.Combat
 
             if (step == BumpStep.Wake)
             {
-                if (Threat.Debug)
+                if (Plugin.Instance.Host.Threats.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[threat] {c.name} woken by {proxy.OwnerName} bumping "
@@ -87,7 +87,7 @@ namespace DarkwoodMP.Combat
             var bump = new BumpFacts
             {
                 Collider = true,
-                On = Threat.Enabled,
+                On = Plugin.Instance.Host.Threats.Enabled,
                 ClientMode = NetEnemies.ClientMode,
             };
 
@@ -182,7 +182,8 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void NearJoiner(Character c, ref bool result)
         {
-            if (!JoinerAiRules.LooksForJoiners(result, Threat.Enabled))
+            if (!JoinerAiRules.LooksForJoiners(
+                result, Plugin.Instance.Host.Threats.Enabled))
             {
                 return;
             }

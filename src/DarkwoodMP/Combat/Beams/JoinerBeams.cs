@@ -85,7 +85,7 @@ namespace DarkwoodMP.Combat
                     c.attackCharacter(proxy.transform);
                 }
 
-                if (Threat.Debug)
+                if (Plugin.Instance.Host.Threats.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[threat] {c.name}'s shadow armour is in "

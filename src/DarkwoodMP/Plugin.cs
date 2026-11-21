@@ -603,7 +603,7 @@ namespace DarkwoodMP
                         profileId, Arg("--dwmp-sandbox")));
             }
 
-            Threat.Debug = Has("--dwmp-debug-threat");
+            Plugin.Instance.Host.Threats.Debug = Has("--dwmp-debug-threat");
             _host.Profiler.Enabled = Has("--dwmp-profile-mod");
             _host.LoadSpeed.Verify = Has("--dwmp-verify-load");
             WorldActions.Debug = Has("--dwmp-debug-world");
@@ -884,7 +884,7 @@ namespace DarkwoodMP
                 player.talkedToNPC = null;
             }
 
-            Threat.Debug = false;
+            Plugin.Instance.Host.Threats.Debug = false;
             WorldActions.Debug = false;
             _host.LoadSpeed.Verify = false;
             _host.TestQuickEnd = false;
@@ -1757,7 +1757,7 @@ namespace DarkwoodMP
             }
 
             Log.LogInfo(data);
-            if (c == null || !Threat.Debug)
+            if (c == null || !Plugin.Instance.Host.Threats.Debug)
             {
                 yield break;
             }

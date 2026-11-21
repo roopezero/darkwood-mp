@@ -117,9 +117,10 @@ namespace DarkwoodMP.World
                 return "-";
             }
 
+            var table = Plugin.Instance.Host.Threats.Of(c);
             return string.Join(
                 ", ",
-                Threat.Of(c).Values.Where(kv => kv.Key != null).Select(
+                table.Values.Where(kv => kv.Key != null).Select(
                     kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
         }
 

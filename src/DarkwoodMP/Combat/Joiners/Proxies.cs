@@ -215,7 +215,7 @@ namespace DarkwoodMP.Combat
                 stopped = StopAttacking(proxy);
             }
 
-            if (changed && Threat.Debug)
+            if (changed && Plugin.Instance.Host.Threats.Debug)
             {
                 LogState(proxy, turnedInvisible, stopped);
             }

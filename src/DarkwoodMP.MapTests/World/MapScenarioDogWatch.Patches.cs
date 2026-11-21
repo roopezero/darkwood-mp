@@ -26,9 +26,9 @@ namespace DarkwoodMP.World
                 string place = Rel(__instance.transform.position);
                 string caller = Caller();
                 string source = "-";
-                if (Threat.NoiseSource != null)
+                if (Plugin.Instance.Host.Threats.NoiseSource != null)
                 {
-                    source = Threat.NoiseSource.name;
+                    source = Plugin.Instance.Host.Threats.NoiseSource.name;
                 }
 
                 Plugin.Log.LogInfo(
@@ -149,9 +149,9 @@ namespace DarkwoodMP.World
                 float distance =
                     StateDump.Flat(Position - __instance.transform.position);
                 string source = "-";
-                if (Threat.NoiseSource != null)
+                if (Plugin.Instance.Host.Threats.NoiseSource != null)
                 {
-                    source = Threat.NoiseSource.name;
+                    source = Plugin.Instance.Host.Threats.NoiseSource.name;
                 }
 
                 Plugin.Log.LogInfo(

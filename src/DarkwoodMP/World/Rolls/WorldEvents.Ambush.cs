@@ -27,7 +27,8 @@ namespace DarkwoodMP.World.Rolls
         public bool Ambush(RandomEvent e, AmbushGateFacts call)
         {
             bool redneck = e.type == RandomEvent.Type.spawnRedneck;
-            if (!AmbushRules.Ours(Client, Threat.Enabled, redneck))
+            if (!AmbushRules.Ours(
+                Client, Plugin.Instance.Host.Threats.Enabled, redneck))
             {
                 return true;
             }

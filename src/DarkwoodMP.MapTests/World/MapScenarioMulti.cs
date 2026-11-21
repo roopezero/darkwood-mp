@@ -29,8 +29,9 @@ namespace DarkwoodMP.World
             Add("mt-tough", Tough);
             Add("mt-debug-threat", (a, r) =>
             {
-                Threat.Debug = a.Length == 0 || a[0] == "on";
-                r.Info = $"threat log {Threat.Debug}";
+                Plugin.Instance.Host.Threats.Debug =
+                    a.Length == 0 || a[0] == "on";
+                r.Info = $"threat log {Plugin.Instance.Host.Threats.Debug}";
                 return Nothing();
             });
 
