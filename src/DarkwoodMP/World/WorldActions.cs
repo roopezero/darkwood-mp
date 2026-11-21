@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Traps;
 using HarmonyLib;
 using UnityEngine;
 
@@ -518,12 +519,19 @@ namespace DarkwoodMP.World
                     // Only ever a request to the host: roll it here, as the
                     // game rolls it for its own player.
                     var item = ObjRef.Resolve<Item>(obj);
-                    bool worked = item != null
-                        && item.disarmChance > UnityEngine.Random.Range(0f, 1f);
-                    string outcome = "0";
+                    float chance = 0f;
+                    float roll = 0f;
+                    if (item != null)
+                    {
+                        chance = item.disarmChance;
+                        roll = UnityEngine.Random.Range(0f, 1f);
+                    }
+
+                    bool worked = DisarmRules.Works(item != null, chance, roll);
+                    string outcome = DisarmRules.Failed;
                     if (worked)
                     {
-                        outcome = "1";
+                        outcome = DisarmRules.Worked;
                     }
 
                     Coop.Current.Authority.Result(outcome);
@@ -1140,60 +1148,27 @@ namespace DarkwoodMP.World
             if (a >= Action.TrapFired)
             {
                 var trap = ObjRef.Resolve<Trigger>(obj);
-                if (trap == null)
+                Verdict verdict;
+                if (a == Action.TrapFired)
                 {
-                    Coop.Current.Authority.Refuse("the trap is gone");
-                    return false;
+                    verdict = TrapRules.MayFire(
+                        TrapFactsOf(
+                            trap, TrapTestOf(TrapFiredPatch.TestRefuse)));
+                    MakeTestRefusal(trap, verdict);
+                }
+                else if (a == Action.TrapDisarm)
+                {
+                    verdict = TrapRules.MayDisarm(
+                        TrapFactsOf(trap, TrapTest.None));
+                }
+                else
+                {
+                    verdict = TrapRules.MaySwitch(
+                        TrapFactsOf(trap, TrapTest.None));
                 }
 
-                if (!Coop.Current.Authority.InReach(
-                    trap.transform.position, Reach, trap.name))
-                {
-                    return false;
-                }
-
-                if (a == Action.TrapFired && trap.active
-                    && TrapFiredPatch.TestRefuse != null)
-                {
-                    // Tests ("trap-refuse"): what makes a real refusal, made
-                    // here just before this request.
-                    if (TrapFiredPatch.TestRefuse == "race")
-                    {
-                        // it went off here first, and that went to everyone
-                        OnAfterTrigger.Invoke(
-                            trap, new object[] { null, false });
-                    }
-                    else // it isn't here
-                    {
-                        trap.active = false;
-                        UnityEngine.Object.DestroyImmediate(trap.gameObject);
-                    }
-
-                    string reason = "the trap is gone (test)";
-                    if (TrapFiredPatch.TestRefuse == "race")
-                    {
-                        reason = "the trap had already gone off (test)";
-                    }
-
-                    Coop.Current.Authority.Refuse(reason);
-                    return false;
-                }
-
-                if (a == Action.TrapFired && !trap.active)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "the trap had already gone off");
-                    return false;
-                }
-
-                if (a == Action.TrapDisarm && (!trap.active || !trap.canDisarm))
-                {
-                    Coop.Current.Authority.Refuse(
-                        "the trap can't be disarmed now");
-                    return false;
-                }
-
-                return true;
+                Coop.Current.Authority.Refuse(verdict);
+                return !verdict.Refused;
             }
 
             if (a < Action.WindowBarricade)
@@ -1374,6 +1349,66 @@ namespace DarkwoodMP.World
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// What the trap rules know of a trap the host is asked about: the
+        /// only code that reads the Trigger for them.
+        /// </summary>
+        private static TrapFacts TrapFactsOf(Trigger trap, TrapTest test)
+        {
+            if (trap == null)
+            {
+                return new TrapFacts();
+            }
+
+            return new TrapFacts
+            {
+                Exists = true,
+                Active = trap.active,
+                CanDisarm = trap.canDisarm,
+                Test = test,
+                Requester = Coop.Current.Authority.ReachOf(
+                    trap.transform.position, trap.name),
+            };
+        }
+
+        /// <summary>
+        /// The map test's trap-refuse as the rule names it: null is off,
+        /// "race" went off here first, anything else is gone.
+        /// </summary>
+        private static TrapTest TrapTestOf(string test)
+        {
+            if (test == null)
+            {
+                return TrapTest.None;
+            }
+
+            if (test == "race")
+            {
+                return TrapTest.Race;
+            }
+
+            return TrapTest.Gone;
+        }
+
+        /// <summary>
+        /// Tests ("trap-refuse"): what makes a real refusal, made here just
+        /// before refusing this request.
+        /// </summary>
+        private static void MakeTestRefusal(Trigger trap, Verdict verdict)
+        {
+            if (verdict.Reason == Refusal.TestTrapWentOff)
+            {
+                // it went off here first, and that went to everyone
+                OnAfterTrigger.Invoke(trap, new object[] { null, false });
+            }
+            else if (verdict.Reason == Refusal.TestTrapGone)
+            {
+                // it isn't here
+                trap.active = false;
+                UnityEngine.Object.DestroyImmediate(trap.gameObject);
+            }
         }
 
         // ---- the state to roll back to --------------------------------------
