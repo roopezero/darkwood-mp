@@ -177,7 +177,8 @@ namespace DarkwoodMP.World.Progress
         }
 
         /// Whether the game's consumeExp counts as our player's cooking
-        /// (ConsumeExpPatch): a player, not a replay, and the essence grew.
+        /// (InvItemClassConsumeExp): a player, not a replay, and the
+        /// essence grew.
         public static bool Cooked(bool hasPlayer, bool replaying, int added)
         {
             return hasPlayer && !replaying && added > 0;

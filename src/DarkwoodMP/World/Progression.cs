@@ -4,7 +4,6 @@ using System.IO;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Progress;
-using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -737,6 +736,56 @@ namespace DarkwoodMP.World
         // ---- the stove's level ----------------------------------------------
 
         /// <summary>
+        /// The game's SkillsMenu.showHideTiers: whether it runs as it is
+        /// (only showing the tiers, or the game's skill choice open);
+        /// otherwise the stove's full bar gives the level here.
+        /// </summary>
+        public bool ShowHideTiers(SkillsMenu menu, bool onlyShow)
+        {
+            if (StoveRules.RunsGame(onlyShow, menu.opened))
+            {
+                return true;
+            }
+
+            TakeLevelAtStove();
+            return false;
+        }
+
+        /// <summary>
+        /// Our player's essence (0 with no player), before the game's
+        /// consumeExp cooks.
+        /// </summary>
+        public static int Experience()
+        {
+            if (Player.Instance != null)
+            {
+                return Player.Instance.experience;
+            }
+
+            return 0;
+        }
+
+        /// <summary>
+        /// The game's consumeExp is done: what it added to our player's
+        /// essence since before (Experience) is our cooking, unless it
+        /// was a replay.
+        /// </summary>
+        public void ConsumedExp(int before)
+        {
+            Player p = Player.Instance;
+            int added = 0;
+            if (p != null)
+            {
+                added = p.experience - before;
+            }
+
+            if (ProgressRules.Cooked(p != null, Coop.Guards.Replaying, added))
+            {
+                Cooked(added);
+            }
+        }
+
+        /// <summary>
         /// The stove's full bar (LevelingMenu.checkIfWantToLevel ->
         /// SkillsMenu.showHideTiers): take the level and its skill point,
         /// without the game's skill choice (the point is spent on the Skills
@@ -1218,78 +1267,6 @@ namespace DarkwoodMP.World
                 + (_saved != null
                     && _saved.Resets.TryGetValue("host", out int d)
                     && d == Today);
-        }
-    }
-
-    /// <summary>
-    /// The stove's full bar gives the level and its point, not the game's skill
-    /// choice (Progression.TakeLevelAtStove).
-    /// </summary>
-    [HarmonyPatch(typeof(SkillsMenu), nameof(SkillsMenu.showHideTiers))]
-    static class StoveLevelPatch
-    {
-        static bool Prefix(SkillsMenu __instance, bool onlyShow)
-        {
-            if (StoveRules.RunsGame(onlyShow, __instance.opened))
-            {
-                return true;
-            }
-
-            Plugin plugin = Plugin.Instance;
-            if (plugin != null && plugin.Host != null)
-            {
-                plugin.Host.Progress.TakeLevelAtStove();
-            }
-
-            return false;
-        }
-    }
-
-    [HarmonyPatch(typeof(InvItemClass), nameof(InvItemClass.consumeExp))]
-    static class ConsumeExpPatch
-    {
-        static void Prefix(out int __state)
-        {
-            if (Player.Instance != null)
-            {
-                __state = Player.Instance.experience;
-            }
-            else
-            {
-                __state = 0;
-            }
-        }
-
-        static void Postfix(int __state)
-        {
-            Player p = Player.Instance;
-            int added = 0;
-            if (p != null)
-            {
-                added = p.experience - __state;
-            }
-
-            if (ProgressRules.Cooked(p != null, Coop.Guards.Replaying, added))
-            {
-                Plugin plugin = Plugin.Instance;
-                if (plugin != null && plugin.Host != null)
-                {
-                    plugin.Host.Progress.Cooked(added);
-                }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save))]
-    static class ProgressSavedPatch
-    {
-        static void Postfix()
-        {
-            Plugin plugin = Plugin.Instance;
-            if (plugin != null && plugin.Host != null)
-            {
-                plugin.Host.Progress.OnHostSaved();
-            }
         }
     }
 }
