@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Npcs;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -115,7 +116,7 @@ namespace DarkwoodMP.World
                 FindNpcs();
             }
 
-            var list = new List<(int id, Vector2 p)>();
+            var list = new List<NpcPlace>();
             foreach (var (id, npc) in _npcs)
             {
                 if (!Movable(npc, out var c))
@@ -133,7 +134,7 @@ namespace DarkwoodMP.World
                 }
 
                 _sent[id] = p;
-                list.Add((id, p));
+                list.Add(new NpcPlace { Id = id, At = new Vec2(p.x, p.y) });
             }
 
             if (list.Count == 0)
@@ -141,18 +142,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            for (int start = 0; start < list.Count; start += 200)
+            int start = 0;
+            while (start < list.Count)
             {
-                int n = Mathf.Min(200, list.Count - start);
                 var w = _session.Begin(MsgType.NpcPos);
-                w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++)
-                {
-                    w.W.Write(list[i].id);
-                    w.W.Write(list[i].p.x);
-                    w.W.Write(list[i].p.y);
-                }
-
+                start += NpcPosMessage.Write(w, list, start);
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
         }
@@ -194,12 +188,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int n = r.R.ReadUInt16();
-            for (int i = 0; i < n; i++)
+            foreach (NpcPlace place in NpcPosMessage.Read(r))
             {
-                int id = r.R.ReadInt32();
-                float x = r.R.ReadSingle(), z = r.R.ReadSingle();
-                _target[id] = new Vector2(x, z);
+                _target[place.Id] = new Vector2(place.At.X, place.At.Z);
             }
         }
 
