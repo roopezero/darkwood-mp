@@ -1,22 +1,13 @@
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
-    /// The co-op windows' look: Darkwood's menu colours (near-black, grey words
-    /// that turn white under the mouse, no colour but a dull red for a refusal)
-    /// in the shape of Half-Life's and Counter-Strike 1.6's menus: a title bar,
-    /// raised buttons with a light top-left edge and a dark bottom-right one,
-    /// sunken lists and text fields. Words are drawn in the game's pixel font
-    /// (PixelFont); text fields use a system font, since you type in them.
+    /// MenuSkin's IMGUI skin, styles and text field font, made the first
+    /// time a window draws and kept as long as the game (ModHost.Styles).
     /// </summary>
-    public static class MenuSkin
+    internal sealed class MenuStyles
     {
-        public static readonly Color Text = new Color(0.70f, 0.70f, 0.70f);
-        public static readonly Color Bright = new Color(0.93f, 0.93f, 0.93f);
-        public static readonly Color Dim = new Color(0.44f, 0.44f, 0.44f);
-        public static readonly Color Warn = new Color(0.72f, 0.30f, 0.26f);
-
         static readonly Color WindowFill =
             new Color(0.045f, 0.045f, 0.045f, 0.96f);
         static readonly Color TitleFill = new Color(0.11f, 0.11f, 0.11f, 1f);
@@ -28,8 +19,8 @@ namespace DarkwoodMP
         static readonly Color SunkenFill =
             new Color(0.025f, 0.025f, 0.025f, 1f);
 
-        public static GUISkin Skin { get; private set; }
-        public static GUIStyle Window,
+        public GUISkin Skin { get; private set; }
+        public GUIStyle Window,
             TitleBar,
             Button,
             Pressed,
@@ -38,11 +29,11 @@ namespace DarkwoodMP
             Plain,
             Selected,
             Line;
-        public static Font FieldFont { get; private set; }
-        public static Texture2D White { get; private set; }
-        private static int _fieldSize;
+        public Font FieldFont { get; private set; }
+        public Texture2D White { get; private set; }
+        private int _fieldSize;
 
-        public static void Ensure()
+        public void Ensure()
         {
             if (FieldFont == null)
             {
@@ -130,10 +121,10 @@ namespace DarkwoodMP
                 })
                 {
                     st.background = Sunken.normal.background;
-                    st.textColor = Bright;
+                    st.textColor = MenuSkin.Bright;
                 }
 
-                s.settings.cursorColor = Bright;
+                s.settings.cursorColor = MenuSkin.Bright;
                 s.settings.selectionColor = new Color(0.4f, 0.4f, 0.4f, 0.8f);
                 s.verticalScrollbar = new GUIStyle(s.verticalScrollbar)
                 {

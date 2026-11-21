@@ -237,9 +237,9 @@ namespace DarkwoodMP.Sync.Players
         {
             return new TagFacts
             {
-                MenuOver = World.UiState.MenuOver,
+                MenuOver = Menus.UiState.MenuOver,
                 MapOpen = MapMarkers.MapOpen,
-                OverlaysHidden = World.UiState.WorldOverlaysHidden,
+                OverlaysHidden = Menus.UiState.WorldOverlaysHidden,
             };
         }
 

@@ -1,7 +1,7 @@
 using DarkwoodMP.Net;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// Client: one loading screen, the game's own (LoadingScreen), from the
@@ -25,7 +25,7 @@ namespace DarkwoodMP.World
     /// (WorldShare.LoadStatus). Esc stops joining until the world starts
     /// loading. The game's menu buttons are off while it's up.
     /// </summary>
-    public static class JoinScreen
+    public sealed class JoinScreen
     {
         private enum Stage
         {
@@ -39,31 +39,31 @@ namespace DarkwoodMP.World
 
         private const float DownloadShare = 0.3f;
 
-        private static Stage _stage;
-        private static bool _shown;
+        private Stage _stage;
+        private bool _shown;
         // when the screen came up, for the stage times in the log
-        private static float _shownAt;
-        private static string At =>
+        private float _shownAt;
+        private string At =>
             $" (at {Time.realtimeSinceStartup - _shownAt:0.0} s)";
         // the chapter's scene is up and its WorldGenerator runs the screen
-        private static bool _inGame;
+        private bool _inGame;
         // of the whole join, 0..1, never lower than before
-        private static float _fraction;
-        private static string _line;
+        private float _fraction;
+        private string _line;
         // the scene StartProfile was called in
-        private static int _menuScene;
+        private int _menuScene;
         // give up waiting for the game's loading screen at this time
-        private static float _handOverUntil;
+        private float _handOverUntil;
         // the Controller whose buttons we turned off, to turn them back on
-        private static Controller _buttonsOffOn;
+        private Controller _buttonsOffOn;
 
-        public static bool Shown => _shown;
+        public bool Shown => _shown;
 
         /// <summary>
         /// We took the host's world: show the screen (once; a second offer
         /// keeps it up).
         /// </summary>
-        public static void Begin()
+        public void Begin()
         {
             if (!_shown)
             {
@@ -85,14 +85,14 @@ namespace DarkwoodMP.World
                 _inGame = false;
             }
 
-            LoadingScreen.Show();
+            Plugin.Instance.Host.Loading.Show();
         }
 
         /// <summary>
         /// UI.initLoadGame has been started: the game's loading takes over the
         /// rest of the bar.
         /// </summary>
-        public static void HandOver()
+        public void HandOver()
         {
             if (!_shown)
             {
@@ -125,7 +125,7 @@ namespace DarkwoodMP.World
         /// Joining stopped before the world loaded: take the screen down and
         /// open the panel, which says why.
         /// </summary>
-        public static void Fail(string why)
+        public void Fail(string why)
         {
             if (!_shown)
             {
@@ -141,7 +141,7 @@ namespace DarkwoodMP.World
             _buttonsOffOn = null;
             Plugin.Log.LogInfo($"[join] loading screen hidden: {why}");
             Clear();
-            LoadingScreen.Hide();
+            Plugin.Instance.Host.Loading.Hide();
             Plugin instance = Plugin.Instance;
             if (instance != null)
             {
@@ -149,7 +149,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Clear()
+        private void Clear()
         {
             _shown = false;
             _inGame = false;
@@ -161,7 +161,7 @@ namespace DarkwoodMP.World
         /// Every frame (Plugin.Update): work out the stage from the session,
         /// the download and the game's loading.
         /// </summary>
-        public static void Update(Session session, WorldShare world)
+        public void Update(Session session, WorldShare world)
         {
             if (!_shown)
             {
@@ -174,7 +174,10 @@ namespace DarkwoodMP.World
                 bool newScene =
                     UnityEngine.SceneManagement.SceneManager
                         .GetActiveScene().handle != _menuScene;
-                if (!_inGame && newScene && wg != null && LoadingScreen.Up)
+                if (!_inGame
+                    && newScene
+                    && wg != null
+                    && Plugin.Instance.Host.Loading.Up)
                 {
                     _inGame = true;
                     Plugin.Log.LogInfo(
@@ -182,7 +185,7 @@ namespace DarkwoodMP.World
                             + At);
                 }
 
-                if (_inGame && !LoadingScreen.Up)
+                if (_inGame && !Plugin.Instance.Host.Loading.Up)
                 {
                     Plugin.Log.LogInfo(
                         "[join] loading screen: the host's world is up" + At);
@@ -196,14 +199,14 @@ namespace DarkwoodMP.World
                         "[join] loading screen: the game's loading didn't "
                             + "start, hiding it");
                     Clear();
-                    LoadingScreen.Hide();
+                    Plugin.Instance.Host.Loading.Hide();
                     return;
                 }
 
                 if (!_inGame)
                 {
                     // the menu's scene, until the chapter's loads
-                    LoadingScreen.Show();
+                    Plugin.Instance.Host.Loading.Show();
                 }
 
                 if (_inGame)
@@ -213,7 +216,7 @@ namespace DarkwoodMP.World
 
                 if (_inGame)
                 {
-                    string line = LoadingScreen.GameStage();
+                    string line = Plugin.Instance.Host.Loading.GameStage();
                     if (line == null)
                     {
                         line = _line;
@@ -250,7 +253,7 @@ namespace DarkwoodMP.World
 
             // again after a change of scene (leaving our own world for the main
             // menu)
-            LoadingScreen.Show();
+            Plugin.Instance.Host.Loading.Show();
 
             // Under the screen, the menu mustn't take clicks or Esc
             // (InputScript.onPressEsc does nothing while the buttons are off).
@@ -330,7 +333,7 @@ namespace DarkwoodMP.World
         /// After the game's code each frame: keep its black fades from covering
         /// the screen while we're joining.
         /// </summary>
-        public static void LateUpdate()
+        public void LateUpdate()
         {
             if (!_shown)
             {
@@ -361,7 +364,7 @@ namespace DarkwoodMP.World
         /// WorldGenerator.percentLoaded was set (it sets the bar's sprite): put
         /// the join's bar back.
         /// </summary>
-        public static void OnGameBar()
+        public void OnGameBar()
         {
             if (!_shown || !_inGame)
             {
@@ -369,10 +372,10 @@ namespace DarkwoodMP.World
             }
 
             RaiseByGame(Singleton<WorldGenerator>.Instance);
-            LoadingScreen.SetBar(_fraction, force: true);
+            Plugin.Instance.Host.Loading.SetBar(_fraction, force: true);
         }
 
-        private static void Raise(float f)
+        private void Raise(float f)
         {
             if (f > _fraction)
             {
@@ -383,7 +386,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The game's loading fills the part of the bar after the download.
         /// </summary>
-        private static void RaiseByGame(WorldGenerator wg)
+        private void RaiseByGame(WorldGenerator wg)
         {
             if (wg != null)
             {
@@ -393,19 +396,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Draw()
+        private void Draw()
         {
-            LoadingScreen.SetBar(_fraction);
+            Plugin.Instance.Host.Loading.SetBar(_fraction);
             string hint = null;
             if (_stage != Stage.Game)
             {
                 hint = "Esc: stop joining";
             }
 
-            LoadingScreen.SetLine(_line, hint);
+            Plugin.Instance.Host.Loading.SetLine(_line, hint);
         }
 
-        private static void SetStage(Stage s, string line)
+        private void SetStage(Stage s, string line)
         {
             _line = line;
             if (s == _stage)

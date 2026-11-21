@@ -6,7 +6,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// "--dwmp-profile-load": times the game's own loading code, to find what
@@ -16,9 +16,9 @@ namespace DarkwoodMP.World
     /// longest single call, and so are the frames that took longest. A
     /// debugging aid: it slows the game down while it's on.
     /// </summary>
-    public static class LoadProfiler
+    public sealed class LoadProfiler
     {
-        private static readonly string[] TypeNames =
+        private readonly string[] TypeNames =
         {
             "SaveManager", "WorldGenerator", "UI", "Core", "WorldGrid",
             "OutsideLocations", "Controller", "Location",
@@ -30,7 +30,7 @@ namespace DarkwoodMP.World
         /// Called millions of times while loading: timing them would cost more
         /// than they do.
         /// </summary>
-        private static readonly HashSet<string> Hot = new HashSet<string>
+        private readonly HashSet<string> Hot = new HashSet<string>
         {
             "trueDistance", "toVector2", "InitializeNode", "GetNewNodeIndex",
             "worldGenFinished", "cursorPos",
@@ -44,14 +44,14 @@ namespace DarkwoodMP.World
             public int Calls;
         }
 
-        private static readonly Dictionary<MethodBase, Stat> _stats =
+        private readonly Dictionary<MethodBase, Stat> _stats =
             new Dictionary<MethodBase, Stat>();
-        private static readonly List<(int frame, float ms, float at)>
+        private readonly List<(int frame, float ms, float at)>
             _longFrames = new List<(int, float, float)>();
-        private static bool _on;
-        private static float _lastFrame;
+        private bool _on;
+        private float _lastFrame;
 
-        public static void Start(Harmony harmony)
+        public void Start(Harmony harmony)
         {
             _on = true;
             var prefix =
@@ -123,7 +123,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[profile] timing {n} methods");
         }
 
-        public static void Frame()
+        public void Frame()
         {
             if (!_on)
             {
@@ -140,17 +140,24 @@ namespace DarkwoodMP.World
             _lastFrame = now;
         }
 
+        // Harmony's prefix and postfix of every timed method: they must be
+        // static, so the postfix hands the time to the one ModHost keeps.
         private static void Before(out long __state) =>
             __state = Stopwatch.GetTimestamp();
 
         private static void After(MethodBase __originalMethod, long __state)
         {
+            Plugin.Instance.Host.LoadProfiler.Count(__originalMethod, __state);
+        }
+
+        private void Count(MethodBase method, long start)
+        {
             double ms =
                 (Stopwatch
-                    .GetTimestamp() - __state) * 1000.0 / Stopwatch.Frequency;
-            if (!_stats.TryGetValue(__originalMethod, out var s))
+                    .GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
+            if (!_stats.TryGetValue(method, out var s))
             {
-                _stats[__originalMethod] = s = new Stat();
+                _stats[method] = s = new Stat();
             }
 
             s.Total += ms;
@@ -161,7 +168,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        public static void Report()
+        public void Report()
         {
             if (!_on)
             {

@@ -1,6 +1,7 @@
+using DarkwoodMP.World;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// Whether the overlays the mod draws over the world (name tags above other

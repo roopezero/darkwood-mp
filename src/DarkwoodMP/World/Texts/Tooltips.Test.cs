@@ -7,294 +7,11 @@ using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Texts
 {
-    /// <summary>
-    /// Descriptions the game leaves out. About two thirds of the items in
-    /// ItemsDatabase have an empty or missing "Items/&lt;type&gt;_desc" entry
-    /// in every language, so their popup shows only a name; and no map location
-    /// has a description at all. The mod carries its own English lines for
-    /// those (the embedded Tooltips.tsv, made by tools/gen_tooltips.py from a
-    /// dump of the game's item data) and fills them in only where the game has
-    /// nothing: an item description the game has is never replaced.
-    ///
-    /// Tooltips.tsv lines (tab separated, "\n" written as a backslash and n):
-    ///   item KEY DRAFT TEXT   a description for Items/KEY_desc
-    ///   loc  KEY DRAFT TEXT   a line for the map element KEY, shown above the
-    ///                         game's "you are here" line
-    ///   skip KEY REASON       an item that needs no text (journal items, which
-    ///                         have their own page, and dev items)
-    /// DRAFT is 1 when the text isn't taken from the game's data and waits for
-    /// review; it isn't used in the game.
-    /// </summary>
-    public static class Tooltips
+    /// Tooltips: the dump and check of every item's and place's text.
+    public sealed partial class Tooltips
     {
-        private const string ItemsSheet = "Items";
-        private const string DescEnd = "_desc";
-
-        /// <summary>Items/KEY_desc -> text.</summary>
-        internal static readonly Dictionary<string, string> Items =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-        /// <summary>Map element name -> text.</summary>
-        internal static readonly Dictionary<string, string> Locations =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-        /// <summary>Item types that need no text, with why.</summary>
-        internal static readonly Dictionary<string, string> Skip =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-
-        static Tooltips()
-        {
-            Load();
-        }
-
-        private static void Load()
-        {
-            try
-            {
-                using (var s =
-                    typeof(Tooltips).Assembly.GetManifestResourceStream(
-                        "DarkwoodMP.Tooltips.tsv"))
-                {
-                    if (s == null)
-                    {
-                        Plugin.Log.LogWarning(
-                            "[tooltips] no Tooltips.tsv in the mod");
-                        return;
-                    }
-
-                    using (var r = new StreamReader(s))
-                    {
-                        string line;
-                        while ((line = r.ReadLine()) != null)
-                        {
-                            if (line.Length == 0 || line[0] == '#')
-                            {
-                                continue;
-                            }
-
-                            var f = line.Split('\t');
-                            if (f[0] == "skip" && f.Length >= 2)
-                            {
-                                if (f.Length > 2)
-                                {
-                                    Skip[f[1]] = f[2];
-                                }
-                                else
-                                {
-                                    Skip[f[1]] = "";
-                                }
-                            }
-                            else if (f.Length >= 4 && f[0] == "item")
-                            {
-                                Items[f[1] + DescEnd] =
-                                    f[3].Replace("\\n", "\n");
-                            }
-                            else if (f.Length >= 4 && f[0] == "loc")
-                            {
-                                Locations[f[1]] = f[3].Replace("\\n", "\n");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"[tooltips] couldn't read Tooltips.tsv: {e.Message}");
-            }
-        }
-
-        /// <summary>
-        /// The mod's line for an item description key ("type_desc"), or null.
-        /// </summary>
-        internal static string ItemText(string descKey)
-        {
-            if (descKey != null && Items.TryGetValue(descKey, out var t))
-            {
-                return Resolve(t);
-            }
-
-            return null;
-        }
-
-        // Names in the lines are the game's own, in the current language:
-        // "{item:TYPE}" is that item's name and "{ui:KEY}" the UI sheet's KEY
-        // (a location's name). Each line is resolved once per language.
-        private static readonly Dictionary<string, string> _resolved =
-            new Dictionary<string, string>(StringComparer.Ordinal);
-        private static LanguageCode _resolvedFor;
-
-        private static string Resolve(string text)
-        {
-            if (text.IndexOf('{') < 0)
-            {
-                return text;
-            }
-
-            var lang = global::Language.CurrentLanguage();
-            if (lang != _resolvedFor)
-            {
-                _resolved.Clear();
-                _resolvedFor = lang;
-            }
-
-            if (_resolved.TryGetValue(text, out var done))
-            {
-                return done;
-            }
-
-            var sb = new System.Text.StringBuilder();
-            int i = 0;
-            while (i < text.Length)
-            {
-                int a = text.IndexOf('{', i);
-                int b;
-                if (a < 0)
-                {
-                    b = -1;
-                }
-                else
-                {
-                    b = text.IndexOf('}', a);
-                }
-
-                if (a < 0 || b < 0)
-                {
-                    sb.Append(text, i, text.Length - i);
-                    break;
-                }
-
-                sb.Append(text, i, a - i);
-                string tag = text.Substring(a + 1, b - a - 1);
-                if (tag.StartsWith("item:", StringComparison.Ordinal))
-                {
-                    sb.Append(
-                        global::Language.Get(
-                            tag.Substring(5) + "_name", ItemsSheet).Trim());
-                }
-                else if (tag.StartsWith("ui:", StringComparison.Ordinal))
-                {
-                    sb.Append(
-                        global::Language.Get(tag.Substring(3), "UI").Trim());
-                }
-                else
-                {
-                    sb.Append(text, a, b - a + 1);
-                }
-
-                i = b + 1;
-            }
-
-            return _resolved[text] = sb.ToString();
-        }
-
-        /// <summary>
-        /// The mod's line for a map element (its "_done" form too, as
-        /// Map.getElement matches both), or null.
-        /// </summary>
-        internal static string LocationText(string element)
-        {
-            if (string.IsNullOrEmpty(element))
-            {
-                return null;
-            }
-
-            if (Locations.TryGetValue(element, out var t))
-            {
-                return Resolve(t);
-            }
-
-            if (element.EndsWith("_done", StringComparison.Ordinal)
-                && Locations.TryGetValue(
-                    element.Substring(0, element.Length - 5), out t))
-            {
-                return Resolve(t);
-            }
-
-            return null;
-        }
-
-        // Language.Get and HasKey run for every text the game shows, many times
-        // a frame: the sheet is checked first (a reference compare for the
-        // game's own "Items" literal, then the string), then the key's end, and
-        // only then the table.
-        private static bool IsItemDesc(string key, string sheet) =>
-            key != null && sheet != null
-                && (ReferenceEquals(sheet, ItemsSheet) || sheet == ItemsSheet)
-                && key.EndsWith(DescEnd, StringComparison.Ordinal);
-
-        [HarmonyPatch(
-            typeof(global::Language), nameof(global::Language.Get),
-            new[] { typeof(string), typeof(string) })]
-        private static class GetPatch
-        {
-            // Language.Get gives "" for an empty entry and the key itself for a
-            // missing one.
-            private static void Postfix(
-                string key, string sheetTitle, ref string __result)
-            {
-                if (!IsItemDesc(key, sheetTitle))
-                {
-                    return;
-                }
-
-                if (!string.IsNullOrEmpty(__result)
-                    && !ReferenceEquals(__result, key) && __result != key)
-                {
-                    return;
-                }
-
-                if (ItemText(key) is string t)
-                {
-                    __result = t;
-                }
-            }
-        }
-
-        [HarmonyPatch(
-            typeof(global::Language), nameof(global::Language.HasKey),
-            new[] { typeof(string), typeof(string) })]
-        private static class HasKeyPatch
-        {
-            private static void Postfix(
-                string key, string sheetTitle, ref bool __result)
-            {
-                if (__result || !IsItemDesc(key, sheetTitle))
-                {
-                    return;
-                }
-
-                if (Items.ContainsKey(key))
-                {
-                    __result = true;
-                }
-            }
-        }
-
-        /// <summary>The map's popup for a location (Map.Update, every frame the
-        /// mouse is on one): the mod's line first, then the game's own text
-        /// ("You are here") if it gave one.</summary>
-        [HarmonyPatch(
-            typeof(ItemPopup), nameof(ItemPopup.show),
-            new[] { typeof(string), typeof(Vector2), typeof(string) })]
-        private static class MapPopupPatch
-        {
-            private static void Prefix(string _name, ref string descText)
-            {
-                if (LocationText(_name) is string t)
-                {
-                    if (string.IsNullOrEmpty(descText))
-                    {
-                        descText = t;
-                    }
-                    else
-                    {
-                        descText = t + "\n" + descText;
-                    }
-                }
-            }
-        }
-
         // ---- Tests ----
 
         /// <summary>
@@ -306,7 +23,7 @@ namespace DarkwoodMP.World
         /// line, and that Tubular magazine's inventory popup shows a
         /// description. "[tooltips] PASS/FAIL" lines, then "[tooltips] done".
         /// </summary>
-        internal static IEnumerator Test(string dir)
+        internal IEnumerator Test(string dir)
         {
             while (!WorldShare.WorldReady)
             {
@@ -518,7 +235,7 @@ namespace DarkwoodMP.World
         /// The game's own text for an item's description, without the mod (null
         /// if there's no entry).
         /// </summary>
-        private static string RawDesc(string type)
+        private string RawDesc(string type)
         {
             var sheet = global::Language.GetAllKeysForSheet(ItemsSheet);
             if (sheet != null && sheet.TryGetValue(type + DescEnd, out var v))
@@ -532,7 +249,7 @@ namespace DarkwoodMP.World
         /// <summary>Puts one of the item in a free backpack slot, shows its
         /// popup as the inventory does, and takes it out again. Returns the
         /// popup's description.</summary>
-        private static string PopupDescription(string type)
+        private string PopupDescription(string type)
         {
             var inv = Player.Instance.Inventory;
             var slot = inv.slots.Find(s => InvItemClass.isNull(s.invItem));
@@ -556,7 +273,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static IEnumerable<MapElement> MapElements(Map map)
+        private IEnumerable<MapElement> MapElements(Map map)
         {
             var seen = new HashSet<MapElement>();
             foreach (var t in map.types)
@@ -584,7 +301,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static JObject Dump(ItemsDatabase idb, Map map)
+        private JObject Dump(ItemsDatabase idb, Map map)
         {
             var made = new Dictionary<string, JArray>();
             var usedIn = new Dictionary<string, JArray>();
@@ -814,7 +531,7 @@ namespace DarkwoodMP.World
         /// <summary>A component's public fields: numbers, text and enums as
         /// they are, other Unity objects as their name (or null), lists as
         /// their count.</summary>
-        private static JObject Fields(object c)
+        private JObject Fields(object c)
         {
             var o = new JObject();
             foreach (var f in c.GetType().GetFields(

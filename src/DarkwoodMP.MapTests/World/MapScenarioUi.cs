@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DarkwoodMP.Menus;
 using HarmonyLib;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -362,7 +363,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            string before = PauseHud.Shown();
+            string before = Plugin.Instance.Host.PauseHud.Shown();
             if (!before.Contains("container2"))
             {
                 r.Fail($"the storage's window isn't shown before: {before}");
@@ -371,7 +372,7 @@ namespace DarkwoodMP.World
 
             Core.showHidePauseMenu();
             yield return new WaitForSecondsRealtime(1f);
-            string under = PauseHud.Shown();
+            string under = Plugin.Instance.Host.PauseHud.Shown();
             bool hidden = UiState.WorldOverlaysHidden;
             string why = UiState.Reason;
             if (Core.mainMenu)
@@ -380,7 +381,7 @@ namespace DarkwoodMP.World
             }
 
             yield return new WaitForSecondsRealtime(1f);
-            string after = PauseHud.Shown();
+            string after = Plugin.Instance.Host.PauseHud.Shown();
             r.Info =
                 $"HUD before: {before}; under the menu: {under} (overlays "
                     + $"hidden {hidden}, {why}); after: {after}";

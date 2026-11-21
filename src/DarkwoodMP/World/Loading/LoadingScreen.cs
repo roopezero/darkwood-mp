@@ -1,7 +1,6 @@
-using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// The game's own loading screen (UI.loadingScreen: its art, its bar
@@ -21,32 +20,32 @@ namespace DarkwoodMP.World
     /// label shown is the step that runs next, since a long step holds up the
     /// frame and the screen shows what was set before it.
     /// </summary>
-    public static class LoadingScreen
+    public sealed class LoadingScreen
     {
         private const string LineName = "DwmpLoadingLine",
             HintName = "DwmpLoadingHint";
 
         // the UI whose screen our text was added to
-        private static UI _ui;
-        private static tk2dTextMesh _line, _hint;
-        private static bool _loggedTree;
-        private static int _barFrame = -1;
-        private static UI _barUi, _shownUi, _tipUi;
+        private UI _ui;
+        private tk2dTextMesh _line, _hint;
+        private bool _loggedTree;
+        private int _barFrame = -1;
+        private UI _barUi, _shownUi, _tipUi;
         // the game's tip text's renderer in _tipUi's screen
-        private static Renderer _tip;
-        private static WorldGenerator _stageWg;
-        private static bool _stageLoading;
-        private static string _shotKey;
-        private static int _shotN;
+        private Renderer _tip;
+        private WorldGenerator _stageWg;
+        private bool _stageLoading;
+        private string _shotKey;
+        private int _shotN;
 
         /// <summary>
         /// "--dwmp-load-shots DIR": a screenshot into DIR each time the line
         /// under the bar moves to a new step.
         /// </summary>
-        public static string ShotsDir;
+        public string ShotsDir;
 
         /// <summary>The game's loading screen is up in this scene.</summary>
-        public static bool Up
+        public bool Up
         {
             get
             {
@@ -60,7 +59,7 @@ namespace DarkwoodMP.World
         /// Show the game's loading screen in whatever scene this is
         /// (JoinScreen, every frame it needs it).
         /// </summary>
-        public static void Show()
+        public void Show()
         {
             var ui = Singleton<UI>.Instance;
             if (ui == null || ui.loadingScreen == null)
@@ -116,7 +115,7 @@ namespace DarkwoodMP.World
         /// Take down a screen JoinScreen showed (joining failed before the
         /// world began to load).
         /// </summary>
-        public static void Hide()
+        public void Hide()
         {
             var ui = Singleton<UI>.Instance;
             SetLine(null, null);
@@ -128,7 +127,7 @@ namespace DarkwoodMP.World
             _shownUi = null;
         }
 
-        private static bool WorldGenFinished() =>
+        private bool WorldGenFinished() =>
             Singleton<WorldGenerator>.Instance == null
                 || Singleton<WorldGenerator>.Instance.finished;
 
@@ -136,7 +135,7 @@ namespace DarkwoodMP.World
         /// Fill the bar to this fraction (0..1), as
         /// WorldGenerator.percentLoaded's setter does: 51 frames, 0 to 50.
         /// </summary>
-        public static void SetBar(float fraction, bool force = false)
+        public void SetBar(float fraction, bool force = false)
         {
             var ui = Singleton<UI>.Instance;
             if (ui == null || ui.loadingBar == null)
@@ -171,7 +170,7 @@ namespace DarkwoodMP.World
         /// The line under the bar (null: none) and a smaller one under it (Esc:
         /// stop joining).
         /// </summary>
-        public static void SetLine(string text, string hint)
+        public void SetLine(string text, string hint)
         {
             var ui = Singleton<UI>.Instance;
             if (ui == null || ui.loadingScreen == null || ui.loadingBar == null)
@@ -195,7 +194,7 @@ namespace DarkwoodMP.World
             Shot(text);
         }
 
-        private static void Shot(string text)
+        private void Shot(string text)
         {
             if (ShotsDir == null || string.IsNullOrEmpty(text))
             {
@@ -238,7 +237,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Set(tk2dTextMesh t, string text)
+        private void Set(tk2dTextMesh t, string text)
         {
             if (t == null)
             {
@@ -271,7 +270,7 @@ namespace DarkwoodMP.World
         /// at any resolution (the UI camera scales the whole screen with the
         /// window's height).
         /// </summary>
-        private static void Make(UI ui)
+        private void Make(UI ui)
         {
             if (!_loggedTree)
             {
@@ -338,7 +337,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The camera that draws this layer (the UI's), if there is one.
         /// </summary>
-        private static Camera UiCamera(int layer)
+        private Camera UiCamera(int layer)
         {
             foreach (var c in Camera.allCameras)
             {
@@ -351,7 +350,7 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        private static tk2dTextMesh MakeText(
+        private tk2dTextMesh MakeText(
             Transform screen, string name, tk2dTextMesh like, Vector3 worldPos,
             float size, Color color)
         {
@@ -393,7 +392,7 @@ namespace DarkwoodMP.World
             return t;
         }
 
-        private static void LogTree(Transform t, int depth)
+        private void LogTree(Transform t, int depth)
         {
             if (depth > 4)
             {
@@ -454,7 +453,7 @@ namespace DarkwoodMP.World
         /// What the game's loading is doing now, or null when no world is
         /// loading.
         /// </summary>
-        public static string GameStage()
+        public string GameStage()
         {
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg == null)
@@ -559,7 +558,7 @@ namespace DarkwoodMP.World
         /// the bar says what's happening instead. The text mesh stays (our
         /// lines take its font), only its renderer is off.
         /// </summary>
-        private static void HideTip()
+        private void HideTip()
         {
             var ui = Singleton<UI>.Instance;
             if (ui == null || ui.loadingScreen == null
@@ -592,10 +591,10 @@ namespace DarkwoodMP.World
         /// Every frame: in a load the game runs by itself, write its step under
         /// its bar.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             HideTip();
-            if (JoinScreen.Shown)
+            if (Plugin.Instance.Host.Join.Shown)
             {
                 return; // JoinScreen writes its own line
             }
@@ -614,15 +613,5 @@ namespace DarkwoodMP.World
 
             SetLine(GameStage(), null);
         }
-    }
-
-    /// <summary>
-    /// The game set its bar: while a client joins, JoinScreen's bar (download
-    /// first, then this) wins.
-    /// </summary>
-    [HarmonyPatch(typeof(WorldGenerator), "set_percentLoaded")]
-    static class PercentLoadedPatch
-    {
-        static void Postfix() => JoinScreen.OnGameBar();
     }
 }

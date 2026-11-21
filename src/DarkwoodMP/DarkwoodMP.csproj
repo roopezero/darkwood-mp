@@ -26,8 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- The mod's item and map descriptions (tools/gen_tooltips.py writes it; World/Tooltips.cs reads it). -->
-    <EmbeddedResource Include="World/Tooltips.tsv" LogicalName="DarkwoodMP.Tooltips.tsv" />
+    <!-- The mod's item and map descriptions (tools/gen_tooltips.py writes it; World/Texts/Tooltips.cs reads it). -->
+    <EmbeddedResource Include="World/Texts/Tooltips.tsv" LogicalName="DarkwoodMP.Tooltips.tsv" />
   </ItemGroup>
 
   <!--
