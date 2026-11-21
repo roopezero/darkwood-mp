@@ -574,9 +574,16 @@ Finish with `tools/run-test.sh full`.
         (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'
         bytes are the core's `DreamStart` and `DreamEnd`. Others read the
         shared dream through `DreamSync.SharedNow`, null with no session.
-  - [ ] Part b: `Progression`, `SkillTree`, `SkillsPanel`. They also run
-        playing alone, so their state goes on `ModHost`, with their message
-        handlers made per session.
+  - [x] Part b: `Progression`. It also runs playing alone, so it is
+        `ModHost.Progress` (`World/Progress/Progression`, a partial class
+        in four files, with `ProgressPatches.cs`); each session joins it
+        (`Progression.Join`) with its four handlers and a hook that forgets
+        the record when the session ends. Its bytes are the core's
+        `ProgressState`, `EssenceAdd` and `LevelTaken`. Its patches run
+        with no session too.
+  - [ ] Part c: `SkillTree`, `SkillsPanel`. They also run playing alone,
+        so their state goes on `ModHost`, with their message handlers made
+        per session.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's

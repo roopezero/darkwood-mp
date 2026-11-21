@@ -443,7 +443,7 @@ namespace DarkwoodMP
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
             ScriptedEvents.Register(_host.Session);
-            Progression.Register(_host.Session);
+            SkillTree.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             UpdateLocalName();
@@ -1184,8 +1184,9 @@ namespace DarkwoodMP
 
             // The Skills panel: two levels with their points, the panel opened
             // with its key, a point spent.
-            Progression.TestGiveLevels(2, chooseSkills: false);
-            Log.LogInfo($"[solo] given two levels: {Progression.TestState()}");
+            _host.Progress.TestGiveLevels(2, chooseSkills: false);
+            Log.LogInfo(
+                $"[solo] given two levels: {_host.Progress.TestState()}");
             SkillsPanel.TestPressKey();
             yield return new WaitForSecondsRealtime(2f);
             Log.LogInfo(
@@ -1291,7 +1292,7 @@ namespace DarkwoodMP
                 // skill, its negative one if needed, Learn.
                 if (RealMouse.Available)
                 {
-                    Progression.TestGiveLevels(1, chooseSkills: false);
+                    _host.Progress.TestGiveLevels(1, chooseSkills: false);
                     yield return new WaitForSecondsRealtime(1f);
                     int had = SkillTree.Points(p);
                     List<string> clickFails = null;
@@ -1309,7 +1310,7 @@ namespace DarkwoodMP
 
                     Log.LogInfo(
                         $"[solo] real clicks on {had} points: {result}: "
-                            + $"{Progression.TestState()}");
+                            + $"{_host.Progress.TestState()}");
                 }
                 else
                 {
@@ -1328,7 +1329,7 @@ namespace DarkwoodMP
             // it's allowed, once a day.
             Singleton<UI>.Instance.LevelingMenu.show();
             float until = Time.realtimeSinceStartup + 20f;
-            while (!Progression.TestCanReset
+            while (!_host.Progress.TestCanReset
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
@@ -1337,29 +1338,29 @@ namespace DarkwoodMP
             bool morningWas = ctl.isAfterNight;
             ctl.isAfterNight = false;
             Log.LogInfo(
-                $"[solo] stove menu open {Progression.TestCanReset}; before: "
-                    + $"{Progression.TestState()}");
+                $"[solo] stove menu open {_host.Progress.TestCanReset}; "
+                    + $"before: {_host.Progress.TestState()}");
             yield return Shot("solo-stove");
-            Progression.TestReset();
+            _host.Progress.TestReset();
             yield return new WaitForSecondsRealtime(1f);
             Log.LogInfo(
                 "[solo] after a reset outside the morning: "
-                    + $"{Progression.TestState()}");
+                    + $"{_host.Progress.TestState()}");
             // as after dawn in the hideout (Controller.startAfterNight),
             // without the trader
             ctl.isAfterNight = true;
             yield return Shot("solo-stove-morning");
-            Progression.TestReset();
+            _host.Progress.TestReset();
             yield return new WaitForSecondsRealtime(1f);
             Log.LogInfo(
                 "[solo] after a reset in the morning: "
-                    + $"{Progression.TestState()}");
+                    + $"{_host.Progress.TestState()}");
             yield return Shot("solo-stove-reset");
-            Progression.TestReset();
+            _host.Progress.TestReset();
             yield return new WaitForSecondsRealtime(0.5f);
             Log.LogInfo(
                 "[solo] after a second reset the same day: "
-                    + $"{Progression.TestState()}");
+                    + $"{_host.Progress.TestState()}");
             ctl.isAfterNight = morningWas;
 
             // A full bar at the stove gives the level and its point, without
@@ -1370,7 +1371,7 @@ namespace DarkwoodMP
                 p.levelRequirements[
                     Mathf.Clamp(
                         p.currentLevel, 0, p.levelRequirements.Count - 1)]);
-            Progression.Cooked(1);
+            _host.Progress.Cooked(1);
             Singleton<UI>.Instance.LevelingMenu.updateLiquid();
             until = Time.realtimeSinceStartup + 10f;
             while (p.currentLevel == levelBefore
@@ -1384,7 +1385,7 @@ namespace DarkwoodMP
                 $"[solo] after a full bar at the stove: level {levelBefore} -> "
                     + $"{p.currentLevel}, the game's skill choice open "
                     + $"{Singleton<SkillsMenu>.Instance.opened}: "
-                    + $"{Progression.TestState()}");
+                    + $"{_host.Progress.TestState()}");
             yield return Shot("solo-stove-level");
             Singleton<UI>.Instance.LevelingMenu.hide();
             yield return new WaitForSecondsRealtime(2f);
@@ -2347,7 +2348,7 @@ namespace DarkwoodMP
             JoinScreen.Update(_host.Session, _world);
             LoadingScreen.Update();
             Chapters.Update();
-            Progression.Update();
+            _host.Progress.Update();
             SkillsPanel.Update(_showMenu);
             coop = Coop.Current;
             if (coop != null)
@@ -2565,7 +2566,7 @@ namespace DarkwoodMP
                 watching.Spectator.DrawGui();
             }
 
-            Progression.OnGUI();
+            _host.Progress.OnGUI();
             SkillsPanel.OnGUI();
             ShowSystemCursor(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);

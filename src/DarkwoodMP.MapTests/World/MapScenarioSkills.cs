@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.World.Progress;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -13,6 +14,9 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class MapScenarioSkills
     {
+        private static Progression Progress =>
+            Plugin.Instance.Host.Progress;
+
         private static Player P => Player.Instance;
 
         public static void Register()
@@ -36,10 +40,10 @@ namespace DarkwoodMP.World
                 n = int.Parse(a[0]);
             }
 
-            Progression.TestGiveLevels(n, chooseSkills: false);
+            Progress.TestGiveLevels(n, chooseSkills: false);
             // the host takes in its own level (Progression.Update)
             yield return new WaitForSecondsRealtime(1.5f);
-            r.Info = Progression.TestState();
+            r.Info = Progress.TestState();
         }
 
         /// <summary>
@@ -247,7 +251,7 @@ namespace DarkwoodMP.World
             var choice = SkillTree.AnyChoice(P);
             if (choice == null)
             {
-                r.Fail($"nothing to learn: {Progression.TestState()}");
+                r.Fail($"nothing to learn: {Progress.TestState()}");
                 yield break;
             }
 
@@ -407,7 +411,7 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"{start} points, {n} choices: {string.Join("; ", log)}; "
-                    + $"{Progression.TestState()}";
+                    + $"{Progress.TestState()}";
             if (start < 2)
             {
                 fails.Add("fewer than two points to spend");
@@ -429,22 +433,22 @@ namespace DarkwoodMP.World
             var menu = Singleton<UI>.Instance.LevelingMenu;
             menu.show();
             float until = Time.realtimeSinceStartup + 20f;
-            while (!Progression.TestCanReset
+            while (!Progress.TestCanReset
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
 
-            if (!Progression.TestCanReset)
+            if (!Progress.TestCanReset)
             {
                 r.Fail("the stove's menu didn't open");
                 yield break;
             }
 
             int had = SkillTree.Chosen(P).Count;
-            Progression.TestReset();
+            Progress.TestReset();
             until = Time.realtimeSinceStartup + 8f;
-            while (Progression.TestWaitingReset
+            while (Progress.TestWaitingReset
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
@@ -454,7 +458,7 @@ namespace DarkwoodMP.World
             int left = SkillTree.Chosen(P).Count;
             r.Info =
                 $"skills {had} -> {left}, morning {Progression.InMorning(0)}: "
-                    + $"{Progression.TestState()}";
+                    + $"{Progress.TestState()}";
             menu.hide();
             yield return new WaitForSecondsRealtime(2f);
             bool wrong = had == 0;

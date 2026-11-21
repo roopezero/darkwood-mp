@@ -49,13 +49,14 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(1.5f);
             var p = P;
+            var progress = Plugin.Instance.Host.Progress;
             var reqs = p.levelRequirements;
             int want = Mathf.Min(
-                Progression.SharedExp,
+                progress.SharedExp,
                 reqs[Mathf.Clamp(p.currentLevel, 0, reqs.Count - 1)]);
             r.Info =
-                $"shared essence {Progression.SharedExp} level "
-                    + $"{Progression.SharedLevel}; ours {p.experience} at "
+                $"shared essence {progress.SharedExp} level "
+                    + $"{progress.SharedLevel}; ours {p.experience} at "
                     + $"level {p.currentLevel}";
             if (p.experience != want)
             {

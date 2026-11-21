@@ -1,8 +1,8 @@
 namespace DarkwoodMP.World.Progress
 {
     /// The stove's level without the game's skill choice
-    /// (Progression.TakeLevelAtStove, StoveLevelPatch) and the overlay that
-    /// shows what's waiting there (Progression.OnGUI).
+    /// (Progression.TakeLevelAtStove, SkillsMenuShowHideTiers) and the
+    /// overlay that shows what's waiting there (Progression.OnGUI).
     public static class StoveRules
     {
         /// What a level gives the player's saturation (gainSaturation).

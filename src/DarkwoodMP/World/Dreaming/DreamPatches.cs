@@ -30,7 +30,11 @@ namespace DarkwoodMP.World.Dreaming
                 coop.Dreaming.Confirmed(Singleton<Dreams>.Instance, __state);
             }
 
-            Progression.LevelTaken();
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
+            {
+                plugin.Host.Progress.LevelTaken();
+            }
         }
     }
 

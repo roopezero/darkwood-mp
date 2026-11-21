@@ -267,6 +267,9 @@ namespace DarkwoodMP
             Porter = new World.Hideout.Porter(this);
             Ovens = new World.Hideout.Ovens(this);
             Nights = new World.Nights.NightObjects(this);
+            // the progression lives as long as the game (ModHost.Progress);
+            // this session brings its messages and forgets its record
+            Plugin.Instance.Host.Progress.Join(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
