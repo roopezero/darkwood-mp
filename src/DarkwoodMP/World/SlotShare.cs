@@ -492,26 +492,12 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void Grew(Inventory inv)
         {
-            if (!_watched.TryGetValue(inv, out var keys)
-                || keys.Length >= inv.slots.Count)
+            if (!_watched.TryGetValue(inv, out var keys))
             {
                 return;
             }
 
-            var grown = new string[inv.slots.Count];
-            for (int i = 0; i < grown.Length; i++)
-            {
-                if (i < keys.Length)
-                {
-                    grown[i] = keys[i];
-                }
-                else
-                {
-                    grown[i] = Key(inv.slots[i]);
-                }
-            }
-
-            _watched[inv] = grown;
+            _watched[inv] = SlotRules.Grown(keys, Keys(inv));
         }
 
         private void Merge(
@@ -545,25 +531,24 @@ namespace DarkwoodMP.World
             int differed = 0, undone = 0;
             for (int i = 0; i < slotCount; i++)
             {
-                string hostKey = Key(Item(host[i]));
-                string now = Key(inv.slots[i]);
-                if (seen == null || i >= seen.Length || now == seen[i])
+                var slot = FactsOf(inv, i, seen) with
+                {
+                    HostKey = Key(Item(host[i])),
+                };
+
+                var step = SlotRules.Merge(slot);
+                if (step == SlotStep.Take)
                 {
                     // Set makes it the slot's starting point
-                    if (now != hostKey)
-                    {
-                        Set(inv, i, host[i]);
-                        differed++;
-                    }
-
+                    Set(inv, i, host[i]);
+                    differed++;
                     continue;
                 }
 
-                if (hostKey == seen[i]
-                    || RotOnly(inv.slots[i].invItem, hostKey, seen[i]))
+                if (step != SlotStep.TakeAndUndo)
                 {
-                    // we changed it, from what the host has too: it goes at the
-                    // next Check
+                    // unchanged and as the host's, or we changed it from what
+                    // the host has too: it goes at the next Check
                     continue;
                 }
 
@@ -600,17 +585,14 @@ namespace DarkwoodMP.World
         private void SendEmptied(ObjRef r, string[] before)
         {
             var changed = new List<SlotChange>();
-            for (int i = 0; i < before.Length; i++)
+            foreach (int i in SlotRules.Emptied(before))
             {
-                if (before[i].Length > 0)
+                changed.Add(new SlotChange
                 {
-                    changed.Add(new SlotChange
-                    {
-                        Slot = i,
-                        Old = before[i],
-                        New = ""
-                    });
-                }
+                    Slot = i,
+                    Old = before[i],
+                    New = ""
+                });
             }
 
             if (changed.Count == 0)
@@ -638,13 +620,15 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void RemoveIfEmptied(Inventory inv)
         {
-            if (inv == null || inv.getAllItems().Count > 0)
+            if (inv == null)
             {
                 return;
             }
 
             var item = inv.GetComponent<Item>();
-            if (!inv.removeWhenEmpty && (item == null || !item.isDroppedItem))
+            bool dropped = item != null && item.isDroppedItem;
+            int items = inv.getAllItems().Count;
+            if (!SlotRules.Removes(items, inv.removeWhenEmpty, dropped))
             {
                 return;
             }
@@ -717,6 +701,44 @@ namespace DarkwoodMP.World
                 Drain = basic.durabilityDrain,
                 MaxDurability = basic.maxDurability,
             };
+        }
+
+        /// <summary>
+        /// What the slot rules look at in slot i here against seen, the keys
+        /// of our last look (null when not watched). Seen is false for a slot
+        /// past either; HostKey is left for the caller.
+        /// </summary>
+        private static SlotFacts FactsOf(Inventory inv, int i, string[] seen)
+        {
+            if (i >= inv.slots.Count)
+            {
+                return default;
+            }
+
+            var here = inv.slots[i].invItem;
+            var slot = new SlotFacts
+            {
+                NowKey = Key(here),
+                Here = FactsOf(here),
+            };
+
+            if (seen == null || i >= seen.Length)
+            {
+                return slot;
+            }
+
+            return slot with
+            {
+                Seen = true,
+                SeenKey = seen[i],
+            };
+        }
+
+        /// The keys of our last look at a container, or null.
+        private string[] Watched(Inventory inv)
+        {
+            _watched.TryGetValue(inv, out var keys);
+            return keys;
         }
 
         /// <summary>
@@ -801,15 +823,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            for (int i = 0; i < keys.Length && i < before.Length
-                && i < inv.slots.Count; i++)
-            {
-                string now = Key(inv.slots[i]);
-                if (now != before[i] && keys[i] == before[i])
-                {
-                    keys[i] = now;
-                }
-            }
+            // in place: a Merge under way may hold this array as what it saw
+            var kept = SlotRules.Drift(keys, before, Keys(inv));
+            System.Array.Copy(kept, keys, keys.Length);
         }
 
         private static string[] Keys(Inventory inv)
@@ -880,8 +896,16 @@ namespace DarkwoodMP.World
             }
 
             var player = Player.Instance;
-            if (!string.IsNullOrEmpty(json) && !InvItemClass.isNull(held)
-                && held.slot == slot && player != null)
+            bool holding = !InvItemClass.isNull(held);
+            var facts = new HeldFacts
+            {
+                Filling = !string.IsNullOrEmpty(json),
+                Holding = holding,
+                FromThisSlot = holding && held.slot == slot,
+                PlayerHere = player != null,
+            };
+
+            if (SlotRules.HeldGoesToBags(facts))
             {
                 var keep = new InvItemClass(held);
                 UIInvItem uiInvItem = held.UIInvItem;
@@ -907,17 +931,9 @@ namespace DarkwoodMP.World
                 // amount stays the 1 the copy gives it, not 0.
                 if (it != null)
                 {
-                    int created;
-                    if (it.baseClass != null && it.baseClass.hasAmmo)
-                    {
-                        created = -1;
-                    }
-                    else
-                    {
-                        created = it.amount;
-                    }
-
-                    slot.createItem(it, created);
+                    bool ammo = it.baseClass != null && it.baseClass.hasAmmo;
+                    slot.createItem(
+                        it, SlotRules.CreateAmount(ammo, it.amount));
                 }
             }
             finally
@@ -935,60 +951,12 @@ namespace DarkwoodMP.World
 
         // Client: the batches of slot changes we sent lately, to undo one whole
         // when the host refuses it.
-        private sealed class Sent
-        {
-            public string Obj;
-            public List<SlotChange> Changes;
-            public float At;
-            public bool Undone;
-        }
-
-        private readonly List<Sent> _sent = new List<Sent>();
-        private const float SentKept = 15f;
+        private readonly SentBatches _sent = new SentBatches();
 
         private void RememberSent(ObjRef obj, List<SlotChange> changes)
         {
-            float now = Time.unscaledTime;
-            _sent.RemoveAll(b => now - b.At > SentKept);
-            _sent.Add(new Sent
-            {
-                Obj = obj.ToString(),
-                Changes = changes,
-                At = now
-            });
-        }
-
-        /// <summary>
-        /// The batch we sent that had this change in it (the oldest not yet
-        /// undone first), or null.
-        /// </summary>
-        private Sent SentWith(
-            ObjRef obj, int slot, string oldKey, string newJson)
-        {
-            string key = obj.ToString();
-            Sent found = null;
-            foreach (var b in _sent)
-            {
-                if (b.Obj != key
-                    || !b.Changes.Exists(
-                        c => c.Slot == slot && c.Old == oldKey
-                            && c.New == newJson))
-                {
-                    continue;
-                }
-
-                if (!b.Undone)
-                {
-                    return b;
-                }
-
-                if (found == null)
-                {
-                    found = b;
-                }
-            }
-
-            return found;
+            _sent.Remember(
+                obj.ToString(), changes, new Seconds(Time.unscaledTime));
         }
 
         private void OnSlots(ulong from, PacketReader r)
@@ -1144,22 +1112,24 @@ namespace DarkwoodMP.World
         /// </summary>
         private void TakeHost(Inventory inv, SlotChange c)
         {
-            if (c.Slot >= inv.slots.Count
-                || !_watched.TryGetValue(inv, out var keys)
-                || c.Slot >= keys.Length
-                || keys[c.Slot] == Key(inv.slots[c.Slot]))
+            var slot = FactsOf(inv, c.Slot, Watched(inv)) with
+            {
+                HostKey = Key(Item(c.New)),
+            };
+
+            var step = SlotRules.TakeHost(slot);
+            if (step == SlotStep.Take)
             {
                 Set(inv, c.Slot, c.New);
                 return;
             }
 
-            string oldKey = keys[c.Slot], hostKey = Key(Item(c.New));
-            if (hostKey == oldKey
-                || RotOnly(inv.slots[c.Slot].invItem, hostKey, oldKey))
+            if (step != SlotStep.TakeAndUndo)
             {
                 return;
             }
 
+            string oldKey = slot.SeenKey;
             var tried = Item(Json(inv, c.Slot));
             Set(inv, c.Slot, c.New);
             Plugin.Log.LogInfo(
@@ -1198,12 +1168,14 @@ namespace DarkwoodMP.World
             // change already sent is refused, and undone, by its own answer.)
             InvItemClass unsent = null;
             string sentKey = null;
-            if (inv != null && slot < inv.slots.Count
-                && _watched.TryGetValue(inv, out var keys)
-                && slot < keys.Length && keys[slot] != Key(inv.slots[slot]))
+            if (inv != null)
             {
-                sentKey = keys[slot];
-                unsent = Item(Json(inv, slot));
+                var here = FactsOf(inv, slot, Watched(inv));
+                if (SlotRules.HasUnsent(here))
+                {
+                    sentKey = here.SeenKey;
+                    unsent = Item(Json(inv, slot));
+                }
             }
 
             if (inv != null)
@@ -1216,21 +1188,36 @@ namespace DarkwoodMP.World
             // slot of a batch we sent undoes the whole batch, netted per item
             // type (an item we moved within the container comes to nothing);
             // its other slots' refusals only set the host's contents.
-            var batch = SentWith(obj, slot, oldKey, triedJson);
-            if (batch == null)
+            var batch = _sent.Find(
+                obj.ToString(),
+                new SlotChange
+                {
+                    Slot = slot,
+                    Old = oldKey,
+                    New = triedJson,
+                });
+
+            bool undone = false;
+            if (batch != null)
+            {
+                undone = batch.Undone;
+            }
+
+            var undo = SlotRules.UndoOnRefusal(batch != null, undone);
+            if (undo == RefusalUndo.Alone)
             {
                 Undo(oldKey, Item(triedJson));
             }
-            else if (!batch.Undone)
+            else if (undo == RefusalUndo.Batch)
             {
                 batch.Undone = true;
-                var net = new Dictionary<string, (int n, InvItemClass item)>();
+                var moves = new Moves();
                 foreach (var c in batch.Changes)
                 {
-                    Moved(c.Old, Item(c.New), net);
+                    moves.Add(c.Old, Item(c.New));
                 }
 
-                Undo(net, quiet: false);
+                Undo(moves, quiet: false);
             }
 
             if (sentKey != null)
@@ -1252,56 +1239,36 @@ namespace DarkwoodMP.World
         private static void Undo(
             string oldKey, InvItemClass tried, bool quiet = false)
         {
-            var net = new Dictionary<string, (int n, InvItemClass item)>();
-            Moved(oldKey, tried, net);
-            Undo(net, quiet);
+            var moves = new Moves();
+            moves.Add(oldKey, tried);
+            Undo(moves, quiet);
         }
 
         /// <summary>
-        /// Adds what a slot going from oldKey to tried moved, per item type, to
-        /// net: more of a type in the container (we put it in) counts up, less
-        /// (we took it) counts down. Summed over a whole batch, an item moved
-        /// from one slot of the container to another comes to nothing.
+        /// What slot changes moved, per item type (SlotNet), with the first
+        /// item tried of each type, to give back.
         /// </summary>
-        private static void Moved(
-            string oldKey, InvItemClass tried,
-            Dictionary<string, (int n, InvItemClass item)> net)
+        private sealed class Moves
         {
-            var old = oldKey.Split('|');
-            string oldType = null;
-            if (oldKey.Length > 0)
-            {
-                oldType = old[0];
-            }
+            public readonly SlotNet Net = new SlotNet();
 
-            int oldAmount = 0;
-            if (oldKey.Length > 0 && old.Length > 1
-                && int.TryParse(old[1], out int a))
-            {
-                oldAmount = a;
-            }
+            public readonly Dictionary<string, InvItemClass> Items =
+                new Dictionary<string, InvItemClass>();
 
-            bool any = !InvItemClass.isNull(tried);
-            void Add(string type, int n, InvItemClass item)
+            /// A slot went from oldKey (its key, "" empty) to tried.
+            public void Add(string oldKey, InvItemClass tried)
             {
-                net.TryGetValue(type, out var was);
-                InvItemClass kept = was.item;
-                if (kept == null)
+                if (InvItemClass.isNull(tried))
                 {
-                    kept = item;
+                    Net.Add(oldKey, null, 0);
+                    return;
                 }
 
-                net[type] = (was.n + n, kept);
-            }
-
-            if (any)
-            {
-                Add(tried.type, tried.amount, tried);
-            }
-
-            if (oldType != null)
-            {
-                Add(oldType, -oldAmount, null);
+                Net.Add(oldKey, tried.type, tried.amount);
+                if (!Items.ContainsKey(tried.type))
+                {
+                    Items[tried.type] = tried;
+                }
             }
         }
 
@@ -1309,8 +1276,7 @@ namespace DarkwoodMP.World
         /// Undo what net says our changes moved: what we put in comes back to
         /// us, what we took goes again.
         /// </summary>
-        private static void Undo(
-            Dictionary<string, (int n, InvItemClass item)> net, bool quiet)
+        private static void Undo(Moves moves, bool quiet)
         {
             var player = Player.Instance;
             if (player == null)
@@ -1319,19 +1285,10 @@ namespace DarkwoodMP.World
             }
 
             bool any = false;
-            foreach (var kv in net)
+            foreach (var kv in moves.Net.Counts)
             {
-                int put = 0;
-                if (kv.Value.n > 0)
-                {
-                    put = kv.Value.n;
-                }
-
-                int took = 0;
-                if (kv.Value.n < 0)
-                {
-                    took = -kv.Value.n;
-                }
+                int put = SlotNet.Put(kv.Value);
+                int took = SlotNet.Took(kv.Value);
 
                 if (put == 0 && took == 0)
                 {
@@ -1340,9 +1297,10 @@ namespace DarkwoodMP.World
 
                 any = true;
                 int dropped = 0;
-                if (put > 0 && kv.Value.item != null)
+                if (put > 0
+                    && moves.Items.TryGetValue(kv.Key, out var item))
                 {
-                    dropped = GiveBack(player, kv.Value.item, put);
+                    dropped = GiveBack(player, item, put);
                 }
 
                 int left = took;
