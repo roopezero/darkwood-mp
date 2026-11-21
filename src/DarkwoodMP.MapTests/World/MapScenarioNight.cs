@@ -380,7 +380,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int sent = NightObjects.SentCount;
+            int sent = NightsSent();
             var was = p.whereAmI.location;
             p.whereAmI.location = loc;
             try
@@ -394,7 +394,7 @@ namespace DarkwoodMP.World
 
             float until = Time.realtimeSinceStartup + 8f;
             while (Time.realtimeSinceStartup < until
-                && NightObjects.SentCount == sent)
+                && NightsSent() == sent)
             {
                 yield return null;
             }
@@ -405,14 +405,26 @@ namespace DarkwoodMP.World
                 g => g != null
                     && names.Contains(Name(g))).GroupBy(Name)
                 .Select(gr => $"{gr.Key} x{gr.Count()}");
-            if (NightObjects.SentCount == sent)
+            if (NightsSent() == sent)
             {
                 r.Fail($"{ev.name} at {loc.name} made nothing");
             }
 
             r.Info =
-                $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} "
+                $"{ev.name} at {loc.name}: {NightsSent() - sent} "
                     + $"objects; night objects now: {string.Join(", ", made)}";
+        }
+
+        /// How many night objects the host sent this session.
+        private static int NightsSent()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return 0;
+            }
+
+            return coop.Nights.SentCount;
         }
 
         // ---- enemy motion ---------------------------------------------------

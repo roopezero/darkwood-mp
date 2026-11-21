@@ -449,8 +449,6 @@ namespace DarkwoodMP
             _flags = new FlagsSync(_host.Session);
             _events = new WorldEvents(_host.Session);
             ScriptedEvents.Register(_host.Session);
-            Hideouts.Register(_host.Session);
-            NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
@@ -2312,7 +2310,11 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("host ids");
-            NightObjects.Update();
+            if (coop != null)
+            {
+                coop.Nights.Update();
+            }
+
             ModProfiler.Mark("night objects");
             coop = Coop.Current;
             if (coop != null)
