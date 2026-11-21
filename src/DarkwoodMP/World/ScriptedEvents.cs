@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -309,26 +310,115 @@ namespace DarkwoodMP.World
             go == p.gameObject || go.transform.IsChildOf(p.transform);
 
         /// <summary>
-        /// Whether this step runs in the part being run now. A moveInventory
-        /// between world containers only is the host's, not the player's
-        /// (World.Hideouts.IsWorldMove).
+        /// Whether this step runs in the part being run now
+        /// (StepRules.Runs). With nothing shared going on (Part.All) every
+        /// step runs, so its facts aren't read.
         /// </summary>
         public static bool Runs(GameEvent ge, GameObject thisGO)
         {
-            if (Current == Part.LaterPlayer)
+            if (Current == Part.All)
             {
-                return LaterStep(ge);
+                return true;
             }
 
-            if (Hideouts.IsWorldMove(ge))
+            return StepRules.Runs((EventPart)Current, FactsOf(ge, thisGO));
+        }
+
+        /// <summary>
+        /// What StepRules needs to know about a step (thisGO: the object
+        /// whose GameEvents it is in, or null).
+        /// </summary>
+        internal static StepFacts FactsOf(GameEvent ge, GameObject thisGO)
+        {
+            if (ge == null)
             {
-                return Runs(player: false, host: true, ge.type);
+                return default;
             }
 
-            return Runs(
-                IsPlayerStep(ge.type) || IsAreaLook(ge, thisGO)
-                    || TargetsPlayer(ge),
-                IsHostStep(ge.type), ge.type);
+            return new StepFacts
+            {
+                Exists = true,
+                Disabled = ge.disabled,
+                Type = StepTypeOf(ge.type),
+                ActiveModifier = ge.activeModifier,
+                ActiveModifier2 = ge.activeModifier2,
+                RelentlessPursuit = ge.relentlessPursuit,
+                SpecialItem = AddsSpecialItem(ge),
+                TargetsPlayer = TargetsPlayer(ge),
+                PlayerType = IsPlayerStep(ge.type),
+                AreaLook = IsAreaLook(ge, thisGO),
+                HostType = IsHostStep(ge.type),
+                WorldMove = Hideouts.IsWorldMove(ge),
+                Message = ge.type == GameEvent.Type.displayMessage,
+            };
+        }
+
+        private static StepType StepTypeOf(GameEvent.Type t)
+        {
+            switch (t)
+            {
+                case GameEvent.Type.transportPlayerToObject:
+                    return StepType.PlayerTrip;
+                case GameEvent.Type.transportToOutsideLocation:
+                case GameEvent.Type.startDream:
+                case GameEvent.Type.endDream:
+                case GameEvent.Type.returnToWorld:
+                case GameEvent.Type.displayMessage:
+                case GameEvent.Type.cameraEffect:
+                case GameEvent.Type.timeScale:
+                case GameEvent.Type.forbidInputs:
+                case GameEvent.Type.switchCantChangeForbidInputs:
+                case GameEvent.Type.switchVisibleUI:
+                case GameEvent.Type.addJournalItem:
+                case GameEvent.Type.addAllJournalItems:
+                case GameEvent.Type.addRecipes:
+                case GameEvent.Type.unlockAchievement:
+                    return StepType.Later;
+                case GameEvent.Type.addOrRemoveInvItem:
+                    return StepType.Item;
+                case GameEvent.Type.openDialogue:
+                case GameEvent.Type.moveInventory:
+                case GameEvent.Type.endGame:
+                    return StepType.NotLater;
+                default:
+                    return StepType.Other;
+            }
+        }
+
+        /// <summary>
+        /// One of the items an addOrRemoveInvItem step adds is an important
+        /// item or a key.
+        /// </summary>
+        private static bool AddsSpecialItem(GameEvent e)
+        {
+            if (e.type != GameEvent.Type.addOrRemoveInvItem)
+            {
+                return false;
+            }
+
+            if (e.prefabList == null)
+            {
+                return false;
+            }
+
+            foreach (var o in e.prefabList)
+            {
+                GameObject gameObject = o as GameObject;
+                InvItem item = null;
+                if (gameObject != null)
+                {
+                    item = gameObject.GetComponent<InvItem>();
+                }
+
+                if (item != null
+                    && (item.isImportantItem
+                        || item.GetComponent<KeyReference>() != null))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // ---- what only the player in an area sees and hears -----------------
@@ -435,26 +525,6 @@ namespace DarkwoodMP.World
             }
 
             return false;
-        }
-
-        private static bool Runs(bool player, bool host, GameEvent.Type t)
-        {
-            switch (Current)
-            {
-                case Part.SharedAndMessages:
-                    return !host
-                        && (!player || t == GameEvent.Type.displayMessage);
-                case Part.PlayerAndShared:
-                    return !host;
-                case Part.HostAndShared:
-                    return !player;
-                case Part.SharedOnly:
-                    return !player && !host;
-                case Part.PlayerOnly:
-                    return player && !host;
-                default:
-                    return true;
-            }
         }
 
         /// <summary>

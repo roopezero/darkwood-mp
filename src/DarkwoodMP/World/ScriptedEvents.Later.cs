@@ -122,65 +122,8 @@ namespace DarkwoodMP.World
         ///   runFunction on "player", such as diveIn): yes; it acted only on
         ///   the first player's own.
         /// </summary>
-        internal static bool LaterStep(GameEvent e)
-        {
-            if (e == null || e.disabled)
-            {
-                return false;
-            }
-
-            switch (e.type)
-            {
-                case GameEvent.Type.transportPlayerToObject:
-                    return !e.activeModifier;
-                case GameEvent.Type.transportToOutsideLocation:
-                case GameEvent.Type.startDream:
-                case GameEvent.Type.endDream:
-                case GameEvent.Type.returnToWorld:
-                case GameEvent.Type.displayMessage:
-                case GameEvent.Type.cameraEffect:
-                case GameEvent.Type.timeScale:
-                case GameEvent.Type.forbidInputs:
-                case GameEvent.Type.switchCantChangeForbidInputs:
-                case GameEvent.Type.switchVisibleUI:
-                case GameEvent.Type.addJournalItem:
-                case GameEvent.Type.addAllJournalItems:
-                case GameEvent.Type.addRecipes:
-                case GameEvent.Type.unlockAchievement:
-                    return true;
-                case GameEvent.Type.addOrRemoveInvItem:
-                    if (!e.activeModifier || e.activeModifier2
-                        || e.relentlessPursuit)
-                    {
-                        return false;
-                    }
-
-                    foreach (var o in e.prefabList)
-                    {
-                        GameObject gameObject = o as GameObject;
-                        InvItem item = null;
-                        if (gameObject != null)
-                        {
-                            item = gameObject.GetComponent<InvItem>();
-                        }
-
-                        if (item != null
-                            && (item.isImportantItem
-                                || item.GetComponent<KeyReference>() != null))
-                        {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                case GameEvent.Type.openDialogue:
-                case GameEvent.Type.moveInventory:
-                case GameEvent.Type.endGame:
-                    return false;
-                default:
-                    return TargetsPlayer(e);
-            }
-        }
+        internal static bool LaterStep(GameEvent e) =>
+            StepRules.LaterStep(FactsOf(e, null));
 
         /// <summary>
         /// Whether a later player would get anything of these events.
