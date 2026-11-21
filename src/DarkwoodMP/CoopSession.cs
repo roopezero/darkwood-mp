@@ -108,6 +108,9 @@ namespace DarkwoodMP
         /// NPC deaths, shared.
         public readonly World.NpcDeaths NpcDeaths;
 
+        /// Items hit, broken and repaired, and explosives going off, shared.
+        public readonly World.BreakActions Breaks;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -145,6 +148,7 @@ namespace DarkwoodMP
             Locks = new World.LockShare(this);
             Switches = new World.SwitchSync(this);
             NpcDeaths = new World.NpcDeaths(this);
+            Breaks = new World.BreakActions(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
