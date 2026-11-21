@@ -423,7 +423,14 @@ Finish with `tools/run-test.sh full`.
 | 6.3 | `PlayerDamage`, `EnemyAreaHits`, `CombatPatches`, `EnemyFx` | 1,583 | `combat map:enemies map:hostile map:savage` |
 | 6.4 | `NetEnemies`, `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings` | 2,675 | `combat map:night map:enemies map:hostile map:far map4` |
 
-- [ ] 6.1 Player puppets.
+- [x] 6.1 Player puppets, in `Sync/Players` on both sides. `PlayerSync` is
+      `ModHost.Players` (with `.Markers`, `.Separation`; `ModHost.Lights`,
+      `ModHost.Sprites`), since the test dummy is a puppet with no session;
+      the light grid and map patches still run without one. `PlayerFx`
+      (our side) and `PuppetFx` (the others', split from it) are
+      `CoopSession` subsystems, as is `ViewWatch` (`.View`).
+      `PlayerState`'s bytes stay in `PlayerSnapshot` (Unity types, about 40
+      callers), and `SpawnSpot` keeps its static `Hits` raycast buffer.
 - [ ] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
       by the closest player.
   - [x] Part a: `Threat`, `NetPlayerProxy`, `ViewRects`. The threat tables
