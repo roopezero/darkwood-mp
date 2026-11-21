@@ -12,7 +12,7 @@ new session, so you don't repeat an investigation that's already done. Status wo
   The "40+ minutes" is `all` + the full `map`. `all` can't be combined with other test names (known).
 - Known flaky part of the full `map`: an awake save dog (Dog#14) patrols near the test centre and sometimes kills
   the client at the rot wardrobe / egg station (test-world artifact, seen on 0.19.0 code too).
-- Save transfer is already packed: `SaveOffer` packing 1 = raw Deflate (`World/WorldFiles.cs`), "about a quarter".
+- Save transfer is already packed: `SaveOffer` packing 1 = raw Deflate (`World/Saves/WorldFiles.cs`), "about a quarter".
   So Task F is about measuring it, not adding compression.
 - Nothing in the code, the git history or the GitHub issues mentions savages. In the game, the "savages" are the
   `Villager*` kinds (and possibly `Redneck*`); `map_scenario_enemies.py` fights each kind once.

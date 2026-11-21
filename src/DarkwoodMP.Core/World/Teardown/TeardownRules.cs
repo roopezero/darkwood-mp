@@ -1,8 +1,9 @@
 namespace DarkwoodMP.World.Teardown
 {
     /// When pathfinding's pending updates are finished before a scan
-    /// (ScanWaitPatch). WorldTeardown's own choices are a flag set by four
-    /// prefixes and cleared at a Single scene load: no rule to copy.
+    /// (ScanWait.BeforeScan). WorldTeardown's own choices are a flag set by
+    /// three prefixes and the game quitting, and cleared at a Single scene
+    /// load: no rule to copy.
     public static class TeardownRules
     {
         /// The pending graph updates are finished before a scan: playing,
