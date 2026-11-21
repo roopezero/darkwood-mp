@@ -562,9 +562,17 @@ Finish with `tools/run-test.sh full`.
         (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'
         bytes are the core's `DreamStart` and `DreamEnd`. Others read the
         shared dream through `DreamSync.SharedNow`, null with no session.
-  - [ ] Part b: `Progression`, `SkillTree`, `SkillsPanel`. They also run
-        playing alone, so their state goes on `ModHost`, with their message
-        handlers made per session.
+  - [ ] Part b: `Progression`. It also runs playing alone, so its state
+        goes on `ModHost`, with its message handlers made per session.
+  - [x] Part c: `SkillTree`, `SkillsPanel` (`World/Skills`). Their state is
+        on `ModHost`: the tiers (`SkillTierCache`), learning
+        (`SkillLearning`, whose `SkillSpend` handler each `CoopSession`
+        registers, forgetting the waiting choice when it ends) and the panel
+        (`SkillsWindow`). `SkillTree` keeps static functions that read the
+        game and call the rules, and `SkillsPanel` is a way in with no state,
+        so its callers didn't change. `SkillSpend`'s bytes are the core's
+        `SkillSpend`; `SkillReset` has no payload. The panel's patches run
+        with no session, as the panel works playing alone.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's
