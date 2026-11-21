@@ -11,6 +11,30 @@ namespace DarkwoodMP.World
     /// <summary>Steps for things dragged, fuelled, used and hit.</summary>
     public static partial class MapScenarioWorld
     {
+        /// This session's DragSync; null without a session.
+        private static DragSync Drags()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return null;
+            }
+
+            return coop.Drags;
+        }
+
+        /// Drags of ours let go of this session (0 without one).
+        private static int Cancelled()
+        {
+            DragSync drags = Drags();
+            if (drags == null)
+            {
+                return 0;
+            }
+
+            return drags.Cancelled;
+        }
+
         // ---- things in the world --------------------------------------------
 
         /// <summary>
@@ -39,7 +63,7 @@ namespace DarkwoodMP.World
             if (!held)
             {
                 string info = r.Info;
-                DragSync drag = DragSync.Instance;
+                DragSync drag = Drags();
                 string owner = null;
                 if (drag != null)
                 {
@@ -135,7 +159,7 @@ namespace DarkwoodMP.World
                 yield return null;
             }
 
-            int cancelled = DragSync.Cancelled;
+            int cancelled = Cancelled();
             bool held = false;
             yield return DragFor(it, by, 1.5f, h => held = h);
             yield return new WaitForSeconds(3f);
@@ -146,10 +170,10 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"{text} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} "
+                $"{text} {it.name} {Ref(it)} ({Cancelled() - cancelled} "
                     + "drag(s) of ours let go of), at rest at "
                     + $"{Fmt(it.transform.position)}";
-            if (held == (DragSync.Cancelled > cancelled))
+            if (held == (Cancelled() > cancelled))
             {
                 r.Fail($"{r.Info}: held to the end and let go of don't agree");
             }

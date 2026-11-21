@@ -177,10 +177,10 @@ namespace DarkwoodMP.World
                     _names.BindShared(id, go);
                     // where it settles from here on is sent (as announced: it
                     // may not have yet)
-                    DragSync instance = DragSync.Instance;
-                    if (instance != null)
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
                     {
-                        instance.Watch(go);
+                        coop.Drags.Watch(go);
                     }
 
                     _outgoing.Add(
@@ -432,10 +432,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            DragSync instance = DragSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.PutAtHost(go, pos);
+                coop.Drags.PutAtHost(go, pos);
             }
         }
 

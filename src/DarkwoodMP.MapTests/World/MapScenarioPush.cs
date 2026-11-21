@@ -233,9 +233,10 @@ namespace DarkwoodMP.World
                 else if (Movable(b, out var it))
                 {
                     string w = "no DragSync";
-                    if (DragSync.Instance != null)
+                    DragSync drags = Drags();
+                    if (drags != null)
                     {
-                        w = DragSync.Instance.WatchInfo(b);
+                        w = drags.WatchInfo(b);
                     }
 
                     string text = "loose";

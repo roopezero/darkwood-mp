@@ -63,6 +63,9 @@ namespace DarkwoodMP
         /// Keeps a dialogue closable when its NPC goes away.
         public readonly World.Talk.DialogueGuard Dialogues;
 
+        /// Things dragged and pushed, shared.
+        public readonly DragSync Drags;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -84,6 +87,7 @@ namespace DarkwoodMP
             Followers = new NpcFollowers(this);
             Talk = new World.Talk.TalkLock(this);
             Dialogues = new World.Talk.DialogueGuard(this);
+            Drags = new DragSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

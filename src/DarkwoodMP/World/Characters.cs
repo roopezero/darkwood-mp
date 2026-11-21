@@ -325,10 +325,10 @@ namespace DarkwoodMP.World
             // (World.Progression)
             Progression.HostSendTo(from);
             // loose things that moved since the snapshot it loaded
-            DragSync instance = DragSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.JoinerInWorld(from);
+                coop.Drags.JoinerInWorld(from);
             }
 
             // story changes made since the snapshot it loaded

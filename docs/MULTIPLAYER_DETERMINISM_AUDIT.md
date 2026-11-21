@@ -103,7 +103,7 @@ So risks 1 to 3 below were not seen in the test world. They stay listed because 
 ## Physics: knocked objects
 
 - **Who moves loose things.** Every loose object (an `Item` with a rigidbody: furniture, placed objects, dropped
-  items) is watched by `World/DragSync.cs` in every game. The host sends where one came to rest (ObjMove, last),
+  items) is watched by `World/Dragging/DragSync.cs` in every game. The host sends where one came to rest (ObjMove, last),
   whatever moved it. A client sends only what its own player pushed and puts its copy of anything else back, so the
   host's rest position is the last word. Drags send their end, and again once settled.
 - **Dropped items don't get knocked.** They are on layer 25, which players' and enemies' bodies don't collide with.

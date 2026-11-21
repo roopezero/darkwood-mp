@@ -81,7 +81,6 @@ namespace DarkwoodMP
         private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
-        private DragSync _drag;
         private FuelSync _fuel;
         private WorldEvents _events;
         private bool _wasInWorld;
@@ -456,7 +455,6 @@ namespace DarkwoodMP
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
-            _drag = new DragSync(_host.Session);
             DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
             new TraderSync(_host.Session);
@@ -2281,7 +2279,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("flags");
             // also without co-op: the flag is kept for when others join
             _host.Tank.Update();
-            _drag.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Drags.Update();
+            }
+
             ModProfiler.Mark("drag");
             DoorPush.Update();
             ModProfiler.Mark("door push");
