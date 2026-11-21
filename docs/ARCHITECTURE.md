@@ -6,19 +6,17 @@ and what the unit tests cover. [TECHNICAL.md](TECHNICAL.md) describes the
 multiplayer design itself (authority, prediction, the protocol);
 [DEVELOPMENT.md](DEVELOPMENT.md) covers building and running the tests.
 
-**Status:** this is the target layout. The code is moving to it one subsystem
-at a time. New code follows it from the start; existing code is moved when
-it's next changed or in a planned refactor pass. Until a subsystem has moved,
-its old form (static classes, logic inside patches) still applies to it. The
-core, analyzer and unit test projects exist. The core has the rules and the
-network code (`Session`, the packets, `TcpBackend` and the server browser);
-the plugin keeps the Steam backend. The map test steps are in
-`src/DarkwoodMP.MapTests`, a second plugin. `ModHost` holds the `Session`,
-its backends and the server browser; `CoopSession`, `Coop.Current` and
-`WorldScope` exist. `MoveCheck`, `Authority`, the object names (`ObjNames`,
-`HostIds`) and the call guards (`Coop.Guards`) have moved into
-`CoopSession`.
-[MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
+**Status:** the code follows this layout. Every subsystem's decisions are
+rules in the core, its state is on `CoopSession` or `ModHost`, and its patches
+are thin. What stays static on purpose: `Plugin.Instance`, `Plugin.Log` and
+`Plugin.Cfg`, the process's entry point that BepInEx creates; `Coop.Current`,
+the running session; helpers that keep no state (such as `TestWorld`,
+`StateDump`, `CursorLock`); a few static front doors that pass on to an
+instance on `ModHost` because transpilers call them (`MenuSkin`, `PixelFont`,
+`MenuWindows`, parts of `Threat`); and the Harmony patch classes, which
+Harmony requires to be static. The in-game test run that checks the whole
+refactor is still to do; [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has what is
+left.
 
 ## The idea: a core of rules, and a thin shell around the game
 
@@ -86,7 +84,10 @@ is deployed to the test game folders only, and `pack.sh` fails if it ends up
 in a zip.
 
 The Steamworks rule from `CLAUDE.md` holds as before: only `SteamBackend`,
-`Lobby` and `SteamTransport` (in the plugin) name Steamworks types. The core
+`Lobby` and `SteamTransport` (in the plugin's `Net/Steam`) name Steamworks
+types. Their decisions are rules in the core's `Net/Steam` (`LobbyRules`,
+`SteamPeerRules`, `SteamSendRules`), which they call with facts made from the
+Steamworks values. The core
 can't, for the same reason it can't name Unity's.
 
 ### Math types
@@ -186,12 +187,12 @@ game.
 ```csharp
 // Plugin: World/Doors/Doors.cs
 
-var door = ObjRef.Resolve<Door>(obj);
-var verdict = DoorRules.MayOpen(FactsOf(door, requester));
-if (verdict.Refused)
+internal bool Allowed(Action a, ObjRef obj, float x)
 {
-    _authority.Refuse(verdict.Reason);
-    return false;
+    var facts = FactsOf(ObjRef.Resolve<Door>(obj));
+    var verdict = DoorRules.MayAct(facts, (DoorAction)a, x);
+    _coop.Authority.Refuse(verdict);
+    return !verdict.Refused;
 }
 ```
 
@@ -220,7 +221,9 @@ State lives in one of three homes, by how long it has to last:
 - **Anything gathered before hosting starts** is either process state or is
   rebuilt by scanning the world when the session starts.
 - **Process state is on `ModHost`, not on `Plugin`,** because `Plugin` has to
-  stay loadable when the core is missing (see "The startup check").
+  stay loadable when the core is missing (see "The startup check"). Code that
+  needs it, patches included, reaches it as `Plugin.Instance.Host` (for
+  example `Plugin.Instance.Host.Session`).
 
 Every subsystem is an instance owned by `CoopSession`, created when a session
 starts and dropped when it ends.
@@ -252,8 +255,8 @@ sealed class CoopSession : IDisposable
 - **No new statics.** The one exception is `Coop.Current`, the running session
   (`null` when there's none), which Harmony patches (always static) use to
   reach it.
-- A subsystem that moves into `CoopSession` drops its `OnSessionEnded`
-  cleanup.
+- A subsystem on `CoopSession` has no `OnSessionEnded` cleanup: the session
+  is dropped with it.
 
 ## Harmony patches
 
@@ -272,12 +275,23 @@ static class DoorOpen
     }
 
     static void Postfix(
-        Door __instance, Vector3 openerPosition, DoorState __state)
+        Door __instance,
+        Vector3 openerPosition,
+        Transform openerTransform,
+        DoorState __state)
     {
-        Doors.Opened(__instance, openerPosition, __state);
+        var coop = Coop.Current;
+        if (coop != null)
+        {
+            var at = Doors.Opener(openerPosition, openerTransform);
+            coop.Doors.Opened(__instance, __state, at);
+        }
     }
 }
 ```
+
+- A patch that finds `Coop.Current` null does nothing, so playing alone is
+  unaffected.
 
 - The shared work (checking there's a session, counting nested calls so only
   the outermost is sent, capturing the state before, sending) is written once
@@ -304,8 +318,10 @@ tests/DarkwoodMP.Core.Tests/World/Doors/DoorRulesTests.cs
 ```
 
 - **About 600 lines per file at most**, and one main type per file. A file
-  that grows past that is split along what it does.
+  that grows past that is split along what it does, into partial files named
+  `<Type>.<Part>.cs` (`NetEnemies.Host.Hits.cs`, `WorldShare.Download.cs`).
 - The in-game test steps are in `src/DarkwoodMP.MapTests`, not in the plugin.
+  The plugin keeps the test harness its `--dwmp-*` tests use, in `Testing/`.
 
 ## Naming
 
@@ -477,7 +493,7 @@ What's tested:
 
 - **Every `...Rules` class.** A bug fixed in a rule comes with a test that
   fails before the fix.
-- **The network in one process.** `Session`, `Packets` and `TcpBackend` are in
+- **The network in one process.** `Session`, the packets and `TcpBackend` are in
   the core (Unity's clock and log come in through `IClock` and `ILog`), and a
   `LoopbackBackend` (in the test project) connects a host and clients in
   memory, and delivers each message on the receiver's next poll, so a test
