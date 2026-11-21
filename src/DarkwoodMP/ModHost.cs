@@ -42,10 +42,18 @@ namespace DarkwoodMP
         public readonly HashSet<Generator> Generators =
             new HashSet<Generator>();
 
+        /// The host's stand-ins for the other players, for its AI; also the
+        /// test dummy's in a game played alone.
+        public readonly Combat.Proxies Proxies = new Combat.Proxies();
+
+        /// Each enemy's threat for each player, while there are stand-ins.
+        public readonly Combat.Threats Threats;
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
         {
+            Threats = new Combat.Threats(Proxies);
             var log = new BepInLog();
             Session = new Session(new UnityClock(), log, PluginInfo.Version)
             {

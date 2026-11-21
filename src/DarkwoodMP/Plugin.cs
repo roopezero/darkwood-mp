@@ -2254,7 +2254,7 @@ namespace DarkwoodMP
             ModProfiler.Mark("players");
             _playerFx.Update();
             ModProfiler.Mark("player fx");
-            Proxies.Update(_playerSync, _host.Session.IsHost);
+            _host.Proxies.Update(_playerSync, _host.Session.IsHost);
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
