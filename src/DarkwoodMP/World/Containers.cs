@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Inventories;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -600,8 +601,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.ContainerState);
-            r.Write(w);
-            w.WriteBigStr(Serialize(inv)); // bigstr, as OnContainer reads it
+            ContainerStateMessage.Write(w, ObjRef.NameOf(r), Serialize(inv));
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
@@ -678,14 +678,7 @@ namespace DarkwoodMP.World
         private void SendLock(ObjRef r, bool open)
         {
             var w = _session.Begin(MsgType.ContainerLock);
-            r.Write(w);
-            int openFlag = 0;
-            if (open)
-            {
-                openFlag = 1;
-            }
-
-            w.W.Write((byte)openFlag);
+            ContainerLockMessage.Write(w, ObjRef.NameOf(r), open);
             _session.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -696,8 +689,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            bool open = r.R.ReadByte() != 0;
+            var obj = ObjRef.RefOf(ContainerLockMessage.Read(r, out bool open));
             string key = LockKey(obj);
             bool held = _locks.TryGetValue(key, out var holder);
             if (!open)
@@ -713,8 +705,8 @@ namespace DarkwoodMP.World
             if (held && holder != from)
             {
                 var w = _session.Begin(MsgType.ContainerBusy);
-                obj.Write(w);
-                w.WriteStr(_session.NameOf(holder));
+                ContainerBusyMessage.Write(
+                    w, ObjRef.NameOf(obj), _session.NameOf(holder));
                 _session.SendTo(from, w, Channel.Control, reliable: true);
                 return;
             }
@@ -729,8 +721,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            string who = r.ReadStr();
+            var obj = ObjRef.RefOf(
+                ContainerBusyMessage.Read(r, out string who));
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv != null)
             {
@@ -821,8 +813,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.ContainerState);
-            r.Write(w);
-            w.WriteBigStr(contents);
+            ContainerStateMessage.Write(w, ObjRef.NameOf(r), contents);
             Share(w, except);
         }
 
@@ -892,8 +883,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            string contents = r.ReadBigStr();
+            var obj = ObjRef.RefOf(
+                ContainerStateMessage.Read(r, out string contents));
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (WorldActions.Debug)
             {
@@ -916,8 +907,8 @@ namespace DarkwoodMP.World
                     $"[authority] {_session.NameOf(from)} changed the contents "
                         + $"of {inv.name}: refused ({why})");
                 var w = _session.Begin(MsgType.ContainerState);
-                obj.Write(w);
-                w.WriteBigStr(Serialize(inv));
+                ContainerStateMessage.Write(
+                    w, ObjRef.NameOf(obj), Serialize(inv));
                 _session.SendTo(from, w, Channel.Control, reliable: true);
                 return;
             }
@@ -1284,8 +1275,7 @@ namespace DarkwoodMP.World
         private void SendBagMarker(long id, Vector3 pos, ulong except)
         {
             var w = _session.Begin(MsgType.DeathBagMarker);
-            w.W.Write(id);
-            w.Write(pos);
+            DeathBagMarkerMessage.Write(w, id, new Vec3(pos.x, pos.y, pos.z));
             Share(w, except);
             if (WorldActions.Debug)
             {
@@ -1306,8 +1296,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            long id = r.R.ReadInt64();
-            Vector3 pos = r.ReadVector3();
+            long id = DeathBagMarkerMessage.Read(r, out Vec3 marker);
+            var pos = new Vector3(marker.X, marker.Y, marker.Z);
             DeathDrop drop = null;
             if (ObjRef.Spawned.TryGetValue(id, out var go) && go != null)
             {
@@ -1363,22 +1353,19 @@ namespace DarkwoodMP.World
             string contents, bool placed, int exp)
         {
             var w = _session.Begin(MsgType.ObjSpawn);
-            w.W.Write(id);
-            int placedFlag = 0;
-            if (placed)
-            {
-                placedFlag = 1;
-            }
+            ObjSpawnMessage.Write(
+                w,
+                new SpawnedThing
+                {
+                    Id = id,
+                    Placed = placed,
+                    Prefab = prefab,
+                    Pos = new Vec3(pos.x, pos.y, pos.z),
+                    Rot = new Quat(rot.x, rot.y, rot.z, rot.w),
+                    Contents = contents,
+                    Experience = exp,
+                });
 
-            w.W.Write((byte)placedFlag);
-            w.WriteStr(prefab);
-            w.Write(pos);
-            w.W.Write(rot.x);
-            w.W.Write(rot.y);
-            w.W.Write(rot.z);
-            w.W.Write(rot.w);
-            w.WriteBigStr(contents);
-            w.W.Write(exp);
             return w;
         }
 
@@ -1394,15 +1381,15 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            long id = r.R.ReadInt64();
-            bool placed = (r.R.ReadByte() & 1) != 0;
-            string prefab = r.ReadStr();
-            Vector3 pos = r.ReadVector3();
+            SpawnedThing thing = ObjSpawnMessage.Read(r);
+            long id = thing.Id;
+            bool placed = thing.Placed;
+            string prefab = thing.Prefab;
+            var pos = new Vector3(thing.Pos.X, thing.Pos.Y, thing.Pos.Z);
             var rot = new Quaternion(
-                r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
-                r.R.ReadSingle());
-            string contents = r.ReadBigStr();
-            int exp = r.R.ReadInt32();
+                thing.Rot.X, thing.Rot.Y, thing.Rot.Z, thing.Rot.W);
+            string contents = thing.Contents;
+            int exp = thing.Experience;
             bool thrownSpawn =
                 _session.IsClient && ThrownSpawns.Contains(prefab);
             if (!(SharedPrefabs.Contains(prefab) || placed || thrownSpawn)
