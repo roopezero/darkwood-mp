@@ -4,7 +4,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
-using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -1120,92 +1119,5 @@ namespace DarkwoodMP.World
         public bool PanReleased => _panGo;
         public bool OwnDeath => _ownDeath;
         public HostBurned HostBurned => _hostBurned;
-    }
-
-    [HarmonyPatch(typeof(EpilogueOutcomes), "goToCredits")]
-    static class EpilogueCreditsPatch
-    {
-        static void Prefix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.BeforeCredits();
-            }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(Events), nameof(Events.fireWorldEvent),
-        new[] { typeof(string) })]
-    static class EpilogueWorldEventPatch
-    {
-        [HarmonyPriority(Priority.First)]
-        static bool Prefix(string type)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Epilogue.WorldEventFired(type);
-        }
-    }
-
-    [HarmonyPatch(typeof(GameEvents), nameof(GameEvents.fire))]
-    static class EpilogueBurnPatch
-    {
-        static void Postfix(GameEvents __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.EventsFired(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Player), nameof(Player.die))]
-    static class EpilogueDiePatch
-    {
-        static void Postfix(Player __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.AfterDie(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(EpilogueOutcomes), "Start")]
-    static class EpilogueOutcomesPatch
-    {
-        static void Prefix(EpilogueOutcomes __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.OutcomesStart(__instance);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The epilogue's parts: a joiner starts each one beside the others, not on
-    /// top of them.
-    /// </summary>
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.startDreaming))]
-    static class EpilogueSpawnPatch
-    {
-        static void Postfix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.PartStarted();
-            }
-        }
     }
 }
