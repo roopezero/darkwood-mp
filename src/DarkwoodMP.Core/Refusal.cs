@@ -532,5 +532,31 @@ namespace DarkwoodMP
 
         /// A player joined while the host plays the ending.
         PlayingEnding,
+
+        // Containers' slots and the workbench's level: the host logs these
+        // and sends each change back (ContainerSlotRefused), or for the
+        // level only logs them.
+
+        /// Another player has the container open. The detail is their name.
+        HasItOpen,
+
+        /// A slot of a batch of changes had changed on the host. The detail
+        /// is Refusals.Detail(slot, changes): the slot's number and how many
+        /// changes the batch holds.
+        SlotChanged,
+
+        /// The one slot a client changed had changed on the host.
+        JustChanged,
+
+        /// A slot would hold more than one stack does. The detail is the
+        /// slot's number.
+        OverStack,
+
+        /// The workbench level a client raised isn't one above the host's.
+        /// The detail is Refusals.Detail(level, current).
+        LevelNotNext,
+
+        /// The player who raised the workbench level isn't near a workbench.
+        NotAtWorkbench,
     }
 }
