@@ -434,6 +434,17 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool InReach(Vector3 pos, float reach, string what)
         {
+            var verdict = ReachOf(pos, reach, what);
+            Refuse(verdict);
+            return !verdict.Refused;
+        }
+
+        /// <summary>
+        /// InReach's verdict, for a handler whose rules take it as a fact:
+        /// nothing is refused here.
+        /// </summary>
+        public Verdict ReachOf(Vector3 pos, float reach, string what)
+        {
             var facts = FactsOf(Requester, pos) with
             {
                 Handling = Handling,
@@ -446,9 +457,7 @@ namespace DarkwoodMP.World
                 facts = facts with { Checked = true, Accepted = Flat(at) };
             }
 
-            var verdict = ReachRules.InReach(facts);
-            Refuse(verdict);
-            return !verdict.Refused;
+            return ReachRules.InReach(facts);
         }
 
         /// <summary>

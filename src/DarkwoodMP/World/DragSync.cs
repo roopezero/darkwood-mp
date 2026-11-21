@@ -58,21 +58,15 @@ namespace DarkwoodMP.World
     /// host's own player takes hold of it the same way, against the same list.
     /// The host takes a drag's moves only from its owner (anyone else is sent
     /// where the thing is), and frees the drag when its owner lets go, stops
-    /// sending for StaleAfter seconds, leaves, or drags it out of reach. Every
-    /// game is told who owns each drag, so a player who tries to take hold of
-    /// something someone else is moving is stopped before the game starts the
-    /// drag (Item.startDragging).
+    /// sending for DragRules.StaleAfter seconds, leaves, or drags it out of
+    /// reach. Every game is told who owns each drag, so a player who tries to
+    /// take hold of something someone else is moving is stopped before the
+    /// game starts the drag (Item.startDragging).
     /// </summary>
     public sealed class DragSync
     {
-        private const float SendInterval = 0.1f;
-        // a mover that stopped sending (left, lost the last packet): let go
-        private const float StaleAfter = 3f;
-        // at most this long to glide to where another game's move came to rest
-        // further than this, it's put there at once
-        private const float GlideFor = 0.6f;
-        private const float GlideMax = 300f;
-
+        // the times and distances are the rules' (OurDragRules, DragRules,
+        // GlideRules, PushRules)
         private readonly Session _session;
 
         // the local drag
@@ -92,8 +86,8 @@ namespace DarkwoodMP.World
             _hostAt = new Dictionary<GameObject, (Vector3, Quaternion)>();
         // client: where we said a thing came to rest, oldest first, until the
         // host passes each back to us (its echo)
-        private readonly Dictionary<GameObject, List<Vector3>> _unechoed =
-            new Dictionary<GameObject, List<Vector3>>();
+        private readonly Dictionary<GameObject, EchoList> _unechoed =
+            new Dictionary<GameObject, EchoList>();
 
         // who is dragging what (by ObjRef): decided on the host, as the host
         // said on a client
@@ -131,24 +125,10 @@ namespace DarkwoodMP.World
         private readonly Dictionary<GameObject, Moving> _moving =
             new Dictionary<GameObject, Moving>();
 
+        // new loose things noted around the players
+        private float _nextLook;
         // loose objects and where they're known to be, checked until they're
         // back at rest wherever they are
-        private const float PushWatchRadius = 600f;
-        // also how often a thing still sliding is sent
-        private const float PushWatchInterval = 0.1f;
-        // new loose things noted around the players
-        private const float PushLookInterval = 0.25f;
-        private float _nextLook;
-        // world units (a crate is about 50 across)
-        private const float PushMinMove = 0.5f;
-        // degrees
-        private const float PushMinTurn = 2f;
-        // a client's player this close to a thing that moved moved it
-        private const float PushTouch = 120f;
-        // still moving after this: sent as it is
-        private const float PushGiveUpAfter = 10f;
-        // a thing our player hit moves by that hit for this long
-        private const float PushHitFor = 3f;
         private sealed class Loose
         {
             public Item Item;
@@ -171,7 +151,7 @@ namespace DarkwoodMP.World
             new Dictionary<Rigidbody, Loose>();
         // every loose object in the world so far has been noted
         private bool _looseFound;
-        private readonly Collider[] _near = new Collider[512];
+        private readonly Collider[] _near = new Collider[PushRules.LookMost];
         private float _nextPushWatch;
         /// <summary>
         /// Pushed objects this game sent (for the tests' log).
@@ -248,7 +228,7 @@ namespace DarkwoodMP.World
                     Send(_dragging, _dragRef, last: true);
                     _settling = _dragging;
                     _settlingRef = _dragRef;
-                    _settleAt = Time.unscaledTime + 1.5f;
+                    _settleAt = OurDragRules.SettleAt(Now).Value;
                     LetGo(_dragRef);
                 }
 
@@ -260,44 +240,101 @@ namespace DarkwoodMP.World
                 }
             }
 
-            if (_dragging != null && _session.IsHost
-                && _owners.TryGetValue(_dragRef.ToString(), out var mine)
-                && mine.Id == _session.LocalId)
+            if (_dragging != null
+                && OurDragRules.KeepsOursHeard(FactsOf(_dragRef)))
             {
                 // the host's own drag never goes stale
-                mine.Heard = Time.unscaledTime;
+                _owners[_dragRef.ToString()].Heard = Time.unscaledTime;
             }
 
-            if (Time.unscaledTime >= _nextFree)
+            if (OurDragRules.Due(Now, new Seconds(_nextFree)))
             {
-                _nextFree = Time.unscaledTime + 1f;
+                _nextFree = Time.unscaledTime + DragRules.SweepEvery;
                 FreeStale();
             }
 
-            if (_dragging != null && _dragRef.Valid
-                && (_session.IsHost || _claimed)
-                && Time.unscaledTime >= _nextSend)
+            var send = new SendFacts
             {
-                _nextSend = Time.unscaledTime + SendInterval;
+                Dragging = _dragging != null,
+                Named = _dragRef.Valid,
+                Host = _session.IsHost,
+                Claimed = _claimed,
+                Now = Now,
+                Next = new Seconds(_nextSend),
+            };
+
+            if (OurDragRules.SendDue(send))
+            {
+                _nextSend = OurDragRules.NextSend(Now).Value;
                 Send(_dragging, _dragRef, last: false);
             }
 
-            if (_settling != null && Time.unscaledTime >= _settleAt)
+            if (_settling != null
+                && OurDragRules.Due(Now, new Seconds(_settleAt)))
             {
                 Send(_settling, _settlingRef, last: true);
                 _settling = null;
             }
 
-            if (Time.unscaledTime >= _nextPushWatch)
+            if (OurDragRules.Due(Now, new Seconds(_nextPushWatch)))
             {
-                _nextPushWatch = Time.unscaledTime + PushWatchInterval;
+                _nextPushWatch = Time.unscaledTime + PushRules.WatchEvery;
                 WatchPushes(player);
             }
         }
 
-        private static bool AtRest(Rigidbody b) => b.IsSleeping()
-            || (b.velocity.sqrMagnitude < 1f
-                && b.angularVelocity.sqrMagnitude < 0.01f);
+        private static Seconds Now => new Seconds(Time.unscaledTime);
+
+        private static bool AtRest(Rigidbody b)
+        {
+            return PushRules.AtRest(
+                b.IsSleeping(), b.velocity.sqrMagnitude,
+                b.angularVelocity.sqrMagnitude);
+        }
+
+        /// <summary>
+        /// What the owner table says of this thing: the only code that reads
+        /// _owners for the rules.
+        /// </summary>
+        private OwnerFacts FactsOf(ObjRef r)
+        {
+            var facts = new OwnerFacts
+            {
+                Named = r.Valid,
+                Local = _session.LocalId,
+                Now = Now,
+                Host = _session.IsHost,
+            };
+
+            if (_owners.TryGetValue(r.ToString(), out var o))
+            {
+                facts = facts with
+                {
+                    Owned = true,
+                    Owner = o.Id,
+                    Heard = new Seconds(o.Heard),
+                };
+            }
+
+            return facts;
+        }
+
+        /// <summary>
+        /// What the owner table says of one of its entries.
+        /// </summary>
+        private OwnerFacts FactsOf(Owner o)
+        {
+            return new OwnerFacts
+            {
+                Named = o.Ref.Valid,
+                Owned = true,
+                Owner = o.Id,
+                Local = _session.LocalId,
+                Heard = new Seconds(o.Heard),
+                Now = Now,
+                Host = _session.IsHost,
+            };
+        }
 
         /// <summary>
         /// Every loose object this game knows of is checked against where it's
@@ -335,9 +372,9 @@ namespace DarkwoodMP.World
                 }
             }
 
-            if (Time.unscaledTime >= _nextLook)
+            if (OurDragRules.Due(Now, new Seconds(_nextLook)))
             {
-                _nextLook = Time.unscaledTime + PushLookInterval;
+                _nextLook = Time.unscaledTime + PushRules.LookEvery;
                 Look(me);
                 if (_session.IsHost)
                 {
@@ -356,13 +393,14 @@ namespace DarkwoodMP.World
             // wherever the host runs our area too (a separate location it
             // placed, the shared dream): only in an area that's ours alone does
             // what our player knocks over stay ours.
-            bool clientAway = _session.IsClient && !Locations.HostRunsHere();
-            float nowT = Time.unscaledTime;
+            bool hostRunsHere = Locations.HostRunsHere();
             List<Rigidbody> gone = null;
             foreach (var kv in _loose)
             {
                 var p = kv.Value;
-                if (p.Body == null || p.Item == null)
+                var step = PushRules.Watch(FactsOf(p, me, hostRunsHere));
+                var outcome = step.Outcome;
+                if (outcome == PushOutcome.Drop)
                 {
                     if (gone == null)
                     {
@@ -373,10 +411,7 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                var t = p.Item.transform;
-                if (p.Body.isKinematic || p.Item == _dragging
-                    || p.Item == _settling
-                    || _moving.ContainsKey(p.Body.gameObject))
+                if (outcome == PushOutcome.Rebase)
                 {
                     // where the drag or the other game puts it, which is sent
                     // or heard as that
@@ -384,49 +419,44 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                float moved = (t.position - p.Pos).magnitude;
-                if (moved < PushMinMove
-                    && Quaternion.Angle(t.rotation, p.Rot) < PushMinTurn)
+                if (outcome == PushOutcome.Still)
                 {
                     p.Since = -1f;
                     p.Touched = false;
                     continue;
                 }
 
-                if (p.Since < 0f)
+                var t = p.Item.transform;
+                float moved = (t.position - p.Pos).magnitude;
+                if (outcome == PushOutcome.Slide
+                    || outcome == PushOutcome.Wait)
                 {
-                    p.Since = nowT;
+                    p.Since = step.Since.Value;
+                    p.Touched = step.Touched;
                 }
 
-                if (_session.IsClient && !clientAway && !p.Touched
-                    && (p.Col != null
-                            && p.Col.bounds.SqrDistance(me)
-                                < PushTouch * PushTouch
-                        || p.HitAt >= 0f && nowT - p.HitAt < PushHitFor))
-                {
-                    p.Touched = true;
-                }
-
-                if (!AtRest(p.Body) && nowT - p.Since < PushGiveUpAfter)
+                if (outcome == PushOutcome.Slide)
                 {
                     // Still sliding: where it is now goes out too (unreliably,
                     // as a drag's moves), so the other games show it sliding
                     // there instead of jumping to where it comes to rest. Only
                     // what this game has the word on: the host's, or a client's
                     // own player's push.
-                    if (_session.IsHost || p.Touched)
-                    {
-                        Send(p.Item, p.Ref, last: false);
-                    }
-
+                    Send(p.Item, p.Ref, last: false);
                     continue;
                 }
 
-                if (_session.IsClient && !p.Touched)
+                if (outcome == PushOutcome.Wait)
+                {
+                    continue;
+                }
+
+                if (outcome == PushOutcome.PutBack)
                 {
                     // Not our player's doing (settling, a nudge, our copy of an
                     // explosion): the host decides where it is, so our copy
                     // goes back to where it was last known to be.
+                    p.Touched = false;
                     t.SetPositionAndRotation(p.Pos, p.Rot);
                     p.Body.position = p.Pos;
                     p.Body.rotation = p.Rot;
@@ -465,10 +495,11 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Our player hit this thing (Item.getHit). A shot pushes it from as
-        /// far as the gun reaches, where the player isn't within PushTouch of
-        /// it, and a client would put it back as not its player's doing (and
-        /// the host's copy, which gets the hit but not its push, doesn't move).
-        /// So for a few seconds a move of it counts as our player's push.
+        /// far as the gun reaches, where the player isn't within
+        /// PushRules.Touch of it, and a client would put it back as not its
+        /// player's doing (and the host's copy, which gets the hit but not its
+        /// push, doesn't move). So for a few seconds a move of it counts as our
+        /// player's push.
         /// </summary>
         public void Hit(Item item)
         {
@@ -561,38 +592,25 @@ namespace DarkwoodMP.World
             foreach (var kv in _atSnapshot)
             {
                 var b = kv.Key;
-                if (b == null)
+                // a drag sends its own end
+                var place = PushRules.Joiner(FactsOf(b, kv.Value));
+                if (place == JoinerPlace.Later)
+                {
+                    var p = _loose[b];
+                    p.Pos = kv.Value.pos;
+                    p.Rot = kv.Value.rot;
+                    p.Since = -1f;
+                    later++;
+                    continue;
+                }
+
+                if (place != JoinerPlace.Send)
                 {
                     continue;
                 }
 
                 var t = b.transform;
-                if ((t.position - kv.Value.pos).magnitude < PushMinMove
-                    && Quaternion.Angle(t.rotation, kv.Value.rot) < PushMinTurn)
-                {
-                    continue;
-                }
-
                 var item = LooseItem(b);
-                if (item == null || b.isKinematic || item == _dragging
-                    || _moving.ContainsKey(b.gameObject))
-                {
-                    continue; // a drag sends its own end
-                }
-
-                if (!AtRest(b))
-                {
-                    if (_loose.TryGetValue(b, out var p))
-                    {
-                        p.Pos = kv.Value.pos;
-                        p.Rot = kv.Value.rot;
-                        p.Since = -1f;
-                        later++;
-                    }
-
-                    continue;
-                }
-
                 var r = ObjRef.Pin(b.gameObject);
                 if (!r.Valid)
                 {
@@ -630,12 +648,49 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// What the push rules know of a body where the joiners' snapshot
+        /// had it (at): the only code that reads it for them.
+        /// </summary>
+        private SnapshotFacts FactsOf(
+            Rigidbody b, (Vector3 pos, Quaternion rot) at)
+        {
+            if (b == null)
+            {
+                return new SnapshotFacts { Gone = true };
+            }
+
+            var t = b.transform;
+            var facts = new SnapshotFacts
+            {
+                Moved = (t.position - at.pos).magnitude,
+                Turned = Quaternion.Angle(t.rotation, at.rot),
+            };
+
+            if (!PushRules.Away(facts.Moved, facts.Turned))
+            {
+                // the rest isn't read: it's skipped
+                return facts;
+            }
+
+            var item = LooseItem(b);
+            return facts with
+            {
+                Loose = item != null,
+                Kinematic = b.isKinematic,
+                Dragged = item != null && item == _dragging,
+                Shown = _moving.ContainsKey(b.gameObject),
+                AtRest = AtRest(b),
+                Watched = _loose.ContainsKey(b),
+            };
+        }
+
+        /// <summary>
         /// Host: notes every loose object under root at once (a separate
         /// location it starts running for a joiner). Objects are otherwise
-        /// noted only within PushWatchRadius of a player, and one an enemy
-        /// pushes far from everyone (a dog chasing about a location while its
-        /// joiner is elsewhere in it) would move unseen and stay where the
-        /// host's enemy left it in the host's game only.
+        /// noted only within PushRules.WatchRadius of a player, and one an
+        /// enemy pushes far from everyone (a dog chasing about a location
+        /// while its joiner is elsewhere in it) would move unseen and stay
+        /// where the host's enemy left it in the host's game only.
         /// </summary>
         public void NoteAll(GameObject root)
         {
@@ -685,21 +740,29 @@ namespace DarkwoodMP.World
 
             var b = go.GetComponent<Rigidbody>();
             var item = LooseItem(b);
-            if (item == null || b.isKinematic || item == _dragging
-                || item == _settling || _moving.ContainsKey(go))
-            {
-                return false;
-            }
-
             var t = go.transform;
             float d = (t.position - pos).magnitude;
-            if (d < PushMinMove)
+            var place = new PlaceFacts
             {
-                return false;
+                Client = true,
+                Loose = item != null,
+            };
+
+            if (item != null)
+            {
+                place = place with
+                {
+                    Kinematic = b.isKinematic,
+                    Dragged = item == _dragging,
+                    Settling = item == _settling,
+                    Shown = _moving.ContainsKey(go),
+                    Distance = d,
+                };
             }
 
             var r = ObjRef.Of(go);
-            if (r.Valid && OtherOwner(r) != null)
+            place = place with { Other = DragRules.OtherOwner(FactsOf(r)) };
+            if (!PushRules.PutsAtHost(place))
             {
                 return false;
             }
@@ -731,7 +794,7 @@ namespace DarkwoodMP.World
         private void Look(Vector3 center)
         {
             int n = Physics.OverlapSphereNonAlloc(
-                center, PushWatchRadius, _near, ~0,
+                center, PushRules.WatchRadius, _near, ~0,
                 QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
             {
@@ -749,25 +812,49 @@ namespace DarkwoodMP.World
         /// </summary>
         private static Item LooseItem(Rigidbody b)
         {
-            if (b == null || b.constraints == RigidbodyConstraints.FreezeAll)
+            if (!PushRules.IsLoose(FactsOf(b)))
             {
                 return null;
             }
 
-            var item = b.GetComponent<Item>();
-            if (item == null)
+            return b.GetComponent<Item>();
+        }
+
+        /// <summary>
+        /// What the push rules know of a body, to tell a loose thing: the
+        /// only code that reads it for them. Read only as far as needed: a
+        /// body that's frozen or no Item isn't loose whatever else it is.
+        /// </summary>
+        private static LooseFacts FactsOf(Rigidbody b)
+        {
+            if (b == null)
             {
-                return null;
+                return default;
             }
 
-            if (b.GetComponent<CharBase>() != null
-                || b.GetComponentInParent<Door>() != null
-                || b.GetComponentInParent<Window>() != null)
+            var facts = new LooseFacts
             {
-                return null;
+                Body = true,
+                Frozen = b.constraints == RigidbodyConstraints.FreezeAll,
+            };
+
+            if (facts.Frozen)
+            {
+                return facts;
             }
 
-            return item;
+            facts = facts with { Item = b.GetComponent<Item>() != null };
+            if (!facts.Item)
+            {
+                return facts;
+            }
+
+            return facts with
+            {
+                Character = b.GetComponent<CharBase>() != null,
+                InDoor = b.GetComponentInParent<Door>() != null,
+                InWindow = b.GetComponentInParent<Window>() != null,
+            };
         }
 
         /// <summary>
@@ -840,6 +927,50 @@ namespace DarkwoodMP.World
                 + System.FormattableString.Invariant($"{text}{touched}");
         }
 
+        /// <summary>
+        /// What the push rules know of one watched thing, with our player at
+        /// me: the only code that reads a watched thing for them.
+        /// </summary>
+        private PushFacts FactsOf(Loose p, Vector3 me, bool hostRunsHere)
+        {
+            if (p.Body == null || p.Item == null)
+            {
+                return new PushFacts { Gone = true };
+            }
+
+            var t = p.Item.transform;
+            var facts = new PushFacts
+            {
+                Kinematic = p.Body.isKinematic,
+                Dragged = p.Item == _dragging,
+                Settling = p.Item == _settling,
+                Shown = _moving.ContainsKey(p.Body.gameObject),
+                Moved = (t.position - p.Pos).magnitude,
+                Turned = Quaternion.Angle(t.rotation, p.Rot),
+                Strayed = p.Since >= 0f,
+                Since = new Seconds(p.Since),
+                Touched = p.Touched,
+                Host = _session.IsHost,
+                HostRunsHere = hostRunsHere,
+                Hit = p.HitAt >= 0f,
+                HitAt = new Seconds(p.HitAt),
+                AtRest = AtRest(p.Body),
+                Now = Now,
+            };
+
+            if (p.Col != null && !_session.IsHost)
+            {
+                // only a client's own player's touch counts
+                facts = facts with
+                {
+                    Collider = true,
+                    Reach = p.Col.bounds.SqrDistance(me),
+                };
+            }
+
+            return facts;
+        }
+
         private static void Rebase(Loose p)
         {
             var t = p.Item.transform;
@@ -864,6 +995,16 @@ namespace DarkwoodMP.World
             {
                 Rebase(p);
             }
+        }
+
+        private void Remember(GameObject go, Vector3 pos)
+        {
+            if (!_unechoed.TryGetValue(go, out var sent))
+            {
+                _unechoed[go] = sent = new EchoList();
+            }
+
+            sent.Sent(VecOf(pos));
         }
 
         private void Send(Item item, ObjRef r, bool last)
@@ -901,15 +1042,7 @@ namespace DarkwoodMP.World
                 _session.SendToHost(w, channel, reliable: last);
                 if (last)
                 {
-                    if (!_unechoed.TryGetValue(item.gameObject, out var sent))
-                    {
-                        _unechoed[item.gameObject] = sent = new List<Vector3>();
-                    }
-
-                    if (sent.Count < 16)
-                    {
-                        sent.Add(t.position);
-                    }
+                    Remember(item.gameObject, t.position);
                 }
             }
         }
@@ -933,20 +1066,13 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            int i = sent.FindIndex(p => (p - pos).sqrMagnitude < 0.01f);
-            if (i < 0)
-            {
-                _unechoed.Remove(go);
-                return false;
-            }
-
-            sent.RemoveRange(0, i + 1);
-            if (sent.Count == 0)
+            bool ours = sent.Take(VecOf(pos));
+            if (sent.Empty)
             {
                 _unechoed.Remove(go);
             }
 
-            return true;
+            return ours;
         }
 
         /// <summary>ObjMove: ObjRef, vec3 pos, quat rot, u8 last.</summary>
@@ -976,47 +1102,19 @@ namespace DarkwoodMP.World
         private static Quaternion QuaternionOf(Rotation q) =>
             new Quaternion(q.X, q.Y, q.Z, q.W);
 
-        /// <summary>
-        /// Host: a player drags only what they're at, to near where they are.
-        /// If not, the drag isn't made or passed on, and their copy is put back
-        /// where the thing is here (ObjMove, last).
-        /// </summary>
-        private bool DragAllowed(ulong from, ObjRef obj, Vector3 pos)
-        {
-            var item = ObjRef.Resolve<Item>(obj);
-            if (item == null)
-            {
-                return false;
-            }
-
-            if (Coop.Current.Authority.Near(
-                from, item.transform.position, WorldActions.Reach)
-                && Coop.Current.Authority.Near(from, pos, WorldActions.Reach))
-            {
-                return true;
-            }
-
-            Plugin.Log.LogInfo(
-                $"[authority] {_session.NameOf(from)} dragged {item.name} from "
-                    + "too far: put back");
-            _session.SendTo(
-                from,
-                Message(
-                    obj, item.transform.position, item.transform.rotation,
-                    true),
-                Channel.Control, reliable: true);
-            return false;
-        }
-
         private void OnMove(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!WorldShare.InWorld)
+            var arrival = new Dragging.ArrivalFacts
             {
-                return;
-            }
+                InWorld = WorldShare.InWorld,
+                Host = s.IsHost,
+                Client = s.IsClient,
+                FromHost = from == s.HostId,
+            };
 
-            if (s.IsClient && from != s.HostId)
+            var arrive = ObjMoveRules.Arrive(arrival);
+            if (arrive == Arrival.Drop)
             {
                 return;
             }
@@ -1027,7 +1125,7 @@ namespace DarkwoodMP.World
             var rot = QuaternionOf(move.Rot);
             bool last = move.Last;
 
-            if (s.IsHost && !TakeMove(from, obj, pos, last))
+            if (arrive == Arrival.Check && !TakeMove(from, move))
             {
                 return;
             }
@@ -1040,20 +1138,31 @@ namespace DarkwoodMP.World
             {
                 var w = Message(obj, pos, rot, last);
                 int channel = Channel.State;
-                ulong skip = from;
                 if (last)
                 {
                     channel = Channel.Control;
-                    skip = 0UL;
                 }
 
+                ulong skip = ObjMoveRules.RelayExcept(last, from);
                 s.Broadcast(w, channel, reliable: last, except: skip);
             }
 
             var item = ObjRef.Resolve<Item>(obj);
-            if (item == null)
+            var apply = new ApplyFacts
             {
-                if (s.IsClient && last && obj.K == ObjRef.Kind.Spawned)
+                Client = s.IsClient,
+                Found = item != null,
+                Last = last,
+                Spawned = obj.K == ObjRef.Kind.Spawned,
+                Owned = _owners.ContainsKey(obj.ToString()),
+                Ours = item != null && item == _dragging,
+            };
+
+            var step = ObjMoveRules.Apply(apply);
+            if (step.Action == ApplyAction.NotHere
+                || step.Action == ApplyAction.TellHostIds)
+            {
+                if (step.Action == ApplyAction.TellHostIds)
                 {
                     // for when our copy is tied
                     CoopSession coop = Coop.Current;
@@ -1073,19 +1182,20 @@ namespace DarkwoodMP.World
             }
 
             var go = item.gameObject;
-            if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o))
+            if (step.Refresh)
             {
-                o.Heard = Time.unscaledTime; // its drag goes on
+                // its drag goes on
+                _owners[obj.ToString()].Heard = Time.unscaledTime;
             }
 
             // we're holding it: kept for if we have to let go
-            if (item == _dragging)
+            if (step.Action == ApplyAction.KeepHostWord)
             {
                 _hostAt[go] = (pos, rot);
                 return;
             }
 
-            if (s.IsClient && last && OurEcho(go, pos))
+            if (step.Action == ApplyAction.CheckEcho && OurEcho(go, pos))
             {
                 if (WorldActions.Debug)
                 {
@@ -1132,18 +1242,9 @@ namespace DarkwoodMP.World
 
         // ---- who drags what -------------------------------------------------
 
-        private bool Stale(Owner o)
-        {
-            float now = Time.unscaledTime;
-            float heard = o.Heard;
-            float limit = StaleAfter + 2f; // a client waits for the host's word
-            if (_session.IsHost)
-            {
-                limit = StaleAfter;
-            }
-
-            return now - heard > limit;
-        }
+        /// The game's own words for a thing out of reach.
+        private static string TooFarText =>
+            Language.Get("Playermsg_tooFar", "UI");
 
         /// <summary>
         /// The name of someone else who is dragging this object now (as the
@@ -1151,13 +1252,20 @@ namespace DarkwoodMP.World
         /// </summary>
         public string OtherOwner(ObjRef r)
         {
-            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o)
-                || o.Id == _session.LocalId || Stale(o))
+            ulong other = DragRules.OtherOwner(FactsOf(r));
+            if (other == 0)
             {
                 return null;
             }
 
-            return _session.NameOf(o.Id);
+            return _session.NameOf(other);
+        }
+
+        /// <summary>"NAME is moving it", the words of Refusal.OtherMoving.
+        /// </summary>
+        internal static string MovingText(string who)
+        {
+            return Refusals.Text(Verdict.Refuse(Refusal.OtherMoving, who));
         }
 
         /// <summary>
@@ -1168,26 +1276,34 @@ namespace DarkwoodMP.World
         {
             _dragRef = ObjRef.Pin(item.gameObject);
             _hostAt.Remove(item.gameObject);
-            string other = OtherOwner(_dragRef);
-            if (other != null)
+            var start = new StartFacts
             {
-                CancelLocal(item, $"{other} is moving it");
+                Other = DragRules.OtherOwner(FactsOf(_dragRef)),
+                Named = _dragRef.Valid,
+                Host = _session.IsHost,
+            };
+
+            var action = OurDragRules.Start(start);
+            if (action == StartAction.Refused)
+            {
+                CancelLocal(item, MovingText(_session.NameOf(start.Other)));
                 return;
             }
 
-            if (_moving.TryGetValue(item.gameObject, out var m)) // ours now
+            // ours now
+            if (_moving.TryGetValue(item.gameObject, out var m))
             {
                 Release(m);
                 _moving.Remove(item.gameObject);
             }
 
             _nextSend = 0f;
-            if (!_dragRef.Valid)
+            if (action == StartAction.Unnamed)
             {
                 return;
             }
 
-            if (_session.IsHost)
+            if (action == StartAction.Own)
             {
                 _owners[_dragRef.ToString()] = new Owner
                 {
@@ -1205,29 +1321,27 @@ namespace DarkwoodMP.World
             Coop.Current.Authority.Request(w, $"drag {item.name} ({_dragRef})",
                 (ok, reason, _) =>
             {
-                if (_dragging != item)
+                var reply = new ReplyFacts
                 {
-                    return; // let go meanwhile, or already cancelled
-                }
+                    Same = _dragging == item,
+                    Ok = ok,
+                    Reason = reason,
+                };
 
-                if (ok)
+                // not the same: let go meanwhile, or already cancelled
+                var answer = OurDragRules.Reply(reply);
+                if (answer == ClaimReply.Claimed)
                 {
                     _claimed = true;
                     _nextSend = 0f;
                 }
-                else
+                else if (answer == ClaimReply.ShowReason)
                 {
-                    string why;
-                    if (reason.EndsWith("is moving it"))
-                    {
-                        why = reason;
-                    }
-                    else
-                    {
-                        why = Language.Get("Playermsg_tooFar", "UI");
-                    }
-
-                    CancelLocal(item, why);
+                    CancelLocal(item, reason);
+                }
+                else if (answer == ClaimReply.TooFar)
+                {
+                    CancelLocal(item, TooFarText);
                 }
             }, inventory: false);
         }
@@ -1238,14 +1352,14 @@ namespace DarkwoodMP.World
         /// </summary>
         private void LetGo(ObjRef r)
         {
-            if (!r.Valid || !_owners.TryGetValue(r.ToString(), out var o)
-                || o.Id != _session.LocalId)
+            var entry = OurDragRules.LetsGo(FactsOf(r));
+            if (entry == LetGoEntry.Keep)
             {
                 return;
             }
 
             _owners.Remove(r.ToString());
-            if (_session.IsHost)
+            if (entry == LetGoEntry.Tell)
             {
                 SendOwner(r, 0, letGo: false);
             }
@@ -1290,16 +1404,30 @@ namespace DarkwoodMP.World
             }
 
             // not already shown following the other player's drag
-            if (!_moving.ContainsKey(go))
+            var body = go.GetComponent<Rigidbody>();
+            Loose p = null;
+            if (body != null)
             {
-                var body = go.GetComponent<Rigidbody>();
+                _loose.TryGetValue(body, out p);
+            }
+
+            var hold = new HoldFacts
+            {
+                Shown = _moving.ContainsKey(go),
+                HostWord = _hostAt.ContainsKey(go),
+                Known = body != null && p != null,
+            };
+
+            var holdAt = OurDragRules.Hold(hold);
+            if (holdAt != HoldAt.None)
+            {
                 var at =
                     (pos: go.transform.position, rot: go.transform.rotation);
-                if (_hostAt.TryGetValue(go, out var h))
+                if (holdAt == HoldAt.HostWord)
                 {
-                    at = h;
+                    at = _hostAt[go];
                 }
-                else if (body != null && _loose.TryGetValue(body, out var p))
+                else if (holdAt == HoldAt.Known)
                 {
                     at = (p.Pos, p.Rot);
                 }
@@ -1390,37 +1518,28 @@ namespace DarkwoodMP.World
         /// </summary>
         private void OnClaim(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !Coop.Current.Authority.Handling)
-            {
-                return;
-            }
-
+            var authority = Coop.Current.Authority;
             var obj = ObjRef.RefOf(DragClaim.Read(r));
+            var outcome = DragRules.MayClaim(FactsOf(obj, from));
+            if (outcome.Answer == ClaimAnswer.None)
+            {
+                return;
+            }
+
+            if (outcome.Answer == ClaimAnswer.Refused)
+            {
+                if (outcome.PutBack)
+                {
+                    // before the Verdict: where their copy goes as they let go
+                    SendHere(obj, from);
+                }
+
+                authority.Refuse(outcome.Verdict);
+                return;
+            }
+
             var item = ObjRef.Resolve<Item>(obj);
-            if (item == null)
-            {
-                Coop.Current.Authority.Refuse("it isn't here");
-                return;
-            }
-
-            if (!Coop.Current.Authority.InReach(
-                item.transform.position, WorldActions.Reach, item.name))
-            {
-                SendHere(obj, from);
-                return;
-            }
-
             string key = obj.ToString();
-            if (_owners.TryGetValue(key, out var o) && o.Id != from
-                && !Stale(o))
-            {
-                // before the Verdict: where their copy goes as they let go
-                SendHere(obj, from);
-                Coop.Current.Authority.Refuse(
-                    $"{_session.NameOf(o.Id)} is moving it");
-                return;
-            }
-
             _owners[key] =
                 new Owner { Id = from, Heard = Time.unscaledTime, Ref = obj };
             SendOwner(obj, from, letGo: true);
@@ -1433,87 +1552,178 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// What the host knows of a claim of obj by from: the only code that
+        /// reads the thing and the owner table for DragRules.MayClaim. The
+        /// thing is looked up only on the host, in a request's handler.
+        /// </summary>
+        private ClaimFacts FactsOf(ObjRef obj, ulong from)
+        {
+            var authority = Coop.Current.Authority;
+            var claim = new ClaimFacts
+            {
+                Host = _session.IsHost,
+                Handling = authority.Handling,
+                From = from,
+                Now = Now,
+            };
+
+            if (!claim.Host || !claim.Handling)
+            {
+                return claim;
+            }
+
+            var item = ObjRef.Resolve<Item>(obj);
+            if (item == null)
+            {
+                return claim;
+            }
+
+            claim = claim with
+            {
+                Found = true,
+                Reach = authority.ReachOf(
+                    item.transform.position, WorldActions.Reach, item.name),
+            };
+
+            if (_owners.TryGetValue(obj.ToString(), out var o))
+            {
+                claim = claim with
+                {
+                    Owned = true,
+                    Owner = o.Id,
+                    OwnerName = _session.NameOf(o.Id),
+                    Heard = new Seconds(o.Heard),
+                };
+            }
+
+            return claim;
+        }
+
+        /// <summary>
         /// Host: whether a player's ObjMove is taken. While someone drags the
         /// thing, only their moves are (anyone else is sent where it is, at
         /// most twice a second); with nobody dragging it, a move that isn't a
         /// drag's end (a drag not agreed to) is dropped, and an end (a push
         /// come to rest) is taken as before. The mover must be within reach
-        /// (DragAllowed): an owner who isn't loses the drag, and lets go.
+        /// of the thing and of where it went: if not, their copy is put back
+        /// where the thing is here, and an owner who isn't loses the drag,
+        /// and lets go.
         /// </summary>
-        private bool TakeMove(ulong from, ObjRef obj, Vector3 pos, bool last)
+        private bool TakeMove(ulong from, in Moved move)
         {
+            var obj = ObjRef.RefOf(move.Name);
             string key = obj.ToString();
-            bool owned = _owners.TryGetValue(key, out var o);
-            if (owned && o.Id != from && Stale(o))
+            var item = ObjRef.Resolve<Item>(obj);
+            string ck = key + "/" + from;
+            var take = DragRules.TakeMove(FactsOf(item, from, move));
+            if (take.FreeStale)
             {
-                Free(key, o, "stopped sending");
-                owned = false;
+                Free(key, _owners[key], "stopped sending");
             }
 
-            if (owned && o.Id != from)
+            if (take.Correct)
             {
-                string ck = key + "/" + from;
-                if (!_corrected.TryGetValue(ck, out float at)
-                    || Time.unscaledTime - at > 0.5f)
-                {
-                    _corrected[ck] = Time.unscaledTime;
-                    SendHere(obj, from);
-                    Plugin.Log.LogInfo(
-                        $"[dragging] {_session.NameOf(from)} moved "
-                            + $"{obj}, which {_session.NameOf(o.Id)} drags: "
-                            + "not taken, sent where it is");
-                }
-
-                return false;
+                _corrected[ck] = Time.unscaledTime;
+                SendHere(obj, from);
+                Plugin.Log.LogInfo(
+                    $"[dragging] {_session.NameOf(from)} moved "
+                        + $"{obj}, which {_session.NameOf(_owners[key].Id)} "
+                        + "drags: not taken, sent where it is");
             }
 
-            if (!owned && !last)
+            if (take.Dropped && WorldActions.Debug)
             {
-                // A push still sliding (nobody drags it): passed on to be
-                // shown, if the pusher is at it. Where it comes to rest is
-                // checked and taken as its last move.
-                var it = ObjRef.Resolve<Item>(obj);
-                if (it != null
-                    && Coop.Current.Authority.Near(
-                        from, it.transform.position, WorldActions.Reach)
-                    && Coop.Current.Authority.Near(
-                        from, pos, WorldActions.Reach))
-                {
-                    return true;
-                }
-
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[dragging] {_session.NameOf(from)} moved {obj} from "
-                            + "too far without a claim: dropped");
-                }
-
-                return false;
+                // A push still sliding (nobody drags it) is passed on to be
+                // shown only if the pusher is at it. Where it comes to rest
+                // is checked and taken as its last move.
+                Plugin.Log.LogInfo(
+                    $"[dragging] {_session.NameOf(from)} moved {obj} from "
+                        + "too far without a claim: dropped");
             }
 
-            if (!DragAllowed(from, obj, pos))
+            if (take.PutBack)
             {
-                if (owned)
-                {
-                    _owners.Remove(key);
-                    SendOwner(obj, 0, letGo: true);
-                }
-
-                return false;
+                // a player drags only what they're at, to near where they
+                // are: their copy goes back where the thing is here
+                Plugin.Log.LogInfo(
+                    $"[authority] {_session.NameOf(from)} dragged {item.name} "
+                        + "from too far: put back");
+                _session.SendTo(
+                    from,
+                    Message(
+                        obj, item.transform.position, item.transform.rotation,
+                        true),
+                    Channel.Control, reliable: true);
             }
 
-            if (owned)
+            if (take.Disown)
             {
-                o.Heard = Time.unscaledTime;
-                if (last)
-                {
-                    _owners.Remove(key);
-                    SendOwner(obj, 0, letGo: false);
-                }
+                _owners.Remove(key);
+                SendOwner(obj, 0, letGo: true);
             }
 
-            return true;
+            if (take.Refresh)
+            {
+                _owners[key].Heard = Time.unscaledTime;
+            }
+
+            if (take.EndDrag)
+            {
+                _owners.Remove(key);
+                SendOwner(obj, 0, letGo: false);
+            }
+
+            return take.Taken;
+        }
+
+        /// <summary>
+        /// What the host knows of from's move of item: the only code that
+        /// reads the thing, the owner table and the corrections for
+        /// DragRules.TakeMove.
+        /// </summary>
+        private DragMoveFacts FactsOf(Item item, ulong from, in Moved told)
+        {
+            string key = ObjRef.RefOf(told.Name).ToString();
+            var move = new DragMoveFacts
+            {
+                From = from,
+                Last = told.Last,
+                Now = Now,
+            };
+
+            if (_owners.TryGetValue(key, out var o))
+            {
+                move = move with
+                {
+                    Owned = true,
+                    Owner = o.Id,
+                    Heard = new Seconds(o.Heard),
+                };
+            }
+
+            if (_corrected.TryGetValue(key + "/" + from, out float at))
+            {
+                move = move with
+                {
+                    Corrected = true,
+                    CorrectedAt = new Seconds(at),
+                };
+            }
+
+            if (item == null)
+            {
+                return move;
+            }
+
+            var authority = Coop.Current.Authority;
+            return move with
+            {
+                Found = true,
+                NearThing = authority.Near(
+                    from, item.transform.position, WorldActions.Reach),
+                NearPlace = authority.Near(
+                    from, VectorOf(told.Pos), WorldActions.Reach),
+            };
         }
 
         /// <summary>
@@ -1532,7 +1742,7 @@ namespace DarkwoodMP.World
 
         private void FreeStale()
         {
-            if (_owners.Count == 0)
+            if (DragRules.ForgetsCorrections(_owners.Count))
             {
                 if (_corrected.Count > 0)
                 {
@@ -1545,7 +1755,7 @@ namespace DarkwoodMP.World
             List<string> stale = null;
             foreach (var kv in _owners)
             {
-                if (Stale(kv.Value))
+                if (DragRules.Sweep(FactsOf(kv.Value)) != OwnerSweep.Keep)
                 {
                     if (stale == null)
                     {
@@ -1563,9 +1773,10 @@ namespace DarkwoodMP.World
 
             foreach (var k in stale)
             {
-                if (_session.IsHost)
+                var o = _owners[k];
+                if (DragRules.Sweep(FactsOf(o)) == OwnerSweep.Free)
                 {
-                    Free(k, _owners[k], "stopped sending");
+                    Free(k, o, "stopped sending");
                 }
                 else
                 {
@@ -1576,15 +1787,10 @@ namespace DarkwoodMP.World
 
         private void FreeOwnedBy(ulong who)
         {
-            if (!_session.IsHost)
-            {
-                return;
-            }
-
             List<string> theirs = null;
             foreach (var kv in _owners)
             {
-                if (kv.Value.Id == who)
+                if (DragRules.FreesOnLeave(FactsOf(kv.Value), who))
                 {
                     if (theirs == null)
                     {
@@ -1610,22 +1816,27 @@ namespace DarkwoodMP.World
         /// </summary>
         private void OnDragOwner(ulong from, PacketReader r)
         {
-            if (!_session.IsClient || from != _session.HostId
-                || !WorldShare.InWorld)
-            {
-                return;
-            }
-
             var word = DragOwner.Read(r);
             var obj = ObjRef.RefOf(word.Name);
             ulong owner = word.Owner;
-            bool letGo = word.LetGo;
             string key = obj.ToString();
-            if (owner == 0)
+            var heard = new NewsFacts
+            {
+                Client = _session.IsClient,
+                FromHost = from == _session.HostId,
+                InWorld = WorldShare.InWorld,
+                Owner = owner,
+                LetGo = word.LetGo,
+                Ours = _dragging != null && _dragRef.ToString() == key,
+                Local = _session.LocalId,
+            };
+
+            var news = OurDragRules.News(heard);
+            if (news.Entry == OwnerEntry.Forget)
             {
                 _owners.Remove(key);
             }
-            else
+            else if (news.Entry == OwnerEntry.Remember)
             {
                 _owners[key] = new Owner
                 {
@@ -1635,31 +1846,17 @@ namespace DarkwoodMP.World
                 };
             }
 
-            if (_dragging == null || _dragRef.ToString() != key)
-            {
-                return;
-            }
-
-            if (owner == _session.LocalId)
+            if (news.Drag == ClaimReply.Claimed)
             {
                 _claimed = true;
-                return;
             }
-
-            if (letGo)
+            else if (news.Drag == ClaimReply.Moving)
             {
-                Item item = _dragging;
-                string why;
-                if (owner != 0)
-                {
-                    why = $"{_session.NameOf(owner)} is moving it";
-                }
-                else
-                {
-                    why = Language.Get("Playermsg_tooFar", "UI");
-                }
-
-                CancelLocal(item, why);
+                CancelLocal(_dragging, MovingText(_session.NameOf(owner)));
+            }
+            else if (news.Drag == ClaimReply.TooFar)
+            {
+                CancelLocal(_dragging, TooFarText);
             }
         }
 
@@ -1697,7 +1894,7 @@ namespace DarkwoodMP.World
             }
 
             List<GameObject> done = null;
-            float k = 1f - Mathf.Exp(-15f * Time.unscaledDeltaTime);
+            float k = GlideRules.Blend(new Seconds(Time.unscaledDeltaTime));
             foreach (var kv in _moving)
             {
                 var m = kv.Value;
@@ -1712,46 +1909,32 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                bool stale = Time.unscaledTime - m.Heard > StaleAfter;
-                if (m.Last || stale)
+                // Slide towards where it is; glide the last bit to where it
+                // came to rest, as it slid there in the mover's game (a jump
+                // of more than GlideRules.GlideMax, a correction, is made at
+                // once); then it's there exactly, and let go.
+                var glide = GlideRules.Step(FactsOf(m));
+                if (glide == GlideAction.Glide)
                 {
-                    // Glide the last bit to where it came to rest, as it slid
-                    // there in the mover's game (a jump of more than GlideMax,
-                    // a correction, is made at once); then it's there exactly,
-                    // and let go.
-                    float off = (m.T.position - m.Pos).magnitude;
-                    bool there = off < 0.5f
-                        && Quaternion.Angle(m.T.rotation, m.Rot) < 1f;
-                    if (!there && off < GlideMax && !stale
-                        && Time.unscaledTime - m.Heard < GlideFor)
-                    {
-                        m.T.SetPositionAndRotation(
-                            Vector3.Lerp(m.T.position, m.Pos, k),
-                            Quaternion.Slerp(m.T.rotation, m.Rot, k));
-                        continue;
-                    }
-
-                    m.T.SetPositionAndRotation(m.Pos, m.Rot);
-                    if (there || Time.unscaledTime - m.Heard > GlideFor
-                        || stale)
-                    {
-                        Release(m);
-                        Rebase(kv.Key);
-                        Recell(kv.Key);
-                        if (done == null)
-                        {
-                            done = new List<GameObject>();
-                        }
-
-                        done.Add(kv.Key);
-                    }
-
+                    m.T.SetPositionAndRotation(
+                        Vector3.Lerp(m.T.position, m.Pos, k),
+                        Quaternion.Slerp(m.T.rotation, m.Rot, k));
                     continue;
                 }
 
-                m.T.SetPositionAndRotation(
-                    Vector3.Lerp(m.T.position, m.Pos, k),
-                    Quaternion.Slerp(m.T.rotation, m.Rot, k));
+                m.T.SetPositionAndRotation(m.Pos, m.Rot);
+                if (glide == GlideAction.Release)
+                {
+                    Release(m);
+                    Rebase(kv.Key);
+                    Recell(kv.Key);
+                    if (done == null)
+                    {
+                        done = new List<GameObject>();
+                    }
+
+                    done.Add(kv.Key);
+                }
             }
 
             if (done != null)
@@ -1860,6 +2043,22 @@ namespace DarkwoodMP.World
             }
         }
 
+        /// <summary>
+        /// What the glide rules know of a thing shown following another
+        /// game's move: the only code that reads it for them.
+        /// </summary>
+        private static GlideFacts FactsOf(Moving m)
+        {
+            return new GlideFacts
+            {
+                Off = (m.T.position - m.Pos).magnitude,
+                Turn = Quaternion.Angle(m.T.rotation, m.Rot),
+                Last = m.Last,
+                Heard = new Seconds(m.Heard),
+                Now = Now,
+            };
+        }
+
         private static void Release(Moving m)
         {
             if (m.Body == null)
@@ -1908,7 +2107,7 @@ namespace DarkwoodMP.World
             Player instance = Player.Instance;
             if (instance != null)
             {
-                instance.displayMessage($"{who} is moving it");
+                instance.displayMessage(DragSync.MovingText(who));
             }
 
             Blocked++;
