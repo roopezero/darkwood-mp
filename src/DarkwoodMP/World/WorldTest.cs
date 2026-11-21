@@ -515,7 +515,12 @@ namespace DarkwoodMP.World
 
                     Plugin.Log.LogInfo(
                         $"[world test] throwing {molotov} south");
-                    ThrowSync.Instance.Thrown(molotov, go, from);
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
+                    {
+                        coop.Throws.Thrown(molotov, go, from);
+                    }
+
                     yield return new WaitForSeconds(5f);
                 }
                 else

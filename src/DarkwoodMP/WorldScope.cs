@@ -16,6 +16,9 @@ namespace DarkwoodMP
         public readonly Player Player;
         public readonly int Scene;
 
+        /// What thrown things are doing in this world (ThrownHits).
+        public readonly World.ThrownThings Thrown = new World.ThrownThings();
+
         public WorldScope(Player player, Scene scene)
         {
             Player = player;

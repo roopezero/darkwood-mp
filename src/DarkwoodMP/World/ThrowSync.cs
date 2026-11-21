@@ -29,20 +29,17 @@ namespace DarkwoodMP.World
     /// only in the thrower's game: the others' copies fly and hit, then go, so
     /// it isn't there to pick up twice.
     /// </summary>
-    public sealed class ThrowSync
+    internal sealed class ThrowSync
     {
         private readonly Session _session;
         private static readonly
             AccessTools.FieldRef<Player, GameObject> HeldItem =
                 AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
 
-        public static ThrowSync Instance { get; private set; }
-
-        public ThrowSync(Session session)
+        public ThrowSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.ItemThrown, OnThrown);
+            _session = coop.Net;
+            coop.Handle(MsgType.ItemThrown, OnThrown);
         }
 
         internal static GameObject Held(Player p) => HeldItem(p);
@@ -429,10 +426,10 @@ namespace DarkwoodMP.World
             bool now = ThrowSync.Held(__instance) != null;
             if (ThrowRules.WasDropped(before, now))
             {
-                ThrowSync instance = ThrowSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.Dropped(__state.type, __state.go);
+                    coop.Throws.Dropped(__state.type, __state.go);
                 }
             }
         }
@@ -451,10 +448,10 @@ namespace DarkwoodMP.World
         {
             if (__state.go != null)
             {
-                ThrowSync instance = ThrowSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.Thrown(
+                    coop.Throws.Thrown(
                         __state.type, __state.go,
                         __instance.transform.position);
                 }
@@ -470,54 +467,131 @@ namespace DarkwoodMP.World
     /// own player being caught in an explosion, which the host's copy reports
     /// through the client's proxy.
     /// </summary>
-    public static class ThrownHits
+    internal static class ThrownHits
     {
-        /// <summary>Copies of others' throws in this game.</summary>
-        public static readonly HashSet<GameObject> Copies =
-            new HashSet<GameObject>();
         /// <summary>
-        /// What thrown things spawned as they landed or exploded (fire,
-        /// fuel...), in this game.
+        /// Copies of others' throws in this world. Empty, and keeping
+        /// nothing, while no world is shared.
         /// </summary>
-        public static readonly HashSet<GameObject> Spawned =
-            new HashSet<GameObject>();
+        public static HashSet<GameObject> Copies
+        {
+            get
+            {
+                ThrownThings here = Here();
+                if (here == null)
+                {
+                    return new HashSet<GameObject>();
+                }
+
+                return here.Copies;
+            }
+        }
 
         /// <summary>
-        /// How deep in a thrown thing's impact or explosion we are.
+        /// What thrown things spawned as they landed or exploded (fire,
+        /// fuel...), in this world. Empty while no world is shared.
         /// </summary>
-        public static int Depth;
+        public static HashSet<GameObject> Spawned
+        {
+            get
+            {
+                ThrownThings here = Here();
+                if (here == null)
+                {
+                    return new HashSet<GameObject>();
+                }
+
+                return here.Spawned;
+            }
+        }
+
+        /// <summary>
+        /// How deep in a thrown thing's impact or explosion we are. Stays 0
+        /// while no world is shared.
+        /// </summary>
+        public static int Depth
+        {
+            get
+            {
+                ThrownThings here = Here();
+                if (here == null)
+                {
+                    return 0;
+                }
+
+                return here.Depth;
+            }
+
+            set
+            {
+                ThrownThings here = Here();
+                if (here != null)
+                {
+                    here.Depth = value;
+                }
+            }
+        }
+
         /// <summary>
         /// The flame touching something right now (Flame.onCollideWith).
+        /// Stays null while no world is shared.
         /// </summary>
-        public static Flame CurrentFlame;
+        public static Flame CurrentFlame
+        {
+            get
+            {
+                ThrownThings here = Here();
+                if (here == null)
+                {
+                    return null;
+                }
+
+                return here.Flame;
+            }
+
+            set
+            {
+                ThrownThings here = Here();
+                if (here != null)
+                {
+                    here.Flame = value;
+                }
+            }
+        }
 
         /// <summary>
         /// Whether a hit happening now comes from something thrown.
         /// </summary>
         public static bool Now()
         {
-            return ThrownHitRules.Now(new ThrownHitFacts
-            {
-                Depth = Depth,
-                Flame = CurrentFlame != null,
-                UnderSpawned = UnderSpawned(CurrentFlame),
-            });
-        }
-
-        /// <summary>
-        /// Whether the flame, or a parent of it, is something a thrown thing
-        /// spawned.
-        /// </summary>
-        private static bool UnderSpawned(Flame flame)
-        {
-            if (flame == null)
+            ThrownThings here = Here();
+            if (here == null)
             {
                 return false;
             }
 
-            for (var t = flame.transform; t != null; t = t.parent)
+            return ThrownHitRules.Now(new ThrownHitFacts
             {
-                if (Spawned.Contains(t.gameObject))
+                Depth = here.Depth,
+                Flame = here.Flame != null,
+                UnderSpawned = UnderSpawned(here),
+            });
+        }
+
+        /// <summary>
+        /// Whether the flame touching now, or a parent of it, is something a
+        /// thrown thing spawned.
+        /// </summary>
+        private static bool UnderSpawned(ThrownThings here)
+        {
+            if (here.Flame == null)
+            {
+                return false;
+            }
+
+            for (var t = here.Flame.transform; t != null; t = t.parent)
+            {
+                if (here.Spawned.Contains(t.gameObject))
                 {
                     return true;
                 }
@@ -526,12 +600,24 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        public static void Clear()
+        /// <summary>
+        /// The loaded world's, or null with no session or no world.
+        /// </summary>
+        private static ThrownThings Here()
         {
-            Copies.Clear();
-            Spawned.Clear();
-            Depth = 0;
-            CurrentFlame = null;
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return null;
+            }
+
+            WorldScope world = coop.World;
+            if (world == null)
+            {
+                return null;
+            }
+
+            return world.Thrown;
         }
     }
 
