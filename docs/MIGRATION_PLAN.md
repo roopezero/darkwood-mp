@@ -511,6 +511,12 @@ Finish with `tools/run-test.sh full`.
         after-night reward's part of `ControllerStartAfterNight` still runs
         with no session, since `FlagsSync` is there from the start.
   - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
+  - [x] Part c: `Hideouts`, `NightObjects`. They are `CoopSession.Porter`
+        and `.Ovens` (`World/Hideout/Porter`, `Ovens`), with the stateless
+        `Hideouts` (`Together`, the world-container moves) left static, and
+        `.Nights` (`World/Nights/NightObjects`, split in two parts), each
+        folder with its `...Patches.cs`. Their five messages' bytes are in the
+        core.
 - [ ] 7.3 Skills and progress.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
