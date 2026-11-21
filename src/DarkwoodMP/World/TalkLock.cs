@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Talk;
@@ -40,11 +39,6 @@ namespace DarkwoodMP.World
         private static readonly Dictionary<string, KeyValuePair<ulong, float>>
             _released = new Dictionary<string, KeyValuePair<ulong, float>>();
         /// <summary>
-        /// Seconds after someone lets go of an NPC before a joiner may talk to
-        /// them (their dialogue's changes on the way).
-        /// </summary>
-        private const float Grace = 1.5f;
-        /// <summary>
         /// The NPC our own player talks to now, as shared (null: none).
         /// </summary>
         private static NPC _ours;
@@ -84,51 +78,41 @@ namespace DarkwoodMP.World
             // talking to them.
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ =>
             {
-                if (_oursRef.Valid && _ours == null)
+                if (TalkRules.UnloadEnds(_oursRef.Valid, _ours != null))
                 {
                     Closed();
                 }
             };
         }
 
-        /// <summary>The name an NPC is locked by if they're the same NPC in
-        /// every game wherever they stand, else "". One from the shared save
-        /// goes by his ref instead: a new chapter-1 world has three "wolfman"
-        /// traders.</summary>
+        /// <summary>
+        /// The name an NPC is locked by (TalkRules.LockName), or "".
+        /// </summary>
         private static string UniqueName(NPC npc)
         {
-            if (npc != null && npc.name != null
-                && (npc.trader || npc.name.IndexOf(
-                    "wolf", StringComparison.OrdinalIgnoreCase) >= 0)
-                && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved)
+            return TalkRules.LockName(NameFactsOf(npc));
+        }
+
+        /// <summary>What decides the name an NPC is locked by.</summary>
+        private static TalkNameFacts NameFactsOf(NPC npc)
+        {
+            if (npc == null)
             {
-                return npc.name;
+                return default;
             }
 
-            return "";
+            var saved = ObjRef.Of(npc.gameObject).K == ObjRef.Kind.Saved;
+            return new TalkNameFacts
+            {
+                Name = npc.name,
+                Trader = npc.trader,
+                Saved = saved,
+            };
         }
 
         private static string Key(ObjRef r, string name)
         {
-            if (name.Length > 0)
-            {
-                return "npc:" + name;
-            }
-
-            return r.ToString();
-        }
-
-        /// <summary>
-        /// Host: who other than this player talks to the NPC, or null.
-        /// </summary>
-        private static string TalkingOther(string key, ulong who)
-        {
-            if (_talkers.TryGetValue(key, out var holder) && holder != who)
-            {
-                return S.NameOf(holder);
-            }
-
-            return null;
+            return TalkRules.Key(name, r.ToString());
         }
 
         /// <summary>
@@ -136,7 +120,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void Release(string key, ulong who)
         {
-            if (!_talkers.TryGetValue(key, out var h) || h != who)
+            bool held = _talkers.TryGetValue(key, out var holder);
+            if (!TalkRules.Releases(held, holder, who))
             {
                 return;
             }
@@ -152,51 +137,76 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool HostMayTalk(NPC npc)
         {
-            if (!Coop.Guards.Sharing || !S.IsHost)
+            Verdict verdict = TalkRules.HostMayTalk(FactsOf(npc));
+            if (!verdict.Refused)
             {
                 return true;
             }
 
-            var r = ObjRef.Of(npc.gameObject);
-            if (!r.Valid)
-            {
-                return true;
-            }
-
-            string other = TalkingOther(Key(r, UniqueName(npc)), S.LocalId);
-            if (other == null)
-            {
-                return true;
-            }
-
+            string text = Refusals.Text(verdict);
             Player instance = Player.Instance;
             if (instance != null)
             {
-                instance.displayMessage($"{other} is talking to them");
+                instance.displayMessage(text);
             }
 
-            Plugin.Log.LogInfo($"{npc.name}: {other} is talking to them");
+            Plugin.Log.LogInfo($"{npc.name}: {text}");
             return false;
+        }
+
+        /// <summary>
+        /// What the host looks at before its own player talks to npc. The ref
+        /// and its holder are only read while sharing as the host.
+        /// </summary>
+        private static HostTalkFacts FactsOf(NPC npc)
+        {
+            bool sharing = Coop.Guards.Sharing;
+            var facts = new HostTalkFacts
+            {
+                HasDialogue = npc.characterDialogue != null,
+                WantsToTalk = npc.wantsToTalk,
+                Sharing = sharing,
+            };
+
+            if (!sharing || !S.IsHost)
+            {
+                return facts;
+            }
+
+            var r = ObjRef.Of(npc.gameObject);
+            string key = Key(r, UniqueName(npc));
+            bool held = _talkers.TryGetValue(key, out var holder);
+            string name = null;
+            if (held)
+            {
+                name = S.NameOf(holder);
+            }
+
+            return facts with
+            {
+                IsHost = true,
+                RefValid = r.Valid,
+                Held = held,
+                Holder = holder,
+                Local = S.LocalId,
+                HolderName = name,
+            };
         }
 
         /// <summary>Our player's dialogue with this NPC opened.</summary>
         internal static void Opened(NPC npc)
         {
-            if (!Coop.Guards.Sharing || WorldActions.OursAlone(npc.gameObject))
+            var r = ObjRef.Of(npc.gameObject);
+            TalkOpen open = TalkRules.Opens(OpenFactsOf(npc, r));
+            if (open == TalkOpen.NotShared)
             {
                 return; // a dream's NPC of our own: nobody else can talk to it
-            }
-
-            var r = ObjRef.Of(npc.gameObject);
-            if (!r.Valid)
-            {
-                return;
             }
 
             _ours = npc;
             _oursRef = r;
             _oursName = UniqueName(npc);
-            if (S.IsHost)
+            if (open == TalkOpen.Take)
             {
                 _talkers[Key(r, _oursName)] = S.LocalId;
                 return;
@@ -220,10 +230,32 @@ namespace DarkwoodMP.World
             }, inventory: false);
         }
 
+        /// <summary>
+        /// What our player's opened dialogue looks at. Only read while
+        /// sharing, as before: the ref and the host's role after it.
+        /// </summary>
+        private static TalkOpenFacts OpenFactsOf(NPC npc, ObjRef r)
+        {
+            bool sharing = Coop.Guards.Sharing;
+            if (!sharing)
+            {
+                return default;
+            }
+
+            return new TalkOpenFacts
+            {
+                Sharing = true,
+                OursAlone = WorldActions.OursAlone(npc.gameObject),
+                RefValid = r.Valid,
+                IsHost = S.IsHost,
+            };
+        }
+
         /// <summary>Our player's dialogue closed.</summary>
         internal static void Closed()
         {
-            if (_ours == null && !_oursRef.Valid)
+            TalkEnd end = TalkRules.Ends(EndFactsOf());
+            if (end == TalkEnd.None)
             {
                 return;
             }
@@ -233,8 +265,7 @@ namespace DarkwoodMP.World
             _ours = null;
             _oursRef = default;
             _oursName = "";
-            var s = S;
-            if (s == null || !r.Valid)
+            if (end == TalkEnd.Forget)
             {
                 return;
             }
@@ -247,13 +278,14 @@ namespace DarkwoodMP.World
                 instance.FlushNow();
             }
 
-            if (s.IsHost)
+            var s = S;
+            if (end == TalkEnd.Release)
             {
                 Release(Key(r, name), s.LocalId);
                 return;
             }
 
-            if (!Combat.NetEnemies.ClientMode)
+            if (end == TalkEnd.Flush)
             {
                 return;
             }
@@ -267,6 +299,26 @@ namespace DarkwoodMP.World
             });
 
             s.SendToHost(w, Channel.Control, reliable: true);
+        }
+
+        /// <summary>What our player's closed dialogue looks at.</summary>
+        private static TalkEndFacts EndFactsOf()
+        {
+            var s = S;
+            var facts = new TalkEndFacts
+            {
+                Ours = _ours != null,
+                OursValid = _oursRef.Valid,
+                HasSession = s != null,
+                ClientMode = Combat.NetEnemies.ClientMode,
+            };
+
+            if (s == null)
+            {
+                return facts;
+            }
+
+            return facts with { IsHost = s.IsHost };
         }
 
         /// <summary>
@@ -288,7 +340,7 @@ namespace DarkwoodMP.World
                 instance.displayMessage(reason);
             }
 
-            CloseWhenReady(npc, 40);
+            CloseWhenReady(npc, TalkRules.Tries);
         }
 
         private static void CloseWhenReady(NPC npc, int tries)
@@ -300,7 +352,9 @@ namespace DarkwoodMP.World
                 win = instance.dialogueWindow;
             }
 
-            if (win == null || win.npc != npc || npc == null)
+            CloseTry next = TalkRules.CloseWhenReady(
+                FactsOf(win, npc, tries));
+            if (next == CloseTry.Stop)
             {
                 return;
             }
@@ -308,17 +362,9 @@ namespace DarkwoodMP.World
             // The window opens over a second or so (a portrait, then a fade:
             // inDialogue, then tweening until it's in); closing it before that
             // leaves the game's own opening steps without an NPC.
-            bool opening = win.tweening || Player.Instance == null
-                || !Player.Instance.inDialogue;
-            if (opening)
+            if (next == CloseTry.Wait)
             {
-                if (tries > 0)
-                {
-                    Singleton<Controller>.Instance.Invoke(
-                        () => CloseWhenReady(npc, tries - 1), 0.25f,
-                        timeScaleDependent: false);
-                }
-
+                TryAgain(npc, tries - 1);
                 return;
             }
 
@@ -330,10 +376,39 @@ namespace DarkwoodMP.World
             DialogueGuard.Close(win);
             if (win.npc == npc)
             {
-                Singleton<Controller>.Instance.Invoke(
-                    () => CloseWhenReady(npc, tries - 1), 0.25f,
-                    timeScaleDependent: false);
+                TryAgain(npc, tries - 1);
             }
+        }
+
+        /// <summary>CloseWhenReady again in TalkRules.RetryEvery.</summary>
+        private static void TryAgain(NPC npc, int tries)
+        {
+            Singleton<Controller>.Instance.Invoke(
+                () => CloseWhenReady(npc, tries), TalkRules.RetryEvery,
+                timeScaleDependent: false);
+        }
+
+        /// <summary>
+        /// One try at closing a refused dialogue: the window, its NPC and
+        /// whether it is still opening. win may be null.
+        /// </summary>
+        private static TalkCloseFacts FactsOf(
+            DialogueWindow win, NPC npc, int tries)
+        {
+            bool same = win != null && win.npc == npc && npc != null;
+            if (!same)
+            {
+                return new TalkCloseFacts { Tries = tries };
+            }
+
+            bool opening = win.tweening || Player.Instance == null
+                || !Player.Instance.inDialogue;
+            return new TalkCloseFacts
+            {
+                SameNpc = true,
+                Opening = opening,
+                Tries = tries,
+            };
         }
 
         private static void OnLock(ulong from, PacketReader r)
@@ -353,26 +428,21 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            string other = TalkingOther(key, from);
-            if (other != null)
+            Verdict verdict = TalkRules.MayClaim(FactsOf(from, key));
+            Authority authority = Coop.Current.Authority;
+            if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse($"{other} is talking to them");
-                return;
-            }
-
-            if (_released.TryGetValue(key, out var rel) && rel.Key != from
-                && UnityEngine.Time.unscaledTime - rel.Value < Grace)
-            {
-                Coop.Current.Authority.Refuse(
-                    $"{s.NameOf(rel.Key)} just talked to them: try again in a "
-                        + "moment");
+                authority.Refuse(verdict);
                 return;
             }
 
             var npc = ObjRef.Resolve<NPC>(obj);
+
+            // The rule's last check, the reach, is Authority's: it knows
+            // where the claimer stands.
             if (npc != null
-                && !Coop.Current.Authority.InReach(
-                    npc.transform.position, 1500f, npc.name))
+                && !authority.InReach(
+                    npc.transform.position, TalkRules.Reach, npc.name))
             {
                 return;
             }
@@ -394,14 +464,49 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world] {who} talks to {name}");
             }
         }
+
+        /// <summary>
+        /// Host: a joiner's claim of the NPC by key, up to its reach, which
+        /// Authority.InReach checks after. The holder's and the releaser's
+        /// names are only read when there is one.
+        /// </summary>
+        private static TalkFacts FactsOf(ulong from, string key)
+        {
+            var s = S;
+            bool held = _talkers.TryGetValue(key, out var holder);
+            bool released = _released.TryGetValue(key, out var rel);
+            string holderName = null;
+            if (held)
+            {
+                holderName = s.NameOf(holder);
+            }
+
+            string releaserName = null;
+            if (released)
+            {
+                releaserName = s.NameOf(rel.Key);
+            }
+
+            return new TalkFacts
+            {
+                From = from,
+                Held = held,
+                Holder = holder,
+                HolderName = holderName,
+                Released = released,
+                Releaser = rel.Key,
+                ReleaserName = releaserName,
+                ReleasedAt = new Seconds(rel.Value),
+                Now = new Seconds(UnityEngine.Time.unscaledTime),
+            };
+        }
     }
 
     [HarmonyPatch(typeof(NPC), nameof(NPC.talkTo))]
     static class TalkToPatch
     {
         static bool Prefix(NPC __instance) =>
-            __instance.characterDialogue == null || !__instance.wantsToTalk
-                || TalkLock.HostMayTalk(__instance);
+            TalkLock.HostMayTalk(__instance);
 
         static void Postfix(NPC __instance)
         {
