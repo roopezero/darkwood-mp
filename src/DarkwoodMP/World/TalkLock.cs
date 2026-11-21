@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Talk;
-using HarmonyLib;
 using UnityEngine.SceneManagement;
 
 namespace DarkwoodMP.World
@@ -92,6 +91,59 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// NPC.talkTo's prefix: whether our player's dialogue may open (only
+        /// the host refuses it, while a joiner talks to them).
+        /// </summary>
+        internal static bool BeforeTalkTo(NPC npc)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Talk.HostMayTalk(npc);
+        }
+
+        /// <summary>
+        /// NPC.talkTo's postfix: our player's dialogue with npc opened, if
+        /// the window has them.
+        /// </summary>
+        internal static void AfterTalkTo(NPC npc)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            UI instance = Singleton<UI>.Instance;
+            DialogueWindow win = null;
+            if (instance != null)
+            {
+                win = instance.dialogueWindow;
+            }
+
+            if (win != null && win.npc == npc)
+            {
+                coop.Talk.Opened(npc);
+            }
+        }
+
+        /// <summary>
+        /// DialogueWindow.close's postfix: our dialogue closed once the
+        /// window let go of its NPC.
+        /// </summary>
+        internal static void AfterClose(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null && w.npc == null)
+            {
+                coop.Talk.Closed();
+            }
+        }
+
+        /// <summary>
         /// The name an NPC is locked by (TalkRules.LockName), or "".
         /// </summary>
         private static string UniqueName(NPC npc)
@@ -141,7 +193,7 @@ namespace DarkwoodMP.World
         /// Host, before our own player's dialogue opens: whether someone else
         /// has the NPC.
         /// </summary>
-        internal bool HostMayTalk(NPC npc)
+        private bool HostMayTalk(NPC npc)
         {
             Verdict verdict = TalkRules.HostMayTalk(FactsOf(npc));
             if (!verdict.Refused)
@@ -200,7 +252,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Our player's dialogue with this NPC opened.</summary>
-        internal void Opened(NPC npc)
+        private void Opened(NPC npc)
         {
             var r = ObjRef.Of(npc.gameObject);
             TalkOpen open = TalkRules.Opens(OpenFactsOf(npc, r));
@@ -505,50 +557,6 @@ namespace DarkwoodMP.World
                 ReleasedAt = new Seconds(rel.Value),
                 Now = new Seconds(UnityEngine.Time.unscaledTime),
             };
-        }
-    }
-
-    [HarmonyPatch(typeof(NPC), nameof(NPC.talkTo))]
-    static class TalkToPatch
-    {
-        static bool Prefix(NPC __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Talk.HostMayTalk(__instance);
-        }
-
-        static void Postfix(NPC __instance)
-        {
-            UI instance = Singleton<UI>.Instance;
-            DialogueWindow win = null;
-            if (instance != null)
-            {
-                win = instance.dialogueWindow;
-            }
-
-            CoopSession coop = Coop.Current;
-            if (coop != null && win != null && win.npc == __instance)
-            {
-                coop.Talk.Opened(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.close))]
-    static class DialogueClosePatch
-    {
-        static void Postfix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null && __instance.npc == null)
-            {
-                coop.Talk.Closed();
-            }
         }
     }
 }

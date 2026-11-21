@@ -66,12 +66,74 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// DialogueWindow.openTrade's postfix: keep the trader's window.
+        /// </summary>
+        internal static void AfterOpenTrade(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dialogues.OpenedTrade(w);
+            }
+        }
+
+        /// <summary>
+        /// DialogueWindow.closeTrade's prefix (the trade window's close
+        /// button and Escape): closeTrade throws without the trader.
+        /// </summary>
+        internal static bool BeforeCloseTrade(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunCloseTrade(w);
+        }
+
+        /// <summary>
+        /// The prefix of DialogueWindow.close, which does nothing once the
+        /// NPC is destroyed, and of escPress (a line being written,
+        /// onInstantClick, and the other menus use the NPC too).
+        /// </summary>
+        internal static bool BeforeClose(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunClose(w);
+        }
+
+        /// <summary>
+        /// DialogueWindow.finishedElement's prefix. A line still being
+        /// written (WritingText.Update) when the dialogue closes calls it on
+        /// the closed window, which has no board elements and no dialogue
+        /// left and throws on currentDialogue.name. That only happens when a
+        /// dialogue is closed while it writes, as the mod does (a refused
+        /// talk, the host's morning ending, a gone NPC): skip it then.
+        /// </summary>
+        internal static bool BeforeFinishedLine(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunFinishedLine(w);
+        }
+
+        /// <summary>
         /// The window's NPC was destroyed (Unity's null, not a cleared field).
         /// </summary>
         internal static bool NpcDestroyed(DialogueWindow w) =>
             w != null && !ReferenceEquals(w.npc, null) && w.npc == null;
 
-        internal void OpenedTrade(DialogueWindow w)
+        private void OpenedTrade(DialogueWindow w)
         {
             Inventory inv = null;
             if (w != null && w.npc != null)
@@ -211,7 +273,7 @@ namespace DarkwoodMP.World
         /// closeTrade's prefix: false (skip the game's method) after closing
         /// the dialogue if the NPC was destroyed, even while tweening.
         /// </summary>
-        internal bool RunCloseTrade(DialogueWindow w)
+        private bool RunCloseTrade(DialogueWindow w)
         {
             if (DialogueRules.RunsCloseTrade(NpcDestroyed(w)))
             {
@@ -227,7 +289,7 @@ namespace DarkwoodMP.World
         /// closing the dialogue if the NPC was destroyed and the window isn't
         /// opening or closing.
         /// </summary>
-        internal bool RunClose(DialogueWindow w)
+        private bool RunClose(DialogueWindow w)
         {
             if (DialogueRules.RunsClose(NpcDestroyed(w), w.tweening))
             {
@@ -241,7 +303,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// finishedElement's prefix: whether the game's runs.
         /// </summary>
-        internal bool RunFinishedLine(DialogueWindow w)
+        private bool RunFinishedLine(DialogueWindow w)
         {
             var line = new LineFacts
             {
@@ -374,95 +436,6 @@ namespace DarkwoodMP.World
             }, 0.5f, timeScaleDependent: false);
 
             _coop.Talk.Closed();
-        }
-    }
-
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.openTrade))]
-    static class DialogueGuardOpenTradePatch
-    {
-        static void Postfix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Dialogues.OpenedTrade(__instance);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The trade window's close button and Escape (escPress): closeTrade throws
-    /// without the trader.
-    /// </summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.closeTrade))]
-    static class DialogueGuardCloseTradePatch
-    {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Dialogues.RunCloseTrade(__instance);
-        }
-    }
-
-    /// <summary>close() does nothing once the NPC is destroyed.</summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.close))]
-    static class DialogueGuardClosePatch
-    {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Dialogues.RunClose(__instance);
-        }
-    }
-
-    /// <summary>
-    /// Escape: a line being written (onInstantClick) and the other menus use
-    /// the NPC too.
-    /// </summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.escPress))]
-    static class DialogueGuardEscPatch
-    {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Dialogues.RunClose(__instance);
-        }
-    }
-
-    /// <summary>A line still being written (WritingText.Update) when the
-    /// dialogue closes calls finishedElement on the closed window, which has no
-    /// board elements and no dialogue left and throws on currentDialogue.name.
-    /// That only happens when a dialogue is closed while it writes, as the mod
-    /// does (a refused talk, the host's morning ending, a gone NPC): skip it
-    /// then.</summary>
-    [HarmonyPatch(
-        typeof(DialogueWindow), nameof(DialogueWindow.finishedElement))]
-    static class DialogueGuardFinishedElementPatch
-    {
-        static bool Prefix(DialogueWindow __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Dialogues.RunFinishedLine(__instance);
         }
     }
 }
