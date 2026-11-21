@@ -164,13 +164,13 @@ namespace DarkwoodMP
         public readonly World.Mornings.AfterNight Mornings;
 
         /// The porter, who moves things between the hideouts once.
-        public readonly World.Porter Porter;
+        public readonly World.Hideout.Porter Porter;
 
         /// The hideouts' ovens and each joiner's own.
-        public readonly World.Ovens Ovens;
+        public readonly World.Hideout.Ovens Ovens;
 
         /// What the host's night events put into the world.
-        public readonly World.NightObjects Nights;
+        public readonly World.Nights.NightObjects Nights;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -230,9 +230,9 @@ namespace DarkwoodMP
             Resets = new World.Deaths.WorldResets(this);
             Pause = new World.Pause.CoopPause(this);
             Mornings = new World.Mornings.AfterNight(this);
-            Porter = new World.Porter(this);
-            Ovens = new World.Ovens(this);
-            Nights = new World.NightObjects(this);
+            Porter = new World.Hideout.Porter(this);
+            Ovens = new World.Hideout.Ovens(this);
+            Nights = new World.Nights.NightObjects(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

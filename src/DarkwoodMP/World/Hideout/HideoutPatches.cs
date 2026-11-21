@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Hideout
 {
     /// <summary>
     /// The porter takes a hideout's things to another

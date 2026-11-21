@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Hideout;
 using HarmonyLib;
 using UnityEngine;
 

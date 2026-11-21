@@ -3,7 +3,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Nights
 {
     /// <summary>
     /// Host: the night event firing now, so the copies of its GameEvents are
