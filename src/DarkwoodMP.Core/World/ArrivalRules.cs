@@ -7,7 +7,7 @@ namespace DarkwoodMP.World
     {
         /// Taken from anyone on the host, and only from the host on a
         /// client, while in a world (EggSync.OnDestroyed,
-        /// InfectionSync.OnCleared, FuelSync.OnFuel, FireSync.OnBurning's
+        /// InfectionSync.OnCleared, Fuel.OnFuel, FireSync.OnBurning's
         /// host side, Construction.OnConstruct).
         public static bool Takes(in ArrivalFacts message)
         {

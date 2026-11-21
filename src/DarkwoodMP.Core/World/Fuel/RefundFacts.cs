@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Fuel
 {
     /// What a client knows when the host answers its Fuel: the answer, and
-    /// the pour it asked about (FuelSync.Pour).
+    /// the pour it asked about (Fuel.Pour).
     public readonly struct RefundFacts
     {
         /// The host allowed it.

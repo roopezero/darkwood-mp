@@ -83,7 +83,6 @@ namespace DarkwoodMP
         private Characters _characters;
         private FlagsSync _flags;
         private DragSync _drag;
-        private FuelSync _fuel;
         private WorldEvents _events;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
@@ -460,7 +459,6 @@ namespace DarkwoodMP
             _flags = new FlagsSync(_host.Session);
             _drag = new DragSync(_host.Session);
             DoorPush.Register(_host.Session);
-            _fuel = new FuelSync(_host.Session);
             new TraderSync(_host.Session);
             new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
@@ -2283,7 +2281,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("drag");
             DoorPush.Update();
             ModProfiler.Mark("door push");
-            _fuel.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Fuel.Update();
+            }
+
             ModProfiler.Mark("fuel");
             _events.Update();
             ModProfiler.Mark("events");
