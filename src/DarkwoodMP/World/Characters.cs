@@ -27,7 +27,7 @@ namespace DarkwoodMP.World
     /// and gets it (CharacterLoad); someone new gets a fresh one (no items,
     /// full health, beside the host), or a copy of the host's if the host's
     /// NewCharacters setting says so. The client sends its character back every
-    /// CharacterInterval seconds, as it leaves, and as the game quits
+    /// OurCharacterRules.SaveInterval, as it leaves, and as the game quits
     /// (CharacterSave). The essence and the number of levels are shared
     /// (World.Progression); the level a character has taken and its skills are
     /// its own.
@@ -47,7 +47,6 @@ namespace DarkwoodMP.World
     /// </summary>
     public sealed class Characters
     {
-        public const float CharacterInterval = 15f;
 
         public sealed class Record
         {
@@ -160,7 +159,7 @@ namespace DarkwoodMP.World
         private Dictionary<string, Record> Records()
         {
             string dir = RecordsDir();
-            if (dir == null || dir == _recordsDir)
+            if (!CharacterRules.Rereads(dir, _recordsDir))
             {
                 return _records;
             }
@@ -203,13 +202,14 @@ namespace DarkwoodMP.World
         /// </summary>
         public void HostSaved()
         {
-            if (WorldShare.Snapshotting || NetEnemies.ClientMode)
+            if (!CharacterRules.Writes(
+                WorldShare.Snapshotting, NetEnemies.ClientMode))
             {
                 return; // a snapshot for a joiner, or a client's copy
             }
 
             var recs = Records();
-            if (recs.Count == 0 || _recordsDir == null)
+            if (!CharacterRules.HasToWrite(recs.Count, _recordsDir != null))
             {
                 return;
             }
@@ -231,10 +231,36 @@ namespace DarkwoodMP.World
             }
         }
 
+        /// A character message from this peer is taken, with its key.
+        private bool Takes(ulong from, out string key)
+        {
+            bool keyed = _session.Keys.TryGetValue(from, out key);
+            return CharacterRules.Takes(_session.IsHost, keyed);
+        }
+
+        private static KindFacts FactsOf(Record rec, int hostChapter)
+        {
+            bool dead = false;
+            int chapter = 0;
+            if (rec != null)
+            {
+                dead = rec.Dead;
+                chapter = rec.Chapter;
+            }
+
+            return new KindFacts
+            {
+                Kept = rec != null,
+                Dead = dead,
+                Chapter = chapter,
+                HostChapter = hostChapter,
+                NewCharacters = Plugin.Cfg.NewCharacters.Value,
+            };
+        }
+
         private void OnRequest(ulong from, PacketReader r)
         {
-            if (!_session.IsHost
-                || !_session.Keys.TryGetValue(from, out var key))
+            if (!Takes(from, out var key))
             {
                 return;
             }
@@ -242,35 +268,15 @@ namespace DarkwoodMP.World
             Records().TryGetValue(KeyHash(key), out var rec);
             var host = Player.Instance;
             var w = _session.Begin(MsgType.CharacterLoad);
-            bool copy = rec == null && Plugin.Cfg.NewCharacters.Value == "copy";
             // A character from an earlier chapter keeps what it is and carries,
             // as the game carries the host's own over (its chapter save), but
             // where it stood was on the last chapter's map: it starts beside
             // the host.
-            int chapter = Chapters.HostChapter;
-            bool earlier = rec != null && rec.Chapter != 0 && chapter != 0
-                && rec.Chapter != chapter;
-            bool dead = rec != null && rec.Dead;
-            // 1: yours, 2: a copy of the host's (keep what you loaded), 0: new,
-            // 3: yours, beside the host, 4: yours, dead for good
-            int answer = 0;
-            if (dead)
-            {
-                answer = 4;
-            }
-            else if (earlier)
-            {
-                answer = 3;
-            }
-            else if (rec != null)
-            {
-                answer = 1;
-            }
-            else if (copy)
-            {
-                answer = 2;
-            }
-
+            var answer = CharacterRules.KindOf(
+                FactsOf(rec, Chapters.HostChapter));
+            bool copy = answer == CharacterKind.HostCopy;
+            bool earlier = answer == CharacterKind.OwnBesideHost;
+            bool dead = answer == CharacterKind.Dead;
             string player = null;
             if (rec != null)
             {
@@ -320,7 +326,7 @@ namespace DarkwoodMP.World
                 w,
                 new CharacterLoadBody
                 {
-                    Kind = (CharacterKind)answer,
+                    Kind = answer,
                     Player = player,
                     Inventory = inv,
                     Hotbar = hotbar,
@@ -379,8 +385,7 @@ namespace DarkwoodMP.World
 
         private void OnSave(ulong from, PacketReader r)
         {
-            if (!_session.IsHost
-                || !_session.Keys.TryGetValue(from, out var key))
+            if (!Takes(from, out var key))
             {
                 return;
             }
@@ -398,17 +403,9 @@ namespace DarkwoodMP.World
             // The chapter of the world the joiner's game is in: what it sends
             // from the last chapter's map, while it waits for the next one or
             // reloads, is stamped with that chapter, whenever it arrives.
-            int chapter = body.Chapter;
-            if (chapter > 0)
-            {
-                rec.Chapter = chapter;
-            }
-            else
-            {
-                rec.Chapter = Chapters.HostChapter;
-            }
-
-            if (rec.Player.Length == 0 || rec.Inv.Length == 0)
+            rec.Chapter =
+                CharacterRules.ChapterOf(body.Chapter, Chapters.HostChapter);
+            if (!CharacterRules.Keeps(rec.Player, rec.Inv))
             {
                 return;
             }
@@ -457,7 +454,10 @@ namespace DarkwoodMP.World
 
             try
             {
-                return Count(c.Inv, types) + Count(c.Hotbar, types) - c.Placed;
+                return CharacterRules.Carries(
+                    CharacterRules.CountOf(BagOf(c.Inv), types),
+                    CharacterRules.CountOf(BagOf(c.Hotbar), types),
+                    c.Placed);
             }
             catch (Exception e)
             {
@@ -480,38 +480,37 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static int Count(string inv, ICollection<string> types)
+        /// What an inventory's JSON holds; null when it's empty or holds
+        /// no item list.
+        private static List<CarriedItem> BagOf(string inv)
         {
             if (string.IsNullOrEmpty(inv))
             {
-                return 0;
+                return null;
             }
 
             var state = JsonConvert.DeserializeObject<Inventory.SaveState>(inv);
-            int n = 0;
-            if (state != null && state.invItems != null)
+            if (state == null || state.invItems == null)
             {
-                foreach (var it in state.invItems)
+                return null;
+            }
+
+            var bag = new List<CarriedItem>();
+            foreach (var it in state.invItems)
+            {
+                if (it != null)
                 {
-                    if (it != null && it.type != null
-                        && types.Contains(it.type))
-                    {
-                        n += Math.Max(1, it.amount);
-                    }
+                    bag.Add(
+                        new CarriedItem { Type = it.type, Amount = it.amount });
                 }
             }
 
-            return n;
+            return bag;
         }
 
-        /// <summary>
-        /// Host: a joiner's character died for good. Kept with it, so it
-        /// doesn't come back alive when they rejoin.
-        /// </summary>
         private void OnDead(ulong from, PacketReader r)
         {
-            if (!_session.IsHost
-                || !_session.Keys.TryGetValue(from, out var key))
+            if (!Takes(from, out var key))
             {
                 return;
             }
@@ -589,11 +588,7 @@ namespace DarkwoodMP.World
                     }
                 }
 
-                if (skills != null)
-                {
-                    has = skills.Exists(
-                        k => k != null && k.type == "electrician");
-                }
+                has = CharacterRules.Electrician(TypesOf(skills));
             }
             catch (Exception e)
             {
@@ -603,6 +598,30 @@ namespace DarkwoodMP.World
 
             _electrician[peer] = (rec.Player, has);
             return has;
+        }
+
+        /// The skills' types; a null skill has none. Null for no list.
+        private static List<string> TypesOf(List<PlayerSkill.SaveState> skills)
+        {
+            if (skills == null)
+            {
+                return null;
+            }
+
+            var types = new List<string>();
+            foreach (var k in skills)
+            {
+                if (k == null)
+                {
+                    types.Add(null);
+                }
+                else
+                {
+                    types.Add(k.type);
+                }
+            }
+
+            return types;
         }
 
         private readonly Dictionary<ulong, (string, bool?)> _electrician =
@@ -616,22 +635,24 @@ namespace DarkwoodMP.World
         private float _nextSave, _readyAt = -1f;
 
         /// <summary>
-        /// How long a joiner's game waits for its character before it shows its
-        /// player anyway.
-        /// </summary>
-        private const float PlaceWait = 6f;
-
-        /// <summary>
         /// Client: in the host's world, but our character isn't placed yet. Our
         /// player still stands where the host's save had the host's player,
         /// which is often where the host is now, so PlayerSync doesn't send
         /// where we are until then (while the world loads, and at most
         /// PlaceWait seconds after): the others first see us where we're put.
         /// </summary>
-        public bool Placing => NetEnemies.ClientMode && !_have
-            && WorldShare.InWorld
-            && (_readyAt < 0f
-                || Time.unscaledTime - _readyAt < PlaceWait);
+        public bool Placing => OurCharacterRules.Placing(OurFactsNow());
+
+        private OurFacts OurFactsNow() => new OurFacts
+        {
+            Client = NetEnemies.ClientMode,
+            InWorld = WorldShare.InWorld,
+            Have = _have,
+            ReadyAt = new Seconds(_readyAt),
+            Now = new Seconds(Time.unscaledTime),
+            QuitSent = _quitSent,
+            Prologue = Prologue.Active,
+        };
 
         /// <summary>
         /// Client: our character in the host's world has come (CharacterLoad).
@@ -724,20 +745,15 @@ namespace DarkwoodMP.World
         /// </summary>
         public void SaveNow()
         {
-            if (_quitSent || !_have || !NetEnemies.ClientMode
-                || !WorldShare.InWorld)
+            // the prologue's character isn't kept: the host keeps ours from
+            // its end on
+            if (!OurCharacterRules.Sends(OurFactsNow()))
             {
                 return;
             }
 
-            if (Prologue.Active)
-            {
-                // the prologue's character isn't kept: the host keeps ours from
-                // its end on
-                return;
-            }
-
-            _nextSave = Time.unscaledTime + CharacterInterval;
+            _nextSave = Time.unscaledTime
+                + OurCharacterRules.SaveInterval.Value;
             var p = Player.Instance;
             try
             {
@@ -782,12 +798,23 @@ namespace DarkwoodMP.World
 
         private void OnLoad(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !NetEnemies.ClientMode)
+            var step = OurCharacterRules.Take(
+                new LoadFacts
+                {
+                    FromHost = from == _session.HostId,
+                    Client = NetEnemies.ClientMode,
+                    Asked = _asked,
+                    AskedScene = _askedScene,
+                    Scene = ActiveScene,
+                    InWorld = WorldShare.InWorld,
+                });
+
+            if (step == LoadStep.Ignore)
             {
                 return;
             }
 
-            if (!_asked || ActiveScene != _askedScene || !WorldShare.InWorld)
+            if (step == LoadStep.AskAgain)
             {
                 Plugin.Log.LogInfo(
                     "Our character came for a world we've left: asking again "
@@ -797,7 +824,7 @@ namespace DarkwoodMP.World
             }
 
             var body = CharacterLoad.Read(r);
-            byte kind = (byte)body.Kind;
+            var kind = body.Kind;
             string ps = body.Player,
                 inv = body.Inventory,
                 hot = body.Hotbar;
@@ -808,12 +835,13 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (kind == 4)
+            if (kind == CharacterKind.Dead)
             {
                 // Our character died for good here: as the game doesn't bring
                 // it back, we watch the others again.
                 _have = true;
-                _nextSave = Time.unscaledTime + CharacterInterval;
+                _nextSave = Time.unscaledTime
+                + OurCharacterRules.SaveInterval.Value;
                 Plugin.Log.LogInfo(
                     "Your character in this world died for good: you watch the "
                         + "others");
@@ -823,21 +851,17 @@ namespace DarkwoodMP.World
 
             try
             {
-                // In the prologue, a new character is what the stage made it
-                // (its own items): only put beside the host.
-                bool prologue = Prologue.Active && (kind == 0 || kind == 2);
-                if (kind == 1 || kind == 3)
+                if (OurCharacterRules.Applies(kind))
                 {
                     ApplyRecord(p, ps, inv, hot);
                 }
 
+                var facts = FactsOf(kind, spawn, p);
                 // Our own kept place, but not on this world's map (a character
                 // kept with the wrong chapter, or one that was away in a
                 // separate location): beside the host, as from the last
                 // chapter.
-                bool offMap = !prologue && kind == 1 && spawn != Vector3.zero
-                    && !OnMap(p.transform.position);
-                if (offMap)
+                if (OurCharacterRules.OffMap(facts))
                 {
                     Plugin.Log.LogInfo(
                         $"[spawn] your kept place {p.transform.position} isn't "
@@ -845,32 +869,23 @@ namespace DarkwoodMP.World
                             + "host");
                 }
 
-                if (prologue)
+                // In the prologue, a new character is what the stage made it
+                // (its own items): only put beside the host. A copy of the
+                // host's is kept, beside them. Our own stays
+                // where it was saved, not on the host (or at 0,0 when no
+                // position was given).
+                var stand = OurCharacterRules.Stand(facts);
+                if (stand == StandStep.AtSpawn)
                 {
-                    if (spawn != Vector3.zero)
-                    {
-                        p.transform.position = spawn;
-                    }
-                }
-                else if ((kind == 3 || offMap) && spawn != Vector3.zero)
-                {
-                    // the last chapter's place isn't on this map
                     p.transform.position = spawn;
                 }
-                else if (kind == 0)
+                else if (stand == StandStep.Fresh)
                 {
                     Fresh(p, spawn);
                 }
-                // A copy of the host's: keep it, beside them. Our own (kind 1)
-                // stays where it was saved, not on the host (or at 0,0 when no
-                // position was given).
-                else if (kind == 2 && spawn != Vector3.zero)
-                {
-                    p.transform.position = spawn;
-                }
 
                 Vector3? host;
-                if (spawn == Vector3.zero)
+                if (OurCharacterRules.IsZero(facts.Spawn))
                 {
                     host = (Vector3?)null;
                 }
@@ -883,27 +898,7 @@ namespace DarkwoodMP.World
                 p.refreshRecipes();
                 Reequip(p);
                 Progression.AfterCharacter(p);
-                string data = "You start as a copy of the host's character";
-                if (prologue)
-                {
-                    data = "A new character for you in the host's prologue";
-                }
-                else if (kind == 1)
-                {
-                    data = "Your character in this world is back";
-                }
-                else if (kind == 3)
-                {
-                    data =
-                        "Your character from the last chapter is back, beside "
-                            + "the host";
-                }
-                else if (kind == 0)
-                {
-                    data = "A new character for you in this world";
-                }
-
-                Plugin.Log.LogInfo(data);
+                Plugin.Log.LogInfo(LoadedText(OurCharacterRules.Note(facts)));
             }
             catch (Exception e)
             {
@@ -911,7 +906,38 @@ namespace DarkwoodMP.World
             }
 
             _have = true;
-            _nextSave = Time.unscaledTime + CharacterInterval;
+            _nextSave = Time.unscaledTime
+                + OurCharacterRules.SaveInterval.Value;
+        }
+
+        private static StandFacts FactsOf(
+            CharacterKind kind, Vector3 spawn, Player p)
+        {
+            return new StandFacts
+            {
+                Kind = kind,
+                Prologue = Prologue.Active,
+                Spawn = new Vec3(spawn.x, spawn.y, spawn.z),
+                OnMap = OnMap(p.transform.position),
+            };
+        }
+
+        private static string LoadedText(LoadNote note)
+        {
+            switch (note)
+            {
+                case LoadNote.Prologue:
+                    return "A new character for you in the host's prologue";
+                case LoadNote.Own:
+                    return "Your character in this world is back";
+                case LoadNote.LastChapter:
+                    return "Your character from the last chapter is back, "
+                        + "beside the host";
+                case LoadNote.New:
+                    return "A new character for you in this world";
+                default:
+                    return "You start as a copy of the host's character";
+            }
         }
 
         /// <summary>
@@ -922,49 +948,51 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool OnMap(Vector3 at)
         {
-            float nearest = NearestChunk(at);
             WorldGenerator wg = Singleton<WorldGenerator>.Instance;
-            float size = 0f;
-            if (wg != null)
-            {
-                size = wg.chunkSize;
-            }
-
-            return nearest <= 0.6f * size;
+            return OurCharacterRules.OnMap(
+                ChunksOf(wg), SizeOf(wg), new Vec2(at.x, at.z));
         }
 
         /// <summary>
-        /// How far (the larger of x and z) the nearest of the world's chunks is
-        /// from a place; 0 when not known.
+        /// How far the nearest of WorldGenerator's chunks is, by the larger of
+        /// the x and z distances; 0 when that can't be told.
         /// </summary>
         internal static float NearestChunk(Vector3 at)
         {
-            var wg = Singleton<WorldGenerator>.Instance;
-            if (wg == null || wg.worldChunks == null
-                || wg.worldChunks.Count == 0 || wg.chunkSize <= 0f)
+            WorldGenerator wg = Singleton<WorldGenerator>.Instance;
+            return OurCharacterRules.NearestChunk(
+                ChunksOf(wg), SizeOf(wg), new Vec2(at.x, at.z));
+        }
+
+        /// The places of the world's chunks (null when there's no list).
+        private static List<Vec2> ChunksOf(WorldGenerator wg)
+        {
+            if (wg == null || wg.worldChunks == null)
             {
-                return 0f;
+                return null;
             }
 
-            float best = float.MaxValue;
+            var chunks = new List<Vec2>();
             foreach (var c in wg.worldChunks)
             {
-                if (c == null)
+                if (c != null)
                 {
-                    continue;
+                    var at = c.transform.position;
+                    chunks.Add(new Vec2(at.x, at.z));
                 }
-
-                var d = c.transform.position - at;
-                best =
-                    Mathf.Min(best, Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.z)));
             }
 
-            if (best == float.MaxValue)
+            return chunks;
+        }
+
+        private static float SizeOf(WorldGenerator wg)
+        {
+            if (wg == null)
             {
                 return 0f;
             }
 
-            return best;
+            return wg.chunkSize;
         }
 
         /// <summary>
@@ -983,7 +1011,8 @@ namespace DarkwoodMP.World
             }
 
             var at = Sync.Players.SpawnSpot.Find(p, want, taken);
-            if ((at - want).sqrMagnitude < 1f)
+            if (!OurCharacterRules.Moves(
+                new Vec3(want.x, want.y, want.z), new Vec3(at.x, at.y, at.z)))
             {
                 Plugin.Log.LogInfo($"[spawn] placed at {want}: free");
                 return;
@@ -1016,14 +1045,14 @@ namespace DarkwoodMP.World
                 () =>
             {
                 p.healthUpgrades--;
-                p.maxHealth -= 25f;
+                p.maxHealth -= OurCharacterRules.UpgradeCost;
             });
 
             state.staminaUpgrades = Delta(state.staminaUpgrades,
                 p.staminaUpgrades, () =>
             {
                 p.staminaUpgrades--;
-                p.maxStamina -= 25f;
+                p.maxStamina -= OurCharacterRules.UpgradeCost;
             });
 
             int hotbarUpgrades = state.hotbarUpgrades,
@@ -1044,7 +1073,7 @@ namespace DarkwoodMP.World
             hotState.loadValues(p.Hotbar);
             p.hotbarUpgrades = hotbarUpgrades;
             p.inventoryUpgrades = inventoryUpgrades;
-            p.setHealth(Mathf.Min(state.health, p.maxHealth));
+            p.setHealth(OurCharacterRules.Health(state.health, p.maxHealth));
         }
 
         /// <summary>
@@ -1058,7 +1087,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void SetSlots(Inventory bag, int count)
         {
-            if (bag == null || bag.slots == null || count <= 0)
+            if (bag == null || bag.slots == null
+                || OurCharacterRules.SlotChange(bag.slots.Count, count) == 0)
             {
                 return;
             }
@@ -1076,12 +1106,13 @@ namespace DarkwoodMP.World
 
         private static int Delta(int wanted, int have, Action takeOne)
         {
-            for (int i = wanted; i < have; i++)
+            int back = OurCharacterRules.UpgradesToTakeBack(wanted, have);
+            for (int i = 0; i < back; i++)
             {
                 takeOne();
             }
 
-            return Math.Max(0, wanted - have);
+            return OurCharacterRules.UpgradesToAdd(wanted, have);
         }
 
         /// <summary>
