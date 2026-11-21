@@ -2249,6 +2249,12 @@ namespace DarkwoodMP
             OptionsWindow.Update();
             MenuList.Update();
             ModProfiler.Begin();
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.WatchWorld();
+            }
+
             _host.Session.Update();
             ModProfiler.Mark("session");
             _host.Browser.Update();
