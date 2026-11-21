@@ -15,7 +15,7 @@ namespace DarkwoodMP.World.Fuel
         /// Player.Instance is there.
         public bool Player { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// There are stand-ins for other players (Proxies.Any).

@@ -10,6 +10,25 @@ namespace DarkwoodMP
     {
         public static CoopSession Current { get; private set; }
 
+        /// <summary>
+        /// The running session's guards, or Guards.Alone with no session:
+        /// that shares nothing and drops what it's told, so a patch can use
+        /// the guards either way.
+        /// </summary>
+        public static World.Guards Guards
+        {
+            get
+            {
+                CoopSession session = Current;
+                if (session == null)
+                {
+                    return World.Guards.Alone;
+                }
+
+                return session.Guards;
+            }
+        }
+
         /// ModHost, when a session starts. Ends one still running, if any.
         internal static void Begin(CoopSession session)
         {

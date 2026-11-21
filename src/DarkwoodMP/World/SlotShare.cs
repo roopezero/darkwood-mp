@@ -430,14 +430,14 @@ namespace DarkwoodMP.World
 
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
             {
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     state.loadValues(inv);
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
 
                 var items = state.invItems;
@@ -933,7 +933,7 @@ namespace DarkwoodMP.World
                         + $"({dropped} at our feet)");
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 slot.removeItem();
@@ -957,7 +957,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (_watched.TryGetValue(inv, out var keys) && i < keys.Length)
@@ -1532,7 +1532,7 @@ namespace DarkwoodMP.World
 
         internal void LevelRaised(int level)
         {
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 return;
             }
@@ -1690,7 +1690,7 @@ namespace DarkwoodMP.World
 
             // the storage's new row (also without co-op)
             WorkbenchStorage.ApplyAll("upgraded");
-            if (!WorldActions.Replaying)
+            if (!Coop.Guards.Replaying)
             {
                 SlotShare instance = SlotShare.Instance;
                 if (instance != null)
@@ -1720,7 +1720,7 @@ namespace DarkwoodMP.World
             __state = null;
             var share = SlotShare.Instance;
             var inv = Inv(__instance);
-            if (share == null || inv == null || !WorldActions.Sharing
+            if (share == null || inv == null || !Coop.Guards.Sharing
                 || share.Watching(inv))
             {
                 return;

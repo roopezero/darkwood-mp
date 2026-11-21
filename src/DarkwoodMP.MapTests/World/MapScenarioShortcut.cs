@@ -337,7 +337,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            WorldActions.Replaying = true; // put back here only, not shared
+            Coop.Guards.Replaying = true; // put back here only, not shared
             try
             {
                 ge.fired = false;
@@ -350,7 +350,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             yield return null;

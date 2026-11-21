@@ -337,9 +337,16 @@ join on the GOG build.
       class. The files stay at `World/`, the same path in both projects,
       since a `World/Names` folder would change the namespace of every
       caller.
-- [ ] **4.5 Guards.** Move `Depth`, `Outermost()`, `Replaying` and `Sharing` out
+- [x] **4.5 Guards.** Move `Depth`, `Outermost()`, `Replaying` and `Sharing` out
       of `WorldActions` into one instance, since every later subsystem uses
       them. `Sharing` is false when there's no session.
+      Done: they are `World.Guards`, made first in each `CoopSession`, and
+      decided by the core's `GuardRules` (new in this step: Phase 4's rules
+      had none for them). Patches read `Coop.Guards`, which with no session
+      is `Guards.Alone`: `Sharing` false, `Depth` and `Replaying` dropped.
+      `ByLocalPlayer` and `TestAsPlayer` stay on `WorldActions`: they say
+      whose call it is, not how deep or whether it's a replay, and the solo
+      tests set `TestAsPlayer` with no session.
 
 Finish with `tools/run-test.sh full`, and compare the `--dwmp-profile-mod` run
 with the baseline.

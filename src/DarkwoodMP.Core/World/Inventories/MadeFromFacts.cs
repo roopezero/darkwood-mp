@@ -14,10 +14,10 @@ namespace DarkwoodMP.World.Inventories
         /// The game gave back an object.
         public bool Exists { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// The prefab is one a player can place, so it has a path

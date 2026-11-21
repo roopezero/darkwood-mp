@@ -208,7 +208,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Make the change in this game (under WorldActions.Replaying).
+        /// Make the change in this game (under Coop.Guards.Replaying).
         /// </summary>
         internal static void Apply(
             Action a, ObjRef obj, bool on, float x, ref float y)
@@ -425,14 +425,14 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     feeder.activate();
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             });
         }
@@ -446,7 +446,7 @@ namespace DarkwoodMP.World
     {
         static void Postfix(InteractiveItem __instance)
         {
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 return;
             }
@@ -470,7 +470,7 @@ namespace DarkwoodMP.World
             __state = default;
             ObjectActions.Activating = null;
             ObjectActions.Took = false;
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 return;
             }
@@ -489,7 +489,7 @@ namespace DarkwoodMP.World
             // both are reset in Finalizer
             bool took =
                 ObjectActions.Took && ObjectActions.Activating == __instance;
-            if (!took || !__state.Valid || !WorldActions.Sharing)
+            if (!took || !__state.Valid || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -544,7 +544,7 @@ namespace DarkwoodMP.World
             }
 
             var s = Session.Instance;
-            if (s == null || !s.IsHost || !WorldActions.Sharing)
+            if (s == null || !s.IsHost || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -563,7 +563,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Feeder __instance)
         {
-            if (!WorldActions.Sharing || !NetEnemies.ClientMode)
+            if (!Coop.Guards.Sharing || !NetEnemies.ClientMode)
             {
                 return true;
             }
@@ -581,7 +581,7 @@ namespace DarkwoodMP.World
         static void Postfix(Feeder __instance)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost || !WorldActions.Sharing)
+            if (s == null || !s.IsHost || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -614,7 +614,7 @@ namespace DarkwoodMP.World
         static void Postfix(Liquid __instance, bool __state)
         {
             if (!__state || Spreading || !__instance.burning
-                || !WorldActions.Sharing)
+                || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -740,7 +740,7 @@ namespace DarkwoodMP.World
     {
         static void Prefix(ChainParent __instance, out float __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.health;
         }
 
@@ -748,7 +748,7 @@ namespace DarkwoodMP.World
             ChainParent __instance, float damage, Transform attackerTransform,
             float __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null || __instance.health == __state)
             {
                 return;
@@ -793,7 +793,7 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            if (Session.Instance.IsClient && !WorldActions.Replaying)
+            if (Session.Instance.IsClient && !Coop.Guards.Replaying)
             {
                 return false; // the host's word
             }
@@ -808,7 +808,7 @@ namespace DarkwoodMP.World
 
         static void Postfix(ShadowArmor __instance, ObjRef __state)
         {
-            if (!__state.Valid || !WorldActions.Sharing)
+            if (!__state.Valid || !Coop.Guards.Sharing)
             {
                 return;
             }

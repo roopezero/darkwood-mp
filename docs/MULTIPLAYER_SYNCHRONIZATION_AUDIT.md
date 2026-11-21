@@ -58,7 +58,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
   otherwise), so a stale local view can't overwrite the host and nothing is lost or doubled. On the host, what our
   player changed since the last look is sent first, and the loaded contents become the watchers' starting point, so
   they aren't sent back. A different slot count still closes the window, as before.
-- The redraws only redraw; they run with `WorldActions.Replaying` set and change no slot, so nothing is sent from
+- The redraws only redraw; they run with `Coop.Guards.Replaying` set and change no slot, so nothing is sent from
   them. No message or byte changed.
 
 ### Results (two real games, 2026-11-11)

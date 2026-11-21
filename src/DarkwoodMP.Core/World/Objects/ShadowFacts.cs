@@ -22,7 +22,7 @@ namespace DarkwoodMP.World.Objects
         /// This game is the host (Session.IsHost).
         public bool Host { get; init; }
 
-        /// WorldActions.Replaying: the death is the host's, applied here.
+        /// Coop.Guards.Replaying: the death is the host's, applied here.
         public bool Replaying { get; init; }
     }
 }

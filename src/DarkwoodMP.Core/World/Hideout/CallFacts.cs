@@ -6,7 +6,7 @@ namespace DarkwoodMP.World.Hideout
         /// Playing together (TogetherRules.Together).
         public bool Together { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// The location has a porterPosition.

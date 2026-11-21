@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Throws
     /// something.
     public readonly struct ThrowFacts
     {
-        /// WorldActions.Sharing: connected, in a world, not replaying.
+        /// Coop.Guards.Sharing: connected, in a world, not replaying.
         public bool Sharing { get; init; }
 
         /// The held thing's GameObject is there.

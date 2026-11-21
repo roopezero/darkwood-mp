@@ -10,7 +10,7 @@ namespace DarkwoodMP.World.Infections
         /// It is fading after the call.
         public bool Fading { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// This game is a client (NetEnemies.ClientMode).

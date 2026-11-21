@@ -464,11 +464,11 @@ namespace DarkwoodMP.World
         public static void RunAs(Part part, bool replaying, Action a)
         {
             var was = Current;
-            bool wasReplaying = WorldActions.Replaying;
+            bool wasReplaying = Coop.Guards.Replaying;
             Current = part;
             if (replaying)
             {
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
             }
 
             try
@@ -478,7 +478,7 @@ namespace DarkwoodMP.World
             finally
             {
                 Current = was;
-                WorldActions.Replaying = wasReplaying;
+                Coop.Guards.Replaying = wasReplaying;
             }
         }
 
@@ -742,7 +742,7 @@ namespace DarkwoodMP.World
         /// runs here; the host's game ran the rest.
         /// </summary>
         internal static bool SharedReplay(global::EventTrigger.Type type) =>
-            WorldActions.Replaying && LeftToActor == null && !OwnAction
+            Coop.Guards.Replaying && LeftToActor == null && !OwnAction
                 && ActionTypes.Contains(type) && S != null && S.IsClient;
 
         /// <summary>
@@ -766,8 +766,8 @@ namespace DarkwoodMP.World
                     && !WorldShare.Loading;
             }
 
-            if (WorldActions.Replaying || Current != Part.All
-                || !WorldActions.Sharing || WorldTypes.Contains(type))
+            if (Coop.Guards.Replaying || Current != Part.All
+                || !Coop.Guards.Sharing || WorldTypes.Contains(type))
             {
                 return false;
             }
@@ -1259,7 +1259,7 @@ namespace DarkwoodMP.World
             }
 
             var s = S;
-            return s != null && s.Active && WorldActions.Sharing
+            return s != null && s.Active && Coop.Guards.Sharing
                 && Current == Part.All && SettingOff;
         }
 
@@ -1903,7 +1903,7 @@ namespace DarkwoodMP.World
         {
             var s = S;
             if (s == null || !s.Active || !WorldShare.InWorld
-                || Current != Part.All || WorldActions.Replaying)
+                || Current != Part.All || Coop.Guards.Replaying)
             {
                 return true;
             }
@@ -2948,7 +2948,7 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 return true;
             }
@@ -3029,7 +3029,7 @@ namespace DarkwoodMP.World
         static bool Prefix(Events __instance, string type)
         {
             if (ScriptedEvents.Current != ScriptedEvents.Part.All
-                || WorldActions.Replaying || !WorldActions.Sharing
+                || Coop.Guards.Replaying || !Coop.Guards.Sharing
                 || ScriptedEvents.AnimationSent)
             {
                 return true;

@@ -7,7 +7,7 @@ namespace DarkwoodMP.World.Scripted
         /// The part being run now (ScriptedEvents.Current).
         public EventPart Current { get; init; }
 
-        /// WorldActions.Replaying and WorldActions.Sharing.
+        /// Coop.Guards.Replaying and Coop.Guards.Sharing.
         public bool Replaying { get; init; }
 
         public bool Sharing { get; init; }

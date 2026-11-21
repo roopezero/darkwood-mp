@@ -8,10 +8,10 @@ namespace DarkwoodMP.World.Inventories
         public bool Exists { get; init; }
 
         /// It was made while applying another game's change
-        /// (WorldActions.Replaying).
+        /// (Coop.Guards.Replaying).
         public bool Replaying { get; init; }
 
-        /// The world is shared now (WorldActions.Sharing).
+        /// The world is shared now (Coop.Guards.Sharing).
         public bool Sharing { get; init; }
 
         /// The prefab's path under Resources/Prefabs.

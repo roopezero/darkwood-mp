@@ -97,7 +97,7 @@ namespace DarkwoodMP.World
             coop.Hook(() => _session.OnPeerConnected -= SendAllTo);
         }
 
-        private bool Hosting => _session.IsHost && WorldActions.Sharing;
+        private bool Hosting => _session.IsHost && Coop.Guards.Sharing;
         private bool Joined => Combat.NetEnemies.ClientMode
             && WorldShare.InWorld && !WorldShare.Loading;
 
@@ -132,7 +132,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void Started(GameObject go)
         {
-            if (go == null || WorldActions.Replaying || Core.loadingGame)
+            if (go == null || Coop.Guards.Replaying || Core.loadingGame)
             {
                 return;
             }

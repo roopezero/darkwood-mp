@@ -7,7 +7,7 @@ namespace DarkwoodMP.World.Fire
         /// The Burn is there (not null).
         public bool Exists { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// This game is the host (Session.IsHost).

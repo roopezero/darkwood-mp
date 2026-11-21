@@ -154,7 +154,7 @@ namespace DarkwoodMP.World
         {
             if (!Together || !WorldLocation(l)
                 || ScriptedEvents.Current != ScriptedEvents.Part.All
-                || WorldActions.Replaying)
+                || Coop.Guards.Replaying)
             {
                 return null;
             }

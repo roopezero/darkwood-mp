@@ -22,6 +22,10 @@ namespace DarkwoodMP
         // constructor. It takes this CoopSession and hooks into the network
         // through Handle and Hook below, so Dispose undoes it all.
 
+        /// The guards every shared world call goes through (depth, replays,
+        /// whether the world is shared).
+        public readonly World.Guards Guards;
+
         /// The host's check on where each client's player says it is.
         public readonly Sync.MoveCheck Moves;
 
@@ -45,6 +49,7 @@ namespace DarkwoodMP
         {
             Net = net;
             // Subsystems are made here, before the first message can arrive.
+            Guards = new World.Guards(this);
             Moves = new Sync.MoveCheck(this);
             Authority = new World.Authority(this);
             Names = new ObjNames(this);

@@ -168,7 +168,7 @@ namespace DarkwoodMP.World
         /// </summary>
         static bool Prefix(Item __instance, out BreakSync.ItemState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = BreakSync.ItemState.Of(__instance);
             return !BreakSync.HostsHit();
         }
@@ -177,7 +177,7 @@ namespace DarkwoodMP.World
             Item __instance, int damage, Transform attackerTransform,
             bool normalHit, BreakSync.ItemState __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null)
             {
                 return;
@@ -225,13 +225,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Item __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.destroyed;
         }
 
         static void Postfix(Item __instance, bool __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null || __state || !__instance.destroyed)
             {
                 return;
@@ -262,13 +262,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Item __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.destroyed;
         }
 
         static void Postfix(Item __instance, bool __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null || !__state || __instance.destroyed)
             {
                 return;
@@ -347,14 +347,14 @@ namespace DarkwoodMP.World
             if (Session.Instance != null && Session.Instance.IsHost)
             {
                 __state.Host = true;
-                __state.Depth = WorldActions.Depth;
-                __state.Replaying = WorldActions.Replaying;
-                WorldActions.Depth = 0;
-                WorldActions.Replaying = false;
+                __state.Depth = Coop.Guards.Depth;
+                __state.Replaying = Coop.Guards.Replaying;
+                Coop.Guards.Depth = 0;
+                Coop.Guards.Replaying = false;
             }
             else
             {
-                WorldActions.Depth++;
+                Coop.Guards.Depth++;
             }
         }
 
@@ -367,11 +367,11 @@ namespace DarkwoodMP.World
 
             if (__state.Host)
             {
-                WorldActions.Depth = __state.Depth + 1;
-                WorldActions.Replaying = __state.Replaying;
+                Coop.Guards.Depth = __state.Depth + 1;
+                Coop.Guards.Replaying = __state.Replaying;
             }
 
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || !BreakSync.Activated(__instance))
             {
                 return;

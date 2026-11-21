@@ -9,7 +9,7 @@ namespace DarkwoodMP.World.Mornings
         /// WorldShare.InWorld.
         public bool InWorld { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// Singleton<Controller>.Instance exists (its day is remembered).

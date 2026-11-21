@@ -418,7 +418,7 @@ namespace DarkwoodMP.World
             by = 0;
             var s = S;
             if (t == null || t.objectThatSpawnedMe == null || s == null
-                || !s.IsHost || s.Peers.Count == 0 || !WorldActions.Sharing)
+                || !s.IsHost || s.Peers.Count == 0 || !Coop.Guards.Sharing)
             {
                 return false;
             }
@@ -623,7 +623,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 var go = Core.AddPrefab(
@@ -651,7 +651,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
     }
@@ -753,7 +753,7 @@ namespace DarkwoodMP.World
         {
             var s = Session.Instance;
             __state = EnemyLandings.Throwing == null && s != null && s.IsHost
-                && s.Peers.Count > 0 && WorldActions.Sharing
+                && s.Peers.Count > 0 && Coop.Guards.Sharing
                 && NetEnemies.Instance != null
                 && NetEnemies.Instance.NetIdOf(
                     __instance, out EnemyLandings.ThrowingBy);
@@ -844,7 +844,7 @@ namespace DarkwoodMP.World
             __state = EnemyLandings.SensorThrowing == null
                 && sensorType != null && s != null && s.IsHost
                 && s.Peers.Count > 0
-                && WorldActions.Sharing && NetEnemies.Instance != null
+                && Coop.Guards.Sharing && NetEnemies.Instance != null
                 && NetEnemies.Instance.NetIdOf(
                     __instance, out EnemyLandings.SensorThrowingBy);
             if (__state)

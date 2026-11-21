@@ -193,7 +193,7 @@ namespace DarkwoodMP.World
         {
             var s = Session.Instance;
             if (s == null || !s.IsHost || !WorldShare.InWorld
-                || WorldActions.Replaying)
+                || Coop.Guards.Replaying)
             {
                 return;
             }
@@ -223,7 +223,7 @@ namespace DarkwoodMP.World
         {
             var s = Session.Instance;
             if (s == null || !s.IsClient || !WorldShare.InWorld
-                || WorldActions.Replaying)
+                || Coop.Guards.Replaying)
             {
                 return;
             }
@@ -385,7 +385,7 @@ namespace DarkwoodMP.World
             bool host = Session.Instance != null && Session.Instance.IsHost;
             if (!host)
             {
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
             }
 
             try
@@ -396,7 +396,7 @@ namespace DarkwoodMP.World
             {
                 if (!host)
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             }
 

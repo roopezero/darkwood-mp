@@ -151,7 +151,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool HostMayTalk(NPC npc)
         {
-            if (!WorldActions.Sharing || !S.IsHost)
+            if (!Coop.Guards.Sharing || !S.IsHost)
             {
                 return true;
             }
@@ -181,7 +181,7 @@ namespace DarkwoodMP.World
         /// <summary>Our player's dialogue with this NPC opened.</summary>
         internal static void Opened(NPC npc)
         {
-            if (!WorldActions.Sharing || WorldActions.OursAlone(npc.gameObject))
+            if (!Coop.Guards.Sharing || WorldActions.OursAlone(npc.gameObject))
             {
                 return; // a dream's NPC of our own: nobody else can talk to it
             }

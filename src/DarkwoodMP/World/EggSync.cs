@@ -154,14 +154,14 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 Break(egg);
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (s.IsHost)

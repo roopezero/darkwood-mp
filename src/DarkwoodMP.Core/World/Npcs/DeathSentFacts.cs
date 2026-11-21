@@ -5,10 +5,10 @@ namespace DarkwoodMP.World.Npcs
     public readonly struct DeathSentFacts
     {
         /// This is the outermost of the patched calls
-        /// (WorldActions.Outermost(), called first).
+        /// (Coop.Guards.Outermost(), called first).
         public bool Outermost { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// The character has an NPC (Character.npc).

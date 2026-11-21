@@ -14,7 +14,7 @@ namespace DarkwoodMP.World.Objects
         /// Liquid.burning, after the call.
         public bool Burning { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// This game is a client (Session.IsClient).

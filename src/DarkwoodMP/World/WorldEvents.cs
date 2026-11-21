@@ -90,7 +90,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Follows => NetEnemies.ClientMode && !Away();
 
-        private bool HostSharing => _session.IsHost && WorldActions.Sharing;
+        private bool HostSharing => _session.IsHost && Coop.Guards.Sharing;
 
         public void Update()
         {
@@ -216,7 +216,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void SendNightEvent(CustomEvent ev)
         {
-            if (!HostSharing || WorldActions.Replaying || ev == null)
+            if (!HostSharing || Coop.Guards.Replaying || ev == null)
             {
                 return;
             }
@@ -351,14 +351,14 @@ namespace DarkwoodMP.World
 
                 ns.currentScenario = sc;
                 Presentation++;
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     ev.fire(force: true);
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                     Presentation--;
                 }
 
@@ -387,14 +387,14 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     ShadowLights(gen, keep);
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
 
                 if (WorldActions.Debug)
@@ -536,16 +536,16 @@ namespace DarkwoodMP.World
             while (true)
             {
                 // the first step runs at once, inside OnNightEvent's own replay
-                bool more, was = WorldActions.Replaying;
+                bool more, was = Coop.Guards.Replaying;
                 Presentation++;
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     more = inner.MoveNext();
                 }
                 finally
                 {
-                    WorldActions.Replaying = was;
+                    Coop.Guards.Replaying = was;
                     Presentation--;
                 }
 
@@ -741,7 +741,7 @@ namespace DarkwoodMP.World
                 }
 
                 int made = 0;
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     foreach (var o in list)
@@ -799,7 +799,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
 
                 if (WorldActions.Debug)
@@ -833,7 +833,7 @@ namespace DarkwoodMP.World
                 }
 
                 GameObject go;
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     go = Core.AddPrefab(
@@ -842,7 +842,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
 
                 if (go == null)
@@ -1107,7 +1107,7 @@ namespace DarkwoodMP.World
             }
 
             if (Session.Instance != null && Session.Instance.IsHost
-                && WorldActions.Sharing && WorldEvents.Instance != null)
+                && Coop.Guards.Sharing && WorldEvents.Instance != null)
             {
                 WorldEvents.Instance.HostShadowLights(__instance);
                 return false;

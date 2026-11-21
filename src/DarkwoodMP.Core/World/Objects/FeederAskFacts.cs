@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Objects
     /// to say whether the use waits for the host's yes.
     public readonly struct FeederAskFacts
     {
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// NetEnemies.ClientMode.

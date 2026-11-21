@@ -92,13 +92,13 @@ namespace DarkwoodMP.World
         }
 
         private static bool HostSharing =>
-            _session != null && _session.IsHost && WorldActions.Sharing;
+            _session != null && _session.IsHost && Coop.Guards.Sharing;
         /// <summary>
         /// Hosting, with players in or not yet: what's made before a player
         /// comes is sent when they come.
         /// </summary>
         private static bool Hosting => _session != null && _session.IsHost
-            && !WorldActions.Replaying && WorldShare.InWorld;
+            && !Coop.Guards.Replaying && WorldShare.InWorld;
 
         // ---- host -----------------------------------------------------------
 
@@ -421,14 +421,14 @@ namespace DarkwoodMP.World
             {
                 if (have != null)
                 {
-                    WorldActions.Replaying = true;
+                    Coop.Guards.Replaying = true;
                     try
                     {
                         Object.Destroy(have);
                     }
                     finally
                     {
-                        WorldActions.Replaying = false;
+                        Coop.Guards.Replaying = false;
                     }
                 }
 
@@ -504,7 +504,7 @@ namespace DarkwoodMP.World
             }
 
             GameObject go;
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 GameObject parentGO = null;
@@ -541,7 +541,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (go == null)

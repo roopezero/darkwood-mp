@@ -1194,7 +1194,7 @@ namespace DarkwoodMP.World
 
         static void Postfix(int __state)
         {
-            if (Player.Instance == null || WorldActions.Replaying)
+            if (Player.Instance == null || Coop.Guards.Replaying)
             {
                 return;
             }

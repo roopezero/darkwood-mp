@@ -3,10 +3,10 @@ namespace DarkwoodMP.World.Breaking
     /// What a game knows after a tracked explosive's Explodes.onActivate.
     public readonly struct ExplodeSendFacts
     {
-        /// It was the outermost patched call (WorldActions.Outermost).
+        /// It was the outermost patched call (Coop.Guards.Outermost).
         public bool Outermost { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// It has gone off now (Explodes.activated).

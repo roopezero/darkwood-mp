@@ -96,7 +96,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: knocked {best.name} at "
                     + $"{from.x:0},{from.z:0} (sharing "
-                    + $"{WorldActions.Sharing})");
+                    + $"{Coop.Guards.Sharing})");
             yield return new WaitForSeconds(4f);
             Vector3 to;
             if (best != null)
@@ -130,7 +130,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(6f);
             float wait = Time.realtimeSinceStartup + 30f;
-            while (!WorldActions.Sharing && Time.realtimeSinceStartup < wait)
+            while (!Coop.Guards.Sharing && Time.realtimeSinceStartup < wait)
             {
                 yield return null;
             }

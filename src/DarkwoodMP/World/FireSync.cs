@@ -83,7 +83,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void Changed(Burn b, bool on)
         {
-            if (b == null || WorldActions.Replaying || !_session.IsHost
+            if (b == null || Coop.Guards.Replaying || !_session.IsHost
                 || _session.Peers.Count == 0 || !WorldShare.InWorld)
             {
                 return;
@@ -176,7 +176,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void ClientIgnited(GameObject go)
         {
-            if (go == null || !NetEnemies.ClientMode || WorldActions.Replaying
+            if (go == null || !NetEnemies.ClientMode || Coop.Guards.Replaying
                 || WorldActions.OursAlone(go))
             {
                 return;
@@ -220,14 +220,14 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     b.stop();
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             });
         }
@@ -375,7 +375,7 @@ namespace DarkwoodMP.World
             }
 
             var burn = c.GetComponent<Burn>();
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 if (on && burn == null)
@@ -389,7 +389,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
     }

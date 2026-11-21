@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Infections
         /// There is a session and this game is its host.
         public bool Host { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
     }
 }

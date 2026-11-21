@@ -947,7 +947,7 @@ namespace DarkwoodMP.World
         {
             var s = S;
             if (!Playing || _burnShared || ge == null || ge.name != BurnEvents
-                || WorldActions.Replaying || s == null || !s.Active)
+                || Coop.Guards.Replaying || s == null || !s.Active)
             {
                 return;
             }
@@ -1021,7 +1021,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"[epilogue] {s.NameOf(who)} set the Being on fire: running "
                     + $"{BurnEvents} here too");
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 found.fire();
@@ -1033,7 +1033,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
 

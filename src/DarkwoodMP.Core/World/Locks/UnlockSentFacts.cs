@@ -7,11 +7,11 @@ namespace DarkwoodMP.World.Locks
     public readonly struct UnlockSentFacts
     {
         /// This is the outermost of the patched calls
-        /// (WorldActions.Outermost(), which the shell calls first, since it
+        /// (Coop.Guards.Outermost(), which the shell calls first, since it
         /// also counts the call off).
         public bool Outermost { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// Locked.locked before the call.

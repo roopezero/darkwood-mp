@@ -212,7 +212,7 @@ namespace DarkwoodMP.World
             };
         }
 
-        private static bool Sharing => WorldActions.Sharing;
+        private static bool Sharing => Coop.Guards.Sharing;
 
         // ---- watching the open containers -----------------------------------
 
@@ -225,7 +225,7 @@ namespace DarkwoodMP.World
 
         public void Update()
         {
-            WorldActions.ResetDepth();
+            Coop.Guards.ResetDepth();
             DropOrphanedWindows();
             if (!Sharing)
             {
@@ -972,14 +972,14 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 state.loadValues(inv);
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             _watched.Remove(inv);
@@ -1022,14 +1022,14 @@ namespace DarkwoodMP.World
                 Check(inv);
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 state.loadValues(inv);
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (slots != null)
@@ -1074,7 +1074,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Made(string prefab, GameObject go)
         {
-            if (go == null || WorldActions.Replaying || !Sharing
+            if (go == null || Coop.Guards.Replaying || !Sharing
                 || !(SharedPrefabs.Contains(prefab) || Placing))
             {
                 return;
@@ -1115,7 +1115,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (!Placing || go == null || WorldActions.Replaying || !Sharing)
+            if (!Placing || go == null || Coop.Guards.Replaying || !Sharing)
             {
                 return;
             }
@@ -1332,7 +1332,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 drop.additionalMapMarker = Core.AddPrefab(
@@ -1341,7 +1341,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (_session.IsHost)
@@ -1468,7 +1468,7 @@ namespace DarkwoodMP.World
             }
 
             GameObject go;
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 go = Core.AddPrefab(
@@ -1508,7 +1508,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             ObjRef.RegisterSpawned(id, go);
@@ -1601,7 +1601,7 @@ namespace DarkwoodMP.World
             // carries (Containers.OnSpawn) sees what was picked up or made a
             // moment ago.
             if (__instance.placingItem && NetEnemies.ClientMode
-                && WorldActions.Sharing)
+                && Coop.Guards.Sharing)
             {
                 Characters instance = Characters.Instance;
                 if (instance != null)
