@@ -57,7 +57,6 @@ namespace DarkwoodMP.Combat
             session.Register(MsgType.EnemyHit, OnHit);
             session.Register(
                 MsgType.PlayerNoise, PlayerNoisePatch.OnRemoteNoise);
-            session.Register(MsgType.PlayerCue, PlayerCues.OnCue);
             session.Register(MsgType.EnemyBlood, OnBlood);
             session.Register(MsgType.EnemyArmor, OnArmor);
             session.OnPeerDisconnected += id =>

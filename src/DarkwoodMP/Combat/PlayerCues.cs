@@ -13,24 +13,26 @@ namespace DarkwoodMP.Combat
     /// game, and the enemies that matter are the host's, so a client sends each
     /// as a PlayerCue and the host runs the game's own call at that player's
     /// proxy. A client's frozen copies of the host's enemies neither dodge nor
-    /// get scared.
+    /// get scared. One per session (CoopSession.Cues).
     /// </summary>
-    public static class PlayerCues
+    internal sealed class PlayerCues
     {
-        public const byte Dodge = CueRules.Dodge, Scare = CueRules.Scare;
-        private static readonly Collider[] _near =
-            new Collider[CueRules.MaxNear];
+        private readonly CoopSession _coop;
+        private readonly Collider[] _near = new Collider[CueRules.MaxNear];
 
-        public static void Send(byte kind)
+        public PlayerCues(CoopSession coop)
         {
-            var s = Net.Session.Instance;
-            bool client = false;
-            if (s != null)
-            {
-                client = s.IsClient;
-            }
+            _coop = coop;
+            coop.Handle(Net.MsgType.PlayerCue, OnCue);
+        }
 
-            if (!CueRules.Sends(s != null, client, NetEnemies.ClientMode))
+        /// <summary>
+        /// Client: our player swung or aimed (CueRules.Dodge or Scare).
+        /// </summary>
+        public void Send(byte kind)
+        {
+            var s = _coop.Net;
+            if (!CueRules.Sends(true, s.IsClient, NetEnemies.ClientMode))
             {
                 return;
             }
@@ -44,11 +46,11 @@ namespace DarkwoodMP.Combat
         /// Host: a client's player swung or aimed; the game's own reaction, at
         /// their proxy.
         /// </summary>
-        public static void OnCue(ulong from, Net.PacketReader r)
+        private void OnCue(ulong from, Net.PacketReader r)
         {
             byte kind = PlayerCue.Read(r);
             NetPlayerProxy.All.TryGetValue(from, out var proxy);
-            var cue = FactsOf(Net.Session.Instance, kind, proxy);
+            var cue = FactsOf(_coop.Net, kind, proxy);
             CueReaction reaction = CueRules.Reaction(cue);
             if (reaction == CueReaction.None)
             {
@@ -127,21 +129,15 @@ namespace DarkwoodMP.Combat
                 alive = proxy.alive;
             }
 
-            bool hosting = false;
-            if (s != null)
-            {
-                hosting = s.IsHost;
-            }
-
             return new CueFacts
             {
-                Hosting = hosting,
+                Hosting = s.IsHost,
                 Kind = kind,
                 StandInAlive = alive,
             };
         }
 
-        private static int CountCharacters(Vector3 pos, float range)
+        private int CountCharacters(Vector3 pos, float range)
         {
             int hits = Physics.OverlapSphereNonAlloc(
                 pos, range, _near, CueRules.EnemyLayers),
@@ -166,7 +162,14 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Player), "notifyEnemiesAboutAttack")]
     static class AttackCuePatch
     {
-        static void Postfix() => PlayerCues.Send(PlayerCues.Dodge);
+        static void Postfix()
+        {
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Cues.Send(CueRules.Dodge);
+            }
+        }
     }
 
     /// <summary>
@@ -176,7 +179,14 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), nameof(Character.scareInArea))]
     static class AimCuePatch
     {
-        static void Prefix() => PlayerCues.Send(PlayerCues.Scare);
+        static void Prefix()
+        {
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Cues.Send(CueRules.Scare);
+            }
+        }
     }
 
     /// <summary>

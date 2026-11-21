@@ -811,63 +811,19 @@ namespace DarkwoodMP.Combat
     /// Host: an enemy chasing a joiner into a location starts at the waypoint
     /// nearest them, as checkOutLocation does for the host's player when it's
     /// inside. The prefix notes the joiner; gotoNextWaypoint then gets the
-    /// waypoint.
+    /// waypoint (JoinerChases).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.checkOutLocation))]
     static class CheckOutLocationJoinerPatch
     {
-        public static NetPlayerProxy Chased;
-
         static void Prefix(Character __instance)
         {
-            Chased = null;
-            var chase = FactsOf(__instance, out var proxy);
-            if (JoinerAiRules.NotesChase(chase))
-            {
-                Chased = proxy;
-            }
-        }
-
-        private static ChaseFacts FactsOf(
-            Character c, out NetPlayerProxy proxy)
-        {
-            proxy = null;
-            var chase = new ChaseFacts
-            {
-                On = Threat.Enabled,
-            };
-
-            if (!chase.On)
-            {
-                return chase;
-            }
-
-            chase = chase with { CheckingOut = c.checkingOutLocation };
-            if (chase.CheckingOut)
-            {
-                return chase;
-            }
-
-            proxy = JoinerAi.ProxyOf(c.superTarget);
-            if (proxy == null || !proxy.alive)
-            {
-                return chase with
-                {
-                    StandIn = proxy != null,
-                };
-            }
-
-            return chase with
-            {
-                StandIn = true,
-                StandInAlive = true,
-                StandInInside = JoinerAi.InsideAt(proxy.transform.position),
-            };
+            Plugin.Instance.Host.Chases.Note(__instance);
         }
 
         static Exception Finalizer(Exception __exception)
         {
-            Chased = null;
+            Plugin.Instance.Host.Chases.Forget();
             return __exception;
         }
     }
@@ -877,47 +833,7 @@ namespace DarkwoodMP.Combat
     {
         static void Prefix(Character __instance, ref Waypoint _waypoint)
         {
-            var proxy = CheckOutLocationJoinerPatch.Chased;
-            var loc = __instance.locationCheckingOut;
-            var step = JoinerAiRules.Waypoint(
-                proxy != null, _waypoint != null, loc != null);
-            if (step == WaypointStep.Leave)
-            {
-                return;
-            }
-
-            // only the call checkOutLocation makes
-            CheckOutLocationJoinerPatch.Chased = null;
-            if (step == WaypointStep.Forget)
-            {
-                return;
-            }
-
-            Vector3 at = proxy.transform.position;
-            var spots = new List<WaypointSpot>();
-            foreach (var w in loc.waypointsInside)
-            {
-                float d = 0f;
-                if (w != null)
-                {
-                    d = (w.transform.position - at).sqrMagnitude;
-                }
-
-                spots.Add(new WaypointSpot
-                {
-                    Exists = w != null,
-                    SqrDistance = d,
-                });
-            }
-
-            int best = JoinerAiRules.NearestWaypoint(spots);
-            Waypoint pick = null;
-            if (best >= 0)
-            {
-                pick = loc.waypointsInside[best];
-            }
-
-            _waypoint = pick;
+            Plugin.Instance.Host.Chases.Waypoint(__instance, ref _waypoint);
         }
     }
 
