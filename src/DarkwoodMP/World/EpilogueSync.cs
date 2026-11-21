@@ -1,4 +1,5 @@
 using DarkwoodMP.World.Dreaming;
+using DarkwoodMP.World.Story;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -50,20 +51,13 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
 
-        public const string PanEvent = "epilogue_cameraPanOverBurningForest";
-        internal enum Step : byte
-        {
-            Pan = 1,
-            Outcomes = 2,
-            Crawled = 3,
-            Burn = 4
-        }
+        public const string PanEvent = EpilogueRules.PanEvent;
 
         /// <summary>
         /// The crater's events that set the Being on fire: the burned-forest
         /// ending, once they run.
         /// </summary>
-        public const string BurnEvents = "Istota_lv1_events";
+        public const string BurnEvents = EpilogueRules.BurnEvents;
         /// <summary>
         /// Seconds after the first player crawled to their death before the pan
         /// runs anyway.
@@ -417,8 +411,7 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.EpilogueStep);
-            w.W.Write((byte)Step.Crawled);
-            w.WriteStr("");
+            EpilogueStepMessage.WriteCrawled(w);
             s.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -501,8 +494,7 @@ namespace DarkwoodMP.World
         {
             var s = S;
             var w = s.Begin(MsgType.EpilogueStep);
-            w.W.Write((byte)Step.Pan);
-            w.WriteStr(PanEvent);
+            EpilogueStepMessage.WritePan(w);
             s.Broadcast(w, Channel.Control, reliable: true);
             // the pan belongs to the burned forest: its outcomes follow
             SendOutcomes(true);
@@ -608,14 +600,7 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.EpilogueStep);
-            w.W.Write((byte)Step.Outcomes);
-            string burnedText = "0";
-            if (burned)
-            {
-                burnedText = "1";
-            }
-
-            w.WriteStr(burnedText);
+            EpilogueStepMessage.WriteOutcomes(w, burned);
             s.Broadcast(w, Channel.Control, reliable: true);
         }
 
@@ -877,8 +862,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var what = (Step)r.R.ReadByte();
-            string value = r.ReadStr();
+            EpilogueNote note = EpilogueStepMessage.Read(r);
+            EpilogueStep what = note.Step;
+            string value = note.Value;
             if (!Playing)
             {
                 return;
@@ -891,7 +877,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (what == Step.Burn)
+                if (what == EpilogueStep.Burn)
                 {
                     Plugin.Log.LogInfo(
                         $"[epilogue] {s.NameOf(from)} set the Being on fire");
@@ -899,7 +885,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (what != Step.Crawled)
+                if (what != EpilogueStep.Crawled)
                 {
                     return;
                 }
@@ -916,7 +902,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (what == Step.Outcomes)
+            if (what == EpilogueStep.Outcomes)
             {
                 if (value == "1")
                 {
@@ -930,13 +916,13 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (what == Step.Burn)
+            if (what == EpilogueStep.Burn)
             {
-                Burned(r.R.ReadUInt64());
+                Burned(EpilogueStepMessage.ReadWho(r));
                 return;
             }
 
-            if (what != Step.Pan)
+            if (what != EpilogueStep.Pan)
             {
                 return;
             }
@@ -971,15 +957,14 @@ namespace DarkwoodMP.World
                 "[epilogue] our player set the Being on fire: the forest burns "
                     + "for everyone");
             var w = s.Begin(MsgType.EpilogueStep);
-            w.W.Write((byte)Step.Burn);
-            w.WriteStr(BurnEvents);
             if (s.IsHost)
             {
-                w.W.Write(s.LocalId);
+                EpilogueStepMessage.WriteBurnBy(w, s.LocalId);
                 s.Broadcast(w, Channel.Control, reliable: true);
             }
             else
             {
+                EpilogueStepMessage.WriteBurn(w);
                 s.SendToHost(w, Channel.Control, reliable: true);
             }
         }
@@ -1000,9 +985,7 @@ namespace DarkwoodMP.World
             if (s.IsHost)
             {
                 var w = s.Begin(MsgType.EpilogueStep);
-                w.W.Write((byte)Step.Burn);
-                w.WriteStr(BurnEvents);
-                w.W.Write(who);
+                EpilogueStepMessage.WriteBurnBy(w, who);
                 s.Broadcast(w, Channel.Control, reliable: true, except: who);
             }
 
