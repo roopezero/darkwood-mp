@@ -12,7 +12,7 @@ namespace DarkwoodMP.Combat
     /// a game played alone too. Each enemy's ThreatTable is kept with the
     /// enemy, so it goes when the enemy does.
     /// </summary>
-    internal sealed class Threats
+    internal sealed partial class Threats
     {
         private readonly ConditionalWeakTable<
             Character,

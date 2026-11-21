@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using HarmonyLib;
-using UnityEngine;
 
 namespace DarkwoodMP.Combat
 {
@@ -57,65 +56,7 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), "checkIfBeingChased")]
     static class CharacterCheckIfBeingChased
     {
-        private static readonly Collider[] _near = new Collider[256];
-
-        static bool Prefix(Character __instance)
-        {
-            if (!Threat.Enabled)
-            {
-                return true;
-            }
-
-            var c = __instance;
-            if (c.summonsAfterEscaping)
-            {
-                return false;
-            }
-
-            if (c.wantToDespawn)
-            {
-                c.runAway(Threat.FleeFrom(c));
-                return false;
-            }
-
-            if (c.behaviour != Character.Behaviour.escaping)
-            {
-                return false;
-            }
-
-            Vector3 me = c.transform.position;
-            // the game's radius and layers
-            int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200);
-            CharBase nearest = null;
-            float best = float.MaxValue;
-            for (int i = 0; i < n; i++)
-            {
-                CharBase cb = null;
-                if (_near[i] != null)
-                {
-                    cb = _near[i].GetComponent<CharBase>();
-                }
-
-                if (!Proxies.IsPlayer(cb)
-                    || (cb is NetPlayerProxy && !cb.alive))
-                {
-                    continue;
-                }
-
-                float d = Core.trueDistance(cb.transform.position, me);
-                if (d < best)
-                {
-                    best = d;
-                    nearest = cb;
-                }
-            }
-
-            if (nearest != null)
-            {
-                c.runAway(nearest.transform.position);
-            }
-
-            return false;
-        }
+        static bool Prefix(Character __instance) =>
+            Plugin.Instance.Host.Threats.ChecksChase(__instance);
     }
 }

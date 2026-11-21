@@ -313,7 +313,7 @@ namespace DarkwoodMP.Combat
 
         private void OnBlood(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !ClientMode)
+            if (!FreezeRules.FromHost(from == _session.HostId, ClientMode))
             {
                 return;
             }

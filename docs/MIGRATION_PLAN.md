@@ -457,7 +457,7 @@ Finish with `tools/run-test.sh full`.
         for `gotoNextWaypoint`, which is `ModHost.Chases`. `JoinerAi` is a
         partial class over three files, and `ShadowArmorLight` became
         `JoinerBeams` in `Combat/Beams`.
-- [ ] 6.3 Damage. `DamageCap` becomes a rule.
+- [x] 6.3 Damage. `DamageCap` becomes a rule.
   - [x] Part a: `DamageCap`, `PlayerDamage`, `EnemyAreaHits`, `EnemyFx`.
         `WeaponCaps` gives `WeaponRules.DamageCap` its facts.
         `PlayerDamage`, `EnemyFx` and `EnemyExplosions` (the client's side
@@ -467,7 +467,7 @@ Finish with `tools/run-test.sh full`.
         sets are `ModHost.Spawns` and `EnemyAreaHits` stays static: the
         test dummy is hurt with no session. Effects travel as the core's
         `SentEffects`, which `NetEnemies` and `HostileNpcs` use too.
-  - [ ] Part b: `CombatPatches` (melee on stand-ins, client hits, cut in
+  - [x] Part b: `CombatPatches` (melee on stand-ins, client hits, cut in
         half, threat, culling, freezing, noise and flee patches).
         Partly done: split into feature folders, the rules called from
         the shell, `PlayerNoiseMessage` in the core, and the culling
@@ -476,33 +476,34 @@ Finish with `tools/run-test.sh full`.
         which the noise patches hand their calls to), the PlayerNoise
         handler is `CoopSession.Noise` (`RemoteNoise`), `Starting` is
         `NetEnemies.Starting`, and the patches have `<GameType><Method>`
-        names. Left: thinning the freeze, threat, flee, melee and client
-        hit patches to one shell call each.
-- [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
+        names. Then each patch makes one shell call: the freeze and client
+        hit patches go to `CoopSession.Enemies`
+        (`NetEnemies.Client.Hooks.cs`, `.Client.Hits.cs`), the threat and
+        flee patches to `ModHost.Threats` (`Threats.Hooks.cs`, which holds
+        the flee patch's old static buffer), melee on stand-ins to
+        `StandInMelee` and cut in half to `CutsInHalf`. Threat, flee, melee
+        on stand-ins, culling, noise and cut in half run with no session
+        (the test dummy); the rest do nothing without one.
+- [x] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
-  - [ ] Part a: `NetEnemies`. Partly done: it is `CoopSession.Enemies`,
-        a partial class over eight files in `Combat/Enemies` (host:
-        tracking, sends, hits; client: copies, states, deaths, sounds).
-        Its frozen and hidden sets, `HitEffects` and `Starting` are the
-        instance's; `Instance`, `Frozen`, `Hidden`, `HitEffects` and
-        `Thaw` pass on to it, so callers didn't change. `AllCharacters`
-        is `ModHost.Characters`. Left: its messages' bytes in the core,
-        calling the core's enemy rules (`EnemyTrackRules`,
-        `EnemyRelayRules`, `EnemyHitRules`, `EnemyLoopRules`,
-        `CopyRules`, `CopyStateRules`, the rest of `FreezeRules`) from
-        the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
-  - [x] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
-        Done: `EnemyMotion` is `CoopSession.Motion` on
-        is `ModHost.Characters`. Its messages' bytes are the core's
+  - [x] Part a: `NetEnemies`. It is `CoopSession.Enemies`, a partial class
+        over twelve files in `Combat/Enemies` (host: tracking, sends, hits,
+        hooks; client: copies, states, armour, deaths, sounds, hits,
+        hooks). Its frozen and hidden sets, `HitEffects` and `Starting` are
+        the instance's; `Instance`, `Frozen`, `Hidden`, `HitEffects` and
+        `Thaw` pass on to it, so callers didn't change. `AllCharacters` is
+        `ModHost.Characters`. Its messages' bytes are the core's
         (`EnemySpawnMessage`, `EnemyStateMessage`, `EnemyMarkMessage` for
         EnemyArmor and EnemyDespawn, `EnemySoundMessage`,
         `EnemyHitMessage`, `EnemyBloodMessage`), and the shell calls
-        `EnemyTrackRules`, `EnemyRelayRules`, `EnemyLoopRules` (but
-        `Stopped`), `EnemyHitRules`, `HitRate` and `CopyRules`. Left:
-        calling `CopyStateRules` and the rest of `FreezeRules`, and
-        thinning `FreezePatches` and `EnemySoundPatches`.
-  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
-        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
+        `EnemyTrackRules`, `EnemyRelayRules`, `EnemyLoopRules`,
+        `EnemyHitRules`, `HitRate`, `CopyRules`, `CopyStateRules` (whose
+        `DeathAnimTime` replaced the client's own) and `FreezeRules`. The
+        freeze and enemy sound patches make one shell call each and do
+        nothing with no session, but `CharacterStart`, which keeps its own
+        `FactsOf` and reads `NetEnemies.Instance`.
+  - [x] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done: `EnemyMotion` is `CoopSession.Motion` on
         the core's `MotionClock`; the hostile NPCs' state is
         `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
         `NpcHitMessage` and `NpcAttackMessage`; the night spawns are

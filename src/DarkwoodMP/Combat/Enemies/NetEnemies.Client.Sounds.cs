@@ -9,7 +9,7 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// The client side: animation, despawns, sounds and our hits. See
+    /// The client side: animation, despawns and sounds. See
     /// NetEnemies.cs.
     /// </summary>
     internal sealed partial class NetEnemies
@@ -143,13 +143,14 @@ namespace DarkwoodMP.Combat
             // never let a puppet's frames act (attack, sound) here
             a.AnimationEventTriggered = CopyFrameEvent;
             a.AnimationCompleted = null;
-            if (clipHash == 0 || a.Library == null)
+            var cur = a.CurrentClip;
+            var step = CopyStateRules.Clip(ClipOf(a, clipHash, frame));
+            if (step == ClipStep.Skip)
             {
                 return;
             }
 
-            var cur = a.CurrentClip;
-            if (cur == null || StableHash.Of(cur.name) != clipHash)
+            if (step == ClipStep.Switch)
             {
                 foreach (var clip in a.Library.clips)
                 {
@@ -157,9 +158,8 @@ namespace DarkwoodMP.Combat
                     {
                         a.PlayFromFrame(
                             clip,
-                            Mathf.Clamp(
-                                frame, 0,
-                                Mathf.Max(0, clip.frames.Length - 1)));
+                            CopyStateRules.StartFrame(
+                                frame, clip.frames.Length));
                         break;
                     }
                 }
@@ -169,20 +169,57 @@ namespace DarkwoodMP.Combat
             // animator update goes back to the copy's own clip time, so the
             // copy flicked to the host's frame and back on every update and
             // stayed off, as a world rabbit did 3 frames ahead.)
-            else if (Mathf.Abs(a.CurrentFrame - frame) > 2
-                && cur.frames != null && frame < cur.frames.Length)
+            else if (step == ClipStep.Replay)
             {
                 a.PlayFromFrame(cur, frame);
             }
 
-            if (!playing && a.Playing)
+            var play = CopyStateRules.Play(playing, a.Playing, a.Paused);
+            if (play == PlayStep.Pause)
             {
                 a.Pause();
             }
-            else if (playing && a.Paused)
+            else if (play == PlayStep.Resume)
             {
                 a.Resume();
             }
+        }
+
+        /// <summary>
+        /// The animator and the host's clip and frame as
+        /// CopyStateRules.Clip sees them.
+        /// </summary>
+        private static ClipFacts ClipOf(
+            tk2dSpriteAnimator a,
+            int clipHash,
+            int frame)
+        {
+            var cur = a.CurrentClip;
+            bool same = cur != null && StableHash.Of(cur.name) == clipHash;
+            bool frames = same && cur.frames != null;
+            int count = 0;
+            if (frames)
+            {
+                count = cur.frames.Length;
+            }
+
+            // read only for the clip it plays, as before
+            int current = 0;
+            if (same)
+            {
+                current = a.CurrentFrame;
+            }
+
+            return new ClipFacts
+            {
+                Clip = clipHash,
+                Frame = frame,
+                Library = a.Library != null,
+                Same = same,
+                Current = current,
+                HasFrames = frames,
+                Frames = count,
+            };
         }
 
         /// <summary>
@@ -202,7 +239,7 @@ namespace DarkwoodMP.Combat
                     f = clip.GetFrame(frame);
                 }
 
-                if (f == null || f.eventInfo != "TweenShadows")
+                if (f == null || !CopyStateRules.PlaysEvent(f.eventInfo))
                 {
                     return;
                 }
@@ -215,7 +252,8 @@ namespace DarkwoodMP.Combat
 
                 if (c != null)
                 {
-                    c.tweenShadows(hide: f.eventInt == 0);
+                    c.tweenShadows(
+                        hide: CopyStateRules.HidesShadows(f.eventInt));
                 }
             }
             catch (System.Exception e)
@@ -406,132 +444,6 @@ namespace DarkwoodMP.Combat
                 IsLoop = IsLoop(snd, audio),
             };
         }
-
-        /// <summary>
-        /// Client: we hit a host's enemy; the host applies it.
-        /// </summary>
-        public void ClientHit(
-            uint id, float damage, bool cut, bool byPlayer, bool interrupt,
-            bool normal, List<InvItemEffect> effects)
-        {
-            int flags = 0;
-            if (cut)
-            {
-                flags |= EnemyHitMessage.Cut;
-            }
-
-            if (byPlayer)
-            {
-                flags |= EnemyHitMessage.ByPlayer;
-            }
-
-            if (interrupt)
-            {
-                flags |= EnemyHitMessage.Interrupt;
-            }
-
-            if (normal)
-            {
-                flags |= EnemyHitMessage.Normal;
-            }
-
-            InvItemClass item = null;
-            if (Player.Instance != null)
-            {
-                item = Player.Instance.currentItem;
-            }
-
-            string s;
-            if (InvItemClass.isNull(item))
-            {
-                s = "";
-            }
-            else
-            {
-                s = Newtonsoft.Json.JsonConvert.SerializeObject(
-                    new InvItemClass.SaveState(item, 0));
-            }
-
-            var w = _session.Begin(MsgType.EnemyHit);
-            EnemyHitMessage.Write(w, new EnemyHitRequest
-            {
-                Id = id,
-                Damage = damage,
-                Flags = (byte)flags,
-                Effects = PlayerDamage.SentOf(effects),
-                Weapon = s,
-            });
-
-            _puppets.TryGetValue(id, out var p);
-            Character hit = null;
-            if (p != null)
-            {
-                hit = p.C;
-            }
-
-            Coop.Current.Authority.Request(
-                w, $"hit on enemy #{id} for {damage:0}",
-                (ok, reason, result) =>
-            {
-                if (ok)
-                {
-                    Coop.Current.Scripted.HitApplied(hit, result);
-                }
-            });
-
-            // Our own hit shows its health bar, as getHit does; the host's
-            // health for it follows in its next state.
-            if (p == null || p.C == null)
-            {
-                return;
-            }
-
-            if (CopyRules.ShowsBar(damage))
-            {
-                HealthBar(p.C, show: true);
-            }
-
-            // Predicted: the blood shows at once; the host's for this hit (a
-            // moment later) isn't shown again.
-            Core.AddPrefab(
-                CopyRules.BloodFor(false), p.C.transform.position,
-                Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f),
-                null);
-            _predictedBlood[id] = Time.realtimeSinceStartup;
-        }
-
-        private readonly Dictionary<uint, float> _predictedBlood =
-            new Dictionary<uint, float>();
-
-        /// <summary>
-        /// Client: the effects of the weapon hitting right now (set around a
-        /// player's MeleeSensor hit), the session's: with no session it reads
-        /// null and keeps nothing.
-        /// </summary>
-        public static List<InvItemEffect> HitEffects
-        {
-            get
-            {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return null;
-                }
-
-                return enemies._hitEffects;
-            }
-
-            set
-            {
-                NetEnemies enemies = Instance;
-                if (enemies != null)
-                {
-                    enemies._hitEffects = value;
-                }
-            }
-        }
-
-        private List<InvItemEffect> _hitEffects;
 
         // ---- shared helpers -------------------------------------------------
 

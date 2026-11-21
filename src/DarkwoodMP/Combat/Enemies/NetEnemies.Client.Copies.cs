@@ -26,10 +26,27 @@ namespace DarkwoodMP.Combat
         {
             get
             {
-                var s = Session.Instance;
-                return s != null && s.IsClient && s.Connected
-                    && SaveRedirect.Active;
+                return FreezeRules.ClientMode(ClientOf(Session.Instance));
             }
+        }
+
+        /// <summary>
+        /// The session as FreezeRules.ClientMode sees it.
+        /// </summary>
+        private static ClientFacts ClientOf(Session s)
+        {
+            if (s == null)
+            {
+                return default;
+            }
+
+            return new ClientFacts
+            {
+                HasSession = true,
+                Client = s.IsClient,
+                Connected = s.Connected,
+                Redirected = SaveRedirect.Active,
+            };
         }
 
         private sealed class Puppet
@@ -336,12 +353,9 @@ namespace DarkwoodMP.Combat
                 a.AnimationCompleted = null;
             }
 
-            if (hide && _corpseIds.ContainsKey(c))
-            {
-                hide = false; // a corpse the host sent stays shown
-            }
-
-            if (hide) // no barking from a dog that isn't shown
+            // a corpse the host sent stays shown; no barking from a dog that
+            // isn't shown
+            if (FreezeRules.Hides(hide, _corpseIds.ContainsKey(c)))
             {
                 Hide(c);
                 StopSounds(c, keepDeathSound: false);

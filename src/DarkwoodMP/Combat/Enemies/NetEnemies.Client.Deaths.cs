@@ -73,13 +73,8 @@ namespace DarkwoodMP.Combat
 
             foreach (var p in _corpses.Values.Concat(_puppets.Values).ToList())
             {
-                if (p == null || !p.Ours || p.C == null || p.C.alive
-                    || p.C.gameObject.activeSelf == active)
-                {
-                    continue;
-                }
-
-                if (!Core.withinLocation(p.C.transform.position, 0f, loc))
+                if (p == null || !CopyStateRules.SwitchesWithLocation(
+                    CorpseOf(p, loc, active)))
                 {
                     continue;
                 }
@@ -114,10 +109,26 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// How long the host's death animation is shown before the corpse is
-        /// settled here.
+        /// A copy as CopyStateRules.SwitchesWithLocation sees it, as its
+        /// location is switched off or on.
         /// </summary>
-        private const float DeathAnimTime = 2f;
+        private static CorpseFacts CorpseOf(Puppet p, Location loc, bool active)
+        {
+            var c = p.C;
+            if (c == null)
+            {
+                return new CorpseFacts { MadeHere = p.Ours };
+            }
+
+            return new CorpseFacts
+            {
+                MadeHere = p.Ours,
+                Exists = true,
+                Alive = c.alive,
+                Already = c.gameObject.activeSelf == active,
+                Within = Core.withinLocation(c.transform.position, 0f, loc),
+            };
+        }
 
         private static readonly System.Reflection.MethodInfo[] CorpseSteps =
         {
@@ -168,13 +179,14 @@ namespace DarkwoodMP.Combat
             // sure)
             SetVisible(c, true);
             DieBody(c);
-            if (p.Cut)
+            var settle = CopyStateRules.SettleAs(p.Cut, c.animator != null);
+            if (settle == SettleStep.Cut)
             {
                 SettleCut(p);
                 return;
             }
 
-            if (c.animator == null)
+            if (settle == SettleStep.Collider)
             {
                 // No sprite animation (the worms): the end of a death animation
                 // never comes in the host's game either, so its corpse is never

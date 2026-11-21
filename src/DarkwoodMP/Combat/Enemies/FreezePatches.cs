@@ -69,27 +69,13 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(Character __instance, bool enable)
         {
-            if (!enable || !NetEnemies.ClientMode
-                || !NetEnemies.Frozen.Contains(__instance))
+            CoopSession coop = Coop.Current;
+            if (coop == null)
             {
                 return true;
             }
 
-            // A copy of the host's enemy plays the host's clips on its sprite
-            // animator, which enableComponents(false)
-            // (Location.activateCharacters as its area was left) switched off:
-            // that one is switched back on.
-            if (NetEnemies.Instance != null
-                && NetEnemies.Instance.IsPuppet(__instance, out _))
-            {
-                var a = __instance.animator;
-                if (a != null)
-                {
-                    a.enabled = true;
-                }
-            }
-
-            return false;
+            return coop.Enemies.EnablesComponents(__instance, enable);
         }
     }
 
@@ -107,14 +93,13 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
-            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0
-                || !NetEnemies.ClientMode)
+            CoopSession coop = Coop.Current;
+            if (coop == null)
             {
                 return true;
             }
 
-            var c = __instance.GetComponent<Character>();
-            return c == null || !NetEnemies.Hidden.Contains(c);
+            return coop.Enemies.PlaysIdleLoop(__instance, loopName);
         }
     }
 
@@ -133,17 +118,13 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
-            if (!NetEnemies.ClientMode
-                || NetEnemies.LocalOnly(__instance.gameObject))
+            CoopSession coop = Coop.Current;
+            if (coop == null)
             {
                 return true;
             }
 
-            Plugin.Log.LogInfo(
-                $"[enemy] {__instance.type} at "
-                    + $"{__instance.transform.position}: not spawned here, the "
-                    + "host's comes from the host");
-            return false;
+            return coop.Enemies.SpawnsHere(__instance);
         }
     }
 
@@ -164,49 +145,10 @@ namespace DarkwoodMP.Combat
     {
         private static void Prefix(Location __instance, bool active)
         {
-            var s = Net.Session.Instance;
-            if (active || s == null || !s.IsHost || !s.Active
-                || __instance.isOutsideLocation
-                || Plugin.Instance.Host.Culling.HostAway)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                return;
-            }
-
-            var list = __instance.charactersList;
-            for (int i = list.Count - 1; i >= 0; i--)
-            {
-                var c = list[i];
-                if (c == null || c.alive || c.dummy || c.npc != null
-                    || Core.withinLocation(
-                        c.transform.position, 0f, __instance))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    list.RemoveAt(i);
-                    __instance.objects.Remove(c.gameObject);
-                    c.disconnectFromLocation();
-                    CullableObject co = c.GetComponent<CullableObject>();
-                    if (co == null)
-                    {
-                        co = c.gameObject.AddComponent<CullableObject>();
-                    }
-
-                    co.registerMe();
-                    Plugin.Log.LogInfo(
-                        $"[enemy] {c.name}'s corpse at {c.transform.position} "
-                            + "lies outside "
-                            + $"{Core.getTrueLocationName(__instance.name)}: "
-                            + "kept as that location is left");
-                }
-                catch (System.Exception e)
-                {
-                    Plugin.Log.LogWarning(
-                        $"Couldn't keep {c.name}'s corpse out of "
-                            + $"{__instance.name}: {e.Message}");
-                }
+                coop.Enemies.LocationLeaving(__instance, active);
             }
         }
     }
@@ -220,13 +162,10 @@ namespace DarkwoodMP.Combat
     {
         private static void Postfix(Location __instance, bool active)
         {
-            if (NetEnemies.ClientMode)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                NetEnemies instance = NetEnemies.Instance;
-                if (instance != null)
-                {
-                    instance.LocationCharacters(__instance, active);
-                }
+                coop.Enemies.LocationSwitched(__instance, active);
             }
         }
     }
@@ -238,7 +177,15 @@ namespace DarkwoodMP.Combat
     public static class CharacterHeardSoundDeaf
     {
         [HarmonyPriority(Priority.First)]
-        private static bool Prefix(Character __instance) =>
-            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+        private static bool Prefix(Character __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Enemies.Hears(__instance);
+        }
     }
 }

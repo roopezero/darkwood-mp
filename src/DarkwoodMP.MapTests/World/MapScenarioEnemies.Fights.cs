@@ -562,7 +562,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            // settled (NetEnemies.DeathAnimTime)
+            // settled (CopyStateRules.DeathAnimTime)
             yield return new WaitForSeconds(2.5f);
             var item = c.GetComponent<Item>();
             var inv = c.GetComponentInChildren<Inventory>(true);
