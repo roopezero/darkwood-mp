@@ -491,8 +491,8 @@ Finish with `tools/run-test.sh full`.
         `EnemyRelayRules`, `EnemyHitRules`, `EnemyLoopRules`,
         `CopyRules`, `CopyStateRules`, the rest of `FreezeRules`) from
         the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
-  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
-        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
+  - [x] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done: `EnemyMotion` is `CoopSession.Motion` on
         the core's `MotionClock`; the hostile NPCs' state is
         `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
         `NpcHitMessage` and `NpcAttackMessage`; the night spawns are
@@ -500,7 +500,13 @@ Finish with `tools/run-test.sh full`.
         stand-in into a game played alone and the worm loop replaces the
         game's coroutine with no session too. `HostileNpcs` and
         `NightSpawns` keep static members that pass on to them, so callers
-        in files other steps were moving didn't change.
+        in files other steps were moving didn't change. `EnemyLandings` is
+        `CoopSession.Landings`, in `Combat/Landings` beside the core's
+        `LandingRules` (split into the host's file and the client's
+        `EnemyLandings.Copies.cs`), its bytes the core's
+        `EnemyProjectileMessage`, `EnemySensorThrownMessage`,
+        `EnemyLandedMessage` and `EnemyLandedGoneMessage`; its stateful
+        patches carry the instance in their `__state`.
 
 Finish with `tools/run-test.sh full`.
 

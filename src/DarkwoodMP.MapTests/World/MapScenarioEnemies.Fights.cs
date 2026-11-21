@@ -65,7 +65,7 @@ namespace DarkwoodMP.World
                 needHits = 2;
             }
 
-            int shown0 = EnemyLandings.Shown;
+            int shown0 = Coop.Current.Landings.Shown;
             Character c = null;
             uint id = 0;
             // the world's own, here before it: not ours to fight
@@ -148,7 +148,7 @@ namespace DarkwoodMP.World
                 }
 
                 if (hurts && hits >= needHits && (!moves || moved > 30f)
-                    && (!throws || EnemyLandings.Shown > shown0))
+                    && (!throws || Coop.Current.Landings.Shown > shown0))
                 {
                     break;
                 }
@@ -156,7 +156,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.1f);
             }
 
-            int thrown = EnemyLandings.Shown - shown0;
+            int thrown = Coop.Current.Landings.Shown - shown0;
             string came =
                 $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, "
                     + $"hurt us {hits} time(s) for {lost:0}, {thrown} "
