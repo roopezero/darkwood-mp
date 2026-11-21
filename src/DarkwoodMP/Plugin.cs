@@ -12,6 +12,7 @@ using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
 using HarmonyLib;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using UnityEngine;
 
 namespace DarkwoodMP

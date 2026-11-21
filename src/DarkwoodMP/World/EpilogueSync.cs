@@ -6,6 +6,7 @@ using DarkwoodMP.Net;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 
 namespace DarkwoodMP.World
 {

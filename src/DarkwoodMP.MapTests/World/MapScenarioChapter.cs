@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using DarkwoodMP.World.Places;
 using Object = UnityEngine.Object;
 using static DarkwoodMP.World.MapScenario;

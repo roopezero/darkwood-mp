@@ -157,7 +157,7 @@ namespace DarkwoodMP.Combat
             if (d != null && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
                 && go.transform.IsChildOf(d.dreamLocation.transform)
-                && (DreamSync.SharedNow == null || World.Prologue.IsStage(
+                && (DreamSync.SharedNow == null || World.Story.Prologue.IsStage(
                     DreamSync.SharedNow)))
             {
                 return true;

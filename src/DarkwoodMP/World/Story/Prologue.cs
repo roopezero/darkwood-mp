@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Story;
 using HarmonyLib;
 using UnityEngine;
 using DreamSync = DarkwoodMP.World.Dreaming.DreamSync;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// The prologue is played together. In Darkwood it isn't a chapter of its
@@ -407,61 +406,6 @@ namespace DarkwoodMP.World
             if (p != null && spawn != null)
             {
                 Characters.PlaceFree(p, spawn.transform.position);
-            }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(Dreams.SaveState), MethodType.Constructor,
-        new[] { typeof(Dreams) })]
-    static class PrologueSnapshotPatch
-    {
-        static void Postfix(Dreams.SaveState __instance, Dreams dreams)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Prologue.ForSnapshot(__instance, dreams);
-            }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(OutsideLocations.SaveState), MethodType.Constructor,
-        new[] { typeof(OutsideLocations) })]
-    static class PrologueSnapshotPlacePatch
-    {
-        static void Postfix(OutsideLocations.SaveState __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Prologue.ForSnapshot(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
-    static class PrologueEndPatch
-    {
-        static void Prefix(Dreams __instance, out string __state)
-        {
-            if (__instance.dreaming && __instance.preset != null)
-            {
-                __state = Core.getTrueLocationName(__instance.preset.name);
-            }
-            else
-            {
-                __state = null;
-            }
-        }
-
-        static void Postfix(Dreams __instance, string __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Prologue.AfterEnd(__instance, __state);
             }
         }
     }

@@ -3,6 +3,7 @@ using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using Prologue = DarkwoodMP.World.Story.Prologue;
 using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 

@@ -9,6 +9,7 @@ using DarkwoodMP.World.Hideout;
 using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 
 namespace DarkwoodMP.World
 {

@@ -1123,14 +1123,14 @@ namespace DarkwoodMP.World
             // goes into the stage the host is in as it loads the snapshot
             // (World.Prologue). Only the film, and the moments between the
             // stages or in their cutscenes, keep it waiting.
-            if (World.Prologue.Film)
+            if (World.Story.Prologue.Film)
             {
                 return Prologue;
             }
 
-            if (World.Prologue.Active)
+            if (World.Story.Prologue.Active)
             {
-                string why = World.Prologue.WhyWait(WorldReady);
+                string why = World.Story.Prologue.WhyWait(WorldReady);
                 CoopSession coop = Coop.Current;
                 if (coop != null)
                 {
