@@ -1,15 +1,15 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Infections
 {
     /// <summary>
-    /// A patch told to fade: sent if it's this game's clear (InfectionSync).
+    /// A patch told to fade: sent if it's this game's clear (Infections).
     /// </summary>
     [HarmonyPatch(typeof(Infection), nameof(Infection.disappear))]
     static class InfectionDisappear
     {
         static void Prefix(Infection __instance, out bool __state) =>
-            __state = InfectionSync.WasFading(__instance);
+            __state = Infections.WasFading(__instance);
 
         static void Postfix(Infection __instance, bool __state)
         {

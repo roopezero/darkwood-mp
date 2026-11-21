@@ -1,10 +1,9 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Infections;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Infections
 {
     /// <summary>
     /// Infection, shared: the patches of black growth on the ground
@@ -31,14 +30,14 @@ namespace DarkwoodMP.World
     /// clients' games with the same id (ObjRef Spawned), and a client's
     /// infection never spreads by itself.
     /// </summary>
-    internal sealed class InfectionSync
+    internal sealed class Infections
     {
         private readonly CoopSession _coop;
 
         private readonly List<ClearedPatch> _cleared =
             new List<ClearedPatch>();
 
-        public InfectionSync(CoopSession coop)
+        public Infections(CoopSession coop)
         {
             _coop = coop;
             coop.Handle(MsgType.InfectionCleared, OnCleared);
