@@ -1,6 +1,6 @@
 namespace DarkwoodMP.Combat.Noise
 {
-    /// A client's PlayerNoise on the host (CharacterAlertInArea.OnRemoteNoise).
+    /// A client's PlayerNoise on the host (RemoteNoise.OnRemoteNoise).
     public readonly struct RemoteNoiseFacts
     {
         /// NetPlayerProxy.All has a live stand-in for the sender.

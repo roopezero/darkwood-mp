@@ -5,7 +5,7 @@ namespace DarkwoodMP.Combat.Enemies
     public readonly struct StartFacts
     {
         /// NetEnemies.Thaw is starting it itself
-        /// (CharacterStart.Starting).
+        /// (NetEnemies.Starting).
         public bool Thawing { get; init; }
 
         /// FreezeRules.ClientMode.
