@@ -125,10 +125,14 @@ namespace DarkwoodMP.World
             AccessTools.Method(typeof(Trigger), "OnAfterTrigger");
 
         /// <summary>
-        /// True while making a call that came from another game, so it isn't
-        /// sent back.
+        /// Coop.Guards.Replaying, until the callers read it there.
         /// </summary>
-        public static bool Replaying;
+        public static bool Replaying
+        {
+            get => Coop.Guards.Replaying;
+            set => Coop.Guards.Replaying = value;
+        }
+
         /// <summary>
         /// "--dwmp-debug-world": log every shared-world message sent and
         /// applied.
@@ -136,59 +140,23 @@ namespace DarkwoodMP.World
         public static bool Debug;
 
         /// <summary>
-        /// How deep in patched calls we are. Only the outermost is sent: a hit
-        /// that breaks a barricade calls destroyBarricade itself, and the other
-        /// games' hit will do the same. Reset every frame, in case a call
-        /// threw.
+        /// Coop.Guards.Depth, until the callers read it there.
         /// </summary>
-        public static int Depth;
-        public static void ResetDepth() => Depth = 0;
-        public static bool Outermost()
+        public static int Depth
         {
-            bool outermost = GuardRules.IsOutermost(Depth);
-            Depth = GuardRules.Leave(Depth);
-            return outermost;
+            get => Coop.Guards.Depth;
+            set => Coop.Guards.Depth = value;
         }
+
+        public static void ResetDepth() => Coop.Guards.ResetDepth();
+        public static bool Outermost() => Coop.Guards.Outermost();
 
         private static Session S => Session.Instance;
 
         /// <summary>
-        /// Whether this game shares its world right now (the host with players
-        /// in, or a client in it). Never while a world loads: the save loader
-        /// makes the saved dropped items, thrown things and the rest again, and
-        /// a joiner sending those as new would make the host a second copy of
-        /// each (WorldShare.Loading).
+        /// Coop.Guards.Sharing, until the callers read it there.
         /// </summary>
-        public static bool Sharing =>
-            S != null && GuardRules.Sharing(FactsOf(S));
-
-        /// <summary>
-        /// Reads the game in the order the rule looks, and no further than
-        /// it needs: Loading asks the game's SaveManager singleton, which is
-        /// left alone at the main menu.
-        /// </summary>
-        private static GuardFacts FactsOf(Session s)
-        {
-            var facts = new GuardFacts { Replaying = Replaying };
-            if (facts.Replaying)
-            {
-                return facts;
-            }
-
-            facts = facts with { InWorld = WorldShare.InWorld };
-            if (!facts.InWorld)
-            {
-                return facts;
-            }
-
-            return facts with
-            {
-                Loading = WorldShare.Loading,
-                Host = s.IsHost,
-                Peers = s.Peers.Count,
-                Client = NetEnemies.ClientMode,
-            };
-        }
+        public static bool Sharing => Coop.Guards.Sharing;
 
         public static void Register(Session s)
         {
