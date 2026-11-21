@@ -6,13 +6,13 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     // The panel's body and footer.
-    public static partial class SkillsPanel
+    internal sealed partial class SkillsWindow
     {
         // ---- drawing --------------------------------------------------------
 
-        private static float Icon => 40 * UiWindow.S;
+        private float Icon => 40 * UiWindow.S;
 
-        private static void Draw(Flow f)
+        private void Draw(Flow f)
         {
             var p = Player.Instance;
             var tiers = SkillTree.Tiers;
@@ -221,7 +221,7 @@ namespace DarkwoodMP.World
         /// Sets _detailH: the details' height for the skill with the longest
         /// description, at this width.
         /// </summary>
-        private static void MeasureDetails(
+        private void MeasureDetails(
             List<SkillTiers.Tier> tiers, float width)
         {
             if (Mathf.Abs(width - _detailW) < 0.5f)
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 + lines * (PixelFont.Line + S) + gap - S;
         }
 
-        private static void DrawFooter(Rect r)
+        private void DrawFooter(Rect r)
         {
             var p = Player.Instance;
             if (p == null)
@@ -317,7 +317,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void LearnChosen()
+        private void LearnChosen()
         {
             var p = Player.Instance;
             string negative = null;

@@ -44,54 +44,14 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class SkillTree
     {
-        private static Session S => Session.Instance;
-
-        public static void Register(Session s)
-        {
-            s.Register(MsgType.SkillSpend, OnSpend);
-            s.OnSessionEnded += () => _waiting = false;
-        }
-
         // ---- the game's tiers -----------------------------------------------
 
-        private static SkillTiers _tiers;
-
         /// <summary>
-        /// The game's skill tiers (Resources/SkillTiers, as SkillsMenu loads
-        /// it), or null before the world is up.
+        /// The game's skill tiers (SkillTierCache), or null before the world
+        /// is up.
         /// </summary>
-        public static List<SkillTiers.Tier> Tiers
-        {
-            get
-            {
-                if (_tiers == null)
-                {
-                    var menu = Singleton<SkillsMenu>.Instance;
-                    if (menu != null)
-                    {
-                        _tiers = AccessTools.Field(
-                            typeof(SkillsMenu),
-                            "skillTiers").GetValue(menu) as SkillTiers;
-                    }
-
-                    if (_tiers == null)
-                    {
-                        var go = Resources.Load("SkillTiers") as GameObject;
-                        if (go != null)
-                        {
-                            _tiers = go.GetComponent<SkillTiers>();
-                        }
-                    }
-                }
-
-                if (_tiers != null)
-                {
-                    return _tiers.tiers;
-                }
-
-                return null;
-            }
-        }
+        public static List<SkillTiers.Tier> Tiers =>
+            Plugin.Instance.Host.Tiers.Tiers;
 
         /// <summary>
         /// The facts of the game's tiers for the rules (SkillRules), without
@@ -134,7 +94,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The facts of the game's tiers (Tiers).</summary>
-        public static TierFacts[] Facts => FactsOf(Tiers);
+        public static TierFacts[] Facts => Plugin.Instance.Host.Tiers.Facts;
 
         /// <summary>
         /// Our player's level and skills with the tiers, for the rules; no
@@ -154,10 +114,10 @@ namespace DarkwoodMP.World
         /// A skill (good or negative) by name, as SkillRules.Find finds it;
         /// null: none.
         /// </summary>
-        private static PlayerSkill Find(string name)
+        internal static PlayerSkill Find(string name)
         {
             var tiers = Tiers;
-            var spot = SkillRules.Find(FactsOf(tiers), name);
+            var spot = SkillRules.Find(Facts, name);
             if (!spot.Found)
             {
                 return null;
@@ -236,90 +196,23 @@ namespace DarkwoodMP.World
 
         // ---- learning -------------------------------------------------------
 
-        private static bool _waiting;
         /// <summary>
-        /// Client: a choice is waiting for the host's answer.
+        /// Client: a choice is waiting for the host's answer
+        /// (SkillLearning.Waiting).
         /// </summary>
-        public static bool Waiting => _waiting;
+        public static bool Waiting => Plugin.Instance.Host.Learning.Waiting;
 
         /// <summary>
         /// Take a good skill (and the negative one that must go with it, or
-        /// null), as SkillsMenu.confirmSkills gives them.
+        /// null), as SkillsMenu.confirmSkills gives them (SkillLearning.Learn).
         /// </summary>
         public static bool Learn(string good, string negative, out string why)
         {
-            var p = Player.Instance;
-            why = null;
-            var note = SkillRules.MayLearn(
-                p != null && p.skills != null && Tiers != null, _waiting);
-            if (note != SkillNote.None)
-            {
-                why = SkillNotes.Text(note);
-                return false;
-            }
-
-            var choice = ChoiceOf(p) with { Good = good, Negative = negative };
-            var chosen = choice.Chosen;
-            int level = choice.Level;
-            var verdict = SkillRules.Check(choice);
-            if (verdict.Refused)
-            {
-                why = Refusals.Text(verdict);
-                return false;
-            }
-
-            var gs = Find(good);
-            var ns = Find(negative);
-            Give(gs, ns);
-            string text = "";
-            if (ns != null)
-            {
-                text = " with " + negative;
-            }
-
-            Plugin.Log.LogInfo(
-                $"[skills] learned {good}{text}: {Points(p)} points left");
-            if (NetEnemies.ClientMode && WorldShare.InWorld && S != null
-                && S.IsClient)
-            {
-                _waiting = true;
-                var w = S.Begin(MsgType.SkillSpend);
-                SkillSpend.Write(
-                    w,
-                    new SpendRequest
-                    {
-                        Level = level,
-                        Good = good,
-                        Negative = negative,
-                        Had = chosen.ToList(),
-                    });
-
-                Coop.Current.Authority.Request(
-                    w, $"learn {good}", (ok, reason, _) =>
-                {
-                    _waiting = false;
-                    if (ok)
-                    {
-                        return;
-                    }
-
-                    Take(gs);
-                    Take(ns);
-                    Plugin.Log.LogInfo(
-                        $"[skills] the host refused {good}: {reason}; taken "
-                            + "back");
-                    Player instance = Player.Instance;
-                    if (instance != null)
-                    {
-                        instance.displayMessage(reason);
-                    }
-                }, inventory: false);
-            }
-
-            return true;
+            return Plugin.Instance.Host.Learning.Learn(
+                good, negative, out why);
         }
 
-        private static void Give(PlayerSkill good, PlayerSkill negative)
+        internal static void Give(PlayerSkill good, PlayerSkill negative)
         {
             var p = Player.Instance;
             if (negative != null)
@@ -356,7 +249,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Take(PlayerSkill sk)
+        internal static void Take(PlayerSkill sk)
         {
             if (sk == null || !sk.chosen)
             {
@@ -373,60 +266,6 @@ namespace DarkwoodMP.World
                     skills.refreshAll();
                 }
             }
-        }
-
-        // ---- host -----------------------------------------------------------
-
-        private static void OnSpend(ulong from, PacketReader r)
-        {
-            var spend = SkillSpend.Read(r);
-            int level = spend.Level;
-            string good = spend.Good, negative = spend.Negative;
-            var chosen = new HashSet<string>(spend.Had);
-
-            var authority = Coop.Current.Authority;
-            if (!SkillRules.Handles(S.IsHost, authority.Handling))
-            {
-                return;
-            }
-
-            var tiers = Facts;
-            int most = 0;
-            if (tiers != null)
-            {
-                most = Progression.MostLevels(Player.Instance);
-            }
-
-            var verdict = SkillRules.MaySpend(
-                new SpendFacts
-                {
-                    Choice = new ChoiceFacts
-                    {
-                        Tiers = tiers,
-                        Level = level,
-                        Chosen = chosen,
-                        Good = good,
-                        Negative = negative,
-                    },
-                    Most = most,
-                });
-
-            if (verdict.Refused)
-            {
-                authority.Refuse(verdict);
-                return;
-            }
-
-            string name = S.NameOf(from);
-            string withNegative = "";
-            if (negative.Length > 0)
-            {
-                withNegative = " with " + negative;
-            }
-
-            Plugin.Log.LogInfo(
-                $"[skills] {name} learned {good}{withNegative} at level "
-                    + $"{level}");
         }
 
         // ---- tests ----------------------------------------------------------

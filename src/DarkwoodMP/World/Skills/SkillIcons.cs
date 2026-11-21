@@ -8,14 +8,14 @@ namespace DarkwoodMP.World
     /// The game's skill icons (tk2d sprites "skill_NAME" in the UISkill
     /// prefab's collection), drawn in IMGUI.
     /// </summary>
-    internal static class SkillIcons
+    internal sealed class SkillIcons
     {
-        private static tk2dSpriteCollectionData _coll;
-        private static bool _tried;
-        private static readonly Dictionary<string, int> _ids =
+        private tk2dSpriteCollectionData _coll;
+        private bool _tried;
+        private readonly Dictionary<string, int> _ids =
             new Dictionary<string, int>();
 
-        public static bool Draw(Rect r, string skill, Color tint)
+        public bool Draw(Rect r, string skill, Color tint)
         {
             if (!_tried)
             {

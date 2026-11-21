@@ -91,7 +91,6 @@ namespace DarkwoodMP.World
             s.Register(MsgType.EssenceAdd, OnEssence);
             s.Register(MsgType.LevelTaken, OnLevelTaken);
             s.Register(MsgType.SkillReset, OnSkillReset);
-            SkillTree.Register(s);
             s.OnSessionEnded += () =>
             {
                 _known = false;

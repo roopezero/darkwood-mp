@@ -6,18 +6,18 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     // What the tests read and drive on the panel.
-    public static partial class SkillsPanel
+    internal sealed partial class SkillsWindow
     {
         // ---- tests ----------------------------------------------------------
 
         /// <summary>For tests: the key pressed (as Update sees it).</summary>
-        internal static void TestPressKey() => Toggle();
+        internal void TestPressKey() => Toggle();
 
         /// <summary>
         /// For tests: choose and learn on the panel, as the clicks do; the
         /// result (null: learned).
         /// </summary>
-        internal static string TestLearn(string good, string negative)
+        internal string TestLearn(string good, string negative)
         {
             _good = good;
             _negative = negative;
@@ -30,7 +30,7 @@ namespace DarkwoodMP.World
         /// For tests: whether the Learn button would take this choice now (as
         /// DrawFooter enables it).
         /// </summary>
-        internal static bool TestReady(string good, string negative)
+        internal bool TestReady(string good, string negative)
         {
             var p = Player.Instance;
             if (p == null || SkillTree.Waiting)
@@ -50,7 +50,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// For tests: show this skill's details as if the mouse were over it.
         /// </summary>
-        internal static void TestPick(string good, string negative)
+        internal void TestPick(string good, string negative)
         {
             _good = good;
             _negative = negative;
@@ -60,24 +60,24 @@ namespace DarkwoodMP.World
         /// For tests: the mouse as the panel sees it (screen pixels from the
         /// top left); null: the real mouse.
         /// </summary>
-        internal static Vector2? TestMouse;
+        internal Vector2? TestMouse;
 
         /// <summary>
         /// For tests: the skill the mouse is over (as the last frame drew it).
         /// </summary>
-        internal static string TestHover => _hover;
+        internal string TestHover => _hover;
 
         /// <summary>
         /// For tests: the good skill chosen on the panel (by a click), not
         /// learned yet.
         /// </summary>
-        internal static string TestChosen => _good;
+        internal string TestChosen => _good;
 
         /// <summary>
         /// For tests: a skill's icon and its cell (the hover and click area) as
         /// last drawn, in screen pixels from the top left.
         /// </summary>
-        internal static bool TestRects(
+        internal bool TestRects(
             string skill, out Rect icon, out Rect cell)
         {
             icon = cell = default;
@@ -98,7 +98,7 @@ namespace DarkwoodMP.World
         /// stay as they were with the mouse over nothing. Returns the number of
         /// frames where something moved (logged as FAIL lines).
         /// </summary>
-        internal static System.Collections.IEnumerator TestHoverSweep(
+        internal System.Collections.IEnumerator TestHoverSweep(
             Action<int> done)
         {
             TestMouse = new Vector2(-100, -100);
@@ -186,7 +186,7 @@ namespace DarkwoodMP.World
         /// if one must go with it, and one on Learn, as a player does. Every
         /// click is logged with what the panel made of it. done(failures).
         /// </summary>
-        internal static System.Collections.IEnumerator TestClickAll(
+        internal System.Collections.IEnumerator TestClickAll(
             Action<List<string>> done)
         {
             var fails = new List<string>();
@@ -372,6 +372,6 @@ namespace DarkwoodMP.World
         /// <summary>
         /// For tests: the panel's window, in screen pixels from the top left.
         /// </summary>
-        internal static Rect TestWindow => Win.Rect;
+        internal Rect TestWindow => Win.Rect;
     }
 }

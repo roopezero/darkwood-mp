@@ -5,7 +5,7 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     // One skill's cell, and the game's names and descriptions.
-    public static partial class SkillsPanel
+    internal sealed partial class SkillsWindow
     {
         // The frames' colours: a learned skill's (bright, red for a negative
         // one), the one chosen to learn, the mouse's.
@@ -22,7 +22,7 @@ namespace DarkwoodMP.World
         /// colour in a bright frame with a check mark in its corner; one chosen
         /// to learn has a grey frame; the others are dimmed.
         /// </summary>
-        private static void DrawSkill(
+        private void DrawSkill(
             Rect cell, float icon, PlayerSkill sk, bool have, bool can,
             bool picked, bool negative)
         {
@@ -93,7 +93,7 @@ namespace DarkwoodMP.World
             }
 
             tint.a = 1f;
-            if (!SkillIcons.Draw(r, sk.name, tint))
+            if (!_icons.Draw(r, sk.name, tint))
             {
                 PixelFont.Draw(
                     r, PixelFont.Fit(SkillName(sk.name), r.width), tint,
@@ -179,13 +179,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static Rect ToScreen(Rect r)
+        private Rect ToScreen(Rect r)
         {
             var a = GUIUtility.GUIToScreenPoint(r.min);
             return new Rect(a, r.size);
         }
 
-        private static void Fill(Rect r, Color c)
+        private void Fill(Rect r, Color c)
         {
             var old = GUI.color;
             GUI.color = c;
@@ -193,7 +193,7 @@ namespace DarkwoodMP.World
             GUI.color = old;
         }
 
-        private static void Outline(Rect r, float t, Color c)
+        private void Outline(Rect r, float t, Color c)
         {
             Fill(new Rect(r.x, r.y, r.width, t), c);
             Fill(new Rect(r.x, r.yMax - t, r.width, t), c);
@@ -205,7 +205,7 @@ namespace DarkwoodMP.World
         /// A small pixel check mark on a dark square, its top right corner at
         /// this point.
         /// </summary>
-        private static void CheckMark(Vector2 topRight, float S, Color c)
+        private void CheckMark(Vector2 topRight, float S, Color c)
         {
             float u = Mathf.Max(1f, Mathf.Round(S * 1.5f)),
                 w = 11 * u,
@@ -225,19 +225,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly Dictionary<string, string> _names =
+        private readonly Dictionary<string, string> _names =
             new Dictionary<string, string>(),
             _descs = new Dictionary<string, string>();
 
-        public static string SkillName(string name) =>
+        public string SkillName(string name) =>
             Lang(_names, name + "_name", name);
-        public static string SkillDesc(string name) =>
+        public string SkillDesc(string name) =>
             Lang(_descs, name + "_desc", "");
 
         /// <summary>
         /// The game's text (sheet Skills), without tk2d's colour codes.
         /// </summary>
-        private static string Lang(
+        private string Lang(
             Dictionary<string, string> cache, string key, string fallback)
         {
             if (cache.TryGetValue(key, out var s))
@@ -271,7 +271,7 @@ namespace DarkwoodMP.World
             return s;
         }
 
-        private static string Clean(string s)
+        private string Clean(string s)
         {
             var sb = new System.Text.StringBuilder(s.Length);
             for (int i = 0; i < s.Length; i++)
