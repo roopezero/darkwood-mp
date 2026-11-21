@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Talk;
 using UnityEngine.SceneManagement;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Talk
 {
     /// <summary>
     /// One player at a time talks to an NPC, as with containers: a dialogue can

@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Talk
 {
     /// <summary>
     /// Our player talks to an NPC: the host may refuse it while a joiner

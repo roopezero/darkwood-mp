@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Talk
 {
     /// <summary>
     /// A trade opened: DialogueGuard keeps the trader's window.

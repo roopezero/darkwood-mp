@@ -1,9 +1,8 @@
 using System;
-using DarkwoodMP.World.Talk;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Talk
 {
     /// <summary>
     /// Keeps a dialogue (and a trade) closable when its NPC goes away while it

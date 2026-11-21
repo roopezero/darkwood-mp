@@ -42,10 +42,10 @@ namespace DarkwoodMP
         public readonly JoinerSaveIds Joiners;
 
         /// One player at a time talks to an NPC.
-        public readonly World.TalkLock Talk;
+        public readonly World.Talk.TalkLock Talk;
 
         /// Keeps a dialogue closable when its NPC goes away.
-        public readonly World.DialogueGuard Dialogues;
+        public readonly World.Talk.DialogueGuard Dialogues;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -61,8 +61,8 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
-            Talk = new World.TalkLock(this);
-            Dialogues = new World.DialogueGuard(this);
+            Talk = new World.Talk.TalkLock(this);
+            Dialogues = new World.Talk.DialogueGuard(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
