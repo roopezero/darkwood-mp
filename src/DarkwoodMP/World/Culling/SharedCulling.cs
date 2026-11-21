@@ -87,7 +87,7 @@ namespace DarkwoodMP.World.Culling
 
         private static RefreshFacts FactsOf(WorldGrid wg, bool instant)
         {
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             return new RefreshFacts
             {
                 Grid = wg.currentGrid != null,

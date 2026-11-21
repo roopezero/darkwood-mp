@@ -25,7 +25,7 @@ namespace DarkwoodMP.World.Locks
         /// tryToLockpick).
         public float How { get; init; }
 
-        /// This game is a client (Session.Instance.IsClient).
+        /// This game is a client (ModHost.Session.IsClient).
         public bool Client { get; init; }
 
         /// The Locked has a Door.

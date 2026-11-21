@@ -170,7 +170,8 @@ namespace DarkwoodMP.World
             string why = null;
             if (item != null)
             {
-                var w = Net.Session.Instance.Begin(Net.MsgType.WorldAction);
+                var w = Plugin.Instance.Host.Session.Begin(
+                    Net.MsgType.WorldAction);
                 WorldActions.WriteAction(
                     w, WorldActions.Action.ItemSearched,
                     ObjRef.Of(item.gameObject), 0f, 0f, false, false, "");

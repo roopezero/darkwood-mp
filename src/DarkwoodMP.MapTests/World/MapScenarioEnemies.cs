@@ -58,7 +58,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Day(string[] a, Result r)
         {
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s != null && s.IsClient)
             {
                 r.Fail("the clock is the host's");
@@ -105,7 +105,7 @@ namespace DarkwoodMP.World
             while (_holdDay)
             {
                 var ctl = Singleton<Controller>.Instance;
-                var s = Net.Session.Instance;
+                var s = Plugin.Instance.Host.Session;
                 if (ctl == null || s == null || !s.IsHost)
                 {
                     _holdDay = false;

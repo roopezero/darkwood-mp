@@ -153,8 +153,7 @@ namespace DarkwoodMP.World
             {
                 var b = d.gameObject.AddComponent<Burn>();
                 b.burnTime = 5f;
-                if (Net.Session.Instance != null
-                    && Net.Session.Instance.IsClient)
+                if (Plugin.Instance.Host.Session.IsClient)
                 {
                     AsPlayer(() =>
                     {

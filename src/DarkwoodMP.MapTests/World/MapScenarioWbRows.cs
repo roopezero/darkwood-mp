@@ -219,8 +219,7 @@ namespace DarkwoodMP.World
             {
                 Directory.CreateDirectory(dir);
                 string text = "host";
-                if (Net.Session.Instance != null
-                    && Net.Session.Instance.IsClient)
+                if (Plugin.Instance.Host.Session.IsClient)
                 {
                     text = "client";
                 }

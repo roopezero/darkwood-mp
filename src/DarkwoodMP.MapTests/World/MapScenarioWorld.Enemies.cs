@@ -16,7 +16,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
-            if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
+            if (Plugin.Instance.Host.Session.IsClient)
             {
                 r.Fail("enemies are the host's");
                 yield break;

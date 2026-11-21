@@ -137,7 +137,7 @@ namespace DarkwoodMP.World.Story
             bool credits = false;
             while (true)
             {
-                if (Session.Instance != null && Session.Instance.Active)
+                if (Plugin.Instance.Host.Session.Active)
                 {
                     yield break; // joined someone meanwhile
                 }

@@ -10,7 +10,7 @@ namespace DarkwoodMP.World.Objects
         /// The shadow is on an Item that isn't a Character.
         public bool OnItem { get; init; }
 
-        /// Session.Instance isn't null.
+        /// ModHost.Session isn't null.
         public bool InSession { get; init; }
 
         /// WorldShare.InWorld.

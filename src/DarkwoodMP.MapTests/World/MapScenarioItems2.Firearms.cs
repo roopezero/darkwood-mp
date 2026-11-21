@@ -240,8 +240,8 @@ namespace DarkwoodMP.World
                 {
                     r.Fail(r.Info + ": " + refused[0].Trim());
                 }
-                else if (Net.Session.Instance != null
-                    && Net.Session.Instance.IsClient && sent.Count == 0)
+                else if (Plugin.Instance.Host.Session.IsClient
+                    && sent.Count == 0)
                 {
                     r.Fail("no hit reached the host's dog: " + r.Info);
                 }

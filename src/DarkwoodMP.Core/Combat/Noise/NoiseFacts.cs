@@ -13,7 +13,7 @@ namespace DarkwoodMP.Combat.Noise
         /// it only when Set is false and OwnNoise is 0 or less, as today.
         public bool FromPlayer { get; init; }
 
-        /// Session.Instance is set, IsClient, and NetEnemies.ClientMode.
+        /// ModHost.Session is set, IsClient, and NetEnemies.ClientMode.
         public bool Client { get; init; }
     }
 }

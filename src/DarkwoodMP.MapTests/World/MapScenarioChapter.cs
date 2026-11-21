@@ -280,7 +280,7 @@ namespace DarkwoodMP.World
             Place(new Vector3(-90000f, P.transform.position.y, -90000f));
             yield return new WaitForSeconds(1f);
             // sends our character (from off the map) first
-            Net.Session.Instance.Backend.Rejoin();
+            Plugin.Instance.Host.Session.Backend.Rejoin();
             while (HasCharacter())
             {
                 yield return new WaitForSecondsRealtime(0.2f);
@@ -494,7 +494,7 @@ namespace DarkwoodMP.World
         private static Vector3? Host()
         {
             var ps = Plugin.Instance.Host.Players;
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (ps == null || s == null)
             {
                 return null;

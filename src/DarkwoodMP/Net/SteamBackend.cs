@@ -99,7 +99,7 @@ namespace DarkwoodMP.Net
             // sent again then.
             _transport.OnSessionLost += who =>
             {
-                var session = Session.Instance;
+                var session = Plugin.Instance.Host.Session;
                 if (!_lobby.InLobby || session == null)
                 {
                     return;

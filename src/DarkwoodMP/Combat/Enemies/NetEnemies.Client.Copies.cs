@@ -26,7 +26,8 @@ namespace DarkwoodMP.Combat
         {
             get
             {
-                return FreezeRules.ClientMode(ClientOf(Session.Instance));
+                return FreezeRules.ClientMode(
+                    ClientOf(Plugin.Instance.Host.Session));
             }
         }
 

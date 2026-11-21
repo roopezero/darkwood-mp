@@ -325,7 +325,7 @@ namespace DarkwoodMP.World.Scripted
             coop.Handle(MsgType.EventFired, OnFired);
         }
 
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
 
         private static bool Debug => WorldActions.Debug;
 

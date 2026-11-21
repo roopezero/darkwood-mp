@@ -83,7 +83,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static string Me()
         {
-            var s = Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s == null || s.IsHost)
             {
                 return "host";

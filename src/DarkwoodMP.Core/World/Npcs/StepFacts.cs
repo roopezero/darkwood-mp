@@ -5,7 +5,7 @@ namespace DarkwoodMP.World.Npcs
     /// value.
     public readonly struct StepFacts
     {
-        /// Session.Instance exists and is the host.
+        /// ModHost.Session exists and is the host.
         public bool Hosting { get; init; }
 
         /// The peer whose event this is (EventParts.By); 0 for the

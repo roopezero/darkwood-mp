@@ -342,7 +342,7 @@ namespace DarkwoodMP
         /// x = 75000, and they aren't away).</summary>
         private int PlayersIn()
         {
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s == null || !s.IsHost || s.Peers.Count == 0
                 || !WorldShare.WorldReady)
             {

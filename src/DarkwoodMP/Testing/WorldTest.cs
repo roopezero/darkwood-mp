@@ -147,8 +147,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            while (Net.Session.Instance == null
-                || Net.Session.Instance.Peers.Count == 0)
+            while (Plugin.Instance.Host.Session.Peers.Count == 0)
             {
                 yield return null;
             }

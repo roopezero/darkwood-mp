@@ -132,7 +132,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Debug;
 
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
 
         public static void Register(Session s)
         {

@@ -101,7 +101,7 @@ namespace DarkwoodMP.Combat
                 return default;
             }
 
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             bool hosting = false;
             if (s != null)
             {

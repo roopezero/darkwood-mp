@@ -156,7 +156,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static Character DogOf(string name)
         {
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             var ne = NetEnemies.Instance;
             if (s == null || !s.IsClient)
             {
@@ -241,7 +241,7 @@ namespace DarkwoodMP.World
             // The host to one side and the client to the other: standing on one
             // spot, each one's throws and shots hit the other player in the
             // way.
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             var across = new Vector3(-d.z, 0f, d.x);
             float sign = 1f;
             if (s != null && s.IsClient)

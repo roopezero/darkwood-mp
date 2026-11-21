@@ -157,7 +157,7 @@ namespace DarkwoodMP.World.Scripted
 
             // The host sends what a world move left in each container (the
             // coroutine above keeps its part).
-            if (Hideouts.Together && Session.Instance.IsHost
+            if (Hideouts.Together && Plugin.Instance.Host.Session.IsHost
                 && Hideouts.IsWorldMove(ge))
             {
                 return Hideouts.SendAfter(coroutine, ge);

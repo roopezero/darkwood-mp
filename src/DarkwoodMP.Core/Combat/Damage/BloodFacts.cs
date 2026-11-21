@@ -16,7 +16,7 @@ namespace DarkwoodMP.Combat.Damage
         /// isNightTrader.
         public bool NightTrader { get; init; }
 
-        /// Session.Instance is set and IsHost.
+        /// ModHost.Session is set and IsHost.
         public bool Host { get; init; }
     }
 }

@@ -338,7 +338,7 @@ namespace DarkwoodMP.World
         private static IEnumerator SnSpawnOwn(string[] a, Result r)
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost
+            if (!Plugin.Instance.Host.Session.IsHost
                 && sm != null)
             {
                 sm.currentUniqueID += 5000;

@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Story
     /// What decides whether a story step runs in this game.
     public readonly struct StepRunFacts
     {
-        /// A session is on (Session.Instance is set and Active).
+        /// A session is on (ModHost.Session is set and Active).
         public bool InSession { get; init; }
 
         /// This game is a joiner (Session.IsClient).

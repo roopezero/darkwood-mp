@@ -22,7 +22,7 @@ namespace DarkwoodMP.World.Locks
         /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
-        /// This game is the host (Session.Instance.IsHost). Only for the
+        /// This game is the host (ModHost.Session.IsHost). Only for the
         /// disarm.
         public bool Host { get; init; }
     }

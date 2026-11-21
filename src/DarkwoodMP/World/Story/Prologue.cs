@@ -48,7 +48,7 @@ namespace DarkwoodMP.World.Story
     /// </summary>
     internal sealed class Prologue
     {
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
         private static Dreams D => Singleton<Dreams>.Instance;
 
         public static bool IsStage(string name) =>

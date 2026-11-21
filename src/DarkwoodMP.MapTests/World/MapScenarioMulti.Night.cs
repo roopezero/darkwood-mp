@@ -72,7 +72,7 @@ namespace DarkwoodMP.World
         /// again.</summary>
         private static IEnumerator Night(string[] a, Result r)
         {
-            if (Net.Session.Instance == null || !Net.Session.Instance.IsHost)
+            if (!Plugin.Instance.Host.Session.IsHost)
             {
                 r.Fail("night attackers are the host's");
                 yield break;

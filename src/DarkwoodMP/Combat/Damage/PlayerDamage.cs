@@ -36,7 +36,7 @@ namespace DarkwoodMP.Combat
                 from = attacker.name;
             }
 
-            var session = Session.Instance;
+            var session = Plugin.Instance.Host.Session;
             switch (DamageRules.Send(FactsOf(owner, attacker, session)))
             {
                 case ProxyHit.LeftToTheirCopy:

@@ -83,7 +83,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static bool IsCopy(ShadowArmor a)
         {
-            var s = Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (a == null || s == null)
             {
                 return false;

@@ -40,7 +40,7 @@ namespace DarkwoodMP.Combat
             switch (NoiseRules.Owner(FactsOf(fromPlayer)))
             {
                 case NoiseOwner.OursToHost:
-                    var s = Net.Session.Instance;
+                    var s = Plugin.Instance.Host.Session;
                     var w = s.Begin(Net.MsgType.PlayerNoise);
                     PlayerNoiseMessage.Write(w, noise);
                     s.SendToHost(w, Net.Channel.Control, reliable: true);
@@ -72,7 +72,7 @@ namespace DarkwoodMP.Combat
         private NoiseFacts FactsOf(bool fromPlayer)
         {
             bool set = Threat.NoiseSource != null;
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             return new NoiseFacts
             {
                 Set = set,

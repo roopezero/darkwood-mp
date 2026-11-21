@@ -4,7 +4,7 @@ namespace DarkwoodMP.Combat.Enemies
     /// NetEnemies.ClientMode).
     public readonly struct ClientFacts
     {
-        /// Session.Instance isn't null.
+        /// ModHost.Session isn't null.
         public bool HasSession { get; init; }
 
         /// Session.IsClient.

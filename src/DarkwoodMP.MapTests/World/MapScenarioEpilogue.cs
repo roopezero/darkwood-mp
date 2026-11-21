@@ -184,7 +184,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(4f);
             string state = Where();
             bool? active = null;
-            Net.Session session = Net.Session.Instance;
+            Net.Session session = Plugin.Instance.Host.Session;
             if (session != null)
             {
                 active = session.Active;
@@ -194,7 +194,7 @@ namespace DarkwoodMP.World
                 $"{state}; session {active}; a friend's puppet shown "
                     + $"{FriendShown()}";
             if (!Playing() || DreamSync.SharedNow == null
-                || Net.Session.Instance == null || !Net.Session.Instance.Active)
+                || !Plugin.Instance.Host.Session.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");
             }
@@ -287,7 +287,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
 
-            Net.Session instance = Net.Session.Instance;
+            Net.Session instance = Plugin.Instance.Host.Session;
             bool? active = null;
             if (instance != null)
             {
@@ -316,7 +316,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
 
-            Net.Session instance = Net.Session.Instance;
+            Net.Session instance = Plugin.Instance.Host.Session;
             bool? active = null;
             if (instance != null)
             {
@@ -329,8 +329,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"no credits: {r.Info}");
             }
-            else if (Net.Session.Instance != null
-                && Net.Session.Instance.Active)
+            else if (Plugin.Instance.Host.Session.Active)
             {
                 r.Fail($"still in the session: {r.Info}");
             }
@@ -602,7 +601,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"no pan: {r.Info}");
             }
-            else if (Net.Session.Instance.IsClient
+            else if (Plugin.Instance.Host.Session.IsClient
                 && HeardBurned() != HostBurned.Yes)
             {
                 r.Fail($"the host's outcomes didn't come: {r.Info}");

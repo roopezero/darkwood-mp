@@ -20,7 +20,7 @@ namespace DarkwoodMP.World
     public static partial class MapScenarioItems1
     {
         private static Player P => Player.Instance;
-        private static Session S => Session.Instance;
+        private static Session S => Plugin.Instance.Host.Session;
         private static readonly System.Reflection.MethodInfo ShowProxyItem =
             AccessTools.Method(typeof(Player), "showProxyItem");
 

@@ -205,7 +205,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            var s = Net.Session.Instance;
+            var s = Plugin.Instance.Host.Session;
             if (s == null || !s.IsHost)
             {
                 return false;
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 }
 
                 _next = Time.unscaledTime + 0.1f;
-                var s = Net.Session.Instance;
+                var s = Plugin.Instance.Host.Session;
                 if (s == null)
                 {
                     return;

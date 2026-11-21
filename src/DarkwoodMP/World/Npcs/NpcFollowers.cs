@@ -249,7 +249,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static StepFacts FactsOf(GameEvent ge, ulong by)
         {
-            Session session = Session.Instance;
+            Session session = Plugin.Instance.Host.Session;
             return new StepFacts
             {
                 Hosting = session != null && session.IsHost,
