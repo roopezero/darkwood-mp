@@ -496,7 +496,8 @@ namespace DarkwoodMP.World
                 }
                 else if (ObjectActions.Handles(a))
                 {
-                    ObjectActions.Apply(a, obj, f1, x, ref y);
+                    Coop.Current.Objects.Apply(a, obj, ref values);
+                    y = values.Y;
                 }
                 else if (a == Action.Explode)
                 {
@@ -568,7 +569,7 @@ namespace DarkwoodMP.World
 
             if (s.IsHost)
             {
-                ObjectActions.AfterOnHost(a, obj, f1);
+                Coop.Current.Objects.AfterOnHost(a, obj, f1);
                 // The host passes a client's action on to the others.
                 var w = s.Begin(MsgType.WorldAction);
                 WriteAction(w, a, obj, x, y, f1, f2, str, byPlayer: true);
@@ -622,7 +623,8 @@ namespace DarkwoodMP.World
         {
             if (ObjectActions.Handles(a))
             {
-                return ObjectActions.Allowed(a, obj, f1, x);
+                var values = new ActionValues { X = x, F1 = f1 };
+                return Coop.Current.Objects.Allowed(a, obj, values);
             }
 
             if (a == Action.Explode)

@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Objects
 {
     /// What a client knows when the host answers its player's use of a
-    /// feeder (the callback of the plugin's ObjectActions.RequestFeeder).
+    /// feeder (the callback of the plugin's ObjectActions.OnFeederAnswer).
     public readonly struct FeederAnswerFacts
     {
         /// The feeder and Player.Instance are both still there.

@@ -302,7 +302,7 @@ namespace DarkwoodMP.World.Infections
                 WasFading = wasFading,
                 Sharing = _coop.Guards.Sharing,
                 ClientMode = NetEnemies.ClientMode,
-                OwnSwing = LiquidLitPatch.OwnSwing,
+                OwnSwing = _coop.Objects.OwnSwing,
             };
 
             if (inf == null)
