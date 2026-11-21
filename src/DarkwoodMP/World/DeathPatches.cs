@@ -1,4 +1,5 @@
 using DarkwoodMP.Combat;
+using DarkwoodMP.World.Deaths;
 using HarmonyLib;
 
 namespace DarkwoodMP.World
@@ -15,23 +16,43 @@ namespace DarkwoodMP.World
     ///   showing);
     ///   the host's own death doesn't either while others are in the world, who
     ///   may still be fighting; it does when the host is alone.
+    ///
+    /// The decision is the core's DeathRules.
     /// </summary>
-    static class DeathRules
+    static class WorldResets
     {
         public static bool WorldResetAllowed()
         {
-            if (NetEnemies.ClientMode)
+            DeathFacts facts = FactsOf(Net.Session.Instance);
+            if (DeathRules.NeedsStack(facts))
             {
-                return false;
+                facts = new DeathFacts
+                {
+                    ClientMode = facts.ClientMode,
+                    IsHost = facts.IsHost,
+                    Peers = facts.Peers,
+                    InDeath = InPlayerDeath(),
+                };
             }
 
-            var s = Net.Session.Instance;
-            if (s != null && s.IsHost && s.Peers.Count > 0 && InPlayerDeath())
+            return DeathRules.WorldResetAllowed(facts);
+        }
+
+        private static DeathFacts FactsOf(Net.Session s)
+        {
+            bool host = s != null && s.IsHost;
+            int peers = 0;
+            if (s != null)
             {
-                return false;
+                peers = s.Peers.Count;
             }
 
-            return true;
+            return new DeathFacts
+            {
+                ClientMode = NetEnemies.ClientMode,
+                IsHost = host,
+                Peers = peers,
+            };
         }
 
         /// <summary>
@@ -71,7 +92,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix()
         {
-            bool ok = DeathRules.WorldResetAllowed();
+            bool ok = WorldResets.WorldResetAllowed();
             if (!ok)
             {
                 Plugin.Log.LogInfo(
@@ -87,7 +108,7 @@ namespace DarkwoodMP.World
         typeof(CharacterSpawner), nameof(CharacterSpawner.despawnCharacters))]
     static class DespawnCharactersPatch
     {
-        static bool Prefix() => DeathRules.WorldResetAllowed();
+        static bool Prefix() => WorldResets.WorldResetAllowed();
     }
 
     [HarmonyPatch(typeof(Controller), nameof(Controller.skipDay))]
@@ -95,7 +116,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix()
         {
-            bool ok = DeathRules.WorldResetAllowed();
+            bool ok = WorldResets.WorldResetAllowed();
             if (!ok)
             {
                 Plugin.Log.LogInfo(
