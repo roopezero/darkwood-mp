@@ -39,6 +39,8 @@ static class Program
                                        split into parts joined with +;
                                        writes manifest.json, sites.jsonl and
                                        queue.jsonl to DIR
+        codemod blank                  stage 12: the blank line rule DW0007
+                                       asks for after a block
         codemod difftest <rule>        runs a rule's differential cases
         codemod selftest [--show NAME] the golden cases and the tool's checks
         """;
@@ -82,6 +84,8 @@ static class Program
                 return IlDiffCommand.Run(rest);
             case "interpolated":
                 return InterpolatedCommand.Run(rest);
+            case "blank":
+                return StageCommand.Run("blank", Blank.Run);
             case "difftest":
                 return DiffTestCommand.Run(rest);
             case "selftest":

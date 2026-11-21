@@ -34,6 +34,7 @@ not in the default place.
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
 | `ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. `--list` first prints each changed method with the manifest entry it was credited to. |
 | `interpolated --out DIR [--src DIR] [--dry-run]` | Stage 11. Splits each interpolated string that crosses 80 columns into parts joined with `+` (see "The interpolated stage" below), in the plugin's sources or in the copy given with `--src`, and writes `manifest.json`, `sites.jsonl` and `queue.jsonl` to `DIR`. `--dry-run` writes only `DIR`. |
+| `blank` | Stage 12. Puts an empty line after each statement, member and accessor that rule DW0007 reports (see "The blank stage" below), and changes nothing else. |
 | `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases` (`difftest interpolated` runs stage 11's). Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
 | `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
@@ -291,6 +292,32 @@ them with new string constants, and leaves 167 strings whole: 80 with no
 space to split at in time, 64 where every cut that fits has a hole in front
 that could be noticed, and 23 converted to `FormattableString`
 (`FormattableString.Invariant`). 170 lines stay over 80 columns.
+
+## The blank stage
+
+`codemod blank` (`Format/Blank.cs`) adds the blank lines rule DW0007 asks
+for: after a statement, member or accessor that holds a `{ }` pair spread over
+lines, unless a `}` or the end of the file comes next (`docs/ARCHITECTURE.md`
+has the whole rule). It doesn't have its own copy of the rule: the tool
+compiles the analyzer's `src/DarkwoodMP.Analyzers/BlankLines.cs` in, and
+`BlankLines.Find` gives the places, so the stage and the rule can't disagree.
+
+For each place it puts an empty line at the start of the line after the end:
+in front of the next code, or of the comment or directive line that comes
+first, since the rule doesn't count those as blank. So the blank line never
+goes before `else`, `catch`, `finally` or the `while` of a `do`: those belong
+to the statement, and the rule only looks behind its end. The one place it
+leaves alone is an end followed on its line by a `/* */` comment that goes on
+to the next line, where an empty line would go into the comment; the stage
+prints each one as `blank: left FILE:LINE: reason`. The plugin has none.
+
+Its gates, on top of the ones every stage has (it compiles, the DLL is the
+same to the byte, the comment words are the same, a second run changes
+nothing): the code is the same ignoring whitespace, every comment is between
+the same two tokens of code, the output is the input with only empty lines
+put between its lines, the layout pass leaves the output alone in each file it
+left alone before, and rule DW0007 reports only the places the stage left
+alone.
 
 ## Operator rules
 
@@ -926,7 +953,18 @@ interpolated stage"). `01-splits` covers the splits (holes with alignments and
 formats, plain parts, braces, a receiver, a lambda, a verbatim string),
 `02-left-whole` every string it must leave whole.
 
+Stage 12's cases are in `SelfTest/Blank/*.golden`: an `=== input` section
+in the layout stage's form, the file the stage must make of it in
+`=== blank`, and in `=== left` each place it leaves alone, one
+`line: reason` each. For every case the self test also checks that only empty
+lines were added, the code and every comment stay where they were, a second
+run changes nothing, the layout pass keeps the output, rule DW0007 reports
+only the places left alone, and the DLL is the same to the byte. `01-places`
+covers every kind of place the rule checks and the ones it doesn't,
+`02-left-alone` the comment it must leave alone.
+
 To add a case, write the `=== input` section, read the output of
 `selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case, `--show wrap/NAME` for a wrap case,
-`--show interpolated/NAME` for a stage 11 case), and
+`--show interpolated/NAME` for a stage 11 case, `--show blank/NAME` for a
+stage 12 case), and
 only then save it as the expected text.

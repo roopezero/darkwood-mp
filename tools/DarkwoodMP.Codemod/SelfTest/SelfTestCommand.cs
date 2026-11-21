@@ -110,6 +110,28 @@ static class SelfTestCommand
             $"{splitFiles.Count - splitFailed} of {splitFiles.Count} "
                 + "interpolated golden cases passed.");
         failed += splitFailed;
+        var blankFiles = BlankGoldenCases.Files(RepoPaths.Find().Root);
+        int blankFailed = 0;
+        foreach (var file in blankFiles)
+        {
+            var problems = BlankGoldenCases.Failures(file);
+            var name = BlankGoldenCases.NameOf(file);
+            if (problems.Count == 0)
+            {
+                Console.WriteLine("ok    " + name);
+                continue;
+            }
+            blankFailed++;
+            Console.WriteLine("FAIL  " + name);
+            foreach (var problem in problems)
+            {
+                Console.WriteLine(problem);
+            }
+        }
+        Console.WriteLine(
+            $"{blankFiles.Count - blankFailed} of {blankFiles.Count} "
+                + "blank golden cases passed.");
+        failed += blankFailed;
         var accepted = BracedCodeCases.Failures();
         accepted.AddRange(LayoutCheckCases.Failures());
         accepted.AddRange(IlDiffCases.Failures());
@@ -162,6 +184,13 @@ static class SelfTestCommand
         if (splitCase != null)
         {
             Console.Write(InterpolatedGoldenCases.Show(splitCase));
+            return 0;
+        }
+        var blankCase = BlankGoldenCases.Files(RepoPaths.Find().Root)
+            .FirstOrDefault(f => BlankGoldenCases.NameOf(f) == name);
+        if (blankCase != null)
+        {
+            Console.Write(BlankGoldenCases.Show(blankCase));
             return 0;
         }
         var golden = GoldenCase.Read(Path.Combine(folder, name + ".golden"));

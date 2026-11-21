@@ -69,6 +69,10 @@ sealed class Gates
         {
             CheckWrap(file, tree, after, parse);
         }
+        if (_stage == "blank")
+        {
+            CheckBlank(file, tree, after, parse);
+        }
         if (_pass(after, parse) != after)
         {
             throw new Stop($"{file}: a second {_stage} run changed the output.");
@@ -131,6 +135,79 @@ sealed class Gates
                 $"{file}: the line '{version.Value}' that "
                     + "tools/tests/worldtest.py reads is gone.");
         }
+    }
+
+    /// The blank stage only puts empty lines between the lines that were
+    /// there, so the code and every comment stay where they were. The
+    /// Formatter must keep them: a file it left alone before, it leaves alone
+    /// after. Every place rule DW0007 still reports is one the stage says it
+    /// left alone, and those are listed.
+    void CheckBlank(
+        string file, SyntaxTree tree, string after, CSharpParseOptions parse)
+    {
+        var before = tree.GetRoot();
+        var rootAfter = CSharpSyntaxTree.ParseText(after, parse).GetRoot();
+        if (!SameCode.Of(before, rootAfter))
+        {
+            throw new Stop(
+                $"{file}: blank changed more than whitespace: "
+                    + TokenDiff.First(before, rootAfter));
+        }
+        var moved = CommentPlaces.Difference(before, rootAfter);
+        if (moved != null)
+        {
+            throw new Stop($"{file}: blank moved a comment: {moved}");
+        }
+        var extra = OnlyEmptyLinesAdded(tree.GetText().ToString(), after);
+        if (extra != null)
+        {
+            throw new Stop($"{file}: blank changed a line: {extra}");
+        }
+        var source = tree.GetText().ToString();
+        if (Format.Passes.Layout(source, parse) == source
+            && Format.Passes.Layout(after, parse) != after)
+        {
+            throw new Stop($"{file}: the layout pass changes blank's output.");
+        }
+        var found = DarkwoodMP.Analyzers.BlankLines.Find(
+            CSharpSyntaxTree.ParseText(after, parse));
+        var left = Format.Blank.LeftAlone(after, parse);
+        if (found.Length != left.Count)
+        {
+            throw new Stop(
+                $"{file}: {found.Length} places still lack a blank line "
+                    + $"after blank, and it left {left.Count} alone.");
+        }
+        foreach (var place in left)
+        {
+            Console.WriteLine(
+                $"{_stage}: left {file}:{place.Line}: {place.Reason}");
+        }
+    }
+
+    /// Null when after is before with only empty lines put between its lines;
+    /// otherwise the first line of after that isn't.
+    public static string OnlyEmptyLinesAdded(string before, string after)
+    {
+        var was = before.Split('\n');
+        var now = after.Split('\n');
+        int i = 0;
+        for (int j = 0; j < now.Length; j++)
+        {
+            if (i < was.Length && now[j] == was[i])
+            {
+                i++;
+            }
+            else if (now[j].Length != 0)
+            {
+                return $"line {j + 1}: '{now[j]}'";
+            }
+        }
+        if (i != was.Length)
+        {
+            return $"line {i + 1} of the input is gone";
+        }
+        return null;
     }
 
     /// Nothing the stage is responsible for may be left in the file.

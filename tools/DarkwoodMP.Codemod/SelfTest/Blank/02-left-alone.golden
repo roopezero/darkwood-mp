@@ -1,0 +1,54 @@
+A /* */ comment that starts behind the end and goes on to the next line: an
+empty line there would go into the comment, so the place is left alone. A
+comment that ends on the line of the end is no trouble.
+=== input
+using System;
+
+namespace Golden
+{
+    class Left
+    {
+        int _count;
+        void Run(Action<Action> each)
+        {
+            each(() =>
+            {
+                _count--;
+            }); /* goes on
+                   here */
+            _count++;
+            each(() =>
+            {
+                _count--;
+            }); /* ends here */
+            _count++;
+        }
+    }
+}
+=== blank
+using System;
+
+namespace Golden
+{
+    class Left
+    {
+        int _count;
+        void Run(Action<Action> each)
+        {
+            each(() =>
+            {
+                _count--;
+            }); /* goes on
+                   here */
+            _count++;
+            each(() =>
+            {
+                _count--;
+            }); /* ends here */
+
+            _count++;
+        }
+    }
+}
+=== left
+13: the next line is inside a comment that starts on this one

@@ -107,7 +107,7 @@ static class WrapGoldenCases
         return problems;
     }
 
-    static Dictionary<string, string> Sections(string file)
+    public static Dictionary<string, string> Sections(string file)
     {
         var sections = new Dictionary<string, List<string>>();
         List<string> current = null;
