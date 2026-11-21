@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Owed;
 using HarmonyLib;
 using Newtonsoft.Json;
 
@@ -35,13 +36,6 @@ namespace DarkwoodMP.World
     /// </summary>
     internal static class OwedParts
     {
-        private sealed class FileData
-        {
-            public Dictionary<string, HashSet<string>> Had =
-                new Dictionary<string, HashSet<string>>();
-            public HashSet<string> HostOwed = new HashSet<string>();
-        }
-
         private static Session S => Session.Instance;
 
         // ---- naming a trigger -----------------------------------------------
@@ -63,17 +57,30 @@ namespace DarkwoodMP.World
                 return null;
             }
 
-            int index = et.eventTriggers.IndexOf(t);
+            return OwedRules.IdOf(FactsOf(et, t));
+        }
+
+        private static TriggerNameFacts FactsOf(
+            EventTriggers et, global::EventTrigger t)
+        {
             var save = et.GetComponent<SaveableObject>();
-            if (save != null && save.uniqueId > 0)
+            int saveId = 0;
+            if (save != null)
             {
-                return $"s{save.uniqueId}#{index}";
+                saveId = save.uniqueId;
             }
 
-            string scene = et.gameObject.scene.name;
             var p = et.transform.position;
-            return FormattableString.Invariant(
-                $"{scene}/{et.name}@{p.x:0},{p.z:0}#{index}");
+            return new TriggerNameFacts
+            {
+                Saved = save != null,
+                SaveId = saveId,
+                Index = et.eventTriggers.IndexOf(t),
+                Scene = et.gameObject.scene.name,
+                Name = et.name,
+                X = p.x,
+                Z = p.z,
+            };
         }
 
         // ---- a joiner's game ------------------------------------------------
@@ -102,7 +109,7 @@ namespace DarkwoodMP.World
 
         // ---- the host's record ----------------------------------------------
 
-        private static FileData _data;
+        private static OwedRecord _data;
         // the profile folder _data.Had belongs to
         private static string _dir;
         // the loaded world _data.HostOwed belongs to
@@ -120,35 +127,26 @@ namespace DarkwoodMP.World
                 sm.baseSaveDirectory, "prof" + Core.currentProfile.id);
         }
 
-        private static FileData Read(string dir)
+        private static OwedRecord Read(string dir)
         {
             try
             {
                 string path = null;
                 if (dir != null)
                 {
-                    path = Path.Combine(dir, "darkwoodmp_later.json");
+                    path = Path.Combine(dir, OwedRules.FileName);
                 }
 
                 if (path != null && File.Exists(path))
                 {
-                    FileData d = JsonConvert.DeserializeObject<FileData>(
+                    OwedRecord d = JsonConvert.DeserializeObject<OwedRecord>(
                         File.ReadAllText(path));
                     if (d == null)
                     {
-                        d = new FileData();
+                        d = new OwedRecord();
                     }
 
-                    if (d.Had == null)
-                    {
-                        d.Had = new Dictionary<string, HashSet<string>>();
-                    }
-
-                    if (d.HostOwed == null)
-                    {
-                        d.HostOwed = new HashSet<string>();
-                    }
-
+                    d.Repair();
                     return d;
                 }
             }
@@ -159,26 +157,35 @@ namespace DarkwoodMP.World
                         + $"{dir}: {e.Message}");
             }
 
-            return new FileData();
+            return new OwedRecord();
         }
 
         /// <summary>
         /// Host: the record for this world, read from beside its save the first
         /// time, and again on a new world.
         /// </summary>
-        private static FileData Data()
+        private static OwedRecord Data()
         {
             string dir = ProfileDir();
             int scene =
                 UnityEngine.SceneManagement.SceneManager
                     .GetActiveScene().handle;
-            if (_data == null || dir != _dir)
+            RecordRead read = OwedRules.Reads(new RecordReadFacts
+            {
+                Loaded = _data != null,
+                Profile = dir,
+                RecordProfile = _dir,
+                Scene = scene,
+                OwedScene = _owedScene,
+            });
+
+            if (read == RecordRead.Whole)
             {
                 _data = Read(dir);
                 _dir = dir;
                 _owedScene = scene;
             }
-            else if (scene != _owedScene)
+            else if (read == RecordRead.HostOwed)
             {
                 // The world was loaded again (a reload, a new chapter): our
                 // player is where the save has them, and so is what they're
@@ -193,13 +200,18 @@ namespace DarkwoodMP.World
 
         private static string KeyOf(ulong peer)
         {
-            if (S != null && S.Keys.TryGetValue(peer, out var key)
-                && !string.IsNullOrEmpty(key))
+            string key = null;
+            if (S != null)
+            {
+                S.Keys.TryGetValue(peer, out key);
+            }
+
+            if (OwedRules.UsesKey(key))
             {
                 return Characters.KeyHash(key);
             }
 
-            return "#" + peer;
+            return OwedRules.Unkeyed(peer);
         }
 
         /// <summary>
@@ -207,15 +219,24 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void HostSaved()
         {
-            if (WorldShare.Snapshotting || Combat.NetEnemies.ClientMode
-                || _data == null)
+            string dir = ProfileDir();
+            bool empty = false;
+            if (_data != null)
             {
-                return;
+                empty = _data.Empty;
             }
 
-            string dir = ProfileDir();
-            if (dir == null || dir != _dir
-                || (_data.Had.Count == 0 && _data.HostOwed.Count == 0))
+            bool writes = OwedRules.Writes(new RecordSaveFacts
+            {
+                Snapshotting = WorldShare.Snapshotting,
+                Client = Combat.NetEnemies.ClientMode,
+                Loaded = _data != null,
+                Profile = dir,
+                RecordProfile = _dir,
+                Empty = empty,
+            });
+
+            if (!writes)
             {
                 return;
             }
@@ -224,8 +245,9 @@ namespace DarkwoodMP.World
             {
                 Directory.CreateDirectory(dir);
                 File.WriteAllText(
-                    Path.Combine(dir, "darkwoodmp_later.json"),
-                    JsonConvert.SerializeObject(_data));
+                    Path.Combine(dir, OwedRules.FileName),
+                    JsonConvert.SerializeObject(
+                        new { _data.Had, _data.HostOwed }));
             }
             catch (Exception e)
             {
@@ -243,25 +265,45 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool Owed(global::EventTrigger t)
         {
+            return OwedRules.Owed(FactsOf(t));
+        }
+
+        private static OwedFacts FactsOf(global::EventTrigger t)
+        {
             var s = S;
-            if (t == null || s == null || !s.Active)
+            bool active = s != null && s.Active;
+            if (t == null || !active)
             {
-                return false;
+                return new OwedFacts { Trigger = t != null, Active = active };
             }
 
             if (s.IsHost)
             {
-                string id = IdOf(t);
-                return id != null && Data().HostOwed.Contains(id);
+                return new OwedFacts
+                {
+                    Trigger = true,
+                    Active = true,
+                    Host = true,
+                    HostOwed = Data().IsHostOwed(IdOf(t)),
+                };
             }
 
-            if (t.thisEventTriggers == null
-                || WorldActions.OursAlone(t.thisEventTriggers.gameObject))
+            EventTriggers et = t.thisEventTriggers;
+            bool alone = et != null && WorldActions.OursAlone(et.gameObject);
+            bool had = false;
+            if (et != null && !alone)
             {
-                return false;
+                had = Ours().Contains(t);
             }
 
-            return !Ours().Contains(t);
+            return new OwedFacts
+            {
+                Trigger = true,
+                Active = true,
+                HasObject = et != null,
+                OursAlone = alone,
+                HadHere = had,
+            };
         }
 
         /// <summary>
@@ -277,7 +319,7 @@ namespace DarkwoodMP.World
                 id = IdOf(t);
             }
 
-            return id != null && Data().HostOwed.Add(id);
+            return id != null && Data().HostOwe(id);
         }
 
         /// <summary>
@@ -294,8 +336,7 @@ namespace DarkwoodMP.World
 
             if (s.IsHost)
             {
-                string id = IdOf(t);
-                return id != null && Data().HostOwed.Remove(id);
+                return Data().HostHad(IdOf(t));
             }
 
             return Ours().Add(t);
@@ -308,9 +349,7 @@ namespace DarkwoodMP.World
         internal static bool Given(ulong peer, global::EventTrigger t)
         {
             string id = IdOf(t);
-            return id != null
-                && Data().Had.TryGetValue(KeyOf(peer), out var set)
-                && set.Contains(id);
+            return id != null && Data().Given(KeyOf(peer), id);
         }
 
         /// <summary>
@@ -324,14 +363,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var had = Data().Had;
-            string key = KeyOf(peer);
-            if (!had.TryGetValue(key, out var set))
-            {
-                had[key] = set = new HashSet<string>();
-            }
-
-            set.Add(id);
+            Data().Give(KeyOf(peer), id);
         }
 
         /// <summary>
