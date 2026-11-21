@@ -1,8 +1,10 @@
+using System;
+using System.Diagnostics;
+using System.Reflection;
 using DarkwoodMP.Combat;
-using DarkwoodMP.World.Deaths;
-using HarmonyLib;
+using DarkwoodMP.Net;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Deaths
 {
     /// <summary>
     /// Dying, with others in the world. Darkwood's death (Player.onDeath) takes
@@ -19,11 +21,55 @@ namespace DarkwoodMP.World
     ///
     /// The decision is the core's DeathRules.
     /// </summary>
-    static class WorldResets
+    internal sealed class WorldResets
     {
-        public static bool WorldResetAllowed()
+        // Frames above InPlayerDeath to skip: itself, Allowed and the
+        // public method, so that the first frame read is the patch's Prefix.
+        private const int OwnFrames = 3;
+
+        private readonly CoopSession _coop;
+
+        public WorldResets(CoopSession coop)
         {
-            DeathFacts facts = FactsOf(Net.Session.Instance);
+            _coop = coop;
+        }
+
+        /// WorldGenerator.respawnAllEnemies: whether it runs.
+        public bool MayRespawnEnemies()
+        {
+            bool ok = Allowed();
+            if (!ok)
+            {
+                Plugin.Log.LogInfo(
+                    "A death didn't respawn the world's enemies: others are "
+                        + "playing in it");
+            }
+
+            return ok;
+        }
+
+        /// CharacterSpawner.despawnCharacters: whether it runs.
+        public bool MayDespawnCharacters()
+        {
+            return Allowed();
+        }
+
+        /// Controller.skipDay: whether it runs.
+        public bool MaySkipNight()
+        {
+            bool ok = Allowed();
+            if (!ok)
+            {
+                Plugin.Log.LogInfo(
+                    "A death didn't skip the night: others are playing in it");
+            }
+
+            return ok;
+        }
+
+        private bool Allowed()
+        {
+            DeathFacts facts = FactsOf(_coop.Net);
             if (DeathRules.NeedsStack(facts))
             {
                 facts = new DeathFacts
@@ -38,7 +84,7 @@ namespace DarkwoodMP.World
             return DeathRules.WorldResetAllowed(facts);
         }
 
-        private static DeathFacts FactsOf(Net.Session s)
+        private static DeathFacts FactsOf(Session s)
         {
             bool host = s != null && s.IsHost;
             int peers = 0;
@@ -61,14 +107,14 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool InPlayerDeath()
         {
-            var st = new System.Diagnostics.StackTrace(2, false);
+            var st = new StackTrace(OwnFrames, false);
             for (int i = 0; i < st.FrameCount && i < 16; i++)
             {
-                System.Diagnostics.StackFrame frame = st.GetFrame(i);
-                System.Type t = null;
+                StackFrame frame = st.GetFrame(i);
+                Type t = null;
                 if (frame != null)
                 {
-                    System.Reflection.MethodBase method = frame.GetMethod();
+                    MethodBase method = frame.GetMethod();
                     if (method != null)
                     {
                         t = method.DeclaringType;
@@ -83,47 +129,6 @@ namespace DarkwoodMP.World
             }
 
             return false;
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(WorldGenerator), nameof(WorldGenerator.respawnAllEnemies))]
-    static class RespawnAllEnemiesPatch
-    {
-        static bool Prefix()
-        {
-            bool ok = WorldResets.WorldResetAllowed();
-            if (!ok)
-            {
-                Plugin.Log.LogInfo(
-                    "A death didn't respawn the world's enemies: others are "
-                        + "playing in it");
-            }
-
-            return ok;
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(CharacterSpawner), nameof(CharacterSpawner.despawnCharacters))]
-    static class DespawnCharactersPatch
-    {
-        static bool Prefix() => WorldResets.WorldResetAllowed();
-    }
-
-    [HarmonyPatch(typeof(Controller), nameof(Controller.skipDay))]
-    static class SkipDayPatch
-    {
-        static bool Prefix()
-        {
-            bool ok = WorldResets.WorldResetAllowed();
-            if (!ok)
-            {
-                Plugin.Log.LogInfo(
-                    "A death didn't skip the night: others are playing in it");
-            }
-
-            return ok;
         }
     }
 }
