@@ -86,6 +86,12 @@ namespace DarkwoodMP.Net
         public event Action<ulong> OnPeerDisconnected;
         public event Action OnSessionEnded;
         /// <summary>
+        /// A backend has entered a session: the host once it's hosting, a
+        /// client once connected and before it sends its Hello, so before
+        /// the first message of the session can arrive.
+        /// </summary>
+        public event Action OnSessionStarted;
+        /// <summary>
         /// Client: the host went away (stopped its server, quit, or the
         /// connection broke); the reason to show.
         /// </summary>
@@ -341,9 +347,27 @@ namespace DarkwoodMP.Net
             }
         }
 
+        /// <summary>
+        /// Handle every message of this type with this handler. A type has
+        /// one handler: registering another replaces it.
+        /// </summary>
         public void Register(
             MsgType type, Action<ulong, PacketReader> handler) =>
             _handlers[type] = handler;
+
+        /// <summary>
+        /// Stop handling this type with this handler. Does nothing when
+        /// another handler has replaced it since, so code that registered
+        /// a type can always remove its own without dropping someone else's.
+        /// </summary>
+        public void Unregister(
+            MsgType type, Action<ulong, PacketReader> handler)
+        {
+            if (_handlers.TryGetValue(type, out var now) && now == handler)
+            {
+                _handlers.Remove(type);
+            }
+        }
 
         public string NameOf(ulong id)
         {
@@ -426,11 +450,22 @@ namespace DarkwoodMP.Net
                 Names[LocalId] = LocalName;
                 Keys[LocalId] = LocalKey;
                 Connected = true;
+                Started();
                 return;
             }
 
             Connected = false;
+            Started();
             SendHello();
+        }
+
+        private void Started()
+        {
+            Action handler = OnSessionStarted;
+            if (handler != null)
+            {
+                handler();
+            }
         }
 
         /// <summary>

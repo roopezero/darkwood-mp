@@ -54,11 +54,9 @@ namespace DarkwoodMP
         public static GUIStyle NameTagStyle;
 
         private Harmony _harmony;
-        private Session _session;
         private PlayerSync _playerSync;
         private PlayerFx _playerFx;
-        private TcpBackend _tcp;
-        private ServerBrowser _browser;
+        private ModHost _host;
         /// <summary>
         /// The Direct panel's server browser (the map test's "lan-search" uses
         /// it).
@@ -68,9 +66,9 @@ namespace DarkwoodMP
             get
             {
                 Plugin instance = Instance;
-                if (instance != null)
+                if (instance != null && instance._host != null)
                 {
-                    return instance._browser;
+                    return instance._host.Browser;
                 }
 
                 return null;
@@ -90,9 +88,6 @@ namespace DarkwoodMP
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
         private bool? _cursorBefore;
-        // Typed as an interface on purpose: no Steamworks type may appear in
-        // this class (GOG builds).
-        private INetBackend _steam;
         // SteamManager.s_instance and its m_bInitialized
         private FieldInfo _steamInstance, _steamInitialized;
         private bool _steamUnavailable;
@@ -160,15 +155,16 @@ namespace DarkwoodMP
         public bool PanelOpen => _showMenu;
 
         /// <summary>
-        /// The session (for the menus, which say what leaving it does).
+        /// The process state: the session, its backends, the server browser
+        /// (the menus say what leaving the session does).
         /// </summary>
-        public Session Session => _session;
+        internal ModHost Host => _host;
 
         /// <summary>
         /// Steam is running and its backend is up (the Start Game window offers
         /// hosting with it).
         /// </summary>
-        internal bool SteamAvailable => _steam is IGuiSection;
+        internal bool SteamAvailable => _host.Steam is IGuiSection;
         /// <summary>
         /// Steam isn't there at all (GOG), as opposed to not up yet.
         /// </summary>
@@ -204,7 +200,7 @@ namespace DarkwoodMP
                 yield return null;
             }
 
-            if (_session.Active)
+            if (_host.Session.Active)
             {
                 yield break;
             }
@@ -215,20 +211,20 @@ namespace DarkwoodMP
                 yield break;
             }
 
-            if (steam && _steam is IGuiSection steamGui)
+            if (steam && _host.Steam is IGuiSection steamGui)
             {
                 steamGui.Host();
                 Log.LogInfo("[start game] hosting with Steam");
             }
             else
             {
-                _session.LastRefusal = null;
+                _host.Session.LastRefusal = null;
                 bool ok = HostDirect();
                 int port = Cfg.DirectPort.Value;
                 string status = "started";
                 if (!ok)
                 {
-                    status = _tcp.Status;
+                    status = _host.Tcp.Status;
                 }
 
                 Log.LogInfo(
@@ -263,7 +259,7 @@ namespace DarkwoodMP
                 maxPlayers = Cfg.MaxPlayers.Value;
             }
 
-            return _tcp.Host(serverName, port, password, maxPlayers);
+            return _host.Tcp.Host(serverName, port, password, maxPlayers);
         }
 
         internal void SetPanel(bool show)
@@ -317,6 +313,14 @@ namespace DarkwoodMP
                 return;
             }
 
+            Load();
+        }
+
+        // The rest of Awake. Not inlined: compiling Awake must not make the
+        // JIT load the core, and this names core types.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void Load()
+        {
             Cfg = new ModConfig
             {
                 PlayerName = Config.Bind(
@@ -399,22 +403,8 @@ namespace DarkwoodMP
                         + "synced/skipped)."),
             };
 
-            var log = new BepInLog();
-            _session = new Session(new UnityClock(), log, PluginInfo.Version)
-            {
-                LocalKey = PlayerKey.Load(Paths.ConfigPath, log)
-            };
-
-            _tcp = new TcpBackend(log, PluginInfo.Version)
-            {
-                PlayerCount = () => _session.PlayerCount,
-                MapPort = OpensPort,
-                BeforeLeave = World.Characters.SaveBeforeLeaving
-            };
-
-            _session.Add(_tcp);
-            _browser = new ServerBrowser(Paths.ConfigPath, log);
-            _direct = new DirectPanel(_tcp, _browser, _session);
+            _host = new ModHost(OpensPort);
+            _direct = new DirectPanel(_host.Tcp, _host.Browser, _host.Session);
             _direct.OnJoining = () =>
             {
                 if (!_panel.Open)
@@ -445,58 +435,58 @@ namespace DarkwoodMP
             };
 
             new StartGameWindow();
-            SaveBook.Register(_session);
+            SaveBook.Register(_host.Session);
             OptionsWindow.Init();
-            _playerSync = new PlayerSync(_session);
-            _playerFx = new PlayerFx(_session);
-            _session.OnPlayerJoined += n => Notice($"{n} joined");
-            _session.OnPlayerLeft += n => Notice($"{n} left");
-            _session.OnPlayerJoining += n => Notice($"{n} is joining...");
-            _session.OnPlayerStoppedJoining += n => Notice(
+            _playerSync = new PlayerSync(_host.Session);
+            _playerFx = new PlayerFx(_host.Session);
+            _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
+            _host.Session.OnPlayerLeft += n => Notice($"{n} left");
+            _host.Session.OnPlayerJoining += n => Notice($"{n} is joining...");
+            _host.Session.OnPlayerStoppedJoining += n => Notice(
                 $"{n} stopped joining");
             _playerSync.OnRemoteDied += n => Notice($"{n} died");
-            _world = new WorldShare(_session, this, Paths.CachePath);
+            _world = new WorldShare(_host.Session, this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
-            PlayerDamage.Register(_session);
-            EnemyAreaHits.Register(_session);
-            EnemyFx.Register(_session);
-            AfterNight.Register(_session);
-            _enemies = new NetEnemies(_session);
-            _time = new TimeSync(_session);
-            WorldActions.Register(_session);
-            Authority.Register(_session);
-            _containers = new Containers(_session);
-            _characters = new Characters(_session);
-            _flags = new FlagsSync(_session);
-            _drag = new DragSync(_session);
-            DoorPush.Register(_session);
-            _fuel = new FuelSync(_session);
-            new TraderSync(_session);
-            new NpcSync(_session);
-            _events = new WorldEvents(_session);
-            new ThrowSync(_session);
-            new FireSync(_session);
-            new SlotShare(_session);
-            Construction.Register(_session);
-            ScriptedEvents.Register(_session);
-            Hideouts.Register(_session);
-            HostIds.Register(_session);
-            NightObjects.Register(_session);
-            TalkLock.Register(_session);
-            Progression.Register(_session);
-            StackSizes.Register(_session);
-            DreamSync.Register(_session);
-            Locations.Register(_session);
-            FarEvents.Register(_session);
-            ViewRects.Register(_session);
-            Chapters.Register(_session);
-            EpilogueSync.Register(_session);
-            EggSync.Register(_session);
-            InfectionSync.Register(_session);
-            EnemyLandings.Register(_session);
-            _session.OnSessionEnded += ThrownHits.Clear;
-            _session.OnSessionEnded += EnemyAreaHits.Clear;
+            PlayerDamage.Register(_host.Session);
+            EnemyAreaHits.Register(_host.Session);
+            EnemyFx.Register(_host.Session);
+            AfterNight.Register(_host.Session);
+            _enemies = new NetEnemies(_host.Session);
+            _time = new TimeSync(_host.Session);
+            WorldActions.Register(_host.Session);
+            Authority.Register(_host.Session);
+            _containers = new Containers(_host.Session);
+            _characters = new Characters(_host.Session);
+            _flags = new FlagsSync(_host.Session);
+            _drag = new DragSync(_host.Session);
+            DoorPush.Register(_host.Session);
+            _fuel = new FuelSync(_host.Session);
+            new TraderSync(_host.Session);
+            new NpcSync(_host.Session);
+            _events = new WorldEvents(_host.Session);
+            new ThrowSync(_host.Session);
+            new FireSync(_host.Session);
+            new SlotShare(_host.Session);
+            Construction.Register(_host.Session);
+            ScriptedEvents.Register(_host.Session);
+            Hideouts.Register(_host.Session);
+            HostIds.Register(_host.Session);
+            NightObjects.Register(_host.Session);
+            TalkLock.Register(_host.Session);
+            Progression.Register(_host.Session);
+            StackSizes.Register(_host.Session);
+            DreamSync.Register(_host.Session);
+            Locations.Register(_host.Session);
+            FarEvents.Register(_host.Session);
+            ViewRects.Register(_host.Session);
+            Chapters.Register(_host.Session);
+            EpilogueSync.Register(_host.Session);
+            EggSync.Register(_host.Session);
+            InfectionSync.Register(_host.Session);
+            EnemyLandings.Register(_host.Session);
+            _host.Session.OnSessionEnded += ThrownHits.Clear;
+            _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
@@ -943,9 +933,9 @@ namespace DarkwoodMP
             _testPresence = false;
             TcpBackend.TestMaxPlayers = 0;
             ConfirmDialog.Cancel();
-            if (_session.Active)
+            if (_host.Session.Active)
             {
-                _session.Backend.Leave();
+                _host.Session.Backend.Leave();
             }
         }
 
@@ -1082,7 +1072,7 @@ namespace DarkwoodMP
                 yield return null;
             }
 
-            while (_session.Active && _session.Peers.Count == 0)
+            while (_host.Session.Active && _host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -1174,7 +1164,7 @@ namespace DarkwoodMP
             }
 
             yield return new WaitForSecondsRealtime(6f);
-            Log.LogInfo($"[solo] session active {_session.Active}");
+            Log.LogInfo($"[solo] session active {_host.Session.Active}");
             yield return Shot("solo-world");
             Core.showHidePauseMenu();
             yield return Shot("solo-pause");
@@ -1833,7 +1823,7 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator SteamSelfTest()
         {
             float until = Time.realtimeSinceStartup + 60f;
-            while (_steam == null)
+            while (_host.Steam == null)
             {
                 if (Time.realtimeSinceStartup > until || _steamUnavailable)
                 {
@@ -1844,7 +1834,7 @@ namespace DarkwoodMP
                 yield return null;
             }
 
-            var steam = (SteamBackend)_steam;
+            var steam = (SteamBackend)_host.Steam;
             steam.Host();
             until = Time.realtimeSinceStartup + 20f;
             while (!steam.InSession && Time.realtimeSinceStartup < until)
@@ -1854,7 +1844,8 @@ namespace DarkwoodMP
 
             Log.LogInfo(
                 $"--dwmp-steam-test: {steam.Status}; host={steam.IsHost}; in "
-                    + $"session={_session.Active} as #{_session.LocalId}; "
+                    + $"session={_host.Session.Active} as "
+                    + $"#{_host.Session.LocalId}; "
                     + $"members: {steam.MemberNames()}");
             yield return new WaitForSeconds(5f);
             steam.Leave();
@@ -1863,7 +1854,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator ReloadAfterJoin(float seconds)
         {
-            while (_session.Peers.Count == 0)
+            while (_host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -1967,7 +1958,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator EndAfterJoin(float seconds)
         {
-            while (_session.Peers.Count == 0 || !WorldShare.WorldReady)
+            while (_host.Session.Peers.Count == 0 || !WorldShare.WorldReady)
             {
                 yield return null;
             }
@@ -1989,7 +1980,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator MenuAfterJoin(float seconds)
         {
-            while (_session.Peers.Count == 0)
+            while (_host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -2001,7 +1992,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator DieAfterJoin()
         {
-            while (_session.Peers.Count == 0)
+            while (_host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -2019,7 +2010,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator FxAfterJoin()
         {
-            while (_session.Peers.Count == 0)
+            while (_host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -2044,7 +2035,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator SaveAfterJoin(float seconds)
         {
-            while (_session.Peers.Count == 0)
+            while (_host.Session.Peers.Count == 0)
             {
                 yield return null;
             }
@@ -2056,7 +2047,7 @@ namespace DarkwoodMP
 
         private System.Collections.IEnumerator ClientMenuRejoin(string address)
         {
-            while (!(_session.IsClient && WorldShare.WorldReady
+            while (!(_host.Session.IsClient && WorldShare.WorldReady
                     && World.Characters.Instance != null
                     && World.Characters.Instance.HasCharacter))
             {
@@ -2079,7 +2070,7 @@ namespace DarkwoodMP
                 yield return null;
             }
 
-            if (_session.Active)
+            if (_host.Session.Active)
             {
                 Log.LogInfo(
                     "[menu test] FAIL: at the main menu, still in the host's "
@@ -2098,13 +2089,13 @@ namespace DarkwoodMP
                     + "window");
             _direct.JoinForTest(address);
             string data;
-            if (_tcp.InSession)
+            if (_host.Tcp.InSession)
             {
                 data = "[menu test] PASS: joining again";
             }
             else
             {
-                data = $"[menu test] FAIL: not joining ({_tcp.Status})";
+                data = $"[menu test] FAIL: not joining ({_host.Tcp.Status})";
             }
 
             Log.LogInfo(data);
@@ -2118,7 +2109,7 @@ namespace DarkwoodMP
             }
 
             Log.LogInfo($"--dwmp-join: joining {address}");
-            _tcp.Join(address, Cfg.Password.Value);
+            _host.Tcp.Join(address, Cfg.Password.Value);
         }
 
         /// <summary>
@@ -2186,7 +2177,7 @@ namespace DarkwoodMP
         {
             InventoryWatch.LateUpdate();
             JoinScreen.LateUpdate();
-            Sync.ViewWatch.LateUpdate(_session != null && _session.Active);
+            Sync.ViewWatch.LateUpdate(_host.Session.Active);
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             GameCursor.LateUpdate(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
@@ -2204,7 +2195,7 @@ namespace DarkwoodMP
                 Application.targetFrameRate = _fpsCap;
             }
 
-            if (_steam == null && !_steamUnavailable
+            if (_host.Steam == null && !_steamUnavailable
                 && Time.unscaledTime >= _nextSteamCheck)
             {
                 _nextSteamCheck = Time.unscaledTime + 1f;
@@ -2258,15 +2249,21 @@ namespace DarkwoodMP
             OptionsWindow.Update();
             MenuList.Update();
             ModProfiler.Begin();
-            _session.Update();
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.WatchWorld();
+            }
+
+            _host.Session.Update();
             ModProfiler.Mark("session");
-            _browser.Update();
+            _host.Browser.Update();
             ModProfiler.Mark("browser");
             _playerSync.Update();
             ModProfiler.Mark("players");
             _playerFx.Update();
             ModProfiler.Mark("player fx");
-            Proxies.Update(_playerSync, _session.IsHost);
+            Proxies.Update(_playerSync, _host.Session.IsHost);
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
@@ -2298,20 +2295,20 @@ namespace DarkwoodMP
             ModProfiler.Mark("enemy fx");
             _world.Update();
             ModProfiler.Mark("world");
-            if (_tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
+            if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
             {
                 _nextWorldLabel = Time.unscaledTime + 2f;
-                _tcp.WorldLabel = WorldLabel();
+                _host.Tcp.WorldLabel = WorldLabel();
             }
 
-            if ((_steam != null || _testPresence)
+            if ((_host.Steam != null || _testPresence)
                 && Time.unscaledTime >= _nextPresence)
             {
                 _nextPresence = Time.unscaledTime + 5f;
                 UpdatePresence();
             }
 
-            JoinScreen.Update(_session, _world);
+            JoinScreen.Update(_host.Session, _world);
             LoadingScreen.Update();
             Chapters.Update();
             Progression.Update();
@@ -2324,7 +2321,7 @@ namespace DarkwoodMP
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();
-            if (_session.IsHost && WorldShare.InWorld)
+            if (_host.Session.IsHost && WorldShare.InWorld)
             {
                 TraderSync instance = TraderSync.Instance;
                 if (instance != null)
@@ -2431,9 +2428,7 @@ namespace DarkwoodMP
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void CreateSteamBackend()
         {
-            var steam = new SteamBackend();
-            _session.Add(steam);
-            _steam = steam;
+            _host.AddSteam(new SteamBackend());
             UpdateLocalName();
             Log.LogInfo("Steam ready: Steam lobbies and invites enabled");
         }
@@ -2459,7 +2454,7 @@ namespace DarkwoodMP
             string name = Cfg.PlayerName.Value;
             if (string.IsNullOrWhiteSpace(name))
             {
-                IGuiSection guiSection = _steam as IGuiSection;
+                IGuiSection guiSection = _host.Steam as IGuiSection;
                 if (guiSection != null)
                 {
                     name = guiSection.SuggestedPlayerName;
@@ -2477,11 +2472,11 @@ namespace DarkwoodMP
 
             if (string.IsNullOrWhiteSpace(name))
             {
-                _session.LocalName = "Player";
+                _host.Session.LocalName = "Player";
             }
             else
             {
-                _session.LocalName = name.Trim();
+                _host.Session.LocalName = name.Trim();
             }
         }
 
@@ -2566,9 +2561,9 @@ namespace DarkwoodMP
                 var r = f.Row(Ui.RowH, 90, 0, 0);
                 Ui.Label(r[0], "Your name");
                 Ui.Label(
-                    r[1], PixelFont.Fit(_session.LocalName, r[1].width),
+                    r[1], PixelFont.Fit(_host.Session.LocalName, r[1].width),
                     MenuSkin.Bright);
-                if (!_session.Active)
+                if (!_host.Session.Active)
                 {
                     Ui.Label(
                         r[2], "change it in Options", MenuSkin.Dim,
@@ -2604,22 +2599,22 @@ namespace DarkwoodMP
                     "You're in the host's world: your own saves are untouched.",
                     MenuSkin.Dim);
             }
-            else if (WorldShare.InWorld && !_session.Active)
+            else if (WorldShare.InWorld && !_host.Session.Active)
             {
                 Ui.Text(
                     f, "Joining a game leaves the one you're in (save first).",
                     MenuSkin.Dim);
             }
 
-            if (!_session.Active && CantHostReason is string why)
+            if (!_host.Session.Active && CantHostReason is string why)
             {
                 Ui.Text(f, why, MenuSkin.Dim);
             }
 
             Ui.Heading(f, "Steam");
-            if (_steam is IGuiSection steamGui)
+            if (_host.Steam is IGuiSection steamGui)
             {
-                steamGui.DrawGui(_session, f);
+                steamGui.DrawGui(_host.Session, f);
             }
             else
             {
@@ -2637,20 +2632,20 @@ namespace DarkwoodMP
             Ui.Heading(f, "Direct connection");
             _direct.Draw(f);
 
-            if (_session.Active && _session.Names.Count > 0)
+            if (_host.Session.Active && _host.Session.Names.Count > 0)
             {
                 Ui.Heading(f, "Players");
                 ulong hostId;
-                if (_session.IsHost)
+                if (_host.Session.IsHost)
                 {
-                    hostId = _session.LocalId;
+                    hostId = _host.Session.LocalId;
                 }
                 else
                 {
-                    hostId = _session.HostId;
+                    hostId = _host.Session.HostId;
                 }
 
-                foreach (var kv in _session.Names)
+                foreach (var kv in _host.Session.Names)
                 {
                     string hostTag = "";
                     if (kv.Key == hostId)
@@ -2659,7 +2654,7 @@ namespace DarkwoodMP
                     }
 
                     string youTag = "";
-                    if (kv.Key == _session.LocalId)
+                    if (kv.Key == _host.Session.LocalId)
                     {
                         youTag = "  (you)";
                     }
@@ -2681,8 +2676,8 @@ namespace DarkwoodMP
         /// </summary>
         private void DrawTestWorld(Flow f)
         {
-            bool inMenu = WorldShare.MainMenuReady() && !_session.Active;
-            if (!inMenu && !(TestWorld.Active && !_session.IsClient))
+            bool inMenu = WorldShare.MainMenuReady() && !_host.Session.Active;
+            if (!inMenu && !(TestWorld.Active && !_host.Session.IsClient))
             {
                 return;
             }
@@ -2840,7 +2835,7 @@ namespace DarkwoodMP
 
             bool changed = text != _lastPresence;
             _lastPresence = text;
-            if (_steam == null)
+            if (_host.Steam == null)
             {
                 if (changed)
                 {
@@ -2865,15 +2860,15 @@ namespace DarkwoodMP
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void SetSteamPresence(string text, bool log)
         {
-            if (!(_steam is SteamBackend sb))
+            if (!(_host.Steam is SteamBackend sb))
             {
                 return;
             }
 
             int players = 1;
-            if (_session.Active)
+            if (_host.Session.Active)
             {
-                players = _session.PlayerCount;
+                players = _host.Session.PlayerCount;
             }
 
             sb.SetPresence(text, players);
@@ -2915,21 +2910,21 @@ namespace DarkwoodMP
                 parts.Add(biome);
             }
 
-            if (!_session.Active)
+            if (!_host.Session.Active)
             {
                 parts.Add("Playing alone");
             }
             else
             {
                 string count =
-                    $"{_session.PlayerCount}/{_session.Backend.MaxPlayers} "
-                        + "players";
-                if (_session.IsHost)
+                    $"{_host.Session.PlayerCount}/"
+                        + $"{_host.Session.Backend.MaxPlayers} players";
+                if (_host.Session.IsHost)
                 {
                     parts.Add($"Hosting, {count}");
                 }
-                else if (_session.Names.TryGetValue(
-                    _session.HostId, out var host)
+                else if (_host.Session.Names.TryGetValue(
+                    _host.Session.HostId, out var host)
                     && !string.IsNullOrEmpty(host))
                 {
                     parts.Add($"In {host}'s game, {count}");
@@ -3079,10 +3074,10 @@ namespace DarkwoodMP
 
         private void OnDestroy()
         {
-            Session session = _session;
-            if (session != null)
+            ModHost host = _host;
+            if (host != null)
             {
-                session.Dispose();
+                host.Dispose();
             }
 
             Harmony harmony = _harmony;

@@ -347,7 +347,7 @@ namespace DarkwoodMP
             Net.Session session = null;
             if (plugin != null)
             {
-                session = plugin.Session;
+                session = plugin.Host.Session;
             }
 
             if (session != null && session.IsHost && session.Peers.Count > 0)

@@ -1,0 +1,71 @@
+using System;
+using BepInEx;
+using DarkwoodMP.Net;
+
+namespace DarkwoodMP
+{
+    /// <summary>
+    /// What lives as long as the game: the Session object, its backends and
+    /// the server browser, which the main menu needs when no session runs.
+    /// Plugin owns it, and can't hold these itself: it has to stay loadable
+    /// when DarkwoodMP.Core.dll is missing (see CoreCheck), so it has no
+    /// field of a core type. ModHost also starts a CoopSession when a
+    /// session starts and ends it when the session ends.
+    /// </summary>
+    internal sealed class ModHost : IDisposable
+    {
+        public readonly Session Session;
+        public readonly TcpBackend Tcp;
+        public readonly ServerBrowser Browser;
+
+        /// <param name="opensPort">whether hosting asks the router to
+        /// forward the port (Host.OpenPort)</param>
+        public ModHost(Func<bool> opensPort)
+        {
+            var log = new BepInLog();
+            Session = new Session(new UnityClock(), log, PluginInfo.Version)
+            {
+                LocalKey = PlayerKey.Load(Paths.ConfigPath, log)
+            };
+
+            Tcp = new TcpBackend(log, PluginInfo.Version)
+            {
+                PlayerCount = () => Session.PlayerCount,
+                MapPort = opensPort,
+                BeforeLeave = World.Characters.SaveBeforeLeaving
+            };
+
+            Session.Add(Tcp);
+            Browser = new ServerBrowser(Paths.ConfigPath, log);
+            // First, so a CoopSession exists before any other handler of
+            // the start runs, and is gone before the others' cleanups.
+            Session.OnSessionStarted += StartCoop;
+            Session.OnSessionEnded += Coop.End;
+        }
+
+        /// The Steam backend once Steam is up; null before that and on GOG.
+        /// Typed as the interface: no Steamworks type may appear here.
+        public INetBackend Steam { get; private set; }
+
+        public void AddSteam(INetBackend steam)
+        {
+            Session.Add(steam);
+            Steam = steam;
+        }
+
+        // A backend can take over from another without the old session
+        // ending first (accepting a Steam invite while hosting Direct), so
+        // the old CoopSession is ended before the new one hooks in.
+        private void StartCoop()
+        {
+            Coop.End();
+            Coop.Begin(new CoopSession(Session));
+        }
+
+        public void Dispose()
+        {
+            Coop.End();
+            Session.Dispose();
+        }
+    }
+}

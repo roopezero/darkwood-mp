@@ -13,8 +13,9 @@ its old form (static classes, logic inside patches) still applies to it. The
 core, analyzer and unit test projects exist. The core has the rules and the
 network code (`Session`, the packets, `TcpBackend` and the server browser);
 the plugin keeps the Steam backend. The map test steps are in
-`src/DarkwoodMP.MapTests`, a second plugin. `ModHost`, `CoopSession` and
-`WorldScope` don't exist yet.
+`src/DarkwoodMP.MapTests`, a second plugin. `ModHost` holds the `Session`,
+its backends and the server browser; `CoopSession`, `Coop.Current` and
+`WorldScope` exist, and no subsystem has moved into them yet.
 [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
 
 ## The idea: a core of rules, and a thin shell around the game

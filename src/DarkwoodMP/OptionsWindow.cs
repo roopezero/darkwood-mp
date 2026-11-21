@@ -871,7 +871,7 @@ namespace DarkwoodMP
             Net.Session session = null;
             if (Plugin.Instance != null)
             {
-                session = Plugin.Instance.Session;
+                session = Plugin.Instance.Host.Session;
             }
 
             bool inGame = session != null && session.Active;
