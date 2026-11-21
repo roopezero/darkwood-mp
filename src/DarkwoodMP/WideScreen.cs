@@ -108,7 +108,8 @@ namespace DarkwoodMP
             GameSettings.Save();
             Screen.SetResolution(native.width, native.height, true);
             Plugin.Log.LogInfo(
-                $"First start on a wide screen: {native.width}x{native.height}, full screen");
+                "First start on a wide screen: "
+                    + $"{native.width}x{native.height}, full screen");
         }
     }
 

@@ -66,7 +66,8 @@ namespace DarkwoodMP.World
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[pathfinding] couldn't finish the graph updates before a scan: {e.Message}");
+                    "[pathfinding] couldn't finish the graph updates before a "
+                        + $"scan: {e.Message}");
             }
         }
     }

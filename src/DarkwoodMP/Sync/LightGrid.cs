@@ -62,7 +62,9 @@ namespace DarkwoodMP.Sync
                 if (Logged.Add(__instance.GetInstanceID()))
                 {
                     Plugin.Log.LogInfo(
-                        $"[lights] {Path(__instance.transform)} at {pos} is outside the pathfinding grid: it lights no nodes there");
+                        $"[lights] {Path(__instance.transform)} at {pos} is "
+                            + "outside the pathfinding grid: it lights no "
+                            + "nodes there");
                 }
                 return false;
             }

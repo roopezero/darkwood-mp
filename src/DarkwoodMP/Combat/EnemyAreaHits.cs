@@ -248,7 +248,8 @@ namespace DarkwoodMP.Combat
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] enemy explosion ({fx}, {sound}) at {ex.transform.position}");
+                    $"[world] enemy explosion ({fx}, {sound}) at "
+                        + $"{ex.transform.position}");
             }
         }
 
@@ -325,7 +326,8 @@ namespace DarkwoodMP.Combat
             if (go == null)
             {
                 Plugin.Log.LogInfo(
-                    $"The host's enemy exploded with {name}, which this game hasn't loaded: sound only");
+                    $"The host's enemy exploded with {name}, which this game "
+                        + "hasn't loaded: sound only");
             }
             FxByName[name] = go;
             return go;
@@ -566,7 +568,8 @@ namespace DarkwoodMP.Combat
                 flash = ex.explosionPrefab.name;
             }
             Plugin.Log.LogInfo(
-                $"--dwmp-test-blast: an enemy bomb ({flash}) beside {p.OwnerName}");
+                $"--dwmp-test-blast: an enemy bomb ({flash}) beside "
+                    + $"{p.OwnerName}");
             ex.onActivate();
             Object.Destroy(go);
             yield return new WaitForSeconds(1f);

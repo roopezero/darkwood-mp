@@ -48,14 +48,17 @@ namespace DarkwoodMP.Combat
                 if (World.MapScenarioDogWatch.On)
                 {
                     Plugin.Log.LogInfo(
-                        $"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
+                        $"[dogwatch] {s.attackerTransform.name}'s hit on "
+                            + $"{proxy.OwnerName}'s stand-in blocked: no line "
+                            + "of sight");
                 }
                 return false;
             }
             if (World.MapScenarioDogWatch.On)
             {
                 Plugin.Log.LogInfo(
-                    $"[dogwatch] {s.attackerTransform.name} hit {proxy.OwnerName}'s stand-in for {s.damage:0}");
+                    $"[dogwatch] {s.attackerTransform.name} hit "
+                        + $"{proxy.OwnerName}'s stand-in for {s.damage:0}");
             }
 
             var attacker = s.attackerTransform.GetComponent<CharBase>();
@@ -377,7 +380,8 @@ namespace DarkwoodMP.Combat
                         count = w.Count;
                     }
                     message =
-                        $"The host is away ({name}): the world is kept running around {count} other player(s)";
+                        $"The host is away ({name}): the world is kept running "
+                            + $"around {count} other player(s)";
                 }
                 log.LogInfo(message);
             }
@@ -623,7 +627,9 @@ namespace DarkwoodMP.Combat
                 return true;
             }
             Plugin.Log.LogInfo(
-                $"[enemy] {__instance.type} at {__instance.transform.position}: not spawned here, the host's comes from the host");
+                $"[enemy] {__instance.type} at "
+                    + $"{__instance.transform.position}: not spawned here, the "
+                    + "host's comes from the host");
             return false;
         }
     }
@@ -673,12 +679,16 @@ namespace DarkwoodMP.Combat
                     }
                     co.registerMe();
                     Plugin.Log.LogInfo(
-                        $"[enemy] {c.name}'s corpse at {c.transform.position} lies outside {Core.getTrueLocationName(__instance.name)}: kept as that location is left");
+                        $"[enemy] {c.name}'s corpse at {c.transform.position} "
+                            + "lies outside "
+                            + $"{Core.getTrueLocationName(__instance.name)}: "
+                            + "kept as that location is left");
                 }
                 catch (System.Exception e)
                 {
                     Plugin.Log.LogWarning(
-                        $"Couldn't keep {c.name}'s corpse out of {__instance.name}: {e.Message}");
+                        $"Couldn't keep {c.name}'s corpse out of "
+                            + $"{__instance.name}: {e.Message}");
                 }
             }
         }
@@ -1146,7 +1156,8 @@ namespace DarkwoodMP.Combat
             if (Threat.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
+                    $"[threat] {__instance.name} sent after the player: goes "
+                        + $"for {((NetPlayerProxy)best).OwnerName}");
             }
             return false;
         }
@@ -1197,7 +1208,9 @@ namespace DarkwoodMP.Combat
             int characterArg = 0) =>
             JoinerAi.Swap(
                 instructions, HostPosition, helper, where, arg: characterArg,
-                none: $"PlayerPositionTranspiler: no Player.Instance._transform.position in {where} (game changed?); it still uses the host's player");
+                none: "PlayerPositionTranspiler: no "
+                    + $"Player.Instance._transform.position in {where} (game "
+                    + "changed?); it still uses the host's player");
 
         private static readonly System.Reflection.FieldInfo PlayerTransform =
             AccessTools.Field(typeof(Player), "_transform");

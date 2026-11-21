@@ -327,7 +327,9 @@ namespace DarkwoodMP
             _gammaChanged = false;
             GameSettings.Save();
             Plugin.Log.LogInfo(
-                $"[options] applied: post-fx {_postFx}, lights {_light}, vsync {_vsync}, zoom {_zoom}, music {_music:0.00}, sound {_sound:0.00}, language {_lang}");
+                $"[options] applied: post-fx {_postFx}, lights {_light}, vsync "
+                    + $"{_vsync}, zoom {_zoom}, music {_music:0.00}, sound "
+                    + $"{_sound:0.00}, language {_lang}");
         }
 
         /// <summary>
@@ -839,7 +841,8 @@ namespace DarkwoodMP
             else
             {
                 text =
-                    $"Others see you as {shown}. Left empty, it's your Steam name, or your computer's user name.";
+                    $"Others see you as {shown}. Left empty, it's your Steam "
+                        + "name, or your computer's user name.";
             }
             Ui.Text(f, text, MenuSkin.Dim);
 
@@ -1786,7 +1789,9 @@ namespace DarkwoodMP
                     text = "started";
                 }
                 Plugin.Log.LogInfo(
-                    $"[options] listening for {Columns[_mapCol].ToLowerInvariant()} input for {_mapRow.Label}: {text}");
+                    "[options] listening for "
+                        + $"{Columns[_mapCol].ToLowerInvariant()} input for "
+                        + $"{_mapRow.Label}: {text}");
                 if (!started)
                 {
                     StopMapping("Couldn't listen for a key.", warn: true);
@@ -1825,7 +1830,8 @@ namespace DarkwoodMP
                     data.responseCallback(
                         RW.InputMapper.ConflictResponse.Cancel);
                     StopMapping(
-                        $"{key} is the game's own for {other}: nothing changed.",
+                        $"{key} is the game's own for {other}: nothing "
+                            + "changed.",
                         warn: true);
                 }
                 else

@@ -77,7 +77,8 @@ namespace DarkwoodMP.Sync
                     trigger = ", trigger";
                 }
                 list.Add($"{path} [layer {layer}, {kind}{trigger}, " +
-                         $"{b.size.x:0}x{b.size.z:0} at ({b.center.x:0}, {b.center.z:0})]");
+                         $"{b.size.x:0}x{b.size.z:0} at ({b.center.x:0}, "
+                        + $"{b.center.z:0})]");
             }
             return list;
         }
@@ -131,8 +132,11 @@ namespace DarkwoodMP.Sync
             _loggedAt = Time.unscaledTime;
             var r = light.GetComponent<Renderer>();
             Plugin.Log.LogInfo(
-                $"[view] our player's view is switched off at ({pos.x:0}, {pos.z:0}) (a black screen): " +
-                               $"the game's ray down through the player's light hits {set}; light drawn {(r != null && r.enabled)}");
+                $"[view] our player's view is switched off at ({pos.x:0}, "
+                    + $"{pos.z:0}) (a black screen): " +
+                               "the game's ray down through the player's "
+                    + $"light hits {set}; light drawn "
+                    + $"{(r != null && r.enabled)}");
         }
     }
 }

@@ -299,7 +299,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[ids] tied {go.name} at {go.transform.position} to the host's #{list[best].id} (given out a while ago)");
+                    $"[ids] tied {go.name} at {go.transform.position} to the "
+                        + $"host's #{list[best].id} (given out a while ago)");
             }
         }
 
@@ -355,7 +356,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[ids] tied {name} at {best.transform.position} to the host's #{id}");
+                    $"[ids] tied {name} at {best.transform.position} to the "
+                        + $"host's #{id}");
             }
             return true;
         }

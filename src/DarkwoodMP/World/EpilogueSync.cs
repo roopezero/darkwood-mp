@@ -235,7 +235,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             Plugin.Log.LogInfo(
-                $"[epilogue] test: in the epilogue: {Player.Instance != null && Player.Instance.inEpilogue}, shared dream {DreamSync.Shared}");
+                "[epilogue] test: in the epilogue: "
+                    + $"{Player.Instance != null && Player.Instance.inEpilogue}, shared dream {DreamSync.Shared}");
             yield return new WaitForSecondsRealtime(8f);
             Plugin.Log.LogInfo("[epilogue] test: skipping to the credits");
             BeforeCredits();
@@ -261,7 +262,8 @@ namespace DarkwoodMP.World
                 }
             }
             Plugin.Log.LogWarning(
-                $"[epilogue] refused a dream end: {d.preset.name} has no outcome \"{outcome}\"");
+                $"[epilogue] refused a dream end: {d.preset.name} has no "
+                    + $"outcome \"{outcome}\"");
             return false;
         }
 
@@ -423,7 +425,8 @@ namespace DarkwoodMP.World
             if (Playing && !_panGo)
             {
                 Plugin.Log.LogInfo(
-                    $"[epilogue] {PanWait:0} s since the first death in the burning forest: the pan runs for everyone");
+                    $"[epilogue] {PanWait:0} s since the first death in the "
+                        + "burning forest: the pan runs for everyone");
                 ReleasePan();
             }
         }
@@ -538,7 +541,8 @@ namespace DarkwoodMP.World
                         catch (Exception e)
                         {
                             Plugin.Log.LogWarning(
-                                $"[epilogue] couldn't run the pan: {e.Message}");
+                                "[epilogue] couldn't run the pan: "
+                                    + $"{e.Message}");
                         }
                     }
                 }
@@ -589,7 +593,9 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogWarning(
-                $"[epilogue] our outcomes screen had burnedForest {o.burnedForest}, the host's {_hostBurned == 1}: using the host's");
+                "[epilogue] our outcomes screen had burnedForest "
+                    + $"{o.burnedForest}, the host's {_hostBurned == 1}: using "
+                    + "the host's");
             o.burnedForest = _hostBurned == 1;
         }
 
@@ -632,7 +638,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             Plugin.Log.LogInfo(
-                $"[epilogue] the part starts where another player stands: ours moves over by {(to - at).magnitude:0}");
+                "[epilogue] the part starts where another player stands: ours "
+                    + $"moves over by {(to - at).magnitude:0}");
             p._transform.position = to;
             var body = p.GetComponent<Rigidbody>();
             if (body != null)
@@ -730,7 +737,8 @@ namespace DarkwoodMP.World
             if (Player.Instance != null && Player.Instance.inEpilogue)
             {
                 Plugin.Log.LogInfo(
-                    $"[epilogue] playing the epilogue together (shared dream {DreamSync.Shared})");
+                    "[epilogue] playing the epilogue together (shared dream "
+                        + $"{DreamSync.Shared})");
                 yield break;
             }
             if (!Playing)
@@ -819,7 +827,8 @@ namespace DarkwoodMP.World
                     return;
                 }
                 Plugin.Log.LogInfo(
-                    $"[epilogue] {s.NameOf(from)} crawled to their death in the burning forest");
+                    $"[epilogue] {s.NameOf(from)} crawled to their death in "
+                        + "the burning forest");
                 Crawled(from);
                 return;
             }
@@ -934,7 +943,8 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogInfo(
-                $"[epilogue] {s.NameOf(who)} set the Being on fire: running {BurnEvents} here too");
+                $"[epilogue] {s.NameOf(who)} set the Being on fire: running "
+                    + $"{BurnEvents} here too");
             WorldActions.Replaying = true;
             try
             {

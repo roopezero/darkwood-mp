@@ -282,7 +282,10 @@ namespace DarkwoodMP.Combat
                 }
                 SentLog.Add((where, who, c));
                 Plugin.Log.LogInfo(
-                    $"[night] {c.name} sent at {who}'s hideout {where} ({OutAt(loc, toSpawn.characterName)} of {toSpawn.amount} {toSpawn.characterName} out there), " +
+                    $"[night] {c.name} sent at {who}'s hideout {where} "
+                        + $"({OutAt(loc, toSpawn.characterName)} of "
+                        + $"{toSpawn.amount} {toSpawn.characterName} out "
+                        + "there), " +
                                    $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
                 return c;
             }
@@ -433,7 +436,8 @@ namespace DarkwoodMP.Combat
             if (proxy != null && Threat.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[night] night worm sent at {proxy.OwnerName}, {Core.trueDistance(pos, around):0} from them");
+                    $"[night] night worm sent at {proxy.OwnerName}, "
+                        + $"{Core.trueDistance(pos, around):0} from them");
             }
             return c;
         }
@@ -460,7 +464,9 @@ namespace DarkwoodMP.Combat
                     locationName = loc.name;
                 }
                 Plugin.Log.LogInfo(
-                    $"[night test] {proxy.OwnerName} at {proxy.transform.position}: location {locationName}, at a hideout: {home}");
+                    $"[night test] {proxy.OwnerName} at "
+                        + $"{proxy.transform.position}: location "
+                        + $"{locationName}, at a hideout: {home}");
                 var worm = SpawnWorm(spawner, proxy);
                 var log = Plugin.Log;
                 string line;
@@ -476,7 +482,8 @@ namespace DarkwoodMP.Combat
                         target = worm.target.name;
                     }
                     line =
-                        $"[night test] worm for {owner} at {position}, {distance:0} from them, going for {target}";
+                        $"[night test] worm for {owner} at {position}, "
+                            + $"{distance:0} from them, going for {target}";
                 }
                 else
                 {
@@ -504,12 +511,16 @@ namespace DarkwoodMP.Combat
                     if (c != null)
                     {
                         data =
-                            $"[night test] night attacker {c.name} for {proxy.OwnerName} at {c.transform.position}";
+                            $"[night test] night attacker {c.name} for "
+                                + $"{proxy.OwnerName} at "
+                                + $"{c.transform.position}";
                     }
                     else
                     {
                         data =
-                            $"[night test] no night attacker for {proxy.OwnerName} (the scenario has none left)";
+                            "[night test] no night attacker for "
+                                + $"{proxy.OwnerName} (the scenario has none "
+                                + "left)";
                     }
                     Plugin.Log.LogInfo(data);
                     JoinerAi.Test(c, proxy);
@@ -517,7 +528,8 @@ namespace DarkwoodMP.Combat
                 else
                 {
                     Plugin.Log.LogInfo(
-                        $"[night test] no location to send a night attacker from for {proxy.OwnerName}");
+                        "[night test] no location to send a night attacker "
+                            + $"from for {proxy.OwnerName}");
                 }
             }
             Plugin.Log.LogInfo("[night test] done");

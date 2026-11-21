@@ -271,7 +271,8 @@ namespace DarkwoodMP.Combat
                 if (!p.C.gameObject.activeSelf && !p.Settled)
                 {
                     Plugin.Log.LogInfo(
-                        $"[enemy] the host's {p.C.name} #{p.Id} was switched off here: on again");
+                        $"[enemy] the host's {p.C.name} #{p.Id} was switched "
+                            + "off here: on again");
                     p.C.gameObject.SetActive(true);
                 }
                 if (!EnemyMotion.Where(p.Motion, now, out var pos, out var rot))
@@ -1098,7 +1099,8 @@ namespace DarkwoodMP.Combat
                     weaponType = "bare hands";
                 }
                 log.LogInfo(
-                    $"[authority] {hitter}'s hit on {target}: {damage:0} is more than {weaponType} can do; {applied:0}");
+                    $"[authority] {hitter}'s hit on {target}: {damage:0} is "
+                        + $"more than {weaponType} can do; {applied:0}");
             }
             World.Authority.Result(
                 applied.ToString(
@@ -1243,7 +1245,8 @@ namespace DarkwoodMP.Combat
                 if (i < 0)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped");
+                        $"[authority] a hit with {weapon.type} came with "
+                            + $"{e.type}, which it doesn't cause; dropped");
                     continue;
                 }
                 result.Add(left[i]);
@@ -1496,7 +1499,8 @@ namespace DarkwoodMP.Combat
                     name = parent.name;
                 }
                 Plugin.Log.LogWarning(
-                    $"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {name})");
+                    $"[enemy] the host's {c.name} #{p.Id} is still switched "
+                        + $"off here (under {name})");
             }
         }
 
@@ -1540,7 +1544,8 @@ namespace DarkwoodMP.Combat
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't put {c.name} back into the culling: {e.Message}");
+                    $"Couldn't put {c.name} back into the culling: "
+                        + $"{e.Message}");
             }
         }
 
@@ -1794,7 +1799,9 @@ namespace DarkwoodMP.Combat
                 .Select(
                     x => $"{x.name} {x.bounds.size.x:0}x{x.bounds.size.z:0}");
             Plugin.Log.LogInfo(
-                $"[enemy] {c.name} {when}: colliders on the view's shadow layers (mask {mask}): {string.Join(", ", b)}; sizes {string.Join(", ", sizes)}");
+                $"[enemy] {c.name} {when}: colliders on the view's shadow "
+                    + $"layers (mask {mask}): {string.Join(", ", b)}; sizes "
+                    + $"{string.Join(", ", sizes)}");
         }
 
         /// <summary>
@@ -1926,7 +1933,8 @@ namespace DarkwoodMP.Combat
                         npcNote = "";
                     }
                     log.LogInfo(
-                        $"Save id {uid} is our {kind}{npcNote}, not the host's {name}: making it from its prefab");
+                        $"Save id {uid} is our {kind}{npcNote}, not the host's "
+                            + $"{name}: making it from its prefab");
                     c = null;
                 }
             }
@@ -2013,7 +2021,8 @@ namespace DarkwoodMP.Combat
                 switched = ", switched on";
             }
             Plugin.Log.LogInfo(
-                $"Showing the host's {name} #{id} ({text}{switched}); {Frozen.Count} of our own characters are frozen");
+                $"Showing the host's {name} #{id} ({text}{switched}); "
+                    + $"{Frozen.Count} of our own characters are frozen");
             LogFovBlockers(c, $"#{id} shown");
         }
 
@@ -2184,7 +2193,8 @@ namespace DarkwoodMP.Combat
                     catch (System.Exception e)
                     {
                         Plugin.Log.LogWarning(
-                            $"Couldn't remove what's attached to {p.C.name}: {e.Message}");
+                            $"Couldn't remove what's attached to {p.C.name}: "
+                                + $"{e.Message}");
                     }
                     // The human spiders' sound_loop child (an Item with
                     // ItemSounds) is gone from the host's copy as it dies (seen
@@ -2411,7 +2421,9 @@ namespace DarkwoodMP.Combat
                     note = "; playing again: " + again;
                 }
                 Plugin.Log.LogInfo(
-                    $"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched {text} with {Core.getTrueLocationName(loc.name)}{note}");
+                    $"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched "
+                        + $"{text} with "
+                        + $"{Core.getTrueLocationName(loc.name)}{note}");
             }
         }
 
@@ -2487,7 +2499,9 @@ namespace DarkwoodMP.Combat
                     c.collider.enabled = true;
                 }
                 Plugin.Log.LogInfo(
-                    $"The host's {c.name} #{p.Id} died: it has no death animation, so its body isn't searchable (as on the host)");
+                    $"The host's {c.name} #{p.Id} died: it has no death "
+                        + "animation, so its body isn't searchable (as on the "
+                        + "host)");
                 return;
             }
             foreach (var step in CorpseSteps)
@@ -2524,7 +2538,8 @@ namespace DarkwoodMP.Combat
                             message = e.Message;
                         }
                         Plugin.Log.LogWarning(
-                            $"Couldn't settle {c.name}'s corpse ({step.Name}): {message}");
+                            $"Couldn't settle {c.name}'s corpse ({step.Name}): "
+                                + $"{message}");
                     }
                 }
             }
@@ -2532,12 +2547,14 @@ namespace DarkwoodMP.Combat
             if (c.GetComponent<Item>() != null)
             {
                 data =
-                    $"The host's {c.name} #{p.Id} died: its corpse can be searched here";
+                    $"The host's {c.name} #{p.Id} died: its corpse can be "
+                        + "searched here";
             }
             else
             {
                 data =
-                    $"The host's {c.name} #{p.Id} died, but its corpse couldn't be made searchable here";
+                    $"The host's {c.name} #{p.Id} died, but its corpse "
+                        + "couldn't be made searchable here";
             }
             Plugin.Log.LogInfo(data);
             LogFovBlockers(c, $"#{p.Id} settled");
@@ -2579,7 +2596,9 @@ namespace DarkwoodMP.Combat
                 }
                 Plugin.Log.LogInfo(
                     $"[enemy] {c.name} dies here: hit collider {text}, " +
-                                   $"pre-death {c.hasPreDeath}; switched-off parts on the view's shadow layers (mask {mask}): [{string.Join(", ", off)}]");
+                                   $"pre-death {c.hasPreDeath}; switched-off "
+                        + $"parts on the view's shadow layers (mask {mask}): "
+                        + $"[{string.Join(", ", off)}]");
                 if (c.collider != null)
                 {
                     if (!c.dontSwitchColliderTriggerOnDeath)
@@ -2612,7 +2631,8 @@ namespace DarkwoodMP.Combat
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't settle {c.name}'s body as die2 does: {e.Message}");
+                    $"Couldn't settle {c.name}'s body as die2 does: "
+                        + $"{e.Message}");
             }
         }
 
@@ -2678,7 +2698,8 @@ namespace DarkwoodMP.Combat
                         message = e.Message;
                     }
                     Plugin.Log.LogWarning(
-                        $"Couldn't settle {c.name}'s cut ({step.Name}): {message}");
+                        $"Couldn't settle {c.name}'s cut ({step.Name}): "
+                            + $"{message}");
                 }
             }
             try
@@ -2719,7 +2740,8 @@ namespace DarkwoodMP.Combat
                     $"Couldn't settle {c.name}'s cut: {e.Message}");
             }
             Plugin.Log.LogInfo(
-                $"The host's {c.name} #{p.Id} was cut in half: its lower half is the host's, nothing to search here");
+                $"The host's {c.name} #{p.Id} was cut in half: its lower half "
+                    + "is the host's, nothing to search here");
         }
 
         private static readonly System.Reflection.MethodInfo YPosAfterDeath =
@@ -2811,9 +2833,13 @@ namespace DarkwoodMP.Combat
                     }
                 }
                 Plugin.Log.LogInfo(
-                    $"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
-                                   $"animator {text}, clip {shownClip}, collider {colliderState}, " +
-                                   $"capsule {capsuleState}, death colliders {count}; at {trimmedLine}); trigger now {(c.collider != null && c.collider.isTrigger)}");
+                    $"{c.name}'s corpse settled here by the mod: the game's "
+                        + $"setDeathCollider stopped ({why.Message}; " +
+                                   $"animator {text}, clip {shownClip}, "
+                        + $"collider {colliderState}, " +
+                                   $"capsule {capsuleState}, death colliders "
+                        + $"{count}; at {trimmedLine}); trigger now "
+                        + $"{(c.collider != null && c.collider.isTrigger)}");
             }
             catch (System.Exception e)
             {
@@ -2938,7 +2964,8 @@ namespace DarkwoodMP.Combat
                 }
                 _corpseIds.Remove(p.C);
                 Plugin.Log.LogInfo(
-                    $"The host's corpse #{id} ({p.C.name}) is gone there: removed here");
+                    $"The host's corpse #{id} ({p.C.name}) is gone there: "
+                        + "removed here");
                 // Destroyed, our copy from the save too: the host's is out of
                 // its world for good, and a hidden copy would still be in ours
                 // (its body searchable by name, saved with our world).
@@ -3039,7 +3066,8 @@ namespace DarkwoodMP.Combat
                 catch (System.Exception e)
                 {
                     Plugin.Log.LogWarning(
-                        $"Couldn't play {p.C.name}'s loop {audio}: {e.Message}");
+                        $"Couldn't play {p.C.name}'s loop {audio}: "
+                            + $"{e.Message}");
                 }
                 return;
             }

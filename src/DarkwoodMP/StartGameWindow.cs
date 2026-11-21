@@ -93,7 +93,8 @@ namespace DarkwoodMP
             _win.ResetPlace();
             _win.Show();
             Plugin.Log.LogInfo(
-                $"[start game] opened: {_slots.Count(s => !s.Free)} saves, {_slots.Count(s => s.Free)} free slots");
+                $"[start game] opened: {_slots.Count(s => !s.Free)} saves, "
+                    + $"{_slots.Count(s => s.Free)} free slots");
         }
 
         public void Close() => _win.Close();
@@ -486,7 +487,8 @@ namespace DarkwoodMP
             {
                 ConfirmDialog.Ask(
                     "Delete save",
-                    $"Delete the save in slot {s.Id} ({Summary(p)})? It can't be undone.",
+                    $"Delete the save in slot {s.Id} ({Summary(p)})? It can't "
+                        + "be undone.",
                     "Delete", () => Delete(s.Id));
             }
             Info(f, "Played", $"{Summary(p)};  last saved {p.timeSaved}");
@@ -504,7 +506,10 @@ namespace DarkwoodMP
             {
                 Ui.Text(
                     f,
-                    $"This save is from an older version of the game ({p.versionText()}). Open it from the game's own profiles screen, which explains what can be done with it.",
+                    "This save is from an older version of the game "
+                        + $"({p.versionText()}). Open it from the game's own "
+                        + "profiles screen, which explains what can be done "
+                        + "with it.",
                     MenuSkin.Warn);
             }
         }
@@ -558,7 +563,9 @@ namespace DarkwoodMP
                     }
                     ConfirmDialog.Ask(
                         "Overwrite save",
-                        $"Start the new game in slot {id}{text}? Its save ({Summary(s.Profile)}) is deleted when the game starts.",
+                        $"Start the new game in slot {id}{text}? Its save "
+                            + $"({Summary(s.Profile)}) is deleted when the "
+                            + "game starts.",
                         "Overwrite", () => _overwrite = id);
                 }
             }
@@ -566,7 +573,8 @@ namespace DarkwoodMP
             {
                 Ui.Text(
                     f,
-                    $"The new game goes in slot {_overwrite}; its save is deleted when you press Start.",
+                    $"The new game goes in slot {_overwrite}; its save is "
+                        + "deleted when you press Start.",
                     MenuSkin.Warn);
             }
         }
@@ -896,7 +904,10 @@ namespace DarkwoodMP
                     hosting = $", then host with {via}";
                 }
                 Plugin.Log.LogInfo(
-                    $"[start game] new game in slot {id} ({Difficulty(_difficulty)}, skip prologue {_skipPrologue}, backer content {_backer}){hosting}");
+                    $"[start game] new game in slot {id} "
+                        + $"({Difficulty(_difficulty)}, skip prologue "
+                        + $"{_skipPrologue}, backer content "
+                        + $"{_backer}){hosting}");
                 // As the profiles screen does for a free slot
                 // (MainMenu.displayProfile), then its Play
                 // (Button.playProfile).
@@ -1026,7 +1037,8 @@ namespace DarkwoodMP
                     var s = w.Chosen;
                     ConfirmDialog.Ask(
                         "Delete save",
-                        $"Delete the save in slot {s.Id} ({Summary(s.Profile)})? It can't be undone.",
+                        $"Delete the save in slot {s.Id} "
+                            + $"({Summary(s.Profile)})? It can't be undone.",
                         "Delete",
                         () => Plugin.Log.LogInfo(
                             "[start window] (not deleted)"));
@@ -1085,7 +1097,8 @@ namespace DarkwoodMP
                 answer = "yes";
             }
             Plugin.Log.LogInfo(
-                $"[start window] pressing Start: {target}, host {hosting}; can start: {answer}");
+                $"[start window] pressing Start: {target}, host {hosting}; can "
+                    + $"start: {answer}");
             w.Start();
         }
 

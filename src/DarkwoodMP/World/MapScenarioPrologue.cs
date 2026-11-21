@@ -55,7 +55,9 @@ namespace DarkwoodMP.World
                 "; ", Here<Locked>().Where(
                     l => !string.IsNullOrEmpty(l.keyType))
                     .Select(
-                        l => $"{l.name} key {l.keyType} locked {l.locked} door {l.GetComponent<Door>() != null} at {Fmt(l.transform.position)}"))
+                        l => $"{l.name} key {l.keyType} locked {l.locked} door "
+                            + $"{l.GetComponent<Door>() != null} at "
+                            + $"{Fmt(l.transform.position)}"))
                 + " | " + string.Join(
                 "; ", Here<Inventory>().SelectMany(
                     i => i.slots.Where(
@@ -64,14 +66,16 @@ namespace DarkwoodMP.World
                             && s.invItem.baseClass
                                 .GetComponent<KeyReference>() != null)
                         .Select(
-                            s => $"{s.invItem.type} (key {s.invItem.baseClass.GetComponent<KeyReference>().type}) in {i.name} at {Fmt(i.transform.position)}")))
+                            s => $"{s.invItem.type} (key "
+                                + $"{s.invItem.baseClass.GetComponent<KeyReference>().type}) in {i.name} at {Fmt(i.transform.position)}")))
                 + " | items with key in their name: " + string.Join(
                 "; ", Here<Inventory>().SelectMany(
                     i => i.slots.Where(
                         s => s != null && !InvItemClass.isNull(s.invItem)
                             && s.invItem.type.ToLower().Contains("key"))
                         .Select(
-                            s => $"{s.invItem.type} in {i.name} ({i.invType}) at {Fmt(i.transform.position)}")))
+                            s => $"{s.invItem.type} in {i.name} ({i.invType}) "
+                                + $"at {Fmt(i.transform.position)}")))
                 + $" | {Here<Locked>().Count()} locks, doors near us: "
                 + string.Join("; ", Here<Door>()
                     .Select(d =>
@@ -90,7 +94,9 @@ namespace DarkwoodMP.World
                         {
                             key = latch.keyType;
                         }
-                        return $"{name} at {spot} locked {locked} key '{key}' blocked {d.blocked} active {d.gameObject.activeInHierarchy}";
+                        return $"{name} at {spot} locked {locked} key '{key}' "
+                            + $"blocked {d.blocked} active "
+                            + $"{d.gameObject.activeInHierarchy}";
                     }));
 
         /// <summary>
@@ -114,7 +120,10 @@ namespace DarkwoodMP.World
                             {
                                 parent = g.transform.parent.name;
                             }
-                            return $"{giver} ({parent}) at {Fmt(g.transform.position)} gives {i.type} (key {i.GetComponent<KeyReference>().type})";
+                            return $"{giver} ({parent}) at "
+                                + $"{Fmt(g.transform.position)} gives {i.type} "
+                                + "(key "
+                                + $"{i.GetComponent<KeyReference>().type})";
                         })));
             var anywhere = StateDump.All<Locked>().Where(
                 l => l.keyType != null && l.keyType.Contains("tutorial"))
@@ -126,12 +135,18 @@ namespace DarkwoodMP.World
                     {
                         holder = l.transform.parent.name;
                     }
-                    return $"{lockName} ({holder}) key {l.keyType} locked {l.locked} at {Fmt(l.transform.position)} active {l.gameObject.activeInHierarchy}";
+                    return $"{lockName} ({holder}) key {l.keyType} locked "
+                        + $"{l.locked} at {Fmt(l.transform.position)} active "
+                        + $"{l.gameObject.activeInHierarchy}";
                 });
             var keyItems = StateDump.All<KeyReference>().Select(
-                k => $"{k.name} key {k.type} at {Fmt(k.transform.position)} active {k.gameObject.activeInHierarchy}");
+                k => $"{k.name} key {k.type} at {Fmt(k.transform.position)} "
+                    + $"active {k.gameObject.activeInHierarchy}");
             r.Info =
-                $"at {Fmt(P.transform.position)}: {Locks()} | events giving a key: {string.Join("; ", gives)} | tutorial locks anywhere: {string.Join("; ", anywhere)} | keys lying about: {string.Join("; ", keyItems)}";
+                $"at {Fmt(P.transform.position)}: {Locks()} | events giving a "
+                    + $"key: {string.Join("; ", gives)} | tutorial locks "
+                    + $"anywhere: {string.Join("; ", anywhere)} | keys lying "
+                    + $"about: {string.Join("; ", keyItems)}";
             yield break;
         }
 
@@ -196,14 +211,16 @@ namespace DarkwoodMP.World
             var j = Singleton<UI>.Instance.journal;
             j.keysDict.TryGetValue(key, out var k);
             string line =
-                $"{_keyItem} (key {key}) from {inv.name} {ObjRef.Of(inv.gameObject)} for {KeyDoorOf(key).name}: taken {took}, ";
+                $"{_keyItem} (key {key}) from {inv.name} "
+                    + $"{ObjRef.Of(inv.gameObject)} for {KeyDoorOf(key).name}: taken {took}, ";
             bool? inDream = null;
             if (k != null)
             {
                 inDream = k.inDream;
             }
             r.Info = line
-                + $"in our journal {k != null} (inDream {inDream}), left in it {inv.slots.Count(x => !InvItemClass.isNull(x.invItem) && x.invItem.type == _keyItem)}";
+                + $"in our journal {k != null} (inDream {inDream}), left in it "
+                + $"{inv.slots.Count(x => !InvItemClass.isNull(x.invItem) && x.invItem.type == _keyItem)}";
             if (k == null)
             {
                 r.Fail($"{r.Info}: not in our journal");
@@ -246,7 +263,8 @@ namespace DarkwoodMP.World
                 shared = "none";
             }
             r.Info =
-                $"key {wanted} in our journal {k != null} (inDream {inDream}), dreaming {dreaming}, shared dream {shared}";
+                $"key {wanted} in our journal {k != null} (inDream {inDream}), "
+                    + $"dreaming {dreaming}, shared dream {shared}";
             if ((k != null) != want)
             {
                 string text = "none";
@@ -298,7 +316,8 @@ namespace DarkwoodMP.World
             // a refusal would lock or close it again
             yield return new WaitForSeconds(2.5f);
             r.Info =
-                $"{d.name} {ObjRef.Of(d.gameObject)} key {a[0]}: unlocked with it {unlocked}, locked {l.locked}, open {d.opened}, refusals {Authority.RolledBack - refused}";
+                $"{d.name} "
+                    + $"{ObjRef.Of(d.gameObject)} key {a[0]}: unlocked with it {unlocked}, locked {l.locked}, open {d.opened}, refusals {Authority.RolledBack - refused}";
             if (Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
@@ -346,7 +365,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info =
-                $"{d.name} {ObjRef.Of(d.gameObject)}: locked {l.locked}, open {d.opened}";
+                $"{d.name} "
+                    + $"{ObjRef.Of(d.gameObject)}: locked {l.locked}, open {d.opened}";
             bool condition;
             if (open)
             {
@@ -419,7 +439,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
             r.Info =
-                $"{d.name} locked {l.locked} open {d.opened}, {_keyItem} back in {inv.name} {ObjRef.Of(inv.gameObject)}: "
+                $"{d.name} locked {l.locked} open {d.opened}, {_keyItem} back "
+                    + $"in {inv.name} {ObjRef.Of(inv.gameObject)}: "
                     + $"{inv.slots.Count(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == _keyItem)}, key in our journal {Singleton<UI>.Instance.journal.keysDict.ContainsKey(a[0])}";
             if (!l.locked || d.opened)
             {
@@ -492,8 +513,12 @@ namespace DarkwoodMP.World
                 shared = "none";
             }
             r.Info =
-                $"stage {stageName} (shared {shared}), first play {P.firstPlay}, antagonist {P.isAntagonist}, "
-                    + $"at {Locations.Current()} {Fmt(P.transform.position)}, carrying {Items()}, the other player seen {FriendSeen()}, time {Singleton<Controller>.Instance.CurrentTime}";
+                $"stage {stageName} (shared {shared}), first play "
+                    + $"{P.firstPlay}, antagonist {P.isAntagonist}, "
+                    + $"at {Locations.Current()} {Fmt(P.transform.position)}, "
+                    + $"carrying {Items()}, the other player seen "
+                    + $"{FriendSeen()}, time "
+                    + $"{Singleton<Controller>.Instance.CurrentTime}";
             if (Prologue.Stage != stage || DreamSync.Shared != stage)
             {
                 r.Fail($"not in the shared {stage}: {r.Info}");
@@ -558,7 +583,8 @@ namespace DarkwoodMP.World
                 now = "out of the prologue";
             }
             r.Info =
-                $"ended {stage} ({picked} of {names}): now {now} at {Locations.Current()} {Fmt(P.transform.position)}";
+                $"ended {stage} ({picked} of {names}): now {now} at "
+                    + $"{Locations.Current()} {Fmt(P.transform.position)}";
             if (Prologue.Stage == stage)
             {
                 r.Fail($"still in {stage}: {r.Info}");
@@ -610,7 +636,9 @@ namespace DarkwoodMP.World
                 shared = "none";
             }
             string line =
-                $"in the prologue {active}, dreaming {dreaming}, first play {first}, shared dream {shared}, at {Locations.Current()} {Fmt(P.transform.position)}, ";
+                $"in the prologue {active}, dreaming {dreaming}, first play "
+                    + $"{first}, shared dream {shared}, at "
+                    + $"{Locations.Current()} {Fmt(P.transform.position)}, ";
             string other;
             if (nearest == float.MaxValue)
             {
@@ -648,10 +676,12 @@ namespace DarkwoodMP.World
                     {
                         count = stock.getAllItems().Count;
                     }
-                    return $"{trader} at {spot} under {parent}/{grand} active {shown} id {id} ({count} for sale)";
+                    return $"{trader} at {spot} under {parent}/{grand} active "
+                        + $"{shown} id {id} ({count} for sale)";
                 });
             Plugin.Log.LogInfo(
-                $"[map] traders after the prologue: {string.Join("; ", wolves)}");
+                "[map] traders after the prologue: "
+                    + $"{string.Join("; ", wolves)}");
             if (Prologue.Active || d.dreaming || P.firstPlay
                 || DreamSync.Shared != null)
             {

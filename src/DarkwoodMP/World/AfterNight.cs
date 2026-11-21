@@ -248,7 +248,8 @@ namespace DarkwoodMP.World
             if (c.isAfterNight && !(d != null && d.dreaming))
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {NameOf(s, from)} walked out of their hideout: our morning is over too");
+                    $"[world] {NameOf(s, from)} walked out of their hideout: "
+                        + "our morning is over too");
                 if (TalkingToMorningVisitor())
                 {
                     _endPending = true;
@@ -270,7 +271,8 @@ namespace DarkwoodMP.World
                 ours = "waits for our dream";
             }
             Plugin.Log.LogInfo(
-                $"[world] {name} walked out of their hideout: the morning is over, sent to the others (ours {ours})");
+                $"[world] {name} walked out of their hideout: the morning is "
+                    + $"over, sent to the others (ours {ours})");
         }
 
         /// <summary>Host, every frame: a joiner still in a morning after
@@ -308,7 +310,8 @@ namespace DarkwoodMP.World
                     kv.Key, s.Begin(MsgType.AfterNightEnded), Channel.Control,
                     reliable: true);
                 Plugin.Log.LogInfo(
-                    $"[world] {NameOf(s, kv.Key)} is still in a morning that's over: told them");
+                    $"[world] {NameOf(s, kv.Key)} is still in a morning that's "
+                        + "over: told them");
             }
         }
 

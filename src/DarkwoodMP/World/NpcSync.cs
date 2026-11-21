@@ -266,7 +266,8 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] {npc.name} is at the host's {to.x:0},{to.z:0} ({d:0} away)");
+                            $"[world] {npc.name} is at the host's "
+                                + $"{to.x:0},{to.z:0} ({d:0} away)");
                     }
                     continue;
                 }

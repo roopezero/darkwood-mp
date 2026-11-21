@@ -651,7 +651,8 @@ namespace DarkwoodMP.World
             if (Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] our hit on {c.name}: its triggers are ours to set off");
+                    $"[world] our hit on {c.name}: its triggers are ours to "
+                        + "set off");
             }
             AsOwnAction(
                 () => Core.sendTriggerInfo(
@@ -699,7 +700,8 @@ namespace DarkwoodMP.World
                         triggersName = t.thisEventTriggers.name;
                     }
                     Plugin.Log.LogInfo(
-                        $"[world] {triggersName} ({type}): left to the player who did it");
+                        $"[world] {triggersName} ({type}): left to the player "
+                            + "who did it");
                 }
             }
             return true;
@@ -975,7 +977,9 @@ namespace DarkwoodMP.World
                 type = t.type;
             }
             Plugin.Log.LogInfo(
-                $"[world] world trigger {et.name} #{index} {r} ({type}): {s.NameOf(cause)} caused it, so its player part is theirs");
+                $"[world] world trigger {et.name} #{index} "
+                    + $"{r} ({type}): {s.NameOf(cause)} caused it, so its "
+                    + "player part is theirs");
             return true;
         }
 
@@ -1180,7 +1184,8 @@ namespace DarkwoodMP.World
             if (Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {what} fired for another player: our player gets its own part when they set it off");
+                    $"[world] {what} fired for another player: our player gets "
+                        + "its own part when they set it off");
             }
         }
 
@@ -1268,7 +1273,8 @@ namespace DarkwoodMP.World
             if (Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] asking for {what} {r}: it fired for another player");
+                    $"[world] asking for {what} {r}: it fired for another "
+                        + "player");
             }
             Authority.Request(w, what, (ok, reason, _) =>
             {
@@ -1276,7 +1282,8 @@ namespace DarkwoodMP.World
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {what} not run here: the host refused it ({reason})");
+                        $"[world] {what} not run here: the host refused it "
+                            + $"({reason})");
                     // Had it already (before a reload, or in an earlier
                     // session), or the host won't give it: don't ask again each
                     // time. Too far away is asked again next time.
@@ -1303,7 +1310,9 @@ namespace DarkwoodMP.World
             }
             HadOurPart(t);
             Plugin.Log.LogInfo(
-                $"[world] {what}: it fired for another player, running only our player's steps ({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
+                $"[world] {what}: it fired for another player, running only "
+                    + "our player's steps "
+                    + $"({string.Join(", ", ge.events.Where(LaterStep).Select(e => e.type))})");
             RunAs(Part.LaterPlayer, replaying: false, () =>
             {
                 foreach (var e in ge.events)
@@ -1382,7 +1391,9 @@ namespace DarkwoodMP.World
             OwedParts.Give(from, t);
             ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo(
-                $"[world] {S.NameOf(from)} set off {et.name} #{et.eventTriggers.IndexOf(t)}, which already fired: their own part only");
+                $"[world] {S.NameOf(from)} set off {et.name} "
+                    + $"#{et.eventTriggers.IndexOf(t)}, which already fired: "
+                    + "their own part only");
         }
 
         /// <summary>
@@ -1426,7 +1437,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {S.NameOf(from)} is to be taken to {to.name} at {to.transform.position}");
+                        $"[world] {S.NameOf(from)} is to be taken to {to.name} "
+                            + $"at {to.transform.position}");
                 }
             }
         }
@@ -1489,7 +1501,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] event {et.name} #{index}: ours alone, run here");
+                        $"[world] event {et.name} #{index}: ours alone, run "
+                            + "here");
                 }
                 return false;
             }
@@ -1569,7 +1582,8 @@ namespace DarkwoodMP.World
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] the host didn't take the {what} ({reason}); it ran here");
+                        $"[world] the host didn't take the {what} ({reason}); "
+                            + "it ran here");
                 }
             }, inventory: false);
         }
@@ -1595,14 +1609,16 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] exit of {et.name} #{index}: it already ran here");
+                        $"[world] exit of {et.name} #{index}: it already ran "
+                            + "here");
                 }
                 return;
             }
             if (OurPlayerInside(et))
             {
                 Plugin.Log.LogInfo(
-                    $"[world] exit of {et.name} #{index}: our player is still in it, it runs when they leave");
+                    $"[world] exit of {et.name} #{index}: our player is still "
+                        + "in it, it runs when they leave");
                 return;
             }
             t.firedExit = true;
@@ -1619,7 +1635,8 @@ namespace DarkwoodMP.World
                     eventName = ge.name;
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] got the exit of {et.name} #{index}: running {eventName}");
+                    $"[world] got the exit of {et.name} #{index}: running "
+                        + $"{eventName}");
             }
             if (ge == null || !CanRun(ge))
             {
@@ -1632,7 +1649,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't run the exit of {et.name} #{index}: {e.Message}");
+                    $"Couldn't run the exit of {et.name} #{index}: "
+                        + $"{e.Message}");
             }
         }
 
@@ -1726,7 +1744,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {what} isn't here: running its world event {n}");
+                        $"[world] {what} isn't here: running its world event "
+                            + $"{n}");
                 }
                 try
                 {
@@ -1796,7 +1815,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] left world event {name} from {from.name}'s animation to the host");
+                        $"[world] left world event {name} from {from.name}'s "
+                            + "animation to the host");
                 }
                 return false;
             }
@@ -1812,7 +1832,8 @@ namespace DarkwoodMP.World
             if (Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent world event {name} from {from.name}'s animation");
+                    $"[world] sent world event {name} from {from.name}'s "
+                        + "animation");
             }
             s.Broadcast(w, Channel.Control, reliable: true);
             AnimationSent = true;
@@ -1855,7 +1876,8 @@ namespace DarkwoodMP.World
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {what} not run here: the host refused it ({reason})");
+                        $"[world] {what} not run here: the host refused it "
+                            + $"({reason})");
                     return;
                 }
                 if (result == Alone)
@@ -1863,7 +1885,8 @@ namespace DarkwoodMP.World
                     // We were somewhere the host doesn't run
                     // (Authority.AcceptAway): every part of it is ours.
                     Plugin.Log.LogInfo(
-                        $"[world] {what}: ours alone, the host says; running all of it here");
+                        $"[world] {what}: ours alone, the host says; running "
+                            + "all of it here");
                     try
                     {
                         RunAs(Part.All, replaying: false, accepted);
@@ -1878,7 +1901,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {what}: the host agreed, running our part and the shared part");
+                        $"[world] {what}: the host agreed, running our part "
+                            + "and the shared part");
                 }
                 try
                 {
@@ -1992,7 +2016,8 @@ namespace DarkwoodMP.World
                     catch (Exception e)
                     {
                         Plugin.Log.LogWarning(
-                            $"Couldn't run world trigger {et.name} #{index}: {e.Message}");
+                            $"Couldn't run world trigger {et.name} #{index}: "
+                                + $"{e.Message}");
                     }
                 }
                 return;
@@ -2122,7 +2147,8 @@ namespace DarkwoodMP.World
                             catch (Exception e)
                             {
                                 Plugin.Log.LogWarning(
-                                    $"Couldn't run event {et.name} #{index}: {e.Message}");
+                                    $"Couldn't run event {et.name} #{index}: "
+                                        + $"{e.Message}");
                             }
                             Owe(t, $"{et.name} #{index}");
                         }
@@ -2615,7 +2641,8 @@ namespace DarkwoodMP.World
                 && !__instance.disabled)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] left {thisEventTriggers.name} #{thisEventTriggers.eventTriggers.IndexOf(__instance)} ({TriggerType}) to the host");
+                    $"[world] left {thisEventTriggers.name} "
+                        + $"#{thisEventTriggers.eventTriggers.IndexOf(__instance)} ({TriggerType}) to the host");
             }
             __state = true;
             __result = ScriptedEvents.Nothing();

@@ -121,7 +121,9 @@ namespace DarkwoodMP.World
             foreach (var c in i.GetComponentsInChildren<Collider>(true))
             {
                 sb.Append(
-                    $" col[{c.GetType().Name} {c.gameObject.name} on={c.enabled} trig={c.isTrigger} layer={c.gameObject.layer}]");
+                    $" col[{c.GetType().Name} {c.gameObject.name} "
+                        + $"on={c.enabled} trig={c.isTrigger} "
+                        + $"layer={c.gameObject.layer}]");
             }
             for (var t = i.transform.parent; t != null; t = t.parent)
             {
@@ -166,7 +168,8 @@ namespace DarkwoodMP.World
             r.Info = string.Join(
                 "; ",
                 list.Select(
-                    i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt1(i.transform.position)}"));
+                    i => $"{_order.IndexOf(Ref(i))}={Ref(i)} "
+                        + $"{Fmt1(i.transform.position)}"));
             if (list.Count == 0)
             {
                 r.Fail("no dropped items by the centre");
@@ -196,7 +199,10 @@ namespace DarkwoodMP.World
             yield return Walk(start + dir * 80f, 5f, detours: 0);
             yield return new WaitForSeconds(3f); // at rest, and sent
             r.Info =
-                $"{Ref(it)} from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+                $"{Ref(it)} from {Fmt1(start)} to "
+                    + $"{Fmt1(it.transform.position)} "
+                    + $"({StateDump.Flat(it.transform.position - start):0.0} "
+                    + "units)";
         }
 
         private static IEnumerator Slide(string[] a, Result r)
@@ -244,12 +250,14 @@ namespace DarkwoodMP.World
             b.WakeUp();
             b.velocity = new Vector3(0f, 0f, 250f);
             Plugin.Log.LogInfo(
-                $"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
+                "[knock] "
+                    + $"{ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
             if (b != null)
             {
                 Plugin.Log.LogInfo(
-                    $"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
+                    "[knock] "
+                        + $"{ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
             }
         }
 
@@ -318,7 +326,10 @@ namespace DarkwoodMP.World
             Object.Destroy(c.gameObject);
             yield return new WaitForSeconds(3f); // at rest, and sent
             r.Info =
-                $"{kind} through {Ref(it)}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+                $"{kind} through {Ref(it)}: from {Fmt1(start)} to "
+                    + $"{Fmt1(it.transform.position)} "
+                    + $"({StateDump.Flat(it.transform.position - start):0.0} "
+                    + "units)";
         }
     }
 }

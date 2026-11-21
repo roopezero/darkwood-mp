@@ -130,7 +130,9 @@ namespace DarkwoodMP.World
             Win.ResetPlace();
             Win.Show();
             Plugin.Log.LogInfo(
-                $"[skills] panel open: level {p.currentLevel}, {SkillTree.Points(p)} points to spend, backpack open {p.Inventory != null && p.Inventory.open}");
+                $"[skills] panel open: level {p.currentLevel}, "
+                    + $"{SkillTree.Points(p)} points to spend, backpack open "
+                    + $"{p.Inventory != null && p.Inventory.open}");
         }
 
         private static void Closed() =>
@@ -957,7 +959,9 @@ namespace DarkwoodMP.World
             bool scrolls = Win.TestScrolls;
             float content = Win.TestContentHeight;
             Plugin.Log.LogInfo(
-                $"[skills] hover sweep over {skills.Count} skills: window {win.width}x{win.height}, scrolls {scrolls}, content {content}");
+                $"[skills] hover sweep over {skills.Count} skills: window "
+                    + $"{win.width}x{win.height}, scrolls {scrolls}, content "
+                    + $"{content}");
             int bad = 0, frames = 0;
             foreach (var sk in skills)
             {
@@ -984,7 +988,11 @@ namespace DarkwoodMP.World
                             hover = "nothing";
                         }
                         Plugin.Log.LogInfo(
-                            $"[skills] FAIL hovering {sk} ({hover}): window {Win.Rect.width}x{Win.Rect.height}, scrolls {Win.TestScrolls}, content {Win.TestContentHeight}, first cell {fc} (was {firstCell})");
+                            $"[skills] FAIL hovering {sk} ({hover}): window "
+                                + $"{Win.Rect.width}x{Win.Rect.height}, "
+                                + $"scrolls {Win.TestScrolls}, content "
+                                + $"{Win.TestContentHeight}, first cell {fc} "
+                                + $"(was {firstCell})");
                     }
                 }
             }
@@ -1072,7 +1080,10 @@ namespace DarkwoodMP.World
                         why = "none";
                     }
                     Plugin.Log.LogInfo(
-                        $"[skills] real click {n} on {sk} (reached {reached}, mouse {mouse}, cell {cell}): over {over}, chosen {picked} with {pickedNegative}, message {why}");
+                        $"[skills] real click {n} on {sk} (reached {reached}, "
+                            + $"mouse {mouse}, cell {cell}): over {over}, "
+                            + $"chosen {picked} with {pickedNegative}, message "
+                            + $"{why}");
                 }
                 float until = Time.realtimeSinceStartup + 8f;
                 while (SkillTree.Waiting && Time.realtimeSinceStartup < until)
@@ -1118,7 +1129,11 @@ namespace DarkwoodMP.World
                     reason = "none";
                 }
                 Plugin.Log.LogInfo(
-                    $"[skills] real click {n} on Learn (mouse {pointer}, button {button}): {outcome} {skill}{withNegative}, points {before} -> {after}, panel open {panelOpen}, chosen {stillPicked}, message {reason}");
+                    $"[skills] real click {n} on Learn (mouse {pointer}, "
+                        + $"button {button}): {outcome} {skill}{withNegative}, "
+                        + $"points {before} -> {after}, panel open "
+                        + $"{panelOpen}, chosen {stillPicked}, message "
+                        + $"{reason}");
                 if (!ok2)
                 {
                     string text = "";
@@ -1142,7 +1157,8 @@ namespace DarkwoodMP.World
                         message = "none";
                     }
                     fails.Add(
-                        $"choice {n} ({choice[0]}{text}) not learned: chosen {good} with {negative}, message {message}");
+                        $"choice {n} ({choice[0]}{text}) not learned: chosen "
+                            + $"{good} with {negative}, message {message}");
                     break;
                 }
             }
@@ -1354,7 +1370,8 @@ namespace DarkwoodMP.World
                 {
                     var d0 = _coll.spriteDefinitions[id];
                     Plugin.Log.LogInfo(
-                        $"[skills] icon for {skill}: flipped {d0.flipped}, uvs {string.Join(" ", Array.ConvertAll(d0.uvs, u => $"({u.x:0.###},{u.y:0.###})"))}");
+                        $"[skills] icon for {skill}: flipped {d0.flipped}, uvs "
+                            + $"{string.Join(" ", Array.ConvertAll(d0.uvs, u => $"({u.x:0.###},{u.y:0.###})"))}");
                 }
             }
             if (id < 0 || Event.current.type != EventType.Repaint)

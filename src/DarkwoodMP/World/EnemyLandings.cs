@@ -95,7 +95,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown at {t.position}");
+                        $"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown "
+                            + $"at {t.position}");
                 }
             }
             Thrown.Clear();
@@ -239,7 +240,9 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{SensorThrowingBy}'s {SensorThrowing} ({ti.name}) thrown at {ti.transform.position}");
+                        $"[world] sent enemy #{SensorThrowingBy}'s "
+                            + $"{SensorThrowing} ({ti.name}) thrown at "
+                            + $"{ti.transform.position}");
                 }
             }
             SensorThrown.Clear();
@@ -286,7 +289,8 @@ namespace DarkwoodMP.World
             if (st == null)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't show enemy #{by}'s {name}: our {thrower.name} has no such ranged sensor");
+                    $"Couldn't show enemy #{by}'s {name}: our {thrower.name} "
+                        + "has no such ranged sensor");
                 return;
             }
             GameObject go;
@@ -323,7 +327,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] got enemy #{by}'s {name} ({go.name}) thrown at {pos}");
+                    $"[world] got enemy #{by}'s {name} ({go.name}) thrown at "
+                        + $"{pos}");
             }
         }
 
@@ -371,7 +376,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] couldn't put back a projectile copy: {e.Message}");
+                        "[world] couldn't put back a projectile copy: "
+                            + $"{e.Message}");
                 }
             }
             if (t != null && t.gameObject.activeSelf)
@@ -420,7 +426,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{LandingBy}'s {go.name} landed: Spawned:{id} at {p}");
+                        $"[world] sent enemy #{LandingBy}'s {go.name} landed: "
+                            + $"Spawned:{id} at {p}");
                 }
                 _landed[id] = go;
             }
@@ -492,7 +499,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] got enemy landed Spawned:{id} gone: {go.name} removed");
+                    $"[world] got enemy landed Spawned:{id} gone: {go.name} "
+                        + "removed");
             }
             Containers.CloseIfOpen(go);
             Object.Destroy(go);
@@ -572,7 +580,8 @@ namespace DarkwoodMP.World
             if (prefab == null)
             {
                 Plugin.Log.LogWarning(
-                    $"[world] enemy #{by}'s {name} landed on the host, but no thrown thing here leaves one");
+                    $"[world] enemy #{by}'s {name} landed on the host, but no "
+                        + "thrown thing here leaves one");
                 return;
             }
             WorldActions.Replaying = true;
@@ -591,7 +600,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] got enemy #{by}'s {name} landed: Spawned:{id} at {pos}");
+                        $"[world] got enemy #{by}'s {name} landed: "
+                            + $"Spawned:{id} at {pos}");
                 }
             }
             catch (System.Exception e)

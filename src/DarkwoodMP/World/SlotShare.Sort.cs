@@ -73,7 +73,8 @@ namespace DarkwoodMP.World
                 if (!r.Valid)
                 {
                     Plugin.Log.LogWarning(
-                        $"[slots] can't sort {inv.name}: no name for it in the host's world");
+                        $"[slots] can't sort {inv.name}: no name for it in the "
+                            + "host's world");
                     return;
                 }
                 // The host's contents must be our starting point, and what we
@@ -81,7 +82,8 @@ namespace DarkwoodMP.World
                 if (_awaiting.ContainsKey(inv))
                 {
                     Plugin.Log.LogInfo(
-                        $"[slots] sort of {inv.name}: still waiting for the host's contents");
+                        $"[slots] sort of {inv.name}: still waiting for the "
+                            + "host's contents");
                     return;
                 }
                 if (_watched.ContainsKey(inv))
@@ -93,7 +95,8 @@ namespace DarkwoodMP.World
                 r.Write(w);
                 Authority.Request(w, $"sort {inv.name}", inventory: false);
                 Plugin.Log.LogInfo(
-                    $"[slots] sorted {inv.name} here ({changed.Count} slot(s) changed); asked the host to sort it");
+                    $"[slots] sorted {inv.name} here ({changed.Count} slot(s) "
+                        + "changed); asked the host to sort it");
                 return;
             }
             var done = Sort(inv);
@@ -162,7 +165,8 @@ namespace DarkwoodMP.World
             {
                 Authority.Refuse(why);
                 Plugin.Log.LogInfo(
-                    $"[authority] {s.NameOf(from)} sorted {inv.name}: refused ({why})");
+                    $"[authority] {s.NameOf(from)} sorted {inv.name}: refused "
+                        + $"({why})");
                 return;
             }
             if (done.Count > 0)
@@ -170,7 +174,8 @@ namespace DarkwoodMP.World
                 SendChanges(obj, done, from);
             }
             Plugin.Log.LogInfo(
-                $"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} slot(s) changed here");
+                $"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} "
+                    + "slot(s) changed here");
         }
 
         /// <summary>
@@ -289,7 +294,7 @@ namespace DarkwoodMP.World
                     dst.State.durability =
                         (dst.State.amount * dst.State.durability
                             + src.State.durability * n)
-                        / (dst.State.amount + n);
+                            / (dst.State.amount + n);
                     dst.State.amount += n;
                     src.State.amount -= n;
                 }
@@ -478,7 +483,8 @@ namespace DarkwoodMP.World
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[slots] couldn't add the Sort & Stack button: {e.Message}");
+                    "[slots] couldn't add the Sort & Stack button: "
+                        + $"{e.Message}");
             }
         }
     }

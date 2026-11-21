@@ -120,7 +120,8 @@ namespace DarkwoodMP.World
                 location = $"{loc.name} entered={loc.entered}";
             }
             return $"event {text}, {In}: {inState}, "
-                + $"{Locked}: {lockedState}, {Out}: {outState}, location {location}";
+                + $"{Locked}: {lockedState}, {Out}: {outState}, location "
+                + $"{location}";
         }
 
         private static string Desc(GameObject go)
@@ -129,7 +130,8 @@ namespace DarkwoodMP.World
             {
                 return "missing";
             }
-            return $"shown={Shown(go)} active={go.activeInHierarchy} at {Fmt(go.transform.position)}";
+            return $"shown={Shown(go)} active={go.activeInHierarchy} at "
+                + $"{Fmt(go.transform.position)}";
         }
 
         private static IEnumerator Check(string[] a, Result r)
@@ -264,7 +266,8 @@ namespace DarkwoodMP.World
                     text = $"{d:0} from it";
                 }
                 r.Fail(
-                    $"not taken to {dest} ({text}, away={o.playerInOutsideLocation}): {State()}");
+                    $"not taken to {dest} ({text}, "
+                        + $"away={o.playerInOutsideLocation}): {State()}");
                 yield break;
             }
             r.Info =
@@ -297,7 +300,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"in the world at {Fmt(Player.Instance.transform.position)}";
+                    "in the world at "
+                        + $"{Fmt(Player.Instance.transform.position)}";
             }
         }
 

@@ -324,9 +324,14 @@ namespace DarkwoodMP
         {
             if (openPort)
             {
-                return $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Your router is asked to forward both; if it can't, the window says so: forward them by hand, or use a VPN (Tailscale, ZeroTier).";
+                return $"Friends connect on TCP port {port}, and the browser "
+                    + $"asks on UDP {port}. Your router is asked to forward "
+                    + "both; if it can't, the window says so: forward them by "
+                    + "hand, or use a VPN (Tailscale, ZeroTier).";
             }
-            return $"Friends connect on TCP port {port}, and the browser asks on UDP {port}. Over the internet, forward both, or use a VPN (Tailscale, ZeroTier).";
+            return $"Friends connect on TCP port {port}, and the browser asks "
+                + $"on UDP {port}. Over the internet, forward both, or use a "
+                + "VPN (Tailscale, ZeroTier).";
         }
 
         private void LookUpPublicIp()
@@ -903,7 +908,8 @@ namespace DarkwoodMP
                 Ui.Field(f, "Address", _address, 64, name: "dwmp-address");
             Ui.Text(
                 f,
-                $"host or host:port (port {TcpBackend.DefaultPort} if you leave it out)",
+                $"host or host:port (port {TcpBackend.DefaultPort} if you "
+                    + "leave it out)",
                 MenuSkin.Dim);
             _addressPassword =
                 Ui.Field(f, "Password", _addressPassword, 32, password: true);

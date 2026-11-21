@@ -163,7 +163,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(0.5f);
             }
             r.Info =
-                $"in chapter {Chapter} ({SceneManager.GetActiveScene().name}) at {Pos(P)}, hotbar {Hotbar(P)}";
+                $"in chapter {Chapter} ({SceneManager.GetActiveScene().name}) "
+                    + $"at {Pos(P)}, hotbar {Hotbar(P)}";
         }
 
         private static IEnumerator Fire(string[] a, Result r)
@@ -220,7 +221,8 @@ namespace DarkwoodMP.World
                 place = "the world";
             }
             r.Info =
-                $"set off {area} ({kind}) for {eventName} at {spot} in {place}, chapter {Chapter}";
+                $"set off {area} ({kind}) for {eventName} at {spot} in "
+                    + $"{place}, chapter {Chapter}";
             var type = t.type;
             AsPlayer(() => et.fireEventTrigger(type));
             yield return new WaitForSeconds(1f);
@@ -263,8 +265,14 @@ namespace DarkwoodMP.World
                 if (Time.realtimeSinceStartup > giveUp)
                 {
                     string line =
-                        $"not in with our character after 300 s: chapter {Chapter}, scene {SceneManager.GetActiveScene().name}, in world {WorldShare.InWorld}, " +
-                                  $"gen done {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs off {Core.forbidInputs}, client mode {Combat.NetEnemies.ClientMode}, ";
+                        "not in with our character after 300 s: chapter "
+                            + $"{Chapter}, scene "
+                            + $"{SceneManager.GetActiveScene().name}, in world "
+                            + $"{WorldShare.InWorld}, " +
+                                  $"gen done {Core.worldGenFinished()}, "
+                            + $"loading {Core.loadingGame}, inputs off "
+                            + $"{Core.forbidInputs}, client mode "
+                            + $"{Combat.NetEnemies.ClientMode}, ";
                     bool? have = null;
                     Characters characters = Characters.Instance;
                     if (characters != null)
@@ -315,7 +323,10 @@ namespace DarkwoodMP.World
                 }
             }
             r.Info =
-                $"told {told}x; chapter {chapter} ({scene}) at {spot}, host {away}, ground {ground} (nearest chunk {nearest:0}, chunk size {size:0}, {chunks} chunks), hotbar {hot}, {ui}";
+                $"told {told}x; chapter {chapter} ({scene}) at {spot}, host "
+                    + $"{away}, ground {ground} (nearest chunk {nearest:0}, "
+                    + $"chunk size {size:0}, {chunks} chunks), hotbar {hot}, "
+                    + $"{ui}";
             if (told != 1)
             {
                 r.Fail($"the host's ChapterStart came {told} times: {r.Info}");
@@ -391,7 +402,9 @@ namespace DarkwoodMP.World
                 shared = "none";
             }
             r.Info =
-                $"dreaming {dreaming} ({presetName}), entering {Core.EnteringDream}, shared {shared}, chapter {Chapter}";
+                $"dreaming {dreaming} ({presetName}), entering "
+                    + $"{Core.EnteringDream}, shared {shared}, chapter "
+                    + $"{Chapter}";
             if (!(D != null && D.dreaming))
             {
                 r.Fail($"not in a dream: {r.Info}");
@@ -451,7 +464,8 @@ namespace DarkwoodMP.World
                 heldText = "nothing held";
             }
             r.Info =
-                $"{heldText.Trim()}; chapter {Chapter}, generating {Chapters.Generating}, dreaming {Dreaming}";
+                $"{heldText.Trim()}; chapter {Chapter}, generating "
+                    + $"{Chapters.Generating}, dreaming {Dreaming}";
             if (held == null)
             {
                 r.Fail($"no chapter held: {r.Info}");
@@ -503,7 +517,9 @@ namespace DarkwoodMP.World
             int starts = Count("Starting chapter 2:"),
                 runs = Count("set off chapter 2") - Count("can't run here yet");
             r.Info =
-                $"chapter {Chapter}, hotbar {Hotbar(P)}, players beside us: {string.Join(" ", seen)}; started {starts}x, a joiner's run {runs}x";
+                $"chapter {Chapter}, hotbar {Hotbar(P)}, players beside us: "
+                    + $"{string.Join(" ", seen)}; started {starts}x, a "
+                    + $"joiner's run {runs}x";
             if (seen.Count < want)
             {
                 r.Fail($"{seen.Count} of {want} players beside us: {r.Info}");
@@ -546,7 +562,8 @@ namespace DarkwoodMP.World
             {
                 return $"ui ok {shown}";
             }
-            return $"ui {shown} shown for {bar.slots.Count} slots, {without} slots not shown";
+            return $"ui {shown} shown for {bar.slots.Count} slots, {without} "
+                + "slots not shown";
         }
 
         /// <summary>

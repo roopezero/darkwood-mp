@@ -253,7 +253,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] asked to add fuel {p.Amount:0.0} to {name} ({r})");
+                    $"[world] asked to add fuel {p.Amount:0.0} to {name} "
+                        + $"({r})");
             }
         }
 
@@ -271,7 +272,8 @@ namespace DarkwoodMP.World
             if (can == null)
             {
                 Plugin.Log.LogInfo(
-                    $"[authority] {amount:0.0} fuel for {to} wasn't from a can: nothing to give back");
+                    $"[authority] {amount:0.0} fuel for {to} wasn't from a "
+                        + "can: nothing to give back");
                 return;
             }
             try
@@ -283,7 +285,8 @@ namespace DarkwoodMP.World
                     player.Inventory.addItemTypeToPlayer(
                         "gasoline", 1, dropIfNoRoom: true);
                     Plugin.Log.LogInfo(
-                        $"[authority] gave back a gasoline can for the fuel {to} didn't take");
+                        "[authority] gave back a gasoline can for the fuel "
+                            + $"{to} didn't take");
                     return;
                 }
                 float max;
@@ -298,7 +301,8 @@ namespace DarkwoodMP.World
                 can.durability = Mathf.Min(max, can.durability + amount);
                 can.refresh();
                 Plugin.Log.LogInfo(
-                    $"[authority] gave back {amount:0.0} fuel to the gasoline can ({to} didn't take it)");
+                    $"[authority] gave back {amount:0.0} fuel to the gasoline "
+                        + $"can ({to} didn't take it)");
             }
             catch (System.Exception e)
             {
@@ -467,7 +471,8 @@ namespace DarkwoodMP.World
                         || Mathf.Abs(logs - Mathf.Round(logs)) > 0.02f)
                     {
                         refused =
-                            $"{used:0.0} isn't a whole number of logs ({saw.fuelToConvert} each)";
+                            $"{used:0.0} isn't a whole number of logs "
+                                + $"({saw.fuelToConvert} each)";
                     }
                     else if (used > have + 0.5f)
                     {
@@ -477,7 +482,9 @@ namespace DarkwoodMP.World
                 if (refused != null)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)}'s fuel {value:+0.0;-0.0} for {c.name} (have {have:0.0}): {refused}; sent back");
+                        $"[authority] {_session.NameOf(from)}'s fuel "
+                            + $"{value:+0.0;-0.0} for {c.name} (have "
+                            + $"{have:0.0}): {refused}; sent back");
                     // the level to roll back to, before the Verdict
                     Send(c, except: 0, to: from);
                     Authority.Refuse(refused);
@@ -560,7 +567,8 @@ namespace DarkwoodMP.World
                     }
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] got fuel {name} ({obj}): {change}{fuel:0.0}{state}");
+                    $"[world] got fuel {name} ({obj}): "
+                        + $"{change}{fuel:0.0}{state}");
             }
 
             if (_session.IsHost)

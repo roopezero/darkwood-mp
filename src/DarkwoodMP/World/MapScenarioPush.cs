@@ -261,7 +261,8 @@ namespace DarkwoodMP.World
             r.Info = string.Join(
                 "; ",
                 things.Select(
-                    i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} {Fmt1(i.transform.position)}"));
+                    i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} "
+                        + $"{Fmt1(i.transform.position)}"));
             if (things.Count == 0)
             {
                 r.Fail("nothing loose by the centre");
@@ -269,7 +270,8 @@ namespace DarkwoodMP.World
             else if (unwatched.Count > 0)
             {
                 r.Fail(
-                    $"not watched for pushes here: {string.Join(", ", unwatched)}");
+                    "not watched for pushes here: "
+                        + $"{string.Join(", ", unwatched)}");
             }
             yield break;
         }
@@ -513,7 +515,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             float moved = StateDump.Flat(it.transform.position - start);
             r.Info =
-                $"{it.name} {Ref(it)} hit from {StateDump.Flat(P.transform.position - start):0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved:0.0} units)";
+                $"{it.name} {Ref(it)} hit from "
+                    + $"{StateDump.Flat(P.transform.position - start):0}: from "
+                    + $"{Fmt1(start)} to {Fmt1(it.transform.position)} "
+                    + $"({moved:0.0} units)";
             if (moved < 3f)
             {
                 r.Fail($"{r.Info}: it didn't move");
@@ -554,7 +559,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(2.5f);
             }
             r.Info =
-                $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
+                $"{d.name} "
+                    + $"{ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
             if (Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f)
             {
                 r.Fail($"{r.Info}: the leaf didn't turn");
@@ -601,7 +607,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info =
-                $"put on {near.Name} ({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
+                $"put on {near.Name} "
+                    + $"({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
             if (dist() < want)
             {
                 r.Fail($"{r.Info}: not eased apart");

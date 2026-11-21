@@ -237,7 +237,8 @@ namespace DarkwoodMP.World
                     shownName = big.name;
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] sent night event {ev.gameObject.name} at {shownName}");
+                    $"[world] sent night event {ev.gameObject.name} at "
+                        + $"{shownName}");
             }
         }
 
@@ -251,7 +252,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent shadow lights: {keep.name} stays on ({gen.name})");
+                    $"[world] sent shadow lights: {keep.name} stays on "
+                        + $"({gen.name})");
             }
         }
 
@@ -314,7 +316,9 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] night event {name} (the host's, at {where}): not at a location here, not played");
+                            $"[world] night event {name} (the host's, at "
+                                + $"{where}): not at a location here, not "
+                                + "played");
                     }
                     return;
                 }
@@ -333,7 +337,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] night event {name} (the host's, at {where}) played here at {big.name}");
+                        $"[world] night event {name} (the host's, at {where}) "
+                            + $"played here at {big.name}");
                 }
             }
             else if (kind == ShadowLightsKind)
@@ -364,7 +369,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] shadow lights: {keep.name} stays on (the host's choice)");
+                        $"[world] shadow lights: {keep.name} stays on (the "
+                            + "host's choice)");
                 }
             }
         }
@@ -627,7 +633,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent night object {prefab} #{id} at {go.transform.position}");
+                    $"[world] sent night object {prefab} #{id} at "
+                        + $"{go.transform.position}");
             }
         }
 
@@ -733,7 +740,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] made the host's {made} of {n} random objects of the dawn");
+                        $"[world] made the host's {made} of {n} random objects "
+                            + "of the dawn");
                 }
             }
             else if (kind == NightObject)
@@ -782,7 +790,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] made the host's night object {name} #{id} at {pos}");
+                        $"[world] made the host's night object {name} #{id} at "
+                            + $"{pos}");
                 }
             }
         }
@@ -801,7 +810,9 @@ namespace DarkwoodMP.World
             {
                 lightning = 1;
             }
-            return $"rain {rain} at {r.timeToStart:0} for {r.duration:0}, lightning {lightning} {r.preRainLightningTime:0} {r.lightningTime:0}, " +
+            return $"rain {rain} at {r.timeToStart:0} for {r.duration:0}, "
+                + $"lightning {lightning} {r.preRainLightningTime:0} "
+                + $"{r.lightningTime:0}, " +
                 $"fog {Tad(r.timeToFadeInFog)}-{Tad(r.timeToFadeOutFog)}";
         }
         private static string Tad(TimeAndDay t)
@@ -986,7 +997,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] night event step {__instance.type} ({__instance.Value}) left to the host");
+                        $"[world] night event step {__instance.type} "
+                            + $"({__instance.Value}) left to the host");
                 }
                 __result = WorldEvents.Nothing();
             }
@@ -1206,7 +1218,8 @@ namespace DarkwoodMP.World
                 c.wantToDespawn = true;
                 c.maxStamina = 1000f;
                 Plugin.Log.LogInfo(
-                    $"[events] the day's redneck ambush is {proxy.OwnerName}'s ({Core.trueDistance(c.transform.position, proxy.transform.position):0} from them)");
+                    $"[events] the day's redneck ambush is {proxy.OwnerName}'s "
+                        + $"({Core.trueDistance(c.transform.position, proxy.transform.position):0} from them)");
             }
             e.randomizeStartTime();
             if (c != null)

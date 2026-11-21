@@ -30,3 +30,5 @@ For trying out what's shared without touching your own saves. It's a tool for te
 ## Claude Code
 
 `CLAUDE.md` has the project's rules, and `.claude/skills/` has skills for testing, adding a shared feature, reading the game's code, and releasing.
+
+`container/box` runs Claude Code on the repo inside a rootless podman container, so what it runs reaches only the repo, the box's own home, this project's Claude memory and the game folder. Its default mode builds and runs the unit tests; `container/box --game` adds the display, the GPU, a writable game folder and a copy of the saves, for the in-game tests. `container/box remote` runs Remote Control in the box, so it can be used from claude.ai/code. [container/README.md](../container/README.md) has the details.

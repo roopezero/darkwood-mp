@@ -286,7 +286,8 @@ namespace DarkwoodMP.World
             Active = true;
             _watching = playing[0].Owner;
             Plugin.Log.LogInfo(
-                $"[epilogue] watching {s.NameOf(_watching)} until the others have crawled too");
+                $"[epilogue] watching {s.NameOf(_watching)} until the others "
+                    + "have crawled too");
             var player = Player.Instance;
             if (player != null)
             {
@@ -339,7 +340,8 @@ namespace DarkwoodMP.World
             }
             var player = Player.Instance;
             Plugin.Log.LogInfo(
-                $"Dead for good, with others still playing: watching {Session.Instance.NameOf(first)}");
+                "Dead for good, with others still playing: watching "
+                    + $"{Session.Instance.NameOf(first)}");
 
             // As the game does at the start of the permadeath screen: this
             // character is gone.
@@ -549,7 +551,8 @@ namespace DarkwoodMP.World
             }
             GUI.Label(
                 rect,
-                $"You're dead. Watching {name}. Click for the next player, right-click for the one before.",
+                $"You're dead. Watching {name}. Click for the next player, "
+                    + "right-click for the one before.",
                 Plugin.NameTagStyle);
         }
     }

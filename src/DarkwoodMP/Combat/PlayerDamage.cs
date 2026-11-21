@@ -43,7 +43,8 @@ namespace DarkwoodMP.Combat
                 if (Threat.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[threat] {from} (an NPC) hit a remote player's stand-in: left to that player's own copy of it");
+                        $"[threat] {from} (an NPC) hit a remote player's "
+                            + "stand-in: left to that player's own copy of it");
                 }
                 return;
             }

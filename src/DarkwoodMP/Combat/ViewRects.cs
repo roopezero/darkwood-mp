@@ -76,7 +76,8 @@ namespace DarkwoodMP.Combat
             }
             Rects[from] = (dx, dy);
             Plugin.Log.LogInfo(
-                $"{s.NameOf(from)}'s game keeps {dx} x {dy} round them running (half width and height): so does ours");
+                $"{s.NameOf(from)}'s game keeps {dx} x {dy} round them running "
+                    + "(half width and height): so does ours");
         }
 
         /// <summary>

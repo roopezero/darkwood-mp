@@ -169,15 +169,19 @@ namespace DarkwoodMP.World
                     fullName = declaringType.FullName;
                 }
                 Plugin.Log.LogInfo(
-                    $"[profile] {kv.Value.Total,9:0} ms total, {kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} calls  {fullName}.{kv.Key.Name}");
+                    $"[profile] {kv.Value.Total,9:0} ms total, "
+                        + $"{kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} "
+                        + $"calls  {fullName}.{kv.Key.Name}");
             }
             foreach (var f in _longFrames.OrderByDescending(f => f.ms).Take(25))
             {
                 Plugin.Log.LogInfo(
-                    $"[profile] frame {f.frame} took {f.ms:0} ms (ended at {f.at:0.0} s)");
+                    $"[profile] frame {f.frame} took {f.ms:0} ms (ended at "
+                        + $"{f.at:0.0} s)");
             }
             Plugin.Log.LogInfo(
-                $"[profile] frames over 150 ms: {_longFrames.Count}, {_longFrames.Sum(f => f.ms) / 1000f:0.0} s in all");
+                $"[profile] frames over 150 ms: {_longFrames.Count}, "
+                    + $"{_longFrames.Sum(f => f.ms) / 1000f:0.0} s in all");
         }
     }
 }

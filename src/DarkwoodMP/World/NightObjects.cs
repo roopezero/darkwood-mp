@@ -198,7 +198,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent night object {go.name} #{id} ({tag.Event} step {tag.Group}/{tag.Step}) at {live.Pos}");
+                    $"[world] sent night object {go.name} #{id} ({tag.Event} "
+                        + $"step {tag.Group}/{tag.Step}) at {live.Pos}");
             }
         }
 
@@ -250,7 +251,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug && _live.Count > 0)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent {_live.Count} night objects to #{peer} (made before it came)");
+                    $"[world] sent {_live.Count} night objects to #{peer} "
+                        + "(made before it came)");
             }
         }
 
@@ -280,7 +282,9 @@ namespace DarkwoodMP.World
                             if (WorldActions.Debug)
                             {
                                 Plugin.Log.LogInfo(
-                                    $"[world] night object {_live[i].Name} #{_live[i].Id}: its trap armed {_live[i].Armed == 1} now, sent");
+                                    $"[world] night object {_live[i].Name} "
+                                        + $"#{_live[i].Id}: its trap armed "
+                                        + $"{_live[i].Armed == 1} now, sent");
                             }
                         }
                         continue;
@@ -292,7 +296,8 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] night object {_live[i].Name} #{_live[i].Id} is gone");
+                            $"[world] night object {_live[i].Name} "
+                                + $"#{_live[i].Id} is gone");
                     }
                     _live.RemoveAt(i);
                 }
@@ -313,7 +318,9 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] night object {trap.name}: its trap armed {_rearm[i].armed == 1} again, as the host's");
+                            $"[world] night object {trap.name}: its trap armed "
+                                + $"{_rearm[i].armed == 1} again, as the "
+                                + "host's");
                     }
                     trap.active = _rearm[i].armed == 1;
                 }
@@ -407,7 +414,8 @@ namespace DarkwoodMP.World
             if (prefab == null)
             {
                 Plugin.Log.LogWarning(
-                    $"No night event step {tag.Scenario}/{tag.Event} {tag.Group}/{tag.Step} here to make its object");
+                    $"No night event step {tag.Scenario}/{tag.Event} "
+                        + $"{tag.Group}/{tag.Step} here to make its object");
                 return;
             }
             if (kind == MadeBefore)
@@ -441,7 +449,8 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] night object {best.name} #{id}: ours from the save");
+                            $"[world] night object {best.name} #{id}: ours "
+                                + "from the save");
                     }
                     return;
                 }
@@ -501,7 +510,8 @@ namespace DarkwoodMP.World
                     text = " (made before we came)";
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] made the host's night object {go.name} #{id} ({tag.Event}) at {pos}{text}");
+                    $"[world] made the host's night object {go.name} #{id} "
+                        + $"({tag.Event}) at {pos}{text}");
             }
         }
 

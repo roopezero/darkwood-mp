@@ -145,7 +145,9 @@ namespace DarkwoodMP.Combat
             if (Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[threat] {listener.name} heard {Name(NoiseSource)} (+{Mathf.Max(0.1f, volume) * NoiseWeight:0.0}) at {position}");
+                    $"[threat] {listener.name} heard {Name(NoiseSource)} "
+                        + $"(+{Mathf.Max(0.1f, volume) * NoiseWeight:0.0}) at "
+                        + $"{position}");
             }
         }
 
@@ -236,12 +238,14 @@ namespace DarkwoodMP.Combat
             if (Debug && (c.target == null || c.target != chosen.Who.transform))
             {
                 Plugin.Log.LogInfo(
-                    $"[threat] {c.name} prefers {Name(chosen.Who)} ({chosen.Score:0.0}) over " +
+                    $"[threat] {c.name} prefers {Name(chosen.Who)} "
+                        + $"({chosen.Score:0.0}) over " +
                                    string.Join(
                                        ", ",
                                        players.GetRange(0, players.Count
                                                - 1).ConvertAll(
-                                                   p => $"{Name(p.Who)} ({p.Score:0.0})")));
+                                                   p => $"{Name(p.Who)} "
+                                                       + $"({p.Score:0.0})")));
             }
 
             list.Clear();

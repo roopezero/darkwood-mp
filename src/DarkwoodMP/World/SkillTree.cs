@@ -403,7 +403,8 @@ namespace DarkwoodMP.World
                     Take(gs);
                     Take(ns);
                     Plugin.Log.LogInfo(
-                        $"[skills] the host refused {good}: {reason}; taken back");
+                        $"[skills] the host refused {good}: {reason}; taken "
+                            + "back");
                     Player instance = Player.Instance;
                     if (instance != null)
                     {
@@ -491,7 +492,8 @@ namespace DarkwoodMP.World
             if (level > most)
             {
                 Authority.Refuse(
-                    $"level {level} is more than the shared essence gives ({most})");
+                    $"level {level} is more than the shared essence gives "
+                        + $"({most})");
                 return;
             }
             string why = Check(level, chosen, good, negative);
@@ -507,7 +509,8 @@ namespace DarkwoodMP.World
                 withNegative = " with " + negative;
             }
             Plugin.Log.LogInfo(
-                $"[skills] {name} learned {good}{withNegative} at level {level}");
+                $"[skills] {name} learned {good}{withNegative} at level "
+                    + $"{level}");
         }
 
         // ---- tests ----------------------------------------------------------
@@ -525,8 +528,10 @@ namespace DarkwoodMP.World
             {
                 var t = tiers[i];
                 parts.Add(
-                    $"tier {TierName(i)} (level {t.level}): {string.Join(", ", t.skills.Where(s => s != null).Select(s => s.name))}; " +
-                          $"negative: {string.Join(", ", t.negativeSkills.Where(s => s != null).Select(s => s.name))}");
+                    $"tier {TierName(i)} (level {t.level}): "
+                        + $"{string.Join(", ", t.skills.Where(s => s != null).Select(s => s.name))}; " +
+                          "negative: "
+                        + $"{string.Join(", ", t.negativeSkills.Where(s => s != null).Select(s => s.name))}");
             }
             return string.Join(" | ", parts);
         }
@@ -555,7 +560,8 @@ namespace DarkwoodMP.World
                     || (!good && negs > 0))
                 {
                     wrong.Add(
-                        $"tier {TierName(i)}: {negs} negative skills with {GoodIn(t, chosen)} skills");
+                        $"tier {TierName(i)}: {negs} negative skills with "
+                            + $"{GoodIn(t, chosen)} skills");
                 }
             }
             if (wrong.Count > 0)

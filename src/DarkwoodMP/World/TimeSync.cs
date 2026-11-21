@@ -102,7 +102,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug && !_dreamLogged)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] dreaming: the clock waits (host at day {day} {time}, world time kept {dreams.timeCopy:0})");
+                        $"[world] dreaming: the clock waits (host at day {day} "
+                            + $"{time}, world time kept {dreams.timeCopy:0})");
                 }
                 _dreamLogged = true;
                 return;
@@ -133,7 +134,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug && behind > 1)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] clock stepped {behind} minutes to day {ctl.day} {ctl.CurrentTime}");
+                        $"[world] clock stepped {behind} minutes to day "
+                            + $"{ctl.day} {ctl.CurrentTime}");
                 }
                 return;
             }

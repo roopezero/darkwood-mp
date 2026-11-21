@@ -64,7 +64,8 @@ namespace DarkwoodMP
             if (!File.Exists(PrefsPath))
             {
                 Log(
-                    $"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run");
+                    $"FAIL no prefs file at {PrefsPath} (only Linux keeps them "
+                        + "in a file): not run");
                 Log("done");
                 yield break;
             }
@@ -96,7 +97,8 @@ namespace DarkwoodMP
             _before = before;
             _sizeBefore = sizeBefore;
             Log(
-                $"{where} menu, screen {Screen.width}x{Screen.height}; prefs file {PrefsPath} with {before.Count} settings");
+                $"{where} menu, screen {Screen.width}x{Screen.height}; prefs "
+                    + $"file {PrefsPath} with {before.Count} settings");
 
             // Through the menu's entry, as a click on it.
             bool took = MenuList.Click("Options");
@@ -104,7 +106,8 @@ namespace DarkwoodMP
             yield return null;
             Check(
                 took && OptionsWindow.IsOpen,
-                $"the menu's Options opens the window (entry taken {took}, open {OptionsWindow.IsOpen})");
+                $"the menu's Options opens the window (entry taken {took}, "
+                    + $"open {OptionsWindow.IsOpen})");
             if (!OptionsWindow.IsOpen)
             {
                 OptionsWindow.Open();
@@ -143,14 +146,18 @@ namespace DarkwoodMP
                 pending && heard && applied
                     && Mathf.Abs(GameSettings.GetFloat("MusicVolume") - m1)
                         < 0.001f && Mathf.Abs(onDisk - m1) < 0.001f,
-                $"music volume {m0:0.00} -> {m1:0.00}: waited for Apply {pending}, the game's slider at it {heard}, stored {GameSettings.GetFloat("MusicVolume"):0.00}, in the file {onDisk:0.00}");
+                $"music volume {m0:0.00} -> {m1:0.00}: waited for Apply "
+                    + $"{pending}, the game's slider at it {heard}, stored "
+                    + $"{GameSettings.GetFloat("MusicVolume"):0.00}, in the "
+                    + $"file {onDisk:0.00}");
             // Back at once, so nothing after this can leave the player's volume
             // changed.
             OptionsWindow.SetVolume(music: true, m0);
             OptionsWindow.Apply();
             Check(
                 Mathf.Approximately(GameSettings.GetFloat("MusicVolume"), m0),
-                $"music volume back at {GameSettings.GetFloat("MusicVolume"):0.00}");
+                "music volume back at "
+                    + $"{GameSettings.GetFloat("MusicVolume"):0.00}");
 
             // A key: listened for and cancelled with Escape, then put on an
             // action and stored.
@@ -219,7 +226,9 @@ namespace DarkwoodMP
                     mapper = "listening";
                 }
                 Check(ok,
-                    $"click on {label}'s key listens (Rewired's mapper {mapper}, the game's keys held {gameHeld}); Escape cancels, {label} still {orig}");
+                    $"click on {label}'s key listens (Rewired's mapper "
+                        + $"{mapper}, the game's keys held {gameHeld}); Escape "
+                        + $"cancels, {label} still {orig}");
 
                 bool set = OptionsWindow.TestAssign(label, free);
                 var afterKey = ReadPrefs();
@@ -238,7 +247,9 @@ namespace DarkwoodMP
                 KeyCode loaded = OptionsWindow.TestKeyOf(label);
                 Check(
                     set && keyStored && loaded == free,
-                    $"{label} put on {free}: the keyboard map in the prefs file changed {keyStored}, read back from the store as {loaded}");
+                    $"{label} put on {free}: the keyboard map in the prefs "
+                        + $"file changed {keyStored}, read back from the store "
+                        + $"as {loaded}");
 
                 // Back as it was, in the player's map too (the store is put
                 // back below).
@@ -259,7 +270,8 @@ namespace DarkwoodMP
                 Screen.SetResolution(w, h, FullScreenMode.Windowed);
                 yield return new WaitForSecondsRealtime(2.5f);
                 Log(
-                    $"screen asked {w}x{h}, got {Screen.width}x{Screen.height}");
+                    $"screen asked {w}x{h}, got "
+                        + $"{Screen.width}x{Screen.height}");
                 string P(string n) =>
                     Path.Combine(dir, $"{where}-{w}x{h}-{n}.png");
                 var names = OptionsWindow.TestTabNames;
@@ -285,7 +297,8 @@ namespace DarkwoodMP
                 }
                 OptionsWindow.TestTab(0);
                 OptionsWindow
-                    .AskKeep($"The screen is now {Screen.width}x{Screen.height}, in a window.", () =>
+                    .AskKeep("The screen is now "
+                        + $"{Screen.width}x{Screen.height}, in a window.", () =>
                 {
                 }, () =>
                 {
@@ -307,7 +320,8 @@ namespace DarkwoodMP
                 yield return null;
                 Check(
                     !OptionsWindow.IsOpen && !OptionsWindow.Pending,
-                    $"Discard closes the window with nothing left to apply (open {OptionsWindow.IsOpen})");
+                    "Discard closes the window with nothing left to apply "
+                        + $"(open {OptionsWindow.IsOpen})");
                 OptionsWindow.Open();
                 yield return null;
             }
@@ -329,7 +343,8 @@ namespace DarkwoodMP
             else
             {
                 what =
-                    $"the prefs file differs from before: {string.Join("; ", diffs)}";
+                    "the prefs file differs from before: "
+                        + $"{string.Join("; ", diffs)}";
             }
             Check(diffs.Count == 0, what);
             if (inWorld)

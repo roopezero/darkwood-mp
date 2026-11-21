@@ -148,7 +148,9 @@ namespace DarkwoodMP.Combat
         {
             _running.Add(c);
             Plugin.Log.LogInfo(
-                $"[npc] {c.name} turned hostile ({c.aggressiveness}, {c.behaviour}, after {Who(c.target)}): the host runs it as enemy #{id}");
+                $"[npc] {c.name} turned hostile ({c.aggressiveness}, "
+                    + $"{c.behaviour}, after {Who(c.target)}): the host runs "
+                    + $"it as enemy #{id}");
         }
 
         internal static void HostStopped(Character c, uint id)
@@ -162,7 +164,8 @@ namespace DarkwoodMP.Combat
         {
             _running.Add(c);
             Plugin.Log.LogInfo(
-                $"[npc] {c.name} is hostile in the host's game: shown as its enemy #{id}");
+                $"[npc] {c.name} is hostile in the host's game: shown as its "
+                    + $"enemy #{id}");
         }
 
         /// <summary>
@@ -178,7 +181,8 @@ namespace DarkwoodMP.Combat
             }
             NetEnemies.Thaw(c);
             Plugin.Log.LogInfo(
-                $"[npc] the host stopped sending {c.name} (#{id}): it's ours to run again");
+                $"[npc] the host stopped sending {c.name} (#{id}): it's ours "
+                    + "to run again");
             return true;
         }
 
@@ -257,7 +261,9 @@ namespace DarkwoodMP.Combat
             if (!c.alive || c.isNightTrader || NetEnemies.LocalOnly(c))
             {
                 Plugin.Log.LogInfo(
-                    $"[npc] our hit on {c.name} is ours (alive {c.alive}, night trader {c.isNightTrader}, local {NetEnemies.LocalOnly(c)})");
+                    $"[npc] our hit on {c.name} is ours (alive {c.alive}, "
+                        + $"night trader {c.isNightTrader}, local "
+                        + $"{NetEnemies.LocalOnly(c)})");
                 return false;
             }
             // Something thrown hits the NPC in the host's copy of the throw.

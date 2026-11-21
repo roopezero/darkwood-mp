@@ -1,0 +1,20 @@
+# The box: a Fedora image with what DarkwoodMP's tools need. Claude, the .NET
+# SDK and ilspycmd aren't in the image: init.sh installs them into the box's
+# home on its first start, so they persist and Claude can update itself.
+FROM registry.fedoraproject.org/fedora:44
+
+# Tools the repo's scripts use, and the libraries the Unity player needs to
+# run the game in game mode.
+RUN dnf -y install --setopt=install_weak_deps=False \
+      bash-completion ca-certificates curl findutils gh git gzip jq less \
+      libicu nano procps-ng python3 ripgrep tar unzip util-linux which \
+      xz ydotool zip \
+      alsa-lib libX11 libXcursor libXext libXi libXinerama libXrandr \
+      libXxf86vm mesa-dri-drivers mesa-libEGL mesa-libGL \
+      mesa-vulkan-drivers pulseaudio-libs vulkan-loader \
+  && dnf clean all
+
+COPY init.sh /usr/local/bin/box-init
+RUN chmod 755 /usr/local/bin/box-init
+
+ENTRYPOINT ["/usr/local/bin/box-init"]

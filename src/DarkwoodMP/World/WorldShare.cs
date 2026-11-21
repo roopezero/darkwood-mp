@@ -539,7 +539,9 @@ namespace DarkwoodMP.World
                         // try again this run
                         _offThreadBroken = true;
                         Plugin.Log.LogWarning(
-                            $"Couldn't read the world for a snapshot off the main thread, saving it the game's way: {e.GetBaseException().Message}");
+                            "Couldn't read the world for a snapshot off the "
+                                + "main thread, saving it the game's way: "
+                                + $"{e.GetBaseException().Message}");
                     }
                     finally
                     {
@@ -553,7 +555,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't snapshot the world, offering the last save instead: {e.Message}");
+                    "Couldn't snapshot the world, offering the last save "
+                        + $"instead: {e.Message}");
                 Restore();
                 yield break;
             }
@@ -571,7 +574,11 @@ namespace DarkwoodMP.World
                     && File.Exists(Path.Combine(profDir, "sav.dat")))
                 {
                     Plugin.Log.LogInfo(
-                        $"Saved a snapshot of the world for a joiner: the game stopped for {stopped} ms (static part copied from your save in {copied} ms, the world read in {stopped - copied} ms), sav.dat written in {writing.Result} ms on a worker thread");
+                        "Saved a snapshot of the world for a joiner: the game "
+                            + $"stopped for {stopped} ms (static part copied "
+                            + $"from your save in {copied} ms, the world read "
+                            + $"in {stopped - copied} ms), sav.dat written in "
+                            + $"{writing.Result} ms on a worker thread");
                     Restore();
                     _lastSnapshot = Time.realtimeSinceStartup;
                     _lastSnapshotScene = ActiveScene;
@@ -588,7 +595,8 @@ namespace DarkwoodMP.World
                     why = error.GetBaseException().Message;
                 }
                 Plugin.Log.LogWarning(
-                    $"Couldn't write the snapshot off the main thread, saving it the game's way: {why}");
+                    "Couldn't write the snapshot off the main thread, saving "
+                        + $"it the game's way: {why}");
                 if (!InWorld || Core.loadingGame)
                 {
                     Restore();
@@ -654,7 +662,9 @@ namespace DarkwoodMP.World
                     locationNote = ", with a new location's static part";
                 }
                 Plugin.Log.LogInfo(
-                    $"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{locationNote})");
+                    "Saved a snapshot of the world for a joiner the game's "
+                        + $"way: the game stopped for {LastSnapshotStopMs} ms "
+                        + $"({text}{locationNote})");
                 _lastSnapshot = Time.realtimeSinceStartup;
                 _lastSnapshotScene = ActiveScene;
                 if (File.Exists(Path.Combine(profDir, "sav.dat")))
@@ -666,7 +676,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't snapshot the world, offering the last save instead: {e.Message}");
+                    "Couldn't snapshot the world, offering the last save "
+                        + $"instead: {e.Message}");
                 return null;
             }
             finally
@@ -814,8 +825,11 @@ namespace DarkwoodMP.World
                                 packing = " (Deflate)";
                             }
                             Plugin.Log.LogInfo(
-                                $"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
-                                               $"sent as {world.Sent.Length / 1024} KiB{packing}; {world.Timing}");
+                                "Host world "
+                                    + $"{WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
+                                               "sent as "
+                                    + $"{world.Sent.Length / 1024} "
+                                    + $"KiB{packing}; {world.Timing}");
                         }
                     }
                 }
@@ -922,7 +936,8 @@ namespace DarkwoodMP.World
             w.W.Write((uint)world.RawSize);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo(
-                $"Offered the world to #{peer} ({world.Sent.Length / 1024} KiB to send, {world.RawSize / 1024} KiB unpacked)");
+                $"Offered the world to #{peer} ({world.Sent.Length / 1024} KiB "
+                    + $"to send, {world.RawSize / 1024} KiB unpacked)");
             WatchFrames(peer);
         }
 
@@ -956,7 +971,10 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogInfo(
-                $"[join] host frames while #{_watchPeer} joined ({why}, {Time.realtimeSinceStartup - _watchFrom:0.0} s): longest {_longestFrame * 1000f:0} ms, {_slowFrames} of {_frames} over 50 ms");
+                $"[join] host frames while #{_watchPeer} joined ({why}, "
+                    + $"{Time.realtimeSinceStartup - _watchFrom:0.0} s): "
+                    + $"longest {_longestFrame * 1000f:0} ms, {_slowFrames} of "
+                    + $"{_frames} over 50 ms");
             LastJoinLongestFrameMs = _longestFrame * 1000f;
             _watchUntil = -1f;
         }
@@ -1160,7 +1178,8 @@ namespace DarkwoodMP.World
                 {
                     _staleTold[peer] = Time.realtimeSinceStartup;
                     Plugin.Log.LogInfo(
-                        $"#{peer} asked for a world it isn't offered: telling it to ask again");
+                        $"#{peer} asked for a world it isn't offered: telling "
+                            + "it to ask again");
                     JoinWait(
                         peer,
                         "The host's world changed while you were getting it: "
@@ -1362,7 +1381,8 @@ namespace DarkwoodMP.World
             if (d.Packing > 1)
             {
                 Fail(
-                    $"the host packed its world in a way this version can't read ({d.Packing})");
+                    "the host packed its world in a way this version can't "
+                        + $"read ({d.Packing})");
                 return;
             }
             if (sum != raw || raw == 0 || raw > WorldFiles.MaxSize
@@ -1400,7 +1420,8 @@ namespace DarkwoodMP.World
                 text = $", {raw / 1024} KiB unpacked";
             }
             Plugin.Log.LogInfo(
-                $"Downloading the host's world ({size / 1024} KiB{text}, day {d.Profile.day})");
+                $"Downloading the host's world ({size / 1024} KiB{text}, day "
+                    + $"{d.Profile.day})");
             JoinScreen.Begin();
             for (int i = 0; i < PiecesInFlight; i++)
             {
@@ -1469,7 +1490,10 @@ namespace DarkwoodMP.World
             }
             float secs = Time.realtimeSinceStartup - d.StartedAt;
             Plugin.Log.LogInfo(
-                $"[join] the world's {d.Blob.Length / 1024} KiB came in {secs * 1000f:0} ms ({d.Blob.Length / 1024f / Mathf.Max(secs, 0.001f):0} KiB/s, {d.Have.Length} pieces)");
+                $"[join] the world's {d.Blob.Length / 1024} KiB came in "
+                    + $"{secs * 1000f:0} ms "
+                    + $"({d.Blob.Length / 1024f / Mathf.Max(secs, 0.001f):0} "
+                    + $"KiB/s, {d.Have.Length} pieces)");
             _runner.StartCoroutine(Finish(d));
         }
 
@@ -1489,7 +1513,8 @@ namespace DarkwoodMP.World
             if (++d.Stalls > MaxStalls)
             {
                 Fail(
-                    $"the host stopped sending its world ({d.Received / 1024} of {d.Blob.Length / 1024} KiB came)");
+                    $"the host stopped sending its world ({d.Received / 1024} "
+                        + $"of {d.Blob.Length / 1024} KiB came)");
                 return;
             }
             int asked = 0;
@@ -1503,7 +1528,8 @@ namespace DarkwoodMP.World
                 }
             }
             Plugin.Log.LogWarning(
-                $"No piece of the host's world for {StallSecs:0} s: asked again for {asked} ({d.Stalls}/{MaxStalls})");
+                $"No piece of the host's world for {StallSecs:0} s: asked "
+                    + $"again for {asked} ({d.Stalls}/{MaxStalls})");
         }
 
         /// <summary>
@@ -1587,7 +1613,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             Plugin.Log.LogInfo(
-                $"[join] the world was unpacked, checked and stored in {took} ms on a worker thread");
+                $"[join] the world was unpacked, checked and stored in {took} "
+                    + "ms on a worker thread");
             try
             {
                 PruneCache(dir);
@@ -1599,7 +1626,8 @@ namespace DarkwoodMP.World
             }
 
             Plugin.Log.LogInfo(
-                $"Got the host's world {hex.Substring(0, 12)}; asking to join with it");
+                $"Got the host's world {hex.Substring(0, 12)}; asking to join "
+                    + "with it");
             LoadStatus = null;
             _readyHash = d.Hash;
             // send exactly this one in the next Hello
@@ -1879,7 +1907,8 @@ namespace DarkwoodMP.World
                 return true;
             }
             Plugin.Log.LogError(
-                $"The save redirect isn't working: the world would save to {save}, not under {saveDir}");
+                "The save redirect isn't working: the world would save to "
+                    + $"{save}, not under {saveDir}");
             return false;
         }
 
@@ -1928,7 +1957,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             Plugin.Log.LogInfo(
-                $"--dwmp-continue: loading your profile {id} (day {profile.day})");
+                $"--dwmp-continue: loading your profile {id} (day "
+                    + $"{profile.day})");
             Core.profiles = state.profiles;
             Singleton<UI>.Instance.StartCoroutine(
                 Singleton<UI>.Instance.initLoadGame());

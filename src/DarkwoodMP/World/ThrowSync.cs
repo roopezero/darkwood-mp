@@ -214,7 +214,8 @@ namespace DarkwoodMP.World
             if (s.IsHost && !Authority.Near(from, pos, 400f))
             {
                 Plugin.Log.LogInfo(
-                    $"[authority] {s.NameOf(from)} threw a {type} from where they aren't: not thrown");
+                    $"[authority] {s.NameOf(from)} threw a {type} from where "
+                        + "they aren't: not thrown");
                 return;
             }
             if (s.IsHost)

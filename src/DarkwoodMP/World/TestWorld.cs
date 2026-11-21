@@ -268,7 +268,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             Plugin.Log.LogInfo(
-                $"Test world: loading profile {profile.id} (day {profile.day})");
+                $"Test world: loading profile {profile.id} (day "
+                    + $"{profile.day})");
             yield return world.ContinueOwnProfile(profile.id, Dir);
         }
 
@@ -315,7 +316,8 @@ namespace DarkwoodMP.World
                     && built != Chapters.HostChapter)
                 {
                     Plugin.Log.LogInfo(
-                        $"Test world: built in chapter {built}, not again in chapter {Chapters.HostChapter}");
+                        $"Test world: built in chapter {built}, not again in "
+                            + $"chapter {Chapters.HostChapter}");
                 }
                 else if (_labels.Count == 0)
                 {
@@ -340,7 +342,8 @@ namespace DarkwoodMP.World
                 if (_labels.Count != was)
                 {
                     Plugin.Log.LogInfo(
-                        $"Test world: {_labels.Count} labelled things around {Center()}");
+                        $"Test world: {_labels.Count} labelled things around "
+                            + $"{Center()}");
                 }
             }
         }
@@ -450,11 +453,13 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Test world: couldn't note where the area is: {e.Message}");
+                    "Test world: couldn't note where the area is: "
+                        + $"{e.Message}");
             }
             GiveKit();
             Plugin.Log.LogInfo(
-                $"Test world: built {built} of {Stations.Length} test stations around {at}");
+                $"Test world: built {built} of {Stations.Length} test stations "
+                    + $"around {at}");
             Plugin.Notice(
                 "Test area built around you: each thing is labelled with what "
                     + "to try.");
@@ -565,7 +570,8 @@ namespace DarkwoodMP.World
                     text = $" (try {tries})";
                 }
                 data =
-                    $"Test world: spawned {c.name} at {c.transform.position}{text}";
+                    $"Test world: spawned {c.name} at "
+                        + $"{c.transform.position}{text}";
             }
             else
             {

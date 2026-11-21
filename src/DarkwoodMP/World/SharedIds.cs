@@ -119,7 +119,8 @@ namespace DarkwoodMP.World
                 _hostMax = n;
             }
             Plugin.Log.LogInfo(
-                $"#{peer} joined with save ids below {n}; save ids below {_hostMin} are shared with every player");
+                $"#{peer} joined with save ids below {n}; save ids below "
+                    + $"{_hostMin} are shared with every player");
         }
 
         /// <summary>

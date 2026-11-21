@@ -100,7 +100,9 @@ namespace DarkwoodMP
                 if (_body != null && _title != null)
                 {
                     Plugin.Log.LogInfo(
-                        $"Co-op windows use the game's fonts: line {_body.LineHeight}, H {_body.CapTop}/{_body.CapHeight}");
+                        "Co-op windows use the game's fonts: line "
+                            + $"{_body.LineHeight}, H "
+                            + $"{_body.CapTop}/{_body.CapHeight}");
                 }
             }
             if (kind == Kind.Title)

@@ -34,7 +34,8 @@ namespace DarkwoodMP.World
                     WorldShare.TestHoldSecs = 15f;
                 }
                 r.Info =
-                    $"joiners wait {WorldShare.TestHoldSecs:0} s from the first";
+                    $"joiners wait {WorldShare.TestHoldSecs:0} s from the "
+                        + "first";
                 return Nothing();
             });
             Add("join-waited", JoinWaited);
@@ -48,7 +49,10 @@ namespace DarkwoodMP.World
                     text = "sav.dat written on a worker thread";
                 }
                 r.Info =
-                    $"snapshot stopped the game for {WorldShare.LastSnapshotStopMs} ms ({text}), longest host frame while joining {WorldShare.LastJoinLongestFrameMs:0} ms";
+                    "snapshot stopped the game for "
+                        + $"{WorldShare.LastSnapshotStopMs} ms ({text}), "
+                        + "longest host frame while joining "
+                        + $"{WorldShare.LastJoinLongestFrameMs:0} ms";
                 if (WorldShare.LastSnapshotStopMs < 0)
                 {
                     r.Fail("no snapshot was made for the joiner");
@@ -127,7 +131,8 @@ namespace DarkwoodMP.World
                 reputation = npc.reputation;
             }
             Plugin.Log.LogInfo(
-                $"[map] story-at-join: after the snapshot, {name}'s reputation {reputation}, player_firstOvenInteraction set");
+                $"[map] story-at-join: after the snapshot, {name}'s reputation "
+                    + $"{reputation}, player_firstOvenInteraction set");
         }
 
         /// <summary>
@@ -184,7 +189,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"waited ({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
+                    "waited "
+                        + $"({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
             }
             yield break;
         }
@@ -241,7 +247,8 @@ namespace DarkwoodMP.World
                     {
                         proto = info.Proto;
                     }
-                    return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto {proto} {f.e.PingMs} ms";
+                    return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto "
+                        + $"{proto} {f.e.PingMs} ms";
                 }));
             }
             if (!found.Any(
@@ -250,7 +257,8 @@ namespace DarkwoodMP.World
                     && f.e.Info.Players >= 2))
             {
                 r.Fail(
-                    $"the LAN tab didn't find the host (2 players, protocol {Net.Protocol.Version}): {r.Info}");
+                    "the LAN tab didn't find the host (2 players, protocol "
+                        + $"{Net.Protocol.Version}): {r.Info}");
             }
         }
 
@@ -306,7 +314,9 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info =
-                $"{t.name} at {Fmt(t.transform.position)} (the game's own crouch: {t.bendDownToDisarm}): clip {Clip(P)}, disarming {P.disarmingTrap}";
+                $"{t.name} at {Fmt(t.transform.position)} (the game's own "
+                    + $"crouch: {t.bendDownToDisarm}): clip {Clip(P)}, "
+                    + $"disarming {P.disarmingTrap}";
             if (!P.disarmingTrap)
             {
                 r.Fail($"{r.Info}: not disarming");
@@ -363,7 +373,7 @@ namespace DarkwoodMP.World
                                 if (f.spriteCollection != null)
                                 {
                                     frames.Add((Net.StableHash.Of(f
-                                        .spriteCollection.spriteCollectionName),
+                                                    .spriteCollection.spriteCollectionName),
                                         f.spriteId));
                                 }
                             }
@@ -377,7 +387,10 @@ namespace DarkwoodMP.World
                         text = "found";
                     }
                     seen =
-                        $"library {last.Library} ({text}), {match} of {last.Sprites.Count} sprites from the crouch, shown {rp.Root != null && rp.Root.activeInHierarchy}";
+                        $"library {last.Library} ({text}), {match} of "
+                            + $"{last.Sprites.Count} sprites from the crouch, "
+                            + "shown "
+                            + $"{rp.Root != null && rp.Root.activeInHierarchy}";
                     if (match > 0 && rp.Root != null
                         && rp.Root.activeInHierarchy)
                     {
@@ -436,7 +449,9 @@ namespace DarkwoodMP.World
                 text = "sprung (the roll failed)";
             }
             r.Info =
-                $"{what}: {text}; clip {Clip(P)}, performingAction {P.performingAction}, gettingInventory {P.gettingInventory}";
+                $"{what}: {text}; clip {Clip(P)}, performingAction "
+                    + $"{P.performingAction}, gettingInventory "
+                    + $"{P.gettingInventory}";
             if (t != null && !t.triggered)
             {
                 r.Fail($"{r.Info}: nothing happened");
@@ -474,7 +489,8 @@ namespace DarkwoodMP.World
             {
                 Core.currentProfile.difficulty = was;
                 r.Fail(
-                    $"not spectating (alive {P.alive}, permadeath box {Singleton<UI>.Instance.permadeathBox != null})");
+                    $"not spectating (alive {P.alive}, permadeath box "
+                        + $"{Singleton<UI>.Instance.permadeathBox != null})");
                 yield break;
             }
             yield return new WaitForSeconds(2f);
@@ -496,7 +512,10 @@ namespace DarkwoodMP.World
                 name = host.Name;
             }
             r.Info =
-                $"watching {name}: camera follows {follows}, our body {dist:0} from them, colliders on {touching}, profile dead {Core.currentProfile.dead}, time scale {Time.timeScale}";
+                $"watching {name}: camera follows {follows}, our body {dist:0} "
+                    + $"from them, colliders on {touching}, profile dead "
+                    + $"{Core.currentProfile.dead}, time scale "
+                    + $"{Time.timeScale}";
             if (!follows || dist < 0f || dist > 50f || touching
                 || !Core.currentProfile.dead || Time.timeScale == 0f)
             {
@@ -527,7 +546,9 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[shots] {path}");
             }
             r.Info =
-                $"cone: light {first.light:0}/{later.light:0}, logic {first.logic:0}/{later.logic:0}, currentFOV {first.current:0}/{later.current:0} (2 s apart)";
+                $"cone: light {first.light:0}/{later.light:0}, logic "
+                    + $"{first.logic:0}/{later.logic:0}, currentFOV "
+                    + $"{first.current:0}/{later.current:0} (2 s apart)";
             if (first.light < 360f || first.logic < 360f
                 || first.current < 360f || later.light < 360f
                 || later.logic < 360f || later.current < 360f)
@@ -551,7 +572,10 @@ namespace DarkwoodMP.World
             yield return null;
             var now = Spectator.ConeAngles();
             r.Info =
-                $"saved light {saved.light:0}, logic {saved.logic:0}, currentFOV {saved.current:0}; now light {now.light:0}, logic {now.logic:0}, currentFOV {now.current:0}; spectating {Spectator.Active}";
+                $"saved light {saved.light:0}, logic {saved.logic:0}, "
+                    + $"currentFOV {saved.current:0}; now light {now.light:0}, "
+                    + $"logic {now.logic:0}, currentFOV {now.current:0}; "
+                    + $"spectating {Spectator.Active}";
             if (Spectator.Active || float.IsNaN(saved.light)
                 || now.light != saved.light || now.logic != saved.logic
                 || now.current != saved.current)
@@ -589,7 +613,10 @@ namespace DarkwoodMP.World
                 alive = proxy.alive;
             }
             r.Info =
-                $"{rp.Name}: spectating {spectating}, shown {shown}, proxy alive {alive}, collider on {col != null && col.enabled}, corrections {corrections}";
+                $"{rp.Name}: spectating {spectating}, shown {shown}, proxy "
+                    + $"alive {alive}, collider on "
+                    + $"{col != null && col.enabled}, corrections "
+                    + $"{corrections}";
             if (!rp.Spectating || (rp.Root != null && rp.Root.activeSelf)
                 || (col != null && col.enabled) || corrections > 0)
             {

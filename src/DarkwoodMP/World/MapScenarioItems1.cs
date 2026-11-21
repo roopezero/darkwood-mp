@@ -225,7 +225,8 @@ namespace DarkwoodMP.World
                 ours = "removed";
             }
             r.Info =
-                $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours {ours}";
+                $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours "
+                    + $"{ours}";
             if (Authority.RolledBack == refused)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
@@ -379,7 +380,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
             r.Info =
-                $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked} key {key}";
+                $"{d.name} {MapScenarioWorld.Ref(d)} "
+                    + $"locked={l != null && l.locked} key {key}";
             if (l == null || !l.locked)
             {
                 r.Fail($"{r.Info}: not locked");
@@ -425,7 +427,8 @@ namespace DarkwoodMP.World
                 }
                 yield return new WaitForSeconds(0.5f);
                 r.Info =
-                    $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: locked={l.locked}";
+                    $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: "
+                        + $"locked={l.locked}";
                 if (Authority.RolledBack == refused)
                 {
                     r.Fail($"{r.Info}: the host didn't refuse it");
@@ -443,7 +446,8 @@ namespace DarkwoodMP.World
             // a refusal would lock it again
             yield return new WaitForSeconds(2f);
             r.Info =
-                $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: opened={opened} locked={l.locked}";
+                $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: "
+                    + $"opened={opened} locked={l.locked}";
             if (!opened || l.locked)
             {
                 r.Fail($"{r.Info}: still locked");
@@ -479,7 +483,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
+                    $"{d.name} {MapScenarioWorld.Ref(d)} "
+                        + $"locked={l != null && l.locked}";
             }
             if ((l != null && l.locked) != want)
             {
@@ -613,7 +618,8 @@ namespace DarkwoodMP.World
             if (d.blocked)
             {
                 r.Fail(
-                    $"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it");
+                    $"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the "
+                        + "player can't open it");
                 yield break;
             }
             if (d.opened)
@@ -737,7 +743,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{loc.name} porter at {Fmt(loc.porterPosition.transform.position)}; day={Core.isDay()} killed={flags.isFlagTrue("porter_killed")}";
+                $"{loc.name} porter at "
+                    + $"{Fmt(loc.porterPosition.transform.position)}; "
+                    + $"day={Core.isDay()} "
+                    + $"killed={flags.isFlagTrue("porter_killed")}";
             if (!Core.isDay() || flags.isFlagTrue("porter_killed"))
             {
                 r.Fail($"{r.Info}: the porter can't come");

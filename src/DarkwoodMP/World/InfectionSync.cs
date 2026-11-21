@@ -164,12 +164,14 @@ namespace DarkwoodMP.World
                 done.Add(p);
             }
             string line =
-                $"[world] infection cleared: {done.Count} (from {s.NameOf(from)})";
+                $"[world] infection cleared: {done.Count} (from "
+                    + $"{s.NameOf(from)})";
             string missed = "";
             if (done.Count < n)
             {
                 missed =
-                    $", {n - done.Count} not here, already gone or out of reach";
+                    $", {n - done.Count} not here, already gone or out of "
+                        + "reach";
             }
             Plugin.Log.LogInfo(line + missed);
             if (s.IsHost && done.Count == 0 && n > 0)

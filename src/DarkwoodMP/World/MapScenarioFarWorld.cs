@@ -71,7 +71,10 @@ namespace DarkwoodMP.World
                     .Where(l => l != null && !l.isSubLocation))
                 {
                     Plugin.Log.LogInfo(
-                        $"[map] location {Core.getTrueLocationName(l.name)} at {Fmt(l.transform.position)} ({Fmt(l.transform.position - Centre)} from the centre)");
+                        $"[map] location {Core.getTrueLocationName(l.name)} at "
+                            + $"{Fmt(l.transform.position)} "
+                            + $"({Fmt(l.transform.position - Centre)} from the "
+                            + "centre)");
                 }
             }
             string s = "centre";
@@ -120,7 +123,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
+                $"{door.name} "
+                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open)
             {
                 string text = "shut";
@@ -155,7 +159,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f); // let the swing end
             r.Info =
-                $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
+                $"{door.name} "
+                    + $"{ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open || DoorLeaf.Turned(door) != open)
             {
                 string text = "shut";
@@ -240,7 +245,8 @@ namespace DarkwoodMP.World
                 if (P.itemBeingDragged != it)
                 {
                     r.Fail(
-                        $"{it.name}: our drag was let go of (another player has it)");
+                        $"{it.name}: our drag was let go of (another player "
+                            + "has it)");
                     yield break;
                 }
                 var at = start + by * (t / secs);
@@ -264,7 +270,8 @@ namespace DarkwoodMP.World
             // where it came to rest goes out once settled
             yield return new WaitForSeconds(2.5f);
             r.Info =
-                $"{it.name} {ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
+                $"{it.name} "
+                    + $"{ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
             if (StateDump.Flat(it.transform.position - to) > 300f)
             {
                 r.Fail($"{r.Info}: it didn't get to {Fmt(to)}");
@@ -297,12 +304,14 @@ namespace DarkwoodMP.World
                 node = co.node;
             }
             string state =
-                $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
+                $"{it.name} "
+                    + $"{ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
             string culling = " no node";
             if (node != null)
             {
                 culling =
-                    $" node {node.position.x:0},{node.position.y:0} entered={node.entered}";
+                    $" node {node.position.x:0},{node.position.y:0} "
+                        + $"entered={node.entered}";
             }
             r.Info = state + culling;
             if (StateDump.Flat(it.transform.position - at) > 300f)
@@ -401,7 +410,10 @@ namespace DarkwoodMP.World
         private static string Describe(Character c)
         {
             string state =
-                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}";
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at "
+                    + $"{Fmt(c.transform.position)} "
+                    + $"on={c.gameObject.activeInHierarchy} (self "
+                    + $"{c.gameObject.activeSelf}) shown={Shown(c)}";
             string origin = "our copy from the save";
             SaveableObject save = c.GetComponent<SaveableObject>();
             if (save != null && save.dontSave)
@@ -454,7 +466,8 @@ namespace DarkwoodMP.World
                 example = far[0];
             }
             r.Info =
-                $"{total} outside our rect, {unseen} not shown; e.g. {Describe(example)}";
+                $"{total} outside our rect, {unseen} not shown; e.g. "
+                    + $"{Describe(example)}";
             if (hidden.Length > 0)
             {
                 r.Fail(r.Info);
@@ -498,7 +511,8 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(HoldDog(_dog, to));
             yield return new WaitForSeconds(2f);
             r.Info =
-                $"{_dog.name} at {Fmt(_dog.transform.position)}, on={_dog.gameObject.activeInHierarchy}";
+                $"{_dog.name} at {Fmt(_dog.transform.position)}, "
+                    + $"on={_dog.gameObject.activeInHierarchy}";
         }
 
         /// <summary>

@@ -166,7 +166,8 @@ namespace DarkwoodMP.World
                     parent = go.transform.parent.name;
                 }
                 Plugin.Log.LogInfo(
-                    $"[ee] made {n} at {place} (parent {parent}; {comps}) from {from}");
+                    $"[ee] made {n} at {place} (parent {parent}; {comps}) from "
+                        + $"{from}");
             }
         }
 
@@ -345,7 +346,12 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             NetEnemies.Instance.NetIdOf(c, out w.Id);
             r.Info =
-                $"{c.name} #{w.Id} at {Fmt(spot)} ({Core.trueDistance(spot, proxy.transform.position):0} from the client, {Core.trueDistance(spot, P.transform.position):0} from us), health {c.health:0}, {Traits(c)}; children: {Children(c)}";
+                $"{c.name} #{w.Id} at {Fmt(spot)} "
+                    + $"({Core.trueDistance(spot, proxy.transform.position):0} "
+                    + "from the client, "
+                    + $"{Core.trueDistance(spot, P.transform.position):0} from "
+                    + $"us), health {c.health:0}, {Traits(c)}; children: "
+                    + $"{Children(c)}";
         }
 
         /// <summary>
@@ -510,7 +516,8 @@ namespace DarkwoodMP.World
             }
             t.Add("behaviour " + c.behaviour);
             t.Add(
-                $"view {c.farViewDistance}/{c.nearViewDistance} x{c.aniSightRangeModifier:0.##}");
+                $"view {c.farViewDistance}/{c.nearViewDistance} "
+                    + $"x{c.aniSightRangeModifier:0.##}");
             if (c.currentActivity != null && c.currentActivity.isActive)
             {
                 t.Add("activity " + c.currentActivity.type);
@@ -636,7 +643,8 @@ namespace DarkwoodMP.World
                 }));
             }
             string summary =
-                $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, ";
+                $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved "
+                    + $"{w.Moved:0}, spawned: {minions}, ";
             string state;
             if (w.C == null)
             {
@@ -645,7 +653,8 @@ namespace DarkwoodMP.World
             else
             {
                 state =
-                    $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}";
+                    $"alive {w.C.alive}, health {w.C.health:0}, children "
+                        + $"{Children(w.C)}";
             }
             r.Info = summary + state;
             if (w.Timeline.Count > 1)
@@ -659,7 +668,9 @@ namespace DarkwoodMP.World
             if (alive.Count > 0)
             {
                 r.Fail(
-                    $"still alive here: {string.Join(", ", alive.Select(c => c.name))}; {r.Info}");
+                    "still alive here: "
+                        + $"{string.Join(", ", alive.Select(c => c.name))}; "
+                        + $"{r.Info}");
                 foreach (var c in alive)
                 {
                     Kill(c);
@@ -852,7 +863,9 @@ namespace DarkwoodMP.World
             }
             int thrown = EnemyLandings.Shown - shown0;
             string came =
-                $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, hurt us {hits} time(s) for {lost:0}, {thrown} projectile(s) shown (children here: {Children(c)})";
+                $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, "
+                    + $"hurt us {hits} time(s) for {lost:0}, {thrown} "
+                    + $"projectile(s) shown (children here: {Children(c)})";
             string weapon = "pitchfork";
             if (a.Contains("--cut"))
             {
@@ -997,7 +1010,9 @@ namespace DarkwoodMP.World
                         .Select(e => $"{e.c.name} #{e.id}"));
             }
             r.Info =
-                $"{came}; then {swings} swing(s) and {direct} hit(s) of {dmg:0}; the host's here: {count} ({spawned}), our player lost {lost:0} in all";
+                $"{came}; then {swings} swing(s) and {direct} hit(s) of "
+                    + $"{dmg:0}; the host's here: {count} ({spawned}), our "
+                    + $"player lost {lost:0} in all";
             if (moves && moved < 30f)
             {
                 r.Fail($"it didn't move here: {r.Info}");
@@ -1009,7 +1024,8 @@ namespace DarkwoodMP.World
             else if (hurts && hits < needHits)
             {
                 r.Fail(
-                    $"it hurt our player only {hits} time(s), not {needHits}: {r.Info}");
+                    $"it hurt our player only {hits} time(s), not {needHits}: "
+                        + $"{r.Info}");
             }
             else if (throws && thrown == 0)
             {
@@ -1153,7 +1169,8 @@ namespace DarkwoodMP.World
                 {
                     holding = p.currentItem.type;
                 }
-                r.Fail($"couldn't take the {type} out (holding {holding}, switching {p.switchingItem}; hotbar: " +
+                r.Fail($"couldn't take the {type} out (holding {holding}, "
+                        + $"switching {p.switchingItem}; hotbar: " +
                        string.Join(", ", p.Hotbar.slots.Select(s =>
                        {
                            if (InvItemClass.isNull(s.invItem))
@@ -1165,7 +1182,8 @@ namespace DarkwoodMP.World
                            {
                                text = " selected";
                            }
-                           return $"{s.invItem.type} ({s.invItem.durability:0}){text}";
+                           return $"{s.invItem.type} "
+                               + $"({s.invItem.durability:0}){text}";
                        })) + ")");
             }
         }
@@ -1215,7 +1233,8 @@ namespace DarkwoodMP.World
             if (item == null || inv == null)
             {
                 r.Info =
-                    $"{c.name} #{_fought}: not searchable (Item {item != null}, Inventory {inv != null})";
+                    $"{c.name} #{_fought}: not searchable (Item "
+                        + $"{item != null}, Inventory {inv != null})";
                 yield break;
             }
             yield return Walk(c.transform.position, 90f);
@@ -1284,7 +1303,8 @@ namespace DarkwoodMP.World
             _armorHealth = _armor.health;
             bool lit = Core.isInLight(spot, mustBeWalkable: false);
             r.Info =
-                $"{c.name} at {Fmt(spot)}, shadow armour {_armorHealth:0}, lit here {lit}";
+                $"{c.name} at {Fmt(spot)}, shadow armour {_armorHealth:0}, lit "
+                    + $"here {lit}";
             if (lit)
             {
                 r.Fail($"its spot is lit already: {r.Info}");
@@ -1333,7 +1353,9 @@ namespace DarkwoodMP.World
                     }
                 }
                 _beamLog =
-                    $"beam watch: {samples} samples, client's beam on in {on}, dog in its beam in {inBox}, lit in {lit}; nearest: {closest}";
+                    $"beam watch: {samples} samples, client's beam on in {on}, "
+                        + $"dog in its beam in {inBox}, lit in {lit}; nearest: "
+                        + $"{closest}";
                 yield return new WaitForSeconds(0.25f);
             }
         }
@@ -1397,7 +1419,8 @@ namespace DarkwoodMP.World
                 }
             }
             r.Info =
-                $"flashlight {text} at {dog.name} {Core.trueDistance(dog.transform.position, p.transform.position):0} away";
+                $"flashlight {text} at {dog.name} "
+                    + $"{Core.trueDistance(dog.transform.position, p.transform.position):0} away";
             if (beam == null || !beam.gameObject.activeSelf)
             {
                 r.Fail($"our flashlight isn't on: {r.Info}");
@@ -1435,7 +1458,8 @@ namespace DarkwoodMP.World
                 text = target.name;
             }
             r.Info =
-                $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {text}";
+                $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog "
+                    + $"goes for {text}";
             bool hurt = _armor.health < _armorHealth;
             r.Info += "; " + _beamLog;
             bool keep = a.Length > 0 && a[0] == "keep";
@@ -1535,7 +1559,8 @@ namespace DarkwoodMP.World
                     effect = "shown";
                 }
                 r.Info =
-                    $"{name}: shadow armour {health:0.#} (going to {goal:0.#}) of {full:0}, effect {effect}";
+                    $"{name}: shadow armour {health:0.#} (going to {goal:0.#}) "
+                        + $"of {full:0}, effect {effect}";
             }
             if (!Ok())
             {
@@ -1636,7 +1661,8 @@ namespace DarkwoodMP.World
             float fromHost =
                 Core.trueDistance(now, host) - Core.trueDistance(spot, host);
             r.Info =
-                $"{c.name} from {Fmt(spot)} to {Fmt(now)}: {fromClient:0} further from the client, {fromHost:0} further from us";
+                $"{c.name} from {Fmt(spot)} to {Fmt(now)}: {fromClient:0} "
+                    + $"further from the client, {fromHost:0} further from us";
             Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null)

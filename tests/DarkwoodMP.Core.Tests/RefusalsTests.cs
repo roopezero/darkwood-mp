@@ -101,6 +101,17 @@ namespace DarkwoodMP.Tests
 
                 text.ShouldBe(name + " is 4041 away from them (reach 600)");
             }
+
+            [Fact]
+            public void Leaves_a_version_read_after_leaving_empty()
+            {
+                // The lobby's data reads empty once the client has left it.
+                var verdict = Verdict.Refuse(Refusal.OtherModVersion, "");
+
+                var text = Refusals.Text(verdict);
+
+                text.ShouldBe("Host runs a different DarkwoodMP version ()");
+            }
         }
 
         public class Detail

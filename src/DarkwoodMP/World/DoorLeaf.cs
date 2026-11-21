@@ -49,7 +49,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {d.name} opened while switched off here: it swings open when it's on again");
+                    $"[world] {d.name} opened while switched off here: it "
+                        + "swings open when it's on again");
             }
         }
 
@@ -429,7 +430,8 @@ namespace DarkwoodMP.World
                         if (WorldActions.Debug)
                         {
                             Plugin.Log.LogInfo(
-                                $"[world] {d.name}'s leaf turned by itself here to {now:0}: back to {w.Shared:0}");
+                                $"[world] {d.name}'s leaf turned by itself "
+                                    + $"here to {now:0}: back to {w.Shared:0}");
                         }
                         GlideTo(d, w.Shared);
                     }
@@ -540,7 +542,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent DoorLeaf {w.D.name} ({r}): pushed to {angle:0}");
+                    $"[world] sent DoorLeaf {w.D.name} ({r}): pushed to "
+                        + $"{angle:0}");
             }
         }
 
@@ -725,7 +728,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] got DoorLeaf {d.name}: not open here, left as it is");
+                        $"[world] got DoorLeaf {d.name}: not open here, left "
+                            + "as it is");
                 }
                 return;
             }
@@ -735,7 +739,8 @@ namespace DarkwoodMP.World
                     || Mathf.Abs(angle) > DoorLeaf.MaxTurn(d) + 5f)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] {_s.NameOf(from)} pushed {d.name}'s leaf to {angle:0} from too far: put back");
+                        $"[authority] {_s.NameOf(from)} pushed {d.name}'s leaf "
+                            + $"to {angle:0} from too far: put back");
                     _s.SendTo(
                         from, Write(obj, DoorLeaf.Signed(d)), Channel.Control,
                         reliable: true);

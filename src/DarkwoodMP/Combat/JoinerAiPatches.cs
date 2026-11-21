@@ -80,7 +80,8 @@ namespace DarkwoodMP.Combat
             else if (swapped != expected)
             {
                 Plugin.Log.LogWarning(
-                    $"JoinerAi: {where}: swapped {swapped} reads of the host's player, expected {expected} (game changed?)");
+                    $"JoinerAi: {where}: swapped {swapped} reads of the host's "
+                        + $"player, expected {expected} (game changed?)");
             }
             return list;
         }
@@ -211,16 +212,19 @@ namespace DarkwoodMP.Combat
                         locationName = loc.name;
                     }
                     Plugin.Log.LogInfo(
-                        $"[joiner ai test] activity {a.type}: target {targetName}, in {locationName}");
+                        $"[joiner ai test] activity {a.type}: target "
+                            + $"{targetName}, in {locationName}");
                 }
                 Plugin.Log.LogInfo(
-                    $"[joiner ai test] {c.name} has {c.activities.Count} activities");
+                    $"[joiner ai test] {c.name} has {c.activities.Count} "
+                        + "activities");
 
                 c.transform.position =
                     proxy.transform.position + new Vector3(800f, 0f, 0f);
                 bool near = c.inSightOrCloseToPlayer();
                 Plugin.Log.LogInfo(
-                    $"[joiner ai test] near the joiner: {near}, {Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
+                    $"[joiner ai test] near the joiner: {near}, "
+                        + $"{Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
 
                 var onCollide =
                     AccessTools.Method(typeof(Character), "onCollideWith");
@@ -229,7 +233,8 @@ namespace DarkwoodMP.Combat
                 onCollide.Invoke(
                     c, new object[] { proxy.GetComponent<Collider>() });
                 Plugin.Log.LogInfo(
-                    $"[joiner ai test] bump on a sleeping {c.name}: waking up {c.wakingUp}");
+                    $"[joiner ai test] bump on a sleeping {c.name}: waking up "
+                        + $"{c.wakingUp}");
                 c.sleeping = false;
                 c.wakingUp = false;
 
@@ -243,7 +248,8 @@ namespace DarkwoodMP.Combat
                 AccessTools.Method(typeof(Character), "reactToCharacter")
                     .Invoke(c, new object[] { null, proxy.transform, true });
                 Plugin.Log.LogInfo(
-                    $"[joiner ai test] hit by the joiner (cowardiness always): behaviour {c.behaviour}, target {T(c.target)}");
+                    "[joiner ai test] hit by the joiner (cowardiness always): "
+                        + $"behaviour {c.behaviour}, target {T(c.target)}");
             }
             catch (Exception e)
             {
@@ -308,7 +314,8 @@ namespace DarkwoodMP.Combat
             if (Threat.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
+                    $"[threat] {c.name} reacts to {proxy.OwnerName}: goes for "
+                        + "them");
             }
         }
 
@@ -460,7 +467,8 @@ namespace DarkwoodMP.Combat
                 if (Threat.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[threat] {c.name} (banshee) touched by {proxy.OwnerName}");
+                        $"[threat] {c.name} (banshee) touched by "
+                            + $"{proxy.OwnerName}");
                 }
                 c.initiateBansheeAttack();
                 return false;
@@ -470,7 +478,8 @@ namespace DarkwoodMP.Combat
                 if (Threat.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[threat] {c.name} woken by {proxy.OwnerName} bumping into it");
+                        $"[threat] {c.name} woken by {proxy.OwnerName} bumping "
+                            + "into it");
                 }
                 c.wakeup();
                 return false;

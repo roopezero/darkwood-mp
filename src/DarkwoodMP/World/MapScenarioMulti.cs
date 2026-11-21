@@ -140,7 +140,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(FlagsSync.Interval + 2f);
             r.Info =
-                $"alive again {P != null && P.alive} at {Fmt(P.transform.position)}";
+                $"alive again {P != null && P.alive} at "
+                    + $"{Fmt(P.transform.position)}";
             if (P == null || !P.alive)
             {
                 r.Fail(r.Info);
@@ -278,7 +279,8 @@ namespace DarkwoodMP.World
             NetEnemies.Instance.NetIdOf(c, out _enemyId);
             Plugin.Instance.StartCoroutine(WatchEnemy(c));
             r.Info =
-                $"{c.name} #{_enemyId} at {Fmt(c.transform.position)}, health {c.health}";
+                $"{c.name} #{_enemyId} at {Fmt(c.transform.position)}, health "
+                    + $"{c.health}";
         }
 
         /// <summary>
@@ -352,7 +354,8 @@ namespace DarkwoodMP.World
                 health = c.health;
             }
             r.Info =
-                $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
+                $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> "
+                    + $"{health:0}, alive {c != null && c.alive}";
             if (kill && c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");
@@ -412,7 +415,8 @@ namespace DarkwoodMP.World
                 t = c.target;
             }
             r.Info =
-                $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
+                $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: "
+                    + $"{string.Join(" > ", _targets)}";
             if (c == null || !c.alive)
             {
                 r.Fail($"{r.Info}: it's dead");
@@ -427,7 +431,8 @@ namespace DarkwoodMP.World
                     nearer)))
             {
                 r.Fail(
-                    $"{r.Info}: {nearer} was never nearer to it while it was after {want} (the test shows nothing)");
+                    $"{r.Info}: {nearer} was never nearer to it while it was "
+                        + $"after {want} (the test shows nothing)");
             }
         }
 
@@ -472,7 +477,8 @@ namespace DarkwoodMP.World
                     livingName = alive.name;
                 }
                 r.Fail(
-                    $"no dead enemy of the host's near us (a living one: {livingName})");
+                    "no dead enemy of the host's near us (a living one: "
+                        + $"{livingName})");
                 yield break;
             }
             var inv = c.GetComponentInChildren<Inventory>(true);
@@ -486,7 +492,8 @@ namespace DarkwoodMP.World
                 loot = MapScenarioWorld.Contents(inv);
             }
             r.Info =
-                $"{name} #{id} dead at {spot}, searchable {searchable}, loot [{loot}]";
+                $"{name} #{id} dead at {spot}, searchable {searchable}, loot "
+                    + $"[{loot}]";
             if (c.GetComponent<Item>() == null || inv == null)
             {
                 r.Fail($"{r.Info}: its corpse can't be searched here");
@@ -540,7 +547,8 @@ namespace DarkwoodMP.World
                     });
                     yield return new WaitForSeconds(1f);
                     took =
-                        $"took {it.type} x{it.amount} (we carry {before} -> {MapScenarioWorld.CarriedOf(it.type)})";
+                        $"took {it.type} x{it.amount} (we carry {before} -> "
+                            + $"{MapScenarioWorld.CarriedOf(it.type)})";
                 }
             }
             if (P.openedItemInventory == inv)
@@ -554,7 +562,8 @@ namespace DarkwoodMP.World
                         && (l.Contains("refused") || l.Contains(
                             "is in use by")));
             r.Info =
-                $"{c.name} {ObjRef.Of(inv.gameObject)}: {took}; it holds [{MapScenarioWorld.Contents(inv)}]";
+                $"{c.name} "
+                    + $"{ObjRef.Of(inv.gameObject)}: {took}; it holds [{MapScenarioWorld.Contents(inv)}]";
             if (refused != null)
             {
                 r.Fail($"{r.Info}; {refused.Trim()}");
@@ -624,7 +633,9 @@ namespace DarkwoodMP.World
                 text = "got";
             }
             r.Info =
-                $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} {MapScenarioWorld.Ref(inv)}): we carry {before} -> {now}; it holds [{MapScenarioWorld.Contents(inv)}]";
+                $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} "
+                    + $"{MapScenarioWorld.Ref(inv)}): we carry {before} -> "
+                    + $"{now}; it holds [{MapScenarioWorld.Contents(inv)}]";
             if (now != before && now != before + item.amount)
             {
                 r.Fail($"{r.Info}: carried amount changed by something else");
@@ -754,7 +765,8 @@ namespace DarkwoodMP.World
                 dialogue = "open";
             }
             r.Info =
-                $"{name} {id}: told someone's talking {told}, dialogue {dialogue}";
+                $"{name} {id}: told someone's talking {told}, dialogue "
+                    + $"{dialogue}";
             if (expectRefused)
             {
                 if (!told || win.npc == npc)
@@ -793,7 +805,8 @@ namespace DarkwoodMP.World
             float swung = DoorSwing(door);
             bool drawnOpen = Mathf.Abs(swung) > 15f;
             r.Info =
-                $"{door.name} {ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
+                $"{door.name} "
+                    + $"{ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
             if (drawnOpen != door.opened)
             {
                 string text = "closed";
@@ -849,7 +862,9 @@ namespace DarkwoodMP.World
                 location = now.name;
             }
             r.Info =
-                $"at {spot}: {location} (went to {to.name}, {StateDump.Flat(to.transform.position - Centre):0} from the centre)";
+                $"at {spot}: {location} (went to {to.name}, "
+                    + $"{StateDump.Flat(to.transform.position - Centre):0} "
+                    + "from the centre)";
             if (now != to)
             {
                 r.Fail($"{r.Info}: not in it");
@@ -982,7 +997,8 @@ namespace DarkwoodMP.World
                 if (got != want)
                 {
                     r.Fail(
-                        $"{r.Info}: {h} got {got} attackers from {n} spawns, wanted {want}");
+                        $"{r.Info}: {h} got {got} attackers from {n} spawns, "
+                            + $"wanted {want}");
                 }
             }
             foreach (var h in per.Keys)

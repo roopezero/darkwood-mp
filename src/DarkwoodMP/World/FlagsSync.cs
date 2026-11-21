@@ -387,12 +387,15 @@ namespace DarkwoodMP.World
             {
                 AddReputation(trader, -amount);
                 Plugin.Log.LogInfo(
-                    $"[world] {trader} already got day {day}'s after-night reward ({had.Value}) in another game: ours ({amount}) taken back");
+                    $"[world] {trader} already got day {day}'s after-night "
+                        + $"reward ({had.Value}) in another game: ours "
+                        + $"({amount}) taken back");
                 return;
             }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo(
-                $"[world] {trader}'s after-night reward for day {day}: {amount}, sent to the others");
+                $"[world] {trader}'s after-night reward for day {day}: "
+                    + $"{amount}, sent to the others");
             Send(new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>(
@@ -415,7 +418,8 @@ namespace DarkwoodMP.World
                 if (had)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given");
+                        $"[world] {trader} already got day {day}'s after-night "
+                            + $"reward: another one ({amount}) not given");
                     return false;
                 }
                 AddReputation(trader, amount);
@@ -436,7 +440,8 @@ namespace DarkwoodMP.World
             }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo(
-                $"[world] {trader}'s after-night reward for day {day}: {amount}");
+                $"[world] {trader}'s after-night reward for day {day}: "
+                    + $"{amount}");
             return true;
         }
 
@@ -674,7 +679,8 @@ namespace DarkwoodMP.World
                 more = ", ...";
             }
             Plugin.Log.LogInfo(
-                $"{name} is in the world: {changed.Count} story changes since their snapshot sent to them ({keys}{more})");
+                $"{name} is in the world: {changed.Count} story changes since "
+                    + $"their snapshot sent to them ({keys}{more})");
         }
 
         private void Send(
@@ -709,7 +715,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");
+                    $"[world] sent {entries.Count} story changes: "
+                        + $"{string.Join(", ", entries.ConvertAll(e => e.Key))}");
             }
         }
 
@@ -809,7 +816,8 @@ namespace DarkwoodMP.World
                     return e.Key;
                 });
                 Plugin.Log.LogInfo(
-                    $"[world] got {got.Count} story changes: {string.Join(", ", changes)}");
+                    $"[world] got {got.Count} story changes: "
+                        + $"{string.Join(", ", changes)}");
             }
             if (_session.IsHost && relay.Count > 0)
             {
@@ -882,7 +890,8 @@ namespace DarkwoodMP.World
                 return true;
             }
             Plugin.Log.LogInfo(
-                $"[authority] refused {_session.NameOf(from)}'s state of {npc}: dead, but no kill of theirs was allowed here");
+                $"[authority] refused {_session.NameOf(from)}'s state of "
+                    + $"{npc}: dead, but no kill of theirs was allowed here");
             SendNpcState(from, npc, st);
             return false;
         }
@@ -1102,7 +1111,8 @@ namespace DarkwoodMP.World
                 if (gone)
                 {
                     Plugin.Log.LogInfo(
-                        $"Journal: another player no longer has {name} (handed over): removed here too");
+                        $"Journal: another player no longer has {name} (handed "
+                            + "over): removed here too");
                 }
                 return;
             }
@@ -1111,7 +1121,8 @@ namespace DarkwoodMP.World
                 // Found in a shared dream that has ended here (or not begun):
                 // the game would never drop it.
                 Plugin.Log.LogInfo(
-                    $"Journal: another player's {name} from a dream we aren't in: not taken");
+                    $"Journal: another player's {name} from a dream we aren't "
+                        + "in: not taken");
                 return;
             }
             string popup = null;
@@ -1178,7 +1189,8 @@ namespace DarkwoodMP.World
                     return;
             }
             Plugin.Log.LogInfo(
-                $"Journal: another player's {kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
+                "Journal: another player's "
+                    + $"{kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
             if (popup != null && WorldShare.WorldReady)
             {
                 try
@@ -1188,7 +1200,8 @@ namespace DarkwoodMP.World
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning(
-                        $"Couldn't show the journal popup for {name}: {e.Message}");
+                        $"Couldn't show the journal popup for {name}: "
+                            + $"{e.Message}");
                 }
             }
         }
@@ -1310,7 +1323,8 @@ namespace DarkwoodMP.World
             if (!has)
             {
                 Plugin.Log.LogInfo(
-                    $"Journal: no popup for {_type} {_desc}, the game has no text for it");
+                    $"Journal: no popup for {_type} {_desc}, the game has no "
+                        + "text for it");
             }
             return has;
         }

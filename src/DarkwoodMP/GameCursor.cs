@@ -59,7 +59,10 @@ namespace DarkwoodMP
                         text = cursor.idle.width + "x" + cursor.idle.height;
                     }
                     Plugin.Log.LogInfo(
-                        $"[cursor] a window is open: the game's cursor sprite hidden ({_hidden.Count} parts), the system cursor shows its picture ({text}); hardware cursor setting {HardwareCursor}");
+                        "[cursor] a window is open: the game's cursor sprite "
+                            + $"hidden ({_hidden.Count} parts), the system "
+                            + $"cursor shows its picture ({text}); hardware "
+                            + $"cursor setting {HardwareCursor}");
                 }
             }
             else if (_active)

@@ -309,7 +309,8 @@ namespace DarkwoodMP.World
                 if (t.GetComponent<Generator>() is Generator g)
                 {
                     extra +=
-                        $" fuel {g.fuel:0}/{g.maxFuel:0} powers {g.powerItems.Count}";
+                        $" fuel {g.fuel:0}/{g.maxFuel:0} powers "
+                            + $"{g.powerItems.Count}";
                 }
                 if (t.GetComponent<Saw>() is Saw s)
                 {
@@ -333,19 +334,25 @@ namespace DarkwoodMP.World
                 if (t.GetComponentInChildren<Item>() is Item it)
                 {
                     extra +=
-                        $" item {it.name} switchable {it.switchable} on {it.isOn} light {it.isLight} destructible {it.destructible} health {it.health} disarmTime {it.disarmTime} searched {it.searched}";
+                        $" item {it.name} switchable {it.switchable} on "
+                            + $"{it.isOn} light {it.isLight} destructible "
+                            + $"{it.destructible} health {it.health} "
+                            + $"disarmTime {it.disarmTime} searched "
+                            + $"{it.searched}";
                 }
                 if (t.GetComponentInChildren<Trigger>() is Trigger tr)
                 {
                     extra +=
-                        $" trigger {tr.name} active {tr.active} triggered {tr.triggered} canDisarm {tr.canDisarm}";
+                        $" trigger {tr.name} active {tr.active} triggered "
+                            + $"{tr.triggered} canDisarm {tr.canDisarm}";
                 }
                 if (t.GetComponentInChildren<Locked>() is Locked lk)
                 {
                     extra += $" locked {lk.locked}";
                 }
                 parts.Add(
-                    $"{name} {ObjRef.Of(t.gameObject)} at {Fmt(t.position)}: {string.Join(" ", comps)};{extra}");
+                    $"{name} "
+                        + $"{ObjRef.Of(t.gameObject)} at {Fmt(t.position)}: {string.Join(" ", comps)};{extra}");
             }
             r.Info = string.Join(" | ", parts);
             Plugin.Log.LogInfo($"[map] inspect: {r.Info}");
@@ -456,7 +463,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{d.name} {Ref(d)} barricaded={d.barricaded} health {d.barricadeHealth}";
+                $"{d.name} {Ref(d)} barricaded={d.barricaded} health "
+                    + $"{d.barricadeHealth}";
             if (!d.barricaded)
             {
                 r.Fail($"{r.Info}: not barricaded");
@@ -483,7 +491,9 @@ namespace DarkwoodMP.World
             AsPlayer(() => d.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{d.name} {Ref(d)} barricaded={d.barricaded} ({d.barricadeHealth}) health {d.health} broken={d.destroyed}";
+                $"{d.name} {Ref(d)} barricaded={d.barricaded} "
+                    + $"({d.barricadeHealth}) health {d.health} "
+                    + $"broken={d.destroyed}";
             if (was.Same(WorldActions.DoorState.Of(d)))
             {
                 r.Fail($"{r.Info}: the hit did nothing");
@@ -520,7 +530,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{d.name} {Ref(d)} burning={d.GetComponent<Burn>() != null} health {d.health}";
+                $"{d.name} {Ref(d)} burning={d.GetComponent<Burn>() != null} "
+                    + $"health {d.health}";
             if (d.GetComponent<Burn>() == null)
             {
                 r.Fail($"{r.Info}: not burning (refused?)");
@@ -547,7 +558,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{w.name} {Ref(w)} barricaded={w.barricaded} health {w.barricadeHealth}";
+                $"{w.name} {Ref(w)} barricaded={w.barricaded} health "
+                    + $"{w.barricadeHealth}";
             if (!w.barricaded)
             {
                 r.Fail($"{r.Info}: not barricaded");
@@ -579,7 +591,8 @@ namespace DarkwoodMP.World
             AsPlayer(() => w.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{w.name} {Ref(w)} barricaded={w.barricaded} health {was} -> {w.barricadeHealth}";
+                $"{w.name} {Ref(w)} barricaded={w.barricaded} health {was} -> "
+                    + $"{w.barricadeHealth}";
             if (w.barricaded && w.barricadeHealth == was)
             {
                 r.Fail($"{r.Info}: the hit did nothing");
@@ -633,7 +646,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{c.name} {Ref(c)} burning={c.GetComponent<Burn>() != null}";
+                    $"{c.name} {Ref(c)} "
+                        + $"burning={c.GetComponent<Burn>() != null}";
             }
             if (c != null && c.GetComponent<Burn>() == null)
             {
@@ -698,7 +712,8 @@ namespace DarkwoodMP.World
             int after =
                 inv.getAllItems().Where(i => i.type == type).Sum(i => i.amount);
             r.Info =
-                $"{type} x{amount} into {inv.name} {Ref(inv)}: [{Contents(inv)}]";
+                $"{type} x{amount} into {inv.name} {Ref(inv)}: "
+                    + $"[{Contents(inv)}]";
             if (after <= before)
             {
                 r.Fail($"{r.Info}: it isn't in there (refused?)");
@@ -742,7 +757,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             int now = CarriedOf(item.type);
             r.Info =
-                $"{item.type} x{item.amount} from {inv.name} {Ref(inv)}: we carry {before} -> {now}; it holds [{Contents(inv)}]";
+                $"{item.type} x{item.amount} from {inv.name} {Ref(inv)}: we "
+                    + $"carry {before} -> {now}; it holds [{Contents(inv)}]";
             if (refused && now > before)
             {
                 r.Fail($"{r.Info}: the host let us take it");
@@ -863,7 +879,9 @@ namespace DarkwoodMP.World
                 P.openedItemInventory = null;
                 yield return new WaitForSeconds(1f);
                 r.Info =
-                    $"{crate.name} {Ref(crate)} picked: searched={crate.searched} after {tries} tries (chance {crate.disarmChance:0.00})";
+                    $"{crate.name} {Ref(crate)} picked: "
+                        + $"searched={crate.searched} after {tries} tries "
+                        + $"(chance {crate.disarmChance:0.00})";
                 if (!crate.searched)
                 {
                     r.Fail($"{r.Info}: still shut");
@@ -946,7 +964,8 @@ namespace DarkwoodMP.World
             // where it came to rest goes out once settled
             yield return new WaitForSeconds(2.5f);
             r.Info =
-                $"{it.name} {Ref(it)} from {Fmt(start)} to {Fmt(it.transform.position)}";
+                $"{it.name} {Ref(it)} from {Fmt(start)} to "
+                    + $"{Fmt(it.transform.position)}";
             if (!held)
             {
                 string info = r.Info;
@@ -1047,7 +1066,9 @@ namespace DarkwoodMP.World
                 text = "got";
             }
             r.Info =
-                $"{text} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} drag(s) of ours let go of), at rest at {Fmt(it.transform.position)}";
+                $"{text} {it.name} {Ref(it)} ({DragSync.Cancelled - cancelled} "
+                    + "drag(s) of ours let go of), at rest at "
+                    + $"{Fmt(it.transform.position)}";
             if (held == (DragSync.Cancelled > cancelled))
             {
                 r.Fail($"{r.Info}: held to the end and let go of don't agree");
@@ -1126,7 +1147,8 @@ namespace DarkwoodMP.World
                 max = s.maxFuel;
             }
             r.Info =
-                $"{c.name} {Ref(c)} fuel {before:0.0} -> {after:0.0} (max {max:0})";
+                $"{c.name} {Ref(c)} fuel {before:0.0} -> {after:0.0} (max "
+                    + $"{max:0})";
             if (after <= before + amount * 0.5f && before < max - 1f)
             {
                 r.Fail($"{r.Info}: the fuel didn't go in");
@@ -1262,7 +1284,8 @@ namespace DarkwoodMP.World
                     constructed = "-";
                 }
                 r.Fail(
-                    $"{name} {id}: nothing to do with it (item {item}, constructed {constructed})");
+                    $"{name} {id}: nothing to do with it (item {item}, "
+                        + $"constructed {constructed})");
             }
         }
 
@@ -1311,7 +1334,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{it.name} {Ref(it)} health {was} -> {it.health} broken={it.destroyed}";
+                    $"{it.name} {Ref(it)} health {was} -> {it.health} "
+                        + $"broken={it.destroyed}";
             }
             if (it != null && it.health == was && !it.destroyed)
             {
@@ -1348,7 +1372,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{t.name} {Ref(t)} triggered={t.triggered} active={t.active}";
+                    $"{t.name} {Ref(t)} triggered={t.triggered} "
+                        + $"active={t.active}";
             }
             if (t != null && !t.triggered)
             {
@@ -1391,7 +1416,9 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1.5f);
             r.Info =
-                $"{name} {at} went off={fired}, health {health:0} -> {P.health:0}, inBearTrap={P.inBearTrap}, rolled back {Authority.RolledBack - rolledBack}";
+                $"{name} {at} went off={fired}, health {health:0} -> "
+                    + $"{P.health:0}, inBearTrap={P.inBearTrap}, rolled back "
+                    + $"{Authority.RolledBack - rolledBack}";
             if (!fired)
             {
                 r.Fail($"{r.Info}: didn't go off");
@@ -1470,7 +1497,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{go.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}";
+                    $"{go.name} "
+                        + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}";
             }
             if (go == null)
             {
@@ -1547,7 +1575,8 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 r.Info =
-                    $"{prefab} {ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {it.health}";
+                    $"{prefab} "
+                        + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {it.health}";
                 yield break;
             }
             r.Fail("none of the prefabs is breakable furniture");
@@ -1592,7 +1621,8 @@ namespace DarkwoodMP.World
             }
             _worldMadeHealth = _worldMade.health;
             r.Info =
-                $"{made.name} {ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {_worldMade.health}, ids given {HostIds.Given}, tied {HostIds.Tied}";
+                $"{made.name} "
+                    + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {_worldMade.health}, ids given {HostIds.Given}, tied {HostIds.Tied}";
         }
 
         /// <summary>"ids-tied [hit]" (both): the chair world-furniture made is
@@ -1625,7 +1655,8 @@ namespace DarkwoodMP.World
             var go = _worldMade.gameObject;
             var at = ObjRef.Of(go);
             r.Info =
-                $"{go.name} {at} tied {ObjRef.IsShared(go)}, health {_worldMadeHealth} -> {_worldMade.health} broken={_worldMade.destroyed}";
+                $"{go.name} "
+                    + $"{at} tied {ObjRef.IsShared(go)}, health {_worldMadeHealth} -> {_worldMade.health} broken={_worldMade.destroyed}";
             if (at.K != ObjRef.Kind.Spawned || !ObjRef.IsShared(go)
                 || ObjRef.Resolve<Item>(at) != _worldMade)
             {
@@ -1658,7 +1689,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"health {_worldMadeHealth} -> {_worldMade.health} {ObjRef.Of(_worldMade.gameObject)}";
+                    $"health {_worldMadeHealth} -> {_worldMade.health} "
+                        + $"{ObjRef.Of(_worldMade.gameObject)}";
             }
         }
 
@@ -2159,7 +2191,9 @@ namespace DarkwoodMP.World
             if (!earn && npc.reputation + repChange < 0)
             {
                 r.Fail(
-                    $"our bags ({giveText}: {giveValue}) don't pay for {boughtType} ({boughtValue}) at reputation {npc.reputation}");
+                    $"our bags ({giveText}: {giveValue}) don't pay for "
+                        + $"{boughtType} ({boughtValue}) at reputation "
+                        + $"{npc.reputation}");
                 yield break;
             }
             P.inShop = true;
@@ -2237,7 +2271,9 @@ namespace DarkwoodMP.World
                 text = giveText;
             }
             r.Info =
-                $"{npc.name}: bought {boughtType} ({boughtValue}), gave {text} ({giveValue}): [{was}] -> [{Contents(npc.inventory)}], reputation {npc.reputation}";
+                $"{npc.name}: bought {boughtType} ({boughtValue}), gave {text} "
+                    + $"({giveValue}): [{was}] -> [{Contents(npc.inventory)}], "
+                    + $"reputation {npc.reputation}";
             if (ri >= 0)
             {
                 string outcome = "got ";
@@ -2342,7 +2378,8 @@ namespace DarkwoodMP.World
                 at = Fmt(c.transform.position);
             }
             r.Info =
-                $"{what}: alive={alive} after {hits} hits, searchable={searchable} at {at}";
+                $"{what}: alive={alive} after {hits} hits, "
+                    + $"searchable={searchable} at {at}";
             if (c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");

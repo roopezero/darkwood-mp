@@ -187,7 +187,8 @@ namespace DarkwoodMP.Net
                     .k_EChatRoomEnterResponseSuccess)
             {
                 Status =
-                    $"Failed to join lobby ({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";
+                    "Failed to join lobby "
+                        + $"({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";
                 Plugin.Log.LogError(Status);
                 return;
             }
@@ -207,7 +208,8 @@ namespace DarkwoodMP.Net
                 SteamMatchmaking.LeaveLobby(id);
                 _refused = id;
                 Status =
-                    $"Host runs a different DarkwoodMP version ({SteamMatchmaking.GetLobbyData(id, KeyMod)})";
+                    "Host runs a different DarkwoodMP version "
+                        + $"({SteamMatchmaking.GetLobbyData(id, KeyMod)})";
                 Plugin.Log.LogError(Status);
                 return;
             }
@@ -244,7 +246,8 @@ namespace DarkwoodMP.Net
                 != 0)
             {
                 Plugin.Log.LogInfo(
-                    $"{SteamFriends.GetFriendPersonaName(who)} joined the lobby");
+                    $"{SteamFriends.GetFriendPersonaName(who)} joined the "
+                        + "lobby");
             }
             else
             {

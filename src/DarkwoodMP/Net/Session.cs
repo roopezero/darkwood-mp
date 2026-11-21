@@ -490,7 +490,8 @@ namespace DarkwoodMP.Net
             }
             else if (version != Protocol.Version)
             {
-                why = $"The host has DarkwoodMP {PluginInfo.Version}, you have {modVersion}. Use the same version.";
+                why = $"The host has DarkwoodMP {PluginInfo.Version}, you have "
+                    + $"{modVersion}. Use the same version.";
             }
             else if (Backend.HostPassword.Length > 0
                 && password != Backend.HostPassword)
@@ -533,7 +534,8 @@ namespace DarkwoodMP.Net
             if (old != 0)
             {
                 Plugin.Log.LogInfo(
-                    $"{NameOf(old)} (#{old}) joined again as #{from}: dropping the old connection");
+                    $"{NameOf(old)} (#{old}) joined again as #{from}: dropping "
+                        + "the old connection");
                 Backend.Kick(old);
                 OnPeerLost(old);
             }
@@ -817,14 +819,16 @@ namespace DarkwoodMP.Net
                 && Now - _helloAt > HelloRetry)
             {
                 Plugin.Log.LogInfo(
-                    $"No answer to Hello in {HelloRetry:0} s: sending it again");
+                    $"No answer to Hello in {HelloRetry:0} s: sending it "
+                        + "again");
                 SendHello();
             }
             if (IsClient && !Connected && _heardHostAt >= 0f
                 && Now - _heardHostAt > JoinSilence)
             {
                 string why =
-                    $"The host hasn't answered for {JoinSilence:0} s, so joining stopped.";
+                    $"The host hasn't answered for {JoinSilence:0} s, so "
+                        + "joining stopped.";
                 Plugin.Log.LogWarning(why);
                 _heardHostAt = -1f;
                 Action<string> handler = OnJoinTimedOut;

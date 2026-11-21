@@ -115,7 +115,8 @@ namespace DarkwoodMP.World
             _t.thisEventTriggers = _et;
             yield return null;
             r.Info =
-                $"area on {host.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}, sound {_sound}";
+                $"area on {host.name} "
+                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, sound {_sound}";
         }
 
         /// <summary>
@@ -149,7 +150,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             r.Info =
-                $"entered: {_sound} playing {Playing()}, trigger fired {_t.fired}";
+                $"entered: {_sound} playing {Playing()}, trigger fired "
+                    + $"{_t.fired}";
             if (!Playing())
             {
                 r.Fail($"the whispers don't play here: {r.Info}");
@@ -209,7 +211,9 @@ namespace DarkwoodMP.World
                 wanted = "playing";
             }
             r.Info =
-                $"{sound} playing {playing} (want {wanted}); entered {_et.entered}, left {_et.exited}, exit ran {_t.firedExit}";
+                $"{sound} playing {playing} (want {wanted}); entered "
+                    + $"{_et.entered}, left {_et.exited}, exit ran "
+                    + $"{_t.firedExit}";
             if (Playing() != want)
             {
                 string why;
@@ -270,7 +274,9 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered {_et.entered}, left {_et.exited}); {_sound} playing {Playing()}";
+                $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered "
+                    + $"{_et.entered}, left {_et.exited}); {_sound} playing "
+                    + $"{Playing()}";
             if (!ScriptedEvents.OurPlayerInside(_et))
             {
                 r.Fail($"the game didn't count our player in: {r.Info}");
@@ -297,7 +303,9 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             r.Info =
-                $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered {_et.entered}, left {_et.exited}); {_sound} playing {Playing()}";
+                $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered "
+                    + $"{_et.entered}, left {_et.exited}); {_sound} playing "
+                    + $"{Playing()}";
             var box = _et.gameObject.GetComponent<BoxCollider>();
             if (box != null)
             {

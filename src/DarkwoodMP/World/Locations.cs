@@ -247,7 +247,8 @@ namespace DarkwoodMP.World
                         note = " (already entered)";
                     }
                     Plugin.Log.LogInfo(
-                        $"[locations] keeping {place} running for the joiner(s) in it{note}");
+                        $"[locations] keeping {place} running for the "
+                            + $"joiner(s) in it{note}");
                 }
                 if (!loc.entered || !loc.gameObject.activeInHierarchy)
                 {
@@ -315,7 +316,9 @@ namespace DarkwoodMP.World
                 CheckExitEvents(loc);
                 loc.timeLeft = Singleton<Controller>.Instance.CurrentTimeAndDay;
                 Plugin.Log.LogInfo(
-                    $"[locations] our player left {Core.getTrueLocationName(loc.name)}; it keeps running for the joiner(s) in it");
+                    "[locations] our player left "
+                        + $"{Core.getTrueLocationName(loc.name)}; it keeps "
+                        + "running for the joiner(s) in it");
             }
             return false;
         }
@@ -605,12 +608,15 @@ namespace DarkwoodMP.World
                         Rot = Mathf.RoundToInt(loc.transform.eulerAngles.y)
                     };
                     Plugin.Log.LogInfo(
-                        $"[locations] {s.NameOf(from)} goes to {name}: it is at {slot.Pos.x:0},{slot.Pos.z:0} here (turned {slot.Rot})");
+                        $"[locations] {s.NameOf(from)} goes to {name}: it is "
+                            + $"at {slot.Pos.x:0},{slot.Pos.z:0} here (turned "
+                            + $"{slot.Rot})");
                 }
                 else if (!IsReal(name))
                 {
                     Plugin.Log.LogWarning(
-                        $"[locations] refused {s.NameOf(from)}'s ask for {name}: no such location");
+                        $"[locations] refused {s.NameOf(from)}'s ask for "
+                            + $"{name}: no such location");
                     return;
                 }
                 else
@@ -627,7 +633,10 @@ namespace DarkwoodMP.World
                         _toSpawn.Enqueue(name);
                     }
                     string line =
-                        $"[locations] {s.NameOf(from)} goes to {name}, which we haven't loaded: it gets spot {slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}";
+                        $"[locations] {s.NameOf(from)} goes to {name}, which "
+                            + "we haven't loaded: it gets spot "
+                            + $"{slot.Pos.x:0},{slot.Pos.z:0}, turned "
+                            + $"{slot.Rot}";
                     string where = "; we load it too";
                     if (dream)
                     {
@@ -671,7 +680,8 @@ namespace DarkwoodMP.World
                     string at = "(gone)";
                     if (loc != null)
                     {
-                        at = $"at {loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}";
+                        at = "at "
+                            + $"{loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}";
                     }
                     string promised = "nothing";
                     if (_slots.TryGetValue(_spawning, out var slot))
@@ -683,7 +693,8 @@ namespace DarkwoodMP.World
                     // another's (getRotationFromLocation) does so in every game
                     // alike; the promise is kept for the record.
                     Plugin.Log.LogInfo(
-                        $"[locations] loaded {_spawning} for the others {at} (promised {promised})");
+                        $"[locations] loaded {_spawning} for the others {at} "
+                            + $"(promised {promised})");
                     ScanPathfinding(_spawning);
                     LoadedForOthers++;
                     _spawning = null;
@@ -722,7 +733,8 @@ namespace DarkwoodMP.World
             }
             _gridBefore = gridBefore;
             Plugin.Log.LogInfo(
-                $"[locations] loading {name} for the others (we stay where we are)");
+                $"[locations] loading {name} for the others (we stay where we "
+                    + "are)");
             o.StartCoroutine(o.spawnLocation(name, transportAfterSpawn: false));
         }
 
@@ -755,12 +767,14 @@ namespace DarkwoodMP.World
                     astar.ScanLoop(null, 1 << i);
                 }
                 Plugin.Log.LogInfo(
-                    $"[locations] {name}'s pathfinding graph scanned (graph {i})");
+                    $"[locations] {name}'s pathfinding graph scanned (graph "
+                        + $"{i})");
             }
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[locations] couldn't scan {name}'s pathfinding: {e.Message}");
+                    $"[locations] couldn't scan {name}'s pathfinding: "
+                        + $"{e.Message}");
             }
         }
 
@@ -785,7 +799,8 @@ namespace DarkwoodMP.World
             }
             g.setGrid(_gridBefore);
             Plugin.Log.LogInfo(
-                $"[locations] {_spawning} added to its grid; the current grid is {_gridBefore} again");
+                $"[locations] {_spawning} added to its grid; the current grid "
+                    + $"is {_gridBefore} again");
         }
 
         // ---- client: asking -------------------------------------------------
@@ -829,7 +844,8 @@ namespace DarkwoodMP.World
             _slots[name] = new Slot { Pos = pos, Rot = rot };
             _asked.Remove(name);
             Plugin.Log.LogInfo(
-                $"[locations] the host's {name} stands at {pos.x:0},{pos.z:0}, turned {rot}");
+                $"[locations] the host's {name} stands at {pos.x:0},{pos.z:0}, "
+                    + $"turned {rot}");
         }
 
         /// <summary>
@@ -856,7 +872,9 @@ namespace DarkwoodMP.World
             {
                 _gaveUp.Add(name);
                 Plugin.Log.LogWarning(
-                    $"[locations] the host didn't say where {name} stands: loading it where our game puts it, so it may not match the host's");
+                    $"[locations] the host didn't say where {name} stands: "
+                        + "loading it where our game puts it, so it may not "
+                        + "match the host's");
             }
             yield return o.StartCoroutine(o.spawnLocation(name, transport));
         }
@@ -887,7 +905,9 @@ namespace DarkwoodMP.World
                 if (slot.Pos != picked)
                 {
                     Plugin.Log.LogInfo(
-                        $"[locations] {name} goes to {slot.Pos.x:0},{slot.Pos.z:0} (the host's spot), not {picked.x:0},{picked.z:0}");
+                        $"[locations] {name} goes to "
+                            + $"{slot.Pos.x:0},{slot.Pos.z:0} (the host's "
+                            + $"spot), not {picked.x:0},{picked.z:0}");
                 }
                 return slot.Pos;
             }
@@ -926,7 +946,8 @@ namespace DarkwoodMP.World
                 return rolled;
             }
             Plugin.Log.LogInfo(
-                $"[locations] {name} turned {slot.Rot} (the host's), not {rolled}");
+                $"[locations] {name} turned {slot.Rot} (the host's), not "
+                    + $"{rolled}");
             return slot.Rot;
         }
     }

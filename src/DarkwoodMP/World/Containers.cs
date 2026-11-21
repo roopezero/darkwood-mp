@@ -107,7 +107,9 @@ namespace DarkwoodMP.World
                 if (Resources.Load("Prefabs/" + path) != item.item)
                 {
                     Plugin.Log.LogWarning(
-                        $"Placeable {kv.Key}: its prefab {item.item.name} isn't in Prefabs/Traps; placing it won't be shared");
+                        $"Placeable {kv.Key}: its prefab {item.item.name} "
+                            + "isn't in Prefabs/Traps; placing it won't be "
+                            + "shared");
                     continue;
                 }
                 _placeables[item.item] = path;
@@ -262,7 +264,8 @@ namespace DarkwoodMP.World
                 catch (System.Exception e)
                 {
                     Plugin.Log.LogWarning(
-                        $"Couldn't close {inv.name}'s window before removing it: {e.Message}");
+                        $"Couldn't close {inv.name}'s window before removing "
+                            + $"it: {e.Message}");
                 }
             }
         }
@@ -310,7 +313,8 @@ namespace DarkwoodMP.World
                 text = "";
             }
             Plugin.Log.LogInfo(
-                $"[containers] an open container was destroyed with its window still up: removed the window{text}");
+                "[containers] an open container was destroyed with its window "
+                    + $"still up: removed the window{text}");
             try
             {
                 if (inv.slots != null)
@@ -376,7 +380,8 @@ namespace DarkwoodMP.World
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't remove a destroyed container's window: {e.Message}");
+                    "Couldn't remove a destroyed container's window: "
+                        + $"{e.Message}");
             }
         }
 
@@ -532,7 +537,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent contents of {inv.name} {ObjRef.Of(inv.gameObject)}");
+                    $"[world] sent contents of {inv.name} "
+                        + $"{ObjRef.Of(inv.gameObject)}");
             }
             Send(ObjRef.Of(inv.gameObject), contents, except: 0);
         }
@@ -843,7 +849,8 @@ namespace DarkwoodMP.World
                 && Refusal(from, inv) is string why)
             {
                 Plugin.Log.LogInfo(
-                    $"[authority] {_session.NameOf(from)} changed the contents of {inv.name}: refused ({why})");
+                    $"[authority] {_session.NameOf(from)} changed the contents "
+                        + $"of {inv.name}: refused ({why})");
                 var w = _session.Begin(MsgType.ContainerState);
                 obj.Write(w);
                 w.WriteBigStr(Serialize(inv));
@@ -928,7 +935,8 @@ namespace DarkwoodMP.World
             {
                 slots.MergeOpen(
                     inv, state,
-                    $"{ObjRef.Of(inv.gameObject)} contents from host, open here");
+                    $"{ObjRef.Of(inv.gameObject)} contents from host, open "
+                        + "here");
                 return;
             }
             if (slots != null)
@@ -957,7 +965,8 @@ namespace DarkwoodMP.World
                 _watched[inv] = Contents(inv);
             }
             Plugin.Log.LogInfo(
-                $"[ui] {inv.name} {ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
+                $"[ui] {inv.name} "
+                    + $"{ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
             UiRefresh.Changed(inv);
         }
 
@@ -1030,7 +1039,8 @@ namespace DarkwoodMP.World
             if (path == null)
             {
                 Plugin.Log.LogWarning(
-                    $"Placed {go.name}, which isn't a placeable prefab here: not shared");
+                    $"Placed {go.name}, which isn't a placeable prefab here: "
+                        + "not shared");
                 return;
             }
             Made(path, go);
@@ -1069,7 +1079,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent {prefab} #{id} at {go.transform.position} (left by a thrown item)");
+                    $"[world] sent {prefab} #{id} at {go.transform.position} "
+                        + "(left by a thrown item)");
             }
             SendSpawn(
                 id, prefab, go.transform.position, go.transform.rotation, "",
@@ -1117,7 +1128,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent {p.Prefab} #{p.Id} at {p.Go.transform.position}");
+                        $"[world] sent {p.Prefab} #{p.Id} at "
+                            + $"{p.Go.transform.position}");
                 }
                 var drop = p.Go.GetComponent<DeathDrop>();
                 if (p.Placed && _session.IsClient)
@@ -1142,7 +1154,8 @@ namespace DarkwoodMP.World
                         CloseIfOpen(go);
                         Object.Destroy(go);
                         Plugin.Log.LogInfo(
-                            $"[world] our {prefab} #{id} was refused: removed it");
+                            $"[world] our {prefab} #{id} was refused: removed "
+                                + "it");
                     });
                     continue;
                 }
@@ -1297,7 +1310,8 @@ namespace DarkwoodMP.World
                 if (!Authority.Handling)
                 {
                     Plugin.Log.LogWarning(
-                        $"[world] {_session.NameOf(from)} placed {prefab} without asking: ignored");
+                        $"[world] {_session.NameOf(from)} placed {prefab} "
+                            + "without asking: ignored");
                     return;
                 }
                 if (!IsPlaceable(prefab))

@@ -174,7 +174,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent what {npc.name} has ({Inv(npc).getAllItems().Count} items)");
+                    $"[world] sent what {npc.name} has "
+                        + $"({Inv(npc).getAllItems().Count} items)");
             }
         }
 
@@ -210,7 +211,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {_session.NameOf(from)} asked about {name}, who isn't here yet");
+                    $"[world] {_session.NameOf(from)} asked about {name}, who "
+                        + "isn't here yet");
             }
         }
 
@@ -289,7 +291,8 @@ namespace DarkwoodMP.World
             if (npc.name != name)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {_session.NameOf(from)} asked about {name}, but {best.name}'s morning trader here is {npc.name}");
+                    $"[world] {_session.NameOf(from)} asked about {name}, but "
+                        + $"{best.name}'s morning trader here is {npc.name}");
                 if (!had)
                 {
                     best.despawnTrader();
@@ -298,7 +301,8 @@ namespace DarkwoodMP.World
             }
             _copies.Add((best, npc, Time.unscaledTime));
             Plugin.Log.LogInfo(
-                $"[world] {_session.NameOf(from)}'s morning: our own {name} is in {best.name} too");
+                $"[world] {_session.NameOf(from)}'s morning: our own {name} is "
+                    + $"in {best.name} too");
             return true;
         }
 
@@ -357,7 +361,8 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] no joiner is in a morning: our {npc.name} leaves {loc.name}");
+                    $"[world] no joiner is in a morning: our {npc.name} leaves "
+                        + $"{loc.name}");
                 if (loc.trader == npc.gameObject)
                 {
                     loc.despawnTrader();
@@ -609,7 +614,9 @@ namespace DarkwoodMP.World
                 flags.AddReputation(name, repChange);
             }
             Plugin.Log.LogInfo(
-                $"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
+                $"{_session.NameOf(from)} traded with {name}: took "
+                    + $"{Text(took)}, gave {Text(gave)}, reputation "
+                    + $"{repChange:+0;-0;0}");
             _session.Broadcast(
                 WriteTrade(
                     name, ObjRef.Of(npc.gameObject), npc.transform.position,
@@ -641,11 +648,13 @@ namespace DarkwoodMP.World
             }
             if (rep + repChange < 0)
             {
-                return $"his reputation is {rep}, which doesn't pay for {-repChange}";
+                return $"his reputation is {rep}, which doesn't pay for "
+                    + $"{-repChange}";
             }
             if (gave.Count == 0 && repChange > 0)
             {
-                return $"taking only can't raise the reputation ({repChange:+0})";
+                return "taking only can't raise the reputation "
+                    + $"({repChange:+0})";
             }
             if (took.Count == 0 && repChange < 0)
             {
@@ -754,7 +763,8 @@ namespace DarkwoodMP.World
                 instance.Apply(Inv(npc), stock);
             }
             Plugin.Log.LogInfo(
-                $"{npc.name} has the host's stock: {Inv(npc).getAllItems().Count} items");
+                $"{npc.name} has the host's stock: "
+                    + $"{Inv(npc).getAllItems().Count} items");
         }
 
         /// <summary>

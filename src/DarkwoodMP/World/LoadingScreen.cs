@@ -306,7 +306,9 @@ namespace DarkwoodMP.World
                 Vector3 l = cam.WorldToScreenPoint(_line.transform.position),
                     h = cam.WorldToScreenPoint(_hint.transform.position);
                 Plugin.Log.LogInfo(
-                    $"[loading] screen {Screen.width}x{Screen.height}: bar centre y={c.y:0} (sprite top {top.y:0}), message y={l.y:0}, hint y={h.y:0}");
+                    $"[loading] screen {Screen.width}x{Screen.height}: bar "
+                        + $"centre y={c.y:0} (sprite top {top.y:0}), message "
+                        + $"y={l.y:0}, hint y={h.y:0}");
             }
         }
 
@@ -375,7 +377,9 @@ namespace DarkwoodMP.World
             var sp = t.GetComponent<tk2dBaseSprite>();
             var r = t.GetComponent<Renderer>();
             string line =
-                $"[loading] {new string(' ', depth * 2)}{t.name} active={t.gameObject.activeSelf} pos={t.position} scale={t.lossyScale}";
+                $"[loading] {new string(' ', depth * 2)}{t.name} "
+                    + $"active={t.gameObject.activeSelf} pos={t.position} "
+                    + $"scale={t.lossyScale}";
             string mesh = "";
             if (tm != null)
             {
@@ -402,7 +406,8 @@ namespace DarkwoodMP.World
             string box = "";
             if (r != null)
             {
-                box = $" bounds={r.bounds.center}/{r.bounds.size} order={r.sortingOrder}";
+                box = $" bounds={r.bounds.center}/{r.bounds.size} "
+                    + $"order={r.sortingOrder}";
             }
             Plugin.Log.LogInfo(line + mesh + sprite + box);
             foreach (Transform c in t)
@@ -449,7 +454,8 @@ namespace DarkwoodMP.World
                 }
                 if (p < 50f)
                 {
-                    return $"Placing the saved objects ({Mathf.FloorToInt(p * 2f)}%)...";
+                    return "Placing the saved objects "
+                        + $"({Mathf.FloorToInt(p * 2f)}%)...";
                 }
                 if (p < 70f)
                 {

@@ -68,7 +68,8 @@ namespace DarkwoodMP.Combat
                 if (Threat.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[threat] {c.name}'s shadow armour is in {proxy.OwnerName}'s flashlight: goes for them");
+                        $"[threat] {c.name}'s shadow armour is in "
+                            + $"{proxy.OwnerName}'s flashlight: goes for them");
                 }
             }
         }

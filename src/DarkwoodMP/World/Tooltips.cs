@@ -304,7 +304,8 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[tooltips] FAIL {what}");
             }
             Plugin.Log.LogInfo(
-                $"[tooltips] table: {Items.Count} items, {Skip.Count} skipped, {Locations.Count} locations");
+                $"[tooltips] table: {Items.Count} items, {Skip.Count} skipped, "
+                    + $"{Locations.Count} locations");
 
             var idb = Singleton<ItemsDatabase>.Instance;
             var map = Singleton<Map>.Instance;
@@ -321,7 +322,8 @@ namespace DarkwoodMP.World
                     Path.Combine(dir, "tooltips_dump.json"),
                     Dump(idb, map).ToString());
                 Plugin.Log.LogInfo(
-                    $"[tooltips] dump written to {Path.Combine(dir, "tooltips_dump.json")}");
+                    "[tooltips] dump written to "
+                        + $"{Path.Combine(dir, "tooltips_dump.json")}");
             }
             catch (Exception e)
             {
@@ -358,12 +360,14 @@ namespace DarkwoodMP.World
             if (missing.Count > 0)
             {
                 Fail(
-                    $"items without a description: {string.Join(", ", missing)}");
+                    "items without a description: "
+                        + $"{string.Join(", ", missing)}");
             }
             else
             {
                 Plugin.Log.LogInfo(
-                    $"[tooltips] PASS items: {game} the game's, {mod} the mod's, {skipped} skipped, none missing");
+                    $"[tooltips] PASS items: {game} the game's, {mod} the "
+                        + $"mod's, {skipped} skipped, none missing");
             }
 
             // A description the game has must come through untouched.
@@ -398,12 +402,14 @@ namespace DarkwoodMP.World
             if (noLine.Count > 0)
             {
                 Fail(
-                    $"map locations without a line: {string.Join(", ", noLine)}");
+                    "map locations without a line: "
+                        + $"{string.Join(", ", noLine)}");
             }
             else
             {
                 Plugin.Log.LogInfo(
-                    $"[tooltips] PASS map: {locs} selectable locations, each with a line");
+                    $"[tooltips] PASS map: {locs} selectable locations, each "
+                        + "with a line");
             }
 
             // Tubular magazine's popup, as the inventory shows it.
@@ -419,7 +425,8 @@ namespace DarkwoodMP.World
             if (!string.IsNullOrEmpty(popupText))
             {
                 Plugin.Log.LogInfo(
-                    $"[tooltips] PASS Tubular magazine's popup: \"{popupText}\"");
+                    "[tooltips] PASS Tubular magazine's popup: "
+                        + $"\"{popupText}\"");
             }
             else
             {
@@ -450,7 +457,8 @@ namespace DarkwoodMP.World
                         && txt.EndsWith("\nGAME"))
                     {
                         Plugin.Log.LogInfo(
-                            $"[tooltips] PASS map popup of {e.elementName}: the mod's line, then the game's");
+                            $"[tooltips] PASS map popup of {e.elementName}: "
+                                + "the mod's line, then the game's");
                     }
                     else
                     {

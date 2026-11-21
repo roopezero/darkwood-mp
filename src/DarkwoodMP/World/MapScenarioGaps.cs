@@ -329,7 +329,9 @@ namespace DarkwoodMP.World
             if (inv == null || food == null)
             {
                 made.Add(
-                    $"no inventory in the wardrobe ({inv != null}) or no rotting food (of {Singleton<ItemsDatabase>.Instance.itemsDict.Count} items: {foods})");
+                    $"no inventory in the wardrobe ({inv != null}) or no "
+                        + "rotting food (of "
+                        + $"{Singleton<ItemsDatabase>.Instance.itemsDict.Count} items: {foods})");
             }
             else
             {
@@ -349,7 +351,8 @@ namespace DarkwoodMP.World
                 // durability 1: whole (the game multiplies it by the maximum)
                 inv.slots[0].createItem(food, 1);
                 made.Add(
-                    $"wardrobe {ObjRef.Of(inv.gameObject)} at {Fmt(w.transform.position)} with {food} ({max:0.##}; rotting: {foods})");
+                    "wardrobe "
+                        + $"{ObjRef.Of(inv.gameObject)} at {Fmt(w.transform.position)} with {food} ({max:0.##}; rotting: {foods})");
             }
 
             var item = crate.GetComponent<Item>();
@@ -369,7 +372,8 @@ namespace DarkwoodMP.World
                 item.shadowArmor = sa;
             }
             made.Add(
-                $"shadow crate {used} {ObjRef.Of(crate)} at {Fmt(crate.transform.position)} (item {item != null})");
+                $"shadow crate {used} "
+                    + $"{ObjRef.Of(crate)} at {Fmt(crate.transform.position)} (item {item != null})");
             r.Info = string.Join("; ", made);
         }
 
@@ -506,7 +510,8 @@ namespace DarkwoodMP.World
             if (_jType == null)
             {
                 r.Fail(
-                    $"no {_jKind} our journal hasn't got (of {keys.Count} in the database)");
+                    $"no {_jKind} our journal hasn't got (of {keys.Count} in "
+                        + "the database)");
             }
             r.Info = $"{_jKind} {_jType}";
             yield break;
@@ -619,7 +624,8 @@ namespace DarkwoodMP.World
                     way = "off";
                 }
                 r.Fail(
-                    $"{_jType} came {way} after {FlagsSync.Interval + 0.5f:0.#} s");
+                    $"{_jType} came {way} after "
+                        + $"{FlagsSync.Interval + 0.5f:0.#} s");
             }
         }
 
@@ -699,7 +705,8 @@ namespace DarkwoodMP.World
             if (Location.getAtPos(p.transform.position) != l)
             {
                 r.Fail(
-                    $"couldn't get into {l.name} (at {Fmt(p.transform.position)})");
+                    $"couldn't get into {l.name} (at "
+                        + $"{Fmt(p.transform.position)})");
                 yield break;
             }
             bool reward = !a.Contains("noreward");
@@ -720,7 +727,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             string head =
-                $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, ";
+                $"{l.name}: afterNight {c.isAfterNight}, frozen "
+                    + $"{p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, ";
             string who = "no trader or wolf";
             if (npc != null)
             {
@@ -811,7 +819,8 @@ namespace DarkwoodMP.World
                 text = ", the wolf here";
             }
             r.Info =
-                $"afterNight {c.isAfterNight}, frozen {frozen}, trader {traderName}{text}";
+                $"afterNight {c.isAfterNight}, frozen {frozen}, trader "
+                    + $"{traderName}{text}";
             if (c.isAfterNight != want || (!want && (npc != null || frozen)))
             {
                 r.Fail(r.Info);
@@ -840,7 +849,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(wait);
             int moved = ((c.CurrentTime - t0) % 1440 + 1440) % 1440;
             r.Info =
-                $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} in {wait:0.#} s";
+                $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} "
+                    + $"in {wait:0.#} s";
             bool wrong = c.DoUpdateTime != want;
             if (!wrong)
             {
@@ -882,7 +892,8 @@ namespace DarkwoodMP.World
             if (!npc.wantsToTalk || npc.characterDialogue == null)
             {
                 r.Fail(
-                    $"{npc.name} doesn't want to talk (wantsToTalk {npc.wantsToTalk})");
+                    $"{npc.name} doesn't want to talk (wantsToTalk "
+                        + $"{npc.wantsToTalk})");
                 yield break;
             }
             bool expectRefused = a.Contains("--refused");
@@ -1049,8 +1060,10 @@ namespace DarkwoodMP.World
                 text = "open";
             }
             r.Info =
-                $"inDialogue {p.inDialogue}, inShop {p.inShop}, performingAction {p.performingAction}, window " +
-                     $"{text}, timeScale {Time.timeScale:0.##}, afterNight {Singleton<Controller>.Instance.isAfterNight}";
+                $"inDialogue {p.inDialogue}, inShop {p.inShop}, "
+                    + $"performingAction {p.performingAction}, window " +
+                     $"{text}, timeScale {Time.timeScale:0.##}, afterNight "
+                    + $"{Singleton<Controller>.Instance.isAfterNight}";
             if (!Free() || Time.timeScale <= 0f)
             {
                 r.Fail(r.Info);
@@ -1112,7 +1125,8 @@ namespace DarkwoodMP.World
             if (slot == null)
             {
                 r.Fail(
-                    $"no rotting food in {inv.name} {ObjRef.Of(inv.gameObject)}");
+                    $"no rotting food in {inv.name} "
+                        + $"{ObjRef.Of(inv.gameObject)}");
                 p.openedItemInventory = null;
                 yield break;
             }
@@ -1174,7 +1188,8 @@ namespace DarkwoodMP.World
                         && l.Contains("sent") && !l.Contains("[map]")).ToList();
             var refused = Refused(mark);
             r.Info =
-                $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} in {calls} refreshes";
+                $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} "
+                    + $"in {calls} refreshes";
             if (d1 < 0f || d1 >= d0)
             {
                 r.Fail($"it didn't rot: {r.Info}");
@@ -1184,7 +1199,8 @@ namespace DarkwoodMP.World
             if (sent.Count > 0)
             {
                 r.Fail(
-                    $"the rot was sent as our change: {sent[0].Trim()}; {r.Info}");
+                    $"the rot was sent as our change: {sent[0].Trim()}; "
+                        + $"{r.Info}");
             }
             if (refused.Count > 0)
             {
@@ -1230,7 +1246,8 @@ namespace DarkwoodMP.World
             var refused = MapScenarioIssues.LogLines()
                 .Where(l => l.Contains($"of {inv.name}: refused")).ToList();
             r.Info =
-                $"{inv.name} {ObjRef.Of(inv.gameObject)}: [{string.Join(",", left)}]";
+                $"{inv.name} "
+                    + $"{ObjRef.Of(inv.gameObject)}: [{string.Join(",", left)}]";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -1319,7 +1336,8 @@ namespace DarkwoodMP.World
             if (pf == null)
             {
                 r.Fail(
-                    $"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}");
+                    "no prefab with a ChainParent among "
+                        + $"{string.Join(", ", VinePrefabs)}");
                 yield break;
             }
             Vector3 position = Spot("vine");
@@ -1350,7 +1368,8 @@ namespace DarkwoodMP.World
                 segment = cp.lastChainSegment.name;
             }
             r.Info =
-                $"{from}: {vine} at {spot}: health {health:0} of {full:0}, segment {segment}";
+                $"{from}: {vine} at {spot}: health {health:0} of {full:0}, "
+                    + $"segment {segment}";
             if (cp.maxHealth <= 0f)
             {
                 r.Fail(r.Info + ": no health to cut");
@@ -1465,12 +1484,14 @@ namespace DarkwoodMP.World
             if (sa == null)
             {
                 r.Fail(
-                    $"{crate.name} {ObjRef.Of(crate.gameObject)} has no shadow");
+                    $"{crate.name} {ObjRef.Of(crate.gameObject)} has no "
+                        + "shadow");
                 yield break;
             }
             crate.shadowArmor = sa;
             r.Info =
-                $"{crate.name} {ObjRef.Of(crate.gameObject)}: shadow {BreakSync.ShadowHealth(crate):0.#} of {sa.maxHealth:0}, item health {crate.health}";
+                $"{crate.name} "
+                    + $"{ObjRef.Of(crate.gameObject)}: shadow {BreakSync.ShadowHealth(crate):0.#} of {sa.maxHealth:0}, item health {crate.health}";
         }
 
         /// <summary>
@@ -1498,7 +1519,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1.5f);
             var refused = Refused(mark);
             r.Info =
-                $"shadow {BreakSync.ShadowHealth(crate):0.#}, item health {hp} -> {crate.health}";
+                $"shadow {BreakSync.ShadowHealth(crate):0.#}, item health {hp} "
+                    + $"-> {crate.health}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -1548,7 +1570,8 @@ namespace DarkwoodMP.World
                 text = $"alive, going to {BreakSync.ShadowHealth(crate):0.#}";
             }
             r.Info =
-                $"shadow {text}, item health {crate.health}, destroyed {crate.destroyed}";
+                $"shadow {text}, item health {crate.health}, destroyed "
+                    + $"{crate.destroyed}";
             if (!Ok() || crate.destroyed)
             {
                 r.Fail(r.Info);

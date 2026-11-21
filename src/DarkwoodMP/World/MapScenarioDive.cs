@@ -136,7 +136,8 @@ namespace DarkwoodMP.World
             yield return null;
             var inv = prefab.GetComponent<InvItem>();
             r.Info =
-                $"{id} {ObjRef.Of(go)} at {Fmt(pos)}; {SharedTank.Item}: important item {inv.isImportantItem}, stackable {inv.stackable}; filled {SharedTank.Filled}";
+                $"{id} "
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}; {SharedTank.Item}: important item {inv.isImportantItem}, stackable {inv.stackable}; filled {SharedTank.Filled}";
         }
 
         /// <summary>
@@ -166,7 +167,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.2f);
             }
             r.Info =
-                $"carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
+                $"carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, "
+                    + $"filled {SharedTank.Filled}";
             if (!SharedTank.Filled)
             {
                 r.Fail(r.Info);
@@ -184,7 +186,9 @@ namespace DarkwoodMP.World
                 SharedTank.Item, n, includeAdditionalInventory: true);
             yield return null;
             r.Info =
-                $"took {n}, carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
+                $"took {n}, carried "
+                    + $"{MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled "
+                    + $"{SharedTank.Filled}";
             if (MapScenarioWorld.CarriedOf(SharedTank.Item) != 0)
             {
                 r.Fail(r.Info);
@@ -208,7 +212,8 @@ namespace DarkwoodMP.World
                 new Flags.SaveState(Singleton<Flags>.Instance).flags.Exists(
                     x => x != null && x.name == SharedTank.Flag && x.isTrue);
             r.Info =
-                $"filled {SharedTank.Filled} (want {want}), in the save {saved}";
+                $"filled {SharedTank.Filled} (want {want}), in the save "
+                    + $"{saved}";
             if (SharedTank.Filled != want || saved != want)
             {
                 r.Fail(r.Info);
@@ -242,7 +247,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"with the tank ran {c.Of(a[0])} (want {yes}), without it {c.Of(a[0] + "-no")} (want {no}); carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled {SharedTank.Filled}";
+                $"with the tank ran {c.Of(a[0])} (want {yes}), without it "
+                    + $"{c.Of(a[0] + "-no")} (want {no}); carried "
+                    + $"{MapScenarioWorld.CarriedOf(SharedTank.Item)}, filled "
+                    + $"{SharedTank.Filled}";
             if (c.Of(a[0]) != yes || c.Of(a[0] + "-no") != no)
             {
                 r.Fail(r.Info);
@@ -300,7 +308,8 @@ namespace DarkwoodMP.World
             _trips[a[0]] = new Trip { Et = et, To = to };
             yield return null;
             r.Info =
-                $"trip {a[0]} {ObjRef.Of(go)} from {Fmt(pos)} to {Fmt(to.position)}, {StateDump.Flat(to.position - pos):0} away";
+                $"trip {a[0]} "
+                    + $"{ObjRef.Of(go)} from {Fmt(pos)} to {Fmt(to.position)}, {StateDump.Flat(to.position - pos):0} away";
         }
 
         /// <summary>
@@ -334,8 +343,10 @@ namespace DarkwoodMP.World
             // a correction comes within a few State updates
             yield return new WaitForSeconds(3f);
             r.Info =
-                $"arrived {arrived}, now at {Fmt(p.transform.position)} ({StateDump.Flat(p.transform.position - m.To.position):0} from the marker), " +
-                     $"put back {Sync.MoveCheck.Corrections - corrections} time(s)";
+                $"arrived {arrived}, now at {Fmt(p.transform.position)} "
+                    + $"({StateDump.Flat(p.transform.position - m.To.position):0} from the marker), " +
+                     $"put back {Sync.MoveCheck.Corrections - corrections} "
+                    + "time(s)";
             if (!arrived)
             {
                 r.Fail($"the trip didn't take us there: {r.Info}");
@@ -449,7 +460,8 @@ namespace DarkwoodMP.World
             _made[id] = m;
             yield return null;
             r.Info =
-                $"trigger {id} {ObjRef.Of(go)} at {Fmt(pos)}, {a[3]}; the unique object player is ours: {Singleton<UniqueObjects>.Instance.getObject("player") == Player.Instance.gameObject}";
+                $"trigger {id} "
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}, {a[3]}; the unique object player is ours: {Singleton<UniqueObjects>.Instance.getObject("player") == Player.Instance.gameObject}";
         }
 
         /// <summary>
@@ -480,7 +492,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             int got = c.Of(a[0]) - had;
             r.Info =
-                $"{got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
+                $"{got} step(s) acted on our player (want {want}), the shared "
+                    + $"step ran {m.C.N} time(s) here";
             if (got != want)
             {
                 r.Fail(r.Info);
@@ -509,7 +522,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
             r.Info =
-                $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})";
+                $"{got} step(s) of {a[0]} acted on our player (want {own}), "
+                    + $"its shared step ran {m.C.N} time(s) (want {shared})";
             if (got != own || m.C.N != shared)
             {
                 r.Fail(r.Info);
@@ -532,13 +546,16 @@ namespace DarkwoodMP.World
             {
                 state = "/" + q.playerState;
             }
-            return $"{q.type}{state} item={Name(q.itemType)} key='{q.keyType}' n={q.amount} mod={q.activeModifier} dest={Name(q.destTransform)}";
+            return $"{q.type}{state} item={Name(q.itemType)} key='{q.keyType}' "
+                + $"n={q.amount} mod={q.activeModifier} "
+                + $"dest={Name(q.destTransform)}";
         }
 
         private static string Ev(GameEvent e)
         {
             string head =
-                $"{e.type} '{e.Value}' '{e.Value2}' mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}";
+                $"{e.type} '{e.Value}' '{e.Value2}' "
+                    + $"mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}";
             List<Object> prefabs = e.prefabList;
             if (prefabs == null)
             {
@@ -653,7 +670,9 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 sb.Append(
-                    $"\n{et.transform.root.name}/{et.name} at {Fmt(et.transform.position)} active={et.gameObject.activeInHierarchy}");
+                    $"\n{et.transform.root.name}/{et.name} at "
+                        + $"{Fmt(et.transform.position)} "
+                        + $"active={et.gameObject.activeInHierarchy}");
                 foreach (var t in et.eventTriggers)
                 {
                     if (t == null)
@@ -667,7 +686,9 @@ namespace DarkwoodMP.World
                         text = " disabled";
                     }
                     sb.Append(
-                        $"\n  > {t.type} '{t.reactsToItemType}' fired={t.fired} multi={t.multipleFire}{text} removeItem={t.removeItemThatTriggeredMe}");
+                        $"\n  > {t.type} '{t.reactsToItemType}' "
+                            + $"fired={t.fired} multi={t.multipleFire}{text} "
+                            + $"removeItem={t.removeItemThatTriggeredMe}");
                     foreach (var q in t.eventRequirements)
                     {
                         if (q != null)
@@ -685,7 +706,8 @@ namespace DarkwoodMP.World
                         if (ge != null)
                         {
                             sb.Append(
-                                $"\n    {label}: {ge.name} multi={ge.multipleFire}");
+                                $"\n    {label}: {ge.name} "
+                                    + $"multi={ge.multipleFire}");
                             foreach (var e in ge.events)
                             {
                                 if (e != null)
@@ -705,7 +727,9 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 sb.Append(
-                    $"\n[events] {g.transform.root.name}/{g.name} at {Fmt(g.transform.position)} multi={g.multipleFire}");
+                    $"\n[events] {g.transform.root.name}/{g.name} at "
+                        + $"{Fmt(g.transform.position)} "
+                        + $"multi={g.multipleFire}");
                 foreach (var e in g.events)
                 {
                     if (e != null)
@@ -739,7 +763,9 @@ namespace DarkwoodMP.World
                     important = inv.isImportantItem;
                 }
                 string head =
-                    $"\n[item] {type}: prefab={hasPrefab} important={important} journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}";
+                    $"\n[item] {type}: prefab={hasPrefab} "
+                        + $"important={important} "
+                        + $"journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}";
                 UI ui = Singleton<UI>.Instance;
                 bool? inJournal = null;
                 if (ui != null)
@@ -757,7 +783,8 @@ namespace DarkwoodMP.World
                 }
                 sb.Append(
                     head
-                        + $" inJournal={inJournal} carried={MapScenarioWorld.CarriedOf(type)}");
+                        + $" inJournal={inJournal} "
+                        + $"carried={MapScenarioWorld.CarriedOf(type)}");
             }
             // Every loaded step that acts on the player
             // (ScriptedEvents.TargetsPlayer), by type and function, and how
@@ -810,7 +837,8 @@ namespace DarkwoodMP.World
                 }
             }
             sb.Append(
-                $"\n[on player] {string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
+                "\n[on player] "
+                    + $"{string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
             UniqueObjects instance = Singleton<UniqueObjects>.Instance;
             GameObject uo = null;
             if (instance != null)
@@ -818,7 +846,8 @@ namespace DarkwoodMP.World
                 uo = instance.getObject("player");
             }
             sb.Append(
-                $"\n[unique] player -> {Name(uo)} is Player.Instance: {uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");
+                $"\n[unique] player -> {Name(uo)} is Player.Instance: "
+                    + $"{uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");
             Plugin.Log.LogInfo($"[dive] scan {pat}:{sb}");
             r.Info = $"{n} triggers (in the log)";
             yield break;

@@ -208,7 +208,8 @@ namespace DarkwoodMP.World
             if (npc != null)
             {
                 r.Info =
-                    $"{npc.name} at {Fmt(npc.transform.position)}, {d:0} from us at {Fmt(Player.Instance.transform.position)}";
+                    $"{npc.name} at {Fmt(npc.transform.position)}, {d:0} from "
+                        + $"us at {Fmt(Player.Instance.transform.position)}";
             }
             else
             {
@@ -238,7 +239,8 @@ namespace DarkwoodMP.World
             _follower = default;
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{c.name} back at {Fmt(c.transform.position)}, {c.aggressiveness}, {c.behaviour}";
+                $"{c.name} back at {Fmt(c.transform.position)}, "
+                    + $"{c.aggressiveness}, {c.behaviour}";
         }
 
         private static readonly string[] WolfFlagNames =
@@ -346,7 +348,8 @@ namespace DarkwoodMP.World
             npc.transform.position = to;
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{npc.name} {ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> {Fmt(npc.transform.position)}";
+                $"{npc.name} "
+                    + $"{ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> {Fmt(npc.transform.position)}";
         }
 
         // ---- a world event from a character's animation ---------------------
@@ -402,7 +405,8 @@ namespace DarkwoodMP.World
             npc.disabled = true;
             yield return null;
             r.Info =
-                $"{npc.name} {ObjRef.Of(npc.gameObject)} at {Fmt(npc.transform.position)}: switched off for talking";
+                $"{npc.name} "
+                    + $"{ObjRef.Of(npc.gameObject)} at {Fmt(npc.transform.position)}: switched off for talking";
         }
 
         /// <summary>"anim-fire left|run": our NPC's animation fires the world
@@ -486,7 +490,8 @@ namespace DarkwoodMP.World
                 ran = "ran";
             }
             r.Info =
-                $"{name}: wantsToTalk {wants}, disabled {disabled}, the event {ran} here";
+                $"{name}: wantsToTalk {wants}, disabled {disabled}, the event "
+                    + $"{ran} here";
             if (npc.disabled || !npc.wantsToTalk || !ge.fired)
             {
                 r.Fail(r.Info);
@@ -544,7 +549,8 @@ namespace DarkwoodMP.World
             if (off >= 60f)
             {
                 r.Fail(
-                    $"{npc.name} is at {Fmt(npc.transform.position)}, {off:0} from the host's {Fmt(to)}");
+                    $"{npc.name} is at {Fmt(npc.transform.position)}, {off:0} "
+                        + $"from the host's {Fmt(to)}");
                 yield break;
             }
             yield return Walk(npc.transform.position, 150f);
@@ -562,7 +568,8 @@ namespace DarkwoodMP.World
                 dialogue = "open";
             }
             r.Info =
-                $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from the host's): dialogue {dialogue}";
+                $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from "
+                    + $"the host's): dialogue {dialogue}";
             if (open)
             {
                 yield return MapScenarioGaps.Close(win, npc);
@@ -694,7 +701,8 @@ namespace DarkwoodMP.World
                 placeName = l.name;
             }
             r.Info =
-                $"NpcDied came {got}, living night traders in {placeName}: {alive.Count}, nightTrader_killedYesterday {flag}";
+                $"NpcDied came {got}, living night traders in {placeName}: "
+                    + $"{alive.Count}, nightTrader_killedYesterday {flag}";
             if (refused.Count > 0)
             {
                 r.Fail($"{r.Info}; {refused[0].Trim()}");
