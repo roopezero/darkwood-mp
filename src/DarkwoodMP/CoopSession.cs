@@ -127,6 +127,9 @@ namespace DarkwoodMP
         /// Logs what switches off our player's view (a black screen).
         public readonly Sync.ViewWatch View;
 
+        /// Client: where the host's enemies are drawn between its states.
+        public readonly Combat.EnemyMotion Motion;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -174,6 +177,7 @@ namespace DarkwoodMP
             Objects = new World.ObjectActions(this);
             PlayerFx = new Sync.PlayerFx(this);
             View = new Sync.ViewWatch();
+            Motion = new Combat.EnemyMotion();
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

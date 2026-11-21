@@ -21,7 +21,7 @@ namespace DarkwoodMP.World
     ///                         it.
     ///   nl-motion SECS        (client) walks in a circle for SECS while
     ///                         counting how its copies of the host's enemies
-    ///                         are drawn (EnemyMotion.Stats).
+    ///                         are drawn (CoopSession.Motion.Stats).
     ///   nl-clear (host)       the herd removed.
     /// Dump section "nightobjects": every chunk's night-spawned objects
     /// (WorldChunk.nightSpawnedObjects, gone at dawn) and every object of a
@@ -513,8 +513,16 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            EnemyMotion.Stats.Reset();
-            EnemyMotion.Stats.On = true;
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                r.Fail("not playing together");
+                yield break;
+            }
+
+            var motion = coop.Motion;
+            motion.Stats.Reset();
+            motion.Stats.On = true;
             var centre = p.transform.position;
             float until = Time.realtimeSinceStartup + secs;
             int leg = 0;
@@ -542,17 +550,17 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                EnemyMotion.Stats.On = false;
+                motion.Stats.On = false;
             }
 
             p.health = p.maxHealth;
-            string s = EnemyMotion.Stats.Summary();
+            string s = motion.Summary();
             Plugin.Log.LogInfo($"[enemy motion] {s}");
-            if (EnemyMotion.Stats.Moving == 0)
+            if (motion.Stats.Moving == 0)
             {
                 r.Fail("no enemy of the host's moved by us: " + s);
             }
-            else if (EnemyMotion.Stats.Stalls * 10 > EnemyMotion.Stats.Moving)
+            else if (motion.Stats.Stalls * 10 > motion.Stats.Moving)
             {
                 r.Fail(
                     "enemies stood still in over 10% of the frames they "

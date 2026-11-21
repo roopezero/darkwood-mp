@@ -888,6 +888,7 @@ namespace DarkwoodMP
             {
                 session.Ui.Enabled = true;
                 session.Pushes.TestTouch = null;
+                session.Motion.Stats.On = false;
                 session.Traps.TestRefuse = World.Traps.TrapTest.None;
             }
 
@@ -895,7 +896,6 @@ namespace DarkwoodMP
 
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
-            EnemyMotion.Stats.On = false;
             WorldActions.TestAsPlayer = false;
             var player = Player.Instance;
             if (player != null)
