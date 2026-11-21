@@ -127,7 +127,7 @@ namespace DarkwoodMP.World
                                 + $"{src.hideoutId}");
                     }
 
-                    Authority.Request(
+                    Coop.Current.Authority.Request(
                         w, $"porter transport from hideout {src.hideoutId}",
                         inventory: false);
                 }
@@ -190,15 +190,15 @@ namespace DarkwoodMP.World
             }
 
             int hid = r.R.ReadByte();
-            if (!Authority.Handling)
+            if (!Coop.Current.Authority.Handling)
             {
                 return;
             }
 
-            var proxy = Authority.Requester;
+            var proxy = Coop.Current.Authority.Requester;
             if (proxy == null)
             {
-                Authority.Refuse("where they are isn't known yet");
+                Coop.Current.Authority.Refuse("where they are isn't known yet");
                 return;
             }
 
@@ -206,7 +206,7 @@ namespace DarkwoodMP.World
             var src = HideoutById(hid);
             if (Why(src, dest) is string why)
             {
-                Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(why);
                 return;
             }
 
@@ -402,7 +402,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world] sent porter call at {loc.name}");
             }
 
-            Authority.Request(
+            Coop.Current.Authority.Request(
                 w, $"porter call at {loc.name}", inventory: false);
             return false;
         }
@@ -463,52 +463,57 @@ namespace DarkwoodMP.World
             var loc = PorterLocationAt(pos);
             if (s.IsHost)
             {
-                if (!Authority.Handling)
+                if (!Coop.Current.Authority.Handling)
                 {
                     return;
                 }
 
                 if (loc == null)
                 {
-                    Authority.Refuse("there's no porter's place there");
+                    Coop.Current.Authority.Refuse(
+                        "there's no porter's place there");
                     return;
                 }
 
-                var proxy = Authority.Requester;
+                var proxy = Coop.Current.Authority.Requester;
                 if (proxy == null)
                 {
-                    Authority.Refuse("where they are isn't known yet");
+                    Coop.Current.Authority.Refuse(
+                        "where they are isn't known yet");
                     return;
                 }
 
                 if (NightSpawns.BigLocationAt(proxy.transform.position) != loc)
                 {
-                    Authority.Refuse($"they aren't at {loc.name}");
+                    Coop.Current.Authority.Refuse($"they aren't at {loc.name}");
                     return;
                 }
 
                 if (!Core.isDay())
                 {
-                    Authority.Refuse("the porter comes in the daytime only");
+                    Coop.Current.Authority.Refuse(
+                        "the porter comes in the daytime only");
                     return;
                 }
 
                 var flags = Singleton<Flags>.Instance;
                 if (flags.isFlagTrue("porter_inTransit"))
                 {
-                    Authority.Refuse("the porter is on the way already");
+                    Coop.Current.Authority.Refuse(
+                        "the porter is on the way already");
                     return;
                 }
 
                 if (flags.isFlagTrue("porter_killed"))
                 {
-                    Authority.Refuse("the porter is dead");
+                    Coop.Current.Authority.Refuse("the porter is dead");
                     return;
                 }
 
                 if (loc.porter != null)
                 {
-                    Authority.Refuse("the porter is there already");
+                    Coop.Current.Authority.Refuse(
+                        "the porter is there already");
                     return;
                 }
 
@@ -571,7 +576,7 @@ namespace DarkwoodMP.World
 
             // Client: lit here at once; the host says whether the old one goes
             // out.
-            Authority.Request(BeginOven(machine, prev),
+            Coop.Current.Authority.Request(BeginOven(machine, prev),
                 $"light the oven {machine.name}", (ok, reason, result) =>
             {
                 if (ok || machine == null)
@@ -690,18 +695,18 @@ namespace DarkwoodMP.World
             var other = ObjRef.Resolve<ExperienceMachine>(otherRef);
             if (s.IsHost)
             {
-                if (!Authority.Handling)
+                if (!Coop.Current.Authority.Handling)
                 {
                     return;
                 }
 
                 if (lit == null)
                 {
-                    Authority.Refuse("no such oven here");
+                    Coop.Current.Authority.Refuse("no such oven here");
                     return;
                 }
 
-                if (!Authority.InReach(
+                if (!Coop.Current.Authority.InReach(
                     lit.transform.position, WorldActions.Reach, lit.name))
                 {
                     return;
@@ -709,7 +714,8 @@ namespace DarkwoodMP.World
 
                 if (lit.transform.GetLocation() == null)
                 {
-                    Authority.Refuse("that oven isn't at a hideout");
+                    Coop.Current.Authority.Refuse(
+                        "that oven isn't at a hideout");
                     return;
                 }
 

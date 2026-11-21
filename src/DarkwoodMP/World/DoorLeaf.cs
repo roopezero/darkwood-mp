@@ -804,7 +804,8 @@ namespace DarkwoodMP.World
 
             if (_s.IsHost)
             {
-                if (!Authority.Near(from, d.body.position, WorldActions.Reach)
+                if (!Coop.Current.Authority.Near(
+                    from, d.body.position, WorldActions.Reach)
                     || Mathf.Abs(angle) > DoorLeaf.MaxTurn(d) + 5f)
                 {
                     Plugin.Log.LogInfo(

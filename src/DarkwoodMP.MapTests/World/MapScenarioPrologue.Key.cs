@@ -298,7 +298,7 @@ namespace DarkwoodMP.World
 
             var l = d.GetComponent<Locked>();
             yield return Walk(d.transform.position);
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             if (a.Contains("--reopen") && d.opened)
             {
                 AsPlayer(() => d.close(P.transform));
@@ -324,8 +324,8 @@ namespace DarkwoodMP.World
                     + $"{ObjRef.Of(d.gameObject)} key {a[0]}: "
                     + $"unlocked with it {unlocked}, locked {l.locked}, "
                     + $"open {d.opened}, "
-                    + $"refusals {Authority.RolledBack - refused}";
-            if (Authority.RolledBack != refused)
+                    + $"refusals {Coop.Current.Authority.RolledBack - refused}";
+            if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
             }

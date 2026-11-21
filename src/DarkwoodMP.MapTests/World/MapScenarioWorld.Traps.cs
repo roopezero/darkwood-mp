@@ -81,11 +81,11 @@ namespace DarkwoodMP.World
 
             float health = P.health;
             string name = t.name, at = Ref(t);
-            int rolledBack = Authority.RolledBack;
+            int rolledBack = Coop.Current.Authority.RolledBack;
             AsPlayer(() => t.checkCollision(col));
             bool fired = t == null || t.triggered;
             for (float until = Time.time + 6f; Time.time < until
-                && Authority.Waiting > 0;)
+                && Coop.Current.Authority.Waiting > 0;)
             {
                 yield return null;
             }
@@ -94,7 +94,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{name} {at} went off={fired}, health {health:0} -> "
                     + $"{P.health:0}, inBearTrap={P.inBearTrap}, rolled back "
-                    + $"{Authority.RolledBack - rolledBack}";
+                    + $"{Coop.Current.Authority.RolledBack - rolledBack}";
             if (!fired)
             {
                 r.Fail($"{r.Info}: didn't go off");
@@ -103,7 +103,7 @@ namespace DarkwoodMP.World
 
             if (a.Length > 1 && a[1] == "refused")
             {
-                if (Authority.RolledBack == rolledBack)
+                if (Coop.Current.Authority.RolledBack == rolledBack)
                 {
                     r.Fail($"{r.Info}: the host didn't refuse it");
                 }

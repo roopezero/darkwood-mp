@@ -497,7 +497,8 @@ namespace DarkwoodMP.World
                 change[kv.Key] = n - kv.Value;
             }
 
-            Authority.Request(w, $"trade with {name}", (ok, reason, result) =>
+            Coop.Current.Authority.Request(
+                w, $"trade with {name}", (ok, reason, result) =>
             {
                 if (ok)
                 {
@@ -634,11 +635,11 @@ namespace DarkwoodMP.World
             var npc = Find(name, who, at);
             if (npc == null)
             {
-                Authority.Refuse($"{name} isn't here");
+                Coop.Current.Authority.Refuse($"{name} isn't here");
                 return;
             }
 
-            if (!Authority.InReach(at, WorldActions.Reach, name))
+            if (!Coop.Current.Authority.InReach(at, WorldActions.Reach, name))
             {
                 Send(npc, from);
                 return;
@@ -653,7 +654,7 @@ namespace DarkwoodMP.World
             if (why != null)
             {
                 Send(npc, from);
-                Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(why);
                 return;
             }
 

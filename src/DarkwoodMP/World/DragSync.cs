@@ -982,9 +982,9 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (Authority.Near(
+            if (Coop.Current.Authority.Near(
                 from, item.transform.position, WorldActions.Reach)
-                && Authority.Near(from, pos, WorldActions.Reach))
+                && Coop.Current.Authority.Near(from, pos, WorldActions.Reach))
             {
                 return true;
             }
@@ -1191,7 +1191,7 @@ namespace DarkwoodMP.World
 
             var w = _session.Begin(MsgType.DragClaim);
             _dragRef.Write(w);
-            Authority.Request(w, $"drag {item.name} ({_dragRef})",
+            Coop.Current.Authority.Request(w, $"drag {item.name} ({_dragRef})",
                 (ok, reason, _) =>
             {
                 if (_dragging != item)
@@ -1380,7 +1380,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private void OnClaim(ulong from, PacketReader r)
         {
-            if (!_session.IsHost || !Authority.Handling)
+            if (!_session.IsHost || !Coop.Current.Authority.Handling)
             {
                 return;
             }
@@ -1389,11 +1389,11 @@ namespace DarkwoodMP.World
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null)
             {
-                Authority.Refuse("it isn't here");
+                Coop.Current.Authority.Refuse("it isn't here");
                 return;
             }
 
-            if (!Authority.InReach(
+            if (!Coop.Current.Authority.InReach(
                 item.transform.position, WorldActions.Reach, item.name))
             {
                 SendHere(obj, from);
@@ -1406,7 +1406,8 @@ namespace DarkwoodMP.World
             {
                 // before the Verdict: where their copy goes as they let go
                 SendHere(obj, from);
-                Authority.Refuse($"{_session.NameOf(o.Id)} is moving it");
+                Coop.Current.Authority.Refuse(
+                    $"{_session.NameOf(o.Id)} is moving it");
                 return;
             }
 
@@ -1463,9 +1464,10 @@ namespace DarkwoodMP.World
                 // checked and taken as its last move.
                 var it = ObjRef.Resolve<Item>(obj);
                 if (it != null
-                    && Authority.Near(
+                    && Coop.Current.Authority.Near(
                         from, it.transform.position, WorldActions.Reach)
-                    && Authority.Near(from, pos, WorldActions.Reach))
+                    && Coop.Current.Authority.Near(
+                        from, pos, WorldActions.Reach))
                 {
                     return true;
                 }

@@ -2325,7 +2325,8 @@ namespace DarkwoodMP.World
             }
 
             bool wasOpen = door.opened;
-            int ropesBefore = Ropes(), refusedBefore = Authority.RolledBack;
+            int ropesBefore = Ropes();
+            int refusedBefore = Coop.Current.Authority.RolledBack;
             Plugin.Log.LogInfo(
                 $"[client test] {door.name} "
                     + $"{ObjRef.Of(door.gameObject)} "
@@ -2349,11 +2350,11 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"[client test] after the host's answer: open={door.opened} "
                     + $"(was {wasOpen}), ropes={Ropes()}, rolled back "
-                    + $"{Authority.RolledBack}");
+                    + $"{Coop.Current.Authority.RolledBack}");
             // The scripted host refuses the door: it is shut or open as before,
             // and the rope it used is back.
             bool back = door.opened == wasOpen && Ropes() == ropesBefore
-                && Authority.RolledBack > refusedBefore;
+                && Coop.Current.Authority.RolledBack > refusedBefore;
             string verdict;
             if (back)
             {
@@ -2364,7 +2365,8 @@ namespace DarkwoodMP.World
                 verdict =
                     $"FAIL (open={door.opened}, was {wasOpen}; ropes "
                         + $"{Ropes()}, were {ropesBefore}; refusals "
-                        + $"{Authority.RolledBack - refusedBefore})";
+                        + (Coop.Current.Authority.RolledBack - refusedBefore)
+                        + ")";
             }
 
             Plugin.Log.LogInfo($"[client test] rollback: {verdict}");

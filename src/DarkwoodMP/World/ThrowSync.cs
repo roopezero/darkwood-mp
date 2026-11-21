@@ -224,7 +224,7 @@ namespace DarkwoodMP.World
             var vel = r.ReadVector3();
             var target = r.ReadVector3();
             float distance = r.R.ReadSingle();
-            if (s.IsHost && !Authority.Near(from, pos, 400f))
+            if (s.IsHost && !Coop.Current.Authority.Near(from, pos, 400f))
             {
                 Plugin.Log.LogInfo(
                     $"[authority] {s.NameOf(from)} threw a {type} from where "

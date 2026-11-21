@@ -1224,9 +1224,10 @@ namespace DarkwoodMP.Combat
             // An NPC a joiner's event sends after "the player" (a dialogue's
             // outcome, run here for them) goes for them.
             NetPlayerProxy requester = null;
-            if (__instance.npc != null)
+            CoopSession coop = Coop.Current;
+            if (__instance.npc != null && coop != null)
             {
-                requester = World.Authority.Requester;
+                requester = coop.Authority.Requester;
             }
 
             if (requester != null)

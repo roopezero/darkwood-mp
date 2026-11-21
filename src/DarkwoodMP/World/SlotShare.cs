@@ -1625,7 +1625,7 @@ namespace DarkwoodMP.World
         {
             foreach (var wb in Object.FindObjectsOfType<Workbench>(true))
             {
-                if (Authority.Near(
+                if (Coop.Current.Authority.Near(
                     player, wb.transform.position, WorldActions.Reach))
                 {
                     return true;

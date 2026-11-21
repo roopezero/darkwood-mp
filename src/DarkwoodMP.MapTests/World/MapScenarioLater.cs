@@ -444,7 +444,7 @@ namespace DarkwoodMP.World
 
             yield return Walk(trip.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
-            int refusedBefore = Authority.RolledBack;
+            int refusedBefore = Coop.Current.Authority.RolledBack;
             var p = Player.Instance;
             SetOff(trip);
             float until = Time.realtimeSinceStartup + 10f;
@@ -473,7 +473,8 @@ namespace DarkwoodMP.World
             r.Info =
                 $"arrived {from:0} from where we left, set off {a[1]} at once: "
                     + $"its shared part ran {at.C.N} time(s) here, requests "
-                    + $"refused {Authority.RolledBack - refusedBefore}";
+                    + "refused "
+                    + (Coop.Current.Authority.RolledBack - refusedBefore);
             if (at.C.N != 1)
             {
                 r.Fail(

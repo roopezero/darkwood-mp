@@ -427,7 +427,8 @@ namespace DarkwoodMP.World
                     w.WriteStr(had[i]);
                 }
 
-                Authority.Request(w, $"learn {good}", (ok, reason, _) =>
+                Coop.Current.Authority.Request(
+                    w, $"learn {good}", (ok, reason, _) =>
                 {
                     _waiting = false;
                     if (ok)
@@ -520,21 +521,21 @@ namespace DarkwoodMP.World
                 chosen.Add(r.ReadStr());
             }
 
-            if (!S.IsHost || !Authority.Handling)
+            if (!S.IsHost || !Coop.Current.Authority.Handling)
             {
                 return;
             }
 
             if (Tiers == null)
             {
-                Authority.Refuse("the host isn't in a world");
+                Coop.Current.Authority.Refuse("the host isn't in a world");
                 return;
             }
 
             int most = Progression.MostLevels(Player.Instance);
             if (level > most)
             {
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     $"level {level} is more than the shared essence gives "
                         + $"({most})");
                 return;
@@ -543,7 +544,7 @@ namespace DarkwoodMP.World
             string why = Check(level, chosen, good, negative);
             if (why != null)
             {
-                Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(why);
                 return;
             }
 

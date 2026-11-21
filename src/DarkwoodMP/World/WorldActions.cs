@@ -392,7 +392,7 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Authority.Request(w, $"{a} {r} ({name})");
+                Coop.Current.Authority.Request(w, $"{a} {r} ({name})");
             }
         }
 
@@ -457,7 +457,7 @@ namespace DarkwoodMP.World
             // did: that player sets off its triggers.
             bool byPlayer = s.IsHost || (f & 4) != 0;
 
-            if (s.IsHost && Authority.Handling
+            if (s.IsHost && Coop.Current.Authority.Handling
                 && !Allowed(a, obj, x, y, f1, str))
             {
                 // A player in a dream of their own (or a place the host doesn't
@@ -465,9 +465,9 @@ namespace DarkwoodMP.World
                 // refuse, nor to apply. Their game no longer sends these
                 // (OursAlone); this is for one that was on the way as they
                 // went.
-                if (Authority.RequesterAway)
+                if (Coop.Current.Authority.RequesterAway)
                 {
-                    Authority.AcceptAway($"{a} {obj}");
+                    Coop.Current.Authority.AcceptAway($"{a} {obj}");
                     return;
                 }
 
@@ -519,7 +519,7 @@ namespace DarkwoodMP.World
                         result = "1";
                     }
 
-                    Authority.Result(result);
+                    Coop.Current.Authority.Result(result);
                     if (Debug)
                     {
                         string pick;
@@ -562,7 +562,7 @@ namespace DarkwoodMP.World
                         outcome = "1";
                     }
 
-                    Authority.Result(outcome);
+                    Coop.Current.Authority.Result(outcome);
                     if (Debug)
                     {
                         string disarm = "failed";
@@ -951,18 +951,18 @@ namespace DarkwoodMP.World
                 var ex = ObjRef.Resolve<Explodes>(obj);
                 if (ex == null || ex.GetComponent<Character>() != null)
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         "it isn't here (gone or already blown up)");
                     return false;
                 }
 
                 if (BreakSync.Activated(ex))
                 {
-                    Authority.Refuse("it had already gone off");
+                    Coop.Current.Authority.Refuse("it had already gone off");
                     return false;
                 }
 
-                return Authority.InReach(
+                return Coop.Current.Authority.InReach(
                     ex.transform.position, ShotReach, ex.name);
             }
 
@@ -971,7 +971,7 @@ namespace DarkwoodMP.World
                 var item = ObjRef.Resolve<Item>(obj);
                 if (item == null)
                 {
-                    Authority.Refuse("not here");
+                    Coop.Current.Authority.Refuse("not here");
                     return false;
                 }
 
@@ -985,7 +985,7 @@ namespace DarkwoodMP.World
                     reach = Reach;
                 }
 
-                if (!Authority.InReach(
+                if (!Coop.Current.Authority.InReach(
                     item.transform.position, reach, item.name))
                 {
                     return false;
@@ -994,20 +994,20 @@ namespace DarkwoodMP.World
                 switch (a)
                 {
                     case Action.ItemHit when item.destroyed:
-                        Authority.Refuse("it is already broken");
+                        Coop.Current.Authority.Refuse("it is already broken");
                         return false;
                     case Action.ItemHit when x > 1000f || x < 0f:
-                        Authority.Refuse(
+                        Coop.Current.Authority.Refuse(
                             $"a hit of {x:0} is more than any weapon does");
                         return false;
                     case Action.ItemBroken when item.destroyed:
-                        Authority.Refuse("it is already broken");
+                        Coop.Current.Authority.Refuse("it is already broken");
                         return false;
                     case Action.ItemBroken when !item.destructible:
-                        Authority.Refuse("it can't be broken");
+                        Coop.Current.Authority.Refuse("it can't be broken");
                         return false;
                     case Action.ItemRepaired when !item.destroyed:
-                        Authority.Refuse("it isn't broken");
+                        Coop.Current.Authority.Refuse("it isn't broken");
                         return false;
                 }
 
@@ -1019,11 +1019,12 @@ namespace DarkwoodMP.World
                 var npc = DyingNpc(obj, str, x, y);
                 if (npc == null)
                 {
-                    Authority.Refuse("no such NPC here");
+                    Coop.Current.Authority.Refuse("no such NPC here");
                     return false;
                 }
 
-                if (!Authority.InReach(npc.transform.position, 2500f, npc.name))
+                if (!Coop.Current.Authority.InReach(
+                    npc.transform.position, 2500f, npc.name))
                 {
                     return false;
                 }
@@ -1052,30 +1053,32 @@ namespace DarkwoodMP.World
                 var l = ObjRef.Resolve<Locked>(obj);
                 if (l == null)
                 {
-                    Authority.Refuse("there's no lock on it here");
+                    Coop.Current.Authority.Refuse("there's no lock on it here");
                     return false;
                 }
 
-                if (!Authority.InReach(l.transform.position, Reach, l.name))
+                if (!Coop.Current.Authority.InReach(
+                    l.transform.position, Reach, l.name))
                 {
                     return false;
                 }
 
                 if (!l.locked)
                 {
-                    Authority.Refuse("it isn't locked");
+                    Coop.Current.Authority.Refuse("it isn't locked");
                     return false;
                 }
 
                 if (x == 0f)
                 {
-                    Authority.Refuse(StoryOnly);
+                    Coop.Current.Authority.Refuse(StoryOnly);
                     return false;
                 }
 
                 if (x == 1f && !HasKey(l))
                 {
-                    Authority.Refuse($"nobody has the key ({l.keyType})");
+                    Coop.Current.Authority.Refuse(
+                        $"nobody has the key ({l.keyType})");
                     return false;
                 }
 
@@ -1089,24 +1092,25 @@ namespace DarkwoodMP.World
                 var item = ObjRef.Resolve<Item>(obj);
                 if (item == null)
                 {
-                    Authority.Refuse("no such thing here");
+                    Coop.Current.Authority.Refuse("no such thing here");
                     return false;
                 }
 
                 if (Crate(item) != null && !item.searched)
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         "a crate is picked open by the host's roll");
                     return false;
                 }
 
                 if (item.GetComponent<Inventory>() == null)
                 {
-                    Authority.Refuse("there's nothing to search in it");
+                    Coop.Current.Authority.Refuse(
+                        "there's nothing to search in it");
                     return false;
                 }
 
-                return Authority.InReach(
+                return Coop.Current.Authority.InReach(
                     item.transform.position, Reach, item.name);
             }
 
@@ -1115,24 +1119,26 @@ namespace DarkwoodMP.World
                 var p = ObjRef.Resolve<Padlock>(obj);
                 if (p == null)
                 {
-                    Authority.Refuse("no such padlock here");
+                    Coop.Current.Authority.Refuse("no such padlock here");
                     return false;
                 }
 
-                if (!Authority.InReach(p.transform.position, Reach, p.name))
+                if (!Coop.Current.Authority.InReach(
+                    p.transform.position, Reach, p.name))
                 {
                     return false;
                 }
 
                 if (!f1)
                 {
-                    Authority.Refuse(StoryOnly);
+                    Coop.Current.Authority.Refuse(StoryOnly);
                     return false;
                 }
 
                 if (p.locked && str != p.combination)
                 {
-                    Authority.Refuse("that isn't the padlock's code");
+                    Coop.Current.Authority.Refuse(
+                        "that isn't the padlock's code");
                     return false;
                 }
 
@@ -1145,11 +1151,12 @@ namespace DarkwoodMP.World
             {
                 if (Crate(picked) == null)
                 {
-                    Authority.Refuse("there's no lock to pick on it");
+                    Coop.Current.Authority.Refuse(
+                        "there's no lock to pick on it");
                     return false;
                 }
 
-                return Authority.InReach(
+                return Coop.Current.Authority.InReach(
                     picked.transform.position, Reach, picked.name);
             }
 
@@ -1158,11 +1165,11 @@ namespace DarkwoodMP.World
                 var item = ObjRef.Resolve<Item>(obj);
                 if (item == null)
                 {
-                    Authority.Refuse("not here");
+                    Coop.Current.Authority.Refuse("not here");
                     return false;
                 }
 
-                return Authority.InReach(
+                return Coop.Current.Authority.InReach(
                     item.transform.position, Reach, item.name);
             }
 
@@ -1171,11 +1178,11 @@ namespace DarkwoodMP.World
                 var trap = ObjRef.Resolve<Trigger>(obj);
                 if (trap == null)
                 {
-                    Authority.Refuse("the trap is gone");
+                    Coop.Current.Authority.Refuse("the trap is gone");
                     return false;
                 }
 
-                if (!Authority.InReach(
+                if (!Coop.Current.Authority.InReach(
                     trap.transform.position, Reach, trap.name))
                 {
                     return false;
@@ -1204,19 +1211,21 @@ namespace DarkwoodMP.World
                         reason = "the trap had already gone off (test)";
                     }
 
-                    Authority.Refuse(reason);
+                    Coop.Current.Authority.Refuse(reason);
                     return false;
                 }
 
                 if (a == Action.TrapFired && !trap.active)
                 {
-                    Authority.Refuse("the trap had already gone off");
+                    Coop.Current.Authority.Refuse(
+                        "the trap had already gone off");
                     return false;
                 }
 
                 if (a == Action.TrapDisarm && (!trap.active || !trap.canDisarm))
                 {
-                    Authority.Refuse("the trap can't be disarmed now");
+                    Coop.Current.Authority.Refuse(
+                        "the trap can't be disarmed now");
                     return false;
                 }
 
@@ -1228,7 +1237,7 @@ namespace DarkwoodMP.World
                 var door = ObjRef.Resolve<Door>(obj);
                 if (door == null)
                 {
-                    Authority.Refuse("no such door here");
+                    Coop.Current.Authority.Refuse("no such door here");
                     return false;
                 }
 
@@ -1244,7 +1253,7 @@ namespace DarkwoodMP.World
                     doorReach = Reach;
                 }
 
-                if (!Authority.InReach(
+                if (!Coop.Current.Authority.InReach(
                     door.transform.position, doorReach, door.name))
                 {
                     return false;
@@ -1255,48 +1264,52 @@ namespace DarkwoodMP.World
                 switch (a)
                 {
                     case Action.DoorOpen when door.destroyed:
-                        Authority.Refuse("the door is broken");
+                        Coop.Current.Authority.Refuse("the door is broken");
                         return false;
                     case Action.DoorOpen when isLocked:
-                        Authority.Refuse("the door is locked");
+                        Coop.Current.Authority.Refuse("the door is locked");
                         return false;
                     case Action.DoorOpen when door.blocked:
-                        Authority.Refuse("the door is blocked");
+                        Coop.Current.Authority.Refuse("the door is blocked");
                         return false;
                     // On a broken door the hammer's strokes rebuild it
                     // (Door.setBarricadeState calls unDestroy): that's a
                     // repair, allowed.
                     case Action.DoorBarricade when door.barricaded
                         && !door.destroyed:
-                        Authority.Refuse("the door is already barricaded");
+                        Coop.Current.Authority.Refuse(
+                            "the door is already barricaded");
                         return false;
                     case Action.DoorDestroyBarricade when !door.barricaded:
-                        Authority.Refuse("the door isn't barricaded");
+                        Coop.Current.Authority.Refuse(
+                            "the door isn't barricaded");
                         return false;
                     case Action.DoorHit when door.destroyed:
-                        Authority.Refuse("the door is already broken");
+                        Coop.Current.Authority.Refuse(
+                            "the door is already broken");
                         return false;
                     case Action.DoorUnlock when locked == null:
-                        Authority.Refuse("the door has no lock to open");
+                        Coop.Current.Authority.Refuse(
+                            "the door has no lock to open");
                         return false;
                     case Action.DoorUnlock when !locked.locked:
-                        Authority.Refuse("the door isn't locked");
+                        Coop.Current.Authority.Refuse("the door isn't locked");
                         return false;
                     case Action.DoorUnlock when x == 0f:
-                        Authority.Refuse(StoryOnly);
+                        Coop.Current.Authority.Refuse(StoryOnly);
                         return false;
                     case Action.DoorLock:
-                        Authority.Refuse(StoryOnly);
+                        Coop.Current.Authority.Refuse(StoryOnly);
                         return false;
                     case Action.DoorUnblock:
-                        Authority.Refuse(StoryOnly);
+                        Coop.Current.Authority.Refuse(StoryOnly);
                         return false;
                     case Action.DoorUnlock when x == 1f && !HasKey(locked):
-                        Authority.Refuse(
+                        Coop.Current.Authority.Refuse(
                             $"nobody has the key ({locked.keyType})");
                         return false;
                     case Action.DoorHit when x > 1000f:
-                        Authority.Refuse(
+                        Coop.Current.Authority.Refuse(
                             $"a hit of {x:0} is more than any weapon does");
                         return false;
                 }
@@ -1307,7 +1320,7 @@ namespace DarkwoodMP.World
             var window = ObjRef.Resolve<Window>(obj);
             if (window == null)
             {
-                Authority.Refuse("no such window here");
+                Coop.Current.Authority.Refuse("no such window here");
                 return false;
             }
 
@@ -1321,7 +1334,7 @@ namespace DarkwoodMP.World
                 windowReach = Reach;
             }
 
-            if (!Authority.InReach(
+            if (!Coop.Current.Authority.InReach(
                 window.transform.position, windowReach, window.name))
             {
                 return false;
@@ -1329,19 +1342,20 @@ namespace DarkwoodMP.World
 
             if (a == Action.WindowBarricade && window.barricaded)
             {
-                Authority.Refuse("the window is already barricaded");
+                Coop.Current.Authority.Refuse(
+                    "the window is already barricaded");
                 return false;
             }
 
             if (a == Action.WindowDestroyBarricade && !window.barricaded)
             {
-                Authority.Refuse("the window isn't barricaded");
+                Coop.Current.Authority.Refuse("the window isn't barricaded");
                 return false;
             }
 
             if (a == Action.WindowHit && x > 1000f)
             {
-                Authority.Refuse(
+                Coop.Current.Authority.Refuse(
                     $"a hit of {x:0} is more than any weapon does");
                 return false;
             }
@@ -2528,7 +2542,8 @@ namespace DarkwoodMP.World
                     $"[world] sent TrapFired {r} ({__instance.name}){waits}");
             }
 
-            Authority.Request(w, $"TrapFired {r} ({__instance.name})",
+            Coop.Current.Authority.Request(
+                w, $"TrapFired {r} ({__instance.name})",
                 (ok, reason, result) =>
             {
                 if (held != null && _held.TryGetValue(key, out var h)
@@ -2886,7 +2901,7 @@ namespace DarkwoodMP.World
             var w = s.Begin(MsgType.WorldAction);
             WorldActions.WriteAction(
                 w, WorldActions.Action.TrapDisarm, r, 0f, 0f, false, false, "");
-            Authority.Request(w, $"TrapDisarm {r} ({trap.name})",
+            Coop.Current.Authority.Request(w, $"TrapDisarm {r} ({trap.name})",
                 (ok, reason, result) =>
             {
                 if (trap == null || Player.Instance == null)

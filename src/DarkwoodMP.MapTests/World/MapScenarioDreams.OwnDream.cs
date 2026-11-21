@@ -97,7 +97,7 @@ namespace DarkwoodMP.World
                 item = et.GetComponentInParent<Item>();
             }
 
-            int rolledBefore = Authority.RolledBack;
+            int rolledBefore = Coop.Current.Authority.RolledBack;
             yield return MoveNear(et.transform);
 
             string opened = "no container";
@@ -172,7 +172,7 @@ namespace DarkwoodMP.World
                 WorldActions.WriteAction(
                     w, WorldActions.Action.ItemSearched,
                     ObjRef.Of(item.gameObject), 0f, 0f, false, false, "");
-                Authority.Request(w,
+                Coop.Current.Authority.Request(w,
                     $"forged ItemSearched {item.name} in our own dream",
                     (o, reason, res) =>
                 {
@@ -190,7 +190,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(1f);
             }
 
-            int refused = Authority.RolledBack - rolledBefore;
+            int refused = Coop.Current.Authority.RolledBack - rolledBefore;
             string text = "gone";
             if (et != null && item != null)
             {

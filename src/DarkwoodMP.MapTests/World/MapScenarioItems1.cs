@@ -210,7 +210,7 @@ namespace DarkwoodMP.World
             }
 
             int had = MapScenarioWorld.CarriedOf(type),
-                refused = Authority.RolledBack;
+                refused = Coop.Current.Authority.RolledBack;
             var at = P.transform.position + new Vector3(1500f, 0f, 0f);
             GameObject go = null;
             yield return PlaceReal(prefab, at, r, g => go = g);
@@ -227,7 +227,7 @@ namespace DarkwoodMP.World
 
             int after = MapScenarioWorld.CarriedOf(type);
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while (Authority.RolledBack == refused
+            while (Coop.Current.Authority.RolledBack == refused
                 && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
@@ -245,7 +245,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours "
                     + $"{ours}";
-            if (Authority.RolledBack == refused)
+            if (Coop.Current.Authority.RolledBack == refused)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
             }
@@ -335,7 +335,8 @@ namespace DarkwoodMP.World
             w.W.Write(0);
             bool? ok = null;
             string why = null;
-            Authority.Request(w, $"forged {a[0]}", (o, reason, res) =>
+            Coop.Current.Authority.Request(
+                w, $"forged {a[0]}", (o, reason, res) =>
             {
                 ok = o;
                 why = reason;
@@ -442,7 +443,7 @@ namespace DarkwoodMP.World
 
             yield return Walk(d.transform.position);
             var j = Singleton<UI>.Instance.journal;
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             if (a.Contains("--forged"))
             {
                 if (j.keysDict.ContainsKey(l.keyType))
@@ -453,7 +454,7 @@ namespace DarkwoodMP.World
 
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
-                while (Authority.RolledBack == refused
+                while (Coop.Current.Authority.RolledBack == refused
                     && Time.realtimeSinceStartup < giveUp)
                 {
                     yield return null;
@@ -463,7 +464,7 @@ namespace DarkwoodMP.World
                 r.Info =
                     $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: "
                         + $"locked={l.locked}";
-                if (Authority.RolledBack == refused)
+                if (Coop.Current.Authority.RolledBack == refused)
                 {
                     r.Fail($"{r.Info}: the host didn't refuse it");
                 }
@@ -488,7 +489,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: still locked");
             }
-            else if (Authority.RolledBack != refused)
+            else if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
             }
@@ -679,12 +680,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             AsPlayer(() => P.openCloseDoor(d, false));
             // a refusal would close it again
             yield return new WaitForSeconds(2f);
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
-            if (Authority.RolledBack != refused)
+            if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
             }
@@ -852,17 +853,18 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int refused = Authority.RolledBack;
+            int refused = Coop.Current.Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
-            while (!PorterThere(loc) && Authority.RolledBack == refused
+            while (!PorterThere(loc)
+                && Coop.Current.Authority.RolledBack == refused
                 && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
 
             r.Info = PorterInfo(loc);
-            if (Authority.RolledBack != refused)
+            if (Coop.Current.Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused the call");
             }
@@ -922,7 +924,8 @@ namespace DarkwoodMP.World
             w.Write(far.porterPosition.transform.position);
             bool? ok = null;
             string why = null;
-            Authority.Request(w, $"forged porter call at {far.name}",
+            Coop.Current.Authority.Request(
+                w, $"forged porter call at {far.name}",
                 (o, reason, res) =>
             {
                 ok = o;

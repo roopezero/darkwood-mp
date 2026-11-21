@@ -452,6 +452,42 @@ namespace DarkwoodMP.World
         }
 
         private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
+
+        /// <summary>
+        /// The session's way to Authority (CoopSession.Authority), while the
+        /// state above is still static: each member is Authority's own.
+        /// </summary>
+        internal sealed class Now
+        {
+            public int Waiting => Authority.Waiting;
+            public int RolledBack => Authority.RolledBack;
+            public bool Handling => Authority.Handling;
+            public ulong From => Authority.From;
+            public bool Refused => Authority.Refused;
+            public NetPlayerProxy Requester => Authority.Requester;
+            public bool RequesterAway => Authority.RequesterAway;
+
+            public void Request(
+                PacketWriter message, string what,
+                Action<bool, string, string> done = null,
+                bool inventory = true) =>
+                Authority.Request(message, what, done, inventory);
+
+            public void Refuse(Verdict refusal) => Authority.Refuse(refusal);
+
+            public void Refuse(string reason) => Authority.Refuse(reason);
+
+            public void Result(string result) => Authority.Result(result);
+
+            public void AcceptAway(string what, string result = "") =>
+                Authority.AcceptAway(what, result);
+
+            public bool Near(ulong player, Vector3 pos, float reach) =>
+                Authority.Near(player, pos, reach);
+
+            public bool InReach(Vector3 pos, float reach, string what) =>
+                Authority.InReach(pos, reach, what);
+        }
     }
 
     /// <summary>

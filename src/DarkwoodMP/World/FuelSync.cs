@@ -242,7 +242,8 @@ namespace DarkwoodMP.World
             w.W.Write(p.Amount);
             w.W.Write((byte)0);
             string name = c.name;
-            Authority.Request(w, $"fuel {p.Amount:+0.0;-0.0} for {name}",
+            Coop.Current.Authority.Request(
+                w, $"fuel {p.Amount:+0.0;-0.0} for {name}",
                 (ok, reason, result) =>
             {
                 // Refused: all of it back to the can. Allowed, but only part of
@@ -436,7 +437,7 @@ namespace DarkwoodMP.World
                         text = "generator";
                     }
 
-                    Authority.Refuse($"no {text} {obj} here");
+                    Coop.Current.Authority.Refuse($"no {text} {obj} here");
                 }
 
                 if (WorldActions.Debug)
@@ -459,7 +460,7 @@ namespace DarkwoodMP.World
                 // poured this much, or cut a log at the saw.
                 string refused = null;
                 float took = value;
-                bool near = Authority.Near(
+                bool near = Coop.Current.Authority.Near(
                     from, c.transform.position, WorldActions.Reach);
                 if (!near)
                 {
@@ -523,12 +524,12 @@ namespace DarkwoodMP.World
                             + $"{have:0.0}): {refused}; sent back");
                     // the level to roll back to, before the Verdict
                     Send(c, except: 0, to: from);
-                    Authority.Refuse(refused);
+                    Coop.Current.Authority.Refuse(refused);
                     return;
                 }
 
                 fuel = Mathf.Clamp(have + took, 0f, max);
-                Authority.Result(
+                Coop.Current.Authority.Result(
                     took.ToString("0.###", CultureInfo.InvariantCulture));
             }
             else

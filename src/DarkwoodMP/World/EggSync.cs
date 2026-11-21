@@ -78,7 +78,7 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Authority.Request(
+                Coop.Current.Authority.Request(
                     w, $"egg {r} destroyed ({egg.gameObject.name})");
             }
         }
@@ -107,7 +107,7 @@ namespace DarkwoodMP.World
             {
                 if (egg == null)
                 {
-                    Authority.Refuse("there's no such egg here");
+                    Coop.Current.Authority.Refuse("there's no such egg here");
                     WorldActions.SendState(from, obj);
                     return;
                 }
@@ -115,7 +115,8 @@ namespace DarkwoodMP.World
                 if (!IsEgg(egg))
                 {
                     WorldActions.SendState(from, obj);
-                    Authority.Refuse($"{egg.gameObject.name} isn't an egg");
+                    Coop.Current.Authority.Refuse(
+                        $"{egg.gameObject.name} isn't an egg");
                     return;
                 }
 
@@ -126,7 +127,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (!Authority.InReach(
+                if (!Coop.Current.Authority.InReach(
                     egg.transform.position, WorldActions.ShotReach,
                     egg.gameObject.name))
                 {

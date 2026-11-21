@@ -81,7 +81,7 @@ namespace DarkwoodMP.World
                     reason = "it's already gone";
                 }
 
-                Authority.Refuse(reason);
+                Coop.Current.Authority.Refuse(reason);
                 return false;
             }
 
@@ -92,41 +92,42 @@ namespace DarkwoodMP.World
                         var cp = t.GetComponent<ChainParent>();
                         if (cp == null)
                         {
-                            Authority.Refuse("it isn't a vine");
+                            Coop.Current.Authority.Refuse("it isn't a vine");
                             return false;
                         }
 
                         if (!cp.attached || cp.health <= 0f)
                         {
-                            Authority.Refuse("it's already cut");
+                            Coop.Current.Authority.Refuse("it's already cut");
                             return false;
                         }
 
                         if (x < 0f || x > VineDamageCap)
                         {
-                            Authority.Refuse(
+                            Coop.Current.Authority.Refuse(
                                 $"a hit of {x:0} is more than any weapon does");
                             return false;
                         }
 
                         // a vine is long: its root may be far from the cut
-                        return Authority.InReach(
+                        return Coop.Current.Authority.InReach(
                             t.position, WorldActions.ShotReach, t.name);
                     }
 
                 case Action.ShadowArmorDied:
-                    Authority.Refuse("the host decides when a shadow dies");
+                    Coop.Current.Authority.Refuse(
+                        "the host decides when a shadow dies");
                     return false;
                 case Action.InteractiveSwitch:
                     {
                         var ii = t.GetComponent<InteractiveItem>();
                         if (ii == null)
                         {
-                            Authority.Refuse("it isn't a switch");
+                            Coop.Current.Authority.Refuse("it isn't a switch");
                             return false;
                         }
 
-                        if (!Authority.InReach(
+                        if (!Coop.Current.Authority.InReach(
                             t.position, WorldActions.Reach, t.name))
                         {
                             return false;
@@ -140,7 +141,7 @@ namespace DarkwoodMP.World
                                 already = "it's already on";
                             }
 
-                            Authority.Refuse(already);
+                            Coop.Current.Authority.Refuse(already);
                             return false;
                         }
 
@@ -150,7 +151,7 @@ namespace DarkwoodMP.World
                 case Action.Removed:
                     if (t.GetComponent<Lure>() != null)
                     {
-                        Authority.Refuse(
+                        Coop.Current.Authority.Refuse(
                             "lures are eaten by the host's animals");
                         return false;
                     }
@@ -158,22 +159,23 @@ namespace DarkwoodMP.World
                     if (t.GetComponent<JournalNoteReference>() == null
                         && t.GetComponent<DeathDrop>() == null)
                     {
-                        Authority.Refuse("it can't be picked up");
+                        Coop.Current.Authority.Refuse("it can't be picked up");
                         return false;
                     }
 
-                    return Authority.InReach(
+                    return Coop.Current.Authority.InReach(
                         t.position, WorldActions.Reach, t.name);
                 case Action.LiquidLit:
                     {
                         var liquid = t.GetComponent<Liquid>();
                         if (liquid == null || !liquid.flammable)
                         {
-                            Authority.Refuse("it can't burn");
+                            Coop.Current.Authority.Refuse("it can't burn");
                             return false;
                         }
 
-                        return Authority.InReach(t.position, 1500f, t.name);
+                        return Coop.Current.Authority.InReach(
+                            t.position, 1500f, t.name);
                     }
 
                 case Action.FeederUsed:
@@ -181,11 +183,11 @@ namespace DarkwoodMP.World
                         var feeder = t.GetComponent<Feeder>();
                         if (feeder == null)
                         {
-                            Authority.Refuse("it isn't a feeder");
+                            Coop.Current.Authority.Refuse("it isn't a feeder");
                             return false;
                         }
 
-                        if (!Authority.InReach(
+                        if (!Coop.Current.Authority.InReach(
                             t.position, WorldActions.Reach, t.name))
                         {
                             return false;
@@ -193,7 +195,7 @@ namespace DarkwoodMP.World
 
                         if (!feeder.Active)
                         {
-                            Authority.Refuse(
+                            Coop.Current.Authority.Refuse(
                                 "the feeder was already used today");
                             return false;
                         }
@@ -408,7 +410,7 @@ namespace DarkwoodMP.World
             w.W.Write(0f);
             w.W.Write((byte)0);
             w.WriteStr("");
-            Authority.Request(w, $"FeederUsed {r} ({feeder.name})",
+            Coop.Current.Authority.Request(w, $"FeederUsed {r} ({feeder.name})",
                 (ok, reason, result) =>
             {
                 if (feeder == null || Player.Instance == null)

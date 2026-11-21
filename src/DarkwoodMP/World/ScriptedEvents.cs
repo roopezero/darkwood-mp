@@ -1342,7 +1342,7 @@ namespace DarkwoodMP.World
                         + "player");
             }
 
-            Authority.Request(w, what, (ok, reason, _) =>
+            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
             {
                 Asking.Remove(t);
                 if (!ok)
@@ -1423,35 +1423,37 @@ namespace DarkwoodMP.World
         {
             if (t == null)
             {
-                Authority.Refuse("no such trigger here");
+                Coop.Current.Authority.Refuse("no such trigger here");
                 return;
             }
 
             if (t.disabled)
             {
-                Authority.Refuse("that event is switched off");
+                Coop.Current.Authority.Refuse("that event is switched off");
                 return;
             }
 
             if (!Once(t) || !OnceDone(t))
             {
-                Authority.Refuse("that hasn't happened here");
+                Coop.Current.Authority.Refuse("that hasn't happened here");
                 return;
             }
 
             if (!HasLaterSteps(t.gameEvents))
             {
-                Authority.Refuse("nothing in it is a player's own");
+                Coop.Current.Authority.Refuse(
+                    "nothing in it is a player's own");
                 return;
             }
 
             if (OwedParts.Given(from, t))
             {
-                Authority.Refuse(HadIt);
+                Coop.Current.Authority.Refuse(HadIt);
                 return;
             }
 
-            if (!Authority.InReach(et.transform.position, 3000f, et.name))
+            if (!Coop.Current.Authority.InReach(
+                et.transform.position, 3000f, et.name))
             {
                 return;
             }
@@ -1461,7 +1463,7 @@ namespace DarkwoodMP.World
                 if (req != null && HostChecks.Contains(req.type)
                     && !req.requirementsMet())
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         $"its requirement ({req.type}) isn't met here");
                     return;
                 }
@@ -1673,7 +1675,7 @@ namespace DarkwoodMP.World
             }
 
             string what = $"exit of {et.name} #{index} {r}";
-            Authority.Request(w, what, (ok, reason, _) =>
+            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
             {
                 if (!ok)
                 {
@@ -1992,7 +1994,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Authority.Request(w, what, (ok, reason, result) =>
+            Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
             {
                 if (!ok)
                 {
@@ -2067,7 +2069,8 @@ namespace DarkwoodMP.World
                 // it (kind 6) its own part too.
                 if (s.IsHost)
                 {
-                    Authority.Refuse("the world's own events are the host's");
+                    Coop.Current.Authority.Refuse(
+                        "the world's own events are the host's");
                     return;
                 }
 
@@ -2164,7 +2167,7 @@ namespace DarkwoodMP.World
             {
                 // Only a request to the host; nothing runs here and it isn't
                 // passed on.
-                if (s.IsHost && Authority.Handling)
+                if (s.IsHost && Coop.Current.Authority.Handling)
                 {
                     var pet = ObjRef.Resolve<EventTriggers>(obj);
                     OnPlayerPart(from, pet, TriggerAt(pet, index));
@@ -2218,15 +2221,16 @@ namespace DarkwoodMP.World
                     // if the world events it fires are ones the host has: the
                     // joiner's trip is its own, and the world events are what a
                     // joiner may ask for by name anyway (kind 2).
-                    if (t == null && Authority.RequesterAway)
+                    if (t == null && Coop.Current.Authority.RequesterAway)
                     {
-                        Authority.AcceptAway($"event {obj} #{index}", Alone);
+                        Coop.Current.Authority.AcceptAway(
+                            $"event {obj} #{index}", Alone);
                         return;
                     }
 
                     if (t == null && !WorldEventsKnown(name))
                     {
-                        Authority.Refuse("no such event here");
+                        Coop.Current.Authority.Refuse("no such event here");
                         return;
                     }
 
@@ -2319,21 +2323,24 @@ namespace DarkwoodMP.World
                     && ge != null;
                 if (s.IsHost)
                 {
-                    if (!known && Authority.RequesterAway)
+                    if (!known && Coop.Current.Authority.RequesterAway)
                     {
-                        Authority.AcceptAway($"world event {name}", Alone);
+                        Coop.Current.Authority.AcceptAway(
+                            $"world event {name}", Alone);
                         return;
                     }
 
                     if (!known)
                     {
-                        Authority.Refuse($"no world event {name} here");
+                        Coop.Current.Authority.Refuse(
+                            $"no world event {name} here");
                         return;
                     }
 
                     if (ge.fired && !ge.multipleFire)
                     {
-                        Authority.Refuse($"{name} has already happened");
+                        Coop.Current.Authority.Refuse(
+                            $"{name} has already happened");
                         return;
                     }
 
@@ -2443,11 +2450,12 @@ namespace DarkwoodMP.World
         {
             if (t.type != global::EventTrigger.Type.area)
             {
-                Authority.Refuse($"{et.name} isn't an area here");
+                Coop.Current.Authority.Refuse($"{et.name} isn't an area here");
                 return false;
             }
 
-            return Authority.InReach(et.transform.position, 3000f, et.name);
+            return Coop.Current.Authority.InReach(
+                et.transform.position, 3000f, et.name);
         }
 
         /// <summary>
@@ -2459,29 +2467,30 @@ namespace DarkwoodMP.World
         {
             if (t.disabled)
             {
-                Authority.Refuse("that event is switched off");
+                Coop.Current.Authority.Refuse("that event is switched off");
                 return false;
             }
 
             if (t.fired && !t.multipleFire)
             {
-                Authority.Refuse("that has already happened");
+                Coop.Current.Authority.Refuse("that has already happened");
                 return false;
             }
 
             if (t.gameEvents == null)
             {
-                Authority.Refuse("nothing happens there");
+                Coop.Current.Authority.Refuse("nothing happens there");
                 return false;
             }
 
             if (t.gameEvents.fired && !t.gameEvents.multipleFire)
             {
-                Authority.Refuse("its events have already run");
+                Coop.Current.Authority.Refuse("its events have already run");
                 return false;
             }
 
-            if (!Authority.InReach(et.transform.position, 3000f, et.name))
+            if (!Coop.Current.Authority.InReach(
+                et.transform.position, 3000f, et.name))
             {
                 return false;
             }
@@ -2491,7 +2500,7 @@ namespace DarkwoodMP.World
                 if (req != null && HostChecks.Contains(req.type)
                     && !req.requirementsMet())
                 {
-                    Authority.Refuse(
+                    Coop.Current.Authority.Refuse(
                         $"its requirement ({req.type}) isn't met here");
                     return false;
                 }
