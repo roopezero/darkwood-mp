@@ -20,83 +20,63 @@ namespace DarkwoodMP.World.Windows
 
         /// <summary>
         /// Host: whether a client's player could have done this to the
-        /// window, as this world is now. Refuses the request if not.
+        /// window, as this world is now (WindowRules.MayAct). Refuses the
+        /// request if not.
         /// </summary>
         internal bool Allowed(Action a, ObjRef obj, float x)
         {
-            var window = ObjRef.Resolve<Window>(obj);
-            if (window == null)
-            {
-                _coop.Authority.Refuse("no such window here");
-                return false;
-            }
-
-            float windowReach;
-            if (a == Action.WindowHit)
-            {
-                windowReach = WorldActions.ShotReach;
-            }
-            else
-            {
-                windowReach = WorldActions.Reach;
-            }
-
-            if (!_coop.Authority.InReach(
-                window.transform.position, windowReach, window.name))
-            {
-                return false;
-            }
-
-            if (a == Action.WindowBarricade && window.barricaded)
-            {
-                _coop.Authority.Refuse(
-                    "the window is already barricaded");
-                return false;
-            }
-
-            if (a == Action.WindowDestroyBarricade && !window.barricaded)
-            {
-                _coop.Authority.Refuse("the window isn't barricaded");
-                return false;
-            }
-
-            if (a == Action.WindowHit && x > 1000f)
-            {
-                _coop.Authority.Refuse(
-                    $"a hit of {x:0} is more than any weapon does");
-                return false;
-            }
-
-            return true;
+            var facts = FactsOf(ObjRef.Resolve<Window>(obj));
+            var verdict = WindowRules.MayAct(facts, (WindowAction)a, x);
+            _coop.Authority.Refuse(verdict);
+            return !verdict.Refused;
         }
 
         /// <summary>
-        /// Make a WorldAction's call on our window. False: it isn't
-        /// here.
+        /// What the host's check knows of a window and the requesting
+        /// player: the only code that reads a window for WindowRules.
+        /// window may be null (not in this world).
+        /// </summary>
+        private WindowFacts FactsOf(Window window)
+        {
+            if (window == null)
+            {
+                return new WindowFacts();
+            }
+
+            var reach = _coop.Authority.ReachOf(
+                window.transform.position,
+                window.name);
+            return new WindowFacts
+            {
+                Exists = true,
+                Requester = reach,
+                Barricaded = window.barricaded,
+            };
+        }
+
+        /// <summary>
+        /// Make a WorldAction's call on our window. False: it isn't here.
         /// </summary>
         internal bool Apply(Action a, ObjRef obj, in ActionValues values)
         {
-            float x = values.X, y = values.Y;
-            bool f1 = values.F1, f2 = values.F2;
-            string str = values.Str;
             var window = WorldActions.Got<Window>(a, obj);
             if (window == null)
             {
                 return false;
             }
 
-            switch (a)
+            switch ((WindowAction)a)
             {
-                case Action.WindowBarricade:
+                case WindowAction.Barricade:
                     // as for a door
                     window.barricadeState = 2;
-                    window.barricade((int)x, f1);
+                    window.barricade((int)values.X, values.F1);
                     break;
-                case Action.WindowDestroyBarricade:
-                    window.destroyBarricade(f1);
+                case WindowAction.DestroyBarricade:
+                    window.destroyBarricade(values.F1);
                     break;
-                case Action.WindowHit:
-                    window.getHit((int)x, null, f1);
+                case WindowAction.Hit:
+                    window.getHit((int)values.X, null, values.F1);
                     break;
             }
 
@@ -110,16 +90,17 @@ namespace DarkwoodMP.World.Windows
         };
 
         /// <summary>
-        /// Client: put our window as the host has it.
+        /// Client: put our window as the host has it (WindowRules.RollBack).
         /// </summary>
         internal void RollBack(Window window, in HostWindow host)
         {
-            if (host.Barricaded && !window.barricaded)
+            var fix = WindowRules.RollBack(host.Barricaded, window.barricaded);
+            if (fix == WindowFix.Barricade)
             {
                 window.barricadeState = 2;
                 window.barricade(host.BarricadeHealth, false);
             }
-            else if (!host.Barricaded && window.barricaded)
+            else if (fix == WindowFix.RemoveBarricade)
             {
                 window.destroyBarricade(false);
             }

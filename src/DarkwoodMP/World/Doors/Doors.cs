@@ -20,145 +20,105 @@ namespace DarkwoodMP.World.Doors
 
         /// <summary>
         /// Host: whether a client's player could have done this to the
-        /// door, as this world is now. Refuses the request if not.
+        /// door, as this world is now (DoorRules.MayAct). Refuses the
+        /// request if not.
         /// </summary>
         internal bool Allowed(Action a, ObjRef obj, float x)
         {
-            var door = ObjRef.Resolve<Door>(obj);
-            if (door == null)
-            {
-                _coop.Authority.Refuse("no such door here");
-                return false;
-            }
-
-            // A hit can come from a shot or our flamethrower's flame
-            // (BreakSync.OwnFlame), which reach further than a hand.
-            float doorReach;
-            if (a == Action.DoorHit)
-            {
-                doorReach = WorldActions.ShotReach;
-            }
-            else
-            {
-                doorReach = WorldActions.Reach;
-            }
-
-            if (!_coop.Authority.InReach(
-                door.transform.position, doorReach, door.name))
-            {
-                return false;
-            }
-
-            var locked = door.GetComponent<Locked>();
-            bool isLocked = locked != null && locked.locked;
-            switch (a)
-            {
-                case Action.DoorOpen when door.destroyed:
-                    _coop.Authority.Refuse("the door is broken");
-                    return false;
-                case Action.DoorOpen when isLocked:
-                    _coop.Authority.Refuse("the door is locked");
-                    return false;
-                case Action.DoorOpen when door.blocked:
-                    _coop.Authority.Refuse("the door is blocked");
-                    return false;
-                // On a broken door the hammer's strokes rebuild it
-                // (Door.setBarricadeState calls unDestroy): that's a
-                // repair, allowed.
-                case Action.DoorBarricade when door.barricaded
-                    && !door.destroyed:
-                    _coop.Authority.Refuse(
-                        "the door is already barricaded");
-                    return false;
-                case Action.DoorDestroyBarricade when !door.barricaded:
-                    _coop.Authority.Refuse(
-                        "the door isn't barricaded");
-                    return false;
-                case Action.DoorHit when door.destroyed:
-                    _coop.Authority.Refuse(
-                        "the door is already broken");
-                    return false;
-                case Action.DoorUnlock when locked == null:
-                    _coop.Authority.Refuse(
-                        "the door has no lock to open");
-                    return false;
-                case Action.DoorUnlock when !locked.locked:
-                    _coop.Authority.Refuse("the door isn't locked");
-                    return false;
-                case Action.DoorUnlock when x == 0f:
-                    _coop.Authority.Refuse(WorldActions.StoryOnly);
-                    return false;
-                case Action.DoorLock:
-                    _coop.Authority.Refuse(WorldActions.StoryOnly);
-                    return false;
-                case Action.DoorUnblock:
-                    _coop.Authority.Refuse(WorldActions.StoryOnly);
-                    return false;
-                case Action.DoorUnlock
-                    when x == 1f && !WorldActions.HasKey(locked):
-                    _coop.Authority.Refuse(
-                        $"nobody has the key ({locked.keyType})");
-                    return false;
-                case Action.DoorHit when x > 1000f:
-                    _coop.Authority.Refuse(
-                        $"a hit of {x:0} is more than any weapon does");
-                    return false;
-            }
-
-            return true;
+            var facts = FactsOf(ObjRef.Resolve<Door>(obj));
+            var verdict = DoorRules.MayAct(facts, (DoorAction)a, x);
+            _coop.Authority.Refuse(verdict);
+            return !verdict.Refused;
         }
 
         /// <summary>
-        /// Make a WorldAction's call on our door. False: it isn't
-        /// here.
+        /// What the host's check knows of a door and the requesting player:
+        /// the only code that reads a door for DoorRules. door may be null
+        /// (not in this world).
+        /// </summary>
+        private DoorFacts FactsOf(Door door)
+        {
+            if (door == null)
+            {
+                return new DoorFacts();
+            }
+
+            var reach = _coop.Authority.ReachOf(
+                door.transform.position,
+                door.name);
+            var facts = new DoorFacts
+            {
+                Exists = true,
+                Requester = reach,
+                Destroyed = door.destroyed,
+                Barricaded = door.barricaded,
+                Blocked = door.blocked,
+            };
+
+            var locked = door.GetComponent<Locked>();
+            if (locked != null)
+            {
+                facts = facts with
+                {
+                    HasLock = true,
+                    Locked = locked.locked,
+                    HasKey = WorldActions.HasKey(locked),
+                    KeyType = locked.keyType,
+                };
+            }
+
+            return facts;
+        }
+
+        /// <summary>
+        /// Make a WorldAction's call on our door. False: it isn't here.
         /// </summary>
         internal bool Apply(Action a, ObjRef obj, in ActionValues values)
         {
-            float x = values.X, y = values.Y;
-            bool f1 = values.F1, f2 = values.F2;
-            string str = values.Str;
             var door = WorldActions.Got<Door>(a, obj);
             if (door == null)
             {
                 return false;
             }
 
-            switch (a)
+            switch ((DoorAction)a)
             {
-                case Action.DoorOpen:
-                    door.open(
-                        new Vector3(x, door.transform.position.y, y),
-                        null, 0f);
+                case DoorAction.Open:
+                    var at = new Vector3(
+                        values.X,
+                        door.transform.position.y,
+                        values.Y);
+                    door.open(at, null, 0f);
                     break;
-                case Action.DoorClose:
+                case DoorAction.Close:
                     door.close(null);
                     break;
-                // As the hammer's third stroke: Door.barricade only
-                // nails it up when barricadeState reaches 3 (and
-                // rebuilds a broken door instead).
-                case Action.DoorBarricade:
+                // As the hammer's third stroke: Door.barricade only nails it
+                // up when barricadeState reaches 3 (and rebuilds a broken
+                // door instead).
+                case DoorAction.Barricade:
                     door.barricadeState = 2;
-                    door.barricade(f1);
+                    door.barricade(values.F1);
                     break;
-                case Action.DoorDestroyBarricade:
-                    door.destroyBarricade(f1);
+                case DoorAction.DestroyBarricade:
+                    door.destroyBarricade(values.F1);
                     break;
-                case Action.DoorDestroy:
-                    door.destroyDoor(f1);
+                case DoorAction.Destroy:
+                    door.destroyDoor(values.F1);
                     break;
-                case Action.DoorHit:
-                    door.getHit((int)x, null, f1, f2);
+                case DoorAction.Hit:
+                    door.getHit((int)values.X, null, values.F1, values.F2);
                     break;
-                case Action.DoorLock:
-                    door.lockMe(str);
+                case DoorAction.Lock:
+                    door.lockMe(values.Str);
                     break;
-                case Action.DoorUnlock:
+                case DoorAction.Unlock:
                     door.unlock();
                     break;
-                case Action.DoorUndestroy:
+                case DoorAction.Undestroy:
                     door.unDestroy();
                     break;
-                case Action.DoorUnblock:
+                case DoorAction.Unblock:
                     door.unblock();
                     break;
             }
@@ -178,17 +138,9 @@ namespace DarkwoodMP.World.Doors
                 key = l.keyType;
             }
 
-            var status = new DoorStatus
-            {
-                Opened = door.opened,
-                Barricaded = door.barricaded,
-                Destroyed = door.destroyed,
-                Locked = l != null && l.locked,
-            };
-
             return new HostDoor
             {
-                Status = status,
+                Status = StatusOf(door),
                 Blocked = door.blocked,
                 Health = door.health,
                 BarricadeHealth = door.barricadeHealth,
@@ -197,60 +149,76 @@ namespace DarkwoodMP.World.Doors
         }
 
         /// <summary>
-        /// Client: put our door as the host has it.
+        /// Client: put our door as the host has it (DoorRules.RollBack).
+        /// Each step looks at the door as the one before left it: breaking
+        /// a door can take its barricade and open it.
         /// </summary>
         internal void RollBack(Door door, in HostDoor host)
         {
-            bool open = host.Status.Opened,
-                barricaded = host.Status.Barricaded,
-                broken = host.Status.Destroyed,
-                locked = host.Status.Locked;
             // only the story sets or clears it (Door.unblock), and only the
             // host runs that
             door.blocked = host.Blocked;
-            if (broken && !door.destroyed)
+            var fixes = DoorRules.RollBack(host.Status, StatusOf(door));
+            if ((fixes & DoorFixes.Break) != 0)
             {
                 // silently: a rollback, not the door breaking again
                 door.destroyDoor(true);
             }
-            else if (!broken && door.destroyed)
+            else if ((fixes & DoorFixes.Mend) != 0)
             {
                 door.unDestroy();
             }
 
-            var l = door.GetComponent<Locked>();
-            if (locked && (l == null || !l.locked))
+            fixes = DoorRules.RollBack(host.Status, StatusOf(door));
+            if ((fixes & DoorFixes.Lock) != 0)
             {
                 door.lockMe(host.KeyType);
             }
-            else if (!locked && l != null && l.locked)
+            else if ((fixes & DoorFixes.Unlock) != 0)
             {
                 door.unlock();
             }
 
-            // as in OnAction
-            if (barricaded && !door.barricaded)
+            // as in Apply
+            fixes = DoorRules.RollBack(host.Status, StatusOf(door));
+            if ((fixes & DoorFixes.Barricade) != 0)
             {
                 door.barricadeState = 2;
                 door.barricade(false);
             }
-            else if (!barricaded && door.barricaded)
+            else if ((fixes & DoorFixes.RemoveBarricade) != 0)
             {
                 door.destroyBarricade(false);
             }
 
-            if (open && !door.opened)
+            fixes = DoorRules.RollBack(host.Status, StatusOf(door));
+            if ((fixes & DoorFixes.Open) != 0)
             {
                 door.open(
                     door.transform.position + door.transform.right, null, 0f);
             }
-            else if (!open && door.opened)
+            else if ((fixes & DoorFixes.Close) != 0)
             {
                 door.close(null);
             }
 
             door.health = host.Health;
             door.barricadeHealth = host.BarricadeHealth;
+        }
+
+        /// <summary>
+        /// The parts of a door a rollback compares.
+        /// </summary>
+        private static DoorStatus StatusOf(Door door)
+        {
+            var l = door.GetComponent<Locked>();
+            return new DoorStatus
+            {
+                Opened = door.opened,
+                Barricaded = door.barricaded,
+                Destroyed = door.destroyed,
+                Locked = l != null && l.locked,
+            };
         }
     }
 }

@@ -434,10 +434,22 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool InReach(Vector3 pos, float reach, string what)
         {
+            var facts = ReachOf(pos, what) with { Reach = reach };
+            var verdict = ReachRules.InReach(facts);
+            Refuse(verdict);
+            return !verdict.Refused;
+        }
+
+        /// <summary>
+        /// Host, in a request's handler: what the reach rules know of the
+        /// requesting player and a thing at pos, for a rule that sets the
+        /// reach itself (DoorRules, WindowRules).
+        /// </summary>
+        public ReachFacts ReachOf(Vector3 pos, string what)
+        {
             var facts = FactsOf(Requester, pos) with
             {
                 Handling = Handling,
-                Reach = reach,
                 What = what,
             };
 
@@ -446,9 +458,7 @@ namespace DarkwoodMP.World
                 facts = facts with { Checked = true, Accepted = Flat(at) };
             }
 
-            var verdict = ReachRules.InReach(facts);
-            Refuse(verdict);
-            return !verdict.Refused;
+            return facts;
         }
 
         /// <summary>
