@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Scripted
 {
     /// What to remember about a trigger's coroutine (the plugin's
-    /// ScriptedEvents.Started). The zero value remembers nothing.
+    /// Started). The zero value remembers nothing.
     public readonly struct Remembered
     {
         /// Something is remembered.

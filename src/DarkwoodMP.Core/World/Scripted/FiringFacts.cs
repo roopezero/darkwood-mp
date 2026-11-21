@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Scripted
     /// share them.
     public readonly struct FiringFacts
     {
-        /// A trigger to share is firing (ScriptedEvents.Firing isn't
+        /// A trigger to share is firing (EventParts.Firing isn't
         /// null), with its EventTriggers and its index there.
         public bool Firing { get; init; }
 
@@ -18,7 +18,7 @@ namespace DarkwoodMP.World.Scripted
         /// Host: the client behind that world trigger, or 0.
         public ulong By { get; init; }
 
-        /// The part being run now (ScriptedEvents.Current).
+        /// The part being run now (EventParts.Current).
         public EventPart Current { get; init; }
 
         /// The events: GameEvents.fired and multipleFire.

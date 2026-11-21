@@ -32,7 +32,7 @@ namespace DarkwoodMP.World.Scripted
         public bool PlayerType { get; init; }
 
         /// It only changes how a repeatable area looks or sounds
-        /// (ScriptedEvents.IsAreaLook).
+        /// (EventParts.IsAreaLook).
         public bool AreaLook { get; init; }
 
         /// Its type is the host's (ScriptedEvents.IsHostStep).

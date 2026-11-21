@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Scripted
     /// is our player's to share.
     public readonly struct WorldEventFacts
     {
-        /// The part being run now (ScriptedEvents.Current).
+        /// The part being run now (EventParts.Current).
         public EventPart Current { get; init; }
 
         /// Coop.Guards.Replaying and Coop.Guards.Sharing.
