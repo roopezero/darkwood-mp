@@ -35,27 +35,12 @@ namespace DarkwoodMP.World
     public sealed class Containers
     {
         /// <summary>
-        /// Prefabs of things made while playing that are shared with the
-        /// others.
-        /// </summary>
-        public static readonly HashSet<string> SharedPrefabs =
-            new HashSet<string>
-        {
-            "Items/DroppedItem", "Items/DroppedItem_water",
-            // what a player who died left behind
-            "Objects/_Unique/deathDrop", "Objects/_Unique/deathDrop_water",
-            // poured by a player (Player.waitToSpillLiquid); each game merges
-            // trails into a puddle itself
-            GasolineTrail,
-        };
-
-        /// <summary>
         /// Sent at once, not once at rest: a trail doesn't move, and the
         /// pourer's game merges a few into a puddle (GasolineTrail.init) and
         /// removes them half a second later. Every trail has to reach the
         /// others first, so their games merge the same ones.
         /// </summary>
-        public const string GasolineTrail = "Items/GasolineTrail";
+        public const string GasolineTrail = SpawnRules.GasolineTrail;
 
         /// <summary>
         /// True while the local player is placing something (a trap...), set
@@ -187,22 +172,7 @@ namespace DarkwoodMP.World
             session.Register(MsgType.DeathBagMarker, OnBagMarker);
             session.Register(MsgType.ContainerLock, OnLock);
             session.Register(MsgType.ContainerBusy, OnBusy);
-            session.OnPeerDisconnected += peer =>
-            {
-                var gone = new List<string>();
-                foreach (var kv in _locks)
-                {
-                    if (kv.Value == peer)
-                    {
-                        gone.Add(kv.Key);
-                    }
-                }
-
-                foreach (var k in gone)
-                {
-                    _locks.Remove(k);
-                }
-            };
+            session.OnPeerDisconnected += peer => _locks.Leave(peer);
 
             session.OnSessionEnded += () =>
             {
@@ -431,26 +401,15 @@ namespace DarkwoodMP.World
 
         private void Poll()
         {
-            _nextCheck = Time.unscaledTime + 0.25f;
+            _nextCheck = Time.unscaledTime + ContainerRules.PollEvery;
             var player = Player.Instance;
             var open = new List<Inventory>();
             if (player != null)
             {
                 // Not one only our player has (in a dream of our own): the host
                 // hasn't got it, so it's ours, as alone.
-                if (IsWorldContainer(player.openedItemInventory)
-                    && !WorldActions.OursAlone(
-                        player.openedItemInventory.gameObject))
-                {
-                    open.Add(player.openedItemInventory);
-                }
-
-                if (IsWorldContainer(player.openedItemInventory2)
-                    && !WorldActions.OursAlone(
-                        player.openedItemInventory2.gameObject))
-                {
-                    open.Add(player.openedItemInventory2);
-                }
+                AddShared(open, player.openedItemInventory);
+                AddShared(open, player.openedItemInventory2);
             }
 
             // Slot by slot (SlotShare): the workbench's storage, used by
@@ -462,11 +421,13 @@ namespace DarkwoodMP.World
             for (int i = open.Count - 1; i >= 0; i--)
             {
                 var inv = open[i];
-                bool storage = slots != null && slots.Is(inv);
-                if (slots == null || !(storage || _session.IsClient))
+                var path = ContainerRules.PathOf(FactsOf(inv));
+                if (slots == null || path == ContainerPath.Whole)
                 {
                     continue;
                 }
+
+                bool storage = path == ContainerPath.Slots;
 
                 if (!storage && !_slotOpen.Contains(inv))
                 {
@@ -553,12 +514,50 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool IsWorldContainer(Inventory inv) =>
-            inv != null
-                && (inv.invType == Inventory.InvType.itemInv
-                    || inv.invType == Inventory.InvType.deathDrop
-                    || inv.invType == Inventory.InvType.shop)
-                && !inv.isWorkbench;
+        private void AddShared(List<Inventory> open, Inventory inv)
+        {
+            if (ContainerRules.PathOf(FactsOf(inv)) != ContainerPath.Ignore)
+            {
+                open.Add(inv);
+            }
+        }
+
+        /// <summary>
+        /// What the container rules look at in a container our player has
+        /// open: the only code that reads it for them. Null is no container.
+        /// </summary>
+        private OpenContainerFacts FactsOf(Inventory inv)
+        {
+            if (inv == null)
+            {
+                return default;
+            }
+
+            var slots = SlotShare.Instance;
+            return new OpenContainerFacts
+            {
+                Kind = KindOf(inv),
+                Workbench = inv.isWorkbench,
+                OursAlone = WorldActions.OursAlone(inv.gameObject),
+                Storage = slots != null && slots.Is(inv),
+                IsClient = _session.IsClient,
+            };
+        }
+
+        private static ContainerKind KindOf(Inventory inv)
+        {
+            switch (inv.invType)
+            {
+                case Inventory.InvType.itemInv:
+                    return ContainerKind.Item;
+                case Inventory.InvType.deathDrop:
+                    return ContainerKind.DeathDrop;
+                case Inventory.InvType.shop:
+                    return ContainerKind.Shop;
+                default:
+                    return ContainerKind.Other;
+            }
+        }
 
         /// <summary>
         /// Send what's in a container to the others now (a trader's new stock).
@@ -610,8 +609,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: who has which container open ("kind:id" of its ObjRef).
         /// </summary>
-        private readonly Dictionary<string, ulong> _locks =
-            new Dictionary<string, ulong>();
+        private readonly ContainerLocks _locks = new ContainerLocks();
         public int LockCount => _locks.Count;
         private static string LockKey(ObjRef r) => r.ToString();
 
@@ -630,14 +628,9 @@ namespace DarkwoodMP.World
             }
 
             // Host: our own player opening it.
-            if (_locks.TryGetValue(LockKey(r), out var holder)
-                && holder != _session.LocalId)
+            if (!_locks.Open(LockKey(r), _session.LocalId, out var holder))
             {
                 Busy(inv, _session.NameOf(holder));
-            }
-            else
-            {
-                _locks[LockKey(r)] = _session.LocalId;
             }
         }
 
@@ -652,10 +645,9 @@ namespace DarkwoodMP.World
             {
                 SendLock(r, open: false);
             }
-            else if (_locks.TryGetValue(LockKey(r), out var holder)
-                && holder == _session.LocalId)
+            else
             {
-                _locks.Remove(LockKey(r));
+                _locks.Close(LockKey(r), _session.LocalId);
             }
         }
 
@@ -665,8 +657,7 @@ namespace DarkwoodMP.World
         public bool LockedByOther(ObjRef r, ulong who, out string holderName)
         {
             holderName = null;
-            if (!_locks.TryGetValue(LockKey(r), out var holder)
-                || holder == who)
+            if (!_locks.HeldByOther(LockKey(r), who, out var holder))
             {
                 return false;
             }
@@ -691,27 +682,19 @@ namespace DarkwoodMP.World
 
             var obj = ObjRef.RefOf(ContainerLockMessage.Read(r, out bool open));
             string key = LockKey(obj);
-            bool held = _locks.TryGetValue(key, out var holder);
             if (!open)
             {
-                if (held && holder == from)
-                {
-                    _locks.Remove(key);
-                }
-
+                _locks.Close(key, from);
                 return;
             }
 
-            if (held && holder != from)
+            if (!_locks.Open(key, from, out var holder))
             {
                 var w = _session.Begin(MsgType.ContainerBusy);
                 ContainerBusyMessage.Write(
                     w, ObjRef.NameOf(obj), _session.NameOf(holder));
                 _session.SendTo(from, w, Channel.Control, reliable: true);
-                return;
             }
-
-            _locks[key] = from;
         }
 
         private void OnBusy(ulong from, PacketReader r)
@@ -826,30 +809,50 @@ namespace DarkwoodMP.World
         /// </summary>
         public static string LockedReason(Inventory inv)
         {
+            return TextOf(ContainerRules.LockedReason(LockOf(inv)));
+        }
+
+        /// <summary>
+        /// Whether a container is shut in this world: the only code that
+        /// reads its Item and Locked for the rules. Null is open.
+        /// </summary>
+        private static LockFacts LockOf(Inventory inv)
+        {
             if (inv == null)
+            {
+                return default;
+            }
+
+            var item = inv.GetComponent<Item>();
+            var l = inv.GetComponent<Locked>();
+            var facts = new LockFacts
+            {
+                Crate = WorldActions.Crate(item) != null,
+                Locked = l != null && l.locked,
+            };
+
+            if (item != null)
+            {
+                facts = facts with
+                {
+                    Searched = item.searched,
+                    DestroyToAccess = item.destroyToAccessInventory,
+                    Destroyed = item.destroyed,
+                };
+            }
+
+            return facts;
+        }
+
+        // A refusal's words, or null when nothing was refused.
+        private static string TextOf(Verdict verdict)
+        {
+            if (!verdict.Refused)
             {
                 return null;
             }
 
-            var item = inv.GetComponent<Item>();
-            if (WorldActions.Crate(item) != null && !item.searched)
-            {
-                return "locked";
-            }
-
-            var l = inv.GetComponent<Locked>();
-            if (l != null && l.locked)
-            {
-                return "locked";
-            }
-
-            if (item != null && item.destroyToAccessInventory
-                && !item.destroyed)
-            {
-                return "locked (not broken open)";
-            }
-
-            return null;
+            return Refusals.Text(verdict);
         }
 
         /// <summary>
@@ -858,27 +861,44 @@ namespace DarkwoodMP.World
         /// </summary>
         public static string Refusal(ulong from, Inventory inv)
         {
+            return TextOf(ContainerRules.MayChange(FactsOf(from, inv)));
+        }
+
+        /// <summary>
+        /// What the host knows of a client's stand-in and a container it
+        /// changed: the only code that reads them for MayChange.
+        /// </summary>
+        private static ContainerFacts FactsOf(ulong from, Inventory inv)
+        {
+            var facts = new ContainerFacts { Lock = LockOf(inv) };
             if (NetPlayerProxy.All.TryGetValue(from, out var proxy)
                 && proxy != null)
             {
-                var d = proxy.transform.position - inv.transform.position;
-                if (new Vector2(d.x, d.z).magnitude > WorldActions.Reach)
+                Vector3 p = proxy.transform.position;
+                Vector3 at = inv.transform.position;
+                facts = facts with
                 {
-                    return "too far from it";
-                }
+                    Known = true,
+                    StandIn = new Vec2(p.x, p.z),
+                    At = new Vec2(at.x, at.z),
+                };
             }
 
-            return LockedReason(inv);
+            return facts;
+        }
+
+        // Whether this game takes a world message from that peer.
+        private bool Accepts(ulong from)
+        {
+            return ContainerRules.Accepts(
+                WorldShare.InWorld,
+                _session.IsClient,
+                from == _session.HostId);
         }
 
         private void OnContainer(ulong from, PacketReader r)
         {
-            if (!WorldShare.InWorld)
-            {
-                return;
-            }
-
-            if (_session.IsClient && from != _session.HostId)
+            if (!Accepts(from))
             {
                 return;
             }
@@ -900,9 +920,17 @@ namespace DarkwoodMP.World
             // A client's whole contents (it sends an emptied container that
             // went this way): refused if it couldn't have changed it, and the
             // host's contents go back to it to roll back to.
-            if (_session.IsHost && inv != null
-                && Refusal(from, inv) is string why)
+            var change = Verdict.Allow;
+            if (_session.IsHost && inv != null)
             {
+                change = ContainerRules.MayChange(FactsOf(from, inv));
+            }
+
+            var answer = ContainerRules.Received(
+                _session.IsHost, inv != null, change);
+            if (answer.Verdict.Refused)
+            {
+                string why = Refusals.Text(answer.Verdict);
                 Plugin.Log.LogInfo(
                     $"[authority] {_session.NameOf(from)} changed the contents "
                         + $"of {inv.name}: refused ({why})");
@@ -913,12 +941,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (inv != null)
+            if (answer.Apply)
             {
                 Apply(inv, contents);
             }
 
-            if (_session.IsHost)
+            if (answer.Relay)
             {
                 Send(obj, contents, except: from); // pass it on
             }
@@ -943,14 +971,16 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (inv.open && state.slotCount == inv.slots.Count
-                && UiRefresh.Enabled)
+            bool sameSlots = inv.open && state.slotCount == inv.slots.Count;
+            var load = ContainerRules.LoadPathOf(
+                inv.open, sameSlots, UiRefresh.Enabled);
+            if (load == LoadPath.InWindow)
             {
                 ApplyOpen(inv, state);
                 return;
             }
 
-            if (inv.open)
+            if (load == LoadPath.CloseFirst)
             {
                 // a different number of slots than its window has drawn: close
                 // it rather than show stale slots
@@ -974,7 +1004,8 @@ namespace DarkwoodMP.World
             }
 
             _watched.Remove(inv);
-            if (inv.removeWhenEmpty && inv.getAllItems().Count == 0)
+            if (ContainerRules.RemovesAfterLoad(
+                inv.removeWhenEmpty, inv.getAllItems().Count))
             {
                 Object.Destroy(inv.gameObject);
             }
@@ -994,7 +1025,9 @@ namespace DarkwoodMP.World
         private void ApplyOpen(Inventory inv, Inventory.SaveState state)
         {
             var slots = SlotShare.Instance;
-            if (_session.IsClient && slots != null && slots.Watching(inv))
+            if (slots != null
+                && ContainerRules.MergesInWindow(
+                    _session.IsClient, slots.Watching(inv)))
             {
                 slots.MergeOpen(
                     inv, state,
@@ -1065,33 +1098,46 @@ namespace DarkwoodMP.World
         /// </summary>
         public void Made(string prefab, GameObject go)
         {
-            if (go == null || Coop.Guards.Replaying || !Sharing
-                || !(SharedPrefabs.Contains(prefab) || Placing))
+            // Not dropped in a dream of our own: nobody else is there.
+            if (!SpawnRules.Shares(FactsOf(prefab, go)))
             {
                 return;
             }
 
-            if (WorldActions.OursAlone(go))
-            {
-                return; // dropped in a dream of our own: nobody else is there
-            }
-
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
-            float delay = 1.5f; // dropped: once it has come to rest
-            if (Placing || prefab == GasolineTrail)
-            {
-                delay = 0.2f;
-            }
-
+            Seconds delay = SpawnRules.SendDelay(Placing, prefab);
             _pending.Add(new Pending
             {
                 Id = id,
                 Go = go,
                 Prefab = prefab,
                 Placed = Placing,
-                SendAt = Time.time + delay
+                SendAt = Time.time + delay.Value
             });
+        }
+
+        /// <summary>
+        /// What the spawn rules look at in something Core.AddPrefab made:
+        /// the only code that reads it for them.
+        /// </summary>
+        private static MadeFacts FactsOf(string prefab, GameObject go)
+        {
+            var facts = new MadeFacts
+            {
+                Exists = go != null,
+                Replaying = Coop.Guards.Replaying,
+                Sharing = Sharing,
+                Prefab = prefab,
+                Placing = Placing,
+            };
+
+            if (go != null)
+            {
+                facts = facts with { OursAlone = WorldActions.OursAlone(go) };
+            }
+
+            return facts;
         }
 
         /// <summary>
@@ -1100,27 +1146,47 @@ namespace DarkwoodMP.World
         /// </summary>
         public void MadeFrom(Object prefab, GameObject go)
         {
-            if (ThrownSpawning != null)
+            var step = SpawnRules.FromPrefab(FactsOf(prefab, go));
+            if (step == MadeFromStep.Thrown)
             {
                 ShareThrownSpawn(ThrownSpawning, go);
-                return;
             }
-
-            if (!Placing || go == null || Coop.Guards.Replaying || !Sharing)
-            {
-                return;
-            }
-
-            string path = PlaceablePath(prefab);
-            if (path == null)
+            else if (step == MadeFromStep.NotPlaceable)
             {
                 Plugin.Log.LogWarning(
                     $"Placed {go.name}, which isn't a placeable prefab here: "
                         + "not shared");
-                return;
+            }
+            else if (step == MadeFromStep.Share)
+            {
+                Made(PlaceablePath(prefab), go);
+            }
+        }
+
+        /// <summary>
+        /// What MadeFrom's rule looks at in something made from a prefab
+        /// object: the only code that reads it for that rule. The placeable
+        /// path is only looked up once the checks before it passed, as
+        /// before.
+        /// </summary>
+        private static MadeFromFacts FactsOf(Object prefab, GameObject go)
+        {
+            var facts = new MadeFromFacts
+            {
+                Thrown = ThrownSpawning != null,
+                Placing = Placing,
+                Exists = go != null,
+                Replaying = Coop.Guards.Replaying,
+                Sharing = Sharing,
+            };
+
+            if (facts.Thrown || !facts.Placing || !facts.Exists
+                || facts.Replaying || !facts.Sharing)
+            {
+                return facts;
             }
 
-            Made(path, go);
+            return facts with { Placeable = PlaceablePath(prefab) != null };
         }
 
         /// <summary>
@@ -1133,7 +1199,7 @@ namespace DarkwoodMP.World
         /// merges gasoline trails into by itself.
         /// </summary>
         public static readonly HashSet<string> ThrownSpawns =
-            new HashSet<string> { "Items/Gasoline" };
+            new HashSet<string> { SpawnRules.ThrownGasoline };
 
         /// <summary>
         /// Set while an Explodes on a thrown item spawns its objects on the
@@ -1147,7 +1213,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private void ShareThrownSpawn(string prefab, GameObject go)
         {
-            if (go == null || !_session.IsHost || !Sharing)
+            if (!SpawnRules.SharesThrown(go != null, _session.IsHost, Sharing))
             {
                 return;
             }
@@ -1192,7 +1258,8 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    condition = Time.time < p.SendAt;
+                    condition = !SpawnRules.Due(
+                        new Seconds(Time.time), new Seconds(p.SendAt));
                 }
 
                 if (condition)
@@ -1216,7 +1283,7 @@ namespace DarkwoodMP.World
                 }
 
                 var drop = p.Go.GetComponent<DeathDrop>();
-                if (p.Placed && _session.IsClient)
+                if (SpawnRules.AsksHost(p.Placed, _session.IsClient))
                 {
                     // Placed by our player: the host decides (within reach, a
                     // thing a player can place). Refused, ours goes, and the
@@ -1269,8 +1336,7 @@ namespace DarkwoodMP.World
         /// The map marker the game puts for a death bag left in a separate
         /// location (Player.dropBody).
         /// </summary>
-        public const string DeathBagMarkerPrefab =
-            "Objects/_Unique/deathDrop_marker";
+        public const string DeathBagMarkerPrefab = SpawnRules.BagMarker;
 
         private void SendBagMarker(long id, Vector3 pos, ulong except)
         {
@@ -1286,12 +1352,7 @@ namespace DarkwoodMP.World
 
         private void OnBagMarker(ulong from, PacketReader r)
         {
-            if (!WorldShare.InWorld)
-            {
-                return;
-            }
-
-            if (_session.IsClient && from != _session.HostId)
+            if (!Accepts(from))
             {
                 return;
             }
@@ -1317,7 +1378,8 @@ namespace DarkwoodMP.World
                         + bagName);
             }
 
-            if (drop == null || drop.additionalMapMarker != null)
+            if (!SpawnRules.TakesMarker(
+                drop != null, drop != null && drop.additionalMapMarker != null))
             {
                 return;
             }
@@ -1326,7 +1388,9 @@ namespace DarkwoodMP.World
             try
             {
                 drop.additionalMapMarker = Core.AddPrefab(
-                    DeathBagMarkerPrefab, pos, Quaternion.Euler(90f, 0f, 0f),
+                    DeathBagMarkerPrefab,
+                    pos,
+                    Quaternion.Euler(SpawnRules.MarkerTilt, 0f, 0f),
                     null);
             }
             finally
@@ -1369,14 +1433,73 @@ namespace DarkwoodMP.World
             return w;
         }
 
-        private void OnSpawn(ulong from, PacketReader r)
+        /// <summary>
+        /// What the spawn rules look at in something another game made: the
+        /// only code that reads this game for them. A client's placed thing
+        /// (on the host) is checked in the old order, each only once the one
+        /// before it passed: a request, a placeable prefab, in reach, and the
+        /// items its character carries (not known: no character from it this
+        /// session).
+        /// </summary>
+        private SpawnFacts FactsOf(ulong from, in SpawnedThing thing)
         {
-            if (!WorldShare.InWorld)
+            string prefab = thing.Prefab;
+            var facts = new SpawnFacts
             {
-                return;
+                IsHost = _session.IsHost,
+                IsClient = _session.IsClient,
+                Prefab = prefab,
+                Placed = thing.Placed,
+                Known = ObjRef.Spawned.ContainsKey(thing.Id),
+                PrefabExists = Resources.Load("Prefabs/" + prefab) != null,
+            };
+
+            CoopSession coop = Coop.Current;
+            if (!facts.IsHost || !facts.Placed || coop == null)
+            {
+                return facts;
             }
 
-            if (_session.IsClient && from != _session.HostId)
+            facts = facts with
+            {
+                Handling = coop.Authority.Handling,
+                Placeable = IsPlaceable(prefab),
+            };
+
+            if (!facts.Handling || !facts.Placeable)
+            {
+                return facts;
+            }
+
+            var pos = new Vector3(thing.Pos.X, thing.Pos.Y, thing.Pos.Z);
+            facts = facts with
+            {
+                Reach = coop.Authority.ReachOf(
+                    pos, WorldActions.Reach, prefab),
+            };
+
+            Characters chars = Characters.Instance;
+            if (facts.Reach.Refused || chars == null)
+            {
+                return facts;
+            }
+
+            int? carried = chars.Carries(from, PlacedWith(prefab));
+            if (carried.HasValue)
+            {
+                facts = facts with
+                {
+                    CharacterKnown = true,
+                    Carried = carried.Value,
+                };
+            }
+
+            return facts;
+        }
+
+        private void OnSpawn(ulong from, PacketReader r)
+        {
+            if (!Accepts(from))
             {
                 return;
             }
@@ -1390,69 +1513,39 @@ namespace DarkwoodMP.World
                 thing.Rot.X, thing.Rot.Y, thing.Rot.Z, thing.Rot.W);
             string contents = thing.Contents;
             int exp = thing.Experience;
-            bool thrownSpawn =
-                _session.IsClient && ThrownSpawns.Contains(prefab);
-            if (!(SharedPrefabs.Contains(prefab) || placed || thrownSpawn)
-                || ObjRef.Spawned.ContainsKey(id))
+            var answer = SpawnRules.Receive(FactsOf(from, thing));
+            if (answer.Step == SpawnStep.Ignore)
             {
                 return;
             }
 
-            if (_session.IsHost && placed)
+            if (answer.Step == SpawnStep.Unasked)
             {
-                // A client's player placed it: only as a request, within reach,
-                // and only a thing a player can place.
-                if (!Coop.Current.Authority.Handling)
-                {
-                    Plugin.Log.LogWarning(
-                        $"[world] {_session.NameOf(from)} placed {prefab} "
-                            + "without asking: ignored");
-                    return;
-                }
-
-                if (!IsPlaceable(prefab))
-                {
-                    Coop.Current.Authority.Refuse(
-                        $"{prefab} isn't something a player can place");
-                    return;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    pos, WorldActions.Reach, prefab))
-                {
-                    return;
-                }
-
-                // And only with the item in their bags: the character the
-                // client sent as its player began placing (PlacingPatch), less
-                // what it has placed since. Not known yet (no character from it
-                // this session): allowed.
-                Characters instance = Characters.Instance;
-                int? carried = null;
-                if (instance != null)
-                {
-                    carried = instance.Carries(from, PlacedWith(prefab));
-                }
-
-                if (carried.HasValue && carried.Value < 1)
-                {
-                    Coop.Current.Authority.Refuse(
-                        $"they don't carry anything that places {prefab}");
-                    return;
-                }
-
-                if (carried.HasValue)
-                {
-                    Characters.Instance.Placed(from);
-                }
-            }
-
-            if (Resources.Load("Prefabs/" + prefab) == null)
-            {
-                Coop.Current.Authority.Refuse($"there's no {prefab} here");
-                Plugin.Log.LogWarning($"No prefab {prefab} here");
+                Plugin.Log.LogWarning(
+                    $"[world] {_session.NameOf(from)} placed {prefab} "
+                        + "without asking: ignored");
                 return;
             }
+
+            // One placed thing less in the client's character's bags
+            // (PlacingPatch), even when its prefab isn't here.
+            if (answer.CountsPlaced)
+            {
+                Characters.Instance.Placed(from);
+            }
+
+            if (answer.Step == SpawnStep.Refuse)
+            {
+                Coop.Current.Authority.Refuse(answer.Verdict);
+                if (answer.Verdict.Reason == DarkwoodMP.Refusal.NoSuchPrefab)
+                {
+                    Plugin.Log.LogWarning($"No prefab {prefab} here");
+                }
+
+                return;
+            }
+
+            bool thrownSpawn = answer.Thrown;
 
             GameObject go;
             Coop.Guards.Replaying = true;
@@ -1555,7 +1648,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            foreach (var c in ne.HostDeadSince(2f))
+            foreach (var c in ne.HostDeadSince(SpawnRules.CorpseDelay))
             {
                 if (c == null || !_corpsesSent.Add(c))
                 {
