@@ -142,6 +142,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 | File | |
 |---|---|
+| `BepInEx/plugins/DarkwoodMP/` | The mod: `DarkwoodMP.dll` and `DarkwoodMP.Core.dll`. Both must be from the same version, so update by extracting the whole zip. |
 | `BepInEx/config/DarkwoodMP.player.key` | Your player key: there are no accounts, and hosts know you by it. Keep it secret; copy it to another PC to be the same player there. |
 | `BepInEx/config/DarkwoodMP.servers.ini` | The browser's Favorites and History, in goasis's format |
 | `BepInEx/cache/DarkwoodMP/worlds/<hash>/` | Hosts' worlds you've joined (the last three) |
