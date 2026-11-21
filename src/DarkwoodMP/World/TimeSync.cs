@@ -23,18 +23,38 @@ namespace DarkwoodMP.World
     /// joiner's dream time is its own: it doesn't step while dreaming, and on
     /// waking (when the game puts its clock back to timeCopy) the next TimeSync
     /// steps it to the host's time, running the minutes it missed.
+    ///
+    /// One lives for each session, in CoopSession.Time.
     /// </summary>
-    public sealed class TimeSync
+    internal sealed class TimeSync
     {
         private readonly Session _session;
         private float _nextSend;
         private bool _clockStopped;
         private bool _dreamLogged;
 
-        public TimeSync(Session session)
+        public TimeSync(CoopSession coop)
         {
-            _session = session;
-            session.Register(MsgType.TimeSync, OnTime);
+            _session = coop.Net;
+            coop.Handle(MsgType.TimeSync, OnTime);
+            coop.Hook(RestartClock);
+        }
+
+        /// The session ended: a clock we kept off runs again, as it would
+        /// in the first frame after (we are no longer a client's copy).
+        private void RestartClock()
+        {
+            if (!_clockStopped)
+            {
+                return;
+            }
+
+            _clockStopped = false;
+            var ctl = Singleton<Controller>.Instance;
+            if (ctl != null)
+            {
+                ctl.DoUpdateTime = true;
+            }
         }
 
         public void Update()

@@ -78,7 +78,6 @@ namespace DarkwoodMP
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
-        private TimeSync _time;
         private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
@@ -453,7 +452,6 @@ namespace DarkwoodMP
             EnemyFx.Register(_host.Session);
             AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
-            _time = new TimeSync(_host.Session);
             WorldActions.Register(_host.Session);
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
@@ -2270,7 +2268,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
-            _time.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Time.Update();
+            }
+
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
             World.WorkbenchStorage.Update();
