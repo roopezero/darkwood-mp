@@ -194,6 +194,22 @@ namespace DarkwoodMP
             Players = new Sync.Players.PlayerSync(Session);
         }
 
+        /// <summary>
+        /// The host's world shared with joiners, and the joiner's download of
+        /// it (World.WorldShare). Kept for the whole game: the main menu
+        /// joins with it, and its cache of downloaded worlds outlives a
+        /// session. Made by Plugin.Load where it was made before, so its
+        /// handlers of the session's events run in the same order.
+        /// </summary>
+        public World.WorldShare Share { get; private set; }
+
+        /// <param name="runner">runs its coroutines (the Plugin)</param>
+        /// <param name="cacheRoot">BepInEx's cache folder</param>
+        public void AddShare(UnityEngine.MonoBehaviour runner, string cacheRoot)
+        {
+            Share = new World.WorldShare(Session, runner, cacheRoot);
+        }
+
         public void AddSteam(INetBackend steam)
         {
             Session.Add(steam);

@@ -8,7 +8,7 @@ namespace DarkwoodMP.Menus
     public readonly struct LeaveFacts
     {
         /// The world is the player's copy of the host's
-        /// (WorldShare.Instance.PlayingHostCopy; false with no WorldShare).
+        /// (ModHost.Share.PlayingHostCopy; false with no WorldShare).
         public bool HostCopy { get; init; }
 
         /// The time of the last save could be read: false when reading

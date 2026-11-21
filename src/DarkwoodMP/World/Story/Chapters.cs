@@ -336,7 +336,7 @@ namespace DarkwoodMP.World.Story
             var w = s.Begin(MsgType.GameEnd);
             // phase 1: the session ends
             GameEnd.Write(w, new EndWord { Kind = kind, Phase = 1 });
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.StopServer(w);

@@ -308,7 +308,7 @@ namespace DarkwoodMP
         private static string LeaveText()
         {
             string s;
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null && instance.PlayingHostCopy)
             {
                 s = "This is your copy of the host's world: your own saves are "

@@ -23,17 +23,18 @@ namespace DarkwoodMP.World
             // watching the prologue's intro for SECS from the first.
             Add("hold-joiners", (a, r) =>
             {
+                WorldShare share = Plugin.Instance.Host.Share;
                 if (a.Length > 0)
                 {
-                    WorldShare.TestHoldSecs = F(a[0]);
+                    share.TestHoldSecs = F(a[0]);
                 }
                 else
                 {
-                    WorldShare.TestHoldSecs = 15f;
+                    share.TestHoldSecs = 15f;
                 }
 
                 r.Info =
-                    $"joiners wait {WorldShare.TestHoldSecs:0} s from the "
+                    $"joiners wait {share.TestHoldSecs:0} s from the "
                         + "first";
                 return Nothing();
             });
@@ -43,22 +44,23 @@ namespace DarkwoodMP.World
             // joiner stopped the host's game.
             Add("join-stop", (a, r) =>
             {
+                WorldShare share = Plugin.Instance.Host.Share;
                 string text = "the game's own save";
-                if (WorldShare.LastSnapshotOffThread)
+                if (share.LastSnapshotOffThread)
                 {
                     text = "sav.dat written on a worker thread";
                 }
 
                 r.Info =
                     "snapshot stopped the game for "
-                        + $"{WorldShare.LastSnapshotStopMs} ms ({text}), "
+                        + $"{share.LastSnapshotStopMs} ms ({text}), "
                         + "longest host frame while joining "
-                        + $"{WorldShare.LastJoinLongestFrameMs:0} ms";
-                if (WorldShare.LastSnapshotStopMs < 0)
+                        + $"{share.LastJoinLongestFrameMs:0} ms";
+                if (share.LastSnapshotStopMs < 0)
                 {
                     r.Fail("no snapshot was made for the joiner");
                 }
-                else if (!WorldShare.LastSnapshotOffThread)
+                else if (!share.LastSnapshotOffThread)
                 {
                     r.Fail(
                         "the snapshot was saved the game's way, not on a "

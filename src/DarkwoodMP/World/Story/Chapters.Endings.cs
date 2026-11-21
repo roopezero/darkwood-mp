@@ -30,7 +30,7 @@ namespace DarkwoodMP.World.Story
                 }
             }
 
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.SetLoadStatus("The host reached the end of the game.");

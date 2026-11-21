@@ -55,7 +55,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool? HostCopy()
         {
-            WorldShare share = WorldShare.Instance;
+            WorldShare share = Plugin.Instance.Host.Share;
             if (share == null)
             {
                 return null;
