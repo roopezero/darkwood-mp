@@ -19,6 +19,93 @@ namespace DarkwoodMP.World.Windows
         }
 
         /// <summary>
+        /// Before a patched window call: one patched world call deeper
+        /// (Coop.Guards, which drop it with no session), and the window as
+        /// it was.
+        /// </summary>
+        internal static WindowState Before(Window window)
+        {
+            Coop.Guards.Depth++;
+            return StateOf(window);
+        }
+
+        /// <summary>
+        /// The window as a call's patch compares it, before and after.
+        /// </summary>
+        internal static WindowState StateOf(Window window) => new WindowState
+        {
+            Barricaded = window.barricaded,
+            BarricadeHealth = window.barricadeHealth,
+        };
+
+        /// <summary>
+        /// Window.barricade: X the barricade's health (destHealth), F1
+        /// byPlayer.
+        /// </summary>
+        internal void Barricaded(
+            Window window,
+            WindowState before,
+            in ActionValues call)
+        {
+            if (Changed(window, before))
+            {
+                WorldActions.Send(
+                    Action.WindowBarricade, window.gameObject, call.X,
+                    f1: call.F1);
+            }
+        }
+
+        /// <summary>
+        /// Window.destroyBarricade.
+        /// </summary>
+        internal void BarricadeBroken(
+            Window window,
+            WindowState before,
+            bool silent)
+        {
+            if (Changed(window, before))
+            {
+                WorldActions.Send(
+                    Action.WindowDestroyBarricade, window.gameObject,
+                    f1: silent);
+            }
+        }
+
+        /// <summary>
+        /// Window.getHit: X the damage, F1 normalHit. A client's own
+        /// flamethrower's flame counts as its player's (BreakSync.OwnFlame).
+        /// </summary>
+        internal void Hit(
+            Window window,
+            WindowState before,
+            in ActionValues hit)
+        {
+            if (Changed(window, before))
+            {
+                WorldActions.Send(
+                    Action.WindowHit, window.gameObject, hit.X, f1: hit.F1,
+                    byPlayerKnown: BreakSync.OwnFlame());
+            }
+        }
+
+        /// <summary>
+        /// After a patched window call: whether to send it. Asks
+        /// Coop.Guards.Outermost first, so every call counts back out.
+        /// </summary>
+        private bool Changed(Window window, WindowState before)
+        {
+            var send = new WindowSendFacts
+            {
+                Outermost = _coop.Guards.Outermost(),
+                Sharing = _coop.Guards.Sharing,
+                Before = before,
+                After = StateOf(window),
+            };
+
+            return WindowRules.SendsChange(send);
+        }
+
+        /// <summary>
         /// Host: whether a client's player could have done this to the
         /// window, as this world is now (WindowRules.MayAct). Refuses the
         /// request if not.

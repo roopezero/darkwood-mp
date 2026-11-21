@@ -3,7 +3,7 @@ using System;
 namespace DarkwoodMP.World.Doors
 {
     /// A door before or after one of its game calls (the plugin's
-    /// WorldActions.DoorState): if any of it differs, the call changed
+    /// Doors.StateOf): if any of it differs, the call changed
     /// the door and is sent.
     public readonly struct DoorState : IEquatable<DoorState>
     {

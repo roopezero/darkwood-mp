@@ -19,6 +19,185 @@ namespace DarkwoodMP.World.Doors
         }
 
         /// <summary>
+        /// Before a patched door call: one patched world call deeper
+        /// (Coop.Guards, which drop it with no session), and the door as it
+        /// was.
+        /// </summary>
+        internal static DoorState Before(Door door)
+        {
+            Coop.Guards.Depth++;
+            return StateOf(door);
+        }
+
+        /// <summary>
+        /// The door as a call's patch compares it, before and after.
+        /// </summary>
+        internal static DoorState StateOf(Door door) => new DoorState
+        {
+            Opened = door.opened,
+            Barricaded = door.barricaded,
+            Destroyed = door.destroyed,
+            Health = door.health,
+            BarricadeHealth = door.barricadeHealth,
+        };
+
+        /// <summary>
+        /// Where the one who opened a door stood (Door.open's arguments):
+        /// its transform if it has one.
+        /// </summary>
+        internal static Vector3 Opener(Vector3 position, Transform opener)
+        {
+            if (opener != null)
+            {
+                return opener.position;
+            }
+
+            return position;
+        }
+
+        /// <summary>
+        /// Door.open: sent with where the opener stood, which decides the
+        /// side the leaf swings to.
+        /// </summary>
+        internal void Opened(Door door, DoorState before, Vector3 opener)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(
+                    Action.DoorOpen, door.gameObject, opener.x, opener.z);
+            }
+        }
+
+        internal void Closed(Door door, DoorState before)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(Action.DoorClose, door.gameObject);
+            }
+        }
+
+        internal void Barricaded(Door door, DoorState before, bool byPlayer)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(
+                    Action.DoorBarricade, door.gameObject, f1: byPlayer);
+            }
+        }
+
+        /// <summary>
+        /// Door.destroyBarricade.
+        /// </summary>
+        internal void BarricadeBroken(Door door, DoorState before, bool silent)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(
+                    Action.DoorDestroyBarricade, door.gameObject, f1: silent);
+            }
+        }
+
+        /// <summary>
+        /// Door.destroyDoor.
+        /// </summary>
+        internal void Broken(Door door, DoorState before, bool silently)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(
+                    Action.DoorDestroy, door.gameObject, f1: silently);
+            }
+        }
+
+        /// <summary>
+        /// Door.unDestroy.
+        /// </summary>
+        internal void Mended(Door door, DoorState before)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(Action.DoorUndestroy, door.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// Door.getHit: X the damage, F1 normalHit, F2 canDamageMetal. A
+        /// client's own flamethrower's flame counts as its player's
+        /// (BreakSync.OwnFlame).
+        /// </summary>
+        internal void Hit(Door door, DoorState before, in ActionValues hit)
+        {
+            if (Changed(door, before))
+            {
+                WorldActions.Send(
+                    Action.DoorHit, door.gameObject, hit.X, f1: hit.F1,
+                    f2: hit.F2, byPlayerKnown: BreakSync.OwnFlame());
+            }
+        }
+
+        /// <summary>
+        /// Door.lockMe: sent changed or not.
+        /// </summary>
+        internal void Locked(Door door, string keyType)
+        {
+            var guards = _coop.Guards;
+            if (DoorSendRules.SendsLock(guards.Outermost(), guards.Sharing))
+            {
+                WorldActions.Send(
+                    Action.DoorLock, door.gameObject, str: keyType);
+            }
+        }
+
+        /// <summary>
+        /// Door.unlock: sent changed or not.
+        /// </summary>
+        internal void Unlocked(Door door)
+        {
+            var guards = _coop.Guards;
+            if (DoorSendRules.SendsLock(guards.Outermost(), guards.Sharing))
+            {
+                WorldActions.Send(Action.DoorUnlock, door.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// The story's Door.unblock (DoorUnblock.Unblock), with whether the
+        /// door was blocked before it.
+        /// </summary>
+        internal void Unblocked(Door door, bool was)
+        {
+            var unblock = new UnblockFacts
+            {
+                WasBlocked = was,
+                Blocked = door.blocked,
+                Depth = _coop.Guards.Depth,
+                Sharing = _coop.Guards.Sharing,
+            };
+
+            if (DoorSendRules.SendsUnblock(unblock))
+            {
+                WorldActions.Send(Action.DoorUnblock, door.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// After a patched door call: whether to send it. Asks
+        /// Coop.Guards.Outermost first, so every call counts back out.
+        /// </summary>
+        private bool Changed(Door door, DoorState before)
+        {
+            var send = new DoorSendFacts
+            {
+                Outermost = _coop.Guards.Outermost(),
+                Sharing = _coop.Guards.Sharing,
+                Before = before,
+                After = StateOf(door),
+            };
+
+            return DoorSendRules.SendsChange(send);
+        }
+
+        /// <summary>
         /// Host: whether a client's player could have done this to the
         /// door, as this world is now (DoorRules.MayAct). Refuses the
         /// request if not.
