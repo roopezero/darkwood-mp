@@ -29,7 +29,15 @@ namespace DarkwoodMP.Combat
                 Gunshot = gunshot,
             };
 
-            switch (NoiseRules.Owner(FactsOf()))
+            // The stack is walked here, in Prefix itself: CalledFromPlayer
+            // skips its own frame and this one.
+            bool fromPlayer = false;
+            if (Threat.NoiseSource == null && OwnNoise <= 0)
+            {
+                fromPlayer = CalledFromPlayer();
+            }
+
+            switch (NoiseRules.Owner(FactsOf(fromPlayer)))
             {
                 case NoiseOwner.OursToHost:
                     var s = Net.Session.Instance;
@@ -49,18 +57,12 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// The noise as the rule sees it. The stack is walked only when no
-        /// source is set and no own-noise method is running.
+        /// The noise as the rule sees it. Prefix walks the stack only when
+        /// no source is set and no own-noise method is running.
         /// </summary>
-        private static NoiseFacts FactsOf()
+        private static NoiseFacts FactsOf(bool fromPlayer)
         {
             bool set = Threat.NoiseSource != null;
-            bool fromPlayer = false;
-            if (!set && OwnNoise <= 0)
-            {
-                fromPlayer = CalledFromPlayer();
-            }
-
             var s = Net.Session.Instance;
             return new NoiseFacts
             {
