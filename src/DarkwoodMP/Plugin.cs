@@ -13,6 +13,7 @@ using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
 using HarmonyLib;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using UnityEngine;
 
 namespace DarkwoodMP
@@ -77,8 +78,6 @@ namespace DarkwoodMP
         }
 
         private DirectPanel _direct;
-        private WorldShare _world;
-        private Characters _characters;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
         private bool? _cursorBefore;
@@ -108,7 +107,7 @@ namespace DarkwoodMP
 
                 // After leaving someone's game you're still in your copy of
                 // their world (your own saves are untouched).
-                WorldShare share = WorldShare.Instance;
+                WorldShare share = Plugin.Instance.Host.Share;
                 if (share != null && share.PlayingHostCopy)
                 {
                     return "This is your copy of another host's world. To "
@@ -116,7 +115,7 @@ namespace DarkwoodMP
                         + "world.";
                 }
 
-                if (EpilogueSync.InEpilogueAlone())
+                if (World.Story.EpilogueSync.InEpilogueAlone())
                 {
                     return "This world is in the epilogue, which can't be "
                         + "shared once it has begun. Host from a save before "
@@ -436,11 +435,8 @@ namespace DarkwoodMP
             _host.Session.OnPlayerStoppedJoining += n => Notice(
                 $"{n} stopped joining");
             _host.Players.OnRemoteDied += n => Notice($"{n} died");
-            _world = new WorldShare(_host.Session, this, Paths.CachePath);
+            _host.AddShare(this, Paths.CachePath);
             WorldActions.Register(_host.Session);
-            _characters = new Characters(_host.Session);
-            Chapters.Register(_host.Session);
-            EpilogueSync.Register(_host.Session);
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
@@ -603,7 +599,7 @@ namespace DarkwoodMP
             if (int.TryParse(Arg("--dwmp-continue"), out int profileId))
             {
                 StartTest(
-                    _world.ContinueOwnProfile(
+                    _host.Share.ContinueOwnProfile(
                         profileId, Arg("--dwmp-sandbox")));
             }
 
@@ -692,7 +688,7 @@ namespace DarkwoodMP
 
             // "--dwmp-test-quick-end": as a joiner, skip the epilogue and the
             // credits soon after they start.
-            Chapters.TestQuick = Has("--dwmp-test-quick-end");
+            _host.TestQuickEnd = Has("--dwmp-test-quick-end");
             // "--dwmp-test-save N": N seconds after a player joins, the host's
             // game saves (as at dawn), writing their characters.
             if (Seconds("--dwmp-test-save", out float saveAfter))
@@ -767,7 +763,8 @@ namespace DarkwoodMP
             if (Has("--dwmp-testworld"))
             {
                 StartTest(
-                    _host.TestArea.Start(_world, reset: Has("--dwmp-reset")));
+                    _host.TestArea.Start(
+                        _host.Share, reset: Has("--dwmp-reset")));
                 if (Arg("--dwmp-shots") is string tdir)
                 {
                     StartTest(TestWorldShots(tdir));
@@ -875,7 +872,7 @@ namespace DarkwoodMP
                 session.Traps.TestRefuse = World.Traps.TrapTest.None;
             }
 
-            WorldShare.TestHoldSecs = 0f;
+            _host.Share.TestHoldSecs = 0f;
 
             SkillsPanel.TestMouse = null;
             _host.TestMouse = null;
@@ -890,7 +887,7 @@ namespace DarkwoodMP
             Threat.Debug = false;
             WorldActions.Debug = false;
             _host.LoadSpeed.Verify = false;
-            Chapters.TestQuick = false;
+            _host.TestQuickEnd = false;
             _spawnType = null;
             _testPresence = false;
             TcpBackend.TestMaxPlayers = 0;
@@ -2011,8 +2008,8 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator ClientMenuRejoin(string address)
         {
             while (!(_host.Session.IsClient && WorldShare.WorldReady
-                    && World.Characters.Instance != null
-                    && World.Characters.Instance.HasCharacter))
+                    && Coop.Current != null
+                    && Coop.Current.Characters.HasCharacter))
             {
                 yield return null;
             }
@@ -2269,7 +2266,12 @@ namespace DarkwoodMP
             }
 
             _host.Profiler.Mark("containers");
-            _characters.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Characters.Update();
+            }
+
             _host.Profiler.Mark("characters");
             coop = Coop.Current;
             if (coop != null)
@@ -2328,7 +2330,7 @@ namespace DarkwoodMP
             }
 
             _host.Profiler.Mark("enemy fx");
-            _world.Update();
+            _host.Share.Update();
             _host.Profiler.Mark("world");
             if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
             {
@@ -2343,9 +2345,14 @@ namespace DarkwoodMP
                 UpdatePresence();
             }
 
-            _host.Join.Update(_host.Session, _world);
+            _host.Join.Update(_host.Session, _host.Share);
             _host.Loading.Update();
-            Chapters.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Chapters.Update();
+            }
+
             _host.Progress.Update();
             SkillsPanel.Update(_showMenu);
             coop = Coop.Current;
@@ -2354,7 +2361,12 @@ namespace DarkwoodMP
                 coop.Dreaming.Update();
             }
 
-            Prologue.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Prologue.Update();
+            }
+
             coop = Coop.Current;
             if (coop != null)
             {
@@ -2639,7 +2651,7 @@ namespace DarkwoodMP
                 }
             }
 
-            if (_world.Progress is var p && p.HasValue)
+            if (_host.Share.Progress is var p && p.HasValue)
             {
                 Ui.Text(
                     f,
@@ -2648,9 +2660,9 @@ namespace DarkwoodMP
                         + $"{p.Value.Total / 1048576f:0.0} MB",
                     MenuSkin.Bright);
             }
-            else if (_world.LoadStatus != null)
+            else if (_host.Share.LoadStatus != null)
             {
-                Ui.Text(f, _world.LoadStatus, MenuSkin.Bright);
+                Ui.Text(f, _host.Share.LoadStatus, MenuSkin.Bright);
             }
 
             if (TestWorld.Active)
@@ -2769,13 +2781,15 @@ namespace DarkwoodMP
                 if (Ui.Button(r[0], label))
                 {
                     SetPanel(false);
-                    StartCoroutine(_host.TestArea.Start(_world, reset: false));
+                    StartCoroutine(
+                        _host.TestArea.Start(_host.Share, reset: false));
                 }
 
                 if (TestWorld.Exists && Ui.Button(r[1], "Reset it"))
                 {
                     SetPanel(false);
-                    StartCoroutine(_host.TestArea.Start(_world, reset: true));
+                    StartCoroutine(
+                        _host.TestArea.Start(_host.Share, reset: true));
                 }
 
                 if (_host.TestArea.Status != null)
@@ -3103,10 +3117,10 @@ namespace DarkwoodMP
             // Our character goes to the host here, while the world is whole,
             // and only here: OnDestroy's Dispose leaves the session (which
             // waits for the TCP writers) without sending it again.
-            Characters characters = _characters;
-            if (characters != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                characters.SaveForQuit();
+                coop.Characters.SaveForQuit();
             }
         }
 

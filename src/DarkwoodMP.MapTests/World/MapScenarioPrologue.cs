@@ -3,6 +3,7 @@ using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using Prologue = DarkwoodMP.World.Story.Prologue;
 using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
@@ -307,10 +308,10 @@ namespace DarkwoodMP.World
             // prologue it isn't sent).
             if (NetEnemies.ClientMode)
             {
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SaveNow();
+                    coop.Characters.SaveNow();
                 }
             }
         }

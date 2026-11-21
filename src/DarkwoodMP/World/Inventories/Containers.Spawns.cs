@@ -225,10 +225,10 @@ namespace DarkwoodMP.World.Inventories
             if (player.placingItem && NetEnemies.ClientMode
                 && Coop.Guards.Sharing)
             {
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SaveNow();
+                    coop.Characters.SaveNow();
                 }
             }
         }

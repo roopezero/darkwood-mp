@@ -227,7 +227,7 @@ namespace DarkwoodMP.Menus
         /// saved and who else is in the game.
         private LeaveFacts LeaveOf()
         {
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             bool copy = instance != null && instance.PlayingHostCopy;
             bool known = false;
             DateTime saved = default;

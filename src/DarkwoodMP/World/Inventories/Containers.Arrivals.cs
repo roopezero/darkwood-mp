@@ -159,7 +159,7 @@ namespace DarkwoodMP.World.Inventories
                     pos, WorldActions.Reach, prefab),
             };
 
-            Characters chars = Characters.Instance;
+            var chars = coop.Characters;
             if (facts.Reach.Refused || chars == null)
             {
                 return facts;
@@ -212,7 +212,7 @@ namespace DarkwoodMP.World.Inventories
             // (PlacingStarts), even when its prefab isn't here.
             if (answer.CountsPlaced)
             {
-                Characters.Instance.Placed(from);
+                Coop.Current.Characters.Placed(from);
             }
 
             if (answer.Step == SpawnStep.Refuse)

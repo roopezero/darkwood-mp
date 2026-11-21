@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.KeptCharacters;
 using DarkwoodMP.World.Saves;
 using Newtonsoft.Json;
 
@@ -55,7 +56,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool? HostCopy()
         {
-            WorldShare share = WorldShare.Instance;
+            WorldShare share = Plugin.Instance.Host.Share;
             if (share == null)
             {
                 return null;
@@ -212,7 +213,7 @@ namespace DarkwoodMP.World
                         .OrderByDescending(File.GetLastWriteTimeUtc))
                     {
                         var c =
-                            JsonConvert.DeserializeObject<Characters.Record>(
+                            JsonConvert.DeserializeObject<CharacterRecord>(
                                 File.ReadAllText(f));
                         if (c != null && !string.IsNullOrEmpty(c.Name)
                             && !names.Contains(c.Name))
@@ -320,11 +321,7 @@ namespace DarkwoodMP.World
             // save and leaves them, so a joiner would get their old character
             // (dead, if it died for good). They go with the old world, as when
             // the slot is deleted.
-            Characters instance = Characters.Instance;
-            if (instance != null)
-            {
-                instance.Forget("a new game");
-            }
+            Plugin.Instance.Host.Kept.Forget("a new game");
 
             var sm = Singleton<SaveManager>.Instance;
             if (RedirectRules.NewGameDeletes(sm != null, HostCopy()))
@@ -351,11 +348,7 @@ namespace DarkwoodMP.World
             }
 
             Forget(p.id, "deleted");
-            Characters instance = Characters.Instance;
-            if (instance != null)
-            {
-                instance.Forget("the slot deleted");
-            }
+            Plugin.Instance.Host.Kept.Forget("the slot deleted");
 
             DeletePlayersDir(saves.baseSaveDirectory, p.id, "with it");
         }

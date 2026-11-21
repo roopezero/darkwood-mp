@@ -7,6 +7,7 @@ using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
 

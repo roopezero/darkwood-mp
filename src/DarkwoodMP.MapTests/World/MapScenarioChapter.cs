@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using DarkwoodMP.World.Places;
 using Object = UnityEngine.Object;
 using static DarkwoodMP.World.MapScenario;
@@ -89,6 +90,23 @@ namespace DarkwoodMP.World
 
         private static int Chapter => Chapters.HostChapter;
 
+        /// The host's next chapter is being built (false with no session).
+        private static bool Generating
+        {
+            get
+            {
+                CoopSession coop = Coop.Current;
+                return coop != null && coop.Chapters.Generating;
+            }
+        }
+
+        /// Our character in the host's world has come; false with no session.
+        private static bool HasCharacter()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Characters.HasCharacter;
+        }
+
         private static IEnumerator Mark(string[] a, Result r)
         {
             _logFrom = MapScenarioIssues.LogMark();
@@ -137,10 +155,10 @@ namespace DarkwoodMP.World
             slots[at2].createItem("rope", 1);
             yield return new WaitForSeconds(0.5f);
             _mark = Hotbar(p);
-            Characters instance = Characters.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.SaveNow();
+                coop.Characters.SaveNow();
             }
 
             r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
@@ -168,7 +186,7 @@ namespace DarkwoodMP.World
 
             while (Chapter != 2
                 || SceneManager.GetActiveScene().name != "chapter2"
-                || !WorldShare.WorldReady || Chapters.Generating)
+                || !WorldShare.WorldReady || Generating)
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
@@ -263,7 +281,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             // sends our character (from off the map) first
             Net.Session.Instance.Backend.Rejoin();
-            while (Characters.Instance.HasCharacter)
+            while (HasCharacter())
             {
                 yield return new WaitForSecondsRealtime(0.2f);
             }
@@ -277,8 +295,7 @@ namespace DarkwoodMP.World
             while (!(Chapter == 2
                     && SceneManager.GetActiveScene().name == "chapter2"
                     && WorldShare.WorldReady && Combat.NetEnemies.ClientMode
-                    && Characters.Instance != null
-                    && Characters.Instance.HasCharacter))
+                    && HasCharacter()))
             {
                 if (Time.realtimeSinceStartup > giveUp)
                 {
@@ -292,10 +309,10 @@ namespace DarkwoodMP.World
                             + $"{Core.forbidInputs}, client mode "
                             + $"{Combat.NetEnemies.ClientMode}, ";
                     bool? have = null;
-                    Characters characters = Characters.Instance;
-                    if (characters != null)
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
                     {
-                        have = characters.HasCharacter;
+                        have = coop.Characters.HasCharacter;
                     }
 
                     r.Fail(line + $"have {have}, at {Pos(P)}");
@@ -328,7 +345,8 @@ namespace DarkwoodMP.World
             }
 
             bool ground = OnGround(p);
-            float nearest = Characters.NearestChunk(p.transform.position);
+            float nearest = KeptCharacters.Characters.NearestChunk(
+                p.transform.position);
             WorldGenerator generator = Singleton<WorldGenerator>.Instance;
             float? size = null;
             if (generator != null)
@@ -497,7 +515,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool OnGround(Player p) =>
             WorldChunk.getChunkAtPos(p.transform.position) != null
-                || Characters.OnMap(p.transform.position);
+                || KeptCharacters.Characters.OnMap(p.transform.position);
 
         /// <summary>
         /// The hotbar has the same slots as `had`, with the same kind of thing

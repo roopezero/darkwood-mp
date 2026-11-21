@@ -597,10 +597,45 @@ Finish with `tools/run-test.sh full`.
         so its callers didn't change. `SkillSpend`'s bytes are the core's
         `SkillSpend`; `SkillReset` has no payload. The panel's patches run
         with no session, as the panel works playing alone.
-- [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
+- [x] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
-- [ ] 7.5 Characters and saves. After each change here, confirm that the run's
+  - [x] Part b: the rest of `Prologue`, and `Chapters`. They are
+        `CoopSession.Prologue` and `.Chapters` (`World/Story`, `Chapters`
+        a partial class in three files), with `ProloguePatches.cs` and
+        `ChapterPatches.cs`; the game-reading queries and the endings a
+        joiner sees alone stay static, and the quick-end test switch is
+        `ModHost.TestQuickEnd`. Their state lasts the session, chapter
+        loads included, so nothing went on `WorldScope`. The bytes are the
+        core's `ChapterStart`, `GameEnd` and `StoryRequest`. Differs:
+        `StoryRequestRules` gained `ReachesEvent`, since the plugin looks a
+        request's event up only once the checks before it pass, and two
+        patches got `Priority.High` to keep their order after the move.
+  - [x] Part c: `EpilogueSync`. It is `CoopSession.Epilogue`
+        (`World/Story/EpilogueSync`, a partial class in three files, with
+        `EpiloguePatches.cs`); its handler and peer check are per session,
+        and its session-end cleanup is a hook. Its bytes are the core's
+        `EpilogueStepMessage`. `InEpilogueAlone` stays static, as hosting
+        asks it with no session. It writes Chapters' `GameEnd` message
+        from the core.
+- [x] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
+  - [x] Part a: `Characters`, `WorldShare`. Their bytes are the core's
+        `CharacterLoad`, `CharacterSave`, `SaveOffer`, `NeedSave`,
+        `SaveData` and `JoinWaitMessage`, and the shell calls
+        `CharacterRules`, `OurCharacterRules`, `GameStateRules`,
+        `JoinGateRules`, `SnapshotRules` and `OfferRules`.
+    - [x] `WorldShare`'s state, patch and files. It is `ModHost.Share`
+          (`World/Joining/WorldShare`, a partial class in six files, with
+          `WorldSharePatches.cs`); its statics are fields of the instance.
+          The namespace stays `DarkwoodMP.World` for its 149 calling files,
+          and `WorldReady`, `Snapshotting` and the other game-state
+          questions stay static, reading `ModHost.Share`.
+    - [x] `Characters`' state, patch and files. It is
+          `CoopSession.Characters` (`World/KeptCharacters`, split into
+          `Characters.cs`, `.Client.cs` and `.Placing.cs`), and the host's
+          kept records are `ModHost.Kept` (`CharacterRecords`, with
+          `CharacterRecord`), written by
+          `CharacterPatches.SaveManagerSaveCharacters` also alone.
   - [x] Part b: `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`,
         `ScanWait`, `WorldTeardown`. They are in `World/Saves` and
         `World/Teardown`, namespace still `DarkwoodMP.World`, with

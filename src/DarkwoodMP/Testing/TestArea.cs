@@ -6,6 +6,7 @@ using System.Linq;
 using BepInEx;
 using DarkwoodMP.Net;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 
 namespace DarkwoodMP.World
 {
@@ -47,11 +48,7 @@ namespace DarkwoodMP.World
                 {
                     WorldShare.RemoveDir(TestWorld.Dir);
                     Copy(mine, TestWorld.Dir);
-                    Characters instance = Characters.Instance;
-                    if (instance != null)
-                    {
-                        instance.Forget("the test world reset");
-                    }
+                    Plugin.Instance.Host.Kept.Forget("the test world reset");
                 }
                 catch (Exception e)
                 {

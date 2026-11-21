@@ -493,8 +493,8 @@ namespace DarkwoodMP.Net
         /// Host -> client: u8 kind (1 the epilogue, 2 the game's end screen),
         /// u8 phase (0 the ending starts: go into the host's epilogue and stay
         /// connected; 1 the session ends: the host's server stops). Kind 1
-        /// phase 0: play the epilogue together (World.EpilogueSync); kind 1
-        /// phase 1: the host went to the credits, so leave and go to the
+        /// phase 0: play the epilogue together (World.Story.EpilogueSync);
+        /// kind 1 phase 1: the host went to the credits, so leave and go to the
         /// credits too. Kind 2 (always phase 1): leave, show the end screen in
         /// your copy of the world, then the credits and the main menu (see
         /// World.Chapters).
@@ -516,7 +516,7 @@ namespace DarkwoodMP.Net
         StoryRequest = 88,
         /// <summary>
         /// u8 what, str value. A step of the shared epilogue (see
-        /// World.EpilogueSync):
+        /// World.Story.EpilogueSync):
         /// host -> client, 1 the camera pans over the burning forest (value:
         /// the world event, epilogue_cameraPanOverBurningForest): every player
         /// has crawled to their death, or a minute has passed since the first

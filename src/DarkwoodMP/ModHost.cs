@@ -103,8 +103,17 @@ namespace DarkwoodMP
         internal readonly Combat.AllCharacters Characters =
             new Combat.AllCharacters();
 
+        /// Host: the other players' characters kept beside the save, written
+        /// whenever the game saves, also with no session.
+        public readonly World.KeptCharacters.CharacterRecords Kept =
+            new World.KeptCharacters.CharacterRecords();
+
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
+
+        /// For tests ("--dwmp-test-quick-end"): skip the epilogue and the
+        /// credits as soon as they start, also after leaving the session.
+        public bool TestQuickEnd;
 
         /// The shared essence and levels, and the stove's skill reset: also
         /// playing alone. A session adds its messages (Progression.Join).
@@ -255,7 +264,7 @@ namespace DarkwoodMP
             {
                 PlayerCount = () => Session.PlayerCount,
                 MapPort = opensPort,
-                BeforeLeave = World.Characters.SaveBeforeLeaving
+                BeforeLeave = World.KeptCharacters.Characters.SaveBeforeLeaving
             };
 
             Session.Add(Tcp);
@@ -285,6 +294,22 @@ namespace DarkwoodMP
         public void AddPlayers()
         {
             Players = new Sync.Players.PlayerSync(Session);
+        }
+
+        /// <summary>
+        /// The host's world shared with joiners, and the joiner's download of
+        /// it (World.WorldShare). Kept for the whole game: the main menu
+        /// joins with it, and its cache of downloaded worlds outlives a
+        /// session. Made by Plugin.Load where it was made before, so its
+        /// handlers of the session's events run in the same order.
+        /// </summary>
+        public World.WorldShare Share { get; private set; }
+
+        /// <param name="runner">runs its coroutines (the Plugin)</param>
+        /// <param name="cacheRoot">BepInEx's cache folder</param>
+        public void AddShare(UnityEngine.MonoBehaviour runner, string cacheRoot)
+        {
+            Share = new World.WorldShare(Session, runner, cacheRoot);
         }
 
         public void AddSteam(INetBackend steam)

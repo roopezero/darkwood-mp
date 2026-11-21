@@ -34,9 +34,9 @@ namespace DarkwoodMP.World.Spectating
     ///
     /// The epilogue's burning forest uses the watching alone (BeginWatch): a
     /// player who crawled to their death there watches the ones still crawling
-    /// until the camera pans over the forest (World.EpilogueSync). Nothing is
-    /// marked dead and no permadeath follows; with nobody left to watch the
-    /// camera stays on the body.
+    /// until the camera pans over the forest (World.Story.EpilogueSync).
+    /// Nothing is marked dead and no permadeath follows; with nobody left to
+    /// watch the camera stays on the body.
     /// For a client that deletes only its copy of the host's world in the mod's
     /// cache (SaveRedirect).
     /// </summary>
@@ -399,10 +399,10 @@ namespace DarkwoodMP.World.Spectating
             if (_coop.Net.IsClient)
             {
                 // the host keeps it with our character
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendDead();
+                    coop.Characters.SendDead();
                 }
             }
 

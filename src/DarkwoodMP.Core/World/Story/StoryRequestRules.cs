@@ -237,6 +237,21 @@ namespace DarkwoodMP.World.Story
             return Answer(facts, StoryOutcome.Run, null);
         }
 
+        /// Whether Decide gets as far as the event: every check before it
+        /// passes. The shell looks the event up only then, as
+        /// Chapters.Decide did (an unknown name warns in the log, and a held
+        /// request is decided every frame).
+        public static bool ReachesEvent(in StoryFacts facts)
+        {
+            var before = facts with
+            {
+                EventFound = false,
+                WasAway = true,
+            };
+
+            return Decide(before).Outcome == StoryOutcome.Run;
+        }
+
         /// Decide for an event the host has: its step must be the one
         /// asked for, and the joiner near it the first time this is
         /// checked.

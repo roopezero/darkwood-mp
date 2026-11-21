@@ -188,6 +188,9 @@ namespace DarkwoodMP
         /// A player dead for good watching the others.
         public readonly World.Spectating.Spectator Spectator;
 
+        /// The epilogue played together.
+        public readonly World.Story.EpilogueSync Epilogue;
+
         /// Where separate locations stand, and the host's locations kept
         /// running for the joiners in them.
         public readonly World.Places.Locations Locations;
@@ -200,6 +203,16 @@ namespace DarkwoodMP
 
         /// What the host's night events put into the world.
         public readonly World.Nights.NightObjects Nights;
+
+        /// The prologue's stages, played together.
+        public readonly World.Story.Prologue Prologue;
+
+        /// New chapters and the game's end, which the host's game starts.
+        public readonly World.Story.Chapters Chapters;
+
+        /// Each player's own character in the host's world: what the host
+        /// heard of the joiners' last, and our own asked for and sent.
+        public readonly World.KeptCharacters.Characters Characters;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -267,10 +280,14 @@ namespace DarkwoodMP
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
             Spectator = new World.Spectating.Spectator(this);
+            Epilogue = new World.Story.EpilogueSync(this);
             Locations = new World.Places.Locations(this);
             Porter = new World.Hideout.Porter(this);
             Ovens = new World.Hideout.Ovens(this);
             Nights = new World.Nights.NightObjects(this);
+            Prologue = new World.Story.Prologue();
+            Chapters = new World.Story.Chapters(this);
+            Characters = new World.KeptCharacters.Characters(this);
             // the progression lives as long as the game (ModHost.Progress);
             // this session brings its messages and forgets its record
             Plugin.Instance.Host.Progress.Join(this);
