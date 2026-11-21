@@ -569,6 +569,16 @@ Finish with `tools/run-test.sh full`.
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
+  - [x] Part b: `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`,
+        `ScanWait`, `WorldTeardown`. They are in `World/Saves` and
+        `World/Teardown`, namespace still `DarkwoodMP.World`, with
+        `SaveBookPatches.cs`, `SaveRedirectPatches.cs`,
+        `WorldTeardownPatches.cs` and `ScanWaitPatches.cs`. Their state is
+        needed at the main menu or alone, so it is on `ModHost`
+        (`SaveFolders`, `Book`, `Teardown`); `SaveRedirect` and `SaveBook`
+        keep static methods with no state, so their callers didn't change,
+        and every patch still runs with no session. None has a message, so
+        no bytes moved; the world hash stays in `WorldFiles`.
 
 Finish with `tools/run-test.sh full`.
 
