@@ -66,11 +66,8 @@ namespace DarkwoodMP.Combat
                 _corpseKnown.Remove(id);
             };
 
-            session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
-            session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
             session.OnSessionEnded += () =>
             {
-                HostileNpcs.Clear();
                 _known.Clear();
                 _corpseKnown.Clear();
                 _byCharHost.Clear();

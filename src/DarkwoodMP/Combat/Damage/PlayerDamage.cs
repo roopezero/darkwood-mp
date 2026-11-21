@@ -125,7 +125,7 @@ namespace DarkwoodMP.Combat
         public static List<InvItemEffect> ReadEffects(PacketReader r) =>
             GameOf(SentEffects.Read(r));
 
-        private static List<SentEffect> SentOf(List<InvItemEffect> effects)
+        internal static List<SentEffect> SentOf(List<InvItemEffect> effects)
         {
             if (effects == null)
             {
@@ -152,7 +152,7 @@ namespace DarkwoodMP.Combat
             return sent;
         }
 
-        private static List<InvItemEffect> GameOf(
+        internal static List<InvItemEffect> GameOf(
             IReadOnlyList<SentEffect> sent)
         {
             var effects = new List<InvItemEffect>();
