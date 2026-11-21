@@ -324,7 +324,8 @@ namespace DarkwoodMP.Combat
             bool water = blood.Water;
             // shown already
             if (_predictedBlood.TryGetValue(id, out float at)
-                && Time.realtimeSinceStartup - at < 1f)
+                && !CopyRules.ShowsBlood(
+                    true, new Seconds(Time.realtimeSinceStartup - at)))
             {
                 _predictedBlood.Remove(id);
                 return;
@@ -332,11 +333,7 @@ namespace DarkwoodMP.Combat
 
             if (_puppets.TryGetValue(id, out var p) && p.C != null)
             {
-                string prefab = "FX/Bloodsplats/Shotsplat_stay";
-                if (water)
-                {
-                    prefab = "FX/Bloodsplats/Shotsplat";
-                }
+                string prefab = CopyRules.BloodFor(water);
 
                 Core.AddPrefab(
                     prefab, p.C.transform.position,

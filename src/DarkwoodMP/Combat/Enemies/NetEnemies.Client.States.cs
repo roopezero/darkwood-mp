@@ -105,6 +105,16 @@ namespace DarkwoodMP.Combat
             }
         }
 
+        private static string KindOfOrNull(Character c)
+        {
+            if (c == null)
+            {
+                return null;
+            }
+
+            return KindOf(c);
+        }
+
         private void OnSpawn(ulong from, PacketReader r)
         {
             if (from != _session.HostId || !ClientMode)
@@ -134,16 +144,28 @@ namespace DarkwoodMP.Combat
             // same kind of creature. The host sends an NPC only while it's
             // hostile there (HostileNpcs): ours is then frozen and shown as the
             // host's.
-            if (uid > 0 && uid < World.SharedIds.ResolveLimit && sm != null
-                && sm.uniqueIdDict.TryGetValue(uid, out var tr) && tr != null)
+            Transform tr = null;
+            bool found = uid > 0 && sm != null
+                && sm.uniqueIdDict.TryGetValue(uid, out tr) && tr != null;
+            if (found)
             {
                 c = tr.GetComponent<Character>();
-                if (c != null && _byChar.ContainsKey(c))
-                {
-                    c = null; // already driven by another id
-                }
+            }
 
-                if (c != null && KindOf(c) != name)
+            var saved = CopyRules.FromSave(new SavedFacts
+            {
+                SaveId = uid,
+                Limit = World.SharedIds.ResolveLimit,
+                Found = found,
+                HasCharacter = c != null,
+                Driven = c != null && _byChar.ContainsKey(c),
+                Kind = KindOfOrNull(c),
+                HostKind = name,
+            });
+
+            if (saved != SavedCopy.Use)
+            {
+                if (saved == SavedCopy.OtherKind)
                 {
                     var log = Plugin.Log;
                     var kind = KindOf(c);
@@ -156,8 +178,10 @@ namespace DarkwoodMP.Combat
                     log.LogInfo(
                         $"Save id {uid} is our {kind}{npcNote}, not the host's "
                             + $"{name}: making it from its prefab");
-                    c = null;
                 }
+
+                // none, or already driven by another id
+                c = null;
             }
 
             // An NPC made while playing (a scripted spawn runs in every game)
@@ -172,13 +196,9 @@ namespace DarkwoodMP.Combat
             if (c == null)
             {
                 GameObject go = null;
-                foreach (var candidate in new[]
+                foreach (var candidate in CopyRules.Prefabs(prefab, name))
                 {
-                    prefab,
-                    "Characters/" + name
-                })
-                {
-                    var res = Resources.Load("Prefabs/" + candidate);
+                    var res = Resources.Load(candidate);
                     if (res != null)
                     {
                         go = Core.AddPrefab(
@@ -290,16 +310,19 @@ namespace DarkwoodMP.Combat
             try
             {
                 var a = c.GetComponent<ShadowArmor>();
-                if (on && a == null)
+                bool has = a != null;
+                var step = CopyRules.Armor(
+                    on, has, has && a.effectGO != null);
+                if (step == ArmorStep.Add)
                 {
                     // its Start makes the effect
                     c.shadowArmor = c.gameObject.AddComponent<ShadowArmor>();
                     Plugin.Log.LogInfo(
                         $"[enemy] {c.name}: shadow armour shown");
                 }
-                else if (!on && a != null)
+                else if (step != ArmorStep.None)
                 {
-                    if (a.effectGO == null)
+                    if (step == ArmorStep.Destroy)
                     {
                         Object.Destroy(a); // not started yet: no effect to stop
                     }

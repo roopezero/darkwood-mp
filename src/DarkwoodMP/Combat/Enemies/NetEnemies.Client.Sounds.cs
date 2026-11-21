@@ -235,17 +235,34 @@ namespace DarkwoodMP.Combat
             var mark = EnemyMarkMessage.Read(r);
             uint id = mark.Id;
             bool keepCorpse = mark.On;
-            if (!_puppets.TryGetValue(id, out var p))
+            bool copy = _puppets.TryGetValue(id, out var p);
+            Puppet corpse = null;
+            bool kept = !copy && _corpses.TryGetValue(id, out corpse);
+            if (kept)
+            {
+                p = corpse;
+            }
+
+            var step = CopyRules.Despawn(new DespawnFacts
+            {
+                Copy = copy,
+                Corpse = kept,
+                KeepCorpse = keepCorpse,
+                Exists = p != null && p.C != null,
+            });
+
+            if (step == DespawnStep.Ignore)
+            {
+                return;
+            }
+
+            if (step == DespawnStep.ForgetCorpse
+                || step == DespawnStep.DestroyCorpse)
             {
                 // The host's corpse is gone (it was destroyed there): so is
                 // ours.
-                if (keepCorpse || !_corpses.TryGetValue(id, out p))
-                {
-                    return;
-                }
-
                 _corpses.Remove(id);
-                if (p.C == null)
+                if (step == DespawnStep.ForgetCorpse)
                 {
                     return;
                 }
@@ -263,13 +280,13 @@ namespace DarkwoodMP.Combat
             }
 
             _puppets.Remove(id);
-            if (p.C == null)
+            if (step == DespawnStep.ForgetCopy)
             {
                 return;
             }
 
             _byChar.Remove(p.C);
-            if (keepCorpse) // stays where it fell
+            if (step == DespawnStep.KeepCorpse) // stays where it fell
             {
                 if (!p.Settled)
                 {
@@ -295,7 +312,7 @@ namespace DarkwoodMP.Combat
             // its window, if our player has its corpse open: gone or hidden, it
             // is gone for us
             World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
-            if (p.Ours)
+            if (CopyRules.Release(p.Ours) == ReleaseStep.Destroy)
             {
                 Object.Destroy(p.C.gameObject);
             }
@@ -317,46 +334,39 @@ namespace DarkwoodMP.Combat
             uint id = sound.Id;
             string audio = sound.Audio;
             float volume = sound.Volume;
-            if (!_puppets.TryGetValue(id, out var p) || p.C == null)
-            {
-                return;
-            }
-
+            _puppets.TryGetValue(id, out var p);
             // Once it's dead here, only its death cry still plays (it can
             // arrive just after the state that said so); a bark or a loop from
             // before the host's die2, arriving late, would go on over the
-            // corpse.
-            if (p.DiedAt >= 0f
-                && (p.C.sounds == null || audio != p.C.sounds.death))
+            // corpse. One of its loops (CharacterSounds.playIdleLoop: idle,
+            // aggressive while it chases, defensive, sleeping, escaping) takes
+            // the place of the copy's loop, as on the host. Played as a sound
+            // it would go on beside the copy's idle loop, and nothing would
+            // stop it. "" is the host's loop stopping
+            // (CharacterSoundsPlayIdleLoopStop).
+            var step = CopyRules.Sound(SoundOf(p, audio));
+            if (step == SoundStep.Ignore)
             {
                 return;
             }
 
-            // One of its loops (CharacterSounds.playIdleLoop: idle, aggressive
-            // while it chases, defensive, sleeping, escaping) takes the place
-            // of the copy's loop, as on the host. Played as a sound it would go
-            // on beside the copy's idle loop, and nothing would stop it. "" is
-            // the host's loop stopping (CharacterSoundsPlayIdleLoopStop).
             var snd = p.C.sounds;
-            if (string.IsNullOrEmpty(audio))
+            if (step == SoundStep.StopLoop)
             {
-                if (snd != null)
+                try
                 {
-                    try
-                    {
-                        snd.playIdleLoop("");
-                    }
-                    catch (System.Exception e)
-                    {
-                        Plugin.Log.LogWarning(
-                            $"Couldn't stop {p.C.name}'s loop: {e.Message}");
-                    }
+                    snd.playIdleLoop("");
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning(
+                        $"Couldn't stop {p.C.name}'s loop: {e.Message}");
                 }
 
                 return;
             }
 
-            if (IsLoop(snd, audio))
+            if (step == SoundStep.Loop)
             {
                 try
                 {
@@ -373,6 +383,28 @@ namespace DarkwoodMP.Combat
             }
 
             AudioController.Play(audio, p.C.transform, volume);
+        }
+
+        /// <summary>
+        /// An EnemySound's facts for the copy it names (none for null).
+        /// </summary>
+        private static SoundFacts SoundOf(Puppet p, string audio)
+        {
+            if (p == null || p.C == null)
+            {
+                return new SoundFacts { Copy = false };
+            }
+
+            var snd = p.C.sounds;
+            return new SoundFacts
+            {
+                Copy = true,
+                Dead = p.DiedAt >= 0f,
+                Sounds = snd != null,
+                DeathCry = snd != null && audio == snd.death,
+                Empty = string.IsNullOrEmpty(audio),
+                IsLoop = IsLoop(snd, audio),
+            };
         }
 
         /// <summary>
@@ -454,7 +486,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            if (damage > 0f)
+            if (CopyRules.ShowsBar(damage))
             {
                 HealthBar(p.C, show: true);
             }
@@ -462,7 +494,7 @@ namespace DarkwoodMP.Combat
             // Predicted: the blood shows at once; the host's for this hit (a
             // moment later) isn't shown again.
             Core.AddPrefab(
-                "FX/Bloodsplats/Shotsplat_stay", p.C.transform.position,
+                CopyRules.BloodFor(false), p.C.transform.position,
                 Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f),
                 null);
             _predictedBlood[id] = Time.realtimeSinceStartup;
