@@ -37,18 +37,23 @@ namespace DarkwoodMP.World
             new HashSet<global::EventTrigger>();
 
         /// <summary>
-        /// The host's refusal of a later player's part they've had already (the
-        /// joiner stops asking for it).
-        /// </summary>
-        private const string HadIt = "they have had their part of it";
-
-        /// <summary>
         /// Whether our player is still owed its part of this fired once-only
         /// trigger.
         /// </summary>
-        internal static bool IsOwed(global::EventTrigger t) =>
-            t != null && Once(t) && OnceDone(t) && HasLaterSteps(t.gameEvents)
-                && IsOwedHere(t);
+        internal static bool IsOwed(global::EventTrigger t)
+        {
+            if (t == null)
+            {
+                return false;
+            }
+
+            var f = FactsOf(t) with
+            {
+                LaterSteps = HasLaterSteps(t.gameEvents)
+            };
+
+            return TriggerRules.IsOwed(f, IsOwedHere(t));
+        }
 
         /// <summary>
         /// Our player had (or is having now) its own part of this trigger (it
@@ -139,21 +144,79 @@ namespace DarkwoodMP.World
         /// once, so a second player diving never had it.
         /// </summary>
         private static bool Once(global::EventTrigger t) =>
-            !t.multipleFire
-                || (t.gameEvents != null && !t.gameEvents.multipleFire);
+            TriggerRules.Once(FactsOf(t));
 
         /// <summary>
         /// Whether a once-only trigger (Once) has had its one run.
         /// </summary>
-        private static bool OnceDone(global::EventTrigger t)
+        private static bool OnceDone(global::EventTrigger t) =>
+            TriggerRules.OnceDone(FactsOf(t));
+
+        /// <summary>
+        /// What TriggerRules needs to know of a trigger itself (t may be
+        /// null: not found).
+        /// </summary>
+        internal static TriggerFacts FactsOf(global::EventTrigger t)
         {
-            if (!t.multipleFire)
+            if (t == null)
             {
-                return t.fired;
+                return default;
             }
 
-            return t.gameEvents != null && !t.gameEvents.multipleFire
-                && t.gameEvents.fired;
+            var ge = t.gameEvents;
+            return new TriggerFacts
+            {
+                Exists = true,
+                Disabled = t.disabled,
+                MultipleFire = t.multipleFire,
+                Fired = t.fired,
+                FiredExit = t.firedExit,
+                Area = t.type == global::EventTrigger.Type.area,
+                HasEvents = ge != null,
+                EventsMultipleFire = ge != null && ge.multipleFire,
+                EventsFired = ge != null && ge.fired,
+            };
+        }
+
+        /// <summary>
+        /// Host, in a request's handler: FactsOf(t), and what the host knows
+        /// of the requester (from) and the trigger's requirements.
+        /// </summary>
+        private static TriggerFacts HostFactsOf(
+            ulong from, global::EventTrigger t, EventTriggers et)
+        {
+            if (t == null)
+            {
+                return default;
+            }
+
+            CoopSession coop = Coop.Current;
+            return FactsOf(t) with
+            {
+                LaterSteps = HasLaterSteps(t.gameEvents),
+                Given = coop.Owed.Given(from, t),
+                Unmet = UnmetOf(t),
+                Name = et.name,
+                Reach = coop.Authority.ReachOf(et.transform.position, et.name),
+            };
+        }
+
+        /// <summary>
+        /// The type of the first requirement the host checks (HostChecks)
+        /// that isn't met in its world, or null.
+        /// </summary>
+        private static string UnmetOf(global::EventTrigger t)
+        {
+            foreach (var req in t.eventRequirements)
+            {
+                if (req != null && HostChecks.Contains(req.type)
+                    && !req.requirementsMet())
+                {
+                    return req.type.ToString();
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -356,52 +419,11 @@ namespace DarkwoodMP.World
         private static void OnPlayerPart(
             ulong from, EventTriggers et, global::EventTrigger t)
         {
-            if (t == null)
+            var verdict = TriggerRules.MayGivePart(HostFactsOf(from, t, et));
+            if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse("no such trigger here");
+                Coop.Current.Authority.Refuse(verdict);
                 return;
-            }
-
-            if (t.disabled)
-            {
-                Coop.Current.Authority.Refuse("that event is switched off");
-                return;
-            }
-
-            if (!Once(t) || !OnceDone(t))
-            {
-                Coop.Current.Authority.Refuse("that hasn't happened here");
-                return;
-            }
-
-            if (!HasLaterSteps(t.gameEvents))
-            {
-                Coop.Current.Authority.Refuse(
-                    "nothing in it is a player's own");
-                return;
-            }
-
-            if (Coop.Current.Owed.Given(from, t))
-            {
-                Coop.Current.Authority.Refuse(HadIt);
-                return;
-            }
-
-            if (!Coop.Current.Authority.InReach(
-                et.transform.position, 3000f, et.name))
-            {
-                return;
-            }
-
-            foreach (var req in t.eventRequirements)
-            {
-                if (req != null && HostChecks.Contains(req.type)
-                    && !req.requirementsMet())
-                {
-                    Coop.Current.Authority.Refuse(
-                        $"its requirement ({req.type}) isn't met here");
-                    return;
-                }
             }
 
             GiveOwed(from, t);

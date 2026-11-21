@@ -207,7 +207,7 @@ namespace DarkwoodMP.World
                         return;
                     }
 
-                    if (t != null && !TriggerAllowed(et, t))
+                    if (t != null && !TriggerAllowed(from, et, t))
                     {
                         return;
                     }
@@ -425,14 +425,9 @@ namespace DarkwoodMP.World
         private static bool ExitAllowed(
             ulong from, EventTriggers et, global::EventTrigger t)
         {
-            if (t.type != global::EventTrigger.Type.area)
-            {
-                Coop.Current.Authority.Refuse($"{et.name} isn't an area here");
-                return false;
-            }
-
-            return Coop.Current.Authority.InReach(
-                et.transform.position, 3000f, et.name);
+            var verdict = TriggerRules.MayExit(HostFactsOf(from, t, et));
+            Coop.Current.Authority.Refuse(verdict);
+            return !verdict.Refused;
         }
 
         /// <summary>
@@ -440,50 +435,11 @@ namespace DarkwoodMP.World
         /// it.
         /// </summary>
         private static bool TriggerAllowed(
-            EventTriggers et, global::EventTrigger t)
+            ulong from, EventTriggers et, global::EventTrigger t)
         {
-            if (t.disabled)
-            {
-                Coop.Current.Authority.Refuse("that event is switched off");
-                return false;
-            }
-
-            if (t.fired && !t.multipleFire)
-            {
-                Coop.Current.Authority.Refuse("that has already happened");
-                return false;
-            }
-
-            if (t.gameEvents == null)
-            {
-                Coop.Current.Authority.Refuse("nothing happens there");
-                return false;
-            }
-
-            if (t.gameEvents.fired && !t.gameEvents.multipleFire)
-            {
-                Coop.Current.Authority.Refuse("its events have already run");
-                return false;
-            }
-
-            if (!Coop.Current.Authority.InReach(
-                et.transform.position, 3000f, et.name))
-            {
-                return false;
-            }
-
-            foreach (var req in t.eventRequirements)
-            {
-                if (req != null && HostChecks.Contains(req.type)
-                    && !req.requirementsMet())
-                {
-                    Coop.Current.Authority.Refuse(
-                        $"its requirement ({req.type}) isn't met here");
-                    return false;
-                }
-            }
-
-            return true;
+            var verdict = TriggerRules.MayFire(HostFactsOf(from, t, et));
+            Coop.Current.Authority.Refuse(verdict);
+            return !verdict.Refused;
         }
     }
 }
