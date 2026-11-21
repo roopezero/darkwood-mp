@@ -808,7 +808,7 @@ namespace DarkwoodMP.Net
         /// Fov_Mob_Spawner), f32 x, f32 y, f32 z, f32 yaw. Something one of the
         /// host's enemies threw (Character.spawnProjectile) landed and left
         /// this; make it there with that id (ObjRef Spawned). A client's copies
-        /// of the host's enemies never throw (see World.EnemyLandings).
+        /// of the host's enemies never throw (see Combat.EnemyLandings).
         /// </summary>
         EnemyLanded = 235,
         /// <summary>
@@ -818,14 +818,14 @@ namespace DarkwoodMP.Net
         /// threw this; show it flying from there. It's only a look: it hurts
         /// nobody and leaves nothing, and goes when it hits something (what it
         /// leaves comes as EnemyLanded; whom it hurts, as PlayerDamage). See
-        /// World.EnemyLandings.
+        /// Combat.EnemyLandings.
         /// </summary>
         EnemyProjectile = 236,
         /// <summary>
         /// Host -> client: i64 spawned id. What a host enemy's projectile left
         /// (EnemyLanded) is gone from the host's world (it ran out, or was
         /// broken); remove yours. A client's copy never goes by itself
-        /// (World.EnemyLandings).
+        /// (Combat.EnemyLandings).
         /// </summary>
         EnemyLandedGone = 237,
         /// <summary>
@@ -845,7 +845,7 @@ namespace DarkwoodMP.Net
         /// enemies threw its sensor's prefab (a ThrownItem made with
         /// Core.AddPrefab, not pooled); make the same from your copy's sensor
         /// and show it flying from there. Only a look, as EnemyProjectile: it
-        /// hurts nobody and leaves nothing (see World.EnemyLandings).
+        /// hurts nobody and leaves nothing (see Combat.EnemyLandings).
         /// </summary>
         EnemySensorThrown = 90,
     }
