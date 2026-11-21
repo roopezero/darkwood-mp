@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Npcs
 {
     /// What an NpcDied names: the thing its ObjRef finds, the NPC's name and
-    /// where it stood (WorldActions.DyingNpc's arguments).
+    /// where it stood (NpcDeaths.Dying's arguments).
     public readonly struct DyingFacts
     {
         /// The ObjRef finds a Character with an NPC.

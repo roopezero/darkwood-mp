@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Npcs
 {
     /// What a game knows when one of its characters' Character.die
-    /// returned (the plugin's NpcDiedPatch).
+    /// returned (the plugin's Die patch).
     public readonly struct DeathSentFacts
     {
         /// This is the outermost of the patched calls

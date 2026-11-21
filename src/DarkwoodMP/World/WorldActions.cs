@@ -551,16 +551,7 @@ namespace DarkwoodMP.World
                 }
                 else if (a == Action.NpcDied)
                 {
-                    var npc = Logged(a, obj, DyingNpc(obj, str, x, y));
-                    // A copy of an NPC the host runs as an enemy dies with the
-                    // host's state (Combat.NetEnemies).
-                    bool puppet = npc != null
-                        && Combat.NetEnemies.Instance != null
-                        && Combat.NetEnemies.Instance.IsPuppet(npc, out _);
-                    if (npc != null && npc.alive && !puppet)
-                    {
-                        npc.die();
-                    }
+                    Coop.Current.NpcDeaths.Apply(a, obj, body);
                 }
                 else if (a == Action.ItemUnlock || a == Action.ItemSearched
                     || a == Action.PadlockUnlock)
@@ -687,7 +678,7 @@ namespace DarkwoodMP.World
         internal static T Got<T>(Action a, ObjRef obj) where T : Component =>
             Logged(a, obj, ObjRef.Resolve<T>(obj));
 
-        private static T Logged<T>(Action a, ObjRef obj, T found)
+        internal static T Logged<T>(Action a, ObjRef obj, T found)
             where T : Component
         {
             if (Debug)
@@ -705,58 +696,6 @@ namespace DarkwoodMP.World
         }
 
         // ---- the host's checks ----------------------------------------------
-
-        /// <summary>
-        /// The NPC an NpcDied names: by its ref, else (an NPC each game placed
-        /// itself, or one that walked off its named spot) the living NPC of
-        /// that name nearest to where it died in the killer's game, within 400.
-        /// </summary>
-        private static Character DyingNpc(
-            ObjRef obj, string name, float x, float z)
-        {
-            var c = ObjRef.Resolve<Character>(obj);
-            if (c != null && c.npc != null
-                && (string.IsNullOrEmpty(name) || c.npc.name == name))
-            {
-                return c;
-            }
-
-            if (string.IsNullOrEmpty(name))
-            {
-                return c;
-            }
-
-            Character best = null;
-            float bestD = 400f * 400f;
-            foreach (var n in UnityEngine.Object.FindObjectsOfType<NPC>())
-            {
-                if (n == null || n.name != name)
-                {
-                    continue;
-                }
-
-                var ch = n.GetComponent<Character>();
-                if (ch == null || !ch.alive)
-                {
-                    continue;
-                }
-
-                float d = FlatSq(ch.transform.position, new Vector3(x, 0f, z));
-                if (d < bestD)
-                {
-                    bestD = d;
-                    best = ch;
-                }
-            }
-
-            Character chosen = best;
-            if (chosen == null)
-            {
-                chosen = c;
-            }
-
-            return chosen;
-        }
 
         /// <summary>
         /// Locking a door, and opening a lock or a padlock other than with a
@@ -851,36 +790,8 @@ namespace DarkwoodMP.World
 
             if (a == Action.NpcDied)
             {
-                var npc = DyingNpc(obj, str, x, y);
-                if (npc == null)
-                {
-                    Coop.Current.Authority.Refuse("no such NPC here");
-                    return false;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    npc.transform.position, 2500f, npc.name))
-                {
-                    return false;
-                }
-
-                FlagsSync instance = FlagsSync.Instance;
-                if (instance != null)
-                {
-                    string name;
-                    if (npc.npc != null)
-                    {
-                        name = npc.npc.name;
-                    }
-                    else
-                    {
-                        name = npc.name;
-                    }
-
-                    instance.DeathAllowed(name);
-                }
-
-                return true;
+                return Coop.Current.NpcDeaths.MayDie(
+                    obj, str, new Vec2(x, y));
             }
 
             if (a == Action.ItemUnlock)
@@ -2011,74 +1922,6 @@ namespace DarkwoodMP.World
                     WorldActions.Action.WindowHit, __instance.gameObject,
                     damage, f1: normalHit, byPlayerKnown: BreakSync.OwnFlame());
             }
-        }
-    }
-}
-
-namespace DarkwoodMP.World
-{
-    /// <summary>
-    /// An NPC (a trader...) died. NPCs live in each player's game; whoever's
-    /// game it died in tells the others, and it dies there too. (The game marks
-    /// some deaths only with a story flag, which FlagsSync shares as well.)
-    /// A client's NPCs can only be killed by its own player or the story, so
-    /// its NPC deaths are always news.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.die))]
-    static class NpcDiedPatch
-    {
-        static void Prefix(Character __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.alive;
-        }
-
-        static void Postfix(Character __instance, bool __state)
-        {
-            if (__state && __instance != null && __instance.npc != null
-                && !__instance.alive && Net.Session.Instance != null)
-            {
-                Combat.HostileNpcs.Died(__instance); // a replayed death too
-            }
-
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __instance == null || __instance.npc == null || !__state)
-            {
-                return;
-            }
-
-            // With its name and where it stood: one each game puts in place
-            // itself (the morning trader, the wolf) has its own save id in
-            // each, and one that walked can be off its named spot.
-            var p = __instance.transform.position;
-            WorldActions.Send(
-                WorldActions.Action.NpcDied, __instance.gameObject, x: p.x,
-                y: p.z, str: __instance.npc.name, byPlayerKnown: true);
-        }
-    }
-
-    /// <summary>
-    /// Killing the night trader sends the killer into a dream
-    /// (`Character.die`'s isNightTrader branch calls
-    /// `Player.special_onKillNightTrader`). When the death is replayed from
-    /// another game, that dream belongs to the killer, not to us: skip it. The
-    /// branch's flag (nightTrader_killedYesterday) and `endAfterNight` still
-    /// run.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.special_onKillNightTrader))]
-    static class NightTraderDreamPatch
-    {
-        static bool Prefix()
-        {
-            if (!Coop.Guards.Replaying)
-            {
-                return true;
-            }
-
-            Plugin.Log.LogInfo(
-                "[world] the night trader was killed in another game: the "
-                    + "killer's dream isn't ours");
-            return false;
         }
     }
 }

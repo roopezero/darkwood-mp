@@ -50,6 +50,9 @@ namespace DarkwoodMP
         /// Items switched on and off (lamps, generators), shared.
         public readonly World.SwitchSync Switches;
 
+        /// NPC deaths, shared.
+        public readonly World.NpcDeaths NpcDeaths;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -67,6 +70,7 @@ namespace DarkwoodMP
             Traps = new World.TrapSync(this);
             Locks = new World.LockShare(this);
             Switches = new World.SwitchSync(this);
+            NpcDeaths = new World.NpcDeaths(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

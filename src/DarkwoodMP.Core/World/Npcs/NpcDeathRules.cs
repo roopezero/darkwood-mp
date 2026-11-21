@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace DarkwoodMP.World.Npcs
 {
     /// NPC deaths: which NPC a death names (the plugin's
-    /// WorldActions.DyingNpc), and the host's check of a client's NpcDied
+    /// NpcDeaths.Dying), and the host's check of a client's NpcDied
     /// (WorldActions.Allowed).
     public static class NpcDeathRules
     {
