@@ -26,7 +26,7 @@ namespace DarkwoodMP.World.Scripted
         /// EventTrigger.multipleFire.
         public bool MultipleFire { get; init; }
 
-        /// The part being run now (ScriptedEvents.Current).
+        /// The part being run now (EventParts.Current).
         public EventPart Current { get; init; }
 
         /// The type set off is a shared replay here

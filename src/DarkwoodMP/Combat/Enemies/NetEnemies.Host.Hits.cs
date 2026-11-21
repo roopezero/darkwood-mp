@@ -115,18 +115,19 @@ namespace DarkwoodMP.Combat
             if (EnemyHitRules.Lands(applied))
             {
                 // A death this hit causes sets off the character's onDeath as
-                // that player's doing (World.ScriptedEvents.Cause). Its
+                // that player's doing (ScriptedEvents.Cause). Its
                 // onGetAttackedByPlayer triggers are the hitter's to set off
                 // (their part, ours and the shared one, as any trigger of
                 // theirs): left to them, and the result tells them
                 // (ScriptedEvents.Attacked).
-                var wasCause = World.ScriptedEvents.Cause;
-                World.ScriptedEvents.Cause = from;
+                var scripted = Coop.Current.Scripted;
+                var wasCause = scripted.Cause;
+                scripted.Cause = from;
                 int left;
                 try
                 {
-                    left = ScriptedEvents.LeavingToActor(
-                        ScriptedEvents.HitTypes, () =>
+                    left = scripted.LeavingToActor(
+                        World.Scripted.ScriptedEvents.HitTypes, () =>
                         c.getHit(
                             applied, proxy.transform,
                             canCutInHalf: (f & 1) != 0, byPlayer: true,
@@ -135,7 +136,7 @@ namespace DarkwoodMP.Combat
                 }
                 finally
                 {
-                    World.ScriptedEvents.Cause = wasCause;
+                    scripted.Cause = wasCause;
                 }
 
                 if (left > 0)
@@ -144,7 +145,7 @@ namespace DarkwoodMP.Combat
                         applied.ToString(
                             "0",
                             System.Globalization.CultureInfo.InvariantCulture)
-                            + ScriptedEvents.Attacked);
+                            + World.Scripted.ScriptedEvents.Attacked);
                 }
 
                 if (c != null)

@@ -28,7 +28,7 @@ namespace DarkwoodMP.Combat.Hostiles
         /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
-        /// ScriptedEvents.Current is Part.SharedOnly: another player's
+        /// EventParts.Current is Part.SharedOnly: another player's
         /// event, run here too.
         public bool SharedOnly { get; init; }
     }

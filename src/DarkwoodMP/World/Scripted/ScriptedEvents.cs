@@ -5,12 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Scripted;
-using DarkwoodMP.World.Hideout;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
     /// <summary>
     /// The game's scripted events (a GameEvents: a list of GameEvent steps)
@@ -89,22 +87,8 @@ namespace DarkwoodMP.World
     /// coroutines, events it chains to), so a chained dialogue still opens only
     /// for the player who set it off.
     /// </summary>
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
-        /// <summary>
-        /// The part being run now (set around a GameEvents.fire, and inside the
-        /// coroutines it started).
-        /// </summary>
-        public static EventPart Current = EventPart.All;
-
-        /// <summary>
-        /// Host: the joiner whose event is being run now (the peer that sent
-        /// the EventFired), or 0. Carried into the coroutines the event starts,
-        /// as Current is (World.NpcFollowers uses it to know who recruited a
-        /// follower).
-        /// </summary>
-        public static ulong By;
-
         private static readonly HashSet<GameEvent.Type> PlayerSteps =
             new HashSet<GameEvent.Type>
         {
@@ -265,51 +249,7 @@ namespace DarkwoodMP.World
         private static bool IsPlayersObject(GameObject go, Player p) =>
             go == p.gameObject || go.transform.IsChildOf(p.transform);
 
-        /// <summary>
-        /// Whether this step runs in the part being run now
-        /// (StepRules.Runs). With nothing shared going on (EventPart.All) every
-        /// step runs, so its facts aren't read.
-        /// </summary>
-        public static bool Runs(GameEvent ge, GameObject thisGO)
-        {
-            if (Current == EventPart.All)
-            {
-                return true;
-            }
-
-            return StepRules.Runs(Current, FactsOf(ge, thisGO));
-        }
-
-        /// <summary>
-        /// What StepRules needs to know about a step (thisGO: the object
-        /// whose GameEvents it is in, or null).
-        /// </summary>
-        internal static StepFacts FactsOf(GameEvent ge, GameObject thisGO)
-        {
-            if (ge == null)
-            {
-                return default;
-            }
-
-            return new StepFacts
-            {
-                Exists = true,
-                Disabled = ge.disabled,
-                Type = StepTypeOf(ge.type),
-                ActiveModifier = ge.activeModifier,
-                ActiveModifier2 = ge.activeModifier2,
-                RelentlessPursuit = ge.relentlessPursuit,
-                SpecialItem = AddsSpecialItem(ge),
-                TargetsPlayer = TargetsPlayer(ge),
-                PlayerType = IsPlayerStep(ge.type),
-                AreaLook = IsAreaLook(ge, thisGO),
-                HostType = IsHostStep(ge.type),
-                WorldMove = Hideouts.IsWorldMove(ge),
-                Message = ge.type == GameEvent.Type.displayMessage,
-            };
-        }
-
-        private static StepType StepTypeOf(GameEvent.Type t)
+        internal static StepType StepTypeOf(GameEvent.Type t)
         {
             switch (t)
             {
@@ -345,7 +285,7 @@ namespace DarkwoodMP.World
         /// One of the items an addOrRemoveInvItem step adds is an important
         /// item or a key.
         /// </summary>
-        private static bool AddsSpecialItem(GameEvent e)
+        internal static bool AddsSpecialItem(GameEvent e)
         {
             if (e.type != GameEvent.Type.addOrRemoveInvItem)
             {
@@ -377,152 +317,19 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        // ---- what only the player in an area sees and hears -----------------
+        private readonly CoopSession _coop;
 
-        /// <summary>
-        /// Steps that change only how a place looks and sounds to whoever
-        /// stands in it. A place's area trigger that fires each time a player
-        /// walks in (and its exit each time they walk out) uses them for its
-        /// mood: the Dry Meadow's markings (gridObj_signs, area_signs_01) fade
-        /// in spot_black and TINT, sprites over the whole screen, and start
-        /// their particles; others start 2D whispers. Run in every game, as
-        /// shared steps, one player walking in blacked out the screen of every
-        /// other player wherever they were, until the last player inside walked
-        /// out (and a player stepping back over the edge blacked out those who
-        /// had left). In such a trigger these are the player's own: only the
-        /// game of the player who walked in (or out) runs them.
-        /// </summary>
-        private static readonly HashSet<GameEvent.Type> LookSteps =
-            new HashSet<GameEvent.Type>
+        internal ScriptedEvents(CoopSession coop)
         {
-            GameEvent.Type.tweenColor, GameEvent.Type.particle,
-            GameEvent.Type.sound, GameEvent.Type.changeIdleSound,
-        };
-
-        /// <summary>
-        /// runFunction steps of that kind: a particle system's emission
-        /// switched on or off.
-        /// </summary>
-        private static readonly HashSet<string> LookFunctions =
-            new HashSet<string> { "resumeEmission", "stopEmission" };
-
-        /// <summary>
-        /// The GameEvents that a repeatable area trigger runs on enter or exit
-        /// (built when needed).
-        /// </summary>
-        private static HashSet<GameEvents> _areaEvents;
-        private static bool _areasDirty = true;
-
-        /// <summary>
-        /// Area triggers came or went (a scene loaded or unloaded, an
-        /// EventTriggers woke up): look again.
-        /// </summary>
-        internal static void AreasChanged() => _areasDirty = true;
-
-        /// <summary>
-        /// Whether this step only changes how a place looks or sounds, in a
-        /// repeatable area trigger's events.
-        /// </summary>
-        internal static bool IsAreaLook(GameEvent ge, GameObject thisGO)
-        {
-            if (ge == null || thisGO == null)
-            {
-                return false;
-            }
-
-            if (!LookSteps.Contains(ge.type)
-                && !(ge.type == GameEvent.Type.runFunction && ge.Value != null
-                    && LookFunctions.Contains(ge.Value)))
-            {
-                return false;
-            }
-
-            if (_areasDirty || _areaEvents == null)
-            {
-                var set = new HashSet<GameEvents>();
-                foreach (var et in UnityEngine.Object
-                    .FindObjectsOfType<EventTriggers>(true))
-                {
-                    if (et == null || et.eventTriggers == null)
-                    {
-                        continue;
-                    }
-
-                    foreach (var t in et.eventTriggers)
-                    {
-                        if (t != null
-                            && t.type == global::EventTrigger.Type.area
-                            && t.multipleFire)
-                        {
-                            if (t.gameEvents != null)
-                            {
-                                set.Add(t.gameEvents);
-                            }
-
-                            if (t.gameEventsExit != null)
-                            {
-                                set.Add(t.gameEventsExit);
-                            }
-                        }
-                    }
-                }
-
-                _areaEvents = set;
-                _areasDirty = false;
-            }
-
-            foreach (var g in thisGO.GetComponents<GameEvents>())
-            {
-                if (g != null && _areaEvents.Contains(g)
-                    && g.events.Contains(ge))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Run something with Current set to part (and Replaying, for a change
-        /// that came from another game).
-        /// </summary>
-        public static void RunAs(EventPart part, bool replaying, Action a)
-        {
-            var was = Current;
-            bool wasReplaying = Coop.Guards.Replaying;
-            Current = part;
-            if (replaying)
-            {
-                Coop.Guards.Replaying = true;
-            }
-
-            try
-            {
-                a();
-            }
-            finally
-            {
-                Current = was;
-                Coop.Guards.Replaying = wasReplaying;
-            }
+            _coop = coop;
+            coop.Handle(MsgType.EventFired, OnFired);
         }
 
         private static Session S => Session.Instance;
+
         private static bool Debug => WorldActions.Debug;
 
-        public static void Register(Session s)
-        {
-            s.Register(MsgType.EventFired, OnFired);
-            s.OnSessionEnded += () =>
-            {
-                Asking.Clear();
-            };
-
-            UnityEngine.SceneManagement.SceneManager.sceneLoaded += (_, __) =>
-                AreasChanged();
-            UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ =>
-                AreasChanged();
-        }
+        /// <summary>The part being run now (ModHost.Parts).</summary>
+        private static EventParts Parts => Plugin.Instance.Host.Parts;
     }
 }

@@ -530,7 +530,7 @@ Finish with `tools/run-test.sh full`.
 | 7.4 | `Chapters`, `Prologue`, `EpilogueSync`, `Spectator` | 1,588 | `story map:chapter map:prologue map:epilogue` |
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
-- [ ] 7.1 Flags and scripted events.
+- [x] 7.1 Flags and scripted events.
   - [x] Part b: `WorldEvents`. It moved to `World/Rolls` (beside the
         core's `RollRules`, `ShadowRules` and `AmbushRules`) as a partial
         class in four files with its patches in `WorldEventPatches.cs`, and
@@ -541,12 +541,18 @@ Finish with `tools/run-test.sh full`.
         `StoryApply`); its bytes are the core's `FlagsDelta`. The journal
         popup patch (`JournalShowJournalInfoPopup`) still runs in a game
         played alone, since the game's own small places have no text.
-  - [ ] `ScriptedEvents`. Done: its bytes (`EventFiredMessage`), and every
-        rule called from the shell (`StepRules`, `DoerRules`, `TriggerRules`,
+  - [x] `ScriptedEvents`. Its bytes are the core's `EventFiredMessage`,
+        and the shell calls `StepRules`, `DoerRules`, `TriggerRules`,
         `FiringRules`, `WorldTriggerRules`, `LaterRules`, `FiredEventRules`,
-        `WorldEventRules`, `TripRules`); `ScriptedEvents.Part` is the core's
-        `EventPart`. Left: its state (an instance on `CoopSession`, with
-        what solo play needs on `ModHost`), thin patches, `World/Scripted/`.
+        `WorldEventRules` and `TripRules`; `ScriptedEvents.Part` is the
+        core's `EventPart`. It is `CoopSession.Scripted`, in `World/Scripted`
+        (seven partial files and `ScriptedEventPatches.cs`). Which part of an
+        event runs now (`Current`, `By`, `Firing`, `StepDepth`, the
+        coroutines' parts, `RunAs`, the area cache) is `ModHost.Parts`
+        (`EventParts`), and its three patches (`GameEventFire`,
+        `FireCoroutineMoveNext`, `EventTriggersAwake`) run also in a game
+        played alone. Moving the state changed every patch, so the patches
+        were thinned in the same commit.
 - [x] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`

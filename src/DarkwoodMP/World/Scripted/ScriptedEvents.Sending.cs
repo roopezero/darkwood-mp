@@ -5,13 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
         /// <summary>
         /// Our player set off this trigger and its GameEvents are about to run:
@@ -19,7 +18,7 @@ namespace DarkwoodMP.World
         /// host tells the joiners to run the shared part.
         /// </summary>
         /// <returns>False if it couldn't be named (nothing was sent).</returns>
-        internal static bool SendTrigger(
+        internal bool SendTrigger(
             EventTriggers et, int index, bool world, Action accepted)
         {
             // In a dream of our own (or a place the host doesn't run): the host
@@ -93,7 +92,7 @@ namespace DarkwoodMP.World
         /// part and passes it on; each game runs it unless its own player is
         /// still in that area (ExitArrived).
         /// </summary>
-        internal static void SendExit(EventTriggers et, int index)
+        internal void SendExit(EventTriggers et, int index)
         {
             if (WorldActions.OursAlone(et.gameObject))
             {
@@ -129,7 +128,7 @@ namespace DarkwoodMP.World
             }
 
             string what = $"exit of {et.name} #{index} {r}";
-            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
+            _coop.Authority.Request(w, what, (ok, reason, _) =>
             {
                 if (!ok)
                 {
@@ -147,7 +146,7 @@ namespace DarkwoodMP.World
         /// place goes on around them (its whispers keep playing), and their own
         /// exit runs it as they leave.
         /// </summary>
-        private static void ExitArrived(
+        private void ExitArrived(
             EventTriggers et, global::EventTrigger t, int index, EventPart part,
             bool replaying)
         {
@@ -205,7 +204,7 @@ namespace DarkwoodMP.World
 
             try
             {
-                RunAs(part, replaying, ge.fire);
+                Parts.RunAs(part, replaying, ge.fire);
             }
             catch (Exception e)
             {
@@ -242,7 +241,7 @@ namespace DarkwoodMP.World
         /// farm side's hole in the world, and a player who had never been to
         /// the village never got it open.
         /// </summary>
-        internal static string WorldEventsOf(global::EventTrigger t)
+        internal string WorldEventsOf(global::EventTrigger t)
         {
             GameEvents ge = null;
             if (t != null)
@@ -278,7 +277,7 @@ namespace DarkwoodMP.World
         /// Whether every world event named is one this game has (and there is
         /// at least one).
         /// </summary>
-        private static bool WorldEventsKnown(string list)
+        private bool WorldEventsKnown(string list)
         {
             var events = Singleton<Events>.Instance;
             var names = Names(list);
@@ -292,7 +291,7 @@ namespace DarkwoodMP.World
         /// For a trigger this game doesn't have: run the world events it fires,
         /// in the given part.
         /// </summary>
-        private static void RunWorldEvents(
+        private void RunWorldEvents(
             string list, EventPart part, bool replaying, string what)
         {
             var events = Singleton<Events>.Instance;
@@ -317,7 +316,8 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    RunAs(part, replaying, () => events.fireWorldEvent(n));
+                    Parts.RunAs(
+                        part, replaying, () => events.fireWorldEvent(n));
                 }
                 catch (Exception e)
                 {
@@ -331,7 +331,7 @@ namespace DarkwoodMP.World
         /// True while the host runs a world event it has just sent as a
         /// character's animation's (FromAnimation).
         /// </summary>
-        internal static bool AnimationSent;
+        internal bool AnimationSent;
 
         /// <summary>
         /// A character's animation frame fires a world event
@@ -354,7 +354,7 @@ namespace DarkwoodMP.World
         /// are left as they were.
         /// </summary>
         /// <returns>Whether the game's own call runs here.</returns>
-        internal static bool FromAnimation(Component from, string name)
+        internal bool FromAnimation(Component from, string name)
         {
             var s = S;
             var act = WorldEventRules.FromAnimation(AnimationOf(from, name));
@@ -400,7 +400,7 @@ namespace DarkwoodMP.World
         /// What WorldEventRules.FromAnimation needs to know of a world event
         /// a character's animation fires.
         /// </summary>
-        private static AnimationFacts AnimationOf(Component from, string name)
+        private AnimationFacts AnimationOf(Component from, string name)
         {
             var s = S;
             if (s == null)
@@ -418,7 +418,7 @@ namespace DarkwoodMP.World
             {
                 Active = s.Active,
                 InWorld = WorldShare.InWorld,
-                Current = Current,
+                Current = Parts.Current,
                 Replaying = Coop.Guards.Replaying,
                 Character = character,
                 Known = ge != null,
@@ -449,12 +449,12 @@ namespace DarkwoodMP.World
         /// our player set it off (a dialogue's outcome).
         /// </summary>
         /// <returns>Whether the game's own call runs here.</returns>
-        internal static bool OnWorldEvent(Events events, string name)
+        internal bool OnWorldEvent(Events events, string name)
         {
             var ge = WorldEventOf(events, name);
             var facts = new WorldEventFacts
             {
-                Current = Current,
+                Current = Parts.Current,
                 Replaying = Coop.Guards.Replaying,
                 Sharing = Coop.Guards.Sharing,
                 AnimationSent = AnimationSent,
@@ -502,7 +502,7 @@ namespace DarkwoodMP.World
             return !S.IsClient;
         }
 
-        internal static void SendWorldEvent(string name, Action accepted)
+        internal void SendWorldEvent(string name, Action accepted)
         {
             var w = S.Begin(MsgType.EventFired);
             EventFiredMessage.Write(w, new FiredEvent
@@ -520,7 +520,7 @@ namespace DarkwoodMP.World
         /// The host tells everyone; a joiner asks, and runs accepted (its own
         /// and the shared part) on a yes.
         /// </summary>
-        private static void Send(PacketWriter w, string what, Action accepted)
+        private void Send(PacketWriter w, string what, Action accepted)
         {
             if (Debug)
             {
@@ -533,7 +533,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
+            _coop.Authority.Request(w, what, (ok, reason, result) =>
             {
                 if (!ok)
                 {
@@ -561,7 +561,7 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    RunAs(part, replaying: false, accepted);
+                    Parts.RunAs(part, replaying: false, accepted);
                 }
                 catch (Exception e)
                 {

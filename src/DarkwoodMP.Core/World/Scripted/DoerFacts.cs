@@ -42,7 +42,7 @@ namespace DarkwoodMP.World.Scripted
 
         public bool Sharing { get; init; }
 
-        /// The part being run now (ScriptedEvents.Current).
+        /// The part being run now (EventParts.Current).
         public EventPart Current { get; init; }
 
         /// Our own player's collider is entering or leaving an area

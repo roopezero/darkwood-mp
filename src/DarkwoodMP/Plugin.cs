@@ -442,7 +442,6 @@ namespace DarkwoodMP
             WorldTeardown.Init();
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            ScriptedEvents.Register(_host.Session);
             SkillTree.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);

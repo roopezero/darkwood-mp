@@ -21,10 +21,10 @@ namespace DarkwoodMP.World.Scripted
         /// This game is a client.
         public bool Client { get; init; }
 
-        /// The part being run now (ScriptedEvents.Current).
+        /// The part being run now (EventParts.Current).
         public EventPart Current { get; init; }
 
-        /// How many event steps are running (ScriptedEvents.StepDepth).
+        /// How many event steps are running (EventParts.StepDepth).
         public int StepDepth { get; init; }
 
         /// The EventTriggers' scene is the active scene.

@@ -5,7 +5,7 @@ namespace DarkwoodMP.World.Scripted
 {
     /// <summary>
     /// A location's enter events run in the part FarEvents gives them
-    /// (FarEvents.EnterEvents); ScriptedEvents.Current goes back after.
+    /// (FarEvents.EnterEvents); EventParts.Current goes back after.
     /// </summary>
     [HarmonyPatch(typeof(Location), "checkEnterEvents")]
     static class LocationCheckEnterEvents
@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Scripted
         static void Prefix(
             Location __instance, out (bool, EventPart) __state)
         {
-            __state = (false, ScriptedEvents.Current);
+            __state = (false, Plugin.Instance.Host.Parts.Current);
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
@@ -26,7 +26,7 @@ namespace DarkwoodMP.World.Scripted
         {
             if (__state.Item1)
             {
-                ScriptedEvents.Current = __state.Item2;
+                Plugin.Instance.Host.Parts.Current = __state.Item2;
             }
 
             return __exception;
@@ -44,7 +44,7 @@ namespace DarkwoodMP.World.Scripted
         static void Prefix(
             Location __instance, out (bool, EventPart, bool) __state)
         {
-            __state = (false, ScriptedEvents.Current, false);
+            __state = (false, Plugin.Instance.Host.Parts.Current, false);
             CoopSession coop = Coop.Current;
             if (coop == null)
             {
@@ -60,7 +60,7 @@ namespace DarkwoodMP.World.Scripted
         {
             if (__state.Item1)
             {
-                ScriptedEvents.Current = __state.Item2;
+                Plugin.Instance.Host.Parts.Current = __state.Item2;
             }
 
             CoopSession coop = Coop.Current;

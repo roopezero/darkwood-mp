@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Doors;
+using DarkwoodMP.World.Scripted;
 using DarkwoodMP.World.Windows;
 using HarmonyLib;
 using UnityEngine;
@@ -287,7 +288,7 @@ namespace DarkwoodMP.World
             // The host's player's own: the triggers it set off here are sent as
             // our player's, so the joiners leave them to that.
             bool byPlayer = S.IsHost && SetsOffTriggers(a)
-                && ScriptedEvents.OurPlayersAction();
+                && Coop.Current.Scripted.OurPlayersAction();
             Send(a, ObjRef.Of(go), go.name, x, y, f1, f2, str, byPlayer);
         }
 
@@ -459,18 +460,19 @@ namespace DarkwoodMP.World
             ThrownHits.Depth = 0;
             ThrownHits.CurrentFlame = null;
             Coop.Guards.Replaying = true;
-            var leftWas = ScriptedEvents.LeftToActor;
+            var scripted = Coop.Current.Scripted;
+            var leftWas = scripted.LeftToActor;
             if (byPlayer)
             {
-                ScriptedEvents.LeftToActor = ScriptedEvents.ActionTypes;
+                scripted.LeftToActor = ScriptedEvents.ActionTypes;
             }
 
             // A world trigger this sets off (an NPC's or item's onDeath, an
             // item switched on) is the sender's doing.
-            var wasCause = ScriptedEvents.Cause;
+            var wasCause = scripted.Cause;
             if (s.IsHost)
             {
-                ScriptedEvents.Cause = from;
+                scripted.Cause = from;
             }
 
             try
@@ -563,10 +565,10 @@ namespace DarkwoodMP.World
             finally
             {
                 Coop.Guards.Replaying = false;
-                ScriptedEvents.LeftToActor = leftWas;
+                scripted.LeftToActor = leftWas;
                 ThrownHits.Depth = thrownDepth;
                 ThrownHits.CurrentFlame = flame;
-                ScriptedEvents.Cause = wasCause;
+                scripted.Cause = wasCause;
             }
 
             if (s.IsHost)
@@ -879,8 +881,9 @@ namespace DarkwoodMP.World
             Coop.Guards.Replaying = true;
             // A rollback puts the thing as it is, it isn't anyone doing it: the
             // triggers it would set off aren't.
-            var leftWas = ScriptedEvents.LeftToActor;
-            ScriptedEvents.LeftToActor = ScriptedEvents.ActionTypes;
+            var scripted = Coop.Current.Scripted;
+            var leftWas = scripted.LeftToActor;
+            scripted.LeftToActor = ScriptedEvents.ActionTypes;
             try
             {
                 switch (kind)
@@ -974,7 +977,7 @@ namespace DarkwoodMP.World
             finally
             {
                 Coop.Guards.Replaying = false;
-                ScriptedEvents.LeftToActor = leftWas;
+                scripted.LeftToActor = leftWas;
             }
         }
     }

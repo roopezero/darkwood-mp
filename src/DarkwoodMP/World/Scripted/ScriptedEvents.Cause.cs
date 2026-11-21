@@ -5,13 +5,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
         // ---- sending --------------------------------------------------------
 
@@ -32,13 +31,13 @@ namespace DarkwoodMP.World
         /// Host: the joiner whose action is being applied now (a hit, an NPC's
         /// death, an item broken or switched on), or 0.
         /// </summary>
-        internal static ulong Cause;
+        internal ulong Cause;
 
         /// <summary>
         /// Host: who switched an item on, while it's on: a joiner's peer id
         /// (the host's own player isn't kept).
         /// </summary>
-        private static readonly ConditionalWeakTable<Item, Switcher> Switchers =
+        private readonly ConditionalWeakTable<Item, Switcher> _switchers =
             new ConditionalWeakTable<Item, Switcher>();
         private sealed class Switcher
         {
@@ -49,7 +48,7 @@ namespace DarkwoodMP.World
         /// Host: an item was switched on, by Cause (a joiner's ItemOn) or by
         /// the host's own player or world.
         /// </summary>
-        internal static void SwitchedOn(Item item)
+        internal void SwitchedOn(Item item)
         {
             var s = S;
             if (item == null || s == null || !s.IsHost)
@@ -57,17 +56,17 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Switchers.Remove(item);
+            _switchers.Remove(item);
             if (Cause != 0)
             {
-                Switchers.Add(item, new Switcher { Peer = Cause });
+                _switchers.Add(item, new Switcher { Peer = Cause });
             }
         }
 
         /// <summary>Host: the joiner who switched this item on, or 0.</summary>
-        internal static ulong SwitcherOf(Item item)
+        internal ulong SwitcherOf(Item item)
         {
-            if (item != null && Switchers.TryGetValue(item, out var sw))
+            if (item != null && _switchers.TryGetValue(item, out var sw))
             {
                 return sw.Peer;
             }
@@ -79,7 +78,7 @@ namespace DarkwoodMP.World
         /// Host: the joiner behind a world trigger of this type set off now, or
         /// 0 (none, or they've gone).
         /// </summary>
-        internal static ulong CauseFor(global::EventTrigger.Type type)
+        internal ulong CauseFor(global::EventTrigger.Type type)
         {
             var s = S;
             return DoerRules.CauseFor(new CauseFacts
@@ -98,7 +97,7 @@ namespace DarkwoodMP.World
         /// and the others the shared part (kind 3). False if it couldn't be
         /// named or the joiner has gone (then it runs as any world trigger).
         /// </summary>
-        internal static bool SendCaused(
+        internal bool SendCaused(
             EventTriggers et, int index, ulong cause)
         {
             var s = S;
@@ -165,7 +164,7 @@ namespace DarkwoodMP.World
         /// Client: tell the host where our player is now, ahead of a request it
         /// checks our reach for.
         /// </summary>
-        private static void FlushPosition()
+        private void FlushPosition()
         {
             if (S != null && S.IsClient)
             {

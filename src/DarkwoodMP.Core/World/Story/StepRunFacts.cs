@@ -9,11 +9,11 @@ namespace DarkwoodMP.World.Story
         /// This game is a joiner (Session.IsClient).
         public bool IsClient { get; init; }
 
-        /// ScriptedEvents.Current is PlayerAndShared: our own player's
+        /// EventParts.Current is PlayerAndShared: our own player's
         /// event.
         public bool OwnPart { get; init; }
 
-        /// ScriptedEvents.Current is All.
+        /// EventParts.Current is All.
         public bool AllParts { get; init; }
 
         /// The step's kind (StoryRequestRules.KindOf).

@@ -109,6 +109,13 @@ namespace DarkwoodMP
         /// playing alone. A session adds its messages (Progression.Join).
         public readonly World.Progress.Progression Progress;
 
+        /// <summary>
+        /// Which part of a scripted event runs now, kept also alone
+        /// (World.Scripted.EventParts).
+        /// </summary>
+        internal readonly World.Scripted.EventParts Parts =
+            new World.Scripted.EventParts();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
@@ -174,6 +181,7 @@ namespace DarkwoodMP
         public void Dispose()
         {
             Coop.End();
+            Parts.Dispose();
             Stacks.Dispose();
             Session.Dispose();
         }

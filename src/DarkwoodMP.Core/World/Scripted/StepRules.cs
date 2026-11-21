@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Scripted
 {
     /// Which steps of a scripted event run in this game (the plugin's
-    /// ScriptedEvents.Runs and LaterStep).
+    /// EventParts.Runs and LaterStep).
     public static class StepRules
     {
         /// Whether this step runs in the part being run now. A later

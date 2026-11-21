@@ -130,7 +130,7 @@ namespace DarkwoodMP.World.Scripted
                 Together = Together,
                 Sub = l.isSubLocation,
                 Outside = l.isOutsideLocation,
-                Current = ScriptedEvents.Current,
+                Current = Plugin.Instance.Host.Parts.Current,
                 Replaying = Coop.Guards.Replaying,
                 Client = client,
                 AnyProxies = Proxies.Any,
@@ -224,7 +224,7 @@ namespace DarkwoodMP.World.Scripted
 
         /// <summary>
         /// A location's enter or exit events start: noted and logged (for a
-        /// world location while together), and ScriptedEvents.Current set to
+        /// world location while together), and EventParts.Current set to
         /// `part`. Returns whether it set it (the caller's Finalizer puts it
         /// back).
         /// </summary>
@@ -269,7 +269,7 @@ namespace DarkwoodMP.World.Scripted
                 return false;
             }
 
-            ScriptedEvents.Current = part.Value;
+            Plugin.Instance.Host.Parts.Current = part.Value;
             return true;
         }
 
@@ -379,7 +379,7 @@ namespace DarkwoodMP.World.Scripted
                             + "player's part only");
                 }
 
-                ScriptedEvents.RunAs(EventPart.PlayerOnly,
+                Plugin.Instance.Host.Parts.RunAs(EventPart.PlayerOnly,
                     replaying: false, () =>
                 {
                     foreach (var et in l.events)
@@ -419,7 +419,7 @@ namespace DarkwoodMP.World.Scripted
 
         /// <summary>
         /// Location.checkEnterEvents starts: the part its events run in.
-        /// Returns whether it set ScriptedEvents.Current (the patch puts it
+        /// Returns whether it set EventParts.Current (the patch puts it
         /// back).
         /// </summary>
         public bool EnterEvents(Location l)
@@ -435,7 +435,7 @@ namespace DarkwoodMP.World.Scripted
         /// <summary>
         /// Location.checkExitEvents starts: the part its events run in, and
         /// whether its characters stay (KeepCharacters, which the patch puts
-        /// back). Returns whether it set ScriptedEvents.Current.
+        /// back). Returns whether it set EventParts.Current.
         /// </summary>
         public bool ExitEvents(Location l)
         {
@@ -469,7 +469,7 @@ namespace DarkwoodMP.World.Scripted
         {
             if (Together && WorldLocation(l) && (force || !l.entered))
             {
-                Note(Switches, l, "enter", ScriptedEvents.Current);
+                Note(Switches, l, "enter", Plugin.Instance.Host.Parts.Current);
             }
         }
 
@@ -482,7 +482,7 @@ namespace DarkwoodMP.World.Scripted
             if (Together && WorldLocation(l) && l.entered
                 && l.gameObject.activeInHierarchy)
             {
-                Note(Switches, l, "leave", ScriptedEvents.Current);
+                Note(Switches, l, "leave", Plugin.Instance.Host.Parts.Current);
             }
         }
     }

@@ -44,7 +44,7 @@ namespace DarkwoodMP.World.Hideout
         /// </summary>
         internal bool Transport(Location src)
         {
-            var part = ScriptedEvents.Current;
+            var part = Plugin.Instance.Host.Parts.Current;
             var step = PorterRules.Transport(new TransportFacts
             {
                 Together = Hideouts.Together,

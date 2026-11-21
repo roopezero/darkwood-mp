@@ -8,7 +8,7 @@ namespace DarkwoodMP.World.Npcs
         /// Session.Instance exists and is the host.
         public bool Hosting { get; init; }
 
-        /// The peer whose event this is (ScriptedEvents.By); 0 for the
+        /// The peer whose event this is (EventParts.By); 0 for the
         /// host's own and the world's.
         public ulong By { get; init; }
 

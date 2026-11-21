@@ -17,7 +17,7 @@ namespace DarkwoodMP.World.Spectating
                 return true;
             }
 
-            __result = World.ScriptedEvents.Nothing();
+            __result = World.Scripted.ScriptedEvents.Nothing();
             return false;
         }
     }

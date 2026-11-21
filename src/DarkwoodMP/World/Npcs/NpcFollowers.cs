@@ -16,7 +16,7 @@ namespace DarkwoodMP.World
     /// would follow the host.
     ///
     /// So the host remembers who recruited each follower: the joiner whose
-    /// event (ScriptedEvents.By, from their EventFired) made it a follower, by
+    /// event (EventParts.By, from their EventFired) made it a follower, by
     /// a modifyCharacter step that sets aggressiveness follower or behaviour
     /// following, or by a gameObject step that switches on a character that is
     /// a follower. On the host such a follower sees only that joiner's stand-in
@@ -75,7 +75,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            ulong by = ScriptedEvents.By;
+            ulong by = Plugin.Instance.Host.Parts.By;
             StepFacts step = FactsOf(ge, by);
             if (!FollowerRules.Recruits(step))
             {
