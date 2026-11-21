@@ -686,6 +686,17 @@ Finish with `tools/run-test.sh full`.
       nothing to do. `WorldTest` is a partial class over six files.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
+  - [ ] Part a: `Plugin`, the Steam files and `IGuiSection`. Done so far:
+        `Plugin.cs` is split into partial files (startup, `TestArgs`,
+        `Shots`, `SoloTest`, `JoinTests`) and `ModConfig` binds the
+        settings; its process state is on `ModHost` (`Panel`, `SteamStart`,
+        `Presence`, `Hosting`, `FpsCap`, `WindowBefore`, `SpawnType`); and it
+        calls `TestArgRules`, `SteamStartupRules`, `PlayerNameRules`,
+        `PresenceRules` and `HostRules`. The Steam files are in `Net/Steam`,
+        namespace unchanged, and have no patches. Left: `SteamBackend`,
+        `Lobby` and `SteamTransport` don't call `LobbyRules`,
+        `SteamPeerRules`, `SteamSendRules`, `SteamPieces` and `PieceJoiner`
+        yet.
 - [x] Turn style warnings into errors for the whole plugin.
 - [ ] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
       `CLAUDE.md`, then delete this plan.
