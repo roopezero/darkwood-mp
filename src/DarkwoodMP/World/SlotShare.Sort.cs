@@ -98,7 +98,7 @@ namespace DarkwoodMP.World
 
                 var changed = Sort(inv);
                 var w = s.Begin(MsgType.StorageSort);
-                r.Write(w);
+                StorageSortMessage.Write(w, ObjRef.NameOf(r));
                 Coop.Current.Authority.Request(
                     w, $"sort {inv.name}", inventory: false);
                 Plugin.Log.LogInfo(
@@ -131,7 +131,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
+            var obj = ObjRef.RefOf(StorageSortMessage.Read(r));
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv == null || !Is(inv))
             {
