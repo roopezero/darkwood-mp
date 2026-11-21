@@ -288,6 +288,12 @@ namespace DarkwoodMP
         /// </summary>
         public static bool TestMode { get; private set; }
 
+        /// <summary>
+        /// The map test steps, set by the DarkwoodMP.MapTests plugin at its
+        /// Awake; null when it isn't loaded (a player's game).
+        /// </summary>
+        internal ITestSteps TestSteps { get; set; }
+
         private UiWindow _panel;
 
         private void Awake()
@@ -900,7 +906,12 @@ namespace DarkwoodMP
             }
 
             _tests.Clear();
-            MapScenario.Stop();
+            ITestSteps steps = TestSteps;
+            if (steps != null)
+            {
+                steps.Stop();
+            }
+
             OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
@@ -910,11 +921,6 @@ namespace DarkwoodMP
             DoorPush.TestTouch = null;
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
-            MapScenarioItems2.AimAt = null;
-            MapScenarioItems2.Safe = false;
-            MapScenarioEnemies.TraceSpawns = false;
-            MapScenarioFarEvents.WatchSteps = false;
-            MapScenarioDogWatch.On = false;
             EnemyMotion.Stats.On = false;
             WorldActions.TestAsPlayer = false;
             var player = Player.Instance;

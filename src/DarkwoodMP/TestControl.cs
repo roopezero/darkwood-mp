@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -25,7 +26,7 @@ namespace DarkwoodMP
     ///   args ARG...       apply --dwmp-* arguments, as on the command line
     ///                     (host, join, test hooks) -> ok
     ///   quit              close the game -> ok
-    ///   do STEP ARG...    run a scenario step (World/MapScenario.cs) to its
+    ///   do STEP ARG...    run a map test step (DarkwoodMP.MapTests) to its
     ///                     end -> done [INFO] / fail REASON
     ///   dump PATH [X Z R] write the shared world's state as JSON
     ///                     (World/StateDump.cs), around X Z within R
@@ -48,6 +49,7 @@ namespace DarkwoodMP
         {
             _plugin = plugin;
             plugin.PatchTestOnly();
+            plugin.TestSteps = new MapSteps();
             var listener = new TcpListener(IPAddress.Loopback, port);
             listener.Start();
             Plugin.Log.LogInfo($"Test control on 127.0.0.1:{port}");
@@ -208,9 +210,18 @@ namespace DarkwoodMP
                         break;
                     }
 
+                    ITestSteps steps = _plugin.TestSteps;
+                    if (steps == null)
+                    {
+                        reply.WriteLine(
+                            "fail the map tests (DarkwoodMP.MapTests) "
+                                + "aren't loaded");
+                        break;
+                    }
+
                     _busy = true;
                     var doReply = reply;
-                    _plugin.StartCoroutine(MapScenario.Run(words[1],
+                    _plugin.StartCoroutine(steps.Run(words[1],
                         words.Skip(2).ToArray(), line =>
                     {
                         _busy = false;
@@ -232,13 +243,13 @@ namespace DarkwoodMP
                         if (words.Length >= 4)
                         {
                             at = new Vector3(
-                                MapScenario.F(words[2]), 0f,
-                                MapScenario.F(words[3]));
+                                Number(words[2]), 0f,
+                                Number(words[3]));
                         }
 
                         if (words.Length >= 5)
                         {
-                            radius = MapScenario.F(words[4]);
+                            radius = Number(words[4]);
                         }
 
                         reply.WriteLine(
@@ -263,7 +274,7 @@ namespace DarkwoodMP
                     float secs = 60f;
                     if (words.Length > 2)
                     {
-                        secs = MapScenario.F(words[2]);
+                        secs = Number(words[2]);
                     }
 
                     int count = 1;
@@ -287,6 +298,11 @@ namespace DarkwoodMP
         /// <summary>
         /// Wait for something to happen in this game ("wait EVENT SECS").
         /// </summary>
+        private static float Number(string text)
+        {
+            return float.Parse(text, CultureInfo.InvariantCulture);
+        }
+
         private static IEnumerator Wait(
             string what, float secs, int count, StreamWriter reply)
         {
@@ -382,7 +398,12 @@ namespace DarkwoodMP
             // The next test's area is the test world's again, not one a step of
             // the last test moved it to (a game kept between map items, e.g.
             // map:prologue's "centre-me").
-            MapScenario.ResetCentre();
+            ITestSteps steps = _plugin.TestSteps;
+            if (steps != null)
+            {
+                steps.ResetCentre();
+            }
+
             // A world still loading is let finish first: leaving in the middle
             // of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 90f;
@@ -420,7 +441,11 @@ namespace DarkwoodMP
 
             Plugin.Instance.SetPanel(false);
             // the next test's log scans start here
-            MapScenarioIssues.MarkLogStart();
+            if (steps != null)
+            {
+                steps.MarkLogStart();
+            }
+
             _busy = false;
             string answer = "error: no main menu after 90 s";
             if (WorldShare.MainMenuReady())

@@ -48,7 +48,7 @@ namespace DarkwoodMP.Combat
             if (!s.doesNotNeedLineOfSight
                 && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
             {
-                if (World.MapScenarioDogWatch.On)
+                if (DogWatch())
                 {
                     Plugin.Log.LogInfo(
                         $"[dogwatch] {s.attackerTransform.name}'s hit on "
@@ -59,7 +59,7 @@ namespace DarkwoodMP.Combat
                 return false;
             }
 
-            if (World.MapScenarioDogWatch.On)
+            if (DogWatch())
             {
                 Plugin.Log.LogInfo(
                     $"[dogwatch] {s.attackerTransform.name} hit "
@@ -84,6 +84,15 @@ namespace DarkwoodMP.Combat
                 proxy.Owner, damage, s.attackerTransform, s.shadowSensor,
                 s.effects);
             return false;
+        }
+
+        /// <summary>
+        /// Whether the map test's dog-watch step wants these hits logged.
+        /// </summary>
+        private static bool DogWatch()
+        {
+            ITestSteps steps = Plugin.Instance.TestSteps;
+            return steps != null && steps.DogWatch;
         }
     }
 
