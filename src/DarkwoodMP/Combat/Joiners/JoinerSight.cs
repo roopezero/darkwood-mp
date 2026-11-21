@@ -333,31 +333,4 @@ namespace DarkwoodMP.Combat
 
         private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
     }
-
-    [HarmonyPatch(typeof(Character), "waitToTeleport")]
-    static class CharacterWaitToTeleport
-    {
-        static bool Prefix(Character __instance)
-        {
-            return JoinerSight.WaitToTeleport(__instance);
-        }
-    }
-
-    [HarmonyPatch(typeof(Character), "checkIfInSightOfPlayer")]
-    static class CharacterCheckIfInSightOfPlayer
-    {
-        static bool Prefix(Character __instance)
-        {
-            return JoinerSight.CheckIfInSight(__instance);
-        }
-    }
-
-    [HarmonyPatch(typeof(Character), "onBansheeOutOfSightOfPlayer")]
-    static class CharacterOnBansheeOutOfSightOfPlayer
-    {
-        static void Postfix(Character __instance)
-        {
-            JoinerSight.OutOfSight(__instance);
-        }
-    }
 }
