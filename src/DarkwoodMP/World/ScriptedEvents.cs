@@ -490,7 +490,6 @@ namespace DarkwoodMP.World
             s.Register(MsgType.EventFired, OnFired);
             s.OnSessionEnded += () =>
             {
-                OwedParts.SessionEnded();
                 Asking.Clear();
             };
 
@@ -1016,7 +1015,7 @@ namespace DarkwoodMP.World
 
             if (t != null)
             {
-                OwedParts.Give(cause, t);
+                GiveOwed(cause, t);
                 ExpectTrips(cause, t.gameEvents);
             }
 
@@ -1062,9 +1061,9 @@ namespace DarkwoodMP.World
         // gets (LaterStep) run for them alone (Part.LaterPlayer), after the
         // host's yes (kind 5) in a joiner's game. The host remembers who had
         // their part, by player key, so each player gets it once. What is owed
-        // is worked out from the loaded world and that record
-        // (World.OwedParts), so it also holds for a mid-game joiner and after
-        // the world is loaded again.
+        // is worked out from the loaded world and that record (OwedParts), so
+        // it also holds for a mid-game joiner and after the world is loaded
+        // again.
 
         /// <summary>
         /// Joiner: owed triggers asked for and not answered yet.
@@ -1084,7 +1083,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool IsOwed(global::EventTrigger t) =>
             t != null && Once(t) && OnceDone(t) && HasLaterSteps(t.gameEvents)
-                && OwedParts.Owed(t);
+                && IsOwedHere(t);
 
         /// <summary>
         /// Our player had (or is having now) its own part of this trigger (it
@@ -1092,9 +1091,33 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void HadOurPart(global::EventTrigger t)
         {
-            if (t != null && Once(t))
+            CoopSession coop = Coop.Current;
+            if (coop != null && t != null && Once(t))
             {
-                OwedParts.Had(t);
+                coop.Owed.Had(t);
+            }
+        }
+
+        // OwedParts.Owed: never owed with no session.
+        private static bool IsOwedHere(global::EventTrigger t)
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Owed.Owed(t);
+        }
+
+        // OwedParts.HostOwe: false with no session.
+        private static bool HostOwe(global::EventTrigger t)
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Owed.HostOwe(t);
+        }
+
+        private static void GiveOwed(ulong peer, global::EventTrigger t)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Owed.Give(peer, t);
             }
         }
 
@@ -1232,7 +1255,7 @@ namespace DarkwoodMP.World
         private static void Owe(global::EventTrigger t, string what)
         {
             if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents)
-                || (S.IsHost && !OwedParts.HostOwe(t)))
+                || (S.IsHost && !HostOwe(t)))
             {
                 return;
             }
@@ -1446,7 +1469,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (OwedParts.Given(from, t))
+            if (Coop.Current.Owed.Given(from, t))
             {
                 Coop.Current.Authority.Refuse(HadIt);
                 return;
@@ -1469,7 +1492,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            OwedParts.Give(from, t);
+            GiveOwed(from, t);
             ExpectTrips(from, t.gameEvents);
             Plugin.Log.LogInfo(
                 $"[world] {S.NameOf(from)} set off {et.name} "
@@ -2242,7 +2265,7 @@ namespace DarkwoodMP.World
                     if (t != null)
                     {
                         // their own part runs in their game
-                        OwedParts.Give(from, t);
+                        GiveOwed(from, t);
                     }
 
                     if (t != null)

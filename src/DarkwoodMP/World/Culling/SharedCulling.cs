@@ -73,7 +73,12 @@ namespace DarkwoodMP.World.Culling
                     RefreshAll(
                         wg, wg.currentGrid, pos, instant,
                         force);
-                    FarEvents.Tick();
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
+                    {
+                        coop.FarEvents.Tick();
+                    }
+
                     return false;
                 default:
                     return true;

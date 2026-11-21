@@ -148,6 +148,12 @@ namespace DarkwoodMP
         /// attacks on NPCs left to the host.
         public readonly Combat.NpcHostility Hostiles;
 
+        /// Who is still owed their own part of a fired once-only trigger.
+        public readonly World.Owed.OwedParts Owed;
+
+        /// A location's enter and exit events with players far apart.
+        public readonly World.Scripted.FarEvents FarEvents;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -199,10 +205,10 @@ namespace DarkwoodMP
             PuppetFx = new Sync.Players.PuppetFx(this);
             View = new Sync.Players.ViewWatch();
             Cues = new Combat.PlayerCues(this);
-            PlayerFx = new Sync.PlayerFx(this);
-            View = new Sync.ViewWatch();
             Motion = new Combat.EnemyMotion();
             Hostiles = new Combat.NpcHostility(this);
+            Owed = new World.Owed.OwedParts(this);
+            FarEvents = new World.Scripted.FarEvents(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using HarmonyLib;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
     /// <summary>
     /// A world location's enter and exit events (EventTriggers of type
@@ -36,8 +35,15 @@ namespace DarkwoodMP.World
     /// host's, and the host runs them in its own game). Its exit despawns
     /// nothing while another player is still by the location.
     /// </summary>
-    public static class FarEvents
+    internal sealed class FarEvents
     {
+        private readonly CoopSession _coop;
+
+        public FarEvents(CoopSession coop)
+        {
+            _coop = coop;
+        }
+
         /// <summary>
         /// For the map test: each enter or exit, with the part it ran in.
         /// </summary>
@@ -50,25 +56,33 @@ namespace DarkwoodMP.World
             public Vector3 Pos;
         }
 
-        public static readonly List<Entry> Log = new List<Entry>();
+        public readonly List<Entry> Log = new List<Entry>();
         /// <summary>
         /// For the map test: Location.enter and leave calls (the location
         /// really switched), by location name.
         /// </summary>
-        public static readonly List<Entry> Switches = new List<Entry>();
+        public readonly List<Entry> Switches = new List<Entry>();
 
-        private static readonly Dictionary<Location, bool> HostIn =
+        private readonly Dictionary<Location, bool> _hostIn =
             new Dictionary<Location, bool>();
-        private static Location[] _all;
-        private static float _allAt = -100f;
+        private Location[] _all;
+        private float _allAt = -100f;
+
+        /// <summary>
+        /// A joiner's exit from a location keeps its trader, porter and wolf
+        /// while another player is by it (set while its exit events run).
+        /// </summary>
+        public bool KeepCharacters { get; private set; }
 
         private static bool Debug => WorldActions.Debug;
-        private static Session S => Session.Instance;
-        internal static bool Together =>
-            S != null && S.Active && WorldShare.InWorld;
+        private Session S => _coop.Net;
+
+        internal bool Together => S.Active && WorldShare.InWorld;
 
         internal static bool WorldLocation(Location l) =>
-            l != null && !l.isSubLocation && !l.isOutsideLocation;
+            l != null
+                && FarEventRules.IsWorldLocation(
+                    l.isSubLocation, l.isOutsideLocation);
 
         internal static void Note(
             List<Entry> list, Location l, string kind, ScriptedEvents.Part part)
@@ -89,104 +103,123 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: whether our own player is by this location (in its cull rect;
-        /// `was`: by it last time, a margin to leave it).
+        /// The facts of a location for FarEventRules: where it and the host's
+        /// player are, our culling's distances, and the host's record of it.
         /// </summary>
-        private static bool HostNear(Location l, bool was)
+        private FarFacts FactsOf(Location l)
         {
-            var p = Player.Instance;
-            if (p == null || Plugin.Instance.Host.Culling.HostAway)
-            {
-                return false;
-            }
-
+            bool client = S.IsClient;
             Culling.SharedCulling.Distances(out int dx, out int dy);
-            float m = 0f;
-            if (was)
+            var b = l.transform.position;
+            var p = Player.Instance;
+            var host = new HostSpot { Known = p != null };
+            if (p != null)
             {
-                m = 600f;
+                var a = p.transform.position;
+                host = new HostSpot
+                {
+                    Known = true,
+                    Away = Plugin.Instance.Host.Culling.HostAway,
+                    Pos = new Vec2(a.x, a.z),
+                };
             }
 
-            var a = p.transform.position;
-            var b = l.transform.position;
-            return Mathf.Abs(a.x - b.x) <= dx + m
-                && Mathf.Abs(a.z - b.z) <= dy + m;
+            bool recorded = _hostIn.TryGetValue(l, out bool hostIn);
+            return new FarFacts
+            {
+                Together = Together,
+                Sub = l.isSubLocation,
+                Outside = l.isOutsideLocation,
+                Current = (EventPart)ScriptedEvents.Current,
+                Replaying = Coop.Guards.Replaying,
+                Client = client,
+                AnyProxies = Proxies.Any,
+                Host = host,
+                CullX = dx,
+                CullZ = dy,
+                At = new Vec2(b.x, b.z),
+                Recorded = recorded,
+                HostIn = hostIn,
+                Entered = l.entered,
+                Loaded = l.finishedLoading,
+                Activating = l.activatingOverTime,
+            };
         }
 
         /// <summary>
-        /// Client: whether another player (not in a separate location or a
-        /// dream) is by this location.
+        /// Client: the other players' puppets, for whether one is by a
+        /// location.
         /// </summary>
-        private static bool OtherNear(Location l)
+        private static List<RemoteSpot> RemoteSpots()
         {
+            var spots = new List<RemoteSpot>();
             var sync = Plugin.Instance.Host.Players;
             if (sync == null)
             {
-                return false;
+                return spots;
             }
 
-            // theirs isn't known here: about ours
-            Culling.SharedCulling.Distances(out int dx, out int dy);
-            var b = l.transform.position;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r == null || r.Root == null || r.Away
-                    || r.Owner == Sync.Players.PlayerSync.DummyId)
+                if (r == null)
                 {
                     continue;
                 }
 
-                var a = r.Root.transform.position;
-                if (Mathf.Abs(a.x - b.x) <= dx && Mathf.Abs(a.z - b.z) <= dy)
+                bool shown = r.Root != null;
+                Vec2 pos = default;
+                if (shown)
                 {
-                    return true;
+                    var a = r.Root.transform.position;
+                    pos = new Vec2(a.x, a.z);
                 }
+
+                spots.Add(new RemoteSpot
+                {
+                    Shown = shown,
+                    Away = r.Away,
+                    Dummy = r.Owner == Sync.Players.PlayerSync.DummyId,
+                    Pos = pos,
+                });
             }
 
-            return false;
+            return spots;
         }
 
         /// <summary>
         /// The part a location's enter (or exit) events run in now; null: as
         /// the game runs them.
         /// </summary>
-        internal static ScriptedEvents.Part? PartFor(Location l, bool enter)
+        internal ScriptedEvents.Part? PartFor(Location l, bool enter)
         {
-            if (!Together || !WorldLocation(l)
-                || ScriptedEvents.Current != ScriptedEvents.Part.All
-                || Coop.Guards.Replaying)
+            // not together: as the game runs them (FarEventRules.OnEnter)
+            if (l == null || !Together)
             {
                 return null;
             }
 
-            if (S.IsClient)
-            {
-                return ScriptedEvents.Part.PlayerAndShared;
-            }
-
-            bool hostIn;
+            FarFacts f = FactsOf(l);
+            FarPart part = FarEventRules.OnExit(f);
             if (enter)
             {
-                // with the margin: the location's node is up to 300 nearer than
-                // it
-                HostIn[l] = hostIn = !Proxies.Any || HostNear(l, true);
+                part = FarEventRules.OnEnter(f);
             }
-            else
+
+            if (part.Record == FarRecord.Store)
             {
-                if (!HostIn.TryGetValue(l, out hostIn))
-                {
-                    hostIn = true;
-                }
-
-                HostIn.Remove(l);
+                _hostIn[l] = part.HostIn;
             }
-
-            if (hostIn)
+            else if (part.Record == FarRecord.Forget)
             {
-                return (ScriptedEvents.Part?)null;
+                _hostIn.Remove(l);
             }
 
-            return ScriptedEvents.Part.HostAndShared;
+            if (!part.Set)
+            {
+                return null;
+            }
+
+            return (ScriptedEvents.Part)part.Part;
         }
 
         /// <summary>
@@ -195,7 +228,7 @@ namespace DarkwoodMP.World
         /// `part`. Returns whether it set it (the caller's Finalizer puts it
         /// back).
         /// </summary>
-        internal static bool Begin(
+        internal bool Begin(
             Location l, bool enter, ScriptedEvents.Part? part, string more = "")
         {
             if (Together && WorldLocation(l))
@@ -244,30 +277,37 @@ namespace DarkwoodMP.World
         /// Whether the location's exit despawns its trader, porter and wolf
         /// here.
         /// </summary>
-        internal static bool Despawns(Location l) =>
-            !(Together && S.IsClient && WorldLocation(l) && OtherNear(l));
+        internal bool Despawns(Location l)
+        {
+            // not together: it despawns (FarEventRules.Despawns)
+            if (l == null || !Together)
+            {
+                return true;
+            }
+
+            FarFacts f = FactsOf(l);
+            var remotes = new List<RemoteSpot>();
+            if (f.Together && f.Client)
+            {
+                remotes = RemoteSpots();
+            }
+
+            return FarEventRules.Despawns(f, remotes);
+        }
 
         /// <summary>
         /// Host, each culling refresh: our player came into a location already
         /// entered for someone else, or went out of one that stays entered: its
         /// own part of the location's enter or exit events.
         /// </summary>
-        internal static void Tick()
+        internal void Tick()
         {
-            var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld
-                || Core.loadingGame)
+            if (!FarEventRules.MayTick(TickFactsOf()))
             {
                 return;
             }
 
-            var d = Singleton<Dreams>.Instance;
-            if (d != null && (d.dreaming || d.wantToDream))
-            {
-                return;
-            }
-
-            if (_all == null || Time.realtimeSinceStartup - _allAt > 10f)
+            if (FarEventRules.Relist(TickFactsOf()))
             {
                 _all = Object.FindObjectsOfType<Location>(true)
                     .Where(WorldLocation).ToArray();
@@ -281,31 +321,27 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                if (!l.entered)
+                FarFacts f = FactsOf(l);
+                FarTick tick = FarEventRules.Tick(f);
+                if (tick == FarTick.Forget)
                 {
-                    HostIn.Remove(l);
+                    _hostIn.Remove(l);
                     continue;
                 }
 
-                if (!l.finishedLoading || l.activatingOverTime)
+                if (tick == FarTick.Wait || tick == FarTick.Same)
                 {
-                    continue; // its enter events haven't run yet
+                    continue; // its enter events haven't run yet, or no change
                 }
 
-                bool was;
-                if (!HostIn.TryGetValue(l, out was))
+                if (tick == FarTick.Record)
                 {
-                    HostIn[l] = HostNear(l, false);
+                    _hostIn[l] = FarEventRules.HostNear(f, false);
                     continue;
                 }
 
-                bool now = HostNear(l, was);
-                if (now == was)
-                {
-                    continue;
-                }
-
-                HostIn[l] = now;
+                bool now = tick == FarTick.Came;
+                _hostIn[l] = now;
                 global::EventTrigger.Type type;
                 if (now)
                 {
@@ -366,53 +402,45 @@ namespace DarkwoodMP.World
             }
         }
 
-        public static void Register(Session s) => s.OnSessionEnded += () =>
+        private FarTickFacts TickFactsOf()
         {
-            HostIn.Clear();
-            _all = null;
-        };
-    }
+            var d = Singleton<Dreams>.Instance;
+            return new FarTickFacts
+            {
+                Host = S.IsHost,
+                InWorld = WorldShare.InWorld,
+                Loading = Core.loadingGame,
+                Dreaming = d != null && (d.dreaming || d.wantToDream),
+                Listed = _all != null,
+                ListedAt = new Seconds(_allAt),
+                Now = new Seconds(Time.realtimeSinceStartup),
+            };
+        }
 
-    [HarmonyPatch(typeof(Location), "checkEnterEvents")]
-    static class LocationEnterEventsPatch
-    {
-        static void Prefix(
-            Location __instance, out (bool, ScriptedEvents.Part) __state)
+        /// <summary>
+        /// Location.checkEnterEvents starts: the part its events run in.
+        /// Returns whether it set ScriptedEvents.Current (the patch puts it
+        /// back).
+        /// </summary>
+        public bool EnterEvents(Location l)
         {
-            __state = (false, ScriptedEvents.Current);
             if (Core.loadingGame)
             {
-                return;
+                return false;
             }
 
-            __state.Item1 = FarEvents.Begin(
-                __instance, enter: true,
-                FarEvents.PartFor(__instance, enter: true));
+            return Begin(l, enter: true, PartFor(l, enter: true));
         }
 
-        static Exception Finalizer(
-            Exception __exception, (bool, ScriptedEvents.Part) __state)
+        /// <summary>
+        /// Location.checkExitEvents starts: the part its events run in, and
+        /// whether its characters stay (KeepCharacters, which the patch puts
+        /// back). Returns whether it set ScriptedEvents.Current.
+        /// </summary>
+        public bool ExitEvents(Location l)
         {
-            if (__state.Item1)
-            {
-                ScriptedEvents.Current = __state.Item2;
-            }
-
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch(typeof(Location), "checkExitEvents")]
-    static class LocationExitEventsPatch
-    {
-        internal static bool KeepCharacters;
-
-        static void Prefix(
-            Location __instance, out (bool, ScriptedEvents.Part, bool) __state)
-        {
-            __state = (false, ScriptedEvents.Current, KeepCharacters);
-            var part = FarEvents.PartFor(__instance, enter: false);
-            KeepCharacters = !FarEvents.Despawns(__instance);
+            var part = PartFor(l, enter: false);
+            KeepCharacters = !Despawns(l);
             string more = "";
             if (KeepCharacters)
             {
@@ -421,70 +449,40 @@ namespace DarkwoodMP.World
                         + "it)";
             }
 
-            __state.Item1 = FarEvents.Begin(__instance, enter: false, part,
-                more);
+            return Begin(l, enter: false, part, more);
         }
 
-        static Exception Finalizer(
-            Exception __exception, (bool, ScriptedEvents.Part, bool) __state)
+        /// <summary>
+        /// Location.checkExitEvents ended: KeepCharacters goes back to what
+        /// it was.
+        /// </summary>
+        public void ExitEventsEnded(bool keep)
         {
-            if (__state.Item1)
-            {
-                ScriptedEvents.Current = __state.Item2;
-            }
-
-            KeepCharacters = __state.Item3;
-            return __exception;
+            KeepCharacters = keep;
         }
-    }
 
-    /// <summary>
-    /// A joiner's exit from a location doesn't take away its trader, porter or
-    /// wolf while another player is by it.
-    /// </summary>
-    [HarmonyPatch(typeof(Location))]
-    static class LocationExitDespawnPatch
-    {
-        [HarmonyPrefix, HarmonyPatch(nameof(Location.despawnTrader))]
-        static bool Trader() =>
-            !LocationExitEventsPatch.KeepCharacters;
-        [HarmonyPrefix, HarmonyPatch(nameof(Location.despawnPorter))]
-        static bool Porter() =>
-            !LocationExitEventsPatch.KeepCharacters;
-        [HarmonyPrefix, HarmonyPatch(nameof(Location.despawnWolf))]
-        static bool Wolf() =>
-            !LocationExitEventsPatch.KeepCharacters;
-    }
-
-    /// <summary>
-    /// For the map test: when a world location really switches on or off
-    /// (culling entered or left it).
-    /// </summary>
-    [HarmonyPatch(typeof(Location))]
-    static class LocationSwitchCountPatch
-    {
-        [HarmonyPrefix, HarmonyPatch(nameof(Location.enter))]
-        static void Enter(Location __instance, bool force)
+        /// <summary>
+        /// For the map test: Location.enter, when a world location really
+        /// switches on.
+        /// </summary>
+        public void Entering(Location l, bool force)
         {
-            if (FarEvents.Together && FarEvents.WorldLocation(__instance)
-                && (force || !__instance.entered))
+            if (Together && WorldLocation(l) && (force || !l.entered))
             {
-                FarEvents.Note(
-                    FarEvents.Switches, __instance, "enter",
-                    ScriptedEvents.Current);
+                Note(Switches, l, "enter", ScriptedEvents.Current);
             }
         }
 
-        [HarmonyPrefix, HarmonyPatch(nameof(Location.leave))]
-        static void Leave(Location __instance, bool force)
+        /// <summary>
+        /// For the map test: Location.leave, when a world location really
+        /// switches off.
+        /// </summary>
+        public void Leaving(Location l)
         {
-            if (FarEvents.Together && FarEvents.WorldLocation(__instance)
-                && __instance.entered
-                && __instance.gameObject.activeInHierarchy)
+            if (Together && WorldLocation(l) && l.entered
+                && l.gameObject.activeInHierarchy)
             {
-                FarEvents.Note(
-                    FarEvents.Switches, __instance, "leave",
-                    ScriptedEvents.Current);
+                Note(Switches, l, "leave", ScriptedEvents.Current);
             }
         }
     }

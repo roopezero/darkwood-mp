@@ -455,7 +455,6 @@ namespace DarkwoodMP
             Progression.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
-            FarEvents.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
