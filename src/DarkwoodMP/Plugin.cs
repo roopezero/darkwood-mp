@@ -2273,7 +2273,7 @@ namespace DarkwoodMP
             _time.Update();
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
-            World.WorkbenchStorage.Update();
+            _host.Workbenches.Update();
             _containers.Update();
             ModProfiler.Mark("containers");
             _characters.Update();

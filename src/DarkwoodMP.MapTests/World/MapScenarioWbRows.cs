@@ -42,6 +42,9 @@ namespace DarkwoodMP.World
         private static int Level =>
             Singleton<Controller>.Instance.workbenchLevel;
 
+        private static WorkbenchStorage Rows =>
+            Plugin.Instance.Host.Workbenches;
+
         private static string Slot(InvSlot s)
         {
             if (InvItemClass.isNull(s.invItem))
@@ -118,16 +121,16 @@ namespace DarkwoodMP.World
             var st = wb.normalInventory;
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until
-                && (st.slots.Count != WorkbenchStorage.Wanted(wb, Level)
+                && (st.slots.Count != Rows.Wanted(wb, Level)
                     || (wantLevel > 0 && Level != wantLevel)))
             {
                 yield return null;
             }
 
-            int want = WorkbenchStorage.Wanted(wb, Level);
+            int want = Rows.Wanted(wb, Level);
             r.Info =
                 $"{MapScenarioWorld.Ref(st)} level {Level}: {st.slots.Count} "
-                    + $"slots (base {WorkbenchStorage.BaseSlots(wb)}, wanted "
+                    + $"slots (base {Rows.BaseSlots(wb)}, wanted "
                     + $"{want}), {st.maxColumns} columns, "
                     + $"{st.getAllItems().Count} filled";
             if (wantLevel > 0 && Level != wantLevel)

@@ -25,21 +25,27 @@ namespace DarkwoodMP.World
     /// it. A client's world is the host's save, which has the host's slot count
     /// already; the host's contents (ContainerSlotsAll) carry it too, and
     /// SlotShare grows the storage to it before taking them.
+    ///
+    /// It works with no session too, so ModHost owns it (ModHost.Workbenches)
+    /// for as long as the game runs.
     /// </summary>
-    public static class WorkbenchStorage
+    internal sealed class WorkbenchStorage
     {
         private const string WorldLoaded = "world loaded";
 
         private const string DefaultPrefab = "Furnitures/workbench_01";
 
-        private static readonly Dictionary<string, int> _base =
+        // Each prefab's slot count at the base level, read from the game's
+        // resources once.
+        private readonly Dictionary<string, int> _base =
             new Dictionary<string, int>();
-        private static RowsApplied _applied = RowsApplied.None;
+
+        private RowsApplied _applied = RowsApplied.None;
 
         /// <summary>
         /// The storage's slot count at the base level: its prefab's.
         /// </summary>
-        public static int BaseSlots(Workbench wb)
+        public int BaseSlots(Workbench wb)
         {
             var so = wb.GetComponent<SaveableObject>();
             string name;
@@ -105,7 +111,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The slot count the storage should have at this level.
         /// </summary>
-        public static int Wanted(Workbench wb, int level) =>
+        public int Wanted(Workbench wb, int level) =>
             WorkbenchRules.Wanted(BaseSlots(wb), level);
 
         private static int Level
@@ -125,7 +131,7 @@ namespace DarkwoodMP.World
         /// Every frame: once a world has loaded (again), or the level changed,
         /// give every workbench its rows.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             RowsUpdate next = WorkbenchRules.Update(_applied, FactsOf());
             _applied = next.Applied;
@@ -160,7 +166,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Give every workbench's storage the slot count of the current level.
         /// </summary>
-        public static void ApplyAll(string why)
+        public void ApplyAll(string why)
         {
             int level = Level;
             foreach (var wb in Object.FindObjectsOfType<Workbench>(true))
@@ -335,9 +341,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
+            WorkbenchStorage storage = Plugin.Instance.Host.Workbenches;
             WorkbenchStorage.Fit(
                 __instance.normalInventory,
-                WorkbenchStorage.Wanted(
+                storage.Wanted(
                     __instance, Singleton<Controller>.Instance.workbenchLevel));
         }
     }

@@ -1604,7 +1604,7 @@ namespace DarkwoodMP.World
                 $"The workbench is now level {level} ({s.NameOf(from)} "
                     + "upgraded it)");
             // its new row, before any change to it arrives
-            WorkbenchStorage.ApplyAll("upgraded");
+            Plugin.Instance.Host.Workbenches.ApplyAll("upgraded");
             // An open workbench shows the new level's recipes.
             Inventory open = null;
             if (Player.Instance != null)
@@ -1689,7 +1689,7 @@ namespace DarkwoodMP.World
             }
 
             // the storage's new row (also without co-op)
-            WorkbenchStorage.ApplyAll("upgraded");
+            Plugin.Instance.Host.Workbenches.ApplyAll("upgraded");
             if (!Coop.Guards.Replaying)
             {
                 SlotShare instance = SlotShare.Instance;
