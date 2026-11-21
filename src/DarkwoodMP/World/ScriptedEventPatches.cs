@@ -12,61 +12,34 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     // ---- which part runs ----------------------------------------------------
+    // These three keep EventParts (ModHost.Parts) also in a game played
+    // alone: a coroutine can outlive its session, and StepDepth counts every
+    // running step.
 
     /// <summary>
     /// A step of a GameEvents that isn't in the part being run is skipped (its
     /// coroutine does nothing).
     /// </summary>
     [HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire))]
-    static class GameEventPartPatch
+    static class GameEventFireParts
     {
         static bool Prefix(
             GameEvent __instance, GameObject thisGO, ref IEnumerator __result)
         {
-            // A new chapter and the game's end are the host's, whoever set them
-            // off (see World.Chapters).
-            bool runs;
-            if (Chapters.IsStoryStep(__instance))
-            {
-                runs = Chapters.StoryStepRuns(__instance, thisGO);
-            }
-            else
-            {
-                runs = ScriptedEvents.Runs(__instance, thisGO);
-            }
-
-            if (runs)
+            var parts = Plugin.Instance.Host.Parts;
+            if (parts.StepStarts(__instance, thisGO, out var instead))
             {
                 return true;
             }
 
-            __result = ScriptedEvents.Nothing();
+            __result = instead;
             return false;
         }
 
         static void Postfix(GameEvent __instance, ref IEnumerator __result)
         {
-            if (__result == null)
-            {
-                return;
-            }
-
-            if (ScriptedEvents.Current != EventPart.All)
-            {
-                ScriptedEvents.Remember(__result, new ScriptedEvents.Started
-                {
-                    Part = ScriptedEvents.Current,
-                    By = ScriptedEvents.By
-                });
-            }
-
-            // The host sends what a world move left in each container (the
-            // coroutine above keeps its part).
-            if (Hideouts.Together && Session.Instance.IsHost
-                && Hideouts.IsWorldMove(__instance))
-            {
-                __result = Hideouts.SendAfter(__result, __instance);
-            }
+            __result =
+                Plugin.Instance.Host.Parts.StepStarted(__instance, __result);
         }
     }
 
@@ -75,7 +48,7 @@ namespace DarkwoodMP.World
     /// delay.
     /// </summary>
     [HarmonyPatch]
-    static class CoroutinePartPatch
+    static class FireCoroutineMoveNext
     {
         static IEnumerable<MethodBase> TargetMethods()
         {
@@ -101,54 +74,16 @@ namespace DarkwoodMP.World
             }
         }
 
-        static void Prefix(
-            object __instance,
-            out (EventPart, ScriptedEvents.Started, bool, ulong)
-                __state)
+        static void Prefix(object __instance, out EventParts.StepSaved __state)
         {
-            __state = (ScriptedEvents.Current, ScriptedEvents.Firing, false,
-                ScriptedEvents.By);
-            if (__instance.GetType().DeclaringType == typeof(GameEvent))
-            {
-                ScriptedEvents.StepDepth++;
-            }
-
-            if (!ScriptedEvents.Coroutines.TryGetValue(__instance, out var st))
-            {
-                return;
-            }
-
-            __state.Item3 = true;
-            ScriptedEvents.Current = st.Part;
-            if (st.ByPlayer)
-            {
-                ScriptedEvents.Firing = st;
-            }
-            else
-            {
-                ScriptedEvents.Firing = null;
-            }
-
-            ScriptedEvents.By = st.By;
+            __state = Plugin.Instance.Host.Parts.EnterStep(__instance);
         }
 
         static Exception Finalizer(
             object __instance, Exception __exception,
-            (EventPart, ScriptedEvents.Started, bool, ulong) __state)
+            EventParts.StepSaved __state)
         {
-            if (__instance.GetType().DeclaringType == typeof(GameEvent)
-                && ScriptedEvents.StepDepth > 0)
-            {
-                ScriptedEvents.StepDepth--;
-            }
-
-            if (__state.Item3)
-            {
-                ScriptedEvents.Current = __state.Item1;
-                ScriptedEvents.Firing = __state.Item2;
-                ScriptedEvents.By = __state.Item4;
-            }
-
+            Plugin.Instance.Host.Parts.LeaveStep(__instance, __state);
             return __exception;
         }
     }
@@ -158,37 +93,60 @@ namespace DarkwoodMP.World
     /// repeatable areas may have changed.
     /// </summary>
     [HarmonyPatch(typeof(EventTriggers), "Awake")]
-    static class AreaTriggersChangedPatch
+    static class EventTriggersAwake
     {
-        static void Postfix() => ScriptedEvents.AreasChanged();
+        static void Postfix()
+        {
+            Plugin.Instance.Host.Parts.AreasChanged();
+        }
     }
 
     // ---- who set it off -----------------------------------------------------
 
     [HarmonyPatch(typeof(EventTriggers), "OnTriggerEnter")]
-    static class TriggerEnterPatch
+    static class EventTriggersOnTriggerEnter
     {
-        static void Prefix(Collider other) =>
-            ScriptedEvents.PlayerEntered = other != null
-                && Player.Instance != null
-                && other.gameObject == Player.Instance.gameObject;
+        static void Prefix(Collider other)
+        {
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.Entering(other);
+            }
+        }
+
         static Exception Finalizer(Exception __exception)
         {
-            ScriptedEvents.PlayerEntered = false;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.Entered();
+            }
+
             return __exception;
         }
     }
 
     [HarmonyPatch(typeof(EventTriggers), "OnTriggerExit")]
-    static class TriggerExitPatch
+    static class EventTriggersOnTriggerExit
     {
-        static void Prefix(Collider other) =>
-            ScriptedEvents.PlayerEntered = other != null
-                && Player.Instance != null
-                && other.gameObject == Player.Instance.gameObject;
+        static void Prefix(Collider other)
+        {
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.Entering(other);
+            }
+        }
+
         static Exception Finalizer(Exception __exception)
         {
-            ScriptedEvents.PlayerEntered = false;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.Entered();
+            }
+
             return __exception;
         }
     }
@@ -200,104 +158,72 @@ namespace DarkwoodMP.World
     /// </summary>
     [HarmonyPatch(
         typeof(global::EventTrigger), nameof(global::EventTrigger.fireExit))]
-    static class TriggerExitSharePatch
+    static class EventTriggerFireExit
     {
         static void Prefix(
             global::EventTrigger __instance,
-            global::EventTrigger.Type TriggerType,
-            out (bool, EventPart) __state)
+            global::EventTrigger.Type TriggerType, out PartSaved __state)
         {
-            __state = (false, ScriptedEvents.Current);
-            if (TriggerType != global::EventTrigger.Type.area
-                || __instance.firedExit || __instance.disabled
-                || __instance.type != TriggerType)
+            __state = default;
+            var coop = Coop.Current;
+            if (coop != null)
             {
-                return;
-            }
-
-            if (__instance.thisEventTriggers == null
-                || !ScriptedEvents.ByOurPlayer(TriggerType))
-            {
-                return;
-            }
-
-            __state.Item1 = true;
-            if (Session.Instance.IsClient)
-            {
-                ScriptedEvents.Current = EventPart.PlayerAndShared;
+                __state = coop.Scripted.ExitStarts(__instance, TriggerType);
             }
         }
 
-        static void Postfix(
-            global::EventTrigger __instance,
-            (bool, EventPart) __state)
+        static void Postfix(global::EventTrigger __instance, PartSaved __state)
         {
-            if (!__state.Item1)
+            var coop = Coop.Current;
+            if (coop != null)
             {
-                return;
-            }
-
-            ScriptedEvents.Current = __state.Item2;
-            if (!__instance.firedExit)
-            {
-                return; // it didn't run (its requirements)
-            }
-
-            var et = __instance.thisEventTriggers;
-            try
-            {
-                ScriptedEvents.SendExit(
-                    et, et.eventTriggers.IndexOf(__instance));
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"Couldn't send the exit of {et.name}: {e.Message}");
+                coop.Scripted.ExitRan(__instance, __state);
             }
         }
 
-        static Exception Finalizer(
-            Exception __exception, (bool, EventPart) __state)
+        static Exception Finalizer(Exception __exception, PartSaved __state)
         {
-            if (__state.Item1)
-            {
-                ScriptedEvents.Current = __state.Item2;
-            }
-
+            Plugin.Instance.Host.Parts.PutBack(__state);
             return __exception;
         }
     }
 
     [HarmonyPatch(
         typeof(EventTriggers), nameof(EventTriggers.fireEventTrigger))]
-    static class FireEventTriggerPatch
+    static class EventTriggersFireEventTrigger
     {
         static void Prefix(
             global::EventTrigger.Type TriggerType, out bool __state)
         {
-            __state = ScriptedEvents.SettingOff;
-            ScriptedEvents.SettingOff = ScriptedEvents.ByOurPlayer(TriggerType);
+            __state = false;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                __state = coop.Scripted.SettingOffNow(TriggerType);
+            }
         }
 
         static Exception Finalizer(Exception __exception, bool __state)
         {
-            ScriptedEvents.SettingOff = __state;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.SettingOff = __state;
+            }
+
             return __exception;
         }
     }
 
     /// <summary>
     /// Remember, for each trigger coroutine, whether our player set it off and
-    /// in which part it runs.
+    /// in which part it runs (ScriptedEvents.TriggerStarts and
+    /// TriggerStarted).
     /// </summary>
     [HarmonyPatch(
         typeof(global::EventTrigger), nameof(global::EventTrigger.fire))]
-    static class EventTriggerStartPatch
+    static class EventTriggerFire
     {
-        /// <summary>
-        /// A joiner leaves the triggers the world sets off by itself to the
-        /// host, which sends them.
-        /// </summary>
         static bool Prefix(
             global::EventTrigger __instance,
             global::EventTrigger.Type TriggerType, string Value,
@@ -305,45 +231,27 @@ namespace DarkwoodMP.World
             out bool __state)
         {
             __state = false;
-            // Set off by applying another player's action: that player sets it
-            // off in its game and sends it.
-            if (ScriptedEvents.LeftToActorNow(__instance, TriggerType))
-            {
-                __state = true;
-                __result = ScriptedEvents.Nothing();
-                return false;
-            }
-
-            // A once-only trigger that fired for another player: our player's
-            // own part of it (ScriptedEvents.LaterPart).
-            if (ScriptedEvents.LaterFor(
-                __instance, thisEventTriggers, TriggerType))
-            {
-                __state = true;
-                __result = ScriptedEvents.LaterPart(
-                    __instance, thisEventTriggers, TriggerType, Value);
-                return false;
-            }
-
-            if (!Combat.NetEnemies.ClientMode
-                || !ScriptedEvents.HostsWorldTrigger(
-                    __instance, thisEventTriggers, TriggerType))
+            var coop = Coop.Current;
+            if (coop == null)
             {
                 return true;
             }
 
-            if (WorldActions.Debug
-                && !(__instance.fired && !__instance.multipleFire)
-                && !__instance.disabled)
+            var f = new TriggerFire
             {
-                int index = thisEventTriggers.eventTriggers.IndexOf(__instance);
-                Plugin.Log.LogInfo(
-                    $"[world] left {thisEventTriggers.name} "
-                        + $"#{index} ({TriggerType}) to the host");
+                Trigger = __instance,
+                Triggers = thisEventTriggers,
+                Type = TriggerType,
+                Value = Value,
+            };
+
+            if (coop.Scripted.TriggerStarts(f, out var instead))
+            {
+                return true;
             }
 
             __state = true;
-            __result = ScriptedEvents.Nothing();
+            __result = instead;
             return false;
         }
 
@@ -352,155 +260,39 @@ namespace DarkwoodMP.World
             global::EventTrigger.Type TriggerType,
             EventTriggers thisEventTriggers, IEnumerator __result, bool __state)
         {
-            if (__result == null || __state)
+            var coop = Coop.Current;
+            if (coop == null || __result == null || __state)
             {
                 return;
             }
 
-            var s = Session.Instance;
-            bool hostWithPeers = s != null && s.IsHost && s.Peers.Count > 0;
-            Remembered remembered = WorldTriggerRules.Remember(new RememberFacts
-            {
-                HostWithPeers = hostWithPeers,
-                HostsWorld = hostWithPeers
-                    && ScriptedEvents.HostsWorldTrigger(
-                        __instance, thisEventTriggers, TriggerType),
-                SettingOff = ScriptedEvents.SettingOff,
-                HasTriggers = thisEventTriggers != null,
-                Sight = __instance.type
-                        == global::EventTrigger.Type.onInSightOfPlayer
-                    || __instance.type
-                        == global::EventTrigger.Type.onOutOfSightOfPlayer,
-                OutOfSight = __instance.type
-                    == global::EventTrigger.Type.onOutOfSightOfPlayer,
-                MultipleFire = __instance.multipleFire,
-                Current = ScriptedEvents.Current,
-                SharedReplay = ScriptedEvents.SharedReplay(TriggerType),
-            });
-
-            if (!remembered.Remembers)
-            {
-                return;
-            }
-
-            if (remembered.World)
-            {
-                ScriptedEvents.Remember(__result, new ScriptedEvents.Started
+            coop.Scripted.TriggerStarted(
+                new TriggerFire
                 {
-                    Part = EventPart.All,
-                    ByPlayer = true,
-                    World = true,
-                    // a joiner behind it gets its player part (SendCaused)
-                    By = ScriptedEvents.CauseFor(TriggerType),
+                    Trigger = __instance,
                     Triggers = thisEventTriggers,
-                    Index = thisEventTriggers.eventTriggers.IndexOf(__instance),
-                });
-
-                return;
-            }
-
-            int index = -1;
-            if (remembered.ByPlayer)
-            {
-                index = thisEventTriggers.eventTriggers.IndexOf(__instance);
-            }
-
-            ScriptedEvents.Remember(__result, new ScriptedEvents.Started
-            {
-                Part = remembered.Part,
-                By = ScriptedEvents.By,
-                ByPlayer = remembered.ByPlayer,
-                Triggers = thisEventTriggers,
-                Index = index,
-            });
+                    Type = TriggerType,
+                },
+                __result);
         }
     }
 
     /// <summary>
-    /// The moment a trigger our player set off runs its GameEvents: share it. A
-    /// joiner runs only its own part and the shared part here.
+    /// The moment a trigger our player set off runs its GameEvents: share it
+    /// (ScriptedEvents.EventsFire).
     /// </summary>
     [HarmonyPatch(typeof(GameEvents), nameof(GameEvents.fire))]
-    static class GameEventsFirePatch
+    static class GameEventsFire
     {
         static bool Prefix(GameEvents __instance)
         {
-            var f = ScriptedEvents.Firing;
-            FiringShare share =
-                FiringRules.Share(ScriptedEvents.FactsOf(f, __instance));
-            if (share == FiringShare.Pass)
+            var coop = Coop.Current;
+            if (coop == null)
             {
                 return true;
             }
 
-            ScriptedEvents.Firing = null; // once
-            // FiringShare.Game: events that ran once already, no sharing, or
-            // a client's world trigger: not ours to send (HostsWorldTrigger
-            // keeps these from starting here).
-            if (share == FiringShare.Game)
-            {
-                return true;
-            }
-
-            bool client = Session.Instance.IsClient;
-            var ge = __instance;
-            var et = f.Triggers;
-            // A world trigger a joiner caused: the host's and the shared part
-            // here, the joiner's own part in its game.
-            if (share == FiringShare.Caused
-                && ScriptedEvents.SendCaused(et, f.Index, f.By))
-            {
-                ScriptedEvents.RunAs(
-                    EventPart.HostAndShared, replaying: false,
-                    ge.fire);
-                return false;
-            }
-
-            global::EventTrigger trigger = null;
-            if (f.Index < et.eventTriggers.Count)
-            {
-                trigger = et.eventTriggers[f.Index];
-            }
-
-            bool repeatableArea = trigger != null
-                && trigger.type == global::EventTrigger.Type.area
-                && trigger.multipleFire;
-            int exitedBefore = et.exited;
-            bool sent = ScriptedEvents.SendTrigger(f.Triggers, f.Index, f.World,
-                () =>
-            {
-                if (ge == null)
-                {
-                    return;
-                }
-
-                if (client)
-                {
-                    // ours ran here: not owed to us after this
-                    ScriptedEvents.HadOurPart(trigger);
-                }
-
-                // Our player walked in and out again before the host's yes
-                // came: its exit (the darkness and the sounds faded out) has
-                // run here already, so the enter's look of the place mustn't
-                // come after it.
-                if (et != null
-                    && FiringRules.LeftBeforeYes(
-                        repeatableArea, exitedBefore, et.exited))
-                {
-                    ScriptedEvents.RunAs(
-                        EventPart.SharedOnly, replaying: false,
-                        ge.fire);
-                }
-                else
-                {
-                    ge.fire();
-                }
-            });
-
-            // A joiner runs its part once the host says yes
-            // (ScriptedEvents.Send).
-            return FiringRules.RunsAtOnce(client, sent);
+            return coop.Scripted.EventsFire(__instance);
         }
     }
 
@@ -508,10 +300,18 @@ namespace DarkwoodMP.World
     /// A world event our player set off (a dialogue's outcome): share it.
     /// </summary>
     [HarmonyPatch(typeof(Events), nameof(Events.fireWorldEvent))]
-    static class WorldEventPatch
+    static class EventsFireWorldEvent
     {
-        static bool Prefix(Events __instance, string type) =>
-            ScriptedEvents.OnWorldEvent(__instance, type);
+        static bool Prefix(Events __instance, string type)
+        {
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Scripted.OnWorldEvent(__instance, type);
+        }
     }
 
     /// <summary>
@@ -519,34 +319,45 @@ namespace DarkwoodMP.World
     /// its refreshWhenTurnedOn triggers.
     /// </summary>
     [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
-    static class SwitcherPatch
+    static class ItemTurnOn
     {
-        static void Postfix(Item __instance) =>
-            ScriptedEvents.SwitchedOn(__instance);
+        static void Postfix(Item __instance)
+        {
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.SwitchedOn(__instance);
+            }
+        }
     }
 
     /// <summary>
     /// Host: an item that's on sets off its refreshWhenTurnedOn triggers from
     /// its ActionWhenTurnedOn's Update, long after it was switched on: whoever
-    /// switched it on is their cause.
+    /// switched it on is their cause (ScriptedEvents.CauseOfUpdate).
     /// </summary>
     [HarmonyPatch(
         typeof(ActionWhenTurnedOn), nameof(ActionWhenTurnedOn.Update))]
-    static class SwitchedOnUpdatePatch
+    static class ActionWhenTurnedOnUpdate
     {
         static void Prefix(ActionWhenTurnedOn __instance, out ulong __state)
         {
-            __state = ScriptedEvents.Cause;
-            if (__instance.turnedOn)
+            __state = 0;
+            var coop = Coop.Current;
+            if (coop != null)
             {
-                ScriptedEvents.Cause =
-                    ScriptedEvents.SwitcherOf(__instance.GetComponent<Item>());
+                __state = coop.Scripted.CauseOfUpdate(__instance);
             }
         }
 
         static Exception Finalizer(Exception __exception, ulong __state)
         {
-            ScriptedEvents.Cause = __state;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.Cause = __state;
+            }
+
             return __exception;
         }
     }
@@ -558,17 +369,30 @@ namespace DarkwoodMP.World
     [HarmonyPatch(
         typeof(AnimationTriggerListener),
         nameof(AnimationTriggerListener.checkFrameTrigger))]
-    static class AnimationWorldEventPatch
+    static class AnimationTriggerListenerCheckFrameTrigger
     {
         static bool Prefix(
             AnimationTriggerListener __instance, string eventInfo,
-            tk2dSpriteAnimationFrame.Trigger.Type type) =>
-            type != tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent
-                || ScriptedEvents.FromAnimation(__instance, eventInfo);
+            tk2dSpriteAnimationFrame.Trigger.Type type)
+        {
+            var coop = Coop.Current;
+            if (coop == null
+                || type != tk2dSpriteAnimationFrame.Trigger.Type.fireWorldEvent)
+            {
+                return true;
+            }
+
+            return coop.Scripted.FromAnimation(__instance, eventInfo);
+        }
 
         static Exception Finalizer(Exception __exception)
         {
-            ScriptedEvents.AnimationSent = false;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Scripted.AnimationSent = false;
+            }
+
             return __exception;
         }
     }

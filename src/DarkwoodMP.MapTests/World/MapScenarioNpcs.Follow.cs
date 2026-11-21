@@ -28,7 +28,7 @@ namespace DarkwoodMP.World
         /// <summary>"follow-recruit NAME" (host): our NPC of that name nearest
         /// the centre is made a follower by a scripted step (GameEvent
         /// modifyCharacter, aggressiveness follower) run as the joiner's event
-        /// (as an EventFired from them runs it: ScriptedEvents.By). It is
+        /// (as an EventFired from them runs it: EventParts.By). It is
         /// recorded as theirs and goes after the joiner's stand-in as its
         /// target, not us (waiting up to 10 s). Whether it walks after them is
         /// follow-check's: the test world's night trader never starts walking
@@ -65,18 +65,18 @@ namespace DarkwoodMP.World
                 targetGameObjects = new List<GameObject> { npc.gameObject },
             };
 
-            ScriptedEvents.RunAs(EventPart.HostAndShared,
+            Plugin.Instance.Host.Parts.RunAs(EventPart.HostAndShared,
                 replaying: true, () =>
             {
-                var was = ScriptedEvents.By;
-                ScriptedEvents.By = proxy.Owner;
+                var was = Plugin.Instance.Host.Parts.By;
+                Plugin.Instance.Host.Parts.By = proxy.Owner;
                 try
                 {
                     Plugin.Instance.StartCoroutine(ge.fire(npc.gameObject));
                 }
                 finally
                 {
-                    ScriptedEvents.By = was;
+                    Plugin.Instance.Host.Parts.By = was;
                 }
             });
 

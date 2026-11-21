@@ -320,7 +320,7 @@ namespace DarkwoodMP.Combat
 
                 if (answer == NpcHitAnswer.HostApplied)
                 {
-                    ScriptedEvents.HitApplied(c, result);
+                    Coop.Current.Scripted.HitApplied(c, result);
                     return;
                 }
 
@@ -432,7 +432,7 @@ namespace DarkwoodMP.Combat
                 Frozen = NetEnemies.Frozen.Contains(c),
                 Replaying = _coop.Guards.Replaying,
                 SharedOnly =
-                    ScriptedEvents.Current == EventPart.SharedOnly,
+                    Plugin.Instance.Host.Parts.Current == EventPart.SharedOnly,
             };
         }
 

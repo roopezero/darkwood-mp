@@ -11,56 +11,18 @@ using UnityEngine;
 
 namespace DarkwoodMP.World
 {
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
-        // ---- what a coroutine was started with ------------------------------
-
-        /// <summary>
-        /// What an EventTrigger.fire or GameEvent.fire coroutine was started
-        /// with.
-        /// </summary>
-        internal sealed class Started
-        {
-            public EventPart Part;
-            /// <summary>The host's By when it was started.</summary>
-            public ulong By;
-            /// <summary>
-            /// EventTrigger.fire only: our own player (or, on the host, the
-            /// world) set it off, and it's to be shared when it fires.
-            /// </summary>
-            public bool ByPlayer;
-            /// <summary>
-            /// The host's world set it off by itself (sent as kind 3).
-            /// </summary>
-            public bool World;
-            public EventTriggers Triggers;
-            public int Index;
-        }
-
-        internal static readonly ConditionalWeakTable<object, Started>
-            Coroutines = new ConditionalWeakTable<object, Started>();
-        internal static void Remember(object coroutine, Started st)
-        {
-            Coroutines.Remove(coroutine);
-            Coroutines.Add(coroutine, st);
-        }
-
-        /// <summary>
-        /// The trigger whose coroutine is running now (EventTrigger.fire's
-        /// body), if it's one to share.
-        /// </summary>
-        internal static Started Firing;
-
         /// <summary>
         /// True while EventTriggers.fireEventTrigger runs for something our own
         /// player did.
         /// </summary>
-        internal static bool SettingOff;
+        internal bool SettingOff;
         /// <summary>
         /// True while EventTriggers.OnTriggerEnter (or OnTriggerExit) runs for
         /// our own player's collider.
         /// </summary>
-        internal static bool PlayerEntered;
+        internal bool PlayerEntered;
 
         /// <summary>
         /// Trigger types the host's world sets off for everyone (see the class
@@ -129,25 +91,25 @@ namespace DarkwoodMP.World
         /// rollback of a thing): the triggers of these types it sets off aren't
         /// started here, as the player who did it sends them. Null otherwise.
         /// </summary>
-        internal static HashSet<global::EventTrigger.Type> LeftToActor;
+        internal HashSet<global::EventTrigger.Type> LeftToActor;
         /// <summary>
         /// How many triggers (of the type set off, and not switched off)
         /// LeftToActor kept from starting.
         /// </summary>
-        internal static int LeftCount;
+        internal int LeftCount;
         /// <summary>
         /// While our player's own action that the host decided is done here as
         /// a replay (a disarm after the host's roll, a hit the host applied to
         /// its character): the triggers it sets off are our player's, as if it
         /// had done it here.
         /// </summary>
-        internal static bool OwnAction;
+        internal bool OwnAction;
 
         /// <summary>
         /// Do a, leaving the triggers of these types it sets off to the player
         /// who did it (LeftToActor). Returns how many were left.
         /// </summary>
-        internal static int LeavingToActor(
+        internal int LeavingToActor(
             HashSet<global::EventTrigger.Type> types, Action a)
         {
             var was = LeftToActor;
@@ -179,7 +141,7 @@ namespace DarkwoodMP.World
         /// off now, as our player's, so we run our part, the host its own and
         /// the shared one, and the others the shared one.
         /// </summary>
-        internal static void HitApplied(Character c, string result)
+        internal void HitApplied(Character c, string result)
         {
             if (c == null || result == null || !result.EndsWith(Attacked))
             {
@@ -203,7 +165,7 @@ namespace DarkwoodMP.World
         /// Do a as our own player's action (OwnAction): the triggers it sets
         /// off are ours, and shared from here.
         /// </summary>
-        internal static void AsOwnAction(Action a)
+        internal void AsOwnAction(Action a)
         {
             bool was = OwnAction;
             OwnAction = true;
@@ -221,7 +183,7 @@ namespace DarkwoodMP.World
         /// EventTrigger.fire: whether this trigger, set off now, is left to the
         /// player whose action it was (LeftToActor).
         /// </summary>
-        internal static bool LeftToActorNow(
+        internal bool LeftToActorNow(
             global::EventTrigger t, global::EventTrigger.Type type)
         {
             if (!DoerRules.LeftToActor(FactsOf(type)))
@@ -249,17 +211,17 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        internal static bool SharedReplay(global::EventTrigger.Type type) =>
+        internal bool SharedReplay(global::EventTrigger.Type type) =>
             DoerRules.SharedReplay(FactsOf(type));
 
-        internal static bool OurPlayersAction() =>
+        internal bool OurPlayersAction() =>
             ByOurPlayer(global::EventTrigger.Type.onOpenDoor);
 
         /// <summary>
         /// Whether a trigger of this type, set off now, is our own player's
         /// doing.
         /// </summary>
-        internal static bool ByOurPlayer(global::EventTrigger.Type type)
+        internal bool ByOurPlayer(global::EventTrigger.Type type)
         {
             Doer doer = DoerRules.ByOurPlayer(FactsOf(type));
             if (doer == Doer.Stack)
@@ -275,7 +237,7 @@ namespace DarkwoodMP.World
         /// What DoerRules needs to know as a trigger of this type is set off
         /// now.
         /// </summary>
-        internal static DoerFacts FactsOf(global::EventTrigger.Type type)
+        internal DoerFacts FactsOf(global::EventTrigger.Type type)
         {
             var s = S;
             bool leaving = LeftToActor != null;
@@ -294,7 +256,7 @@ namespace DarkwoodMP.World
                 Loading = WorldShare.Loading,
                 Replaying = Coop.Guards.Replaying,
                 Sharing = Coop.Guards.Sharing,
-                Current = Current,
+                Current = Parts.Current,
                 PlayerEntered = PlayerEntered,
                 TestAsPlayer = WorldActions.TestAsPlayer,
                 Leaving = leaving,
@@ -306,7 +268,7 @@ namespace DarkwoodMP.World
         /// What FiringRules needs to know as a GameEvents starts to run, with
         /// the trigger firing now (Firing, or null).
         /// </summary>
-        internal static FiringFacts FactsOf(Started firing, GameEvents ge)
+        internal FiringFacts FactsOf(Started firing, GameEvents ge)
         {
             if (firing == null)
             {
@@ -321,7 +283,7 @@ namespace DarkwoodMP.World
                 Index = firing.Index,
                 World = firing.World,
                 By = firing.By,
-                Current = Current,
+                Current = Parts.Current,
                 Fired = ge.fired,
                 MultipleFire = ge.multipleFire,
                 Sharing = Coop.Guards.Sharing,
@@ -363,17 +325,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// How many GameEvent step coroutines are running right now (a trigger
-        /// set off inside one is a chain).
-        /// </summary>
-        internal static int StepDepth;
-
-        /// <summary>
         /// Whether this trigger, set off now as fired, is one the host's world
         /// runs for everyone: the host sends it, a joiner leaves it to the
         /// host.
         /// </summary>
-        internal static bool HostsWorldTrigger(
+        internal bool HostsWorldTrigger(
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type fired)
         {
@@ -386,7 +342,7 @@ namespace DarkwoodMP.World
         /// and its name cost more than the rest: they are read only for a
         /// trigger the cheaper facts don't already rule out.
         /// </summary>
-        internal static WorldTriggerFacts FactsOf(
+        internal WorldTriggerFacts FactsOf(
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type fired)
         {
@@ -399,8 +355,8 @@ namespace DarkwoodMP.World
                     || fired == global::EventTrigger.Type.onGameObjectActivated,
                 Active = s != null && s.Active,
                 Client = s != null && s.IsClient,
-                Current = Current,
-                StepDepth = StepDepth,
+                Current = Parts.Current,
+                StepDepth = Parts.StepDepth,
             };
 
             if (!f.Matches || !f.HostWorldType || !f.Active

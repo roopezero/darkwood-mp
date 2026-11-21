@@ -174,7 +174,7 @@ namespace DarkwoodMP.World
                 {
                     // Our player's disarm: its onDisarmed triggers are ours
                     // to set off and share.
-                    ScriptedEvents.AsOwnAction(trap.disarm);
+                    Coop.Current.Scripted.AsOwnAction(trap.disarm);
                     Player.Instance.displayMessage(
                         Language.Get("Playermsg_disarmedSuccess", "UI"));
                 }

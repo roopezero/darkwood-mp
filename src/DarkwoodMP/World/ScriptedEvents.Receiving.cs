@@ -11,11 +11,11 @@ using UnityEngine;
 
 namespace DarkwoodMP.World
 {
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
         // ---- receiving ------------------------------------------------------
 
-        private static void OnFired(ulong from, PacketReader r)
+        private void OnFired(ulong from, PacketReader r)
         {
             var s = S;
             if (s == null || !WorldShare.InWorld)
@@ -39,7 +39,7 @@ namespace DarkwoodMP.World
                 var takes = FiredEventRules.HostTakes(kind);
                 if (takes.Refused)
                 {
-                    Coop.Current.Authority.Refuse(takes);
+                    _coop.Authority.Refuse(takes);
                     return;
                 }
             }
@@ -103,7 +103,7 @@ namespace DarkwoodMP.World
                     {
                         var eventPart = FiredEventRules.WorldTriggerPart(
                             ours, near);
-                        RunAs(eventPart, replaying: true, ge.fire);
+                        Parts.RunAs(eventPart, replaying: true, ge.fire);
                     }
                     catch (Exception e)
                     {
@@ -120,7 +120,7 @@ namespace DarkwoodMP.World
             {
                 // Only a request to the host; nothing runs here and it isn't
                 // passed on.
-                if (s.IsHost && Coop.Current.Authority.Handling)
+                if (s.IsHost && _coop.Authority.Handling)
                 {
                     var pet = ObjRef.Resolve<EventTriggers>(obj);
                     OnPlayerPart(from, pet, TriggerAt(pet, index));
@@ -138,10 +138,10 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                var wasBy = By;
+                var wasBy = Parts.By;
                 if (s.IsHost)
                 {
-                    By = from;
+                    Parts.By = from;
                 }
 
                 try
@@ -160,7 +160,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    By = wasBy;
+                    Parts.By = wasBy;
                 }
             }
             else if (kind == EventKind.Trigger)
@@ -174,7 +174,7 @@ namespace DarkwoodMP.World
                     // if the world events it fires are ones the host has: the
                     // joiner's trip is its own, and the world events are what a
                     // joiner may ask for by name anyway (kind 2).
-                    var authority = Coop.Current.Authority;
+                    var authority = _coop.Authority;
                     bool away = authority.RequesterAway;
                     bool known = t != null || away || WorldEventsKnown(name);
                     var answer = FiredEventRules.AnswerTrigger(
@@ -212,10 +212,10 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(line + found);
                 }
 
-                var wasBy = By;
+                var wasBy = Parts.By;
                 if (s.IsHost)
                 {
-                    By = from;
+                    Parts.By = from;
                 }
 
                 try
@@ -245,7 +245,8 @@ namespace DarkwoodMP.World
                         {
                             try
                             {
-                                RunAs(part, replaying: s.IsClient, ge.fire);
+                                Parts.RunAs(
+                                    part, replaying: s.IsClient, ge.fire);
                             }
                             catch (Exception e)
                             {
@@ -260,7 +261,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    By = wasBy;
+                    Parts.By = wasBy;
                 }
             }
             else
@@ -272,7 +273,7 @@ namespace DarkwoodMP.World
                     && ge != null;
                 if (s.IsHost)
                 {
-                    var authority = Coop.Current.Authority;
+                    var authority = _coop.Authority;
                     var answer = FiredEventRules.AnswerWorldEvent(
                         FactsOf(ge), name, authority.RequesterAway);
                     if (answer.Alone)
@@ -308,10 +309,10 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                var wasBy = By;
+                var wasBy = Parts.By;
                 if (s.IsHost)
                 {
-                    By = from;
+                    Parts.By = from;
                 }
 
                 try
@@ -326,7 +327,7 @@ namespace DarkwoodMP.World
                         worldPart = EventPart.SharedOnly;
                     }
 
-                    RunAs(
+                    Parts.RunAs(
                         worldPart, replaying: s.IsClient,
                         () => events.fireWorldEvent(name));
                 }
@@ -337,7 +338,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    By = wasBy;
+                    Parts.By = wasBy;
                 }
             }
 
@@ -356,7 +357,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static global::EventTrigger TriggerAt(
+        private global::EventTrigger TriggerAt(
             EventTriggers et, int index)
         {
             if (et != null && index < et.eventTriggers.Count)
@@ -371,13 +372,13 @@ namespace DarkwoodMP.World
         /// Whether a trigger's GameEvents may run now: not run yet (or run each
         /// time), and active or allowed to run inactive.
         /// </summary>
-        private static bool CanRun(GameEvents ge) =>
+        private bool CanRun(GameEvents ge) =>
             FiredEventRules.CanRun(FactsOf(ge));
 
         /// <summary>
         /// What the rules need to know of a GameEvents (ge may be null).
         /// </summary>
-        internal static EventsFacts FactsOf(GameEvents ge)
+        internal EventsFacts FactsOf(GameEvents ge)
         {
             if (ge == null)
             {
@@ -412,7 +413,7 @@ namespace DarkwoodMP.World
         /// Client: whether our player is near enough a world trigger to see
         /// its messages (FiredEventRules.NearTrigger).
         /// </summary>
-        private static bool NearTrigger(EventTriggers et)
+        private bool NearTrigger(EventTriggers et)
         {
             var p = Player.Instance;
             if (p == null)
@@ -432,11 +433,11 @@ namespace DarkwoodMP.World
         /// Host: a joiner's player can have left this area trigger: it's an
         /// area here and they are near it.
         /// </summary>
-        private static bool ExitAllowed(
+        private bool ExitAllowed(
             ulong from, EventTriggers et, global::EventTrigger t)
         {
             var verdict = TriggerRules.MayExit(HostFactsOf(from, t, et));
-            Coop.Current.Authority.Refuse(verdict);
+            _coop.Authority.Refuse(verdict);
             return !verdict.Refused;
         }
 
@@ -444,11 +445,11 @@ namespace DarkwoodMP.World
         /// The trigger can fire in the host's world and the requester is near
         /// it.
         /// </summary>
-        private static bool TriggerAllowed(
+        private bool TriggerAllowed(
             ulong from, EventTriggers et, global::EventTrigger t)
         {
             var verdict = TriggerRules.MayFire(HostFactsOf(from, t, et));
-            Coop.Current.Authority.Refuse(verdict);
+            _coop.Authority.Refuse(verdict);
             return !verdict.Refused;
         }
     }

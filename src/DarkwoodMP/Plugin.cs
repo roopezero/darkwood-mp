@@ -442,7 +442,6 @@ namespace DarkwoodMP
             WorldTeardown.Init();
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);

@@ -105,6 +105,13 @@ namespace DarkwoodMP
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
 
+        /// <summary>
+        /// Which part of a scripted event runs now, kept also alone
+        /// (World.Scripted.EventParts).
+        /// </summary>
+        internal readonly World.Scripted.EventParts Parts =
+            new World.Scripted.EventParts();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
@@ -169,6 +176,7 @@ namespace DarkwoodMP
         public void Dispose()
         {
             Coop.End();
+            Parts.Dispose();
             Stacks.Dispose();
             Session.Dispose();
         }

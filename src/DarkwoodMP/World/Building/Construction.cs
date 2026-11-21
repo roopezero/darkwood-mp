@@ -112,7 +112,7 @@ namespace DarkwoodMP.World
                 try
                 {
                     c.chosenOption = option;
-                    ScriptedEvents.RunAs(
+                    Plugin.Instance.Host.Parts.RunAs(
                         EventPart.PlayerAndShared, replaying: false,
                         () => c.construct(manual: false, option));
                     if (!string.IsNullOrEmpty(sound))
@@ -193,7 +193,7 @@ namespace DarkwoodMP.World
                         part = EventPart.SharedOnly;
                     }
 
-                    ScriptedEvents.RunAs(part, replaying: true,
+                    Plugin.Instance.Host.Parts.RunAs(part, replaying: true,
                         () => c.construct(manual: false, option));
                 }
                 catch (Exception e)

@@ -252,7 +252,7 @@ namespace DarkwoodMP.World
             }
 
             int had = MapScenarioWorld.CarriedOf(Item);
-            bool owed = ScriptedEvents.IsOwed(m.T);
+            bool owed = Coop.Current.Scripted.IsOwed(m.T);
             bool wasFired = m.T.fired;
             SetOff(m);
             bool wantItem = m.T.gameEvents.events.Exists(
@@ -291,7 +291,7 @@ namespace DarkwoodMP.World
 
             r.Info = state
                 + $"shared part ran {runs} time(s) here, still owed "
-                + $"{ScriptedEvents.IsOwed(m.T)}{made}; bags "
+                + $"{Coop.Current.Scripted.IsOwed(m.T)}{made}; bags "
                 + $"{MapScenarioWorld.Contents(bag)}";
             if (wantItem && got != 1)
             {
@@ -416,7 +416,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"the shared part of {a[0]} ran {m.C.N} time(s) here (want "
                     + $"{want}); fired {m.T.fired}, owed to our player "
-                    + $"{ScriptedEvents.IsOwed(m.T)}";
+                    + $"{Coop.Current.Scripted.IsOwed(m.T)}";
             if (m.C.N != want)
             {
                 r.Fail(r.Info);

@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace DarkwoodMP.World
 {
-    public static partial class ScriptedEvents
+    internal sealed partial class ScriptedEvents
     {
         // ---- a once-only trigger, for the next player -----------------------
         //
@@ -33,14 +33,14 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Joiner: owed triggers asked for and not answered yet.
         /// </summary>
-        private static readonly HashSet<global::EventTrigger> Asking =
+        private readonly HashSet<global::EventTrigger> _asking =
             new HashSet<global::EventTrigger>();
 
         /// <summary>
         /// Whether our player is still owed its part of this fired once-only
         /// trigger.
         /// </summary>
-        internal static bool IsOwed(global::EventTrigger t)
+        internal bool IsOwed(global::EventTrigger t)
         {
             if (t == null)
             {
@@ -59,7 +59,7 @@ namespace DarkwoodMP.World
         /// Our player had (or is having now) its own part of this trigger (it
         /// ran in our game).
         /// </summary>
-        internal static void HadOurPart(global::EventTrigger t)
+        internal void HadOurPart(global::EventTrigger t)
         {
             CoopSession coop = Coop.Current;
             if (coop != null && t != null && Once(t))
@@ -69,20 +69,20 @@ namespace DarkwoodMP.World
         }
 
         // OwedParts.Owed: never owed with no session.
-        private static bool IsOwedHere(global::EventTrigger t)
+        private bool IsOwedHere(global::EventTrigger t)
         {
             CoopSession coop = Coop.Current;
             return coop != null && coop.Owed.Owed(t);
         }
 
         // OwedParts.HostOwe: false with no session.
-        private static bool HostOwe(global::EventTrigger t)
+        private bool HostOwe(global::EventTrigger t)
         {
             CoopSession coop = Coop.Current;
             return coop != null && coop.Owed.HostOwe(t);
         }
 
-        private static void GiveOwed(ulong peer, global::EventTrigger t)
+        private void GiveOwed(ulong peer, global::EventTrigger t)
         {
             CoopSession coop = Coop.Current;
             if (coop != null)
@@ -128,7 +128,7 @@ namespace DarkwoodMP.World
         ///   the first player's own.
         /// </summary>
         internal static bool LaterStep(GameEvent e) =>
-            StepRules.LaterStep(FactsOf(e, null));
+            StepRules.LaterStep(Parts.FactsOf(e, null));
 
         /// <summary>
         /// Whether a later player would get anything of these events.
@@ -143,20 +143,20 @@ namespace DarkwoodMP.World
         /// use, but its dream (startDream_outside_village_ch2_cellar_01) runs
         /// once, so a second player diving never had it.
         /// </summary>
-        private static bool Once(global::EventTrigger t) =>
+        private bool Once(global::EventTrigger t) =>
             TriggerRules.Once(FactsOf(t));
 
         /// <summary>
         /// Whether a once-only trigger (Once) has had its one run.
         /// </summary>
-        private static bool OnceDone(global::EventTrigger t) =>
+        private bool OnceDone(global::EventTrigger t) =>
             TriggerRules.OnceDone(FactsOf(t));
 
         /// <summary>
         /// What TriggerRules needs to know of a trigger itself (t may be
         /// null: not found).
         /// </summary>
-        internal static TriggerFacts FactsOf(global::EventTrigger t)
+        internal TriggerFacts FactsOf(global::EventTrigger t)
         {
             if (t == null)
             {
@@ -182,7 +182,7 @@ namespace DarkwoodMP.World
         /// Host, in a request's handler: FactsOf(t), and what the host knows
         /// of the requester (from) and the trigger's requirements.
         /// </summary>
-        private static TriggerFacts HostFactsOf(
+        private TriggerFacts HostFactsOf(
             ulong from, global::EventTrigger t, EventTriggers et)
         {
             if (t == null)
@@ -205,7 +205,7 @@ namespace DarkwoodMP.World
         /// The type of the first requirement the host checks (HostChecks)
         /// that isn't met in its world, or null.
         /// </summary>
-        private static string UnmetOf(global::EventTrigger t)
+        private string UnmetOf(global::EventTrigger t)
         {
             foreach (var req in t.eventRequirements)
             {
@@ -223,7 +223,7 @@ namespace DarkwoodMP.World
         /// Another player's once-only trigger fired here (only its shared part
         /// ran): our player is owed its own.
         /// </summary>
-        private static void Owe(global::EventTrigger t, string what)
+        private void Owe(global::EventTrigger t, string what)
         {
             if (t == null || !Once(t) || !HasLaterSteps(t.gameEvents)
                 || (S.IsHost && !HostOwe(t)))
@@ -243,7 +243,7 @@ namespace DarkwoodMP.World
         /// Whether this owed trigger, set off now by our player, is to run as a
         /// later player's part (LaterPart).
         /// </summary>
-        internal static bool LaterFor(
+        internal bool LaterFor(
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type type)
         {
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 Owed = matches && IsOwed(t),
                 Active = s != null && s.Active,
                 Sharing = Coop.Guards.Sharing,
-                Current = Current,
+                Current = Parts.Current,
                 SettingOff = SettingOff,
             });
         }
@@ -266,7 +266,7 @@ namespace DarkwoodMP.World
         /// the later player's steps, at once on the host, after the host's yes
         /// in a joiner's game.
         /// </summary>
-        internal static IEnumerator LaterPart(
+        internal IEnumerator LaterPart(
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type type, string value)
         {
@@ -280,7 +280,7 @@ namespace DarkwoodMP.World
                 Disabled = t.disabled,
                 Met = t.requirementsMet(),
                 Owed = IsOwed(t),
-                Asking = Asking.Contains(t),
+                Asking = _asking.Contains(t),
             }))
             {
                 yield break;
@@ -340,7 +340,7 @@ namespace DarkwoodMP.World
                 Name = "",
             });
 
-            Asking.Add(t);
+            _asking.Add(t);
             if (Debug)
             {
                 Plugin.Log.LogInfo(
@@ -348,9 +348,9 @@ namespace DarkwoodMP.World
                         + "player");
             }
 
-            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
+            _coop.Authority.Request(w, what, (ok, reason, _) =>
             {
-                Asking.Remove(t);
+                _asking.Remove(t);
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
@@ -375,7 +375,7 @@ namespace DarkwoodMP.World
         /// Run the later player's steps of ge here, as GameEvents.fire starts
         /// them (it does nothing once fired).
         /// </summary>
-        private static void RunLater(
+        private void RunLater(
             global::EventTrigger t, GameEvents ge, string what)
         {
             if (!IsOwed(t) || ge == null)
@@ -390,7 +390,7 @@ namespace DarkwoodMP.World
                 $"[world] {what}: it fired for another player, running only "
                     + "our player's steps "
                     + $"({steps})");
-            RunAs(EventPart.LaterPlayer, replaying: false, () =>
+            Parts.RunAs(EventPart.LaterPlayer, replaying: false, () =>
             {
                 foreach (var e in ge.events)
                 {
@@ -424,13 +424,13 @@ namespace DarkwoodMP.World
         /// Host: a joiner asks for its own part of a once-only trigger that
         /// already fired (kind 5).
         /// </summary>
-        private static void OnPlayerPart(
+        private void OnPlayerPart(
             ulong from, EventTriggers et, global::EventTrigger t)
         {
             var verdict = TriggerRules.MayGivePart(HostFactsOf(from, t, et));
             if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(verdict);
+                _coop.Authority.Refuse(verdict);
                 return;
             }
 
@@ -450,7 +450,7 @@ namespace DarkwoodMP.World
         /// the movement check took for a speed hack and put them back. Tell it
         /// where each trip lands, so that jump is taken as the teleport it is.
         /// </summary>
-        private static void ExpectTrips(ulong from, GameEvents ge)
+        private void ExpectTrips(ulong from, GameEvents ge)
         {
             var coop = Coop.Current;
             if (coop == null || ge == null)
@@ -483,7 +483,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// What TripRules needs to know of a step (e may be null).
         /// </summary>
-        private static TripStep TripOf(GameEvent e)
+        private TripStep TripOf(GameEvent e)
         {
             if (e == null)
             {
@@ -507,7 +507,7 @@ namespace DarkwoodMP.World
         /// The object a step's first target resolves to (as GameEvent.fire puts
         /// its targets in order), or null.
         /// </summary>
-        private static GameObject FirstTarget(GameEvent e)
+        private GameObject FirstTarget(GameEvent e)
         {
             if (e.targetGameObjects != null)
             {

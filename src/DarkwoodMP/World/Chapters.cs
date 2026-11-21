@@ -204,7 +204,7 @@ namespace DarkwoodMP.World
             var kind = KindOf(e);
             if (s.IsClient)
             {
-                bool ours = ScriptedEvents.Current
+                bool ours = Plugin.Instance.Host.Parts.Current
                     == EventPart.PlayerAndShared;
                 string text = "";
                 if (kind == StoryKind.Chapter)
@@ -228,7 +228,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (ScriptedEvents.Current != EventPart.All)
+            if (Plugin.Instance.Host.Parts.Current != EventPart.All)
             {
                 return false;
             }

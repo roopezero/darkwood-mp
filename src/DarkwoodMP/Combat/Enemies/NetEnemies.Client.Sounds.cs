@@ -436,7 +436,7 @@ namespace DarkwoodMP.Combat
             {
                 if (ok)
                 {
-                    ScriptedEvents.HitApplied(hit, result);
+                    Coop.Current.Scripted.HitApplied(hit, result);
                 }
             });
 

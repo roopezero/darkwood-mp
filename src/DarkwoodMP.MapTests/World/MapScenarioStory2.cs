@@ -75,7 +75,7 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"{et.name} marked fired as loaded; owed to our player "
-                    + $"{ScriptedEvents.IsOwed(t)}";
+                    + $"{Coop.Current.Scripted.IsOwed(t)}";
         }
 
         /// <summary>

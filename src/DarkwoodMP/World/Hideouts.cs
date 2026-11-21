@@ -117,7 +117,7 @@ namespace DarkwoodMP.World
             {
                 // Our player's doing (our own part of the event): ask the host.
                 // Another player's: the host's result comes.
-                if (ScriptedEvents.Current != EventPart.SharedOnly
+                if (Plugin.Instance.Host.Parts.Current != EventPart.SharedOnly
                     && !Coop.Guards.Replaying)
                 {
                     var w = s.Begin(MsgType.PorterTransport);
@@ -139,7 +139,7 @@ namespace DarkwoodMP.World
 
             // Host: a joiner's event is done when its own PorterTransport
             // comes, for its hideout.
-            if (ScriptedEvents.Current == EventPart.HostAndShared)
+            if (Plugin.Instance.Host.Parts.Current == EventPart.HostAndShared)
             {
                 return false;
             }
