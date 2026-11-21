@@ -77,7 +77,7 @@ class Breaks
     static bool Placing => Enabled && Count > 0 && Something > 1
         && Count < Something + 1
         && (Count < 0
-                || Something - Count < Something * Count + Count * Count);
+            || Something - Count < Something * Count + Count * Count);
 
     static void Run(int box, int vis, int n, int from, int to, int reach)
     {

@@ -240,7 +240,27 @@ sealed class WrapLine
                 level++;
             }
         }
+        // A home line that itself continues a chain sits at that chain's
+        // column already: what a bracket on it holds goes one level in from
+        // it, not two.
+        var lead = Root.FindToken(lines[home].Start + IndentOf(lines[home]));
+        if (level > 0 && StartsContinuation(lead))
+        {
+            level--;
+        }
         return indentOf(home) + Wrap.Step * (1 + level);
+    }
+
+    /// True when token, first on its line, continues an expression: a
+    /// binary operator or a member access's dot.
+    public static bool StartsContinuation(SyntaxToken token)
+    {
+        if (token.Parent is BinaryExpressionSyntax binary)
+        {
+            return binary.OperatorToken == token;
+        }
+        return token.IsKind(SyntaxKind.DotToken)
+            && token.Parent is MemberAccessExpressionSyntax;
     }
 
     /// True when node is the receiver of its parent's member access, call
