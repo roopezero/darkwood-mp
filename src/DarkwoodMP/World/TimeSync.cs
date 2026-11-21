@@ -26,7 +26,6 @@ namespace DarkwoodMP.World
     /// </summary>
     public sealed class TimeSync
     {
-        private const int MaxStepsPerUpdate = 120;
         private readonly Session _session;
         private float _nextSend;
         private bool _clockStopped;
@@ -41,31 +40,23 @@ namespace DarkwoodMP.World
         public void Update()
         {
             var ctl = Singleton<Controller>.Instance;
-            if (_session.IsHost && _session.Peers.Count > 0
-                && WorldShare.InWorld && ctl != null
-                && Time.unscaledTime >= _nextSend)
+            ClockSendFacts send = FactsOf(ctl);
+            if (ClockRules.MaySend(send))
             {
-                _nextSend = Time.unscaledTime + 1f;
+                _nextSend = ClockRules.NextSend(send.Now).Value;
                 var w = _session.Begin(MsgType.TimeSync);
-                var dreams = Singleton<Dreams>.Instance;
-                bool dreaming = dreams != null && dreams.dreaming;
-                int minute;
-                if (dreaming)
-                {
-                    minute = Mathf.Clamp((int)dreams.timeCopy, 0, 1439);
-                }
-                else
-                {
-                    minute = ctl.CurrentTime;
-                }
-
+                int minute = ClockRules.MinuteToSend(send);
                 TimeSyncMessage.Write(
                     w,
                     new HostClock { Day = ctl.day, Minute = minute });
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
 
-            if (NetEnemies.ClientMode && ctl != null)
+            ClockHold hold = ClockRules.OwnClock(
+                NetEnemies.ClientMode,
+                ctl != null,
+                _clockStopped);
+            if (hold == ClockHold.Stop)
             {
                 if (ctl.DoUpdateTime)
                 {
@@ -75,42 +66,102 @@ namespace DarkwoodMP.World
 
                 _clockStopped = true;
             }
-            else if (_clockStopped)
+            else if (hold == ClockHold.Restart)
             {
                 _clockStopped = false;
-                if (ctl != null)
-                {
-                    ctl.DoUpdateTime = true;
-                }
+                ctl.DoUpdateTime = true;
             }
+            else if (hold == ClockHold.Forget)
+            {
+                _clockStopped = false;
+            }
+        }
+
+        /// What the host's clock is, to send it. Dreaming: the clock shows
+        /// the dream's time, and the world's waits in timeCopy.
+        private ClockSendFacts FactsOf(Controller ctl)
+        {
+            var dreams = Singleton<Dreams>.Instance;
+            bool dreaming = dreams != null && dreams.dreaming;
+            float timeCopy = 0f;
+            if (dreaming)
+            {
+                timeCopy = dreams.timeCopy;
+            }
+
+            int minute = 0;
+            if (ctl != null)
+            {
+                minute = ctl.CurrentTime;
+            }
+
+            return new ClockSendFacts
+            {
+                IsHost = _session.IsHost,
+                Peers = _session.Peers.Count,
+                InWorld = WorldShare.InWorld,
+                HasController = ctl != null,
+                Now = new Seconds(Time.unscaledTime),
+                NextSend = new Seconds(_nextSend),
+                Dreaming = dreaming,
+                TimeCopy = timeCopy,
+                Minute = minute,
+            };
+        }
+
+        /// What a client's clock is when the host's comes.
+        private static ClockFacts FactsOf(Controller ctl, HostClock host)
+        {
+            var dreams = Singleton<Dreams>.Instance;
+            bool dreaming = dreams != null
+                && (dreams.dreaming || dreams.switchingDream);
+            int day = 0;
+            int minute = 0;
+            if (ctl != null)
+            {
+                day = ctl.day;
+                minute = ctl.CurrentTime;
+            }
+
+            return new ClockFacts
+            {
+                HasController = ctl != null,
+                InWorld = WorldShare.InWorld,
+                Dreaming = dreaming,
+                HostDay = host.Day,
+                HostMinute = host.Minute,
+                Day = day,
+                Minute = minute,
+            };
         }
 
         private void OnTime(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !NetEnemies.ClientMode)
+            bool fromHost = from == _session.HostId;
+            if (!ClockRules.Takes(fromHost, NetEnemies.ClientMode))
             {
                 return;
             }
 
-            HostClock clock = TimeSyncMessage.Read(r);
-            int day = clock.Day;
-            int time = clock.Minute;
+            HostClock host = TimeSyncMessage.Read(r);
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null || !WorldShare.InWorld)
+            ClockStep step = ClockRules.CatchUp(FactsOf(ctl, host));
+            if (step.Move == ClockMove.Ignore)
             {
                 return;
             }
 
-            var dreams = Singleton<Dreams>.Instance;
-            if (dreams != null && (dreams.dreaming || dreams.switchingDream))
+            if (step.Move == ClockMove.Wait)
             {
                 // The clock shows the dream's time; the world's waits in
                 // timeCopy, and catches up after waking.
                 if (WorldActions.Debug && !_dreamLogged)
                 {
+                    var dreams = Singleton<Dreams>.Instance;
                     Plugin.Log.LogInfo(
-                        $"[world] dreaming: the clock waits (host at day {day} "
-                            + $"{time}, world time kept {dreams.timeCopy:0})");
+                        $"[world] dreaming: the clock waits (host at day "
+                            + $"{host.Day} {host.Minute}, world time kept "
+                            + $"{dreams.timeCopy:0})");
                 }
 
                 _dreamLogged = true;
@@ -118,49 +169,49 @@ namespace DarkwoodMP.World
             }
 
             _dreamLogged = false;
-
-            // Minutes the client is behind, round the clock. (Darkwood counts a
-            // new day at dawn, in startDay, not at midnight, so 1440 * day +
-            // minute isn't monotonic; the minute of the day, round the clock,
-            // is.)
-            int behind = ((time - ctl.CurrentTime) % 1440 + 1440) % 1440;
-            if (behind == 0 && ctl.day == day)
+            if (step.Move == ClockMove.Nothing)
             {
                 return;
             }
 
-            if (behind <= MaxStepsPerUpdate && Mathf.Abs(day - ctl.day) <= 1)
+            if (step.Move == ClockMove.Step)
             {
-                for (int i = 0; i < behind; i++)
-                {
-                    ctl.CurrentTime++;
-                    // wraps at 1440; at dawn startDay() counts the new day
-                    ctl.refreshTime();
-                }
-
-                if (ctl.day != day)
-                {
-                    ctl.setDay(day);
-                }
-
-                if (WorldActions.Debug && behind > 1)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] clock stepped {behind} minutes to day "
-                            + $"{ctl.day} {ctl.CurrentTime}");
-                }
-
+                Step(ctl, host.Day, step.Minutes);
                 return;
             }
 
             // Far off (joining late, the host slept): go straight there.
-            ctl.setDay(day);
-            ctl.CurrentTime = time;
+            ctl.setDay(host.Day);
+            ctl.CurrentTime = host.Minute;
             ctl.refreshTime(afterGameLoad: true);
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[world] clock jumped to day {ctl.day} {ctl.CurrentTime}");
+            }
+        }
+
+        /// Steps the clock a minute at a time, so dusk, night, dawn and
+        /// their events come as they would have.
+        private static void Step(Controller ctl, int day, int behind)
+        {
+            for (int i = 0; i < behind; i++)
+            {
+                ctl.CurrentTime++;
+                // wraps at 1440; at dawn startDay() counts the new day
+                ctl.refreshTime();
+            }
+
+            if (ctl.day != day)
+            {
+                ctl.setDay(day);
+            }
+
+            if (WorldActions.Debug && behind > 1)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] clock stepped {behind} minutes to day "
+                        + $"{ctl.day} {ctl.CurrentTime}");
             }
         }
     }
