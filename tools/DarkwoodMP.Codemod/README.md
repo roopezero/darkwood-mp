@@ -29,18 +29,16 @@ not in the default place.
 | `census [--samples]` | Counts what the pass has to change, per construct and context: statements without braces, one-line blocks and bodies, lines over 80 columns, `?:`, `??`, `??=` and `?.`. Writes nothing. `--samples` adds example lines. |
 | `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted, and they line up with the code around them. |
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, gives an object initializer behind a multi-line argument list one line per member, and runs the Roslyn `Formatter` over every file. |
+| `wrap [--report FILE \| --explain FILE LINE]` | Stage 10. Breaks every line over 80 columns that a width rule can break (see "The wrap stage" below), then lists the lines still over 80 with the reason for each, on the console or in `FILE`. `--explain` prints what one pass plans for one line of a file and writes nothing. |
 | `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
 | `ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. `--list` first prints each changed method with the manifest entry it was credited to. |
 | `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
 | `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
-`Prototype/Wrap.cs` is the prototype's width pass for stage 10. It compiles, but
-no command runs it yet.
-
 ## What stops a command
 
-`census`, `braces`, `layout` and `check` build the compilation the way the real
+`census`, `braces`, `layout`, `wrap` and `check` build the compilation the way the real
 build does: the same files, language version, symbols and references. They stop
 with exit code 2, before anything is written, if:
 
@@ -48,8 +46,8 @@ with exit code 2, before anything is written, if:
 - the sources have a compile error,
 - `UnityEngine.Object` doesn't resolve.
 
-`braces` and `layout` rewrite every file in memory first. They write nothing
-unless all of these hold:
+`braces`, `layout` and `wrap` rewrite every file in memory first. They write
+nothing unless all of these hold:
 
 - the comment words of every file are unchanged,
 - the rewritten sources compile with no errors,
@@ -73,6 +71,17 @@ unless all of these hold:
     statement,
   - a comment at the end of a line of several statements goes on a line of its
     own above the first of them.
+- after `wrap`, every file holds the same code apart from whitespace
+  (`SyntaxFactory.AreEquivalent` with `ignoreChildNode: _ => false`). In a file
+  where it split a string, both trees first have every `"a" + "b"` of two
+  plain literals joined back by their text and the parentheses around a lone
+  literal dropped (`Stages/JoinedStrings.cs`). The layout pass changes nothing
+  in the output (`Format(Wrap(x)) == Wrap(x)`), and a line matching
+  `ushort Version = (\d+);`, which `tools/tests/worldtest.py` reads, is still
+  there. Its comment word check counts any run of one repeated character
+  (`-----`) as the same word and splits words at `<summary>`, `</summary>`,
+  `<remarks>` and `<returns>` tags, because the stage shortens dividers and
+  opens one-line summaries; every other word stays the same, in order.
 
 Writing the files can still fail after every gate has passed: a read-only file
 or folder, a full disk. Each new text goes to a temp file beside its source
@@ -96,6 +105,87 @@ tools/verify-identical.sh HEAD~1 HEAD
 ```
 
 Exit code 0 means every DLL is identical to the byte.
+
+## The wrap stage
+
+`codemod wrap` (`Format/Wrap.cs`) works in passes. Each pass plans at most one
+break for each line over 80 columns, on the tree of the text it was given,
+applies them all, and runs the layout pass over the file, so the stage writes
+only what the `Formatter` keeps. A plan that touches a line another plan of
+the same pass touches waits for the next pass. Passes repeat until one
+changes nothing; after 40 the command stops, because two rules undo each
+other. A line is never touched when it matches `ushort Version = (\d+);`, when
+it starts inside a string or a comment that spans lines, or when it is a
+preprocessor directive or disabled code.
+
+Comments (`Format/WrapComments.cs`):
+
+- A long `//` or `///` line is reflowed with the rest of its paragraph: the
+  lines around it with the same indentation and prefix, up to an empty
+  comment line or a line that isn't prose. The words are filled greedily at
+  80 columns; a run between `<` and `>` (an XML tag such as
+  `<see cref="X"/>`) counts as one word, and a doc line that opens a tag
+  (`<param ...>`) starts a paragraph of its own.
+- Only prose is reflowed. A line that is a list item, a table row (starts or
+  ends with `|`), indented (code, a list's next line, a diagram), a diagram
+  (box characters, three spaces in a row), commented-out code, or a tag
+  alone keeps its line and is reported.
+- A one-line `<summary>text</summary>` (or `remarks`, `returns`) that is too
+  long gets its tags on lines of their own, with the text filled between.
+- A divider of one repeated character is cut to 80 columns, and so are the
+  dashes behind a heading such as `// ---- name -----`, keeping three.
+- A `//` comment behind code goes on a line of its own above the code.
+
+Code (`Format/WrapCode.cs`, `Format/WrapStrings.cs`), tried in this order until
+one finds a break:
+
+1. An object, collection or anonymous initializer on the line that crosses
+   the limit is opened, its braces on lines of their own and one member per
+   line, the form the `Formatter` keeps. No other rule breaks inside an
+   initializer that starts on the line.
+2. A `||`, `&&` or `??` in no bracket opened on the line: a break before the
+   last one that fits, the loosest kind first.
+3. A chain of three or more calls (`a.Where(...).Select(...).ToList()`): a
+   break before the last chained `.` that fits.
+4. An argument, parameter, index or attribute list: the first one on the line
+   that crosses the limit breaks after its `(` and is filled greedily one
+   level in, with `)` behind the last item. A list that closes on a later
+   line breaks after its `(` and moves each later item that starts a line,
+   with its own lines, to that column, unless it holds a block, an
+   initializer or a switch expression.
+5. A list that opened on an earlier line or goes on past this one: a break
+   after the last of its commas that fits, at the column of its items.
+6. Any binary operator, at the least nested level, the loosest first (`||`,
+   `&&`, `??`, `|`, `^`, `&`, `==`/`!=`, the comparisons, `+`/`-`). A line
+   that already starts with the same operator keeps its column, so a long
+   `+` or `&&` chain stays in one column.
+7. A break after the last `=` or `=>` that fits.
+8. A break before the last `.` of a call that fits.
+9. A plain string constant that crosses the limit is split after a space (not
+   one inside an escape) into `"a " + "b"`, which the compiler folds back.
+   It is parenthesised unless its parent keeps the two parts together (an
+   argument, an initializer, a return, `=`, `+`, `??`, `==`, `!=`), so
+   `("a " + "b").Split()` still calls `Split` on the whole string. Verbatim,
+   raw and UTF-8 strings are never split, nor is a string in a pattern or a
+   case label, and an interpolated string is left whole for stage 11.
+10. When nothing fits: a break before the first `||`, `&&` or `??` past the
+    limit, then after an `=` or `=>` past it, so that the next pass works on a
+    shorter line.
+
+What it leaves for a person, all in the report: interpolated strings (stage
+11), comment lists, tables, diagrams and indented lines, commented-out code,
+headings too long for the line, a word longer than the line (a URL or a path),
+verbatim and raw strings, strings with no space to split at in time, and code
+with no place to break (most often a declaration whose type and name alone
+pass 80 columns, or a line indented far to the right). It also can't tell
+whether a comment it moved above its code, or a reflowed comment, still reads
+well there; a person reads the diff.
+
+On the plugin at 590e850 it rewrites 163 of 164 files and leaves 1,474 of
+the 11,803 long lines: 1,102 in interpolated strings, 190 indented comment
+lines, 114 code lines with no place to break, 51 comment list items, 9 long
+headings, 3 strings with no space in time, 3 verbatim or raw strings, one
+line of commented-out code and one long URL.
 
 ## Operator rules
 
@@ -701,6 +791,16 @@ one `line: reason` each. For every case the self test also checks that a
 second run of the rule changes nothing and that the IL diff of the input and
 the output passes with the rule's own manifest.
 
+The wrap stage's cases are in `SelfTest/Wrap/*.golden`: an `=== input`
+section in the layout stage's form, the file the stage must make of it in
+`=== wrap`, and the lines it must leave over 80 columns in `=== report`, one
+`line: reason` each. For every case the self test also checks that a second
+run changes nothing, the layout pass keeps the output, the comment words and
+the code (with split strings joined back) are the same, and the DLL is the
+same to the byte. `01-comments` covers the comment rules and what they leave,
+`02-code` the code rules and the protocol version line, `03-strings` the
+string split and every string it must not split.
+
 To add a case, write the `=== input` section, read the output of
-`selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case), and
+`selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case, `--show wrap/NAME` for a wrap case), and
 only then save it as the expected text.

@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 namespace DarkwoodMP.Codemod.SelfTest;
 
 /// "codemod selftest": runs every golden case in SelfTest/Golden through both
-/// stages. Exits with 1 when any case fails.
+/// stages, then the rule and wrap cases. Exits with 1 when any case fails.
 static class SelfTestCommand
 {
     const string GoldenFolder = "tools/DarkwoodMP.Codemod/SelfTest/Golden";
@@ -66,6 +66,28 @@ static class SelfTestCommand
             $"{ruleFiles.Count - ruleFailed} of {ruleFiles.Count} rule golden "
                 + "cases passed.");
         failed += ruleFailed;
+        var wrapFiles = WrapGoldenCases.Files(RepoPaths.Find().Root);
+        int wrapFailed = 0;
+        foreach (var file in wrapFiles)
+        {
+            var problems = WrapGoldenCases.Failures(file);
+            var name = WrapGoldenCases.NameOf(file);
+            if (problems.Count == 0)
+            {
+                Console.WriteLine("ok    " + name);
+                continue;
+            }
+            wrapFailed++;
+            Console.WriteLine("FAIL  " + name);
+            foreach (var problem in problems)
+            {
+                Console.WriteLine(problem);
+            }
+        }
+        Console.WriteLine(
+            $"{wrapFiles.Count - wrapFailed} of {wrapFiles.Count} wrap golden "
+                + "cases passed.");
+        failed += wrapFailed;
         var accepted = BracedCodeCases.Failures();
         accepted.AddRange(LayoutCheckCases.Failures());
         accepted.AddRange(IlDiffCases.Failures());
@@ -104,6 +126,13 @@ static class SelfTestCommand
         if (ruleCase != null)
         {
             Console.Write(RuleGoldenCases.Show(ruleCase));
+            return 0;
+        }
+        var wrapCase = WrapGoldenCases.Files(RepoPaths.Find().Root)
+            .FirstOrDefault(f => WrapGoldenCases.NameOf(f) == name);
+        if (wrapCase != null)
+        {
+            Console.Write(WrapGoldenCases.Show(wrapCase));
             return 0;
         }
         var golden = GoldenCase.Read(Path.Combine(folder, name + ".golden"));

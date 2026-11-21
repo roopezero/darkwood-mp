@@ -1,0 +1,89 @@
+=== input
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Point
+{
+    public int X;
+    public int Y;
+    public string Name;
+}
+
+class Code
+{
+    public const ushort Version = 29; // the line the Python tests read, never wrapped even when long
+
+    static int Sum(int first, int second, int third, int fourth, int fifth, int sixth) => first + second;
+
+    static void Use(params int[] values)
+    {
+    }
+
+    static bool Test(int alpha, int beta, int gamma)
+    {
+        if (alpha > 0 && beta > 0 && gamma > 0 && alpha + beta > gamma && alpha + gamma > beta)
+        {
+            return true;
+        }
+        var total = Sum(alpha, beta, gamma, alpha * beta, beta * gamma, gamma * alpha) + alpha;
+        var p = new Point { X = alpha, Y = beta, Name = "a name that makes it long" };
+        var words = new List<string>().Where(w => w.Length > 0).Select(w => w.ToUpper()).ToList();
+        int longNamedVariableForTheTest = alpha * beta * gamma * alpha * beta * gamma * 100;
+        Use(Sum(alpha, beta, gamma, alpha, beta, gamma), alpha, beta, gamma,
+            Sum(gamma, beta, alpha, gamma, beta, alpha), total, p.X, words.Count);
+        return total > longNamedVariableForTheTest;
+    }
+}
+=== wrap
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Point
+{
+    public int X;
+    public int Y;
+    public string Name;
+}
+
+class Code
+{
+    public const ushort Version = 29; // the line the Python tests read, never wrapped even when long
+
+    static int Sum(
+        int first, int second, int third, int fourth, int fifth,
+        int sixth) => first + second;
+
+    static void Use(params int[] values)
+    {
+    }
+
+    static bool Test(int alpha, int beta, int gamma)
+    {
+        if (alpha > 0 && beta > 0 && gamma > 0 && alpha + beta > gamma
+            && alpha + gamma > beta)
+        {
+            return true;
+        }
+        var total = Sum(
+            alpha, beta, gamma, alpha * beta, beta * gamma,
+            gamma * alpha) + alpha;
+        var p = new Point
+        {
+            X = alpha,
+            Y = beta,
+            Name = "a name that makes it long"
+        };
+        var words = new List<string>().Where(w => w.Length > 0)
+            .Select(w => w.ToUpper()).ToList();
+        int longNamedVariableForTheTest =
+            alpha * beta * gamma * alpha * beta * gamma * 100;
+        Use(Sum(alpha, beta, gamma, alpha, beta, gamma), alpha, beta, gamma,
+            Sum(gamma, beta, alpha, gamma, beta, alpha), total, p.X,
+            words.Count);
+        return total > longNamedVariableForTheTest;
+    }
+}
+=== report
+14: the protocol version line, read by tools/tests/worldtest.py

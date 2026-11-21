@@ -29,6 +29,57 @@ static class CommentWords
         return words;
     }
 
+    /// The words as the wrap stage compares them: every divider (a word of
+    /// one character repeated three or more times, such as "-----") made the
+    /// same, because the stage shortens dividers to fit the line, and the
+    /// tags it moves onto lines of their own split off (see SplitAtTags).
+    public static List<string> ForWrap(List<string> words)
+    {
+        var same = new List<string>();
+        foreach (var word in SplitAtTags(words))
+        {
+            if (IsDivider(word))
+            {
+                same.Add("<divider " + word[0] + ">");
+            }
+            else
+            {
+                same.Add(word);
+            }
+        }
+        return same;
+    }
+
+    static readonly string[] Tags =
+    {
+        "<summary>", "</summary>", "<remarks>", "</remarks>",
+        "<returns>", "</returns>",
+    };
+
+    /// The words with <summary>, </summary> and the like as words of their
+    /// own, wherever they were glued to a word.
+    static List<string> SplitAtTags(List<string> words)
+    {
+        var split = new List<string>();
+        foreach (var word in words)
+        {
+            var text = word;
+            foreach (var tag in Tags)
+            {
+                text = text.Replace(tag, " " + tag + " ");
+            }
+            split.AddRange(
+                text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+        return split;
+    }
+
+    static bool IsDivider(string word)
+    {
+        return Format.WrapComments.Divider.IsMatch(word)
+            && word.Distinct().Count() == 1;
+    }
+
     public static List<string> Of(string source, CSharpParseOptions parse)
     {
         return Of(CSharpSyntaxTree.ParseText(source, parse).GetRoot());

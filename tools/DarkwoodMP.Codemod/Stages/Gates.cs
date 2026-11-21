@@ -41,8 +41,14 @@ sealed class Gates
             throw new Stop($"{file}: the output has a carriage return.");
         }
         var rootAfter = CSharpSyntaxTree.ParseText(after, parse).GetRoot();
-        var words = CommentWords.FirstDifference(
-            CommentWords.Of(tree.GetRoot()), CommentWords.Of(rootAfter));
+        var wordsBefore = CommentWords.Of(tree.GetRoot());
+        var wordsAfter = CommentWords.Of(rootAfter);
+        if (_stage == "wrap")
+        {
+            wordsBefore = CommentWords.ForWrap(wordsBefore);
+            wordsAfter = CommentWords.ForWrap(wordsAfter);
+        }
+        var words = CommentWords.FirstDifference(wordsBefore, wordsAfter);
         if (words != null)
         {
             throw new Stop($"{file}: comment words changed at {words}");
@@ -58,6 +64,10 @@ sealed class Gates
             {
                 throw new Stop($"{file}: braces changed more than braces: {added}");
             }
+        }
+        if (_stage == "wrap")
+        {
+            CheckWrap(file, tree, after, parse);
         }
         if (_pass(after, parse) != after)
         {
@@ -80,6 +90,40 @@ sealed class Gates
         if (moved != null)
         {
             throw new Stop($"{file}: layout moved a comment: {moved}");
+        }
+    }
+
+    /// The wrap stage changes whitespace and splits plain strings, which the
+    /// compiler folds back. The Formatter must keep what it wrote, and the
+    /// line the Python tests read the protocol version from must still match.
+    void CheckWrap(
+        string file, SyntaxTree tree, string after, CSharpParseOptions parse)
+    {
+        var before = tree.GetRoot();
+        var rootAfter = CSharpSyntaxTree.ParseText(after, parse).GetRoot();
+        bool split = JoinedStrings.Count(rootAfter)
+            != JoinedStrings.Count(before);
+        bool same = SameCode.Of(before, rootAfter);
+        if (split)
+        {
+            same = JoinedStrings.SameCode(before, rootAfter);
+        }
+        if (!same)
+        {
+            throw new Stop(
+                $"{file}: wrap changed more than whitespace and string "
+                    + "splits: " + TokenDiff.First(before, rootAfter));
+        }
+        if (Format.Passes.Layout(after, parse) != after)
+        {
+            throw new Stop($"{file}: the layout pass changes wrap's output.");
+        }
+        var version = Format.Wrap.VersionLine.Match(tree.GetText().ToString());
+        if (version.Success && !after.Contains(version.Value))
+        {
+            throw new Stop(
+                $"{file}: the line '{version.Value}' that "
+                    + "tools/tests/worldtest.py reads is gone.");
         }
     }
 

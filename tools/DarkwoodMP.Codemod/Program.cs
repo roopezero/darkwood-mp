@@ -20,6 +20,10 @@ static class Program
         codemod braces                 stage 1: every statement gets braces
         codemod layout                 stage 2: one-line blocks and bodies,
                                        then the Formatter over every file
+        codemod wrap [--report FILE | --explain FILE LINE]
+                                       stage 10: every line at most 80
+                                       columns; lists the lines left over.
+                                       --explain shows one line's plan
         codemod check [--braces] <dirA> <dirB>
                                        same code, same comment words and every
                                        comment in its place, file by file?
@@ -62,6 +66,8 @@ static class Program
                 return StageCommand.Run("braces", Passes.Braces);
             case "layout":
                 return StageCommand.Run("layout", Passes.Layout);
+            case "wrap":
+                return WrapCommand.Run(rest);
             case "check":
                 return CheckCommand.Run(rest);
             case "rule":
