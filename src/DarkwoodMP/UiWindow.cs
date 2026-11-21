@@ -193,12 +193,12 @@ namespace DarkwoodMP
         /// then the window jumped when the mouse went faster), which is what
         /// made slow drags stick. DragTest puts its made-up mouse here.
         /// </summary>
-        internal static Func<Vector2> TestMouse;
         private static Vector2 MouseNow()
         {
-            if (TestMouse != null)
+            Func<Vector2> test = TestMouse();
+            if (test != null)
             {
-                return TestMouse();
+                return test();
             }
 
             return new Vector2(
@@ -210,7 +210,19 @@ namespace DarkwoodMP
         /// (outside the game's window, say).
         /// </summary>
         private static bool Released() =>
-            TestMouse == null && !Input.GetMouseButton(0);
+            TestMouse() == null && !Input.GetMouseButton(0);
+
+        /// <summary>DragTest's made-up mouse (ModHost.TestMouse).</summary>
+        private static Func<Vector2> TestMouse()
+        {
+            var plugin = Plugin.Instance;
+            if (plugin == null)
+            {
+                return null;
+            }
+
+            return plugin.Host.TestMouse;
+        }
 
         /// <summary>
         /// The grip is handled before the window takes the event, in screen

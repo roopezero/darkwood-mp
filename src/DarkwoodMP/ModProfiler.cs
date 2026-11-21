@@ -12,18 +12,18 @@ namespace DarkwoodMP
     /// game's average frame. Harmony patches inside the game's code aren't
     /// included.
     /// </summary>
-    public static class ModProfiler
+    internal sealed class ModProfiler
     {
-        public static bool Enabled;
-        private static readonly Stopwatch _sw = new Stopwatch();
-        private static readonly Dictionary<string, double> _ms =
+        public bool Enabled;
+        private readonly Stopwatch _sw = new Stopwatch();
+        private readonly Dictionary<string, double> _ms =
             new Dictionary<string, double>();
-        private static readonly Dictionary<string, double> _worst =
+        private readonly Dictionary<string, double> _worst =
             new Dictionary<string, double>();
-        private static double _frameMod, _worstMod, _frames;
-        private static float _frameTime, _since;
+        private double _frameMod, _worstMod, _frames;
+        private float _frameTime, _since;
 
-        public static void Begin()
+        public void Begin()
         {
             if (Enabled)
             {
@@ -34,7 +34,7 @@ namespace DarkwoodMP
         /// <summary>
         /// The time since Begin or the last Mark goes to this part.
         /// </summary>
-        public static void Mark(string part)
+        public void Mark(string part)
         {
             if (!Enabled)
             {
@@ -54,7 +54,7 @@ namespace DarkwoodMP
             _frameMod += ms;
         }
 
-        public static void EndFrame()
+        public void EndFrame()
         {
             if (!Enabled)
             {

@@ -44,8 +44,6 @@ namespace DarkwoodMP
             public bool Free => Profile == null;
         }
 
-        public static StartGameWindow Instance { get; private set; }
-
         private readonly UiWindow _win;
         private readonly List<Slot> _slots = new List<Slot>();
         private List<GameProfile> _profiles;
@@ -67,9 +65,10 @@ namespace DarkwoodMP
 
         public bool Open => _win.Open;
 
+        private static ConfirmDialog Confirm => Plugin.Instance.Host.Confirm;
+
         public StartGameWindow()
         {
-            Instance = this;
             _win = new UiWindow(0x0D41, "Start Game")
             {
                 MinSize = new Vector2(380, 220),
@@ -263,7 +262,7 @@ namespace DarkwoodMP
 
             var e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape
-                && !ConfirmDialog.Open)
+                && !Confirm.Open)
             {
                 e.Use();
                 Close();
@@ -489,7 +488,7 @@ namespace DarkwoodMP
             _name = Ui.Field(c[1], _name, 40);
             if (Ui.Button(c[2], "Delete save..."))
             {
-                ConfirmDialog.Ask(
+                Confirm.Ask(
                     "Delete save",
                     $"Delete the save in slot {s.Id} ({Summary(p)})? It can't "
                         + "be undone.",
@@ -571,7 +570,7 @@ namespace DarkwoodMP
                         text = $" ({label})";
                     }
 
-                    ConfirmDialog.Ask(
+                    Confirm.Ask(
                         "Overwrite save",
                         $"Start the new game in slot {id}{text}? Its save "
                             + $"({Summary(s.Profile)}) is deleted when the "
@@ -1016,7 +1015,7 @@ namespace DarkwoodMP
                 }
             }
 
-            var w = Instance;
+            var w = Plugin.Instance.Host.StartGame;
             MenuList.Click("Start Game");
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo(
@@ -1083,7 +1082,7 @@ namespace DarkwoodMP
                     w.Choose(firstSave);
                     yield return Shot("start-save-host");
                     var s = w.Chosen;
-                    ConfirmDialog.Ask(
+                    Confirm.Ask(
                         "Delete save",
                         $"Delete the save in slot {s.Id} "
                             + $"({Summary(s.Profile)})? It can't be undone.",
@@ -1091,7 +1090,7 @@ namespace DarkwoodMP
                         () => Plugin.Log.LogInfo(
                             "[start window] (not deleted)"));
                     yield return Shot("start-delete");
-                    ConfirmDialog.Cancel();
+                    Confirm.Cancel();
                 }
 
                 w._host = false;

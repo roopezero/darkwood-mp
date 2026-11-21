@@ -167,7 +167,7 @@ namespace DarkwoodMP
 
             yield return new WaitForSecondsRealtime(3f);
             _fails = 0;
-            UiWindow.TestMouse = () => _mouse;
+            Plugin.Instance.Host.TestMouse = () => _mouse;
             _win = new UiWindow(0x0D5F, "Drag test")
             {
                 DefaultRect = () => new Rect(100, 100, 500, 300),
@@ -275,7 +275,7 @@ namespace DarkwoodMP
             }
 
             _win = null;
-            UiWindow.TestMouse = null;
+            Plugin.Instance.Host.TestMouse = null;
             string s;
             if (_fails == 0)
             {

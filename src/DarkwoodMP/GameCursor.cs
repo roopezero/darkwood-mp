@@ -15,15 +15,15 @@ namespace DarkwoodMP
     /// animations; the ones hidden are turned back on when the last window
     /// closes.
     /// </summary>
-    public static class GameCursor
+    internal sealed class GameCursor
     {
-        private static readonly List<Renderer> _hidden = new List<Renderer>();
-        private static bool _active;
+        private readonly List<Renderer> _hidden = new List<Renderer>();
+        private bool _active;
 
-        private static bool HardwareCursor => Singleton<Globals>.Instance
+        private bool HardwareCursor => Singleton<Globals>.Instance
                 != null && Singleton<Globals>.Instance.useHardwareCursor;
 
-        public static void LateUpdate(bool windowsOpen)
+        public void LateUpdate(bool windowsOpen)
         {
             var ui = Singleton<UI>.Instance;
             global::Cursor cursor = null;

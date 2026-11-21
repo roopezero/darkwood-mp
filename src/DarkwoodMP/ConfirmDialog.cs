@@ -12,15 +12,15 @@ namespace DarkwoodMP
     /// Update, outside OnGUI, once the game's buttons are on again. One
     /// question at a time: a new one replaces the one that's open.
     /// </summary>
-    public static class ConfirmDialog
+    internal sealed class ConfirmDialog
     {
-        private static UiWindow _win;
-        private static string _text, _yes, _no;
-        private static Action _onYes, _onNo, _pending;
+        private UiWindow _win;
+        private string _text, _yes, _no;
+        private Action _onYes, _onNo, _pending;
         // realtime when No is chosen by itself (0: never)
-        private static float _deadline;
+        private float _deadline;
 
-        public static bool Open => _win != null && _win.Open;
+        public bool Open => _win != null && _win.Open;
 
         /// <summary>
         /// Ask: <paramref name="title"/> in the title bar,
@@ -32,7 +32,7 @@ namespace DarkwoodMP
         /// that many seconds, and the body counts them down ("keep these
         /// settings?").
         /// </summary>
-        public static void Ask(
+        public void Ask(
             string title, string text, string yes, Action onYes,
             string no = "No", Action onNo = null, float timeout = 0f)
         {
@@ -100,7 +100,7 @@ namespace DarkwoodMP
         /// Close it as if No was chosen (between tests, or when what it asked
         /// about went away).
         /// </summary>
-        public static void Cancel()
+        public void Cancel()
         {
             if (Open)
             {
@@ -111,7 +111,7 @@ namespace DarkwoodMP
         /// <summary>
         /// Choose an answer, as the buttons do (for the tests).
         /// </summary>
-        public static void Choose(bool yes)
+        public void Choose(bool yes)
         {
             if (Open)
             {
@@ -120,9 +120,9 @@ namespace DarkwoodMP
         }
 
         // The close box answers No.
-        private static void Closed() => Answer(false);
+        private void Closed() => Answer(false);
 
-        private static void Answer(bool yes)
+        private void Answer(bool yes)
         {
             Action act;
             if (yes)
@@ -157,7 +157,7 @@ namespace DarkwoodMP
         /// Every frame (Plugin.Update, after the game's buttons are let go):
         /// run the answer's action.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             if (Open && _deadline > 0f
                 && Time.realtimeSinceStartup >= _deadline)
@@ -188,7 +188,7 @@ namespace DarkwoodMP
         /// Draw it (Plugin.OnGUI, with MenuSkin's skin, after every other
         /// window).
         /// </summary>
-        public static void OnGUI()
+        public void OnGUI()
         {
             if (!Open)
             {
@@ -229,7 +229,7 @@ namespace DarkwoodMP
             _win.OnGUI();
         }
 
-        private static void DrawBody(Flow f)
+        private void DrawBody(Flow f)
         {
             f.Space(4);
             if (!string.IsNullOrEmpty(_text))
@@ -251,7 +251,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void DrawButtons(Rect r)
+        private void DrawButtons(Rect r)
         {
             var b = Ui.Split(r, 0, 80, 80);
             if (Ui.Button(b[1], _yes))

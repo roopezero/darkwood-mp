@@ -33,7 +33,7 @@ namespace DarkwoodMP
     /// - Multiplayer: your name (the mod's General.PlayerName) and the hosting
     ///   settings from the mod's config.
     /// </summary>
-    public static class OptionsWindow
+    internal sealed class OptionsWindow
     {
         private enum Tab
         {
@@ -47,15 +47,15 @@ namespace DarkwoodMP
         private static readonly string[] TabNames =
             { "Video", "Audio", "Game", "Controls", "Multiplayer" };
 
-        private static UiWindow _win;
-        private static Tab _tab;
+        private UiWindow _win;
+        private Tab _tab;
 
         // What the tabs show for the settings that wait for Apply; the game's
         // stored values when nothing is changed.
-        private static int _postFx, _light, _vsync, _zoom;
-        private static string _lang;
-        private static float _music, _sound;
-        private static bool _gammaChanged;
+        private int _postFx, _light, _vsync, _zoom;
+        private string _lang;
+        private float _music, _sound;
+        private bool _gammaChanged;
 
         private static readonly string[] LangCodes =
         {
@@ -98,9 +98,11 @@ namespace DarkwoodMP
 
         private const float KeepSeconds = 15f;
 
-        public static bool IsOpen => _win != null && _win.Open;
+        public bool IsOpen => _win != null && _win.Open;
 
-        public static void Init()
+        private ConfirmDialog Confirm => Plugin.Instance.Host.Confirm;
+
+        public OptionsWindow()
         {
             float S() => PixelFont.Scale;
             _win = new UiWindow(0x0D50, "Options")
@@ -119,7 +121,7 @@ namespace DarkwoodMP
             MenuWindows.Draw += OnGUI;
         }
 
-        public static void Open()
+        public void Open()
         {
             Load();
             _rows = null;
@@ -134,7 +136,7 @@ namespace DarkwoodMP
         /// Close as Close does: asks first when something is changed and not
         /// applied.
         /// </summary>
-        public static void RequestClose()
+        public void RequestClose()
         {
             if (!IsOpen)
             {
@@ -143,7 +145,7 @@ namespace DarkwoodMP
 
             if (Pending)
             {
-                ConfirmDialog.Ask("Options", "Apply the changes you made?",
+                Confirm.Ask("Options", "Apply the changes you made?",
                     "Apply", () =>
                 {
                     if (Apply())
@@ -162,7 +164,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void CloseNow()
+        private void CloseNow()
         {
             _win.OnClose = null;
             _win.Close();
@@ -170,7 +172,7 @@ namespace DarkwoodMP
             Closed();
         }
 
-        private static void OnCloseBox()
+        private void OnCloseBox()
         {
             // The close box has already closed it: open again to ask, if
             // there's something to ask about.
@@ -185,7 +187,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Closed()
+        private void Closed()
         {
             StopMapping(null);
             _drop = null;
@@ -200,9 +202,9 @@ namespace DarkwoodMP
 
         // ---- the game's settings --------------------------------------------
 
-        private static MainMenu Menu => Singleton<MainMenu>.Instance;
+        private MainMenu Menu => Singleton<MainMenu>.Instance;
 
-        private static void Load()
+        private void Load()
         {
             _postFx = GameSettings.GetInt("PostFXQuality");
             _light = GameSettings.GetInt("LightQuality");
@@ -214,7 +216,7 @@ namespace DarkwoodMP
         }
 
         /// <summary>Something waits for Apply.</summary>
-        public static bool Pending =>
+        public bool Pending =>
             _postFx != GameSettings.GetInt("PostFXQuality")
                 || _light != GameSettings.GetInt("LightQuality") ||
             _vsync != GameSettings.GetInt("Vsync")
@@ -229,7 +231,7 @@ namespace DarkwoodMP
         /// language asks to quit first (false: not applied yet, the answer does
         /// it).
         /// </summary>
-        public static bool Apply()
+        public bool Apply()
         {
             if (_lang != GameSettings.GetString("LanguageCode"))
             {
@@ -239,7 +241,7 @@ namespace DarkwoodMP
                     lost = " What you did since you last saved is lost.";
                 }
 
-                ConfirmDialog.Ask("Language",
+                Confirm.Ask("Language",
                     "The new language is used from when Darkwood starts again. "
                         + "Apply the changes and quit now?" + lost,
                     "Quit", () =>
@@ -259,7 +261,7 @@ namespace DarkwoodMP
             return true;
         }
 
-        private static void ApplyNow()
+        private void ApplyNow()
         {
             VideoMenu vm = null;
             if (Menu != null)
@@ -357,7 +359,7 @@ namespace DarkwoodMP
         /// Back to the stored values (the volumes heard as they were), as
         /// UI.revertOptionsSettings.
         /// </summary>
-        public static void Revert()
+        public void Revert()
         {
             Load();
             SetVolume(music: true, _music);
@@ -368,7 +370,7 @@ namespace DarkwoodMP
         /// A volume, heard at once (the game's slider, which sets the mixer);
         /// stored on Apply.
         /// </summary>
-        internal static void SetVolume(bool music, float v)
+        internal void SetVolume(bool music, float v)
         {
             AudioMenu am = null;
             if (Menu != null)
@@ -421,7 +423,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void SetGamma(float v)
+        private void SetGamma(float v)
         {
             OptionsSlider g = null;
             if (Menu != null)
@@ -446,7 +448,7 @@ namespace DarkwoodMP
         /// A new resolution or full screen, at once; kept only if the player
         /// says so within 15 seconds (MainMenu.confirmBoxYes/No).
         /// </summary>
-        private static void ChangeScreen(int w, int h, bool full)
+        private void ChangeScreen(int w, int h, bool full)
         {
             int ow = GameSettings.GetInt("ScreenWidth"),
                 oh = GameSettings.GetInt("ScreenHeight");
@@ -524,12 +526,12 @@ namespace DarkwoodMP
             });
         }
 
-        internal static void AskKeep(string text, Action keep, Action back) =>
-            ConfirmDialog.Ask(
+        internal void AskKeep(string text, Action keep, Action back) =>
+            Confirm.Ask(
                 "Keep these settings?", text, "Keep", keep, "Go back", back,
                 timeout: KeepSeconds);
 
-        private static void SetSetting(string key, int v)
+        private void SetSetting(string key, int v)
         {
             GameSettings.SetInt(key, v);
             GameSettings.Save();
@@ -538,7 +540,7 @@ namespace DarkwoodMP
 
         // ---- drawing --------------------------------------------------------
 
-        private static void OnGUI()
+        private void OnGUI()
         {
             if (!IsOpen)
             {
@@ -561,7 +563,7 @@ namespace DarkwoodMP
         /// Every frame (Plugin.Update): Escape, and the key mapping's steps
         /// that wait for a frame.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             if (!IsOpen)
             {
@@ -569,7 +571,7 @@ namespace DarkwoodMP
             }
 
             UpdateMapping();
-            if (Input.GetKeyDown(KeyCode.Escape) && !ConfirmDialog.Open
+            if (Input.GetKeyDown(KeyCode.Escape) && !Confirm.Open
                 && Time.frameCount != _escTaken)
             {
                 if (_drop != null)
@@ -583,10 +585,10 @@ namespace DarkwoodMP
             }
         }
 
-        private static float S => PixelFont.Scale;
+        private float S => PixelFont.Scale;
         private const float LabelW = 150;
 
-        private static void DrawBody(Flow f)
+        private void DrawBody(Flow f)
         {
             var tabs = Ui.Split(
                 new Rect(
@@ -633,7 +635,7 @@ namespace DarkwoodMP
             f.Y = panel.yMax;
         }
 
-        private static void SwitchTab(Tab t)
+        private void SwitchTab(Tab t)
         {
             if (t == _tab)
             {
@@ -645,14 +647,14 @@ namespace DarkwoodMP
             _tab = t;
         }
 
-        private static Rect[] Setting(Flow f, string label)
+        private Rect[] Setting(Flow f, string label)
         {
             var c = f.Row(Ui.RowH, LabelW, 0);
             Ui.Label(c[0], label);
             return c;
         }
 
-        private static void DrawVideo(Flow f)
+        private void DrawVideo(Flow f)
         {
             var res = Core.getResolutions();
             var names = new List<string>();
@@ -750,7 +752,7 @@ namespace DarkwoodMP
                 MenuSkin.Dim);
         }
 
-        private static void DrawAudio(Flow f)
+        private void DrawAudio(Flow f)
         {
             AudioMenu am = null;
             if (Menu != null)
@@ -832,7 +834,7 @@ namespace DarkwoodMP
                 MenuSkin.Dim);
         }
 
-        private static void DrawGame(Flow f)
+        private void DrawGame(Flow f)
         {
             var c = Setting(f, "Language");
             int li = Array.IndexOf(LangCodes, _lang);
@@ -865,7 +867,7 @@ namespace DarkwoodMP
                 MenuSkin.Dim);
         }
 
-        private static void DrawMultiplayer(Flow f)
+        private void DrawMultiplayer(Flow f)
         {
             var cfg = Plugin.Cfg;
             Net.Session session = null;
@@ -974,12 +976,12 @@ namespace DarkwoodMP
                 MenuSkin.Dim);
         }
 
-        private static void DrawFooter(Rect r)
+        private void DrawFooter(Rect r)
         {
             var b = Ui.Split(r, 130, 0, 80, 80, 80);
             if (_tab == Tab.Controls && Ui.Button(b[0], "Reset to defaults"))
             {
-                ConfirmDialog.Ask(
+                Confirm.Ask(
                     "Reset controls",
                     "Put every key and mouse button back as the game has them, "
                         + "and the switches above to theirs?",
@@ -1003,12 +1005,12 @@ namespace DarkwoodMP
             }
         }
 
-        private static string Percent(float v, float min, float max) =>
+        private string Percent(float v, float min, float max) =>
             $"{Mathf.RoundToInt(Mathf.InverseLerp(min, max, v) * 100)}%";
 
         // ---- a slider -------------------------------------------------------
 
-        private static float Slider(Rect r, float v, float min, float max)
+        private float Slider(Rect r, float v, float min, float max)
         {
             int id = GUIUtility.GetControlID(FocusType.Passive);
             var e = Event.current;
@@ -1089,13 +1091,13 @@ namespace DarkwoodMP
             public float Top, Width;
         }
 
-        private static Drop _drop;
+        private Drop _drop;
 
         /// <summary>
         /// A button showing the chosen one of <paramref name="options"/>; a
         /// click opens the list under it.
         /// </summary>
-        private static void Choice(
+        private void Choice(
             Rect r, string key, string[] options, int index, Action<int> pick)
         {
             bool open = _drop != null && _drop.Key == key;
@@ -1155,7 +1157,7 @@ namespace DarkwoodMP
         }
 
         /// <summary>A small triangle pointing down.</summary>
-        private static void DrawArrow(Rect r, Color c)
+        private void DrawArrow(Rect r, Color c)
         {
             if (Event.current.type != EventType.Repaint)
             {
@@ -1179,7 +1181,7 @@ namespace DarkwoodMP
         /// The open list, over everything in the window (UiWindow.Overlay): no
         /// IMGUI controls, events by hand.
         /// </summary>
-        private static void DrawDrop()
+        private void DrawDrop()
         {
             if (_drop == null)
             {
@@ -1349,23 +1351,23 @@ namespace DarkwoodMP
             RW.ControllerType.Joystick
         };
 
-        private static List<Binding> _rows;
-        private static Vector2 _listScroll;
-        private static string _status;
-        private static bool _statusWarn;
+        private List<Binding> _rows;
+        private Vector2 _listScroll;
+        private string _status;
+        private bool _statusWarn;
 
-        private static RW.InputMapper _mapper;
-        private static Binding _mapRow;
-        private static int _mapCol;
-        private static bool _startWhenReleased;
-        private static RW.InputMapper.ConflictFoundEventData _conflict;
-        private static int _escTaken;
+        private RW.InputMapper _mapper;
+        private Binding _mapRow;
+        private int _mapCol;
+        private bool _startWhenReleased;
+        private RW.InputMapper.ConflictFoundEventData _conflict;
+        private int _escTaken;
 
         /// <summary>
         /// The player's map for a kind of controller, as
         /// ControlsMenu.GetControllerMap.
         /// </summary>
-        private static RW.ControllerMap Map(RW.ControllerType type)
+        private RW.ControllerMap Map(RW.ControllerType type)
         {
             RW.Player p = null;
             if (Singleton<InputScript>.Instance != null)
@@ -1393,7 +1395,7 @@ namespace DarkwoodMP
         /// The rows of the game's controls page (ControlsMenu.populate and
         /// CreateUIRow), with the same columns left out.
         /// </summary>
-        private static void BuildRows()
+        private void BuildRows()
         {
             _rows = new List<Binding>();
             if (!RW.ReInput.isReady)
@@ -1443,7 +1445,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void AddRow(
+        private void AddRow(
             RW.ControllerMap[] maps, RW.InputAction a, RW.AxisRange range,
             string label)
         {
@@ -1493,7 +1495,7 @@ namespace DarkwoodMP
             _rows.Add(row);
         }
 
-        private static bool Skipped(int column, string name)
+        private bool Skipped(int column, string name)
         {
             switch (column)
             {
@@ -1514,7 +1516,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void DrawControls(Flow f)
+        private void DrawControls(Flow f)
         {
             if (_rows == null)
             {
@@ -1782,7 +1784,7 @@ namespace DarkwoodMP
         /// Start listening for a new key (once the mouse button that chose it
         /// is let go, so the click isn't taken).
         /// </summary>
-        private static void BeginMapping(Binding b, int col)
+        private void BeginMapping(Binding b, int col)
         {
             _mapRow = b;
             _mapCol = col;
@@ -1797,7 +1799,7 @@ namespace DarkwoodMP
         /// Escape and controller switch leave the keys alone. It's let go a few
         /// frames after the mapping ends, as the game does.
         /// </summary>
-        private static void SetAssigning(bool on)
+        private void SetAssigning(bool on)
         {
             ControlsMenu cm = null;
             if (Menu != null)
@@ -1830,7 +1832,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void EnsureMapper()
+        private void EnsureMapper()
         {
             if (_mapper != null)
             {
@@ -1875,7 +1877,7 @@ namespace DarkwoodMP
             _mapper.StoppedEvent += _ => StopMapping(null, fromMapper: true);
         }
 
-        private static void UpdateMapping()
+        private void UpdateMapping()
         {
             if (_mapRow == null)
             {
@@ -1983,7 +1985,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void OnMapped(RW.InputMapper.InputMappedEventData d)
+        private void OnMapped(RW.InputMapper.InputMappedEventData d)
         {
             string label = "";
             if (_mapRow != null)
@@ -2013,7 +2015,7 @@ namespace DarkwoodMP
             SetAssigning(false);
         }
 
-        private static bool _stopping;
+        private bool _stopping;
 
         /// <summary>
         /// End the mapping. From one of the mapper's own events
@@ -2021,7 +2023,7 @@ namespace DarkwoodMP
         /// told to again: Stop raises the mapper's events, which call this, and
         /// _stopping keeps it from running again inside them.
         /// </summary>
-        private static void StopMapping(
+        private void StopMapping(
             string status, bool warn = false, bool fromMapper = false)
         {
             if (_stopping)
@@ -2063,7 +2065,7 @@ namespace DarkwoodMP
         /// The key maps into the game's store (ControlsMenu.Save), and the
         /// game's own copies of the maps refreshed.
         /// </summary>
-        private static void SaveControls()
+        private void SaveControls()
         {
             RW.Interfaces.IUserDataStore userDataStore =
                 RW.ReInput.userDataStore;
@@ -2084,7 +2086,7 @@ namespace DarkwoodMP
         /// The game's "revert controls": its default key maps, and the switches
         /// as a first start sets them.
         /// </summary>
-        private static void ResetControls()
+        private void ResetControls()
         {
             StopMapping(null);
             ControlsMenu cm = null;
@@ -2129,24 +2131,24 @@ namespace DarkwoodMP
 
         // ---- for the tests --------------------------------------------------
 
-        internal static void TestTab(int t)
+        internal void TestTab(int t)
         {
             SwitchTab((Tab)t);
         }
 
-        internal static string[] TestTabNames => TabNames;
+        internal string[] TestTabNames => TabNames;
         /// <summary>
         /// Open a dropdown as a click on it does ("res", "lang", ...), the next
         /// time it's drawn.
         /// </summary>
-        internal static void TestOpenDrop(string key)
+        internal void TestOpenDrop(string key)
         {
             _testDropKey = key;
         }
 
-        private static string _testDropKey;
-        internal static bool TestMapping => _mapRow != null;
-        internal static string TestMapperStatus
+        private string _testDropKey;
+        internal bool TestMapping => _mapRow != null;
+        internal string TestMapperStatus
         {
             get
             {
@@ -2162,7 +2164,7 @@ namespace DarkwoodMP
         /// <summary>
         /// The keyboard rows (label, key) as the window lists them.
         /// </summary>
-        internal static
+        internal
             List<(string label, string key, int actionId, int range)>
             TestRows()
         {
@@ -2179,14 +2181,14 @@ namespace DarkwoodMP
             return l;
         }
 
-        private static Binding KeyboardRow(string label) =>
+        private Binding KeyboardRow(string label) =>
             _rows.Find(r => r.Label == label && r.Allowed[0]);
 
         /// <summary>
         /// Start listening for a key for the keyboard row with this label, as a
         /// click on it does.
         /// </summary>
-        internal static bool TestBeginMapping(string label)
+        internal bool TestBeginMapping(string label)
         {
             if (_rows == null)
             {
@@ -2203,7 +2205,7 @@ namespace DarkwoodMP
             return true;
         }
 
-        internal static void TestEscape()
+        internal void TestEscape()
         {
             _escTaken = Time.frameCount;
             StopMapping("Cancelled: nothing changed.");
@@ -2214,7 +2216,7 @@ namespace DarkwoodMP
         /// finished mapping does (the element map replaced in the player's
         /// keyboard map, then saved), for a test that can't press a real key.
         /// </summary>
-        internal static bool TestAssign(string label, KeyCode key)
+        internal bool TestAssign(string label, KeyCode key)
         {
             if (_rows == null)
             {
@@ -2255,7 +2257,7 @@ namespace DarkwoodMP
         /// <summary>
         /// The key on the keyboard row with this label (None: none).
         /// </summary>
-        internal static KeyCode TestKeyOf(string label)
+        internal KeyCode TestKeyOf(string label)
         {
             BuildRows();
             var b = KeyboardRow(label);
@@ -2275,7 +2277,7 @@ namespace DarkwoodMP
         }
 
         /// <summary>Some action in the keyboard map has this key.</summary>
-        internal static bool TestKeyUsed(KeyCode key)
+        internal bool TestKeyUsed(KeyCode key)
         {
             var map = Map(RW.ControllerType.Keyboard);
             if (map == null)
@@ -2298,7 +2300,7 @@ namespace DarkwoodMP
         /// The game's stored key maps read back into the player's maps
         /// (ControlsMenu.Load).
         /// </summary>
-        internal static void TestReloadControls()
+        internal void TestReloadControls()
         {
             RW.Interfaces.IUserDataStore userDataStore =
                 RW.ReInput.userDataStore;
