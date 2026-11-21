@@ -1,3 +1,4 @@
+using DarkwoodMP.Net;
 using DarkwoodMP.World;
 
 namespace DarkwoodMP.Tests.World
@@ -27,6 +28,45 @@ namespace DarkwoodMP.Tests.World
                 var sent = AuthorityRules.Fits(length);
 
                 sent.ShouldBe(fits);
+            }
+        }
+
+        public class TakesBare
+        {
+            [Fact]
+            public void Drops_a_request_only_message_on_its_own()
+            {
+                bool handling = false;
+
+                var taken = AuthorityRules.TakesBare(
+                    MsgType.WorldAction,
+                    handling);
+
+                taken.ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Takes_a_request_only_message_inside_a_request()
+            {
+                bool handling = true;
+
+                var taken = AuthorityRules.TakesBare(
+                    MsgType.DragClaim,
+                    handling);
+
+                taken.ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Takes_any_other_message_on_its_own()
+            {
+                bool handling = false;
+
+                var taken = AuthorityRules.TakesBare(
+                    MsgType.PlayerState,
+                    handling);
+
+                taken.ShouldBeTrue();
             }
         }
 

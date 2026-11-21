@@ -680,5 +680,11 @@ namespace DarkwoodMP
 
         /// A long message's pieces hold more bytes than its first piece said.
         PiecesTooLong,
+
+        /// A refusal whose words aren't named yet: the detail is the whole
+        /// text. The handlers of the subsystems that haven't moved to their
+        /// rules refuse with it (Authority.Refuse(string)); it goes once the
+        /// last of them has.
+        Words,
     }
 }

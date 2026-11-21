@@ -451,6 +451,8 @@ namespace DarkwoodMP
                     return "a message of " + detail + " bytes";
                 case Refusal.PiecesTooLong:
                     return "its pieces ran past its length";
+                case Refusal.Words:
+                    return detail;
                 default:
                     return verdict.Reason.ToString();
             }

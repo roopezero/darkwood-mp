@@ -50,7 +50,8 @@ namespace DarkwoodMP.World
         private static uint _seq;
         private static readonly Dictionary<uint, Pending> _pending =
             new Dictionary<uint, Pending>();
-        private static readonly byte[] _copy = new byte[1 << 16];
+        private static readonly byte[] _copy =
+            new byte[AuthorityRules.MaxRequest];
 
         /// <summary>Requests sent and not answered yet.</summary>
         public static int Waiting => _pending.Count;
@@ -79,6 +80,8 @@ namespace DarkwoodMP.World
             var left = new List<Pending>(_pending.Values);
             _pending.Clear();
             _bareWarned.Clear();
+            string ended =
+                Refusals.Text(Verdict.Refuse(Refusal.SessionEnded));
             foreach (var p in left)
             {
                 try
@@ -86,7 +89,7 @@ namespace DarkwoodMP.World
                     Action<bool, string, string> handler = p.Done;
                     if (handler != null)
                     {
-                        handler(false, "the session ended", "");
+                        handler(false, ended, "");
                     }
                 }
                 catch (Exception e)
@@ -99,34 +102,16 @@ namespace DarkwoodMP.World
             InventoryWatch.Reset();
         }
 
-        /// <summary>
-        /// Messages an honest client sends only inside a Request: their
-        /// handlers check them only there (InReach, Refuse), so the host drops
-        /// one that comes from a client on its own.
-        /// </summary>
-        private static readonly HashSet<MsgType> RequestOnly =
-            new HashSet<MsgType>
-        {
-            MsgType.WorldAction, MsgType.EnemyHit, MsgType.NpcHit,
-            MsgType.NpcAttack, MsgType.Burning,
-            MsgType.Construct, MsgType.EventFired, MsgType.StoryRequest,
-            MsgType.EggDestroyed, MsgType.InfectionCleared,
-            MsgType.TraderTrade, MsgType.StorageSort, MsgType.SkillSpend,
-            MsgType.EssenceAdd, MsgType.SkillReset,
-            MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit,
-            MsgType.Fuel, MsgType.DragClaim,
-        };
-
         private static readonly HashSet<(ulong, MsgType)> _bareWarned =
             new HashSet<(ulong, MsgType)>();
 
         /// <summary>
         /// Host (Session.Dispatch): whether a client's message may be handled
-        /// as it came.
+        /// as it came (AuthorityRules.TakesBare).
         /// </summary>
         private static bool AllowBare(ulong from, MsgType type)
         {
-            if (Handling || !RequestOnly.Contains(type))
+            if (AuthorityRules.TakesBare(type, Handling))
             {
                 return true;
             }
@@ -171,7 +156,7 @@ namespace DarkwoodMP.World
             }
 
             int n = message.Length;
-            if (n > _copy.Length)
+            if (!AuthorityRules.Fits(n))
             {
                 Plugin.Log.LogWarning($"Request too long: {what}");
                 return;
@@ -189,8 +174,7 @@ namespace DarkwoodMP.World
             pending.Done = done;
             _pending[seq] = pending;
             var w = s.Begin(MsgType.Request);
-            w.W.Write(seq);
-            w.W.Write(_copy, 0, n);
+            RequestMessage.Write(w, seq, new ArraySegment<byte>(_copy, 0, n));
             s.SendToHost(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -206,30 +190,27 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            uint seq = r.R.ReadUInt32();
-            bool ok = r.R.ReadByte() != 0;
-            string reason = r.ReadStr();
-            string result = r.ReadStr();
-            if (!_pending.TryGetValue(seq, out var p))
+            var reply = VerdictMessage.Read(r);
+            if (!_pending.TryGetValue(reply.Seq, out var p))
             {
                 return;
             }
 
-            _pending.Remove(seq);
-            if (!ok)
+            _pending.Remove(reply.Seq);
+            if (!reply.Ok)
             {
                 RolledBack++;
                 Plugin.Log.LogInfo(
-                    $"[authority] the host refused {p.What}: {reason}; rolled "
-                        + "back");
+                    $"[authority] the host refused {p.What}: {reply.Reason}; "
+                        + "rolled back");
                 InventoryWatch.Undo(p.Inventory);
             }
             else if (WorldActions.Debug)
             {
                 string text = "";
-                if (result.Length > 0)
+                if (reply.Result.Length > 0)
                 {
-                    text = " (" + result + ")";
+                    text = " (" + reply.Result + ")";
                 }
 
                 Plugin.Log.LogInfo(
@@ -242,7 +223,7 @@ namespace DarkwoodMP.World
                 Action<bool, string, string> handler = p.Done;
                 if (handler != null)
                 {
-                    handler(ok, reason, result);
+                    handler(reply.Ok, reply.Reason, reply.Result);
                 }
             }
             catch (Exception e)
@@ -255,43 +236,48 @@ namespace DarkwoodMP.World
         // ---- host -----------------------------------------------------------
 
         /// <summary>
+        /// Host: what has been decided about the request being handled, or
+        /// the last one handled (AuthorityRules).
+        /// </summary>
+        private static RequestAnswer _answer;
+
+        /// <summary>
         /// Host: true while handling a client's Request (its handler may Refuse
         /// it or set a Result).
         /// </summary>
-        public static bool Handling { get; private set; }
+        public static bool Handling => _answer.Handling;
         /// <summary>Host: who sent the request being handled.</summary>
-        public static ulong From { get; private set; }
-        private static string _refusal, _result;
+        public static ulong From => _answer.From;
 
         /// <summary>
         /// Host, in a request's handler: refuse it. Send the client the state
-        /// it should roll back to first.
+        /// it should roll back to first. The first refusal counts.
+        /// </summary>
+        public static void Refuse(Verdict refusal)
+        {
+            _answer = AuthorityRules.Refuse(_answer, refusal);
+        }
+
+        /// <summary>
+        /// Refuse(Verdict) in words not named yet (Refusal.Words), for the
+        /// handlers that don't call their rules yet. Null refuses nothing.
         /// </summary>
         public static void Refuse(string reason)
         {
-            if (Handling && _refusal == null)
+            if (reason != null)
             {
-                _refusal = reason;
+                Refuse(Verdict.Refuse(Refusal.Words, reason));
             }
         }
 
-        public static bool Refused => _refusal != null;
+        public static bool Refused => _answer.Verdict.Refused;
         /// <summary>
         /// Host, in a request's handler: what came of it, for the client
         /// (decided here: damage, a roll).
         /// </summary>
         public static void Result(string result)
         {
-            if (Handling)
-            {
-                string kept = result;
-                if (kept == null)
-                {
-                    kept = "";
-                }
-
-                _result = kept;
-            }
+            _answer = AuthorityRules.Result(_answer, result);
         }
 
         private static void OnRequest(ulong from, PacketReader r)
@@ -302,17 +288,16 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            uint seq = r.R.ReadUInt32();
-            byte[] inner = r.R.ReadBytes(1 << 16);
-            Handling = true;
-            From = from;
-            _refusal = null;
-            _result = "";
+            byte[] inner = RequestMessage.Read(r, out uint seq);
+            _answer = AuthorityRules.Begin(from);
             try
             {
-                if (inner.Length == 0 || (MsgType)inner[0] == MsgType.Request)
+                bool nested = inner.Length > 0
+                    && (MsgType)inner[0] == MsgType.Request;
+                var may = AuthorityRules.MayHandle(inner.Length, nested);
+                if (may.Refused)
                 {
-                    Refuse("empty request");
+                    Refuse(may);
                 }
                 else
                 {
@@ -321,38 +306,17 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Refuse("error: " + e.Message);
+                Refuse(Verdict.Refuse(Refusal.HandlerFailed, e.Message));
             }
             finally
             {
-                Handling = false;
+                _answer = AuthorityRules.End(_answer);
             }
 
             var w = s.Begin(MsgType.Verdict);
-            w.W.Write(seq);
-            int acceptFlag = 0;
-            if (_refusal == null)
-            {
-                acceptFlag = 1;
-            }
-
-            w.W.Write((byte)acceptFlag);
-            string refusal = _refusal;
-            if (refusal == null)
-            {
-                refusal = "";
-            }
-
-            w.WriteStr(refusal);
-            string result = _result;
-            if (result == null)
-            {
-                result = "";
-            }
-
-            w.WriteStr(result);
+            VerdictMessage.Write(w, seq, _answer);
             s.SendTo(from, w, Channel.Control, reliable: true);
-            if (_refusal != null)
+            if (_answer.Verdict.Refused)
             {
                 string what = "nothing";
                 if (inner.Length > 0)
@@ -362,7 +326,7 @@ namespace DarkwoodMP.World
 
                 Plugin.Log.LogInfo(
                     $"[authority] refused {what} from {s.NameOf(from)}: "
-                        + $"{_refusal}");
+                        + $"{Refusals.Text(_answer.Verdict)}");
             }
         }
 
@@ -390,8 +354,16 @@ namespace DarkwoodMP.World
         /// they did there isn't in the host's world, so it can't be checked
         /// here, nor refused.
         /// </summary>
-        public static bool RequesterAway =>
-            Requester is NetPlayerProxy p && p != null && p.Away;
+        public static bool RequesterAway
+        {
+            get
+            {
+                var p = Requester;
+                bool known = p != null;
+                bool away = known && p.Away;
+                return AuthorityRules.RequesterAway(Handling, known, away);
+            }
+        }
 
         /// <summary>
         /// Host, in a request's handler: take back a refusal made while
@@ -407,24 +379,17 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            string refusal = _refusal;
-            if (refusal == null)
+            string refusal = "not here";
+            if (Refused)
             {
-                refusal = "not here";
+                refusal = Refusals.Text(_answer.Verdict);
             }
 
             Plugin.Log.LogInfo(
                 $"[authority] {S.NameOf(From)}'s {what}: they're where the "
                     + $"host doesn't run ({refusal}), so it's theirs alone: "
                     + "accepted, not applied here");
-            _refusal = null;
-            string kept = result;
-            if (kept == null)
-            {
-                kept = "";
-            }
-
-            _result = kept;
+            _answer = AuthorityRules.AcceptAway(_answer, result);
         }
 
         /// <summary>
@@ -433,55 +398,60 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Near(ulong player, Vector3 pos, float reach)
         {
-            if (!NetPlayerProxy.All.TryGetValue(player, out var p) || p == null)
-            {
-                return true;
-            }
-
-            return Flat(p, pos) <= reach;
+            NetPlayerProxy.All.TryGetValue(player, out var p);
+            var facts = FactsOf(p, pos) with { Reach = reach };
+            return ReachRules.Near(facts);
         }
 
         /// <summary>
         /// Host, in a request's handler: refuse it if the requesting player is
-        /// further than reach from pos.
+        /// further than reach from pos. The stand-in follows the puppet, which
+        /// moves on the next frame; the player's newest position (a
+        /// PlayerState flushed just before this request,
+        /// Sync.PlayerSync.FlushNow) has already been through MoveCheck, so
+        /// it's as trustworthy as the stand-in and newer: the nearer counts.
         /// </summary>
         public static bool InReach(Vector3 pos, float reach, string what)
         {
-            var p = Requester;
-            if (p == null)
+            var facts = FactsOf(Requester, pos) with
             {
-                // not known yet (just joined): nothing to check against
-                return true;
-            }
+                Handling = Handling,
+                Reach = reach,
+                What = what,
+            };
 
-            float d = Flat(p, pos);
-            // The stand-in follows the puppet, which moves on the next frame;
-            // the player's newest position (a PlayerState flushed just before
-            // this request, Sync.PlayerSync.FlushNow) has already been through
-            // MoveCheck, so it's as trustworthy as the stand-in and newer.
-            // Either will do.
             var coop = Coop.Current;
-            if (d > reach && coop != null
-                && coop.Moves.TryAccepted(From, out var at))
+            if (coop != null && coop.Moves.TryAccepted(From, out var at))
             {
-                d = Mathf.Min(
-                    d, new Vector2(at.x - pos.x, at.z - pos.z).magnitude);
+                facts = facts with { Checked = true, Accepted = Flat(at) };
             }
 
-            if (d <= reach)
-            {
-                return true;
-            }
-
-            Refuse($"{what} is {d:0} away from them (reach {reach:0})");
-            return false;
+            var verdict = ReachRules.InReach(facts);
+            Refuse(verdict);
+            return !verdict.Refused;
         }
 
-        private static float Flat(NetPlayerProxy p, Vector3 pos)
+        /// <summary>
+        /// What the reach rules know of a player's stand-in and a target: the
+        /// only code that reads the stand-in for them. p may be null (or
+        /// destroyed): no stand-in yet.
+        /// </summary>
+        private static ReachFacts FactsOf(NetPlayerProxy p, Vector3 target)
         {
-            var d = p.transform.position - pos;
-            return new Vector2(d.x, d.z).magnitude;
+            var facts = new ReachFacts { Target = Flat(target) };
+            if (p != null)
+            {
+                facts = facts with
+                {
+                    Known = true,
+                    StandIn = Flat(p.transform.position),
+                };
+            }
+
+            return facts;
         }
+
+        private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
     }
 
     /// <summary>
@@ -516,37 +486,9 @@ namespace DarkwoodMP.World
         public static Dictionary<string, int> TakeChange()
         {
             var now = Count();
-            if (now == null || _base == null)
-            {
-                _base = now;
-                return null;
-            }
-
-            var change = new Dictionary<string, int>();
-            foreach (var kv in now)
-            {
-                _base.TryGetValue(kv.Key, out int was);
-                if (kv.Value != was)
-                {
-                    change[kv.Key] = kv.Value - was;
-                }
-            }
-
-            foreach (var kv in _base)
-            {
-                if (!now.ContainsKey(kv.Key))
-                {
-                    change[kv.Key] = -kv.Value;
-                }
-            }
-
+            var change = InventoryRules.Change(_base, now);
             _base = now;
-            if (change.Count > 0)
-            {
-                return change;
-            }
-
-            return null;
+            return change;
         }
 
         /// <summary>
@@ -625,7 +567,7 @@ namespace DarkwoodMP.World
                     }
 
                     d.TryGetValue(it.type, out int n);
-                    d[it.type] = n + Math.Max(1, it.amount);
+                    d[it.type] = n + InventoryRules.CountOf(it.amount);
                 }
             }
 

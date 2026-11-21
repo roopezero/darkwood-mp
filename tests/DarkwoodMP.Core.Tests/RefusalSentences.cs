@@ -613,6 +613,7 @@ namespace DarkwoodMP.Tests
                     null,
                     "its pieces ran past its length"
                 },
+                { Refusal.Words, "it isn't broken", "it isn't broken" },
             };
     }
 }
