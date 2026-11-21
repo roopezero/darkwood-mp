@@ -35,6 +35,7 @@ tools/run-test.sh, tools/tests/ in-game tests with scripted Python peers
 scripts/darkwood_mp.sh         Linux launcher (Steam's runtime container safe)
 scripts/README-*.txt           DarkwoodMP-README.txt inside the zips (install and play steps)
 pack.sh                        builds dist/DarkwoodMP-win.zip, -win_x86.zip and -linux.zip
+container/                     `box`: Claude Code in a rootless podman container (container/README.md)
 README.md, CHANGELOG.md        for players (see "Docs")
 LICENSE, LICENSES/             MIT for the mod; LICENSES/ has BepInEx's bundled parts' licenses, which pack.sh puts in the zips
 docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps), MULTIPLAYER_* (audits, test guide)
@@ -47,6 +48,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - The mod's version is `<Version>` in `Directory.Build.props`. The plugin prints about 32,000 style warnings until its code has been formatted; that's expected, and `-clp:ErrorsOnly` shows only the errors.
 - The mod's log is `<game>/BepInEx/LogOutput.log`. Unity's is `~/.config/unity3d/Acid Wizard Studio/Darkwood/Player.log`, which also has the game's exceptions. A good start logs `All N patches applied`.
 - To launch it yourself: `cd <game> && setsid timeout 300 ./darkwood_mp.sh --inner <--dwmp-* args> &`. Without `--inner` the script expects Steam's command line. Stop it with `kill $(pgrep -x Darkwood.x86_64)`; never `pkill -f Darkwood`, which matches your own shell.
+- **In the box** (`container/box`), `$DWMP_BOX` says the mode: `dev` has a read-only game folder, builds without deploying and can't run the game (no in-game tests; ask the user to restart the box with `--game`); `game` can, on a copy of the saves.
 - Only **one copy of the game** runs per machine, so "the other player" in tests is always a Python script. Use the `darkwood-test` skill, and run tests after every change to game-facing code.
 
 ## Tests

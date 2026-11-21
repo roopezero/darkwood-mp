@@ -1,0 +1,260 @@
+#!/bin/bash
+# container/box: runs Claude Code (or a shell) on this repo inside a rootless
+# podman container, the "box". The box sees the repo, its own home folder, this
+# project's Claude memory and the game folder, and nothing else of yours.
+# container/README.md says what each mode lets in.
+#
+#   container/box [--game] [-- CLAUDE-ARGS...]   start Claude in the repo
+#   container/box [--game] shell [-- BASH-ARGS...]
+#                                              a shell in the box instead
+#   container/box [--game] remote [-- REMOTE-CONTROL-ARGS...]
+#                                              Remote Control in the background:
+#                                              use the box from claude.ai/code
+#   container/box remote-logs                  follow it (shows its link)
+#   container/box remote-stop                  stop it
+#   container/box build                        build the image again
+#   container/box refresh-saves                copy your saves into the box again
+#   container/box help                         this text
+#
+# --game also gives the box your display, the GPU, the ydotool socket, a
+# writable game folder and a copy of your saves, for the in-game tests.
+#
+# Environment: GAME_DIR (the Darkwood folder), DARKWOOD_BOX_STATE (where the
+# box keeps its home, default ~/.local/share/darkwood-box), BOX_GH_TOKEN_FILE
+# (default ~/.config/darkwood-box/gh-token).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+# shellcheck source=../tools/lib.sh
+. "$ROOT/tools/lib.sh"
+refuse_root
+
+IMAGE=darkwood-box
+REMOTE=darkwood-box-remote # the background container
+STATE="${DARKWOOD_BOX_STATE:-$HOME/.local/share/darkwood-box}"
+BOX_HOME="$STATE/home"
+GAME_DIR="${GAME_DIR:-$HOME/.local/share/Steam/steamapps/common/Darkwood}"
+TOKEN_FILE="${BOX_GH_TOKEN_FILE:-$HOME/.config/darkwood-box/gh-token}"
+DATA_REL=".config/unity3d/Acid Wizard Studio/Darkwood"
+
+die() { echo "box: $*" >&2; exit 1; }
+say() { echo "box: $*" >&2; }
+
+usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; }
+
+command -v podman >/dev/null ||
+  die "podman isn't installed (the box uses rootless podman, not docker)"
+
+# The image is built again when the Containerfile or init.sh changed.
+image_hash() {
+  cat "$ROOT/container/Containerfile" "$ROOT/container/init.sh" |
+    sha256sum | cut -c1-16
+}
+
+build_image() {
+  say "building the image $IMAGE (a few minutes the first time)"
+  podman build --label "box.hash=$(image_hash)" -t "$IMAGE" \
+    -f "$ROOT/container/Containerfile" "$ROOT/container"
+}
+
+ensure_image() {
+  local have
+  have="$(podman image inspect "$IMAGE" \
+    --format '{{index .Labels "box.hash"}}' 2>/dev/null || true)"
+  if [ "$have" != "$(image_hash)" ]; then
+    build_image
+  fi
+}
+
+# copy_saves: the box's own copy of the game's data folder (saves and
+# settings). Your real folder is never mounted into the box.
+copy_saves() {
+  local from="$HOME/$DATA_REL" to="$BOX_HOME/$DATA_REL"
+  [ -d "$from" ] || die "no game data in $from: play the game once first"
+  mkdir -p "$to"
+  safe_rm_in "$to"
+  cp -a "$from/." "$to/"
+  say "copied your saves and game settings into the box ($to)"
+}
+
+game=0
+what=claude
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --game) game=1 ;;
+    shell) what=shell ;;
+    remote) what=remote ;;
+    remote-logs) exec podman logs -f "$REMOTE" ;;
+    remote-stop)
+      podman stop "$REMOTE" >/dev/null && say "stopped"
+      exit 0
+      ;;
+    build) build_image; exit 0 ;;
+    refresh-saves) copy_saves; exit 0 ;;
+    help|-h|--help) usage; exit 0 ;;
+    --) shift; break ;;
+    *) die "unknown argument '$1' (container/box help)" ;;
+  esac
+  shift
+done
+
+ensure_image
+mkdir -p "$BOX_HOME/.claude"
+
+# Claude names a project's folder after its path, with every character that
+# isn't a letter or a digit made a '-'. The repo is at the same path in the
+# box, so the box's Claude uses the same memory folder as yours.
+key="$(printf '%s' "$ROOT" | sed 's/[^A-Za-z0-9]/-/g')"
+MEMORY="$HOME/.claude/projects/$key/memory"
+mkdir -p "$MEMORY"
+
+# Your Claude settings (model, theme, auto-mode rules), copied once; the box
+# keeps its own login.
+if [ -f "$HOME/.claude/settings.json" ] &&
+  ! [ -f "$BOX_HOME/.claude/settings.json" ]; then
+  cp "$HOME/.claude/settings.json" "$BOX_HOME/.claude/settings.json"
+fi
+
+# mount_point DIR: makes DIR inside the box's home as you, before podman
+# would make it as a user of its own that you couldn't write in.
+mount_point() {
+  case "$1" in
+    "$HOME"/*) mkdir -p "$BOX_HOME/${1#"$HOME"/}" ;;
+  esac
+}
+
+if [ -d "$GAME_DIR" ]; then
+  GAME_DIR="$(cd "$GAME_DIR" && pwd -P)"
+else
+  say "no game folder at $GAME_DIR: the plugin won't build (set GAME_DIR)"
+fi
+
+mount_point "$ROOT"
+mount_point "$MEMORY"
+if [ -d "$GAME_DIR" ]; then
+  mount_point "$GAME_DIR"
+fi
+
+args=(
+  run --rm --init
+  --userns=keep-id
+  --security-opt label=disable
+  --hostname darkwood-box
+  -e HOME="$HOME"
+  -e TERM="${TERM:-xterm-256color}"
+  -e BOX_GIT_NAME="$(git -C "$ROOT" config user.name || true)"
+  -e BOX_GIT_EMAIL="$(git -C "$ROOT" config user.email || true)"
+  -v "$BOX_HOME:$HOME"
+  -v "$ROOT:$ROOT"
+  -v "$MEMORY:$MEMORY"
+  -w "$ROOT"
+)
+
+# Remote Control runs in the background with a terminal of its own, so it
+# keeps running when this one closes. Otherwise the box is in this terminal
+# (with a TTY when there is one, so scripts can run it without).
+if [ "$what" = remote ]; then
+  args=("${args[@]/#--rm/--rm=false}" -d -t --name "$REMOTE")
+else
+  args+=(-i)
+  if [ -t 0 ] && [ -t 1 ]; then
+    args+=(-t)
+  fi
+fi
+
+# The repo's own folder when you start the box from inside it.
+case "$PWD/" in
+  "$ROOT"/*) args+=(-w "$PWD") ;;
+esac
+
+token=""
+if [ -f "$TOKEN_FILE" ]; then
+  token="$(tr -d '[:space:]' <"$TOKEN_FILE")"
+elif command -v gh >/dev/null && token="$(gh auth token 2>/dev/null)"; then
+  say "no $TOKEN_FILE: passing your gh login's token, which reaches all" \
+    "your repos (container/README.md says how to make a narrower one)"
+fi
+
+if [ -n "$token" ]; then
+  args+=(-e GH_TOKEN="$token")
+else
+  say "no GitHub token: the box can commit but not push"
+fi
+
+if [ "$game" = 0 ]; then
+  args+=(-e DWMP_BOX=dev -e DeployToGame=false)
+  if [ -d "$GAME_DIR" ]; then
+    args+=(-v "$GAME_DIR:$GAME_DIR:ro")
+  fi
+else
+  [ -d "$GAME_DIR" ] || die "game mode needs the game folder"
+  if ! [ -d "$BOX_HOME/$DATA_REL/1_4Save" ]; then
+    copy_saves
+  fi
+
+  display="${DISPLAY:-:0}"
+  xauth="${XAUTHORITY:-}"
+  if [ -z "$xauth" ]; then
+    xauth="$(ls -t "/run/user/$(id -u)"/xauth_* 2>/dev/null | head -1 || true)"
+  fi
+
+  [ -d /tmp/.X11-unix ] ||
+    die "no X server (/tmp/.X11-unix): log into the desktop first"
+  args+=(
+    -e DWMP_BOX=game
+    -e DISPLAY="$display"
+    -v /tmp/.X11-unix:/tmp/.X11-unix
+    -v "$GAME_DIR:$GAME_DIR"
+    --device /dev/dri
+    --group-add keep-groups
+  )
+  if [ -n "$xauth" ] && [ -f "$xauth" ]; then
+    args+=(-v "$xauth:/tmp/.box-xauth:ro" -e XAUTHORITY=/tmp/.box-xauth)
+  else
+    say "no X authority file found: the game may not open its window"
+  fi
+
+  if [ -S /tmp/.ydotool_socket ]; then
+    args+=(
+      -v /tmp/.ydotool_socket:/tmp/.ydotool_socket
+      -e YDOTOOL_SOCKET=/tmp/.ydotool_socket
+    )
+  fi
+
+  say "game mode: the box can see your screen and move your mouse"
+fi
+
+if [ "$what" = remote ]; then
+  if ! [ -f "$BOX_HOME/.claude/.credentials.json" ]; then
+    die "the box isn't logged in to Claude yet: start container/box once" \
+      "and run /login (Remote Control needs a claude.ai subscription)"
+  fi
+
+  state="$(podman container inspect "$REMOTE" --format '{{.State.Status}}' \
+    2>/dev/null || true)"
+  if [ "$state" = running ]; then
+    die "Remote Control is already running (container/box remote-logs," \
+      "container/box remote-stop)"
+  fi
+
+  # The last run's container is kept so its log can be read; remove it now.
+  if [ -n "$state" ]; then
+    podman rm "$REMOTE" >/dev/null
+  fi
+
+  podman "${args[@]}" "$IMAGE" remote "$@" >/dev/null
+  sleep 5
+  state="$(podman container inspect "$REMOTE" --format '{{.State.Status}}' \
+    2>/dev/null || true)"
+  if [ "$state" != running ]; then
+    podman logs "$REMOTE" >&2 || true
+    die "Remote Control stopped at once; its log is above"
+  fi
+
+  say "Remote Control started: open claude.ai/code (or the Claude app) and" \
+    "pick this box's environment. container/box remote-logs follows it" \
+    "(Ctrl+C leaves it running), container/box remote-stop stops it."
+  exit 0
+fi
+
+exec podman "${args[@]}" "$IMAGE" "$what" "$@"
