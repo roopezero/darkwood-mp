@@ -364,6 +364,14 @@ with the baseline.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.
+  - [x] Part b: `UiRefresh`, `TraderSync`, `ThrowSync`. `UiRefresh` and
+        `TraderSync` are `CoopSession.Ui` and `.Traders`, `ThrowSync` is
+        `.Throws`, and its thrown things' state is `WorldScope.Thrown`
+        (`ThrownHits` keeps its static methods, as `ObjRef` does). The
+        trader files are in `World/Traders`, split by topic; the throw
+        files are in `World/Throws`. `UiRefresh` has no rules and no folder
+        of its own. `Authority.ReachOf` gives a rule the requester's reach
+        facts (the egg step adds the same).
 - [ ] 5.4 Dragging.
 
 Finish with `tools/run-test.sh full`.
