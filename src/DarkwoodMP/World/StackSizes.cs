@@ -41,7 +41,7 @@ namespace DarkwoodMP.World
         private static readonly List<InvItem> Kept = new List<InvItem>();
         private static Session _session;
         // client: the host's size, -1 when not in a session
-        private static int _hostSize = -1;
+        private static int _hostSize = StackRules.NoHostSize;
 
         /// <summary>
         /// The size in use now: the host's in a session as a client, otherwise
@@ -51,12 +51,8 @@ namespace DarkwoodMP.World
         {
             get
             {
-                if (_hostSize >= 0)
-                {
-                    return _hostSize;
-                }
-
-                return Mathf.Max(0, Plugin.Cfg.StackSize.Value);
+                return StackRules.Current(
+                    _hostSize, Plugin.Cfg.StackSize.Value);
             }
         }
 
@@ -74,12 +70,12 @@ namespace DarkwoodMP.World
 
             s.OnSessionEnded += () =>
             {
-                if (_hostSize < 0)
+                if (!StackRules.FollowsHost(_hostSize))
                 {
                     return;
                 }
 
-                _hostSize = -1;
+                _hostSize = StackRules.NoHostSize;
                 Plugin.Log.LogInfo(
                     "[stacks] session over: our own setting again "
                         + $"({Current})");
@@ -88,13 +84,14 @@ namespace DarkwoodMP.World
 
             Plugin.Cfg.StackSize.SettingChanged += (_, __) =>
             {
-                if (_hostSize >= 0)
+                var change = StackRules.OnSettingChanged(_hostSize, s.IsHost);
+                if (change == StackChange.Ignore)
                 {
                     return; // a client keeps the host's until it leaves
                 }
 
                 Apply(Current);
-                if (s.IsHost)
+                if (change == StackChange.ApplyAndSend)
                 {
                     s.Broadcast(
                         Write(Current), Channel.Control, reliable: true);
@@ -119,7 +116,8 @@ namespace DarkwoodMP.World
 
         private static void OnStackSize(ulong from, PacketReader r)
         {
-            if (!_session.IsClient || from != _session.HostId)
+            bool host = from == _session.HostId;
+            if (!StackRules.TakesSize(_session.IsClient, host))
             {
                 return;
             }
@@ -136,22 +134,43 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Fits(InvItemClass it)
         {
+            return StackRules.Fits(SlotOf(it));
+        }
+
+        /// <summary>
+        /// An item in a slot, for StackRules.Fits: the only code that reads
+        /// it. Its prefab is judged on its maxAmount now.
+        /// </summary>
+        private static StackSlotFacts SlotOf(InvItemClass it)
+        {
             if (InvItemClass.isNull(it) || it.baseClass == null)
             {
-                return true;
+                return default;
             }
 
             var b = it.baseClass;
-            if (!Eligible(b, b.maxAmount))
+            return new StackSlotFacts
             {
-                return true;
-            }
-
-            return it.amount <= b.maxAmount;
+                Exists = true,
+                Item = ItemOf(b, b.maxAmount),
+                Amount = it.amount,
+            };
         }
 
-        private static bool Eligible(InvItem b, int orig) =>
-            b.stackable && !b.stacksDurability && !b.hasAmmo && orig > 1;
+        /// <summary>
+        /// An item prefab's flags, judged on stack size max, for
+        /// StackRules.Eligible: the only code that reads them.
+        /// </summary>
+        private static StackItemFacts ItemOf(InvItem b, int max)
+        {
+            return new StackItemFacts
+            {
+                Stackable = b.stackable,
+                StacksFuel = b.stacksDurability,
+                HoldsAmmo = b.hasAmmo,
+                Max = max,
+            };
+        }
 
         /// <summary>
         /// Make every eligible item stack to size (0: the game's own sizes).
@@ -187,21 +206,13 @@ namespace DarkwoodMP.World
                     Original[it] = orig;
                 }
 
-                if (!Eligible(it, orig))
+                if (!StackRules.Eligible(ItemOf(it, orig)))
                 {
                     continue;
                 }
 
                 eligible++;
-                int max;
-                if (size > 0)
-                {
-                    max = Mathf.Max(orig, size);
-                }
-                else
-                {
-                    max = orig;
-                }
+                int max = StackRules.SizeFor(orig, size);
 
                 if (max != orig)
                 {

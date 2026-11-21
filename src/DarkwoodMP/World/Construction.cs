@@ -86,7 +86,7 @@ namespace DarkwoodMP.World
             }
 
             string sound = null;
-            if (option >= 0 && option < c.options.Count)
+            if (ConstructionRules.HasOption(option, c.options.Count))
             {
                 sound = c.options[option].buildCompleteSound;
             }
@@ -172,7 +172,13 @@ namespace DarkwoodMP.World
                     $"[world] got build {obj} option {option}: " + name);
             }
 
-            if (c != null && option >= 0 && option < c.options.Count)
+            int options = 0;
+            if (c != null)
+            {
+                options = c.options.Count;
+            }
+
+            if (ConstructionRules.Builds(c != null, option, options))
             {
                 try
                 {
@@ -209,35 +215,65 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool Allowed(Constructible c, int option)
         {
-            if (c == null)
+            // The reach is Authority's to check: ConstructionRules.MayBuild
+            // decides the rest, with no request it would check reach for.
+            var verdict = ConstructionRules.MayBuild(BuildOf(c, option));
+            if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(
-                    "there's nothing to build there (built already?)");
-                return false;
-            }
-
-            if (option < 0 || option >= c.options.Count)
-            {
-                Coop.Current.Authority.Refuse($"it has no option {option}");
-                return false;
-            }
-
-            var item = c.GetComponent<Item>();
-            bool broken = item != null && item.destroyed;
-            if (c.onlyWhenDestroyed && !broken)
-            {
-                Coop.Current.Authority.Refuse("it isn't broken");
-                return false;
-            }
-
-            if (c.constructed && !broken)
-            {
-                Coop.Current.Authority.Refuse("it's built already");
+                Coop.Current.Authority.Refuse(verdict);
                 return false;
             }
 
             return Coop.Current.Authority.InReach(
-                c.transform.position, WorldActions.Reach, c.name);
+                c.transform.position, ConstructionRules.Reach, c.name);
+        }
+
+        /// <summary>
+        /// What the host knows of the construction a joiner's Construct names:
+        /// the only code that reads it for ConstructionRules.MayBuild. c may
+        /// be null (not found).
+        /// </summary>
+        private static BuildFacts BuildOf(Constructible c, int option)
+        {
+            if (c == null)
+            {
+                return new BuildFacts { Option = option };
+            }
+
+            var item = c.GetComponent<Item>();
+            return new BuildFacts
+            {
+                Found = true,
+                Option = option,
+                Options = c.options.Count,
+                OnlyWhenDestroyed = c.onlyWhenDestroyed,
+                Constructed = c.constructed,
+                Broken = item != null && item.destroyed,
+                Name = c.name,
+            };
+        }
+
+        /// <summary>
+        /// What Constructible.construct does as it starts: the only code that
+        /// reads the game for ConstructionRules.Start.
+        /// </summary>
+        internal static BuildStart StartOf(Constructible c, bool manual)
+        {
+            var facts = new StartFacts
+            {
+                Confirming = Confirming,
+                Sharing = Coop.Guards.Sharing,
+                Manual = manual,
+                TestAsPlayer = WorldActions.TestAsPlayer,
+            };
+
+            var s = Session.Instance;
+            if (s != null && s.IsClient)
+            {
+                facts = facts with { Client = true, Waiting = IsWaiting(c) };
+            }
+
+            return ConstructionRules.Start(facts);
         }
     }
 
@@ -255,66 +291,62 @@ namespace DarkwoodMP.World
             out bool __state)
         {
             __state = false;
-            if (Construction.Confirming || !Coop.Guards.Sharing
-                || !(manual || WorldActions.TestAsPlayer))
+            switch (Construction.StartOf(__instance, manual))
+            {
+                case BuildStart.Game:
+                    return true;
+                case BuildStart.Swallow:
+                    return false;
+                case BuildStart.Host:
+                    __state = true;
+                    Coop.Guards.Depth++;
+                    return true;
+            }
+
+            // A joiner asks first: the ingredients go now (to come back if
+            // refused), the build once the host agrees.
+            if (ConstructionRules.ReadsMenu(forceOption, manual))
+            {
+                // sets chosenOption from the construction menu
+                __instance.getSelectedOption();
+            }
+
+            int option = ConstructionRules.OptionOf(
+                forceOption, __instance.chosenOption);
+            // Not one we can name to the host, or no such option: built
+            // here alone, as the game would.
+            int options = __instance.options.Count;
+            bool named = false;
+            if (ConstructionRules.HasOption(option, options))
+            {
+                named = ObjRef.Of(__instance.gameObject).Valid;
+            }
+
+            if (!ConstructionRules.Asks(option, options, named))
             {
                 return true;
             }
 
-            if (Session.Instance.IsClient)
+            if (manual)
             {
-                // A joiner asks first: the ingredients go now (to come back if
-                // refused), the build once the host agrees.
-                if (Construction.IsWaiting(__instance))
+                var menu = Singleton<ConstructionMenu>.Instance;
+                ConstructionIcon icon = null;
+                if (menu != null)
                 {
-                    return false;
+                    icon = menu.selectedIcon;
                 }
 
-                int option = forceOption;
-                if (option == -1)
+                if (icon != null)
                 {
-                    if (manual)
+                    foreach (var req in icon.requirements)
                     {
-                        // sets chosenOption from the construction menu
-                        __instance.getSelectedOption();
-                    }
-
-                    option = __instance.chosenOption;
-                }
-
-                // Not one we can name to the host, or no such option: built
-                // here alone, as the game would.
-                if (option < 0 || option >= __instance.options.Count
-                    || !ObjRef.Of(__instance.gameObject).Valid)
-                {
-                    return true;
-                }
-
-                if (manual)
-                {
-                    var menu = Singleton<ConstructionMenu>.Instance;
-                    ConstructionIcon icon = null;
-                    if (menu != null)
-                    {
-                        icon = menu.selectedIcon;
-                    }
-
-                    if (icon != null)
-                    {
-                        foreach (var req in icon.requirements)
-                        {
-                            req.removeIngredients();
-                        }
+                        req.removeIngredients();
                     }
                 }
-
-                Construction.Send(__instance, option);
-                return false;
             }
 
-            __state = true;
-            Coop.Guards.Depth++;
-            return true;
+            Construction.Send(__instance, option);
+            return false;
         }
 
         static void Postfix(
@@ -325,16 +357,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int option;
-            if (forceOption != -1)
-            {
-                option = forceOption;
-            }
-            else
-            {
-                option = __instance.chosenOption;
-            }
-
+            int option = ConstructionRules.OptionOf(
+                forceOption, __instance.chosenOption);
             Construction.Send(__instance, option);
         }
     }

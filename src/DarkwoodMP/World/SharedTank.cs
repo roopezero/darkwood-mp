@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dive;
 using HarmonyLib;
 using UnityEngine;
 
@@ -25,10 +26,10 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class SharedTank
     {
-        public const string Item = "oxygenTank_full";
+        public const string Item = SharedTankRules.Item;
         public const string Flag = FlagsSync.ModPrefix + "oxygenTankFilled";
-        public const float Interval = 2f;
-        private static float _next;
+        private static Seconds _next;
+        private static Object _tankPrefab;
 
         /// <summary>
         /// Whether a player has filled the tank in this world.
@@ -38,8 +39,12 @@ namespace DarkwoodMP.World
             get
             {
                 var f = Singleton<Flags>.Instance;
-                return f != null && f.flagsDict.TryGetValue(Flag, out var x)
-                    && x != null && x.isTrue;
+                if (f == null || !f.flagsDict.TryGetValue(Flag, out var x))
+                {
+                    return false;
+                }
+
+                return SharedTankRules.Filled(x != null, x != null && x.isTrue);
             }
         }
 
@@ -49,66 +54,121 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update()
         {
-            if (Time.unscaledTime < _next)
+            var now = new Seconds(Time.unscaledTime);
+            if (!SharedTankRules.Due(now, _next))
             {
                 return;
             }
 
-            _next = Time.unscaledTime + Interval;
-            if (!WorldShare.InWorld || WorldShare.Loading || Core.mainMenu
-                || Filled)
+            _next = SharedTankRules.Next(now);
+            if (!SharedTankRules.Looks(WatchOf()))
             {
                 return;
             }
 
-            var p = Player.Instance;
-            if (p == null || p.Inventory == null)
+            if (!SharedTankRules.Sets(HoldOf(Player.Instance)))
             {
                 return;
             }
 
-            // As the requirement looks: in the bags, or among the journal's
-            // items.
-            bool holds = p.Inventory.getItemInPlayer(
-                Item, 0f, includeAdditionalInventory: true) != null;
-            if (!holds)
-            {
-                UI ui = Singleton<UI>.Instance;
-                if (ui != null)
-                {
-                    Journal journal = ui.journal;
-                    if (journal != null)
-                    {
-                        var items = journal.itemsDict;
-                        if (items != null)
-                        {
-                            holds = items.ContainsKey(Item);
-                        }
-                    }
-                }
-            }
-
-            if (!holds)
-            {
-                return;
-            }
-
-            var f = Singleton<Flags>.Instance;
-            if (f == null)
-            {
-                return;
-            }
-
-            FlagsSync.SetModFlag(f, Flag, true, 0);
+            FlagsSync.SetModFlag(Singleton<Flags>.Instance, Flag, true, 0);
             Plugin.Log.LogInfo(
                 "[world] our player holds a full oxygen tank: every player "
                     + $"can dive in the village cellar now ({Flag})");
         }
 
-        private static Object _tankPrefab;
+        /// <summary>
+        /// What the watcher knows of the game now: the only code that reads
+        /// it for SharedTankRules.Looks.
+        /// </summary>
+        private static WatchFacts WatchOf()
+        {
+            var p = Player.Instance;
+            return new WatchFacts
+            {
+                InWorld = WorldShare.InWorld,
+                Loading = WorldShare.Loading,
+                MainMenu = Core.mainMenu,
+                Filled = Filled,
+                Player = p != null && p.Inventory != null,
+            };
+        }
+
+        /// <summary>
+        /// Whether our player holds the full tank as the requirement looks
+        /// for it: in the bags, or among the journal's items (looked at only
+        /// when it isn't in the bags).
+        /// </summary>
+        private static HoldFacts HoldOf(Player p)
+        {
+            bool bags = p.Inventory.getItemInPlayer(
+                Item, 0f, includeAdditionalInventory: true) != null;
+            bool journal = false;
+            if (!bags)
+            {
+                UI ui = Singleton<UI>.Instance;
+                if (ui != null)
+                {
+                    Journal book = ui.journal;
+                    if (book != null)
+                    {
+                        var items = book.itemsDict;
+                        if (items != null)
+                        {
+                            journal = items.ContainsKey(Item);
+                        }
+                    }
+                }
+            }
+
+            return new HoldFacts
+            {
+                InBags = bags,
+                InJournal = journal,
+                Flags = Singleton<Flags>.Instance != null,
+            };
+        }
+
+        /// <summary>
+        /// The requirement's result once the game has checked it: the only
+        /// code that reads the requirement for SharedTankRules.Requirement.
+        /// The item and the flag are looked at only for a haveItem
+        /// requirement on the tank.
+        /// </summary>
+        internal static bool Requirement(
+            EventTriggerRequirement need, bool result)
+        {
+            return SharedTankRules.Requirement(RequirementOf(need, result));
+        }
+
+        private static RequirementFacts RequirementOf(
+            EventTriggerRequirement need, bool result)
+        {
+            var facts = new RequirementFacts
+            {
+                HaveItem =
+                    need.type == EventTriggerRequirement.Type.playerState
+                        && need.playerState == Player.State.haveItem,
+                ActiveModifier = need.activeModifier,
+                Result = result,
+            };
+
+            if (!facts.HaveItem)
+            {
+                return facts;
+            }
+
+            facts = facts with { Tank = IsTank(need.itemType) };
+            if (!facts.Tank)
+            {
+                return facts;
+            }
+
+            return facts with { Filled = Filled };
+        }
 
         /// <summary>Whether this requirement's item is the full tank.</summary>
-        internal static bool IsTank(Object itemType)
+        private static bool IsTank(Object itemType)
         {
             if (itemType == null)
             {
@@ -126,7 +186,7 @@ namespace DarkwoodMP.World
             }
 
             InvItem item = go.GetComponent<InvItem>();
-            if (item == null || item.type != Item)
+            if (item == null || !SharedTankRules.IsTank(item.type))
             {
                 return false;
             }
@@ -148,18 +208,7 @@ namespace DarkwoodMP.World
         static void Postfix(
             EventTriggerRequirement __instance, ref bool __result)
         {
-            if (__instance.type != EventTriggerRequirement.Type.playerState
-                || __instance.playerState != Player.State.haveItem)
-            {
-                return;
-            }
-
-            if (!SharedTank.IsTank(__instance.itemType) || !SharedTank.Filled)
-            {
-                return;
-            }
-
-            __result = __instance.activeModifier;
+            __result = SharedTank.Requirement(__instance, __result);
         }
     }
 }

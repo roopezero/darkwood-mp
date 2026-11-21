@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Breaking;
 using HarmonyLib;
 using UnityEngine;
 
@@ -63,18 +64,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool HostsHit()
         {
-            if (!NetEnemies.ClientMode)
-            {
-                return false;
-            }
-
-            if (ThrownHits.Depth > 0)
-            {
-                return true;
-            }
-
-            var flame = ThrownHits.CurrentFlame;
-            return flame != null && !EnemyAreaHits.ByLocalPlayer(flame);
+            return BreakRules.HostsHit(HitOf(null));
         }
 
         /// <summary>
@@ -82,10 +72,10 @@ namespace DarkwoodMP.World
         /// something now. The host has no copy of that flame, so the hit it
         /// makes on a door, window or furniture is ours to send, as a request.
         /// </summary>
-        internal static bool OwnFlame() =>
-            NetEnemies.ClientMode && ThrownHits.Depth == 0
-                && ThrownHits.CurrentFlame != null
-                && EnemyAreaHits.ByLocalPlayer(ThrownHits.CurrentFlame);
+        internal static bool OwnFlame()
+        {
+            return BreakRules.OwnFlame(HitOf(null));
+        }
 
         /// <summary>
         /// Client: whether a change to an item happening now is our own
@@ -93,29 +83,41 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool OurPlayers(Transform attacker)
         {
+            switch (BreakRules.OwnerOf(HitOf(attacker)))
+            {
+                case HitOwner.Ours:
+                    return true;
+                case HitOwner.Others:
+                    return false;
+                default:
+                    return WorldActions.ByLocalPlayer();
+            }
+        }
+
+        /// <summary>
+        /// Where a hit happening now comes from: the only code that reads it
+        /// for BreakRules. attacker may be null (none given).
+        /// </summary>
+        private static HitFacts HitOf(Transform attacker)
+        {
+            // The rest matters only on a client: not read on the host.
             if (!NetEnemies.ClientMode)
             {
-                return true;
+                return default;
             }
 
-            if (ThrownHits.Depth > 0)
+            var flame = ThrownHits.CurrentFlame;
+            var p = Player.Instance;
+            return new HitFacts
             {
-                // inside an explosion: the host's copy of it does the damage
-                return false;
-            }
-
-            if (OwnFlame())
-            {
-                return true;
-            }
-
-            if (attacker != null && Player.Instance != null
-                && attacker == Player.Instance.transform)
-            {
-                return true;
-            }
-
-            return WorldActions.ByLocalPlayer();
+                ClientMode = true,
+                ThrownDepth = ThrownHits.Depth,
+                Flame = flame != null,
+                FlameOurs = flame != null
+                    && EnemyAreaHits.ByLocalPlayer(flame),
+                AttackerIsPlayer = attacker != null && p != null
+                    && attacker == p.transform,
+            };
         }
 
         private static readonly
@@ -140,20 +142,194 @@ namespace DarkwoodMP.World
         /// An item's health, whether it's broken, and its shadow's health: a
         /// hit on a shadow-covered item changes only the last.
         /// </summary>
-        public struct ItemState
+        public static ItemState StateOf(Item i)
         {
-            public int Health;
-            public bool Destroyed;
-            public float Shadow;
-            public static ItemState Of(Item i) => new ItemState
+            return new ItemState
             {
                 Health = i.health,
                 Destroyed = i.destroyed,
-                Shadow = ShadowHealth(i)
+                Shadow = ShadowHealth(i),
+            };
+        }
+
+        /// <summary>
+        /// One Item.getHit: who made it, its damage, whether it was a normal
+        /// hit, and the item's state before it.
+        /// </summary>
+        public struct Hit
+        {
+            public Transform Attacker;
+            public int Damage;
+            public bool Normal;
+            public ItemState Before;
+        }
+
+        /// <summary>
+        /// Item.getHit is starting: one call deeper, and its state before.
+        /// False when the hit is the host's to make (an explosion, fire): the
+        /// host's ItemHit is made here instead.
+        /// </summary>
+        internal static bool BeforeHit(Item item, out ItemState before)
+        {
+            Coop.Guards.Depth++;
+            before = StateOf(item);
+            return !HostsHit();
+        }
+
+        /// <summary>
+        /// Item.getHit ran: our player's hit is sent, and what it hits moves
+        /// with it.
+        /// </summary>
+        internal static void AfterHit(Item item, in Hit hit)
+        {
+            bool counts = BreakRules.Counts(
+                Coop.Guards.Outermost(), Coop.Guards.Sharing, item != null);
+            if (!counts)
+            {
+                return;
+            }
+
+            bool ours = OurPlayers(hit.Attacker);
+            // Our player's hit pushes what it hits (a shot's AddForceAtPosition
+            // comes right after it): where it comes to rest is our player's
+            // doing, however far away they stood.
+            if (ours)
+            {
+                DragSync instance = DragSync.Instance;
+                if (instance != null)
+                {
+                    instance.Hit(item);
+                }
+            }
+
+            var facts = new ItemHitFacts
+            {
+                Before = hit.Before,
+                After = StateOf(item),
+                Ours = ours,
+                Destructible = item.destructible,
+                OpensByBreaking = item.destroyToAccessInventory,
+                Name = item.gameObject.name,
             };
 
-            public bool Same(ItemState o) => Health == o.Health
-                && Destroyed == o.Destroyed && Shadow == o.Shadow;
+            switch (BreakRules.HitSend(facts))
+            {
+                case ItemSend.EggDestroyed:
+                    // EggSync's message breaks it in the other games,
+                    // wherever it is there.
+                    EggSync.Send(item);
+                    return;
+                case ItemSend.ItemHit:
+                    WorldActions.Send(
+                        WorldActions.Action.ItemHit,
+                        ObjRef.Of(item.gameObject), item.name, hit.Damage,
+                        item.health, f1: hit.Normal);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Item.die ran: broken by itself (not by a hit, which ItemHit
+        /// carries, breaking it in the other games too).
+        /// </summary>
+        internal static void AfterBreak(Item item, bool was)
+        {
+            if (!BreakRules.Broke(ChangeOf(item, was)) || !OurPlayers(null))
+            {
+                return;
+            }
+
+            ItemSend send = BreakRules.BrokenAs(
+                item.destructible, item.destroyToAccessInventory,
+                item.gameObject.name);
+            if (send == ItemSend.EggDestroyed)
+            {
+                EggSync.Send(item);
+                return;
+            }
+
+            WorldActions.Send(
+                WorldActions.Action.ItemBroken, ObjRef.Of(item.gameObject),
+                item.name);
+        }
+
+        /// <summary>
+        /// Item.setNormalState ran: a broken item repaired
+        /// (Constructible.construct calls it).
+        /// </summary>
+        internal static void AfterRepair(Item item, bool was)
+        {
+            if (!BreakRules.Repaired(ChangeOf(item, was)) || !OurPlayers(null))
+            {
+                return;
+            }
+
+            WorldActions.Send(
+                WorldActions.Action.ItemRepaired, ObjRef.Of(item.gameObject),
+                item.name);
+        }
+
+        /// <summary>
+        /// An Item.die or setNormalState that ran, for BreakRules: the
+        /// guards are asked first (Outermost leaves the call).
+        /// </summary>
+        private static ItemChangeFacts ChangeOf(Item item, bool was)
+        {
+            var facts = new ItemChangeFacts
+            {
+                Outermost = Coop.Guards.Outermost(),
+                Sharing = Coop.Guards.Sharing,
+                Exists = item != null,
+                WasDestroyed = was,
+            };
+
+            if (item == null)
+            {
+                return facts;
+            }
+
+            return facts with { Destroyed = item.destroyed };
+        }
+
+        /// <summary>
+        /// An explosive as it goes off, for BreakRules.Tracks: the only code
+        /// that reads it. ex may be null.
+        /// </summary>
+        internal static ExplodeFacts ExplodeOf(Explodes ex)
+        {
+            if (ex == null)
+            {
+                return default;
+            }
+
+            return new ExplodeFacts
+            {
+                Exists = true,
+                Activated = Activated(ex),
+                Proxy = ex.GetComponent<ProxyItem>() != null,
+                Thrown = ex.GetComponent<ThrownItem>() != null
+                    || ThrownHits.Copies.Contains(ex.gameObject),
+                Character = ex.GetComponent<Character>() != null,
+                ByEnemy = EnemyAreaHits.ByEnemy(
+                    ex.transform, ex.objectThatSpawnedMe),
+            };
+        }
+
+        /// <summary>The guards' depth and replay flag now.</summary>
+        internal static Breaking.Guards GuardsNow()
+        {
+            return new Breaking.Guards
+            {
+                Depth = Coop.Guards.Depth,
+                Replaying = Coop.Guards.Replaying,
+            };
+        }
+
+        /// <summary>Set the guards' depth and replay flag.</summary>
+        internal static void SetGuards(Breaking.Guards set)
+        {
+            Coop.Guards.Depth = set.Depth;
+            Coop.Guards.Replaying = set.Replaying;
         }
     }
 
@@ -166,53 +342,22 @@ namespace DarkwoodMP.World
         /// On a client, a hit the host makes too (an explosion, fire) isn't
         /// made here: the host's ItemHit is.
         /// </summary>
-        static bool Prefix(Item __instance, out BreakSync.ItemState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = BreakSync.ItemState.Of(__instance);
-            return !BreakSync.HostsHit();
-        }
+        static bool Prefix(Item __instance, out ItemState __state) =>
+            BreakSync.BeforeHit(__instance, out __state);
 
         static void Postfix(
             Item __instance, int damage, Transform attackerTransform,
-            bool normalHit, BreakSync.ItemState __state)
+            bool normalHit, ItemState __state)
         {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __instance == null)
+            var hit = new BreakSync.Hit
             {
-                return;
-            }
+                Attacker = attackerTransform,
+                Damage = damage,
+                Normal = normalHit,
+                Before = __state,
+            };
 
-            // Our player's hit pushes what it hits (a shot's AddForceAtPosition
-            // comes right after it): where it comes to rest is our player's
-            // doing, however far away they stood.
-            if (BreakSync.OurPlayers(attackerTransform))
-            {
-                DragSync instance = DragSync.Instance;
-                if (instance != null)
-                {
-                    instance.Hit(__instance);
-                }
-            }
-
-            if (__state.Same(BreakSync.ItemState.Of(__instance))
-                || !BreakSync.OurPlayers(attackerTransform))
-            {
-                return;
-            }
-
-            // An egg this hit broke: EggSync's message breaks it in the other
-            // games, wherever it is there.
-            if (!__state.Destroyed && __instance.destroyed
-                && EggSync.IsEgg(__instance))
-            {
-                EggSync.Send(__instance);
-                return;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.ItemHit, ObjRef.Of(__instance.gameObject),
-                __instance.name, damage, __instance.health, f1: normalHit);
+            BreakSync.AfterHit(__instance, hit);
         }
     }
 
@@ -229,29 +374,8 @@ namespace DarkwoodMP.World
             __state = __instance.destroyed;
         }
 
-        static void Postfix(Item __instance, bool __state)
-        {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __instance == null || __state || !__instance.destroyed)
-            {
-                return;
-            }
-
-            if (!BreakSync.OurPlayers(null))
-            {
-                return;
-            }
-
-            if (EggSync.IsEgg(__instance))
-            {
-                EggSync.Send(__instance);
-                return;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.ItemBroken,
-                ObjRef.Of(__instance.gameObject), __instance.name);
-        }
+        static void Postfix(Item __instance, bool __state) =>
+            BreakSync.AfterBreak(__instance, __state);
     }
 
     /// <summary>
@@ -266,23 +390,8 @@ namespace DarkwoodMP.World
             __state = __instance.destroyed;
         }
 
-        static void Postfix(Item __instance, bool __state)
-        {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __instance == null || !__state || __instance.destroyed)
-            {
-                return;
-            }
-
-            if (!BreakSync.OurPlayers(null))
-            {
-                return;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.ItemRepaired,
-                ObjRef.Of(__instance.gameObject), __instance.name);
-        }
+        static void Postfix(Item __instance, bool __state) =>
+            BreakSync.AfterRepair(__instance, __state);
     }
 
     /// <summary>
@@ -308,54 +417,29 @@ namespace DarkwoodMP.World
             public ObjRef Ref;
             public string Name;
             public bool Host;
-            public int Depth;
-            public bool Replaying;
+            public Breaking.Guards Saved;
         }
 
         static void Prefix(Explodes __instance, out State __state)
         {
             __state = default;
-            if (__instance == null || BreakSync.Activated(__instance)
-                || __instance.GetComponent<ProxyItem>() != null)
+            if (!BreakRules.Tracks(BreakSync.ExplodeOf(__instance)))
             {
                 return;
             }
 
-            if (__instance.GetComponent<ThrownItem>() != null
-                || ThrownHits.Copies.Contains(__instance.gameObject))
-            {
-                return; // ThrowSync's
-            }
-
-            // An enemy (a kamikaze) or what an enemy threw: those happen only
-            // on the host, which sends EnemyExplosion for their sound and flash
-            // (EnemyAreaHits); a client's frozen copy must never go off.
-            if (__instance.GetComponent<Character>() != null
-                || EnemyAreaHits.ByEnemy(
-                    __instance.transform, __instance.objectThatSpawnedMe))
-            {
-                return;
-            }
-
+            bool host = Session.Instance != null && Session.Instance.IsHost;
+            var now = BreakSync.GuardsNow();
             __state = new State
             {
                 Track = true,
                 Ref = ObjRef.Of(__instance.gameObject),
-                Name = __instance.name
+                Name = __instance.name,
+                Host = host,
+                Saved = now,
             };
 
-            if (Session.Instance != null && Session.Instance.IsHost)
-            {
-                __state.Host = true;
-                __state.Depth = Coop.Guards.Depth;
-                __state.Replaying = Coop.Guards.Replaying;
-                Coop.Guards.Depth = 0;
-                Coop.Guards.Replaying = false;
-            }
-            else
-            {
-                Coop.Guards.Depth++;
-            }
+            BreakSync.SetGuards(BreakRules.Enter(host, now));
         }
 
         static void Postfix(Explodes __instance, State __state)
@@ -365,21 +449,29 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (__state.Host)
+            BreakSync.SetGuards(
+                BreakRules.Leave(
+                    __state.Host, __state.Saved, BreakSync.GuardsNow()));
+            var facts = new ExplodeSendFacts
             {
-                Coop.Guards.Depth = __state.Depth + 1;
-                Coop.Guards.Replaying = __state.Replaying;
-            }
+                Outermost = Coop.Guards.Outermost(),
+                Sharing = Coop.Guards.Sharing,
+                Activated = BreakSync.Activated(__instance),
+                ClientMode = NetEnemies.ClientMode,
+            };
 
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || !BreakSync.Activated(__instance))
+            switch (BreakRules.ExplodeOwner(facts))
             {
-                return;
-            }
+                case HitOwner.Others:
+                    return;
+                case HitOwner.AskStack:
+                    if (!WorldActions.ByLocalPlayer())
+                    {
+                        // our player's shot; fire and chains are the host's
+                        return;
+                    }
 
-            if (NetEnemies.ClientMode && !WorldActions.ByLocalPlayer())
-            {
-                return; // our player's shot; fire and chains are the host's
+                    break;
             }
 
             WorldActions.Send(
