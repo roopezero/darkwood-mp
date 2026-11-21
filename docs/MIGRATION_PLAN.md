@@ -236,9 +236,13 @@ Moves `Packets`, `Session`, `INetBackend`, `TcpBackend`, `PortMapper`,
 - [x] Update the path to `Packets.cs` in `tools/tests/worldtest.py`, and in the
       skills that name it.
 - [x] Split `Packets.cs` into one file per main type.
-- [ ] Add `LoopbackBackend` and the unit tests: the handshake and each refusal,
+- [x] Add `LoopbackBackend` and the unit tests: the handshake and each refusal,
       relaying to everyone but the sender, requests and verdicts, packet bytes,
-      goasis's `INFO` format, and TCP framing on localhost.
+      goasis's `INFO` format, and TCP framing on localhost. `Authority` is
+      still in the plugin, so the request tests cover what `Session` does
+      with one (`Handle`, `AllowBare`); the rest comes with Phase 4.
+
+Phase 3 is done apart from its gate's in-game runs and the joins by hand.
 
 **Gate:** `dotnet test`; `tools/run-test.sh net map:core map:join`; then
 `tools/run-test.sh full`; with a test build, a real join on Windows and a Direct
