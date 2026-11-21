@@ -44,17 +44,11 @@ namespace DarkwoodMP.Combat
             var effects = PlayerDamage.GameOf(hit.Effects);
             string weaponJson = hit.Weapon;
             _byIdHost.TryGetValue(id, out var t);
-            if (t == null || t.C == null || !InPlay(t.C))
+            NetPlayerProxy.All.TryGetValue(from, out var proxy);
+            var verdict = EnemyHitRules.MayHit(HitOf(t, proxy));
+            if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse("that enemy isn't alive here");
-                return;
-            }
-
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
-                || proxy == null)
-            {
-                Coop.Current.Authority.Refuse(
-                    "no stand-in for that player yet");
+                Coop.Current.Authority.Refuse(verdict);
                 return;
             }
 
@@ -73,39 +67,19 @@ namespace DarkwoodMP.Combat
             List<InvItemEffect> effects, string weaponJson)
         {
             var weapon = Weapon(weaponJson);
-            bool ranged = weapon != null && weapon.baseClass != null
-                && !weapon.baseClass.isMelee;
-            float reach;
-            if (ranged)
-            {
-                reach = RelevantRange;
-            }
-            else
-            {
-                reach = MeleeReach;
-            }
-
+            var firing = FiringOf(weapon);
+            float reach = EnemyHitRules.ReachFor(firing);
             if (!Coop.Current.Authority.InReach(
                 c.transform.position, reach, c.name))
             {
                 return;
             }
 
-            if (!HitRateOk(from, weapon))
+            var rate = _hitRate.Take(
+                from, new Seconds(Time.realtimeSinceStartup), firing);
+            if (rate.Refused)
             {
-                string type = null;
-                if (weapon != null)
-                {
-                    type = weapon.type;
-                }
-
-                if (type == null)
-                {
-                    type = "bare hands";
-                }
-
-                Coop.Current.Authority.Refuse(
-                    $"more hits a second than {type} makes");
+                Coop.Current.Authority.Refuse(rate);
                 return;
             }
 
@@ -138,7 +112,7 @@ namespace DarkwoodMP.Combat
             // The bar isn't shown for another player's hit (getHit would, as
             // byPlayer); as for any hit not by our player, it shows if we have
             // that enemy selected, and an open bar is refreshed.
-            if (applied > 0f)
+            if (EnemyHitRules.Lands(applied))
             {
                 // A death this hit causes sets off the character's onDeath as
                 // that player's doing (World.ScriptedEvents.Cause). Its
@@ -279,20 +253,25 @@ namespace DarkwoodMP.Combat
                 _weaponEffects[b] = own;
             }
 
-            var left = new List<InvItemEffect>(own);
-            foreach (var e in sent)
+            var picked = EnemyHitRules.Effects(new EffectFacts
             {
-                int i = left.FindIndex(x => x.type == e.type);
-                if (i < 0)
+                Armed = true,
+                Own = own.Select(e => (int)e.type).ToArray(),
+                Sent = sent.Select(e => (int)e.type).ToArray(),
+            });
+
+            for (int i = 0; i < picked.Length; i++)
+            {
+                if (picked[i] < 0)
                 {
                     Plugin.Log.LogInfo(
                         $"[authority] a hit with {weapon.type} came with "
-                            + $"{e.type}, which it doesn't cause; dropped");
+                            + $"{sent[i].type}, which it doesn't cause; "
+                            + "dropped");
                     continue;
                 }
 
-                result.Add(left[i]);
-                left.RemoveAt(i);
+                result.Add(own[picked[i]]);
             }
 
             return result;
@@ -302,25 +281,28 @@ namespace DarkwoodMP.Combat
         /// How far a melee hit reaches (generous: the positions the host has
         /// are a little late).
         /// </summary>
-        private const float MeleeReach = 500f;
-        /// <summary>
-        /// Most hits a player lands in a second with a melee weapon or bare
-        /// hands (or a slow gun).
-        /// </summary>
-        private const int MaxHitsPerSecond = 24;
-        private readonly Dictionary<ulong, Queue<float>> _hitTimes =
-            new Dictionary<ulong, Queue<float>>();
+        private readonly HitRate _hitRate = new HitRate();
 
         /// <summary>
-        /// Most hits a second this weapon lands, by the host's numbers for its
-        /// type: each of a gun's shots sends a hit for every pellet that lands
-        /// (InvItem.projectileAmount, Player.fireWeapon), and it fires at most
-        /// once per fireRate seconds (at most every 0.05 s for automatic and
-        /// burst fire, 0.15 s for one shot a click), with half again as a
-        /// margin for hits that arrive bunched up. Never under
-        /// MaxHitsPerSecond.
+        /// The checks' facts for a hit on a tracked enemy by a player's
+        /// stand-in.
         /// </summary>
-        private static int MaxHits(InvItemClass weapon)
+        private static HitFacts HitOf(Tracked t, NetPlayerProxy proxy)
+        {
+            bool tracked = t != null && t.C != null;
+            return new HitFacts
+            {
+                Tracked = tracked,
+                InPlay = tracked && InPlay(t.C),
+                StandIn = proxy != null,
+            };
+        }
+
+        /// <summary>
+        /// What the hitter's weapon reaches and how fast it hits; bare hands
+        /// for none.
+        /// </summary>
+        private static FiringFacts FiringOf(InvItemClass weapon)
         {
             InvItem b = null;
             if (weapon != null)
@@ -328,55 +310,24 @@ namespace DarkwoodMP.Combat
                 b = weapon.baseClass;
             }
 
-            if (b == null || !b.isFirearm)
+            if (b == null)
             {
-                return MaxHitsPerSecond;
+                return new FiringFacts { Armed = false };
             }
 
-            // A gun fired one shot per click (oneShot, semiAuto) has its
-            // fireRate at 0 or near it: its pump or bolt animation, and the
-            // clicks, keep it under about 7 shots a second.
-            bool auto = b.fireMode == InvItem.FireMode.fullAuto
-                || b.fireMode == InvItem.FireMode.burst;
-            float minRate = 0.15f;
-            if (auto)
+            return new FiringFacts
             {
-                minRate = 0.05f;
-            }
-
-            float shots = 1f / Mathf.Max(b.fireRate, minRate);
-            return Mathf.Max(
-                MaxHitsPerSecond,
-                Mathf.CeilToInt(
-                    Mathf.Max(1, b.projectileAmount) * shots * 1.5f));
+                Armed = true,
+                Melee = b.isMelee,
+                Firearm = b.isFirearm,
+                Auto = b.fireMode == InvItem.FireMode.fullAuto
+                    || b.fireMode == InvItem.FireMode.burst,
+                FireRate = b.fireRate,
+                Projectiles = b.projectileAmount,
+                Type = weapon.type,
+            };
         }
 
-        private bool HitRateOk(ulong from, InvItemClass weapon)
-        {
-            if (!_hitTimes.TryGetValue(from, out var q))
-            {
-                _hitTimes[from] = q = new Queue<float>();
-            }
-
-            float now = Time.realtimeSinceStartup;
-            while (q.Count > 0 && now - q.Peek() > 1f)
-            {
-                q.Dequeue();
-            }
-
-            if (q.Count >= MaxHits(weapon))
-            {
-                return false;
-            }
-
-            q.Enqueue(now);
-            return true;
-        }
-
-        /// <summary>
-        /// The weapon a hit came with (InvItemClass.SaveState as JSON; null for
-        /// bare hands or one we can't read).
-        /// </summary>
         private static InvItemClass Weapon(string json)
         {
             if (string.IsNullOrEmpty(json))

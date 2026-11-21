@@ -276,8 +276,9 @@ namespace DarkwoodMP.Combat
         {
             foreach (var t in _byCharHost.Values)
             {
-                if (t.C != null && t.DiedAt >= 0
-                    && Time.time - t.DiedAt >= seconds)
+                if (t.C != null && EnemyRelayRules.DeadSince(
+                    t.DiedAt >= 0, new Seconds(Time.time - t.DiedAt),
+                    new Seconds(seconds)))
                 {
                     yield return t.C;
                 }

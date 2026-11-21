@@ -38,7 +38,7 @@ namespace DarkwoodMP.Combat
         private void ArmorSync(Tracked t)
         {
             bool now = HasArmor(t.C);
-            if (now == t.Armor)
+            if (!EnemyRelayRules.ArmorChanged(now, t.Armor))
             {
                 return;
             }
