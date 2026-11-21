@@ -466,6 +466,153 @@ namespace DarkwoodMP.Tests
                     null,
                     "The host is playing the ending."
                 },
+                { Refusal.HasItOpen, "Player 2", "Player 2 has it open" },
+                {
+                    Refusal.SlotChanged,
+                    Refusals.Detail("3", "2"),
+                    "slot 3 had just changed, so the 2 changes made with it"
+                        + " are refused too"
+                },
+                { Refusal.JustChanged, null, "it had just changed" },
+                {
+                    Refusal.OverStack,
+                    "12",
+                    "slot 12: more than one stack holds"
+                },
+                {
+                    Refusal.LevelNotNext,
+                    Refusals.Detail("4", "2"),
+                    "level 4 isn't one above 2"
+                },
+                {
+                    Refusal.NotAtWorkbench,
+                    null,
+                    "they aren't at a workbench"
+                },
+                {
+                    Refusal.UnexpectedFile,
+                    "sav.exe",
+                    "the host offered an unexpected file \"sav.exe\""
+                },
+                {
+                    Refusal.UnknownPacking,
+                    "2",
+                    "the host packed its world in a way this version can't"
+                        + " read (2)"
+                },
+                {
+                    Refusal.BadWorldSize,
+                    null,
+                    "the host's world has a bad size"
+                },
+                {
+                    Refusal.UnreadableProfile,
+                    "Unexpected character",
+                    "couldn't read the host's profile: Unexpected character"
+                },
+                {
+                    Refusal.InvalidProfile,
+                    null,
+                    "the host's profile is invalid"
+                },
+                { Refusal.BadPiece, null, "bad piece from the host" },
+                { Refusal.ShortPiece, null, "a short piece from the host" },
+                {
+                    Refusal.HostStoppedSending,
+                    Refusals.Detail("512", "9216"),
+                    "the host stopped sending its world (512 of 9216 KiB"
+                        + " came)"
+                },
+                { Refusal.PathEmpty, null, "the path is empty" },
+                { Refusal.PathNotAbsolute, null, "the path isn't absolute" },
+                {
+                    Refusal.PathInvalid,
+                    "Illegal characters",
+                    "the path isn't valid (Illegal characters)"
+                },
+                { Refusal.FilesystemRoot, null, "it's a filesystem root" },
+                {
+                    Refusal.HomeFolder,
+                    null,
+                    "it's your home folder or holds it"
+                },
+                {
+                    Refusal.OutsideModFolders,
+                    null,
+                    "it isn't inside the mod's cache or save-redirect folder"
+                },
+                {
+                    Refusal.NotASaveSlot,
+                    "100",
+                    "slot 100 isn't a save slot"
+                },
+                {
+                    Refusal.NotPlayersFolder,
+                    null,
+                    "it isn't prof<N>/darkwoodmp_players in the save folder"
+                },
+                { Refusal.WaitForMainMenu, null, "Wait for the main menu." },
+                { Refusal.NoSaveInSlot, null, "No save in that slot." },
+                {
+                    Refusal.NeedsProfilesScreen,
+                    null,
+                    "This save needs the game's profiles screen."
+                },
+                {
+                    Refusal.ChooseOverwrite,
+                    null,
+                    "Choose a save to overwrite."
+                },
+                {
+                    Refusal.NameLocked,
+                    null,
+                    "You can change it when you're in no game."
+                },
+                {
+                    Refusal.LoadWorldToHost,
+                    null,
+                    "To host, load your world first (Start Game), then press"
+                        + " Esc and choose Multiplayer in the pause menu."
+                },
+                {
+                    Refusal.HostsCopy,
+                    null,
+                    "This is your copy of another host's world. To host, go"
+                        + " back to the main menu and load your own world."
+                },
+                {
+                    Refusal.EpilogueBegun,
+                    null,
+                    "This world is in the epilogue, which can't be shared once"
+                        + " it has begun. Host from a save before the end of"
+                        + " the game."
+                },
+                {
+                    Refusal.OtherModVersion,
+                    "0.28.0",
+                    "Host runs a different DarkwoodMP version (0.28.0)"
+                },
+                { Refusal.NotInLobby, null, "not in lobby" },
+                {
+                    Refusal.TooLongForSteam,
+                    Refusals.Detail("640", "SaveData"),
+                    "an unreliable SaveData of 640 KiB is too long for Steam"
+                },
+                {
+                    Refusal.QueueFull,
+                    "65536",
+                    "65536 KiB already waiting for room"
+                },
+                {
+                    Refusal.BadMessageLength,
+                    "-1",
+                    "a message of -1 bytes"
+                },
+                {
+                    Refusal.PiecesTooLong,
+                    null,
+                    "its pieces ran past its length"
+                },
             };
     }
 }

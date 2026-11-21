@@ -532,5 +532,153 @@ namespace DarkwoodMP
 
         /// A player joined while the host plays the ending.
         PlayingEnding,
+
+        // Containers' slots and the workbench's level: the host logs these
+        // and sends each change back (ContainerSlotRefused), or for the
+        // level only logs them.
+
+        /// Another player has the container open. The detail is their name.
+        HasItOpen,
+
+        /// A slot of a batch of changes had changed on the host. The detail
+        /// is Refusals.Detail(slot, changes): the slot's number and how many
+        /// changes the batch holds.
+        SlotChanged,
+
+        /// The one slot a client changed had changed on the host.
+        JustChanged,
+
+        /// A slot would hold more than one stack does. The detail is the
+        /// slot's number.
+        OverStack,
+
+        /// The workbench level a client raised isn't one above the host's.
+        /// The detail is Refusals.Detail(level, current).
+        LevelNotNext,
+
+        /// The player who raised the workbench level isn't near a workbench.
+        NotAtWorkbench,
+
+        // Getting the host's world: the client gives up on the download
+        // with one of these, in "Couldn't get the host's world: {text}".
+
+        /// The offer names a file the world doesn't have, or one twice. The
+        /// detail is the file's name.
+        UnexpectedFile,
+
+        /// The world was packed in a way this version can't unpack. The
+        /// detail is the packing's number.
+        UnknownPacking,
+
+        /// The offer's sizes don't add up, or are 0 or too large.
+        BadWorldSize,
+
+        /// The host's profile isn't JSON the game reads. The detail is the
+        /// reader's message.
+        UnreadableProfile,
+
+        /// The host's profile is missing, or its slot isn't 1 to 99.
+        InvalidProfile,
+
+        /// A piece is empty, not on a piece's boundary, or past the end.
+        BadPiece,
+
+        /// A piece holds fewer bytes than it says.
+        ShortPiece,
+
+        /// No piece came after too many stalls. The detail is
+        /// Refusals.Detail(got, total), both in KiB.
+        HostStoppedSending,
+
+        // Deleting a folder: the mod refuses to, logging
+        // "Not deleting {path}: {text}".
+
+        /// The path is null, empty or only spaces.
+        PathEmpty,
+
+        /// The path isn't rooted.
+        PathNotAbsolute,
+
+        /// The full path can't be made. The detail is the error's message.
+        PathInvalid,
+
+        /// The path is a filesystem's root.
+        FilesystemRoot,
+
+        /// The path is the user's home folder or holds it.
+        HomeFolder,
+
+        /// The path isn't strictly inside the mod's cache or the save
+        /// redirect's folder.
+        OutsideModFolders,
+
+        /// The players' folder of a slot outside 1 to 99. The detail is the
+        /// slot.
+        NotASaveSlot,
+
+        /// The players' folder isn't exactly prof<N>/darkwoodmp_players in the
+        /// save folder.
+        NotPlayersFolder,
+
+        // The menus: shown in the player's own window, never sent.
+
+        /// Start Game, before the main menu is ready for it
+        /// (WorldShare.MainMenuReady).
+        WaitForMainMenu,
+
+        /// Start Game: the chosen slot holds no save.
+        NoSaveInSlot,
+
+        /// Start Game: the chosen save is from an older version of the
+        /// game, which only the game's profiles screen opens.
+        NeedsProfilesScreen,
+
+        /// Start Game: a new game with every slot in use, and none chosen
+        /// to overwrite.
+        ChooseOverwrite,
+
+        /// Options: the player's name can't change while they're in a
+        /// game.
+        NameLocked,
+
+        // Hosting: why a player can't host the world they're in.
+
+        /// The player isn't in a world: hosting starts from inside one.
+        LoadWorldToHost,
+
+        /// The world is the player's copy of another host's world, which they
+        /// are still in after leaving that host's game.
+        HostsCopy,
+
+        /// The world is in the epilogue, which can't be shared once it has
+        /// begun.
+        EpilogueBegun,
+
+        // Steam: lobbies, P2P sessions, and messages too long or too many.
+
+        /// The Steam lobby's host runs another protocol version. The detail is
+        /// the lobby's "darkwoodmp" value (the host's mod version), which the
+        /// shell reads after leaving the lobby, so it can be empty.
+        OtherModVersion,
+
+        /// A P2P session request from someone who isn't the lobby's host (for
+        /// a client) or isn't a lobby member (for a host).
+        NotInLobby,
+
+        /// An unreliable message longer than Steam takes in one. The detail is
+        /// Refusals.Detail(KiB, type), the length in whole KiB and then the
+        /// message type's name.
+        TooLongForSteam,
+
+        /// Too much already waits for room in Steam's queue for that peer. The
+        /// detail is how much, in whole KiB.
+        QueueFull,
+
+        /// A long message's first piece gives a length out of range. The
+        /// detail is that length, -1 for a piece shorter than its header.
+        BadMessageLength,
+
+        /// A long message's pieces hold more bytes than its first piece said.
+        PiecesTooLong,
     }
 }

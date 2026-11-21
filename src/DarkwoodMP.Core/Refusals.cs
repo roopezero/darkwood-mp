@@ -357,6 +357,100 @@ namespace DarkwoodMP
                         + " they've loaded their world.";
                 case Refusal.PlayingEnding:
                     return "The host is playing the ending.";
+                case Refusal.HasItOpen:
+                    return detail + " has it open";
+                case Refusal.SlotChanged:
+                    return Fill(
+                        "slot {0} had just changed, so the {1} changes made"
+                        + " with it are refused too", detail, 2);
+                case Refusal.JustChanged:
+                    return "it had just changed";
+                case Refusal.OverStack:
+                    return "slot " + detail + ": more than one stack holds";
+                case Refusal.LevelNotNext:
+                    return Fill(
+                        "level {0} isn't one above {1}", detail, 2);
+                case Refusal.NotAtWorkbench:
+                    return "they aren't at a workbench";
+                case Refusal.UnexpectedFile:
+                    return "the host offered an unexpected file \""
+                        + detail + "\"";
+                case Refusal.UnknownPacking:
+                    return "the host packed its world in a way this version"
+                        + " can't read (" + detail + ")";
+                case Refusal.BadWorldSize:
+                    return "the host's world has a bad size";
+                case Refusal.UnreadableProfile:
+                    return "couldn't read the host's profile: " + detail;
+                case Refusal.InvalidProfile:
+                    return "the host's profile is invalid";
+                case Refusal.BadPiece:
+                    return "bad piece from the host";
+                case Refusal.ShortPiece:
+                    return "a short piece from the host";
+                case Refusal.HostStoppedSending:
+                    return Fill(
+                        "the host stopped sending its world"
+                            + " ({0} of {1} KiB came)",
+                        detail,
+                        2);
+                case Refusal.PathEmpty:
+                    return "the path is empty";
+                case Refusal.PathNotAbsolute:
+                    return "the path isn't absolute";
+                case Refusal.PathInvalid:
+                    return "the path isn't valid (" + detail + ")";
+                case Refusal.FilesystemRoot:
+                    return "it's a filesystem root";
+                case Refusal.HomeFolder:
+                    return "it's your home folder or holds it";
+                case Refusal.OutsideModFolders:
+                    return "it isn't inside the mod's cache or save-redirect"
+                        + " folder";
+                case Refusal.NotASaveSlot:
+                    return "slot " + detail + " isn't a save slot";
+                case Refusal.NotPlayersFolder:
+                    return "it isn't prof<N>/darkwoodmp_players in the save"
+                        + " folder";
+                case Refusal.WaitForMainMenu:
+                    return "Wait for the main menu.";
+                case Refusal.NoSaveInSlot:
+                    return "No save in that slot.";
+                case Refusal.NeedsProfilesScreen:
+                    return "This save needs the game's profiles screen.";
+                case Refusal.ChooseOverwrite:
+                    return "Choose a save to overwrite.";
+                case Refusal.NameLocked:
+                    return "You can change it when you're in no game.";
+                case Refusal.LoadWorldToHost:
+                    return "To host, load your world first (Start Game), then"
+                        + " press Esc and choose Multiplayer in the pause"
+                        + " menu.";
+                case Refusal.HostsCopy:
+                    return "This is your copy of another host's world. To"
+                        + " host, go back to the main menu and load your own"
+                        + " world.";
+                case Refusal.EpilogueBegun:
+                    return "This world is in the epilogue, which can't be"
+                        + " shared once it has begun. Host from a save before"
+                        + " the end of the game.";
+                case Refusal.OtherModVersion:
+                    return "Host runs a different DarkwoodMP version ("
+                        + detail
+                        + ")";
+                case Refusal.NotInLobby:
+                    return "not in lobby";
+                case Refusal.TooLongForSteam:
+                    return Fill(
+                        "an unreliable {1} of {0} KiB is too long for Steam",
+                        detail,
+                        2);
+                case Refusal.QueueFull:
+                    return detail + " KiB already waiting for room";
+                case Refusal.BadMessageLength:
+                    return "a message of " + detail + " bytes";
+                case Refusal.PiecesTooLong:
+                    return "its pieces ran past its length";
                 default:
                     return verdict.Reason.ToString();
             }
