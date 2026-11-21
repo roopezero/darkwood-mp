@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.World.Doors;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
