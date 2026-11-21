@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -316,19 +317,8 @@ namespace DarkwoodMP.Sync
         private Player _flashlightOf;
         private tk2dBaseSprite[] _sprites;
         private int[] _pathHashes;
-        private float _nextRescan;
+        private Seconds _nextRescan;
         private bool _dumped;
-
-        /// <summary>
-        /// The player object also carries the FOV/light rigs, the cursor,
-        /// interaction prompts and progress bars.
-        /// Those are rendered by the lighting system or are local-only UI, so
-        /// only the character's own art is mirrored: torso (root sprite,
-        /// includes held weapon frames), legs, and the drop shadow.
-        /// </summary>
-        private static bool IsCharacterArt(string path) =>
-            path == "." || path == "PlayerLegs"
-                || path.StartsWith("PlayerLegs/") || path == "Shadow";
 
         public bool Capture(PlayerSnapshot snap)
         {
@@ -341,8 +331,9 @@ namespace DarkwoodMP.Sync
             var root = player.transform;
 
             // Children (held items, effects) come and go; rescan periodically.
-            if (_cachedRoot != player.gameObject
-                || UnityEngine.Time.unscaledTime >= _nextRescan)
+            var now = new Seconds(UnityEngine.Time.unscaledTime);
+            if (PlayerLookRules.Rescans(
+                _cachedRoot == player.gameObject, now, _nextRescan))
             {
                 _cachedRoot = player.gameObject;
                 var all = player.GetComponentsInChildren<tk2dBaseSprite>(true);
@@ -352,7 +343,7 @@ namespace DarkwoodMP.Sync
                 foreach (var s in all)
                 {
                     string path = PathOf(s.transform, root);
-                    bool ok = IsCharacterArt(path);
+                    bool ok = PlayerLookRules.IsCharacterArt(path);
                     if (dump)
                     {
                         string text = "skip";
@@ -396,13 +387,13 @@ namespace DarkwoodMP.Sync
                 _dumped |= dump;
                 _sprites = keep.ToArray();
                 _pathHashes = hashes.ToArray();
-                _nextRescan = UnityEngine.Time.unscaledTime + 1f;
+                _nextRescan = PlayerLookRules.NextRescan(now);
             }
 
             var invRot = Quaternion.Inverse(root.rotation);
             snap.Position = root.position;
             snap.Rotation = root.rotation;
-            snap.Alive = player.alive && !player.dying;
+            snap.Alive = PlayerLookRules.Alive(player.alive, player.dying);
             snap.Spectating = World.Spectator.Active;
             if (player.torsoAnimator != null
                 && player.torsoAnimator.Library != null)
@@ -414,44 +405,17 @@ namespace DarkwoodMP.Sync
                 snap.Library = "";
             }
 
-            var held = player.currentItem;
-            if (player.itemLightEmitter != null && !InvItemClass.isNull(held)
-                && held.baseClass != null)
-            {
-                string heldLight = held.type;
-                if (heldLight == null)
-                {
-                    heldLight = "";
-                }
-
-                snap.HeldLight = heldLight;
-            }
-            else
-            {
-                snap.HeldLight = "";
-            }
-
+            snap.HeldLight = PlayerLookRules.HeldLight(HeldOf(player));
             var flames = player.itemParticleEmitter;
-            if (snap.HeldLight != "" && flames != null)
+            Vec3 offset = default;
+            if (flames != null)
             {
-                snap.HeldFlames = invRot * (flames.position - root.position);
-            }
-            else
-            {
-                snap.HeldFlames = Vector3.zero;
+                offset = VecOf(invRot * (flames.position - root.position));
             }
 
-            var dot = player.lightDot;
-            var ctl = Singleton<Controller>.Instance;
-            if (dot != null && dot.lightsPlayer && ctl != null
-                && ctl.logicLights.Contains(dot))
-            {
-                snap.Lantern = dot.LightRadius;
-            }
-            else
-            {
-                snap.Lantern = 0f;
-            }
+            snap.HeldFlames = VectorOf(PlayerLookRules.Flames(
+                snap.HeldLight, flames != null, offset));
+            snap.Lantern = PlayerLookRules.Lantern(LanternOf(player));
 
             if (_flashlight == null || _flashlightOf != player)
             {
@@ -468,29 +432,9 @@ namespace DarkwoodMP.Sync
             }
 
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
-            Light2D beam = null;
-            if (snap.Flashlight)
-            {
-                beam = _flashlight.GetComponent<Light2D>();
-            }
-
-            if (beam != null)
-            {
-                snap.BeamRadius = beam.LightRadius;
-            }
-            else
-            {
-                snap.BeamRadius = 0f;
-            }
-
-            if (beam != null)
-            {
-                snap.BeamBright = beam.LightColor.r;
-            }
-            else
-            {
-                snap.BeamBright = 0f;
-            }
+            BeamFacts beam = BeamOf(snap.Flashlight, _flashlight);
+            snap.BeamRadius = PlayerLookRules.BeamRadius(beam);
+            snap.BeamBright = PlayerLookRules.BeamGrey(beam);
 
             snap.Invisible = player.invisible;
             var fx = player.effects;
@@ -505,28 +449,20 @@ namespace DarkwoodMP.Sync
             snap.Away = LocalAway();
             snap.AfterNight = World.AfterNight.Local;
             snap.Place = World.Locations.Current();
-            int percent = 0;
-            if (player.maxHealth > 0f)
-            {
-                percent = Mathf.Clamp(
-                    Mathf.RoundToInt(player.health / player.maxHealth * 100f),
-                    0, 100);
-            }
-
-            snap.Health = (byte)percent;
+            snap.Health = PlayerLookRules.HealthPercent(
+                player.health, player.maxHealth);
             snap.Sprites.Clear();
             for (int i = 0; i < _sprites.Length
-                && snap.Sprites.Count < 255; i++)
+                && snap.Sprites.Count < PlayerLookRules.MaxSprites; i++)
             {
                 var s = _sprites[i];
-                if (s == null || !s.gameObject.activeInHierarchy
-                    || s.Collection == null)
+                Renderer mr = null;
+                if (s != null)
                 {
-                    continue;
+                    mr = s.GetComponent<Renderer>();
                 }
 
-                var mr = s.GetComponent<Renderer>();
-                if (mr == null || !mr.enabled)
+                if (!PlayerLookRules.SendsSprite(SpriteOf(s, mr)))
                 {
                     continue;
                 }
@@ -558,9 +494,92 @@ namespace DarkwoodMP.Sync
         {
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
-            return (o != null && o.playerInOutsideLocation)
-                || (d != null && d.dreaming);
+            return PlayerLookRules.Away(
+                o != null && o.playerInOutsideLocation,
+                d != null && d.dreaming);
         }
+
+        private static HeldFacts HeldOf(Player player)
+        {
+            var held = player.currentItem;
+            bool valid = !InvItemClass.isNull(held);
+            bool hasBase = valid && held.baseClass != null;
+            string type = null;
+            if (hasBase)
+            {
+                type = held.type;
+            }
+
+            return new HeldFacts
+            {
+                HasLightEmitter = player.itemLightEmitter != null,
+                HeldValid = valid,
+                HasBaseClass = hasBase,
+                HeldType = type,
+            };
+        }
+
+        private static LanternFacts LanternOf(Player player)
+        {
+            var dot = player.lightDot;
+            var ctl = Singleton<Controller>.Instance;
+            if (dot == null)
+            {
+                return default;
+            }
+
+            return new LanternFacts
+            {
+                HasDot = true,
+                LightsPlayer = dot.lightsPlayer,
+                HasController = ctl != null,
+                IsLogicLight = ctl != null && ctl.logicLights.Contains(dot),
+                Radius = dot.LightRadius,
+            };
+        }
+
+        private static BeamFacts BeamOf(bool on, GameObject flashlight)
+        {
+            Light2D light = null;
+            if (on)
+            {
+                light = flashlight.GetComponent<Light2D>();
+            }
+
+            if (light == null)
+            {
+                return new BeamFacts { On = on };
+            }
+
+            return new BeamFacts
+            {
+                On = on,
+                HasLight = true,
+                Radius = light.LightRadius,
+                Grey = light.LightColor.r,
+            };
+        }
+
+        private static SpriteFacts SpriteOf(tk2dBaseSprite s, Renderer mr)
+        {
+            if (s == null)
+            {
+                return default;
+            }
+
+            return new SpriteFacts
+            {
+                Exists = true,
+                Active = s.gameObject.activeInHierarchy,
+                HasCollection = s.Collection != null,
+                HasRenderer = mr != null,
+                RendererEnabled = mr != null && mr.enabled,
+            };
+        }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         private static string PathOf(Transform t, Transform root)
         {

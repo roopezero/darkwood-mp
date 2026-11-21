@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -15,10 +16,10 @@ namespace DarkwoodMP.Sync
         public readonly ulong Owner;
         public string Name;
         public GameObject Root { get; private set; }
-        public bool Alive => !_hasLast || _last.Alive;
-        public bool Spectating => _hasLast && _last.Spectating;
+        public bool Alive => PuppetRules.IsAlive(Facts);
+        public bool Spectating => PuppetRules.IsSpectating(Facts);
         /// <summary>In a separate location or a dream.</summary>
-        public bool Away => _hasLast && _last.Away;
+        public bool Away => PuppetRules.IsAway(Facts);
         /// <summary>
         /// The latest snapshot (its state bits: invisible, wards, forest
         /// skills), or null before the first.
@@ -39,14 +40,24 @@ namespace DarkwoodMP.Sync
         private readonly PlayerSnapshot _prev = new PlayerSnapshot();
         private readonly PlayerSnapshot _last = new PlayerSnapshot();
         private bool _hasPrev, _hasLast;
-        /// <summary>
-        /// Running covers about 500 a second; this is more than half a second
-        /// of it between two updates.
-        /// </summary>
-        private const float JumpDistance = 300f;
         private readonly Dictionary<int, tk2dSprite> _parts =
             new Dictionary<int, tk2dSprite>();
         private readonly HashSet<int> _seen = new HashSet<int>();
+
+        /// What the latest snapshot says, for PuppetRules.
+        private PuppetFacts Facts => new PuppetFacts
+        {
+            HasLast = _hasLast,
+            Alive = _last.Alive,
+            Spectating = _last.Spectating,
+            Away = _last.Away,
+            Flashlight = _last.Flashlight,
+            HeldLight = _last.HeldLight,
+            Lantern = _last.Lantern,
+            BeamRadius = _last.BeamRadius,
+        };
+
+        private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
 
         public RemotePlayer(ulong owner, string name)
         {
@@ -62,7 +73,7 @@ namespace DarkwoodMP.Sync
 
         public void Push(PlayerSnapshot snap)
         {
-            if (_hasLast && _last.Alive && !snap.Alive)
+            if (PuppetRules.Died(_hasLast, _last.Alive, snap.Alive))
             {
                 System.Action<RemotePlayer> handler = OnDied;
                 if (handler != null)
@@ -74,12 +85,8 @@ namespace DarkwoodMP.Sync
             // A first position, or a jump further than anyone walks between two
             // updates (placed on joining, a teleport), is shown at once rather
             // than slid across, through whoever stands between.
-            bool jump = _hasLast
-                && new Vector2(
-                    snap.Position.x - _last.Position.x,
-                    snap.Position.z - _last.Position.z).magnitude
-                    > JumpDistance;
-            if (_hasLast && !jump)
+            if (PuppetRules.KeepsPrevious(
+                _hasLast, Flat(_last.Position), Flat(snap.Position)))
             {
                 _prev.CopyFrom(_last);
                 _hasPrev = true;
@@ -139,17 +146,9 @@ namespace DarkwoodMP.Sync
                 return;
             }
 
-            string want = "";
-            if (_last.Alive && !_last.Spectating)
-            {
-                want = _last.HeldLight;
-                if (want == null)
-                {
-                    want = "";
-                }
-            }
-
-            if (want != _heldShown || (want != "" && _heldLight == null))
+            PuppetFacts puppet = Facts;
+            string want = PuppetRules.HeldLight(puppet);
+            if (PuppetRules.RedoesHeld(want, _heldShown, _heldLight != null))
             {
                 RemoveHeld();
                 _heldShown = want;
@@ -209,7 +208,7 @@ namespace DarkwoodMP.Sync
                 }
             }
 
-            bool beam = _last.Flashlight && _last.Alive && !_last.Spectating;
+            bool beam = PuppetRules.Beam(puppet);
             if (beam && _beam == null)
             {
                 Transform own = null;
@@ -240,7 +239,7 @@ namespace DarkwoodMP.Sync
                 beamLight = _beam.GetComponent<Light2D>();
             }
 
-            if (beamLight != null && _last.BeamRadius > 0f)
+            if (beamLight != null && PuppetRules.SetsBeam(puppet))
             {
                 if (beamLight.LightRadius != _last.BeamRadius)
                 {
@@ -284,13 +283,8 @@ namespace DarkwoodMP.Sync
 
         private void ApplyLantern()
         {
-            float want = 0f;
-            if (_last.Alive && !_last.Spectating && !_last.Away)
-            {
-                want = _last.Lantern;
-            }
-
-            if (want <= 0f)
+            float want = PuppetRules.Lantern(Facts);
+            if (PuppetRules.RemovesLantern(want))
             {
                 RemoveLantern();
                 return;
@@ -538,12 +532,19 @@ namespace DarkwoodMP.Sync
             EnsureRoot();
             Vector3 pos;
             Quaternion rot;
-            if (_hasPrev && _last.Time > _prev.Time)
+            PuppetBlend blend = PuppetRules.Blend(new BlendFacts
+            {
+                HasPrevious = _hasPrev,
+                Previous = new Seconds(_prev.Time),
+                Last = new Seconds(_last.Time),
+                Now = new Seconds(Time.time),
+            });
+
+            if (blend.Blends)
             {
                 // Render one snapshot interval behind: blend prev->last over
                 // the time it took last to arrive.
-                float t = Mathf.Clamp01(
-                    (Time.time - _last.Time) / (_last.Time - _prev.Time));
+                float t = blend.Fraction;
                 pos = Vector3.Lerp(_prev.Position, _last.Position, t);
                 rot = Quaternion.Slerp(_prev.Rotation, _last.Rotation, t);
             }
@@ -559,8 +560,9 @@ namespace DarkwoodMP.Sync
             // (or the other way round), where their coordinates are in an area
             // this game hasn't loaded, or is another place. A location stands
             // in the same place in every game (World.Locations).
-            bool shown = !_last.Spectating
-                && World.Locations.SamePlace(_last.Away, _last.Place);
+            bool shown = PuppetRules.Shown(
+                _last.Spectating,
+                World.Locations.SamePlace(_last.Away, _last.Place));
             if (Root.activeSelf != shown)
             {
                 Root.SetActive(shown);
@@ -647,7 +649,8 @@ namespace DarkwoodMP.Sync
     {
         private static readonly Dictionary<int, tk2dSpriteCollectionData>
             _byHash = new Dictionary<int, tk2dSpriteCollectionData>();
-        private static float _lastRescan = -999f;
+        private static Seconds _lastRescan =
+            new Seconds(SpriteCacheRules.NeverScanned);
 
         private static readonly HashSet<string> _loadedLibraries =
             new HashSet<string>();
@@ -660,11 +663,13 @@ namespace DarkwoodMP.Sync
         public static tk2dSpriteCollectionData Get(int hash, string library)
         {
             var c = Get(hash);
-            if (c != null || string.IsNullOrEmpty(library)
-                || !_loadedLibraries.Add(library))
+            bool tried = library != null && _loadedLibraries.Contains(library);
+            if (!SpriteCacheRules.LoadsLibrary(c != null, library, tried))
             {
                 return c;
             }
+
+            _loadedLibraries.Add(library);
 
             var lib =
                 Resources.Load(library, typeof(tk2dSpriteAnimation))
@@ -688,7 +693,7 @@ namespace DarkwoodMP.Sync
             }
 
             Keep.Add(lib); // held, so its sprites stay loaded while it's in use
-            _lastRescan = -999f;
+            _lastRescan = new Seconds(SpriteCacheRules.NeverScanned);
             return Get(hash);
         }
 
@@ -703,9 +708,10 @@ namespace DarkwoodMP.Sync
 
             // Collections load with scenes; rescan at most twice a second on a
             // miss.
-            if (Time.unscaledTime - _lastRescan > 0.5f)
+            var now = new Seconds(Time.unscaledTime);
+            if (SpriteCacheRules.Rescans(now, _lastRescan))
             {
-                _lastRescan = Time.unscaledTime;
+                _lastRescan = now;
                 _byHash.Clear();
                 foreach (var col in Resources
                     .FindObjectsOfTypeAll<tk2dSpriteCollectionData>())

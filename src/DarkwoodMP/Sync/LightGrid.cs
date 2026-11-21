@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using Pathfinding;
 using UnityEngine;
@@ -34,25 +35,9 @@ namespace DarkwoodMP.Sync
         {
             try
             {
-                var astar = AstarPath.active;
-                if (astar == null)
-                {
-                    return true;
-                }
-
                 Vector3 pos = __instance.transform.position;
-                var g = astar.getNearestGraphFast(pos);
-                if (g == null || g.nodes == null || g.nodes.Length == 0
-                    || g.nodeSize <= 0f)
-                {
-                    return true; // the game returns at once
-                }
-
-                Vector3 d = pos - (Vector3)g.nodes[0].position;
-                int x = Mathf.RoundToInt(d.x / g.nodeSize),
-                    z = Mathf.RoundToInt(d.z / g.nodeSize);
-                int r = _nodeLightRadius;
-                if (x >= -r && x < g.Width + r && z >= -r && z < g.Depth + r)
+                if (!LightGridRules.SkipsLookup(
+                    FactsOf(pos, _nodeLightRadius)))
                 {
                     return true;
                 }
@@ -77,6 +62,42 @@ namespace DarkwoodMP.Sync
             {
                 return true;
             }
+        }
+
+        // Without a grid or nodes the game returns at once.
+        private static LightGridFacts FactsOf(Vector3 pos, int radius)
+        {
+            var astar = AstarPath.active;
+            if (astar == null)
+            {
+                return default;
+            }
+
+            var g = astar.getNearestGraphFast(pos);
+            if (g == null || g.nodes == null)
+            {
+                return new LightGridFacts { Pathfinding = true };
+            }
+
+            Vec3 origin = default;
+            if (g.nodes.Length > 0)
+            {
+                var first = (Vector3)g.nodes[0].position;
+                origin = new Vec3(first.x, first.y, first.z);
+            }
+
+            return new LightGridFacts
+            {
+                Pathfinding = true,
+                Graph = true,
+                Nodes = g.nodes.Length,
+                NodeSize = g.nodeSize,
+                Width = g.Width,
+                Depth = g.Depth,
+                Light = new Vec3(pos.x, pos.y, pos.z),
+                Origin = origin,
+                Radius = radius,
+            };
         }
 
         private static string Path(Transform t)

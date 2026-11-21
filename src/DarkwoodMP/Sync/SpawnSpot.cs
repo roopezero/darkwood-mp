@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -20,10 +21,8 @@ namespace DarkwoodMP.Sync
     /// </summary>
     public static class SpawnSpot
     {
-        private const int Angles = 12;
-        // in body radii from the wanted spot
-        private static readonly float[] Rings = { 2.5f, 4f, 6f, 8f, 11f };
-        private static readonly Collider[] Hits = new Collider[64];
+        private static readonly Collider[] Hits =
+            new Collider[SpawnRules.MaxHits];
 
         /// <summary>
         /// A free spot for player p near want. taken: other spots to keep clear
@@ -34,10 +33,13 @@ namespace DarkwoodMP.Sync
             Player p, Vector3 want, IEnumerable<Vector3> taken = null)
         {
             float radius = BodyRadius(p);
-            var others = new List<Vector3>();
+            var others = new List<Vec2>();
             if (taken != null)
             {
-                others.AddRange(taken);
+                foreach (var t in taken)
+                {
+                    others.Add(Flat(t));
+                }
             }
 
             var sync = PlayerSync.Instance;
@@ -46,19 +48,24 @@ namespace DarkwoodMP.Sync
                 foreach (var r in sync.Remotes.Values)
                 {
                     var last = r.Last;
-                    if (last == null || last.Spectating
-                        || !World.Locations.SamePlace(last.Away, last.Place))
+                    if (last == null)
                     {
                         continue;
                     }
 
-                    others.Add(last.Position);
+                    bool same =
+                        World.Locations.SamePlace(last.Away, last.Place);
+                    if (SpawnRules.KeepsClear(true, last.Spectating, same))
+                    {
+                        others.Add(Flat(last.Position));
+                    }
                 }
             }
 
             var background = new HashSet<Collider>();
             int n = Physics.OverlapSphereNonAlloc(
-                want, radius * 0.5f, Hits, ~0, QueryTriggerInteraction.Ignore);
+                want, radius * SpawnRules.BackgroundShare, Hits, ~0,
+                QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
             {
                 background.Add(Hits[i]);
@@ -73,23 +80,18 @@ namespace DarkwoodMP.Sync
 
             // two joiners at once don't both pick the first free angle
             float start = Random.Range(0f, 360f);
-            foreach (var ring in Rings)
+            foreach (var spot in SpawnRules.Around(VecOf(want), radius, start))
             {
-                for (int a = 0; a < Angles; a++)
+                var at = new Vector3(spot.X, spot.Y, spot.Z);
+                if (Free(p, want, at, radius, others, background, gridHere))
                 {
-                    float ang = (start + a * 360f / Angles) * Mathf.Deg2Rad;
-                    var at = want + new Vector3(
-                        Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * (ring * radius);
-                    if (Free(p, want, at, radius, others, background, gridHere))
-                    {
-                        return at;
-                    }
+                    return at;
                 }
             }
 
             Plugin.Log.LogInfo(
                 "[spawn] no free spot within "
-                    + $"{Rings[Rings.Length - 1] * radius:0} of {want}: "
+                    + $"{SpawnRules.Searched(radius):0} of {want}: "
                     + "staying there");
             return want;
         }
@@ -105,39 +107,35 @@ namespace DarkwoodMP.Sync
                 cap = p.GetComponent<CapsuleCollider>();
             }
 
-            float r = 15f;
-            if (cap != null)
+            if (cap == null)
             {
-                r = cap.radius * Mathf.Max(
-                    Mathf.Abs(p.transform.lossyScale.x),
-                    Mathf.Abs(p.transform.lossyScale.z));
+                return SpawnRules.BodyRadius(false, 0f, default);
             }
 
-            return Mathf.Max(10f, r);
+            Vector3 scale = p.transform.lossyScale;
+            return SpawnRules.BodyRadius(
+                true, cap.radius, new Vec2(scale.x, scale.z));
         }
 
         /// <summary>
         /// Two players' bodies that close (flat distance) overlap or touch.
         /// </summary>
-        public static float Apart(Player p) => Apart(BodyRadius(p));
-
-        private static float Apart(float radius) => radius * 2f + 10f;
+        public static float Apart(Player p) =>
+            SpawnRules.Apart(BodyRadius(p));
 
         private static bool Free(
             Player p, Vector3 want, Vector3 at, float radius,
-            List<Vector3> others, HashSet<Collider> background, bool gridHere)
+            List<Vec2> others, HashSet<Collider> background, bool gridHere)
         {
-            float apart = Apart(radius);
-            foreach (var o in others)
+            float apart = SpawnRules.Apart(radius);
+            if (!SpawnRules.ClearOfOthers(Flat(at), others, apart))
             {
-                if (new Vector2(o.x - at.x, o.z - at.z).magnitude < apart)
-                {
-                    return false;
-                }
+                return false;
             }
 
             int n = Physics.OverlapSphereNonAlloc(
-                at, radius * 1.1f, Hits, ~0, QueryTriggerInteraction.Ignore);
+                at, radius * SpawnRules.SphereShare, Hits, ~0,
+                QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
             {
                 if (Solid(p, Hits[i], background))
@@ -146,21 +144,22 @@ namespace DarkwoodMP.Sync
                 }
             }
 
-            if (gridHere && !Walkable(at))
+            if (!SpawnRules.WalkableEnough(gridHere, Walkable(at)))
             {
                 return false;
             }
 
             var d = at - want;
             float len = d.magnitude;
-            if (len > 1f)
+            if (SpawnRules.ChecksRay(len))
             {
                 var hits = Physics.RaycastAll(
                     want, d / len, len, ~0, QueryTriggerInteraction.Ignore);
                 foreach (var h in hits)
                 {
-                    if (h.collider.attachedRigidbody == null
-                        && Solid(p, h.collider, background))
+                    bool body = h.collider.attachedRigidbody != null;
+                    if (SpawnRules.BlocksRay(
+                        body, Solid(p, h.collider, background)))
                     {
                         return false; // a wall between
                     }
@@ -173,28 +172,34 @@ namespace DarkwoodMP.Sync
         private static bool Solid(
             Player p, Collider c, HashSet<Collider> background)
         {
-            if (c == null || c.isTrigger || background.Contains(c))
-            {
-                return false;
-            }
-
-            if (c.gameObject.layer == 1)
-            {
-                return false; // the ground (Core.canSpawnHere skips it too)
-            }
-
-            if (p != null && c.transform.IsChildOf(p.transform))
-            {
-                return false;
-            }
-
-            if (c.GetComponentInParent<Combat.NetPlayerProxy>() != null)
-            {
-                return false; // counted by position instead
-            }
-
-            return true;
+            return SpawnRules.IsSolid(SolidOf(p, c, background));
         }
+
+        // The ground (layer 1) is skipped as Core.canSpawnHere does; a proxy
+        // is counted by position instead.
+        private static SolidFacts SolidOf(
+            Player p, Collider c, HashSet<Collider> background)
+        {
+            if (c == null)
+            {
+                return default;
+            }
+
+            return new SolidFacts
+            {
+                Exists = true,
+                Trigger = c.isTrigger,
+                Background = background.Contains(c),
+                Layer = c.gameObject.layer,
+                OfPlayer = p != null && c.transform.IsChildOf(p.transform),
+                OfProxy =
+                    c.GetComponentInParent<Combat.NetPlayerProxy>() != null,
+            };
+        }
+
+        private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
 
         /// <summary>
         /// The game's pathfinding grid counts it walkable

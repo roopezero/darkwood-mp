@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -22,21 +23,19 @@ namespace DarkwoodMP.Sync
         private readonly PlayerCapture _capture = new PlayerCapture();
         private readonly PlayerSnapshot _snap = new PlayerSnapshot();
         private readonly PlayerSnapshot _incoming = new PlayerSnapshot();
-        private float _nextSend;
+        private Seconds _nextSend;
         // Players who left, and when. Over Steam a PlayerState sent before
         // PlayerLeft can arrive after it (they go on different channels, which
         // Steam doesn't order), and would bring back a frozen puppet.
-        private readonly Dictionary<ulong, float> _left =
-            new Dictionary<ulong, float>();
-        private const float LeftIgnore = 5f;
+        private readonly LeftPlayers _left = new LeftPlayers();
         /// <summary>
         /// The tests' dummy (--dwmp-dummy): a copy of you left standing where
         /// you were, which the AI treats as another player. Never a real peer
         /// id.
         /// </summary>
-        public const ulong DummyId = ulong.MaxValue - 1;
+        public const ulong DummyId = PuppetRules.DummyId;
         public bool HasDummy => Remotes.ContainsKey(DummyId);
-        private float _dummyFlashUntil;
+        private Seconds _dummyFlashUntil;
         private float _dummyDamage;
 
         public void SpawnDummy(Vector3 offset)
@@ -57,7 +56,7 @@ namespace DarkwoodMP.Sync
         public void FlashDummy(float damage)
         {
             _dummyDamage += damage;
-            _dummyFlashUntil = Time.time + 1.5f;
+            _dummyFlashUntil = NameTagRules.FlashUntil(new Seconds(Time.time));
         }
 
         public PlayerSync(Session session)
@@ -68,10 +67,10 @@ namespace DarkwoodMP.Sync
             session.OnPeerDisconnected += id =>
             {
                 RemoveRemote(id);
-                _left[id] = Time.unscaledTime;
+                _left.Left(id, Now);
             };
 
-            session.OnPeerConnected += id => _left.Remove(id);
+            session.OnPeerConnected += id => _left.Joined(id);
             session.OnSessionEnded += () =>
             {
                 _left.Clear();
@@ -86,10 +85,11 @@ namespace DarkwoodMP.Sync
 
         public void Update()
         {
-            float now = Time.unscaledTime;
-            if (now >= _nextSend)
+            Seconds now = Now;
+            if (PlayerStateRules.SendDue(now, _nextSend))
             {
-                _nextSend = now + 1f / Mathf.Max(1, Plugin.SendRate.Value);
+                _nextSend = new Seconds(now.Value + PlayerStateRules
+                    .SendInterval(Plugin.SendRate.Value).Value);
                 Send(reliable: false);
             }
 
@@ -128,15 +128,9 @@ namespace DarkwoodMP.Sync
             }
 
             _snap.Owner = _session.LocalId;
-            if (!_session.Active || !_session.Connected)
-            {
-                return;
-            }
-
             // A joiner isn't shown until its character is placed
             // (World.Characters.Placing), off the others.
-            var characters = World.Characters.Instance;
-            if (characters != null && characters.Placing)
+            if (!PlayerStateRules.MaySend(SendOf()))
             {
                 return;
             }
@@ -166,51 +160,39 @@ namespace DarkwoodMP.Sync
         private void OnPlayerState(ulong from, PacketReader r)
         {
             _incoming.Read(r);
-            ulong id;
-            if (_session.IsHost)
-            {
-                id = from;
-            }
-            else
-            {
-                id = _incoming.Owner;
-            }
-
-            if (LeftJustNow(id))
+            StateArrival arrival = PlayerStateRules.Arrive(StateOf(from));
+            if (arrival.Drop == StateDrop.LeftJustNow
+                || arrival.Drop == StateDrop.NotFromHost)
             {
                 return;
             }
 
-            if (_session.IsHost)
+            // Never trust the owner field from a client, nor a place it
+            // couldn't have got to.
+            _incoming.Owner = arrival.Owner;
+            // A spectator (dead for good, World.Spectator) goes along with
+            // whoever it watches and can't touch anything: it's not
+            // checked, and starts afresh if it ever plays again.
+            var coop = Coop.Current;
+            if (coop != null && arrival.Move == StateMove.Forget)
             {
-                // Never trust the owner field from a client, nor a place it
-                // couldn't have got to.
-                _incoming.Owner = from;
-                // A spectator (dead for good, World.Spectator) goes along with
-                // whoever it watches and can't touch anything: it's not
-                // checked, and starts afresh if it ever plays again.
-                var coop = Coop.Current;
-                if (coop != null && _incoming.Spectating)
-                {
-                    coop.Moves.Forget(from);
-                }
-                else if (coop != null)
-                {
-                    _incoming.Position =
-                        coop.Moves.Check(from, _incoming.Position);
-                }
+                coop.Moves.Forget(from);
+            }
+            else if (coop != null && arrival.Move == StateMove.Check)
+            {
+                _incoming.Position =
+                    coop.Moves.Check(from, _incoming.Position);
+            }
 
+            if (arrival.Relays)
+            {
                 var w = _session.Begin(MsgType.PlayerState);
                 _incoming.Write(w);
                 _session.Broadcast(
                     w, Channel.State, reliable: false, except: from);
             }
-            else if (from != _session.HostId)
-            {
-                return;
-            }
 
-            if (_incoming.Owner == _session.LocalId)
+            if (arrival.Drop == StateDrop.AboutUs)
             {
                 return;
             }
@@ -220,21 +202,67 @@ namespace DarkwoodMP.Sync
             remote.Push(_incoming);
         }
 
-        private bool LeftJustNow(ulong id)
+        /// The PlayerState just read into _incoming, from a peer.
+        private StateFacts StateOf(ulong from)
         {
-            if (!_left.TryGetValue(id, out float at))
+            ulong key = PlayerStateRules.GuardKey(
+                _session.IsHost, from, _incoming.Owner);
+            return new StateFacts
             {
-                return false;
-            }
-
-            if (Time.unscaledTime - at < LeftIgnore)
-            {
-                return true;
-            }
-
-            _left.Remove(id);
-            return false;
+                Host = _session.IsHost,
+                From = from,
+                Said = _incoming.Owner,
+                HostId = _session.HostId,
+                LocalId = _session.LocalId,
+                LeftJustNow = _left.JustNow(key, Now),
+                Spectating = _incoming.Spectating,
+            };
         }
+
+        private SendFacts SendOf()
+        {
+            var characters = World.Characters.Instance;
+            return new SendFacts
+            {
+                Active = _session.Active,
+                Connected = _session.Connected,
+                Placing = characters != null && characters.Placing,
+            };
+        }
+
+        private static TagFacts TagsOf()
+        {
+            return new TagFacts
+            {
+                MenuOver = World.UiState.MenuOver,
+                MapOpen = MapMarkers.MapOpen,
+                OverlaysHidden = World.UiState.WorldOverlaysHidden,
+            };
+        }
+
+        private LabelFacts LabelOf(RemotePlayer r)
+        {
+            var last = r.Last;
+            byte health = 0;
+            if (last != null)
+            {
+                health = last.Health;
+            }
+
+            return new LabelFacts
+            {
+                Name = r.Name,
+                Dummy = r.Owner == DummyId,
+                HasLast = last != null,
+                Alive = r.Alive,
+                Health = health,
+                Now = new Seconds(Time.time),
+                FlashUntil = _dummyFlashUntil,
+                Damage = _dummyDamage,
+            };
+        }
+
+        private static Seconds Now => new Seconds(Time.unscaledTime);
 
         private RemotePlayer GetOrCreate(ulong id, string name)
         {
@@ -277,18 +305,14 @@ namespace DarkwoodMP.Sync
             // Not over the pause menu or the mod's windows; on the map, beside
             // the players' markers; not over a cutscene, a game menu or
             // anything else that isn't the world in play (UiState).
-            if (World.UiState.MenuOver)
-            {
-                return;
-            }
-
-            if (MapMarkers.MapOpen)
+            TagLayer layer = NameTagRules.Where(TagsOf());
+            if (layer == TagLayer.Map)
             {
                 MapMarkers.DrawNames();
                 return;
             }
 
-            if (World.UiState.WorldOverlaysHidden)
+            if (layer == TagLayer.None)
             {
                 return;
             }
@@ -307,36 +331,26 @@ namespace DarkwoodMP.Sync
                 }
 
                 var sp = cam.WorldToScreenPoint(r.Root.transform.position);
-                if (sp.z < 0)
+                if (!NameTagRules.Draws(true, sp.z))
                 {
                     continue;
                 }
 
                 var rect =
                     new Rect(sp.x - 100, Screen.height - sp.y - 60, 200, 22);
-                if (r.Owner != DummyId)
+                if (NameTagRules.RefreshesName(r.Owner))
                 {
                     // names can arrive after the first snapshot
                     r.Name = _session.NameOf(r.Owner);
                 }
 
-                string label = r.Name;
-                var last = r.Last;
-                if (last != null && r.Alive)
-                {
-                    label += $"  {last.Health}%";
-                }
-
-                if (r.Owner == DummyId && Time.time < _dummyFlashUntil)
-                {
-                    label += $"  -{_dummyDamage:0}";
-                }
-                else if (r.Owner == DummyId)
+                NameTag tag = NameTagRules.Label(LabelOf(r));
+                if (tag.ResetsDamage)
                 {
                     _dummyDamage = 0f;
                 }
 
-                GUI.Label(rect, label, Plugin.NameTagStyle);
+                GUI.Label(rect, tag.Text, Plugin.NameTagStyle);
             }
         }
     }

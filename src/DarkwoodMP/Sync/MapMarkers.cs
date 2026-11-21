@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 
@@ -26,13 +27,24 @@ namespace DarkwoodMP.Sync
 
         private static Map.Type WorldType(Map map)
         {
-            if (map == null || !map.opened)
+            if (map == null)
             {
                 return null;
             }
 
-            var t = CurrentType(map);
-            if (t != null && t.name == "World")
+            Map.Type t = null;
+            string name = null;
+            if (map.opened)
+            {
+                t = CurrentType(map);
+            }
+
+            if (t != null)
+            {
+                name = t.name;
+            }
+
+            if (MapMarkerRules.OnWorldMap(map.opened, name))
             {
                 return t;
             }
@@ -45,7 +57,18 @@ namespace DarkwoodMP.Sync
         /// and not spectating.
         /// </summary>
         private static bool OnMap(RemotePlayer r) =>
-            r.Root != null && !r.Away && !r.Spectating;
+            MapMarkerRules.OnMap(FactsOf(r));
+
+        private static MarkerFacts FactsOf(RemotePlayer r)
+        {
+            return new MarkerFacts
+            {
+                Dummy = r.Owner == PlayerSync.DummyId,
+                HasRoot = r.Root != null,
+                Away = r.Away,
+                Spectating = r.Spectating,
+            };
+        }
 
         /// <summary>
         /// After the map opens: an icon for each other player in the main
@@ -63,7 +86,7 @@ namespace DarkwoodMP.Sync
 
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Owner == PlayerSync.DummyId || !OnMap(r))
+                if (!MapMarkerRules.Marks(FactsOf(r)))
                 {
                     continue;
                 }
@@ -108,10 +131,15 @@ namespace DarkwoodMP.Sync
         // raised above the background, then the type's icon offset on screen.
         private static void Place(Map.Type type, Transform t, Vector3 world)
         {
-            t.localPosition = world / type.scale + new Vector3(0f, 15f, 0f);
-            t.position += new Vector3(
-                type.iconOffset.x * Core.ResolutionWidthModifier, 0f,
-                type.iconOffset.y * Core.ResolutionHeightModifier);
+            Vec3 spot = MapMarkerRules.LocalSpot(
+                new Vec3(world.x, world.y, world.z), type.scale);
+            t.localPosition = new Vector3(spot.X, spot.Y, spot.Z);
+            Vec3 shift = MapMarkerRules.IconShift(
+                new Vec2(type.iconOffset.x, type.iconOffset.y),
+                new Vec2(
+                    Core.ResolutionWidthModifier,
+                    Core.ResolutionHeightModifier));
+            t.position += new Vector3(shift.X, shift.Y, shift.Z);
         }
 
         /// <summary>
