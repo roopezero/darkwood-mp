@@ -29,7 +29,7 @@ namespace DarkwoodMP
     ///   do STEP ARG...    run a map test step (DarkwoodMP.MapTests) to its
     ///                     end -> done [INFO] / fail REASON
     ///   dump PATH [X Z R] write the shared world's state as JSON
-    ///                     (World/StateDump.cs), around X Z within R
+    ///                     (Testing/StateDump.cs), around X Z within R
     ///                     -> ok N entries
     ///   wait EVENT SECS [N]  world-ready (our world loaded and settled),
     ///                     player-joined (host: a player, or N players, in and

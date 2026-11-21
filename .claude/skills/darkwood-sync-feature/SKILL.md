@@ -44,7 +44,7 @@ Use the `darkwood-game-code` skill. Find:
 ## 5. Test it
 
 - Unit-test every new rule in `tests/DarkwoodMP.Core.Tests` (a `<Class>Tests` class with a nested class per method, in the folder that mirrors the core's): `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`. A test only counts once you have seen it fail, so break the rule by hand first.
-- Add a step to `World/WorldTest.cs` that does the thing on the host, and decode the message in `tools/tests/worldobs.py`.
+- Add a step to `Testing/WorldTest.cs` that does the thing on the host, and decode the message in `tools/tests/worldobs.py`.
 - Run `tools/run-test.sh capture host-world client-world` (the `darkwood-test` skill). The host log should show `[world] sent ...`, and the client log `[world] got ... : <object name>`.
 - Add the requests your feature makes to `tools/tests/authtest.py` (allowed and refused cases), and run `host-authority client-authority`.
 - Run the regression tests too (`host-combat client-enemies client-chars`), since many patches share hot paths, or simply `tools/run-test.sh all`.
