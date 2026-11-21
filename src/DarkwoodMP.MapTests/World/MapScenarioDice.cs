@@ -193,7 +193,7 @@ namespace DarkwoodMP.World
 
                 // Things that explode in every game (BreakSync's Explode) and
                 // spawn objects at random spots round them: only thrown ones'
-                // spawns are the host's (ObjectActions.ThrownLeavesPatch).
+                // spawns are the host's (ObjectActions.BeforeSpawn).
                 var blasts =
                     new SortedDictionary<string, int>(StringComparer.Ordinal);
                 foreach (var x in Resources.FindObjectsOfTypeAll<Explodes>())

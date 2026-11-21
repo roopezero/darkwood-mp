@@ -103,7 +103,7 @@ namespace DarkwoodMP.World
         private static IEnumerator Lit(string[] a, Result r)
         {
             bool want = a.Length == 0 || a[0] == "yes";
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             Sync.RemotePlayer rp = null;
             NetPlayerProxy proxy = null;
             bool shown = false, inLight = false;

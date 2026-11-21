@@ -32,7 +32,7 @@ namespace DarkwoodMP.World
 
         private static bool FriendSeen()
         {
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             return ps != null
                 && ps.Remotes.Values.Any(
                     rp => rp.Root != null && rp.Root.activeInHierarchy);
@@ -196,7 +196,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(3f);
             int time = Singleton<Controller>.Instance.CurrentTime;
             float nearest = float.MaxValue;
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps != null)
             {
                 foreach (var rp in ps.Remotes.Values)

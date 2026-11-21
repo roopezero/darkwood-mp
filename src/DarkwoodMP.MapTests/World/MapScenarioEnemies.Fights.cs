@@ -391,7 +391,8 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// What one hit of the weapon in hand does at most: its damage with
-        /// upgrades, doubled by the Strong skill (within NetEnemies.DamageCap).
+        /// upgrades, doubled by the Strong skill (within
+        /// WeaponRules.DamageCap).
         /// </summary>
         private static float HitDamage(Player p)
         {

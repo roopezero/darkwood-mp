@@ -76,7 +76,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            int sent = DragSync.PushesSent;
+            int sent = PushesSent();
             var from = best.transform.position;
             var body = best.GetComponent<Rigidbody>();
             var dir = from - me;
@@ -117,13 +117,25 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: {movedName} moved "
                     + $"{(to - from).magnitude:0} units to {to.x:0},{to.z:0}; "
-                    + $"pushes sent: {DragSync.PushesSent - sent}");
+                    + $"pushes sent: {PushesSent() - sent}");
+        }
+
+        /// Pushes this game sent this session (none without one).
+        private static int PushesSent()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return 0;
+            }
+
+            return coop.Drags.PushesSent;
         }
 
         public static IEnumerator Run()
         {
-            while (!WorldShare.InWorld || PlayerSync.Instance == null
-                || !PlayerSync.Instance.HasDummy)
+            while (!WorldShare.InWorld || Plugin.Instance.Host.Players == null
+                || !Plugin.Instance.Host.Players.HasDummy)
             {
                 yield return null;
             }
@@ -136,7 +148,8 @@ namespace DarkwoodMP.World
             }
 
             yield return Push();
-            var dummy = PlayerSync.Instance.Remotes[PlayerSync.DummyId];
+            var dummy =
+                Plugin.Instance.Host.Players.Remotes[PlayerSync.DummyId];
             var o = Singleton<OutsideLocations>.Instance;
             var grid = Singleton<WorldGrid>.Instance;
             if (o == null || grid == null || grid.currentGrid == null)

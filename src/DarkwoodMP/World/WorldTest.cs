@@ -415,14 +415,20 @@ namespace DarkwoodMP.World
                 // agreed to its DragClaim): our player's drag is let go of at
                 // once, and the game's own Item.startDragging doesn't start
                 // one.
-                var ds = DragSync.Instance;
+                DragSync ds = null;
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    ds = coop.Drags;
+                }
+
                 if (ds != null)
                 {
-                    int cancelled = DragSync.Cancelled;
+                    int cancelled = ds.Cancelled;
                     ds.TestOwner(drag.gameObject, 999);
-                    int blocked = DragStartPatch.Blocked;
+                    int blocked = ds.Blocked;
                     drag.startDragging();
-                    bool stopped = DragStartPatch.Blocked > blocked
+                    bool stopped = ds.Blocked > blocked
                         && !drag.beingDragged
                         && player.itemBeingDragged != drag;
                     // as a script takes hold of it
@@ -430,7 +436,7 @@ namespace DarkwoodMP.World
                     yield return null;
                     yield return null;
                     bool letGo = player.itemBeingDragged != drag
-                        && DragSync.Cancelled > cancelled;
+                        && ds.Cancelled > cancelled;
                     string text = "started";
                     if (stopped)
                     {
@@ -524,7 +530,12 @@ namespace DarkwoodMP.World
 
                     Plugin.Log.LogInfo(
                         $"[world test] throwing {molotov} south");
-                    ThrowSync.Instance.Thrown(molotov, go, from);
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
+                    {
+                        coop.Throws.Thrown(molotov, go, from);
+                    }
+
                     yield return new WaitForSeconds(5f);
                 }
                 else
@@ -579,7 +590,7 @@ namespace DarkwoodMP.World
 
                 // A sprite from a collection not loaded here, from a player
                 // whose body uses libName: that loads it.
-                Sync.SpriteCollections.Get(
+                Plugin.Instance.Host.Sprites.Get(
                     Net.StableHash.Of("not loaded here"), libName);
                 var lib =
                     Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>()
@@ -619,8 +630,8 @@ namespace DarkwoodMP.World
                 }
 
                 int inLib = colls.Count(
-                    n => Sync.SpriteCollections.Get(Net.StableHash.Of(n))
-                        != null);
+                    n => Plugin.Instance.Host.Sprites.Get(
+                        Net.StableHash.Of(n)) != null);
                 string libState = "FAIL: not loaded";
                 if (lib != null)
                 {
@@ -1178,6 +1189,12 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo("[world test] done");
         }
 
+        /// <summary>The game's own stack size of an item type.</summary>
+        private static int GameSize(string type)
+        {
+            return Plugin.Instance.Host.Stacks.OriginalOf(type);
+        }
+
         /// <summary>
         /// World.StackSizes at 50: 30 bandages picked up one by one go in one
         /// slot; Sort &amp; Stack makes one stack of 3 + 3 + 40 nails in the
@@ -1283,7 +1300,7 @@ namespace DarkwoodMP.World
                     $"30 {bandage} picked up one by one: "
                         + $"{string.Join(", ", st.Select(a => "x" + a))} "
                         + "(game's own size "
-                        + $"{StackSizes.OriginalOf(bandage)})");
+                        + $"{GameSize(bandage)})");
                 Clear(bandage);
             }
             else
@@ -1469,7 +1486,7 @@ namespace DarkwoodMP.World
                 int max = Singleton<ItemsDatabase>.Instance.getItem(
                     bandage, instantiate: false).maxAmount;
                 Check(
-                    max == StackSizes.OriginalOf(bandage) && max < 30,
+                    max == GameSize(bandage) && max < 30,
                     $"StackSize 0: {bandage} stacks to {max} again");
             }
 

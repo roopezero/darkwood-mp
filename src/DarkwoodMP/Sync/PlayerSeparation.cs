@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -18,62 +20,36 @@ namespace DarkwoodMP.Sync
     /// push past. The player's own game decides where it is, as for any walk,
     /// and the host's MoveCheck sees an ordinary slow move.
     /// </summary>
-    public static class PlayerSeparation
+    public sealed class PlayerSeparation
     {
-        // world units a second, with the two fully overlapping (walking is
-        // about 250)
-        private const float MaxSpeed = 120f;
-        private const float DefaultRadius = 18f;
         // our player's body, along the ground
-        private static float _radius;
-        private static Player _measured;
+        private float _radius;
+        private Player _measured;
+        // The puppets' bodies, filled again each frame they're eased.
+        private readonly List<PuppetBody> _bodies = new List<PuppetBody>();
 
         /// <summary>
         /// Total distance our player was eased out of others (for the tests'
         /// log).
         /// </summary>
-        public static float Eased;
+        public float Eased { get; private set; }
 
         /// <summary>
         /// How close two players' centres can be before they're eased apart
         /// (two body widths).
         /// </summary>
-        public static float Distance
+        public float Distance => SeparationRules.Distance(_radius);
+
+        public void Update(PlayerSync sync, ulong localId)
         {
-            get
-            {
-                float radius = DefaultRadius;
-                if (_radius > 0f)
-                {
-                    radius = _radius;
-                }
-
-                return 2f * radius;
-            }
-        }
-
-        public static void Update(PlayerSync sync, ulong localId)
-        {
-            ModConfig cfg = Plugin.Cfg;
-            if (cfg != null && cfg.SoftPlayerCollision != null
-                && !Plugin.Cfg.SoftPlayerCollision.Value)
-            {
-                return;
-            }
-
-            if (!World.WorldShare.InWorld || sync.Remotes.Count == 0)
-            {
-                return;
-            }
-
             var p = Player.Instance;
-            if (p == null || !p.alive || p.dying || Core.forbidInputs)
+            Rigidbody rb = null;
+            if (p != null)
             {
-                return;
+                rb = p.GetComponent<Rigidbody>();
             }
 
-            var rb = p.GetComponent<Rigidbody>();
-            if (rb == null || rb.isKinematic)
+            if (!SeparationRules.Eases(FrameOf(sync, p, rb)))
             {
                 return;
             }
@@ -83,74 +59,99 @@ namespace DarkwoodMP.Sync
                 Measure(p);
             }
 
-            float min = Distance;
-            var me = rb.position;
-            Vector3 push = Vector3.zero;
-            foreach (var r in sync.Remotes.Values)
-            {
-                if (r.Root == null || !r.Root.activeSelf || !r.Alive
-                    || r.Spectating)
-                {
-                    continue;
-                }
-
-                var other = r.Root.transform.position;
-                var d = new Vector3(me.x - other.x, 0f, me.z - other.z);
-                float dist = d.magnitude;
-                if (dist >= min)
-                {
-                    continue;
-                }
-
-                // Right on top of each other: each game goes its own way, by
-                // who has the lower id.
-                Vector3 away;
-                if (dist > 0.01f)
-                {
-                    away = d / dist;
-                }
-                else if (localId < r.Owner)
-                {
-                    away = Vector3.right;
-                }
-                else
-                {
-                    away = Vector3.left;
-                }
-
-                push += away * ((min - dist) / min);
-            }
-
-            if (push == Vector3.zero)
+            Vec2 step = SeparationRules.Step(PushOf(sync, rb, localId));
+            var move = new Vector3(step.X, 0f, step.Z);
+            if (move == Vector3.zero)
             {
                 return;
             }
 
-            float frac = Mathf.Min(1f, push.magnitude);
-            var step = push.normalized * (MaxSpeed * frac * Mathf.Min(
-                Time.deltaTime, 0.05f));
-            rb.MovePosition(rb.position + step);
-            Eased += step.magnitude;
+            rb.MovePosition(rb.position + move);
+            Eased += move.magnitude;
         }
 
-        private static void Measure(Player p)
+        private static SeparationFacts FrameOf(
+            PlayerSync sync, Player p, Rigidbody rb)
         {
-            _measured = p;
-            _radius = 0f;
-            foreach (var c in p.GetComponents<Collider>())
+            ModConfig cfg = Plugin.Cfg;
+            return new SeparationFacts
             {
-                if (c != null && !c.isTrigger && c.enabled)
+                SwitchedOff = cfg != null && cfg.SoftPlayerCollision != null
+                    && !cfg.SoftPlayerCollision.Value,
+                InWorld = World.WorldShare.InWorld,
+                Puppets = sync.Remotes.Count,
+                HasPlayer = p != null,
+                Alive = p != null && p.alive,
+                Dying = p != null && p.dying,
+                ForbidInputs = Core.forbidInputs,
+                HasBody = rb != null,
+                Kinematic = rb != null && rb.isKinematic,
+            };
+        }
+
+        private PushFacts PushOf(
+            PlayerSync sync, Rigidbody rb, ulong localId)
+        {
+            var bodies = _bodies;
+            bodies.Clear();
+            foreach (var r in sync.Remotes.Values)
+            {
+                bool shown = r.Root != null && r.Root.activeSelf;
+                Vec2 at = default;
+                if (shown)
                 {
-                    _radius = Mathf.Max(
-                        _radius,
-                        Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
+                    var other = r.Root.transform.position;
+                    at = new Vec2(other.x, other.z);
                 }
+
+                bodies.Add(new PuppetBody
+                {
+                    Owner = r.Owner,
+                    Shown = shown,
+                    Alive = r.Alive,
+                    Spectating = r.Spectating,
+                    At = at,
+                });
             }
 
-            if (_radius <= 1f || _radius > 60f)
+            var me = rb.position;
+            return new PushFacts
             {
-                _radius = DefaultRadius;
+                Ours = new Vec2(me.x, me.z),
+                LocalId = localId,
+                Radius = _radius,
+                Delta = new Seconds(Time.deltaTime),
+                Puppets = bodies,
+            };
+        }
+
+        private static ColliderFacts ColliderOf(Collider c)
+        {
+            if (c == null)
+            {
+                return default;
             }
+
+            var e = c.bounds.extents;
+            return new ColliderFacts
+            {
+                Exists = true,
+                Trigger = c.isTrigger,
+                Enabled = c.enabled,
+                Extents = new Vec2(e.x, e.z),
+            };
+        }
+
+        private void Measure(Player p)
+        {
+            _measured = p;
+            var colliders = new List<ColliderFacts>();
+            foreach (var c in p.GetComponents<Collider>())
+            {
+                colliders.Add(ColliderOf(c));
+            }
+
+            _radius = SeparationRules.Radius(colliders);
 
             Plugin.Log.LogInfo(
                 "Soft player collision: players are eased apart within "

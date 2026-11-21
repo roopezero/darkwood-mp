@@ -155,7 +155,7 @@ namespace DarkwoodMP.World
             }
 
             bool someoneOut = false;
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (CoopPause.InCoop && sync != null
                 && UnityEngine.Time.unscaledTime - _since >= Grace)
             {
@@ -296,7 +296,7 @@ namespace DarkwoodMP.World
         /// PlayerState says it's out.</summary>
         private static void TellLateMornings(Session s, Controller c)
         {
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (_overDay < 0 || sync == null || !WorldShare.InWorld)
             {
                 return;
@@ -500,7 +500,9 @@ namespace DarkwoodMP.World
 
             // does nothing while the window is still opening: tried again next
             // frame
-            DialogueGuard.Close(w);
+            var guard = Plugin.Instance.Host.Dialogues;
+            guard.Close(w);
+
             if (w.npc == null)
             {
                 End(c);
@@ -512,7 +514,8 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     "[world] our dialogue with the trader didn't close: "
                         + "closing it without him and ending the morning");
-                DialogueGuard.ForceClose(w, "not closing");
+                guard.ForceClose(w, "not closing");
+
                 End(c);
             }
         }

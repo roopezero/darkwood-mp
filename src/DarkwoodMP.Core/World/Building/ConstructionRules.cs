@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Building
         /// The construct call's forceOption when it names none.
         public const int NoOption = -1;
 
-        /// What Constructible.construct does (ConstructPatch.Prefix). The
+        /// What Constructible.construct does (Construction.BeforeBuild). The
         /// game's own builds, the joiner's confirmed copy and anything
         /// while not sharing aren't shared; only the player's (or a test's
         /// as the player) are.

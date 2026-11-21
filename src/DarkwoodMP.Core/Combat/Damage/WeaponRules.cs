@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// Host: the most damage a client's hit on one of the host's enemies
-    /// may do (NetEnemies.DamageCap and its use in NetEnemies.ApplyHit). A
+    /// may do (WeaponCaps, used in NetEnemies.ApplyHit). A
     /// larger hit is cut down to the cap, never refused.
     public static class WeaponRules
     {

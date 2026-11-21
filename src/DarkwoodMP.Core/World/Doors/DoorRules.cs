@@ -1,8 +1,8 @@
 namespace DarkwoodMP.World.Doors
 {
-    /// The host's check of what a client did to a door (the door part of
-    /// the plugin's WorldActions.Allowed), and what a client's door is
-    /// set back to when the host refused it (OnObjState, Kind.Door). The
+    /// The host's check of what a client did to a door (the plugin's
+    /// Doors.Allowed), and what a client's door is set back to when the
+    /// host refused it (Doors.RollBack). The
     /// first check that fails wins: is the door there, is the player in
     /// reach, then the door's state.
     public static class DoorRules

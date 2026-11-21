@@ -66,7 +66,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             float until = Time.realtimeSinceStartup + 5f;
             while ((ps == null || !ps.Remotes.Values.Any(
                 x => x.Owner != Sync.PlayerSync.DummyId && x.Last != null))

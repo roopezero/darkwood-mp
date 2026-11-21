@@ -224,7 +224,7 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// Host -> client: ObjRef, u8 what (1 enemy, 2 door, 3 window, 4 item),
         /// f32 burn time, u8 on: something started or stopped burning (see
-        /// World.FireSync). Client -> host, inside a Request, the same bytes
+        /// World.Fire.Fire). Client -> host, inside a Request, the same bytes
         /// with on = 1: our player's flames set this door, window or item
         /// alight.
         /// </summary>
@@ -300,7 +300,7 @@ namespace DarkwoodMP.Net
         /// result: the amount it took), or refuses it (too far, more than a
         /// can, a full tank) after sending the level back. From the host: fuel
         /// is the level and on whether it runs, after a pour and when that
-        /// changed (World.FuelSync).
+        /// changed (World.Fuel).
         /// </summary>
         Fuel = 44,
         /// <summary>
@@ -579,14 +579,14 @@ namespace DarkwoodMP.Net
         /// the egg, f32 x, f32 z (where it stands, to find it by name if the
         /// ObjRef doesn't), str its GameObject's name. A larva egg (or another
         /// item broken open to get at its contents) was broken in the sender's
-        /// game; break yours (see World.EggSync).
+        /// game; break yours (see World.Eggs.Eggs).
         /// </summary>
         EggDestroyed = 0xD0,
         /// <summary>
         /// Either way (a client's is a request): u16 n, then n times:
         /// ObjRef (u8 kind, i64 id), f32 x, f32 z. These patches of infection
         /// (the damaging ground fire clears) were burned away in the sender's
-        /// game in one frame; clear yours (see World.InfectionSync). A client
+        /// game in one frame; clear yours (see World.Infections). A client
         /// sends only what its player's burning weapon cleared.
         /// </summary>
         InfectionCleared = 0xD1,
@@ -596,7 +596,7 @@ namespace DarkwoodMP.Net
         /// of infection appeared in the host's world (it spreads, or a spider
         /// laid it);
         /// make yours with that id (ObjRef Spawned). Clients' infection never
-        /// spreads by itself (see World.InfectionSync).
+        /// spreads by itself (see World.Infections).
         /// </summary>
         InfectionSpawned = 0xD2,
         /// <summary>

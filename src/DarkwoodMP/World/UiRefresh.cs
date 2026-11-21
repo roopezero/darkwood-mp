@@ -24,19 +24,26 @@ namespace DarkwoodMP.World
     /// them changes a slot, so nothing goes back out from them. Nothing is done
     /// when the object's window isn't open.
     /// </summary>
-    internal static class UiRefresh
+    internal sealed class UiRefresh
     {
+        private readonly CoopSession _coop;
+
+        public UiRefresh(CoopSession coop)
+        {
+            _coop = coop;
+        }
+
         /// <summary>
         /// Counted for the map test (ui-* steps): how many times an open window
         /// was redrawn.
         /// </summary>
-        internal static int Redraws;
+        public int Redraws { get; private set; }
 
         /// <summary>
         /// False only in the map test's "before" run (ui-refresh off): windows
         /// behave as they did without this.
         /// </summary>
-        internal static bool Enabled = true;
+        public bool Enabled { get; set; } = true;
 
         /// <summary>
         /// Whether the local player has this inventory's window open.
@@ -57,7 +64,7 @@ namespace DarkwoodMP.World
         /// A remote change to these slots was applied: redraw what of its
         /// window the slots don't draw.
         /// </summary>
-        internal static void Changed(Inventory inv)
+        public void Changed(Inventory inv)
         {
             if (!Enabled || !Shown(inv))
             {
@@ -78,7 +85,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// A remote change to a generator's or the saw's fuel was applied.
         /// </summary>
-        internal static void FuelChanged(Component c)
+        public void FuelChanged(Component c)
         {
             if (c == null || !Enabled)
             {
@@ -121,10 +128,10 @@ namespace DarkwoodMP.World
             }, c.name);
         }
 
-        private static void Run(System.Action redraw, string what)
+        private void Run(System.Action redraw, string what)
         {
-            bool was = Coop.Guards.Replaying;
-            Coop.Guards.Replaying = true;
+            bool was = _coop.Guards.Replaying;
+            _coop.Guards.Replaying = true;
             try
             {
                 redraw();
@@ -137,7 +144,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Coop.Guards.Replaying = was;
+                _coop.Guards.Replaying = was;
             }
         }
     }

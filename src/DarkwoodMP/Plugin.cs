@@ -55,8 +55,6 @@ namespace DarkwoodMP
         public static GUIStyle NameTagStyle;
 
         private Harmony _harmony;
-        private PlayerSync _playerSync;
-        private PlayerFx _playerFx;
         private ModHost _host;
         /// <summary>
         /// The Direct panel's server browser (the map test's "lan-search" uses
@@ -79,11 +77,8 @@ namespace DarkwoodMP
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
-        private TimeSync _time;
         private Characters _characters;
         private FlagsSync _flags;
-        private DragSync _drag;
-        private FuelSync _fuel;
         private WorldEvents _events;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
@@ -437,52 +432,32 @@ namespace DarkwoodMP
             new StartGameWindow();
             SaveBook.Register(_host.Session);
             OptionsWindow.Init();
-            _playerSync = new PlayerSync(_host.Session);
-            _playerFx = new PlayerFx(_host.Session);
+            _host.AddPlayers();
             _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
             _host.Session.OnPlayerLeft += n => Notice($"{n} left");
             _host.Session.OnPlayerJoining += n => Notice($"{n} is joining...");
             _host.Session.OnPlayerStoppedJoining += n => Notice(
                 $"{n} stopped joining");
-            _playerSync.OnRemoteDied += n => Notice($"{n} died");
+            _host.Players.OnRemoteDied += n => Notice($"{n} died");
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
-            PlayerDamage.Register(_host.Session);
-            EnemyAreaHits.Register(_host.Session);
-            EnemyFx.Register(_host.Session);
             AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
-            _time = new TimeSync(_host.Session);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
-            _drag = new DragSync(_host.Session);
-            DoorPush.Register(_host.Session);
-            _fuel = new FuelSync(_host.Session);
-            new TraderSync(_host.Session);
-            new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new ThrowSync(_host.Session);
-            new FireSync(_host.Session);
-            Construction.Register(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
-            TalkLock.Register(_host.Session);
             Progression.Register(_host.Session);
-            StackSizes.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
             FarEvents.Register(_host.Session);
-            ViewRects.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
-            EggSync.Register(_host.Session);
-            InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
-            _host.Session.OnSessionEnded += ThrownHits.Clear;
-            _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
@@ -906,10 +881,16 @@ namespace DarkwoodMP
             OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
-            UiRefresh.Enabled = true;
-            TrapFiredPatch.TestRefuse = null;
+            CoopSession session = Coop.Current;
+            if (session != null)
+            {
+                session.Ui.Enabled = true;
+                session.Pushes.TestTouch = null;
+                session.Traps.TestRefuse = World.Traps.TrapTest.None;
+            }
+
             WorldShare.TestHoldSecs = 0f;
-            DoorPush.TestTouch = null;
+
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
             EnemyMotion.Stats.On = false;
@@ -1754,7 +1735,7 @@ namespace DarkwoodMP
             }
 
             yield return new WaitForSeconds(5f);
-            _playerSync.SpawnDummy(new Vector3(120f, 0f, 0f));
+            _host.Players.SpawnDummy(new Vector3(120f, 0f, 0f));
             Log.LogInfo("--dwmp-dummy: dummy left 120 units east of you");
             if (_spawnType == null)
             {
@@ -2178,7 +2159,12 @@ namespace DarkwoodMP
             }
 
             JoinScreen.LateUpdate();
-            Sync.ViewWatch.LateUpdate(_host.Session.Active);
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.View.LateUpdate(_host.Session.Active);
+            }
+
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             GameCursor.LateUpdate(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
@@ -2260,15 +2246,25 @@ namespace DarkwoodMP
             ModProfiler.Mark("session");
             _host.Browser.Update();
             ModProfiler.Mark("browser");
-            _playerSync.Update();
+            _host.Players.Update();
             ModProfiler.Mark("players");
-            _playerFx.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.PlayerFx.Update();
+            }
+
             ModProfiler.Mark("player fx");
-            Proxies.Update(_playerSync, _host.Session.IsHost);
+            _host.Proxies.Update(_host.Players, _host.Session.IsHost);
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
-            _time.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Time.Update();
+            }
+
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
             _host.Workbenches.Update();
@@ -2286,12 +2282,27 @@ namespace DarkwoodMP
             _flags.Update();
             ModProfiler.Mark("flags");
             // also without co-op: the flag is kept for when others join
-            World.SharedTank.Update();
-            _drag.Update();
+            _host.Tank.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Drags.Update();
+            }
+
             ModProfiler.Mark("drag");
-            DoorPush.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pushes.Update();
+            }
+
             ModProfiler.Mark("door push");
-            _fuel.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Fuel.Update();
+            }
+
             ModProfiler.Mark("fuel");
             _events.Update();
             ModProfiler.Mark("events");
@@ -2304,7 +2315,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("host ids");
             NightObjects.Update();
             ModProfiler.Mark("night objects");
-            EnemyFx.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.EnemyFx.Update();
+            }
+
             ModProfiler.Mark("enemy fx");
             _world.Update();
             ModProfiler.Mark("world");
@@ -2329,34 +2345,37 @@ namespace DarkwoodMP
             DreamSync.Update();
             Prologue.Update();
             Locations.Update();
-            ViewRects.Update();
-            InfectionSync.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Views.Update();
+                coop.Infections.Update();
+            }
+
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();
-            if (_host.Session.IsHost && WorldShare.InWorld)
+            coop = Coop.Current;
+            if (_host.Session.IsHost && WorldShare.InWorld && coop != null)
             {
-                TraderSync instance = TraderSync.Instance;
-                if (instance != null)
-                {
-                    instance.HostUpdate();
-                }
+                coop.Traders.HostUpdate();
             }
 
-            NpcSync npcs = NpcSync.Instance;
-            if (npcs != null)
+            coop = Coop.Current;
+            if (coop != null)
             {
-                npcs.Update();
+                coop.Npcs.Update();
             }
 
             ModProfiler.Mark("npcs");
-            DialogueGuard.Update();
+            // also alone: a dialogue's NPC can go away then too
+            _host.Dialogues.Update();
+
             TestWorld.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
                 Spectator.Reset();
-                ThrownHits.Clear();
-                EnemyAreaHits.Clear();
+                _host.Spawns.Clear();
             }
 
             _wasInWorld = WorldShare.InWorld;
@@ -2507,7 +2526,7 @@ namespace DarkwoodMP
                 NameTagStyle.normal.textColor = new Color(0.9f, 0.85f, 0.7f);
             }
 
-            _playerSync.DrawNameTags();
+            _host.Players.DrawNameTags();
             TestWorld.DrawLabels();
             Spectator.DrawGui();
             Progression.OnGUI();

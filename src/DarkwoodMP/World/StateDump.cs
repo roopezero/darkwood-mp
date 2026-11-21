@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Doors;
 using UnityEngine;
 
 namespace DarkwoodMP.World

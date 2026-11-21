@@ -1,8 +1,8 @@
 namespace DarkwoodMP.World.Locks
 {
     /// What a game knows when one of its Items may have just become
-    /// searched: Item.disarm (the plugin's CrateSearchedPatch) or
-    /// Item.openInventory (OpenSearchedPatch) returned.
+    /// searched: Item.disarm (the plugin's Disarm patch) or
+    /// Item.openInventory (OpenInventory) returned.
     public readonly struct SearchSentFacts
     {
         /// Item.searched before the call.

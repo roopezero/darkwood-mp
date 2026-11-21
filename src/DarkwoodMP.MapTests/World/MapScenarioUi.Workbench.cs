@@ -241,7 +241,7 @@ namespace DarkwoodMP.World
                         args[k + 2], CultureInfo.InvariantCulture)));
             }
 
-            int redraws0 = UiRefresh.Redraws;
+            int redraws0 = Coop.Current.Ui.Redraws;
             float until = Time.realtimeSinceStartup + 4f;
             while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n))
                 && Time.realtimeSinceStartup < until)
@@ -274,8 +274,8 @@ namespace DarkwoodMP.World
                 rec = Recipes(wb, out int met, out int total);
             r.Info =
                 $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, "
-                    + $"tint ok={rec == null}; redraws {UiRefresh.Redraws} "
-                    + "(total)";
+                    + $"tint ok={rec == null}; redraws "
+                    + $"{Coop.Current.Ui.Redraws} (total)";
             if (wrong.Count > 0)
             {
                 r.Fail(

@@ -48,6 +48,92 @@ namespace DarkwoodMP
         /// every container a client changes.
         public readonly World.Inventories.SlotShare Slots;
 
+        /// Building and repairing, and a joiner's builds waiting for the
+        /// host's answer.
+        public readonly Construction Construction;
+
+        /// The host's stack size, sent to the clients.
+        public readonly StackShare Stacks;
+
+        /// The host's clock, which every client's follows.
+        public readonly TimeSync Time;
+
+        /// Where the NPCs stand: the host sends its own, clients follow.
+        public readonly NpcSync Npcs;
+
+        /// Host: which joiner each recruited follower follows.
+        public readonly NpcFollowers Followers;
+
+        /// One player at a time talks to an NPC.
+        public readonly World.Talk.TalkLock Talk;
+
+        /// Things dragged and pushed, shared.
+        public readonly DragSync Drags;
+
+        /// Redraws an open window after another player's change to it.
+        public readonly UiRefresh Ui;
+
+        /// What traders have for sale, and trades with them.
+        public readonly TraderSync Traders;
+
+        /// Thrown and dropped things, shared.
+        public readonly World.ThrowSync Throws;
+
+        /// Larva eggs and other items broken open, shared.
+        public readonly World.Eggs.Eggs Eggs;
+
+        /// The infection's patches: clears and the host's spread.
+        public readonly World.Infections.Infections Infections;
+
+        /// Things on fire, shown from the host's world.
+        public readonly World.Fire.Fire Fire;
+
+        /// The fuel in generators and saws.
+        public readonly World.Fuel.Fuel Fuel;
+        public readonly World.Doors.Doors Doors;
+
+        public readonly World.Windows.Windows Windows;
+
+        /// Open doors' leaves that players push, shared.
+        public readonly World.Doors.DoorPush Pushes;
+
+        /// Traps going off, switched and disarmed, shared.
+        public readonly World.TrapSync Traps;
+
+        /// Locks, containers searched and padlocks opened, shared.
+        public readonly World.LockShare Locks;
+
+        /// Items switched on and off (lamps, generators), shared.
+        public readonly World.SwitchSync Switches;
+
+        /// NPC deaths, shared.
+        public readonly World.NpcDeaths NpcDeaths;
+
+        /// Host: how much of the world each joiner's game keeps running.
+        public readonly Combat.ViewRects Views;
+
+        /// Client: the host's enemies' hits on our player.
+        public readonly Combat.PlayerDamage Damage;
+
+        /// Client: the host's enemies' explosions, seen and heard here.
+        public readonly Combat.EnemyExplosions Explosions;
+
+        /// What the host's enemies do that a joiner sees or hears.
+        public readonly Combat.EnemyFx EnemyFx;
+
+        /// Items hit, broken and repaired, and explosives going off, shared.
+        public readonly World.BreakActions Breaks;
+
+        /// Notes, feeders, gasoline, vines and shadows, shared.
+        public readonly World.ObjectActions Objects;
+
+        /// What our player sounds and looks like to the others beyond its
+        /// sprites: sounds, shots, blood and burning.
+        public readonly Sync.PlayerFx PlayerFx;
+
+        /// Logs what switches off our player's view (a black screen).
+        public readonly Sync.ViewWatch View;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -64,6 +150,39 @@ namespace DarkwoodMP
             Joiners = new JoinerSaveIds();
             Containers = new World.Inventories.Containers(this);
             Slots = new World.Inventories.SlotShare(this);
+            Construction = new Construction(this);
+            Stacks = new StackShare(this);
+            Time = new TimeSync(this);
+            Npcs = new NpcSync(this);
+            Followers = new NpcFollowers(this);
+            Talk = new World.Talk.TalkLock(this);
+            Drags = new DragSync(this);
+            Ui = new UiRefresh(this);
+            Traders = new TraderSync(this);
+            Throws = new World.ThrowSync(this);
+            Eggs = new World.Eggs.Eggs(this);
+            Infections = new World.Infections.Infections(this);
+            Fire = new World.Fire.Fire(this);
+            Fuel = new World.Fuel.Fuel(this);
+            Doors = new World.Doors.Doors(this);
+            Windows = new World.Windows.Windows(this);
+            // the leaves live as long as the game (ModHost.Leaves); the
+            // doors waiting for their push are forgotten when this ends
+            var leaves = Plugin.Instance.Host.Leaves;
+            Hook(leaves.Clear);
+            Pushes = new World.Doors.DoorPush(this, leaves);
+            Traps = new World.TrapSync(this);
+            Locks = new World.LockShare(this);
+            Switches = new World.SwitchSync(this);
+            NpcDeaths = new World.NpcDeaths(this);
+            Views = new Combat.ViewRects(this);
+            Damage = new Combat.PlayerDamage(this);
+            Explosions = new Combat.EnemyExplosions(this);
+            EnemyFx = new Combat.EnemyFx(this);
+            Breaks = new World.BreakActions(this);
+            Objects = new World.ObjectActions(this);
+            PlayerFx = new Sync.PlayerFx(this);
+            View = new Sync.ViewWatch();
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

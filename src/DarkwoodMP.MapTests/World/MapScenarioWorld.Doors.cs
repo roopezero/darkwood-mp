@@ -124,21 +124,21 @@ namespace DarkwoodMP.World
             }
 
             yield return Walk(d.transform.position);
-            var was = WorldActions.DoorState.Of(d);
+            var was = World.Doors.Doors.StateOf(d);
             AsPlayer(() => d.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{d.name} {Ref(d)} barricaded={d.barricaded} "
                     + $"({d.barricadeHealth}) health {d.health} "
                     + $"broken={d.destroyed}";
-            if (was.Same(WorldActions.DoorState.Of(d)))
+            if (was.Equals(World.Doors.Doors.StateOf(d)))
             {
                 r.Fail($"{r.Info}: the hit did nothing");
             }
         }
 
         /// <summary>"door-burn N": set it alight. The host's world burns it; a
-        /// client's lights its copy and asks the host (FireSync.ClientIgnited,
+        /// client's lights its copy and asks the host (Fire.ClientIgnited,
         /// as its flamethrower does).</summary>
         private static IEnumerator DoorBurn(string[] a, Result r)
         {
@@ -158,10 +158,10 @@ namespace DarkwoodMP.World
                 {
                     AsPlayer(() =>
                     {
-                        FireSync instance = FireSync.Instance;
-                        if (instance != null)
+                        CoopSession coop = Coop.Current;
+                        if (coop != null)
                         {
-                            instance.ClientIgnited(d.gameObject);
+                            coop.Fire.ClientIgnited(d.gameObject);
                         }
                     });
                 }

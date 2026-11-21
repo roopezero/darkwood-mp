@@ -419,9 +419,19 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool Near(ulong player, Vector3 pos, float reach)
         {
-            NetPlayerProxy.All.TryGetValue(player, out var p);
-            var facts = FactsOf(p, pos) with { Reach = reach };
+            var facts = NearOf(player, pos) with { Reach = reach };
             return ReachRules.Near(facts);
+        }
+
+        /// <summary>
+        /// Host: what the reach rules know of this player's stand-in and a
+        /// thing at pos, for a rule that sets the reach itself and asks
+        /// ReachRules.Near (LeafGlideRules).
+        /// </summary>
+        public ReachFacts NearOf(ulong player, Vector3 pos)
+        {
+            NetPlayerProxy.All.TryGetValue(player, out var p);
+            return FactsOf(p, pos);
         }
 
         /// <summary>
@@ -440,24 +450,37 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// InReach's verdict without refusing anything, for a handler whose
-        /// own rule takes it as a fact.
+        /// InReach's verdict, for a handler whose rules take it as a fact:
+        /// nothing is refused here.
         /// </summary>
         public Verdict ReachOf(Vector3 pos, float reach, string what)
         {
-            var facts = FactsOf(Requester, pos) with
-            {
-                Handling = Handling,
-                Reach = reach,
-                What = what,
-            };
+            var facts = ReachOf(pos) with { Reach = reach, What = what };
+            return ReachRules.InReach(facts);
+        }
 
+        /// <summary>
+        /// Host, in a request's handler: what the reach rules know of the
+        /// requesting player and a thing at pos, for a rule that sets the
+        /// reach itself (DoorRules, WindowRules).
+        /// </summary>
+        public ReachFacts ReachOf(Vector3 pos, string what) =>
+            ReachOf(pos) with { What = what };
+
+        /// <summary>
+        /// Host, in a request's handler: what the reach rules know of the
+        /// requesting player and pos, for a subsystem's facts. The rule sets
+        /// the reach and the name.
+        /// </summary>
+        public ReachFacts ReachOf(Vector3 pos)
+        {
+            var facts = FactsOf(Requester, pos) with { Handling = Handling };
             if (_coop.Moves.TryAccepted(From, out var at))
             {
                 facts = facts with { Checked = true, Accepted = Flat(at) };
             }
 
-            return ReachRules.InReach(facts);
+            return facts;
         }
 
         /// <summary>

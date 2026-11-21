@@ -375,7 +375,7 @@ namespace DarkwoodMP.World.Inventories
                     + "undone");
             if (differed > 0)
             {
-                UiRefresh.Changed(inv);
+                _coop.Ui.Changed(inv);
             }
 
             RemoveIfEmptied(inv);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using DarkwoodMP.World.Doors;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -286,7 +287,12 @@ namespace DarkwoodMP.World
             }
 
             yield return Walk(hinge.connectedAnchor - u.normalized * 60f, 40f);
-            DoorPush.TestTouch = d;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pushes.TestTouch = d;
+            }
+
             try
             {
                 // Turn it about the hinge (world up) towards the target, as a
@@ -332,7 +338,10 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                DoorPush.TestTouch = null;
+                if (coop != null)
+                {
+                    coop.Pushes.TestTouch = null;
+                }
             }
 
             float reach = StateDump.Flat(

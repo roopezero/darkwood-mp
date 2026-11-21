@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Doors
 {
     /// What the story's unblock of a door looks at to decide whether to
-    /// send it (the plugin's DoorUnblockPatch.Unblock).
+    /// send it (the plugin's DoorUnblock.Unblock).
     public readonly struct UnblockFacts
     {
         /// Door.blocked before Door.unblock.

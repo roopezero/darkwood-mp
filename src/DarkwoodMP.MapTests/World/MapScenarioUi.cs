@@ -42,9 +42,10 @@ namespace DarkwoodMP.World
             Add("ui-pause", Pause, timeout: 20f);
             Add("ui-refresh", (a, r) =>
             {
-                UiRefresh.Enabled = a.Length == 0 || a[0] != "off";
+                UiRefresh ui = Coop.Current.Ui;
+                ui.Enabled = a.Length == 0 || a[0] != "off";
                 string text = "off";
-                if (UiRefresh.Enabled)
+                if (ui.Enabled)
                 {
                     text = "on";
                 }

@@ -66,7 +66,7 @@ namespace DarkwoodMP.World.Inventories
                     TakeHost(inv, c);
                 }
 
-                UiRefresh.Changed(inv);
+                _coop.Ui.Changed(inv);
                 RemoveIfEmptied(inv);
                 return;
             }
@@ -127,7 +127,7 @@ namespace DarkwoodMP.World.Inventories
                 return;
             }
 
-            UiRefresh.Changed(inv);
+            _coop.Ui.Changed(inv);
             SendChanges(obj, accepted, from);
             RemoveIfEmptied(inv);
         }
@@ -298,7 +298,7 @@ namespace DarkwoodMP.World.Inventories
                 Undo(sentKey, unsent, quiet: true);
             }
 
-            UiRefresh.Changed(inv);
+            _coop.Ui.Changed(inv);
         }
     }
 }

@@ -1174,9 +1174,9 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            float cap = DamageCap(weapon);
-            float applied = Mathf.Clamp(damage, 0f, cap);
-            if (applied < damage)
+            float cap = Damage.WeaponCaps.Of(weapon);
+            float applied = Damage.WeaponRules.Applied(damage, cap);
+            if (Damage.WeaponRules.Cut(damage, applied))
             {
                 var log = Plugin.Log;
                 var hitter = _session.NameOf(from);
@@ -1467,43 +1467,6 @@ namespace DarkwoodMP.Combat
             {
                 return null;
             }
-        }
-
-        /// <summary>
-        /// The most damage this weapon can deal in one hit, by the game's own
-        /// numbers for its class: its damage or special damage, with every
-        /// damage upgrade its class offers (InvItem.upgrades; not the upgrades
-        /// the hit says it has, which the client sends), doubled by the Strong
-        /// skill's effect, with a margin.
-        /// Bare hands: as the game's weakest weapons.
-        /// </summary>
-        public static float DamageCap(InvItemClass weapon)
-        {
-            InvItem b = null;
-            if (weapon != null)
-            {
-                b = weapon.baseClass;
-            }
-
-            if (b == null)
-            {
-                return 40f;
-            }
-
-            float mod = 1f; // as getModdedDamage adds them up
-            if (b.upgrades != null)
-            {
-                foreach (var u in b.upgrades)
-                {
-                    if (u != null && u.damageModifier > 1f)
-                    {
-                        mod += u.damageModifier - 1f;
-                    }
-                }
-            }
-
-            int most = Mathf.Max(b.damage, b.specialDamage);
-            return Mathf.Max(10f, most * mod * 2f * 1.25f);
         }
 
         // =====================================================================

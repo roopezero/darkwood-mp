@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using DarkwoodMP.Net;
 
@@ -39,10 +40,50 @@ namespace DarkwoodMP
         /// (HostIds.NewId), so ids made in the same millisecond differ.
         public readonly Random IdRandom = new Random();
 
+        /// The village cellar's full oxygen tank, shared once filled.
+        public readonly World.SharedTank Tank = new World.SharedTank();
+
+        /// One stack size for every stackable item.
+        public readonly World.StackSizes Stacks;
+
+        /// The generators the game started (Generator.Start), also alone: a
+        /// world loaded before hosting has them too (Fuel checks them).
+        public readonly HashSet<Generator> Generators =
+            new HashSet<Generator>();
+
+        /// The host's stand-ins for the other players, for its AI; also the
+        /// test dummy's in a game played alone.
+        public readonly Combat.Proxies Proxies = new Combat.Proxies();
+
+        /// Each enemy's threat for each player, while there are stand-ins.
+        public readonly Combat.Threats Threats;
+
+        /// Keeps a dialogue closable when its NPC goes away, also alone.
+        public readonly World.Talk.DialogueGuard Dialogues =
+            new World.Talk.DialogueGuard();
+
+        /// Doors opened here while their leaf was switched off, also alone;
+        /// a session forgets them when it ends (CoopSession).
+        public readonly World.Doors.DoorLeaf Leaves =
+            new World.Doors.DoorLeaf();
+
+        /// What the host's enemies and our player's weapon spawned, also
+        /// alone (the test dummy is hurt with no session).
+        internal readonly Combat.AreaSpawns Spawns = new Combat.AreaSpawns();
+
+        /// The sprite collections by name hash, for the puppets' looks; kept
+        /// as long as the game runs, as the game keeps them.
+        public readonly Sync.SpriteCollections Sprites =
+            new Sync.SpriteCollections();
+
+        /// Lights outside the pathfinding grid, also when playing alone.
+        public readonly Sync.LightGrid Lights = new Sync.LightGrid();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
         {
+            Threats = new Combat.Threats(Proxies);
             var log = new BepInLog();
             Session = new Session(new UnityClock(), log, PluginInfo.Version)
             {
@@ -58,15 +99,31 @@ namespace DarkwoodMP
 
             Session.Add(Tcp);
             Browser = new ServerBrowser(Paths.ConfigPath, log);
+            Stacks = new World.StackSizes();
             // First, so a CoopSession exists before any other handler of
             // the start runs, and is gone before the others' cleanups.
             Session.OnSessionStarted += StartCoop;
             Session.OnSessionEnded += Coop.End;
+            Session.OnSessionEnded += Spawns.Clear;
         }
 
         /// The Steam backend once Steam is up; null before that and on GOG.
         /// Typed as the interface: no Steamworks type may appear here.
         public INetBackend Steam { get; private set; }
+
+        /// <summary>
+        /// The other players' puppets, and our player's look sent to them.
+        /// Kept for the whole game: the tests' dummy (--dwmp-dummy) is a
+        /// puppet without a session. Made by Plugin.Load where it was made
+        /// before, so its handlers of the session's events run in the same
+        /// order.
+        /// </summary>
+        public Sync.PlayerSync Players { get; private set; }
+
+        public void AddPlayers()
+        {
+            Players = new Sync.PlayerSync(Session);
+        }
 
         public void AddSteam(INetBackend steam)
         {
@@ -86,6 +143,7 @@ namespace DarkwoodMP
         public void Dispose()
         {
             Coop.End();
+            Stacks.Dispose();
             Session.Dispose();
         }
     }

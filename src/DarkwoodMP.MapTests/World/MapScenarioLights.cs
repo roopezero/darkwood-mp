@@ -140,7 +140,7 @@ namespace DarkwoodMP.World
             bool ok = false;
             while (true)
             {
-                Sync.PlayerSync instance = Sync.PlayerSync.Instance;
+                Sync.PlayerSync instance = Plugin.Instance.Host.Players;
                 List<Sync.RemotePlayer> puppets = null;
                 if (instance != null)
                 {

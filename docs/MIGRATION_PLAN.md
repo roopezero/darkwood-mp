@@ -360,10 +360,43 @@ with the baseline.
 | 5.3 | `Containers`, `SlotShare`, `SlotShare.Sort`, `WorkbenchStorage`, `UiRefresh`, `TraderSync`, `ThrowSync` | 2,828 | `world map:items1 map:items2 map:wbrows map:trade map:ui` |
 | 5.4 | `DragSync` | 858 | `host-drag map:knock map4` |
 
-- [ ] 5.1 Small subsystems, one branch each.
-- [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
-      and splits into `Doors`, `Windows` and `Traps`.
-- [ ] 5.3 Items.
+- [x] 5.1 Small subsystems, in three parts.
+  - [x] Part a: `EggSync`, `InfectionSync`, `FireSync`, `FuelSync`. They are
+        `World/Eggs/Eggs`, `World/Infections/Infections`, `World/Fire/Fire`
+        and `World/Fuel/Fuel`, fields of `CoopSession`. The list of
+        generators is `ModHost.Generators`, since generators start before
+        hosting from the pause menu. Their facts take the requester's reach
+        from `Authority.ReachOf`. The fuel message's bytes are the core's
+        `FuelMessage`, since `Fuel` is the plugin's class in the same
+        namespace.
+  - [x] Part b: `BreakSync`, `Construction`, `SharedTank`, `StackSizes`.
+        `Construction` and `StackShare` (the host's size and its message)
+        are `CoopSession` subsystems; the prefabs' sizes (`StackSizes`) and
+        the tank watcher (`SharedTank`) live on `ModHost`, since a game
+        played alone uses them, so their patches still run with no session.
+        `BreakSync` keeps no state and stays static helpers. `Construction`
+        checks reach with `Authority.InReach` after `MayBuild`, so
+        `BuildFacts.Reach` is left empty.
+  - [x] Part c: `TimeSync`, `NpcSync`, `NpcFollowers`, `TalkLock`,
+        `DialogueGuard`. The first four are `CoopSession.Time`, `.Npcs`,
+        `.Followers` and `.Talk`, in `World/Clock`, `World/Npcs` and
+        `World/Talk`. `DialogueGuard` is `ModHost.Dialogues`, in
+        `World/Talk`: a game played alone needs it too.
+- [x] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
+      and splits into `Doors`, `Windows` and `Traps`. Done in slices, each a
+      `CoopSession` subsystem: `.Doors` and `.Pushes` (the leaves are `ModHost.Leaves`) in
+      `World/Doors`, `.Windows` in `World/Windows`, `.Traps` (with
+      `DisarmAnimation`) in `World/Traps`, `.Locks` in `World/Locks`,
+      `.Switches` in `World/Switches`, `.NpcDeaths` in `World/Npcs`,
+      `.Breaks` (`BreakActions`: item hits, breaks, repairs, explosions and
+      the item and explosive parts of `ObjState`) in `World/Breaking`, and
+      `.Objects` (`ObjectActions`, two files of one partial class, and
+      `ObjectPatches`) in `World/Objects`. `WorldActions` stays a static
+      class of shared plumbing (the `Action` enum, `Send`, the
+      `WorldAction` and `ObjState` dispatch, `HasKey`, `Crate`, the
+      `HammerStroke` patch) so its many callers don't change; it is still
+      about 1,000 lines.
+- [x] 5.3 Items.
   - [x] Part a: `Containers`, `SlotShare` (with `SlotShare.Sort`) and
         `WorkbenchStorage`. Done: the containers and the slot sharing are
         `CoopSession.Containers` and `CoopSession.Slots` in
@@ -371,7 +404,20 @@ with the baseline.
         `ModHost.Workbenches` in `World/Workbenches`, and so is the
         placeables cache (`ModHost.Placeables`). Sort & Stack still works
         alone, through a static `SortAlone` that sends nothing.
-- [ ] 5.4 Dragging.
+  - [x] Part b: `UiRefresh`, `TraderSync`, `ThrowSync`. `UiRefresh` and
+        `TraderSync` are `CoopSession.Ui` and `.Traders`, `ThrowSync` is
+        `.Throws`, and its thrown things' state is `WorldScope.Thrown`
+        (`ThrownHits` keeps its static methods, as `ObjRef` does). The
+        trader files are in `World/Traders`, split by topic; the throw
+        files are in `World/Throws`. `UiRefresh` has no rules and no folder
+        of its own. `Authority.ReachOf` gives a rule the requester's reach
+        facts (the egg step adds the same).
+- [x] 5.4 Dragging. Done: `CoopSession.Drags`, in `World/Dragging` (five
+      files of one partial class, namespace `DarkwoodMP.World` so callers
+      didn't change), its bytes the core's `ObjMove`, `DragClaim` and
+      `DragOwner`. Its state stays session-long, as before, not on
+      `WorldScope`. `Authority.ReachOf` gives `InReach`'s verdict without
+      refusing, for `DragRules.MayClaim` to take as a fact.
 
 Finish with `tools/run-test.sh full`.
 
@@ -387,7 +433,29 @@ Finish with `tools/run-test.sh full`.
 - [ ] 6.1 Player puppets.
 - [ ] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
       by the closest player.
+  - [x] Part a: `Threat`, `NetPlayerProxy`, `ViewRects`. The threat tables
+        and the stand-ins are `ModHost.Threats` and `ModHost.Proxies`, since
+        the test dummy brings both into a game played alone; `Threat` and
+        `NetPlayerProxy.All` keep static members that pass on to them, so
+        their callers didn't change. `ViewRects` is `CoopSession.Views`, its
+        bytes the core's `ViewRectMessage`. The core's tests already pinned
+        down threat over closeness
+        (`Picks_a_far_player_with_more_threat_over_the_closest` in `Order`
+        and `Best`).
+  - [ ] Part b: `JoinerAiPatches`, `JoinerSight`, `WardPatches`,
+        `ShadowArmorLight`, `PlayerCues`.
 - [ ] 6.3 Damage. `DamageCap` becomes a rule.
+  - [x] Part a: `DamageCap`, `PlayerDamage`, `EnemyAreaHits`, `EnemyFx`.
+        `WeaponCaps` gives `WeaponRules.DamageCap` its facts.
+        `PlayerDamage`, `EnemyFx` and `EnemyExplosions` (the client's side
+        of `EnemyAreaHits`) are `CoopSession.Damage`, `.EnemyFx` and
+        `.Explosions`, in `Combat/Damage` and `Combat/Effects` with the
+        namespace `DarkwoodMP.Combat`, so callers didn't change. The spawn
+        sets are `ModHost.Spawns` and `EnemyAreaHits` stays static: the
+        test dummy is hurt with no session. Effects travel as the core's
+        `SentEffects`, which `NetEnemies` and `HostileNpcs` use too.
+  - [ ] Part b: `CombatPatches` (melee on stand-ins, client hits, cut in
+        half, threat, culling, freezing, noise and flee patches).
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
 

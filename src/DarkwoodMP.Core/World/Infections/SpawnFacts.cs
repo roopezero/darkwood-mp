@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Infections
     public readonly struct SpawnFacts
     {
         /// How deep the game is inside Infection.spawnInfection or
-        /// Character.waitToSpawnEgg (InfectionSync.Growing).
+        /// Character.waitToSpawnEgg (Infections.Growing).
         public int Growing { get; init; }
 
         /// The patch is there (not null).

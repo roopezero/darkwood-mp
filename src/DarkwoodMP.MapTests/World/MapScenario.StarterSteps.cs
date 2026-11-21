@@ -250,7 +250,7 @@ namespace DarkwoodMP.World
                 r.Fail($"our player is dead (health {playerHealth:0})");
             }
 
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps != null)
             {
                 foreach (var rp in ps.Remotes.Values)

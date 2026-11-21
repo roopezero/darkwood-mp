@@ -158,9 +158,10 @@ namespace DarkwoodMP.World
 
             sb.Append(" ");
             string watch = "no DragSync";
-            if (DragSync.Instance != null)
+            DragSync drags = Drags();
+            if (drags != null)
             {
-                watch = DragSync.Instance.WatchInfo(b);
+                watch = drags.WatchInfo(b);
             }
 
             sb.Append(watch);
@@ -260,11 +261,35 @@ namespace DarkwoodMP.World
                     + $"sliding from {Fmt1(t.position)}";
         }
 
+        /// This session's DragSync; null without a session.
+        private static DragSync Drags()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return null;
+            }
+
+            return coop.Drags;
+        }
+
+        /// When the last snapshot's positions were noted (-1: none).
+        private static float SnapshotAt()
+        {
+            DragSync drags = Drags();
+            if (drags == null)
+            {
+                return -1f;
+            }
+
+            return drags.SnapshotAt;
+        }
+
         private static IEnumerator KeepSliding(Rigidbody b, float since)
         {
             float until = Time.unscaledTime + 120f;
             float side = 1f;
-            while (b != null && DragSync.SnapshotAt < since
+            while (b != null && SnapshotAt() < since
                 && Time.unscaledTime < until)
             {
                 b.WakeUp();
@@ -284,7 +309,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 "[knock] "
                     + $"{ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} "
-                    + $"after the snapshot (at {DragSync.SnapshotAt:0.0}, "
+                    + $"after the snapshot (at {SnapshotAt():0.0}, "
                     + $"now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
             if (b != null)

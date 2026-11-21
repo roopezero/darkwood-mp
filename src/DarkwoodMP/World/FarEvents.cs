@@ -119,7 +119,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool OtherNear(Location l)
         {
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (sync == null)
             {
                 return false;

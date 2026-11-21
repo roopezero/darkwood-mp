@@ -93,7 +93,7 @@ namespace DarkwoodMP.Combat
             new HashSet<Character>();
 
         /// <summary>
-        /// An NPC died in this game (WorldActions' NpcDiedPatch): its corpse is
+        /// An NPC died in this game (NpcDeaths.AfterDie): its corpse is
         /// still our copy of that NPC.
         /// </summary>
         internal static void Died(Character c)

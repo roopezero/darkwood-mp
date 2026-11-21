@@ -87,7 +87,7 @@ namespace DarkwoodMP.World
         private static IEnumerator Note(string[] a, Result r)
         {
             _mark = MapScenarioIssues.LogMark();
-            _shotsNoted = Sync.PlayerFx.ShotsSeen;
+            _shotsNoted = Coop.Current.PlayerFx.ShotsSeen;
             Heard.Clear();
             _spawnedAtNote = new HashSet<GameObject>(
                 ThrownHits.Spawned.Where(g => g != null));
@@ -173,13 +173,13 @@ namespace DarkwoodMP.World
             }
 
             float until = Time.realtimeSinceStartup + 5f;
-            while (Sync.PlayerFx.ShotsSeen - _shotsNoted < want
+            while (Coop.Current.PlayerFx.ShotsSeen - _shotsNoted < want
                 && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.3f);
             }
 
-            int n = Sync.PlayerFx.ShotsSeen - _shotsNoted;
+            int n = Coop.Current.PlayerFx.ShotsSeen - _shotsNoted;
             r.Info = $"{n} shot(s) shown on the other player's puppet";
             if (n < want)
             {

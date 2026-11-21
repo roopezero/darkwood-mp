@@ -265,7 +265,7 @@ namespace DarkwoodMP.World.Inventories
 
             bool sameSlots = inv.open && state.slotCount == inv.slots.Count;
             var load = ContainerRules.LoadPathOf(
-                inv.open, sameSlots, UiRefresh.Enabled);
+                inv.open, sameSlots, _coop.Ui.Enabled);
             if (load == LoadPath.InWindow)
             {
                 ApplyOpen(inv, state);
@@ -362,7 +362,7 @@ namespace DarkwoodMP.World.Inventories
                 $"[ui] {inv.name} "
                     + $"{ObjRef.Of(inv.gameObject)}: contents loaded into "
                     + $"its open window ({inv.getAllItems().Count} items)");
-            UiRefresh.Changed(inv);
+            _coop.Ui.Changed(inv);
         }
     }
 }

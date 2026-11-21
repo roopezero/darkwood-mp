@@ -282,7 +282,7 @@ namespace DarkwoodMP.World
         /// <summary>The other player's puppet (not the test dummy).</summary>
         private static RemotePlayer Other()
         {
-            PlayerSync instance = PlayerSync.Instance;
+            PlayerSync instance = Plugin.Instance.Host.Players;
             if (instance != null)
             {
                 return instance.Remotes.Values.FirstOrDefault(

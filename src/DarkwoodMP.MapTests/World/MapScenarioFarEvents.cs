@@ -79,7 +79,7 @@ namespace DarkwoodMP.World
             _since = Time.realtimeSinceStartup;
             PlayerStepsRun.Clear();
             Dialogues = 0;
-            WatchSteps = Sync.PlayerSync.Instance != null
+            WatchSteps = Plugin.Instance.Host.Players != null
                 && Net.Session.Instance != null && Net.Session.Instance.IsHost;
             _refreshesAtReset = SharedCullingPatch.LoadingRefreshes;
             var locs = WorldLocations()
@@ -238,7 +238,8 @@ namespace DarkwoodMP.World
             }
             else if (t == "gen:far")
             {
-                var g = FuelSync.Generators.Where(x => x != null && !x.isSaw)
+                var g = Plugin.Instance.Host.Generators
+                    .Where(x => x != null && !x.isSaw)
                     .OrderByDescending(
                         x => StateDump.Flat(x.transform.position
                                 - Centre)).FirstOrDefault();

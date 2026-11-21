@@ -254,9 +254,9 @@ namespace DarkwoodMP.World.Workbenches
             if (coop != null)
             {
                 coop.Slots.Grew(inv);
+                coop.Ui.Changed(inv);
             }
 
-            UiRefresh.Changed(inv);
             return true;
         }
 

@@ -500,7 +500,7 @@ namespace DarkwoodMP.World
                 return AfterNight.Local;
             }
 
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             return sync != null && sync.Remotes.TryGetValue(peer, out var rp)
                 && rp.Last != null && rp.Last.AfterNight;
         }

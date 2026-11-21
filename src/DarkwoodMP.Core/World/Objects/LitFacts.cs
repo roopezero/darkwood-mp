@@ -8,7 +8,7 @@ namespace DarkwoodMP.World.Objects
         public bool WasOut { get; init; }
 
         /// A burning liquid is lighting its neighbours
-        /// (LiquidLitPatch.Spreading): a spread.
+        /// (ObjectActions.Spreading): a spread.
         public bool Spreading { get; init; }
 
         /// Liquid.burning, after the call.
@@ -21,7 +21,7 @@ namespace DarkwoodMP.World.Objects
         public bool Client { get; init; }
 
         /// Our player's melee sensor is touching something
-        /// (LiquidLitPatch.OwnSwing).
+        /// (ObjectActions.OwnSwing).
         public bool OwnSwing { get; init; }
     }
 }

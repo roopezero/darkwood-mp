@@ -56,6 +56,7 @@ namespace DarkwoodMP.World.Inventories
     internal sealed partial class SlotShare
     {
         private readonly Session _session;
+        private readonly CoopSession _coop;
 
         // what each watched storage's slots held when last compared (their
         // keys)
@@ -68,6 +69,7 @@ namespace DarkwoodMP.World.Inventories
 
         public SlotShare(CoopSession coop)
         {
+            _coop = coop;
             _session = coop.Net;
             coop.Handle(MsgType.ContainerSlots, OnSlots);
             coop.Handle(MsgType.ContainerSlotRefused, OnRefused);
