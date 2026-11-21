@@ -361,6 +361,16 @@ with the baseline.
 | 5.4 | `DragSync` | 858 | `host-drag map:knock map4` |
 
 - [ ] 5.1 Small subsystems, one branch each.
+      - [x] Part b: `BreakSync`, `Construction`, `SharedTank`, `StackSizes`.
+        Done: `Construction` and `StackShare` (the host's size and its
+        message) are `CoopSession` subsystems; the prefabs' sizes
+        (`StackSizes`) and the tank watcher (`SharedTank`) live on
+        `ModHost`, since a game played alone uses them, so their patches
+        still run with no session. `BreakSync` keeps no state and stays
+        static helpers. The plugin's feature folders keep the
+        `DarkwoodMP.World` namespace. `Construction` checks reach with
+        `Authority.InReach` after `MayBuild`, so `BuildFacts.Reach` is
+        left empty.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.
