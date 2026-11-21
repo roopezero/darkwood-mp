@@ -364,6 +364,13 @@ with the baseline.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.
+  - [x] Part a: `Containers`, `SlotShare` (with `SlotShare.Sort`) and
+        `WorkbenchStorage`. Done: the containers and the slot sharing are
+        `CoopSession.Containers` and `CoopSession.Slots` in
+        `World/Inventories`; the workbench storage works alone too, so it's
+        `ModHost.Workbenches` in `World/Workbenches`, and so is the
+        placeables cache (`ModHost.Placeables`). Sort & Stack still works
+        alone, through a static `SortAlone` that sends nothing.
 - [ ] 5.4 Dragging.
 
 Finish with `tools/run-test.sh full`.
