@@ -30,7 +30,7 @@ src/GameReferences.props        the game's paths and DLL references
 tests/DarkwoodMP.Core.Tests/    unit tests of the core (net8.0, xUnit, Shouldly)
 tests/DarkwoodMP.Analyzers.Tests/ unit tests of the formatting rules on small pieces of code (net8.0, xUnit, Shouldly)
 Directory.Build.props           the mod's version (<Version>), language settings, the analyzer reference
-.editorconfig                   style rules: errors in the core and the tests, warnings in the plugin until its code is formatted
+.editorconfig                   style rules, errors in every project
 tools/run-test.sh, tools/tests/ in-game tests with scripted Python peers
 scripts/darkwood_mp.sh         Linux launcher (Steam's runtime container safe)
 scripts/README-*.txt           DarkwoodMP-README.txt inside the zips (install and play steps)
@@ -45,7 +45,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 
 - Tools are in the user's home, not on PATH: `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:~/.dotnet/tools:$PATH`.
 - `dotnet build src/DarkwoodMP -c Release` builds and deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to `<game>/BepInEx/plugins/DarkwoodMP/`. The game is at `~/.local/share/Steam/steamapps/common/Darkwood`. Restart the game to load a new build.
-- The mod's version is `<Version>` in `Directory.Build.props`. The plugin prints about 32,000 style warnings until its code has been formatted; that's expected, and `-clp:ErrorsOnly` shows only the errors.
+- The mod's version is `<Version>` in `Directory.Build.props`. The style rules are errors, so a build with any finding fails.
 - The mod's log is `<game>/BepInEx/LogOutput.log`. Unity's is `~/.config/unity3d/Acid Wizard Studio/Darkwood/Player.log`, which also has the game's exceptions. A good start logs `All N patches applied`.
 - To launch it yourself: `cd <game> && setsid timeout 300 ./darkwood_mp.sh --inner <--dwmp-* args> &`. Without `--inner` the script expects Steam's command line. Stop it with `kill $(pgrep -x Darkwood.x86_64)`; never `pkill -f Darkwood`, which matches your own shell.
 - **In the box** (`container/box`), `$DWMP_BOX` says the mode: `dev` has a read-only game folder, builds without deploying and can't run the game (no in-game tests; ask the user to restart the box with `--game`); `game` can, on a copy of the saves.
@@ -79,7 +79,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - **Game quirks:** the game has its own global `RandomNumberGenerator` and `Button` types that shadow .NET's (qualify them). Darkwood counts a new day at dawn, not midnight. `Player` is a 9000-line singleton, so don't instantiate it.
 - **Comments and docs:** plain, concrete sentences that say what happens and why; no hype.
 - **Naming and size (`docs/ARCHITECTURE.md`):** short real words for variables and parameters (single letters only in short scopes); the type carries the unit (`Vec2`, `Seconds`) and the class says whose; say which version of a value it is (`Reported`, `Accepted`, never `Good`); at most three parameters, more become a facts struct; no `bool` that switches behaviour (split the method); a call that needs named arguments means the method should change; `PascalCase` public members, `_camelCase` private fields; files about 600 lines at most, one main type each.
-- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); a blank line after a statement, member or accessor that holds a `{ }` pair spread over lines, anywhere in it (so after `});`, `};` and `}).Max();` too, but a `{ }` on one line doesn't count), unless a `}` or the end of the file comes next; a comment or directive line isn't blank, so the blank line goes before it; at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in Core, tests and map tests; warnings in the plugin until the formatting pass has been over its code.
+- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); a blank line after a statement, member or accessor that holds a `{ }` pair spread over lines, anywhere in it (so after `});`, `};` and `}).Max();` too, but a `{ }` on one line doesn't count), unless a `}` or the end of the file comes next; a comment or directive line isn't blank, so the blank line goes before it; at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in every project.
 
 ## Docs
 

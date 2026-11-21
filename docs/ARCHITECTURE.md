@@ -399,15 +399,8 @@ The build enforces these. `.editorconfig` makes a missing brace and a brace
 at the end of a line errors (with `EnforceCodeStyleInBuild`), and
 `src/DarkwoodMP.Analyzers` fails the build on a one-line block, a missing
 blank line after a block, a line over 80 columns, `?:`, `??`, `??=` and `?.`
-(rules DW0001 to DW0007). They are errors in the core, the tests and the map
-tests. In the plugin they are warnings until one formatting pass has been
-over all of its code. The codemod's blank stage (`codemod blank`) adds the
-plugin's missing blank lines from the analyzer's own places. When that
-pass is finished and no finding is left, the plugin's warning section in
-`.editorconfig` is deleted, so the rules are errors everywhere. If only some
-folders are clean at that point, they are listed in the last section of
-`.editorconfig`, the one that makes those folders errors, until the rest
-follow. `tests/DarkwoodMP.Analyzers.Tests` runs each rule on small pieces of
+(rules DW0001 to DW0007). They are errors in every project, the plugin
+included: one formatting pass has been over all of its code. `tests/DarkwoodMP.Analyzers.Tests` runs each rule on small pieces of
 code, with a case that fires and one that stays quiet.
 
 ## Unit tests

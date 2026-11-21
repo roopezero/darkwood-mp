@@ -24,20 +24,7 @@ csharp_new_line_before_finally = true
 csharp_preserve_single_line_blocks = true
 csharp_preserve_single_line_statements = false
 
-# Errors by default: the core, the tests and the map tests.
+# Errors everywhere: the plugin, the core, the tests and the map tests.
 dotnet_diagnostic.IDE0011.severity = error
 dotnet_diagnostic.IDE0055.severity = error
 dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = error
-
-# The plugin stays at warnings until the formatting pass has been over its code.
-[src/DarkwoodMP/**.cs]
-dotnet_diagnostic.IDE0011.severity = warning
-dotnet_diagnostic.IDE0055.severity = warning
-dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = warning
-
-# Folders the formatting pass has cleaned: uncomment this section and list
-# each folder. It must stay last, because the last matching section wins.
-# [src/DarkwoodMP/{World/Doors,Net}/**.cs]
-# dotnet_diagnostic.IDE0011.severity = error
-# dotnet_diagnostic.IDE0055.severity = error
-# dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = error

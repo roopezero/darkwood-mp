@@ -7,8 +7,10 @@ is checked.
 
 **Status:** Phase 0 is done. Phase 1 is done except for its in-game gate, which
 moves to the final run, and the hand tests of a test build on Windows and on
-GOG, which are still to do. The formatting pass over all the code is next, then
-Phase 2. See [Changes made while carrying out the
+GOG, which are still to do. The formatting pass over all the code is done, and
+the style rules are errors in the plugin too. The rules of Phases 4 to 8 are
+written in the core with their unit tests; the plugin doesn't call them yet.
+Phase 2 is next. See [Changes made while carrying out the
 plan](#changes-made-while-carrying-out-the-plan). Tick the boxes below as steps
 are merged, and delete this file when Phase 8 is finished.
 
@@ -333,7 +335,7 @@ Finish with `tools/run-test.sh full`.
 - [ ] 8.2 The in-game test code left in the plugin.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
-- [ ] Turn style warnings into errors for the whole plugin.
+- [x] Turn style warnings into errors for the whole plugin.
 - [ ] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
       `CLAUDE.md`, then delete this plan.
 
@@ -397,7 +399,8 @@ on the migration.
 |---|---|---|
 | Recipe step 7 formats each folder as it moves | One formatting pass over all the code, after Phase 1 and before Phase 2 | Later moves carry code that is already formatted, and the proof is simpler |
 | Phase 2 splits five map test files over 600 lines | Fifteen files | Formatting makes them longer |
-| Phase 8 turns style errors on for the plugin | They go on as soon as the formatting pass leaves no finding | Nothing is left to wait for |
+| Phase 8 turns style errors on for the plugin | They went on when the formatting pass left no finding | Nothing is left to wait for |
+| Recipe step 2 writes each subsystem's rules as it moves | The rules of Phases 4 to 8 were all written first, each with its unit tests, and the plugin calls them as each subsystem moves | The rules only add code to the core, so they could be written side by side without touching the plugin |
 | Process state goes on the `Plugin` instance | On `ModHost`, which `Plugin` owns | `Plugin` must stay loadable when the core is missing |
 | The risk "Players update only `DarkwoodMP.dll`" is covered by the zips and the install steps | The startup check (`CoreCheck`) also reports it in the log | It is handled in code |
 | Phase 1's gate | Also starts the game with the core DLL removed and with an older one: both must log the fatal line and leave the game playable | Only the real engine can prove the check. These two runs are part of the final run |

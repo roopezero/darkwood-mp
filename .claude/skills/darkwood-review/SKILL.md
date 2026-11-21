@@ -31,7 +31,7 @@ Slices: `prod*` (the mod, the core and the analyzers), `test*` (the unit tests, 
 - Comments: plain, concrete sentences (see CLAUDE.md). Don't add comments that narrate the change.
 - **Building:** builds share `obj/`, so serialize them with a lock and don't deploy:
   `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:$PATH; flock -o .cache/review/build.lock dotnet build src/DarkwoodMP -c Release -p:DeployToGame=false -nodeReuse:false -p:UseSharedCompilation=false -clp:ErrorsOnly 2>&1 | grep -E "error|Build succeeded" | sort -u | head -40`.
-  (`-o` and no node reuse or compiler server matter: a leftover compiler server inherits the lock otherwise and every later build waits for ever. `-clp:ErrorsOnly` because the plugin shows about 32,000 style warnings until its code has been formatted.) Other agents edit other files at the same time: an error in a file outside your slice isn't yours; build again a minute later if it blocks you. Python: `python3 -m py_compile FILE`. Shell: `bash -n FILE` (and `shellcheck` if it is installed).
+  (`-o` and no node reuse or compiler server matter: a leftover compiler server inherits the lock otherwise and every later build waits for ever. `-clp:ErrorsOnly` keeps the output short.) Other agents edit other files at the same time: an error in a file outside your slice isn't yours; build again a minute later if it blocks you. Python: `python3 -m py_compile FILE`. Shell: `bash -n FILE` (and `shellcheck` if it is installed).
 - **Unit tests:** `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`, through the same lock. They need no game, so run them after any change to `src/DarkwoodMP.Core`. `dotnet test tests/DarkwoodMP.Analyzers.Tests` with the same options tests the formatting rules; run it after any change to `src/DarkwoodMP.Analyzers`.
 - **Never** launch the game or `tools/run-test.sh`: one game per machine, and the main session runs the tests at the end.
 - Don't commit, don't touch `git` state (no stash, checkout, reset).
@@ -70,7 +70,7 @@ The simplify pass can break things the compiler doesn't catch (one run left a lo
 
 ## 4. Build, test, report
 
-1. The release check from the `darkwood-release` skill (it deploys): no errors, and no warnings except the style warnings the plugin shows until its code has been formatted.
+1. The release check from the `darkwood-release` skill (it deploys): no errors and no warnings.
 2. Tests, in the background, one run at a time (see `darkwood-test`): `tools/run-test.sh all`, then `tools/run-test.sh map` if the fixes touched sync. Every item must end with `no exceptions` and `your saves: unchanged`. A failure: read its log, check it against `git stash`-free reasoning (compare with the last release's behaviour in the CHANGELOG), and fix it or dispatch an agent to.
 3. Docs: if behaviour players see changed, update `docs/` and `CHANGELOG.md` (see CLAUDE.md "Docs"); keep `docs/DEVELOPMENT.md` true for any tool that changed.
 4. Report to the user: the majors fixed (one line each), the ones left and why, lines removed by the simplify pass (`git diff --stat | tail -1`), and the test results. Don't commit unless asked (or the `darkwood-release` skill is run).
