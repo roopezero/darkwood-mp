@@ -358,9 +358,32 @@ namespace DarkwoodMP.World
             }
 
             var s = Session.Instance;
-            if (s != null && s.IsHost && s.Peers.Count > 0
-                && ScriptedEvents.HostsWorldTrigger(
-                    __instance, thisEventTriggers, TriggerType))
+            bool hostWithPeers = s != null && s.IsHost && s.Peers.Count > 0;
+            Remembered remembered = WorldTriggerRules.Remember(new RememberFacts
+            {
+                HostWithPeers = hostWithPeers,
+                HostsWorld = hostWithPeers
+                    && ScriptedEvents.HostsWorldTrigger(
+                        __instance, thisEventTriggers, TriggerType),
+                SettingOff = ScriptedEvents.SettingOff,
+                HasTriggers = thisEventTriggers != null,
+                Sight = __instance.type
+                        == global::EventTrigger.Type.onInSightOfPlayer
+                    || __instance.type
+                        == global::EventTrigger.Type.onOutOfSightOfPlayer,
+                OutOfSight = __instance.type
+                    == global::EventTrigger.Type.onOutOfSightOfPlayer,
+                MultipleFire = __instance.multipleFire,
+                Current = (EventPart)ScriptedEvents.Current,
+                SharedReplay = ScriptedEvents.SharedReplay(TriggerType),
+            });
+
+            if (!remembered.Remembers)
+            {
+                return;
+            }
+
+            if (remembered.World)
             {
                 ScriptedEvents.Remember(__result, new ScriptedEvents.Started
                 {
@@ -376,51 +399,17 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            // Seeing something is each player's own unless it happens once: a
-            // trigger that fires each time it comes into (or goes out of) sight
-            // would run for everyone whenever anyone looks.
-            bool sight = __instance.type
-                    == global::EventTrigger.Type.onInSightOfPlayer
-                || __instance.type
-                    == global::EventTrigger.Type.onOutOfSightOfPlayer;
-            bool byPlayer = ScriptedEvents.SettingOff
-                && thisEventTriggers != null
-                && !(sight
-                    && (__instance.multipleFire
-                        || __instance.type
-                            == global::EventTrigger.Type.onOutOfSightOfPlayer));
-            // The host's action that no player did (the world's, an event's
-            // step), applied here: the shared part.
-            bool sharedReplay = !byPlayer
-                && ScriptedEvents.Current == ScriptedEvents.Part.All
-                && ScriptedEvents.SharedReplay(TriggerType);
-            if (!byPlayer && !sharedReplay
-                && ScriptedEvents.Current == ScriptedEvents.Part.All)
-            {
-                return;
-            }
-
-            ScriptedEvents.Part part;
-            if (sharedReplay)
-            {
-                part = ScriptedEvents.Part.SharedOnly;
-            }
-            else
-            {
-                part = ScriptedEvents.Current;
-            }
-
             int index = -1;
-            if (byPlayer)
+            if (remembered.ByPlayer)
             {
                 index = thisEventTriggers.eventTriggers.IndexOf(__instance);
             }
 
             ScriptedEvents.Remember(__result, new ScriptedEvents.Started
             {
-                Part = part,
+                Part = (ScriptedEvents.Part)remembered.Part,
                 By = ScriptedEvents.By,
-                ByPlayer = byPlayer,
+                ByPlayer = remembered.ByPlayer,
                 Triggers = thisEventTriggers,
                 Index = index,
             });

@@ -377,43 +377,50 @@ namespace DarkwoodMP.World
             global::EventTrigger t, EventTriggers et,
             global::EventTrigger.Type fired)
         {
-            if (t == null || et == null || t.type != fired
-                || !HostWorldTypes.Contains(fired))
-            {
-                return false;
-            }
+            return WorldTriggerRules.HostsWorldTrigger(FactsOf(t, et, fired));
+        }
 
+        /// <summary>
+        /// What WorldTriggerRules needs to know of a trigger of type fired,
+        /// set off now. The scene, whether the object is a joiner's own copy
+        /// and its name cost more than the rest: they are read only for a
+        /// trigger the cheaper facts don't already rule out.
+        /// </summary>
+        internal static WorldTriggerFacts FactsOf(
+            global::EventTrigger t, EventTriggers et,
+            global::EventTrigger.Type fired)
+        {
             var s = S;
-            if (s == null || !s.Active || Current != Part.All || StepDepth > 0)
+            var f = new WorldTriggerFacts
             {
-                return false;
-            }
+                Matches = t != null && et != null && t.type == fired,
+                HostWorldType = HostWorldTypes.Contains(fired),
+                Appears = fired == global::EventTrigger.Type.onSpawned
+                    || fired == global::EventTrigger.Type.onGameObjectActivated,
+                Active = s != null && s.Active,
+                Client = s != null && s.IsClient,
+                Current = (EventPart)Current,
+                StepDepth = StepDepth,
+            };
 
-            if (et.gameObject.scene
-                != UnityEngine.SceneManagement.SceneManager.GetActiveScene())
+            if (!f.Matches || !f.HostWorldType || !f.Active
+                || f.Current != EventPart.All || f.StepDepth > 0)
             {
-                return false;
-            }
-
-            if (s.IsClient && Combat.NetEnemies.LocalOnly(et.gameObject))
-            {
-                return false;
+                return f;
             }
 
             var r = ObjRef.Of(et.gameObject);
-            if (!r.Valid)
+            return f with
             {
-                return false;
-            }
-
-            if ((fired == global::EventTrigger.Type.onSpawned
-                    || fired == global::EventTrigger.Type.onGameObjectActivated)
-                && (r.K != ObjRef.Kind.Saved || t.multipleFire))
-            {
-                return false;
-            }
-
-            return true;
+                InActiveScene = et.gameObject.scene
+                    == UnityEngine.SceneManagement.SceneManager
+                        .GetActiveScene(),
+                LocalOnly = f.Client
+                    && Combat.NetEnemies.LocalOnly(et.gameObject),
+                Named = r.Valid,
+                Saved = r.K == ObjRef.Kind.Saved,
+                MultipleFire = t.multipleFire,
+            };
         }
     }
 }
