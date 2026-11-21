@@ -21,10 +21,13 @@ namespace DarkwoodMP.World
         public TrapDisarms(CoopSession coop)
         {
             _coop = coop;
-            Animation = new DisarmAnimation();
+            Animation = Plugin.Instance.Host.DisarmCrouch;
         }
 
-        /// <summary>The crouch co-op adds to a disarm.</summary>
+        /// <summary>
+        /// The crouch co-op adds to a disarm, kept for the whole game
+        /// (ModHost.DisarmCrouch).
+        /// </summary>
         public readonly DisarmAnimation Animation;
 
         /// <summary>

@@ -3,8 +3,8 @@ using UnityEngine;
 
 namespace DarkwoodMP.World
 {
-    // The trap patches (TrapSync, DisarmAnimation). Each does nothing with
-    // no session: playing alone is the game's own.
+    // The trap patches (TrapSync, DisarmAnimation). With no session they
+    // leave the game's own, but the disarm crouch's end runs alone too.
 
     /// <summary>A trap going off (TrapSync).</summary>
     [HarmonyPatch(typeof(Trigger), "OnAfterTrigger")]
@@ -99,19 +99,16 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Co-op's crouch for a disarm (DisarmAnimation).</summary>
+    /// <summary>
+    /// Co-op's crouch for a disarm (DisarmAnimation, on ModHost). Alone it
+    /// only forgets an earlier crouch: it crouches only in co-op.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.doDisarm))]
     static class DoDisarm
     {
         static void Postfix(Player __instance, Item trapToDisarm)
         {
-            var coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            coop.Traps.Disarms.Animation.Crouch(__instance, trapToDisarm);
+            Plugin.Instance.Host.DisarmCrouch.Crouch(__instance, trapToDisarm);
         }
     }
 
@@ -136,13 +133,11 @@ namespace DarkwoodMP.World
 
         static void Postfix(Player __instance, bool __state)
         {
-            var coop = Coop.Current;
-            if (coop == null || !__state)
+            // also with no session: a crouch begun in one ends here
+            if (__state)
             {
-                return;
+                Plugin.Instance.Host.DisarmCrouch.StandUp(__instance);
             }
-
-            coop.Traps.Disarms.Animation.StandUp(__instance);
         }
     }
 
@@ -157,13 +152,11 @@ namespace DarkwoodMP.World
 
         static void Postfix(Player __instance, bool __state)
         {
-            var coop = Coop.Current;
-            if (coop == null || !__state)
+            // also with no session: a crouch begun in one ends here
+            if (__state)
             {
-                return;
+                Plugin.Instance.Host.DisarmCrouch.StandUp(__instance);
             }
-
-            coop.Traps.Disarms.Animation.StandUp(__instance);
         }
     }
 }

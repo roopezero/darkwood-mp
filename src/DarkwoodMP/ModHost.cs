@@ -86,6 +86,12 @@ namespace DarkwoodMP
         public readonly World.Doors.DoorLeaf Leaves =
             new World.Doors.DoorLeaf();
 
+        /// The crouch co-op adds to a disarm. It lives as long as the game,
+        /// so a crouch begun in a session still ends when its bar ends after
+        /// the session has (the host stopped hosting mid-disarm).
+        internal readonly World.DisarmAnimation DisarmCrouch =
+            new World.DisarmAnimation();
+
         /// What the host's enemies and our player's weapon spawned, also
         /// alone (the test dummy is hurt with no session).
         internal readonly Combat.AreaSpawns Spawns = new Combat.AreaSpawns();
