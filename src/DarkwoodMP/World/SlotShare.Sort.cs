@@ -150,22 +150,22 @@ namespace DarkwoodMP.World
                 why = "the host is moving an item in it";
             }
 
-            List<Change> done;
+            List<SlotChange> done;
             if (why == null)
             {
                 done = Sort(inv);
             }
             else
             {
-                done = new List<Change>();
+                done = new List<SlotChange>();
             }
 
             // The requester gets every slot: what to keep if its prediction was
             // right, what to take if not.
-            var all = new List<Change>(before.Length);
+            var all = new List<SlotChange>(before.Length);
             for (int i = 0; i < before.Length && i < inv.slots.Count; i++)
             {
-                all.Add(new Change
+                all.Add(new SlotChange
                 {
                     Slot = i,
                     Old = before[i],
@@ -199,22 +199,18 @@ namespace DarkwoodMP.World
         /// everyone but that peer, and from a client to the host.
         /// </summary>
         private void SendChanges(
-            ObjRef obj, List<Change> changes, ulong peer = 0,
+            ObjRef obj, List<SlotChange> changes, ulong peer = 0,
             bool toOnly = false)
         {
             var s = _session;
-            for (int at = 0; at < changes.Count; at += 200)
+            for (int at = 0; at < changes.Count;
+                at += ContainerSlotsMessage.MaxChanges)
             {
-                int n = Mathf.Min(200, changes.Count - at);
+                int n = Mathf.Min(
+                    ContainerSlotsMessage.MaxChanges, changes.Count - at);
                 var w = s.Begin(MsgType.ContainerSlots);
-                obj.Write(w);
-                w.W.Write((byte)n);
-                for (int k = at; k < at + n; k++)
-                {
-                    w.W.Write((ushort)changes[k].Slot);
-                    w.WriteStr(changes[k].Old);
-                    w.WriteStr(changes[k].New);
-                }
+                ContainerSlotsMessage.Write(
+                    w, ObjRef.NameOf(obj), changes.GetRange(at, n));
 
                 if (toOnly)
                 {
@@ -269,7 +265,7 @@ namespace DarkwoodMP.World
         /// Check). Returns the slots that changed: what each held (key) and
         /// holds (JSON).
         /// </summary>
-        private List<Change> Sort(Inventory inv)
+        private List<SlotChange> Sort(Inventory inv)
         {
             var stacks = new List<Stack>();
             for (int i = 0; i < inv.slots.Count; i++)
@@ -397,7 +393,7 @@ namespace DarkwoodMP.World
             });
 
             var before = Keys(inv);
-            var changes = new List<Change>();
+            var changes = new List<SlotChange>();
             for (int i = 0; i < inv.slots.Count; i++)
             {
                 string json = "";
@@ -413,7 +409,7 @@ namespace DarkwoodMP.World
                 }
 
                 Set(inv, i, json);
-                changes.Add(new Change
+                changes.Add(new SlotChange
                 {
                     Slot = i,
                     Old = before[i],

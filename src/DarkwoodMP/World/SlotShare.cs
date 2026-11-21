@@ -168,12 +168,12 @@ namespace DarkwoodMP.World
                         + "saw");
             }
 
-            var changed = new List<Change>();
+            var changed = new List<SlotChange>();
             for (int i = 0; i < keys.Length; i++)
             {
                 if (keys[i] != before[i])
                 {
-                    changed.Add(new Change
+                    changed.Add(new SlotChange
                     {
                         Slot = i,
                         Old = before[i],
@@ -258,7 +258,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.ContainerSlotsAsk);
-            r.Write(w);
+            ContainerSlotsAskMessage.Write(w, ObjRef.NameOf(r));
             _session.SendToHost(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -324,22 +324,21 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
+            var obj = ObjRef.RefOf(ContainerSlotsAskMessage.Read(r));
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv != null)
             {
                 StartRot(inv);
             }
 
-            var w = s.Begin(MsgType.ContainerSlotsAll);
-            obj.Write(w);
             string doc = "";
             if (inv != null)
             {
                 doc = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
             }
 
-            w.WriteBigStr(doc);
+            var w = s.Begin(MsgType.ContainerSlotsAll);
+            ContainerSlotsAllMessage.Write(w, ObjRef.NameOf(obj), doc);
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -371,8 +370,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            string contents = r.ReadBigStr();
+            var obj = ObjRef.RefOf(
+                ContainerSlotsAllMessage.Read(r, out string contents));
             var inv = ObjRef.Resolve<Inventory>(obj);
             bool waited = inv != null && _awaiting.Remove(inv);
             if (inv == null || contents.Length == 0)
@@ -608,12 +607,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private void SendEmptied(ObjRef r, string[] before)
         {
-            var changed = new List<Change>();
+            var changed = new List<SlotChange>();
             for (int i = 0; i < before.Length; i++)
             {
                 if (before[i].Length > 0)
                 {
-                    changed.Add(new Change
+                    changed.Add(new SlotChange
                     {
                         Slot = i,
                         Old = before[i],
@@ -970,18 +969,12 @@ namespace DarkwoodMP.World
 
         // ---- messages -------------------------------------------------------
 
-        private struct Change
-        {
-            public int Slot;
-            public string Old, New;
-        }
-
         // Client: the batches of slot changes we sent lately, to undo one whole
         // when the host refuses it.
         private sealed class Sent
         {
             public string Obj;
-            public List<Change> Changes;
+            public List<SlotChange> Changes;
             public float At;
             public bool Undone;
         }
@@ -989,7 +982,7 @@ namespace DarkwoodMP.World
         private readonly List<Sent> _sent = new List<Sent>();
         private const float SentKept = 15f;
 
-        private void RememberSent(ObjRef obj, List<Change> changes)
+        private void RememberSent(ObjRef obj, List<SlotChange> changes)
         {
             float now = Time.unscaledTime;
             _sent.RemoveAll(b => now - b.At > SentKept);
@@ -1047,18 +1040,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            int n = r.R.ReadByte();
-            var changes = new List<Change>(n);
-            for (int k = 0; k < n; k++)
-            {
-                changes.Add(new Change
-                {
-                    Slot = r.R.ReadUInt16(),
-                    Old = r.ReadStr(),
-                    New = r.ReadStr()
-                });
-            }
+            var obj = ObjRef.RefOf(
+                ContainerSlotsMessage.Read(r, out var changes));
 
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (WorldActions.Debug)
@@ -1070,7 +1053,7 @@ namespace DarkwoodMP.World
                 }
 
                 Plugin.Log.LogInfo(
-                    $"[world] got {n} slot(s) of {obj}: " + name);
+                    $"[world] got {changes.Count} slot(s) of {obj}: " + name);
             }
 
             if (inv == null)
@@ -1150,7 +1133,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            var accepted = new List<Change>();
+            var accepted = new List<SlotChange>();
             foreach (var c in changes)
             {
                 if (refusedAll == null)
@@ -1164,11 +1147,17 @@ namespace DarkwoodMP.World
                     $"[authority] {s.NameOf(from)} changed slot {c.Slot} of "
                         + $"{inv.name}: refused ({refusedAll})");
                 var w = s.Begin(MsgType.ContainerSlotRefused);
-                obj.Write(w);
-                w.W.Write((ushort)c.Slot);
-                w.WriteStr(Json(inv, c.Slot));
-                w.WriteStr(c.Old);
-                w.WriteStr(c.New);
+                ContainerSlotRefusedMessage.Write(
+                    w,
+                    ObjRef.NameOf(obj),
+                    new RefusedSlot
+                    {
+                        Slot = c.Slot,
+                        Held = Json(inv, c.Slot),
+                        Old = c.Old,
+                        Tried = c.New,
+                    });
+
                 s.SendTo(from, w, Channel.Control, reliable: true);
             }
 
@@ -1189,7 +1178,7 @@ namespace DarkwoodMP.World
         /// the host would refuse it, so it's undone now, as Merge does, and Set
         /// doesn't double or lose what it moved.
         /// </summary>
-        private void TakeHost(Inventory inv, Change c)
+        private void TakeHost(Inventory inv, SlotChange c)
         {
             if (c.Slot >= inv.slots.Count
                 || !_watched.TryGetValue(inv, out var keys)
@@ -1227,11 +1216,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            int slot = r.R.ReadUInt16();
-            string hostJson = r.ReadStr(),
-                oldKey = r.ReadStr(),
-                triedJson = r.ReadStr();
+            var obj = ObjRef.RefOf(
+                ContainerSlotRefusedMessage.Read(r, out var refused));
+            int slot = refused.Slot;
+            string hostJson = refused.Held,
+                oldKey = refused.Old,
+                triedJson = refused.Tried;
             // may be gone here: a dropped item we picked up with a click
             var inv = ObjRef.Resolve<Inventory>(obj);
             Plugin.Log.LogInfo(
@@ -1541,7 +1531,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.WorkbenchLevel);
-            w.W.Write(level);
+            WorkbenchLevelMessage.Write(w, level);
             if (_session.IsHost)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -1562,7 +1552,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int level = r.R.ReadInt32();
+            int level = WorkbenchLevelMessage.Read(r);
             var ctl = Singleton<Controller>.Instance;
             if (ctl == null)
             {
@@ -1598,7 +1588,7 @@ namespace DarkwoodMP.World
                 }
 
                 var w = s.Begin(MsgType.WorkbenchLevel);
-                w.W.Write(level);
+                WorkbenchLevelMessage.Write(w, level);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
 
