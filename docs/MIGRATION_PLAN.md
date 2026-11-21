@@ -502,6 +502,11 @@ Finish with `tools/run-test.sh full`.
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
 - [ ] 7.1 Flags and scripted events.
+  - [x] Part c: `FlagsSync`. It is `CoopSession.Story`, in `World/Story`
+        (four files: `FlagsSync`, `FlagsSync.Npcs`, `StoryRead`,
+        `StoryApply`); its bytes are the core's `FlagsDelta`. The journal
+        popup patch (`JournalShowJournalInfoPopup`) still runs in a game
+        played alone, since the game's own small places have no text.
 - [ ] 7.2 Places and nights.
 - [ ] 7.3 Skills and progress.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
