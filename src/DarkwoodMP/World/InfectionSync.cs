@@ -32,34 +32,32 @@ namespace DarkwoodMP.World
     /// clients' games with the same id (ObjRef Spawned), and a client's
     /// infection never spreads by itself.
     /// </summary>
-    public static class InfectionSync
+    internal sealed class InfectionSync
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
 
-        private static readonly List<ClearedPatch> _cleared =
+        private readonly List<ClearedPatch> _cleared =
             new List<ClearedPatch>();
+
+        public InfectionSync(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.InfectionCleared, OnCleared);
+            coop.Handle(MsgType.InfectionSpawned, OnSpawned);
+        }
+
+        private Session S => _coop.Net;
 
         /// <summary>
         /// Host: inside spawnInfection or a spider laying: a new patch made now
         /// is sent.
         /// </summary>
-        internal static int Growing;
-
-        public static void Register(Session s)
-        {
-            s.Register(MsgType.InfectionCleared, OnCleared);
-            s.Register(MsgType.InfectionSpawned, OnSpawned);
-            s.OnSessionEnded += () =>
-            {
-                _cleared.Clear();
-                Growing = 0;
-            };
-        }
+        public int Growing { get; set; }
 
         /// <summary>
         /// A patch was cleared in this game, by something that's ours to send.
         /// </summary>
-        internal static void Cleared(Infection inf)
+        internal void Cleared(Infection inf)
         {
             var r = ObjRef.Of(inf.gameObject);
             if (!r.Valid)
@@ -78,14 +76,14 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Each frame: send what was cleared this frame, in one message.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             if (_cleared.Count == 0)
             {
                 return;
             }
 
-            if (!Coop.Guards.Sharing)
+            if (!_coop.Guards.Sharing)
             {
                 _cleared.Clear();
                 return;
@@ -102,11 +100,11 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Coop.Current.Authority.Request(w, what, inventory: false);
+                _coop.Authority.Request(w, what, inventory: false);
             }
         }
 
-        private static void OnCleared(ulong from, PacketReader r)
+        private void OnCleared(ulong from, PacketReader r)
         {
             var s = S;
             if (!ArrivalRules.Takes(ArrivalOf(s, from)))
@@ -127,7 +125,7 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                Coop.Guards.Replaying = true;
+                _coop.Guards.Replaying = true;
                 try
                 {
                     Clear(inf);
@@ -140,7 +138,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    Coop.Guards.Replaying = false;
+                    _coop.Guards.Replaying = false;
                 }
 
                 done.Add(p);
@@ -166,7 +164,7 @@ namespace DarkwoodMP.World
             Verdict verdict = InfectionRules.MayClear(n, done.Count);
             if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(verdict);
+                _coop.Authority.Refuse(verdict);
                 return;
             }
 
@@ -181,7 +179,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// What the arrival rules know of a message from a peer.
         /// </summary>
-        private static ArrivalFacts ArrivalOf(Session s, ulong from)
+        private ArrivalFacts ArrivalOf(Session s, ulong from)
         {
             if (s == null)
             {
@@ -202,7 +200,7 @@ namespace DarkwoodMP.World
         /// (null: not found here). The only code that reads the patch for
         /// them; on the host, the requester's reach.
         /// </summary>
-        private static PatchFacts FactsOf(Infection inf, bool host)
+        private PatchFacts FactsOf(Infection inf, bool host)
         {
             if (inf == null)
             {
@@ -221,7 +219,7 @@ namespace DarkwoodMP.World
                 return facts;
             }
 
-            var reach = Coop.Current.Authority.ReachOf(inf.transform.position);
+            var reach = _coop.Authority.ReachOf(inf.transform.position);
             return facts with { Reach = reach };
         }
 
@@ -229,12 +227,12 @@ namespace DarkwoodMP.World
         /// What the infection rules know of a patch told to fade: whether it
         /// was fading before the call (wasFading), and the game's state now.
         /// </summary>
-        internal static ClearFacts ClearOf(Infection inf, bool wasFading)
+        internal ClearFacts ClearOf(Infection inf, bool wasFading)
         {
             var facts = new ClearFacts
             {
                 WasFading = wasFading,
-                Sharing = Coop.Guards.Sharing,
+                Sharing = _coop.Guards.Sharing,
                 ClientMode = NetEnemies.ClientMode,
                 OwnSwing = LiquidLitPatch.OwnSwing,
             };
@@ -250,15 +248,15 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: what the infection rules know of a patch that starts.
         /// </summary>
-        internal static SpawnFacts SpawnOf(Infection inf)
+        internal SpawnFacts SpawnOf(Infection inf)
         {
-            var s = Session.Instance;
+            var s = S;
             return new SpawnFacts
             {
                 Growing = Growing,
                 Exists = inf != null,
                 Host = s != null && s.IsHost,
-                Sharing = Coop.Guards.Sharing,
+                Sharing = _coop.Guards.Sharing,
             };
         }
 
@@ -327,7 +325,7 @@ namespace DarkwoodMP.World
         /// Host: a new patch was made by the world (spread or a spider): send
         /// it.
         /// </summary>
-        internal static void Spawned(Infection inf)
+        internal void Spawned(Infection inf)
         {
             long id = HostIds.NewId();
             ObjRef.RegisterSpawned(id, inf.gameObject);
@@ -355,7 +353,7 @@ namespace DarkwoodMP.World
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
-        private static void OnSpawned(ulong from, PacketReader r)
+        private void OnSpawned(ulong from, PacketReader r)
         {
             var s = S;
             if (!ArrivalRules.TakesFromHost(ArrivalOf(s, from)))
@@ -379,7 +377,7 @@ namespace DarkwoodMP.World
                 parent = ObjRef.Resolve<Transform>(parentRef);
             }
 
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 GameObject parentGO;
@@ -423,7 +421,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
         }
     }
@@ -435,15 +433,21 @@ namespace DarkwoodMP.World
             __state = __instance == null || __instance.disappearing;
         static void Postfix(Infection __instance, bool __state)
         {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
             // A client's own player's burning weapon only; its copy of the
             // host's fire clears what the host's does, and the host says so.
-            var facts = InfectionSync.ClearOf(__instance, __state);
+            var facts = coop.Infections.ClearOf(__instance, __state);
             if (!InfectionRules.SendsClear(facts))
             {
                 return;
             }
 
-            InfectionSync.Cleared(__instance);
+            coop.Infections.Cleared(__instance);
         }
     }
 
@@ -457,9 +461,10 @@ namespace DarkwoodMP.World
         static bool Prefix(out bool __state)
         {
             __state = InfectionRules.MaySpread(NetEnemies.ClientMode);
-            if (__state)
+            CoopSession coop = Coop.Current;
+            if (__state && coop != null)
             {
-                InfectionSync.Growing++;
+                coop.Infections.Growing++;
             }
 
             return __state;
@@ -468,10 +473,11 @@ namespace DarkwoodMP.World
         static System.Exception Finalizer(
             System.Exception __exception, bool __state)
         {
-            if (__state)
+            CoopSession coop = Coop.Current;
+            if (__state && coop != null)
             {
-                InfectionSync.Growing =
-                    InfectionRules.Left(InfectionSync.Growing);
+                InfectionSync infections = coop.Infections;
+                infections.Growing = InfectionRules.Left(infections.Growing);
             }
 
             return __exception;
@@ -485,10 +491,24 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Character), "waitToSpawnEgg")]
     static class SpiderLaysInfectionPatch
     {
-        static void Prefix() => InfectionSync.Growing++;
+        static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Infections.Growing++;
+            }
+        }
+
         static System.Exception Finalizer(System.Exception __exception)
         {
-            InfectionSync.Growing = InfectionRules.Left(InfectionSync.Growing);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                InfectionSync infections = coop.Infections;
+                infections.Growing = InfectionRules.Left(infections.Growing);
+            }
+
             return __exception;
         }
     }
@@ -498,12 +518,19 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Infection __instance)
         {
-            if (!InfectionRules.SendsSpawned(InfectionSync.SpawnOf(__instance)))
+            CoopSession coop = Coop.Current;
+            if (coop == null)
             {
                 return;
             }
 
-            InfectionSync.Spawned(__instance);
+            var facts = coop.Infections.SpawnOf(__instance);
+            if (!InfectionRules.SendsSpawned(facts))
+            {
+                return;
+            }
+
+            coop.Infections.Spawned(__instance);
         }
     }
 }

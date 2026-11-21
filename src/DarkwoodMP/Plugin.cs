@@ -481,7 +481,6 @@ namespace DarkwoodMP
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             EggSync.Register(_host.Session);
-            InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
             _host.Session.OnSessionEnded += ThrownHits.Clear;
             _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
@@ -2325,7 +2324,12 @@ namespace DarkwoodMP
             Prologue.Update();
             Locations.Update();
             ViewRects.Update();
-            InfectionSync.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Infections.Update();
+            }
+
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();
