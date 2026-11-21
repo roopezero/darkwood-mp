@@ -52,11 +52,11 @@ namespace DarkwoodMP.World
     {
         private static Session S => Session.Instance;
 
-        public const string EpilogueDream = "epilog_part1a_dream";
+        public const string EpilogueDream = StoryRequestRules.EpilogueDream;
         /// <summary>
         /// The game's last chapter: the epilogue comes after it.
         /// </summary>
-        public const int LastChapter = 2;
+        public const int LastChapter = StoryRequestRules.LastChapter;
 
         /// <summary>
         /// Host: its next chapter is being built (from generateChapter until
@@ -95,14 +95,14 @@ namespace DarkwoodMP.World
                 _endSent = false;
                 Generating = false;
                 _held = null;
-                _readySince = -1f;
+                _ready = false;
                 _ran.Clear();
             };
         }
 
         public static void Update()
         {
-            if (Generating && WorldShare.WorldReady)
+            if (ChapterRules.ChapterReady(Generating, WorldShare.WorldReady))
             {
                 Generating = false;
                 _chapterSent = false;
@@ -116,30 +116,41 @@ namespace DarkwoodMP.World
         public static bool IsStoryStep(GameEvent e) =>
             KindOf(e) != StoryKind.None;
 
-        internal static StoryKind KindOf(GameEvent e)
+        internal static StoryKind KindOf(GameEvent e) =>
+            StoryRequestRules.KindOf(StepOf(e));
+
+        /// <summary>
+        /// The only code reading a GameEvent step for the rules (the zero
+        /// facts for none).
+        /// </summary>
+        private static StoryStepFacts StepOf(GameEvent e)
         {
             if (e == null)
             {
-                return StoryKind.None;
+                return default;
             }
 
-            if (e.type == GameEvent.Type.transportPlayerToObject
-                && e.activeModifier)
+            var action = StepAction.Other;
+            if (e.type == GameEvent.Type.transportPlayerToObject)
             {
-                return StoryKind.Chapter;
+                action = StepAction.Transport;
             }
-
-            if (e.type == GameEvent.Type.startDream && e.Value == EpilogueDream)
+            else if (e.type == GameEvent.Type.startDream)
             {
-                return StoryKind.Epilogue;
+                action = StepAction.StartDream;
             }
-
-            if (e.type == GameEvent.Type.endGame)
+            else if (e.type == GameEvent.Type.endGame)
             {
-                return StoryKind.EndScreen;
+                action = StepAction.EndGame;
             }
 
-            return StoryKind.None;
+            return new StoryStepFacts
+            {
+                Action = action,
+                ActiveModifier = e.activeModifier,
+                Value = e.Value,
+                Chapter = e.intValue,
+            };
         }
 
         /// <summary>
@@ -184,62 +195,60 @@ namespace DarkwoodMP.World
         public static bool StoryStepRuns(GameEvent e, GameObject thisGO)
         {
             var s = S;
-            if (s == null || !s.Active)
+            var facts = new StepRunFacts();
+            if (s != null && s.Active)
             {
-                return true;
+                facts = new StepRunFacts
+                {
+                    InSession = true,
+                    IsClient = s.IsClient,
+                    OwnPart = ScriptedEvents.Current
+                        == EventPart.PlayerAndShared,
+                    AllParts = ScriptedEvents.Current == EventPart.All,
+                    Kind = KindOf(e),
+                };
             }
 
-            var kind = KindOf(e);
-            if (s.IsClient)
+            StepRun run = StoryRequestRules.StepRuns(facts);
+            if (facts.IsClient)
             {
-                bool ours = ScriptedEvents.Current
-                    == EventPart.PlayerAndShared;
                 string text = "";
-                if (kind == StoryKind.Chapter)
+                if (facts.Kind == StoryKind.Chapter)
                 {
                     text = $" {e.intValue}";
                 }
 
                 string action = "not run here";
-                if (ours)
+                if (run == StepRun.AskHost)
                 {
                     action = "asking the host";
                 }
 
                 Plugin.Log.LogInfo(
-                    $"A story step ({kind}{text}) is the host's: " + action);
-                if (ours)
-                {
-                    SendStoryRequest(e, thisGO, kind);
-                }
-
-                return false;
+                    $"A story step ({facts.Kind}{text}) is the host's: "
+                        + action);
             }
 
-            if (ScriptedEvents.Current != EventPart.All)
+            switch (run)
             {
-                return false;
+                case StepRun.AskHost:
+                    SendStoryRequest(e, thisGO, facts.Kind);
+                    return false;
+                case StepRun.Skip:
+                    return false;
+                case StepRun.StartChapter:
+                    SendChapterStart(e.intValue);
+                    return true;
+                default:
+                    return true;
             }
-
-            if (kind == StoryKind.Chapter)
-            {
-                SendChapterStart(e.intValue);
-            }
-
-            return true;
         }
 
-        private static string What(StoryKind kind, int chapter)
-        {
-            if (kind == StoryKind.Chapter)
-            {
-                return $"chapter {chapter}";
-            }
+        private static string What(StoryKind kind, int chapter) =>
+            StoryRequestRules.What(kind, chapter);
 
-            return $"the game's end ({kind})";
-        }
-
-        private static float _lastRequest = -999f;
+        private static Seconds _lastRequest =
+            new Seconds(StoryRequestRules.NeverAsked);
 
         /// <summary>
         /// Joiner: our player's event reached a story step; the host decides.
@@ -247,12 +256,13 @@ namespace DarkwoodMP.World
         private static void SendStoryRequest(
             GameEvent e, GameObject thisGO, StoryKind kind)
         {
-            if (Time.realtimeSinceStartup - _lastRequest < 5f)
+            var now = new Seconds(Time.realtimeSinceStartup);
+            if (!StoryRequestRules.MaySend(now, _lastRequest))
             {
                 return; // one event can hold the step more than once
             }
 
-            _lastRequest = Time.realtimeSinceStartup;
+            _lastRequest = now;
             GameEvents ge = null;
             if (thisGO != null)
             {
@@ -297,15 +307,17 @@ namespace DarkwoodMP.World
             string what = What(kind, e.intValue);
             Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
             {
-                if (!ok)
+                string notice = StoryRequestRules.NoticeFor(new ReplyFacts
                 {
-                    Plugin.Notice($"The host didn't start {what}: {reason}");
-                }
-                else if (result != null && result.StartsWith("pending: "))
+                    Ok = ok,
+                    Reason = reason,
+                    Result = result,
+                    What = what,
+                });
+
+                if (notice != null)
                 {
-                    Plugin.Notice(
-                        $"The host will start {what} as soon as it can "
-                            + $"({result.Substring(9)})");
+                    Plugin.Notice(notice);
                 }
             }, inventory: false);
         }
@@ -329,66 +341,56 @@ namespace DarkwoodMP.World
             }
 
             StoryAsk ask = StoryRequest.Read(r);
-            var obj = ObjRef.RefOf(ask.Event);
-            int index = ask.Index;
-            var kind = ask.Kind;
-            int chapter = ask.Chapter;
             if (!Coop.Current.Authority.Handling)
             {
                 return; // only as a Request
             }
 
-            Sync.Players.RemotePlayer rp = null;
-            if (Plugin.Instance.Host.Players != null
-                && Plugin.Instance.Host.Players.Remotes.TryGetValue(
-                    from, out var remote))
-            {
-                rp = remote;
-            }
-
             var h = new Held
             {
                 From = from,
-                Obj = obj,
-                Index = index,
-                Kind = kind,
-                Chapter = chapter,
-                WasAway = rp != null && rp.Away
+                Obj = ObjRef.RefOf(ask.Event),
+                Index = ask.Index,
+                Kind = ask.Kind,
+                Chapter = ask.Chapter,
+                WasAway = AwayNow(from)
             };
 
-            string reason;
-            switch (Decide(h, out reason))
+            StoryAnswer answer = Decide(h);
+            string what = What(h.Kind, h.Chapter);
+            switch (answer.Outcome)
             {
-                case Verdict.Refuse:
-                    Coop.Current.Authority.Refuse(reason);
+                case StoryOutcome.Refuse:
+                    Coop.Current.Authority.Refuse(answer.Verdict);
                     return;
-                case Verdict.Done:
-                    Coop.Current.Authority.Result("done: " + reason);
+                case StoryOutcome.Done:
+                    Coop.Current.Authority.Result(
+                        StoryRequestRules.DonePrefix + answer.Reason);
                     return;
-                case Verdict.Wait:
+                case StoryOutcome.Wait:
                     // A repeat of the one held keeps it (and when it was first
                     // checked).
-                    if (_held == null || _held.Key != h.Key
-                        || _held.From != from)
+                    if (!HeldRules.Repeats(StoryOf(_held), StoryOf(h)))
                     {
                         Plugin.Log.LogInfo(
-                            $"{s.NameOf(from)} set off {What(kind, chapter)}, "
-                                + $"which can't run here yet ({reason}): "
-                                + "holding it until it can");
+                            $"{s.NameOf(from)} set off {what}, which can't "
+                                + $"run here yet ({answer.Reason}): holding "
+                                + "it until it can");
                         _held = h;
-                        _readySince = -1f;
+                        _ready = false;
                     }
 
-                    Coop.Current.Authority.Result("pending: " + reason);
+                    Coop.Current.Authority.Result(
+                        StoryRequestRules.PendingPrefix + answer.Reason);
                     return;
             }
 
             Plugin.Log.LogInfo(
-                $"{s.NameOf(from)} set off {What(kind, chapter)}: running it "
-                    + "here");
+                $"{s.NameOf(from)} set off {what}: running it here");
             if (!Run(h))
             {
-                Coop.Current.Authority.Refuse("it couldn't run");
+                Coop.Current.Authority.Refuse(
+                    Verdict.Refuse(Refusal.RunFailed));
             }
         }
 
@@ -403,106 +405,79 @@ namespace DarkwoodMP.World
             public int Index, Chapter;
             public StoryKind Kind;
             public bool WasAway, ReachChecked;
-            public string Key => KeyOf(Kind, Chapter);
+            public string Key => StoryRequestRules.KeyOf(Kind, Chapter);
         }
 
         private static Held _held;
-        private static float _readySince = -1f;
+        /// <summary>
+        /// Host: the held step could run on every frame since _readySince.
+        /// </summary>
+        private static bool _ready;
+        private static Seconds _readySince;
         /// <summary>
         /// Host: the story steps run for a joiner or started by our own game in
-        /// this session (KeyOf): none runs twice.
+        /// this session (StoryRequestRules.KeyOf): none runs twice.
         /// </summary>
         private static readonly System.Collections.Generic.HashSet<string>
             _ran = new System.Collections.Generic.HashSet<string>();
-        private static string KeyOf(StoryKind kind, int chapter)
+
+        /// <summary>Who set off a held step, and which (none: zero).</summary>
+        private static HeldStory StoryOf(Held h)
         {
-            if (kind == StoryKind.Chapter)
+            if (h == null)
             {
-                return "chapter " + chapter;
+                return default;
             }
 
-            return "end";
-        }
-
-        private enum Verdict
-        {
-            Run,
-            Done,
-            Wait,
-            Refuse
-        }
-
-        /// <summary>
-        /// Whether the host's player is in a dream, or on the way into or out
-        /// of one.
-        /// </summary>
-        private static bool HostDreaming()
-        {
-            var d = Singleton<Dreams>.Instance;
-            return Core.EnteringDream
-                || (d != null
-                    && (d.dreaming || d.dreamPrepared || d.switchingDream
-                        || (d.currentTransition != null
-                            && d.currentTransition.isPlaying)));
+            return new HeldStory
+            {
+                From = h.From,
+                Kind = h.Kind,
+                Chapter = h.Chapter,
+            };
         }
 
         /// <summary>
-        /// Host: what to do with a joiner's story step now. reason: why it
-        /// waits, or why it's refused.
+        /// Whether a joiner is away in a place of their own now (false with no
+        /// puppet for them).
         /// </summary>
-        private static Verdict Decide(Held h, out string reason)
+        private static bool AwayNow(ulong player)
         {
-            reason = null;
-            var kind = h.Kind;
-            if (kind != StoryKind.Chapter && kind != StoryKind.Epilogue
-                && kind != StoryKind.EndScreen)
+            Sync.Players.RemotePlayer rp = null;
+            if (Plugin.Instance.Host.Players != null
+                && Plugin.Instance.Host.Players.Remotes.TryGetValue(
+                    player, out var remote))
             {
-                reason = "no such story step";
-                return Verdict.Refuse;
+                rp = remote;
             }
 
-            if (_ran.Contains(h.Key))
-            {
-                reason = "the host's game has already started it";
-                return Verdict.Done;
-            }
+            return rp != null && rp.Away;
+        }
 
-            if (_chapterSent || Generating || _endSent)
+        /// <summary>
+        /// Host: the only code reading the game for a joiner's story step. The
+        /// event is looked up only once the rules get as far as it.
+        /// </summary>
+        private static StoryFacts FactsOf(Held h)
+        {
+            var facts = new StoryFacts
             {
-                reason =
-                    "the host's game is on its way to another part of the "
-                        + "story";
-                return Verdict.Wait;
-            }
+                Kind = h.Kind,
+                Chapter = h.Chapter,
+                Ran = _ran.Contains(h.Key),
+                OnTheWay = _chapterSent || Generating || _endSent,
+                HostInWorld = WorldShare.InWorld && Player.Instance != null
+                    && !WorldShare.Loading && WorldShare.WorldReady,
+                Dreams = Prologue.DreamsOf(Singleton<Dreams>.Instance),
+                HostChapter = HostChapter,
+                ReachChecked = h.ReachChecked,
+                WasAway = h.WasAway,
+                IsAway = AwayNow(h.From),
+            };
 
-            if (!WorldShare.InWorld || Player.Instance == null
-                || WorldShare.Loading || !WorldShare.WorldReady)
+            if (!StoryRequestRules.ReachesEvent(facts))
             {
-                reason = "the host isn't in its world yet";
-                return Verdict.Wait;
-            }
-
-            if (HostDreaming())
-            {
-                reason = "the host is in a dream";
-                return Verdict.Wait;
-            }
-
-            int now = HostChapter;
-            if (kind == StoryKind.Chapter && h.Chapter != now + 1)
-            {
-                reason =
-                    $"chapter {h.Chapter} isn't the next one (this is chapter "
-                        + $"{now})";
-                return Verdict.Refuse;
-            }
-
-            if (kind == StoryKind.Epilogue && now < LastChapter)
-            {
-                reason =
-                    $"the epilogue comes after chapter {LastChapter} (this is "
-                        + $"chapter {now})";
-                return Verdict.Refuse;
+                return facts;
             }
 
             GameEvents ge = null;
@@ -511,55 +486,40 @@ namespace DarkwoodMP.World
                 ge = ObjRef.Resolve<GameEvents>(h.Obj);
             }
 
-            if (ge != null)
+            if (ge == null)
             {
-                GameEvent step = null;
-                if (h.Index < ge.events.Count)
-                {
-                    step = ge.events[h.Index];
-                }
-
-                if (KindOf(step) != kind
-                    || (kind == StoryKind.Chapter
-                        && step.intValue != h.Chapter))
-                {
-                    reason = $"{ge.name} doesn't do that";
-                    return Verdict.Refuse;
-                }
-
-                // Checked once, from where they were then: a held request isn't
-                // refused because they moved on meanwhile.
-                if (!h.ReachChecked)
-                {
-                    h.ReachChecked = true;
-                    if (!Coop.Current.Authority.Near(
-                        h.From, ge.transform.position, 3000f))
-                    {
-                        reason = $"{ge.name} is more than 3000 away from them";
-                        return Verdict.Refuse;
-                    }
-                }
-
-                return Verdict.Run;
+                return facts;
             }
 
-            Sync.Players.RemotePlayer rp = null;
-            if (Plugin.Instance.Host.Players != null
-                && Plugin.Instance.Host.Players.Remotes.TryGetValue(
-                    h.From, out var remote))
+            StoryStepFacts step = default;
+            if (h.Index < ge.events.Count)
             {
-                rp = remote;
+                step = StepOf(ge.events[h.Index]);
             }
 
-            if (!h.WasAway && !(rp != null && rp.Away))
+            ReachFacts reach = Coop.Current.Authority.NearOf(
+                h.From, ge.transform.position);
+            return facts with
             {
-                reason =
-                    "that event isn't in the host's world, and they aren't in "
-                        + "a place of their own";
-                return Verdict.Refuse;
-            }
+                EventFound = true,
+                EventName = ge.name,
+                Step = step,
+                Known = reach.Known,
+                StandIn = reach.StandIn,
+                EventAt = reach.Target,
+            };
+        }
 
-            return Verdict.Run;
+        /// <summary>
+        /// Host: what to do with a joiner's story step now. Its reach is
+        /// checked once, from where they were then: a held request isn't
+        /// refused because they moved on meanwhile.
+        /// </summary>
+        private static StoryAnswer Decide(Held h)
+        {
+            StoryAnswer answer = StoryRequestRules.Decide(FactsOf(h));
+            h.ReachChecked = answer.ReachChecked;
+            return answer;
         }
 
         /// <summary>Host: run a joiner's story step in our game.</summary>
@@ -595,55 +555,53 @@ namespace DarkwoodMP.World
             }
 
             var s = S;
-            if (s == null || !s.IsHost || !s.Peers.Contains(h.From))
+            bool here = s != null && s.IsHost && s.Peers.Contains(h.From);
+            StoryAnswer answer = default;
+            if (here)
             {
-                Plugin.Log.LogInfo(
-                    $"Dropped the held {What(h.Kind, h.Chapter)}: its player "
-                        + "left");
-                _held = null;
-                return;
+                answer = Decide(h);
             }
 
-            var v = Decide(h, out string reason);
-            if (v == Verdict.Wait)
+            HeldStep step = HeldRules.Next(new HeldFacts
             {
-                _readySince = -1f;
-                return;
-            }
+                PlayerHere = here,
+                Outcome = answer.Outcome,
+                Ready = _ready,
+                ReadySince = _readySince,
+                Now = new Seconds(Time.realtimeSinceStartup),
+            });
 
-            if (v == Verdict.Run)
+            string what = What(h.Kind, h.Chapter);
+            switch (step.Action)
             {
-                if (_readySince < 0f)
-                {
-                    _readySince = Time.realtimeSinceStartup;
-                }
-
-                if (Time.realtimeSinceStartup - _readySince < 3f)
-                {
+                case HeldAction.Dropped:
+                    Plugin.Log.LogInfo(
+                        $"Dropped the held {what}: its player left");
+                    _held = null;
                     return;
-                }
+                case HeldAction.Keep:
+                    _ready = step.Ready;
+                    _readySince = step.ReadySince;
+                    return;
             }
 
             _held = null;
-            _readySince = -1f;
-            if (v == Verdict.Done)
+            _ready = false;
+            switch (step.Action)
             {
-                Plugin.Log.LogInfo(
-                    $"The held {What(h.Kind, h.Chapter)}: {reason}");
-                return;
-            }
-
-            if (v == Verdict.Refuse)
-            {
-                Plugin.Log.LogWarning(
-                    $"Not running the held {What(h.Kind, h.Chapter)} after "
-                        + $"all: {reason}");
-                return;
+                case HeldAction.Done:
+                    Plugin.Log.LogInfo($"The held {what}: {answer.Reason}");
+                    return;
+                case HeldAction.Refused:
+                    Plugin.Log.LogWarning(
+                        $"Not running the held {what} after all: "
+                            + answer.Words);
+                    return;
             }
 
             Plugin.Log.LogInfo(
-                $"{s.NameOf(h.From)} set off {What(h.Kind, h.Chapter)} "
-                    + "earlier: running it here now");
+                $"{s.NameOf(h.From)} set off {what} earlier: running it here "
+                    + "now");
             Run(h);
         }
 
@@ -652,19 +610,30 @@ namespace DarkwoodMP.World
         private static void SendChapterStart(int chapter)
         {
             var s = S;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || _chapterSent)
+            if (!ChapterRules.SendsChapterStart(
+                s != null && s.IsHost, PeersOf(s), _chapterSent))
             {
                 return;
             }
 
             _chapterSent = true;
-            _ran.Add(KeyOf(StoryKind.Chapter, chapter));
+            _ran.Add(StoryRequestRules.KeyOf(StoryKind.Chapter, chapter));
             Plugin.Log.LogInfo(
                 $"Starting chapter {chapter}: the players in your world follow "
                     + "once it's ready");
             var w = s.Begin(MsgType.ChapterStart);
             ChapterStart.Write(w, chapter);
             s.Broadcast(w, Channel.Control, reliable: true);
+        }
+
+        private static int PeersOf(Session s)
+        {
+            if (s == null)
+            {
+                return 0;
+            }
+
+            return s.Peers.Count;
         }
 
         /// <summary>
@@ -674,13 +643,24 @@ namespace DarkwoodMP.World
         internal static bool BeforeGenerate(int chapter, bool generateSave)
         {
             var s = S;
-            if (s == null || !s.Active || !generateSave)
+            var facts = new GenerateFacts { NewChapter = generateSave };
+            if (s != null && s.Active)
+            {
+                facts = facts with
+                {
+                    InSession = true,
+                    IsClient = s.IsClient,
+                };
+            }
+
+            GenerateStep step = ChapterRules.BeforeGenerate(facts);
+            if (step == GenerateStep.Run)
             {
                 // loading a chapter's save (also a joiner loading the host's)
                 return true;
             }
 
-            if (s.IsClient)
+            if (step == GenerateStep.Skip)
             {
                 Plugin.Log.LogWarning(
                     $"Not starting chapter {chapter} here: the host's game "
@@ -696,13 +676,14 @@ namespace DarkwoodMP.World
         internal static void HostEnding(EndKind kind)
         {
             var s = S;
-            if (s == null || !s.IsHost || _endSent)
+            kind = EndingRules.HostEnds(s != null && s.IsHost, _endSent, kind);
+            if (kind == EndKind.None)
             {
                 return;
             }
 
             _endSent = true;
-            _ran.Add(KeyOf(StoryKind.Epilogue, 0));
+            _ran.Add(StoryRequestRules.KeyOf(StoryKind.Epilogue, 0));
             if (kind == EndKind.Epilogue)
             {
                 EpilogueSync.HostStarts();
@@ -724,7 +705,7 @@ namespace DarkwoodMP.World
 
         internal static void OnPrepareDream(string preset)
         {
-            if (preset == EpilogueDream)
+            if (EndingRules.DreamEnds(preset))
             {
                 HostEnding(EndKind.Epilogue);
             }
@@ -734,7 +715,7 @@ namespace DarkwoodMP.World
 
         // ---- joiner ---------------------------------------------------------
 
-        private static float _chapterWaitUntil;
+        private static Seconds _chapterWaitUntil;
 
         private static void OnChapterStart(ulong from, PacketReader r)
         {
@@ -772,9 +753,10 @@ namespace DarkwoodMP.World
                     $"Couldn't fade out for the chapter: {e.Message}");
             }
 
-            bool waiting = _chapterWaitUntil > Time.realtimeSinceStartup;
-            _chapterWaitUntil = Time.realtimeSinceStartup + 300f;
-            if (!waiting)
+            ChapterWait wait = ChapterRules.Extend(
+                _chapterWaitUntil, new Seconds(Time.realtimeSinceStartup));
+            _chapterWaitUntil = wait.Until;
+            if (wait.Starts)
             {
                 Plugin.Instance.StartCoroutine(
                     ChapterWait(SceneManager.GetActiveScene().handle));
@@ -787,12 +769,25 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator ChapterWait(int scene)
         {
-            while (Time.realtimeSinceStartup < _chapterWaitUntil)
+            while (true)
             {
-                if (SceneManager.GetActiveScene().handle != scene
-                    || !WorldShare.InWorld)
+                ChapterWaitStep step = ChapterRules.Wait(new ChapterWaitFacts
                 {
-                    _chapterWaitUntil = 0f;
+                    Now = new Seconds(Time.realtimeSinceStartup),
+                    Until = _chapterWaitUntil,
+                    SceneChanged =
+                        SceneManager.GetActiveScene().handle != scene,
+                    InWorld = WorldShare.InWorld,
+                });
+
+                if (step == ChapterWaitStep.TimedOut)
+                {
+                    break;
+                }
+
+                if (step == ChapterWaitStep.Over)
+                {
+                    _chapterWaitUntil = default;
                     yield break;
                 }
 
@@ -808,7 +803,8 @@ namespace DarkwoodMP.World
         private static void OnGameEnd(ulong from, PacketReader r)
         {
             var s = S;
-            if (s == null || s.IsHost || from != s.HostId)
+            bool fromHost = s != null && !s.IsHost && from == s.HostId;
+            if (!fromHost)
             {
                 return;
             }
@@ -816,10 +812,20 @@ namespace DarkwoodMP.World
             EndWord word = GameEnd.Read(r);
             var kind = word.Kind;
             byte phase = word.Phase;
+            // The epilogue's steps are EpilogueSync's: only whether it's
+            // one of them is read here.
+            GameEndStep step = EndingRules.GameEnd(new GameEndFacts
+            {
+                FromHost = fromHost,
+                Kind = (byte)kind,
+                Phase = phase,
+            });
+
             Plugin.Log.LogInfo(
                 $"The host reached the game's end ({kind}, phase {phase})");
-            if (EpilogueSync.OnGameEnd((byte)kind, phase))
+            if (step != GameEndStep.Solo)
             {
+                EpilogueSync.OnGameEnd((byte)kind, phase);
                 return;
             }
 
@@ -848,7 +854,8 @@ namespace DarkwoodMP.World
                 instance.SetLoadStatus("The host reached the end of the game.");
             }
 
-            if (!WorldShare.InWorld || !SaveRedirect.Active)
+            if (!EndingRules.ShowsEnding(
+                WorldShare.InWorld, SaveRedirect.Active))
             {
                 return;
             }
@@ -880,7 +887,8 @@ namespace DarkwoodMP.World
 
                 if (started)
                 {
-                    float until = Time.realtimeSinceStartup + 45f;
+                    float until = Time.realtimeSinceStartup
+                        + EndingRules.AloneEnterFor;
                     while (Time.realtimeSinceStartup < until
                         && !(Player.Instance != null
                             && Player.Instance.inEpilogue))
@@ -930,13 +938,15 @@ namespace DarkwoodMP.World
         {
             var dreams = Singleton<Dreams>.Instance;
             var p = Player.Instance;
-            if (dreams == null || p == null || dreams.dreaming)
+            var o = Singleton<OutsideLocations>.Instance;
+            var facts = new StartFacts
             {
-                return false;
-            }
+                Dreams = Prologue.DreamsOf(dreams),
+                HasPlayer = p != null,
+                InOutside = o != null && o.playerInOutsideLocation,
+            };
 
-            if (Singleton<OutsideLocations>.Instance != null
-                && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
+            if (!EndingRules.MayStartAlone(facts))
             {
                 return false;
             }

@@ -57,7 +57,6 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// The only code reading the game's Dreams for the rules.
-        /// Transition isn't read: no prologue rule looks at it.
         /// </summary>
         internal static DreamFacts DreamsOf(Dreams d)
         {
@@ -82,6 +81,8 @@ namespace DarkwoodMP.World
                 Prepared = d.dreamPrepared,
                 Switching = d.switchingDream,
                 Wanted = d.wantToDream,
+                Transition = d.currentTransition != null
+                    && d.currentTransition.isPlaying,
                 HasPreset = d.preset != null,
                 Preset = preset,
                 TrueName = trueName,
