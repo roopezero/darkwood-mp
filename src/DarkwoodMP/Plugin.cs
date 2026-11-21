@@ -480,7 +480,6 @@ namespace DarkwoodMP
             ViewRects.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
-            EggSync.Register(_host.Session);
             InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
             _host.Session.OnSessionEnded += ThrownHits.Clear;

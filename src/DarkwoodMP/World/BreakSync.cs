@@ -206,7 +206,7 @@ namespace DarkwoodMP.World
             if (!__state.Destroyed && __instance.destroyed
                 && EggSync.IsEgg(__instance))
             {
-                EggSync.Send(__instance);
+                Coop.Current.Eggs.Send(__instance);
                 return;
             }
 
@@ -244,7 +244,7 @@ namespace DarkwoodMP.World
 
             if (EggSync.IsEgg(__instance))
             {
-                EggSync.Send(__instance);
+                Coop.Current.Eggs.Send(__instance);
                 return;
             }
 

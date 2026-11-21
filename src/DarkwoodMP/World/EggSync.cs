@@ -29,12 +29,17 @@ namespace DarkwoodMP.World
     /// and the egg isn't broken already, breaks its own and passes it on; if it
     /// refuses, the client gets the egg's state back (WorldActions.SendState).
     /// </summary>
-    public static class EggSync
+    internal sealed class EggSync
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
 
-        public static void Register(Session s) =>
-            s.Register(MsgType.EggDestroyed, OnDestroyed);
+        public EggSync(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.EggDestroyed, OnDestroyed);
+        }
+
+        private Session S => _coop.Net;
 
         /// <summary>
         /// Whether this item is an egg (broken open to get at its contents).
@@ -54,7 +59,7 @@ namespace DarkwoodMP.World
         /// This game broke the egg; the caller checked it's ours to send
         /// (BreakSync.OurPlayers).
         /// </summary>
-        public static void Send(Item egg)
+        public void Send(Item egg)
         {
             // in a dream of our own: nobody else has it
             bool alone = WorldActions.OursAlone(egg.gameObject);
@@ -82,12 +87,12 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Coop.Current.Authority.Request(
+                _coop.Authority.Request(
                     w, $"egg {r} destroyed ({egg.gameObject.name})");
             }
         }
 
-        private static void OnDestroyed(ulong from, PacketReader r)
+        private void OnDestroyed(ulong from, PacketReader r)
         {
             var s = S;
             if (s == null || !WorldShare.InWorld)
@@ -111,7 +116,7 @@ namespace DarkwoodMP.World
                 if (verdict.Refused)
                 {
                     WorldActions.SendState(from, obj);
-                    Coop.Current.Authority.Refuse(verdict);
+                    _coop.Authority.Refuse(verdict);
                     return;
                 }
 
@@ -141,14 +146,14 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 Break(egg);
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
 
             if (s.IsHost)
@@ -159,7 +164,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static PacketWriter Write(in EggBreak egg)
+        private PacketWriter Write(in EggBreak egg)
         {
             var w = S.Begin(MsgType.EggDestroyed);
             EggDestroyed.Write(w, egg);
@@ -181,7 +186,7 @@ namespace DarkwoodMP.World
         /// Host: what the egg rules know of the egg a client says it broke
         /// (null: not found here). The only code that reads the egg for them.
         /// </summary>
-        private static EggFacts FactsOf(Item egg)
+        private EggFacts FactsOf(Item egg)
         {
             if (egg == null)
             {
@@ -195,7 +200,7 @@ namespace DarkwoodMP.World
                 OpensByBreaking = egg.destroyToAccessInventory,
                 Destroyed = egg.destroyed,
                 Name = egg.gameObject.name,
-                Reach = Coop.Current.Authority.ReachOf(egg.transform.position),
+                Reach = _coop.Authority.ReachOf(egg.transform.position),
             };
         }
 
