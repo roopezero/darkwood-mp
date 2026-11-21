@@ -302,6 +302,33 @@ namespace DarkwoodMP.World
             };
         }
 
+        /// <summary>
+        /// What FiringRules needs to know as a GameEvents starts to run, with
+        /// the trigger firing now (Firing, or null).
+        /// </summary>
+        internal static FiringFacts FactsOf(Started firing, GameEvents ge)
+        {
+            if (firing == null)
+            {
+                return default;
+            }
+
+            var s = S;
+            return new FiringFacts
+            {
+                Firing = true,
+                HasTriggers = firing.Triggers != null,
+                Index = firing.Index,
+                World = firing.World,
+                By = firing.By,
+                Current = (EventPart)Current,
+                Fired = ge.fired,
+                MultipleFire = ge.multipleFire,
+                Sharing = Coop.Guards.Sharing,
+                Client = s != null && s.IsClient,
+            };
+        }
+
         internal static bool OnStack(Type type)
         {
             var st = new System.Diagnostics.StackTrace(2, false);

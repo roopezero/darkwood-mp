@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
@@ -436,36 +437,28 @@ namespace DarkwoodMP.World
         static bool Prefix(GameEvents __instance)
         {
             var f = ScriptedEvents.Firing;
-            if (f == null || f.Index < 0 || f.Triggers == null
-                || ScriptedEvents.Current != ScriptedEvents.Part.All)
+            FiringShare share =
+                FiringRules.Share(ScriptedEvents.FactsOf(f, __instance));
+            if (share == FiringShare.Pass)
             {
                 return true;
             }
 
             ScriptedEvents.Firing = null; // once
-            if (__instance.fired && !__instance.multipleFire)
-            {
-                return true;
-            }
-
-            if (!Coop.Guards.Sharing)
+            // FiringShare.Game: events that ran once already, no sharing, or
+            // a client's world trigger: not ours to send (HostsWorldTrigger
+            // keeps these from starting here).
+            if (share == FiringShare.Game)
             {
                 return true;
             }
 
             bool client = Session.Instance.IsClient;
-            if (f.World && client)
-            {
-                // not ours to send (HostsWorldTrigger keeps these from starting
-                // here)
-                return true;
-            }
-
             var ge = __instance;
             var et = f.Triggers;
             // A world trigger a joiner caused: the host's and the shared part
             // here, the joiner's own part in its game.
-            if (f.World && f.By != 0
+            if (share == FiringShare.Caused
                 && ScriptedEvents.SendCaused(et, f.Index, f.By))
             {
                 ScriptedEvents.RunAs(
@@ -502,7 +495,9 @@ namespace DarkwoodMP.World
                 // came: its exit (the darkness and the sounds faded out) has
                 // run here already, so the enter's look of the place mustn't
                 // come after it.
-                if (repeatableArea && et != null && et.exited > exitedBefore)
+                if (et != null
+                    && FiringRules.LeftBeforeYes(
+                        repeatableArea, exitedBefore, et.exited))
                 {
                     ScriptedEvents.RunAs(
                         ScriptedEvents.Part.SharedOnly, replaying: false,
@@ -516,7 +511,7 @@ namespace DarkwoodMP.World
 
             // A joiner runs its part once the host says yes
             // (ScriptedEvents.Send).
-            return !(client && sent);
+            return FiringRules.RunsAtOnce(client, sent);
         }
     }
 
