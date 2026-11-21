@@ -1,4 +1,5 @@
 using DarkwoodMP.World.Inventories;
+using DarkwoodMP.World.Rolls;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -2058,8 +2059,9 @@ namespace DarkwoodMP.World
                         + $"{made} in the chunks now");
             }
 
-            bool lights = WorldEvents.Instance != null
-                && WorldEvents.Instance.HostShadowLights(player, anyTime: true);
+            CoopSession coop = Coop.Current;
+            bool lights = coop != null
+                && coop.WorldEvents.ShadowLightsAnyTime(player);
             string text = "not here (no generator with lamps)";
             if (lights)
             {
