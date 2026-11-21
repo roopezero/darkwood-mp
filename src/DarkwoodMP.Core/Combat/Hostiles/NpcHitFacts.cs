@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Hostiles
 {
     /// Client: our player's hit on an NPC of ours that the host doesn't
-    /// run yet (HostileNpcs.ClientHit, from ClientForwardHitPatch).
+    /// run yet (HostileNpcs.ClientHit, from CharacterGetHitFromClient).
     public readonly struct NpcHitFacts
     {
         /// We are applying our own hit or attack (HostileNpcs._ours).

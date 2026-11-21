@@ -141,6 +141,12 @@ namespace DarkwoodMP
         /// A client's swings and aims, which the host's enemies react to.
         public readonly Combat.PlayerCues Cues;
 
+        /// The host's enemies and their copies on clients.
+        public readonly Combat.NetEnemies Enemies;
+
+        /// Host: the noise clients' characters make.
+        public readonly Combat.RemoteNoise Noise;
+
         /// Client: where the host's enemies are drawn between its states.
         public readonly Combat.EnemyMotion Motion;
 
@@ -214,6 +220,8 @@ namespace DarkwoodMP
             PuppetFx = new Sync.Players.PuppetFx(this);
             View = new Sync.Players.ViewWatch();
             Cues = new Combat.PlayerCues(this);
+            Enemies = new Combat.NetEnemies(this);
+            Noise = new Combat.RemoteNoise(this);
             Motion = new Combat.EnemyMotion();
             Hostiles = new Combat.NpcHostility(this);
             Owed = new World.Owed.OwedParts(this);

@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// An enemy's melee sensor touching something
-    /// (MeleeSensorProxyPatch.Prefix).
+    /// (MeleeSensorHitsStandIn.Prefix).
     public readonly struct MeleeFacts
     {
         /// The collider isn't null and has a NetPlayerProxy.

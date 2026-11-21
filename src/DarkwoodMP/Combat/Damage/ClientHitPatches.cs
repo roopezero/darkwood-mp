@@ -21,7 +21,7 @@ namespace DarkwoodMP.Combat
             typeof(bool),
             typeof(bool)
         })]
-    public static class ClientForwardHitPatch
+    public static class CharacterGetHitFromClient
     {
         [HarmonyPriority(Priority.First)]
         private static bool Prefix(
@@ -122,7 +122,7 @@ namespace DarkwoodMP.Combat
     /// send them with it.
     /// </summary>
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
-    static class ClientHitEffectsPatch
+    static class MeleeSensorNotesEffects
     {
         static void Prefix(MeleeSensor __instance)
         {
@@ -154,7 +154,7 @@ namespace DarkwoodMP.Combat
     /// whose hit just went to the host (HostileNpcs.EffectsForwarded).
     /// </summary>
     [HarmonyPatch]
-    static class ClientNoPuppetEffectsPatch
+    static class CharacterEffectsActivateOnCopy
     {
         // Every overload: weapons use the InvItemEffect one, fire and others
         // the ones taking an effect type.

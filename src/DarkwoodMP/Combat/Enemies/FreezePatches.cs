@@ -8,21 +8,19 @@ namespace DarkwoodMP.Combat
     /// (see NetEnemies).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Start))]
-    public static class ClientFreezeCharacterPatch
+    public static class CharacterStart
     {
-        /// <summary>Set while Thaw starts a character itself.</summary>
-        public static bool Starting;
-
         private static bool Prefix(Character __instance)
         {
-            if (!FreezeRules.FreezesAtStart(FactsOf(__instance)))
+            NetEnemies enemies = NetEnemies.Instance;
+            if (enemies == null
+                || !FreezeRules.FreezesAtStart(FactsOf(enemies, __instance)))
             {
                 return true;
             }
 
-            bool puppet = NetEnemies.Instance != null
-                && NetEnemies.Instance.IsPuppet(__instance, out _);
-            NetEnemies.Freeze(__instance, hide: !puppet);
+            bool puppet = enemies.IsPuppet(__instance, out _);
+            enemies.Freeze(__instance, hide: !puppet);
             return false;
         }
 
@@ -30,14 +28,14 @@ namespace DarkwoodMP.Combat
         /// The character as the rule sees it. Whether it's eligible and a
         /// local one are read only on a client, outside Thaw, as before.
         /// </summary>
-        private static StartFacts FactsOf(Character c)
+        private static StartFacts FactsOf(NetEnemies enemies, Character c)
         {
             bool client = NetEnemies.ClientMode;
-            if (Starting || !client)
+            if (enemies.Starting || !client)
             {
                 return new StartFacts
                 {
-                    Thawing = Starting,
+                    Thawing = enemies.Starting,
                     ClientMode = client,
                 };
             }
@@ -67,7 +65,7 @@ namespace DarkwoodMP.Combat
     /// NetEnemies.Thaw unfreezes the ones that are ours.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.enableComponents))]
-    public static class ClientFrozenStaysPatch
+    public static class CharacterEnableComponents
     {
         private static bool Prefix(Character __instance, bool enable)
         {
@@ -105,7 +103,7 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(
         typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop),
         new[] { typeof(string), typeof(bool) })]
-    public static class ClientHiddenSilentPatch
+    public static class CharacterSoundsPlayIdleLoopHidden
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
@@ -131,7 +129,7 @@ namespace DarkwoodMP.Combat
     /// </summary>
     [HarmonyPatch(
         typeof(CharacterSpawnPoint), nameof(CharacterSpawnPoint.actuallySpawn))]
-    public static class ClientNoOwnSpawnsPatch
+    public static class CharacterSpawnPointActuallySpawn
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
@@ -162,7 +160,7 @@ namespace DarkwoodMP.Combat
     /// like any other object from then on.
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
-    public static class HostCorpsesOutsideLocationPatch
+    public static class LocationActivateCharactersHost
     {
         private static void Prefix(Location __instance, bool active)
         {
@@ -218,7 +216,7 @@ namespace DarkwoodMP.Combat
     /// switched off and on with their location (NetEnemies.LocationCharacters).
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
-    public static class ClientCorpsesWithLocationPatch
+    public static class LocationActivateCharactersClient
     {
         private static void Postfix(Location __instance, bool active)
         {
@@ -237,7 +235,7 @@ namespace DarkwoodMP.Combat
     /// Client: frozen and host-driven characters don't hear anything here.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.heardSound))]
-    public static class ClientDeafPatch
+    public static class CharacterHeardSoundDeaf
     {
         [HarmonyPriority(Priority.First)]
         private static bool Prefix(Character __instance) =>

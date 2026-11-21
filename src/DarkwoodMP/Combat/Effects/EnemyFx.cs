@@ -90,7 +90,7 @@ namespace DarkwoodMP.Combat
         private void HostCombat()
         {
             var s = Net;
-            var chars = AllCharacters.Active();
+            var chars = Plugin.Instance.Host.Characters.Active();
             foreach (var proxy in NetPlayerProxy.All.Values)
             {
                 if (proxy == null)

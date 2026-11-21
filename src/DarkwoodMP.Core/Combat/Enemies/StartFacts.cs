@@ -1,11 +1,11 @@
 namespace DarkwoodMP.Combat.Enemies
 {
     /// What the client looks at as one of its characters starts
-    /// (ClientFreezeCharacterPatch, on Character.Start).
+    /// (CharacterStart, on Character.Start).
     public readonly struct StartFacts
     {
         /// NetEnemies.Thaw is starting it itself
-        /// (ClientFreezeCharacterPatch.Starting).
+        /// (NetEnemies.Starting).
         public bool Thawing { get; init; }
 
         /// FreezeRules.ClientMode.

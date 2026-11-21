@@ -2,7 +2,7 @@ namespace DarkwoodMP.Combat.Enemies
 {
     /// The sound loops of the host's enemies, made sure of in the clients'
     /// games (the plugin's NetEnemies.LoopCheck, IsLoop and OnSound, and
-    /// HostLoopStopPatch).
+    /// CharacterSoundsPlayIdleLoopStop).
     public static class EnemyLoopRules
     {
         /// How often the host checks its enemies' loops (and armour).

@@ -229,7 +229,7 @@ Animals treating a joiner by its perks (gap 18) and fleeing a joiner's ward: CO 
 
 ## Enemy animation and facing (question 3)
 
-- Implemented: `Combat/NetEnemies.cs` sends up to 8 sprite animators per enemy (clip hash, frame, playing; around
+- Implemented: `Combat/Enemies/NetEnemies.cs` sends up to 8 sprite animators per enemy (clip hash, frame, playing; around
   line 401) and the client applies them with `ApplyAnim` (around line 1071), with frame events cleared so a copy
   can't attack or make sounds.
 - Not asserted anywhere: `StateDump` has no animator field for enemies, `mapcompare.py` compares none, no
@@ -345,5 +345,5 @@ wait for doesn't happen (`combattest.py` could exit 1 unless everything in UNTIL
   `MapScenarioIssues.cs`, `MapScenarioNight.cs`, `MapScenarioFixChecks.cs`; `tools/tests/mapcompare.py`.
 - Scripted tests: `tools/run-test.sh` (the `check` function: exceptions and saves only), `tools/tests/*.py`,
   `src/DarkwoodMP/World/WorldTest.cs`.
-- Enemy replication: `src/DarkwoodMP/Combat/NetEnemies.cs`. Kinds: the game's `CharacterType` enum.
+- Enemy replication: `src/DarkwoodMP/Combat/Enemies/NetEnemies.cs`. Kinds: the game's `CharacterType` enum.
 - Status claims: `README.md`, `docs/INTERACTIONS.md`, `docs/MULTIPLAYER_ENGINEERING_LEDGER.md`, `git log`.

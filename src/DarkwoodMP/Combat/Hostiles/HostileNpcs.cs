@@ -169,7 +169,7 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: the melee hit is over (ClientHitEffectsPatch).
+        /// Client: the melee hit is over (MeleeSensorNotesEffects).
         /// </summary>
         internal static void EndHit()
         {
@@ -248,9 +248,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client, from ClientForwardHitPatch: a hit on an NPC of ours that the
-        /// host doesn't run yet. True if it's handled (sent, or left to the
-        /// host's copy): don't apply it here.
+        /// Client, from CharacterGetHitFromClient: a hit on an NPC of ours
+        /// that the host doesn't run yet. True if it's handled (sent, or left
+        /// to the host's copy): don't apply it here.
         /// </summary>
         internal static bool ClientHit(
             Character c, float damage, Transform attacker, bool cut,

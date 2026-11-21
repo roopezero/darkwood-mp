@@ -43,7 +43,7 @@ namespace DarkwoodMP.Combat
         internal static Character NearestEnemy(Vector3 at)
         {
             Character c = null;
-            foreach (var x in AllCharacters.Active())
+            foreach (var x in Plugin.Instance.Host.Characters.Active())
             {
                 if (x != null && x.alive && NetEnemies.Eligible(x)
                     && (c == null

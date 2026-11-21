@@ -105,7 +105,7 @@ namespace DarkwoodMP.Combat
 
         /// <summary>
         /// For the game's code that aims an enemy at Player.Instance.transform
-        /// (see ThreatPursuitTranspiler).
+        /// (see CharacterCanSeeEnemyPursuit).
         /// </summary>
         public static Transform PursuitTarget(Character c)
         {

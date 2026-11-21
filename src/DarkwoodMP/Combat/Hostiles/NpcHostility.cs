@@ -73,7 +73,7 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: the melee hit is over (ClientHitEffectsPatch).
+        /// Client: the melee hit is over (MeleeSensorNotesEffects).
         /// </summary>
         public void EndHit() => _forwarded = null;
 
@@ -210,9 +210,9 @@ namespace DarkwoodMP.Combat
         // ---- client: our player's hit or attack goes to the host ------------
 
         /// <summary>
-        /// Client, from ClientForwardHitPatch: a hit on an NPC of ours that the
-        /// host doesn't run yet. True if it's handled (sent, or left to the
-        /// host's copy): don't apply it here.
+        /// Client, from CharacterGetHitFromClient: a hit on an NPC of ours
+        /// that the host doesn't run yet. True if it's handled (sent, or left
+        /// to the host's copy): don't apply it here.
         /// </summary>
         public bool ClientHit(in HostileNpcs.Hit hit)
         {

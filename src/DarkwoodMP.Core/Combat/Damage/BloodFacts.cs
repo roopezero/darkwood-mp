@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// A hit on a character in the host's game
-    /// (CharacterGetHitThreatPatch.Postfix).
+    /// (CharacterGetHitThreat.Postfix).
     public readonly struct BloodFacts
     {
         /// getHit's normalHit.

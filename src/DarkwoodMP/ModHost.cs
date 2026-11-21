@@ -98,6 +98,13 @@ namespace DarkwoodMP
         public readonly Sync.Players.LightGrid Lights =
             new Sync.Players.LightGrid();
 
+        /// <summary>The active characters (Combat.AllCharacters).</summary>
+        internal readonly Combat.AllCharacters Characters =
+            new Combat.AllCharacters();
+
+        /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
+        internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

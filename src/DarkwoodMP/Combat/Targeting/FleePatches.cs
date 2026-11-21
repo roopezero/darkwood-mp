@@ -9,7 +9,7 @@ namespace DarkwoodMP.Combat
     /// runs from the player it was chasing.
     /// </summary>
     [HarmonyPatch(typeof(Character), "setToFlee")]
-    static class FleeFromTargetPatch
+    static class CharacterSetToFlee
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -24,7 +24,7 @@ namespace DarkwoodMP.Combat
     /// </summary>
     [HarmonyPatch(
         typeof(Character), nameof(Character.attacking), MethodType.Setter)]
-    static class RunAwayAfterAttackPatch
+    static class CharacterAttackingSetter
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -39,7 +39,7 @@ namespace DarkwoodMP.Combat
     /// character is after, or the nearest one, not always from the host's.
     /// </summary>
     [HarmonyPatch(typeof(Character.Activity), nameof(Character.Activity.run))]
-    static class RunAwayActivityPatch
+    static class ActivityRun
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -55,7 +55,7 @@ namespace DarkwoodMP.Combat
     /// nearest. Otherwise the game's own method runs.
     /// </summary>
     [HarmonyPatch(typeof(Character), "checkIfBeingChased")]
-    static class FleeFromAnyPlayerPatch
+    static class CharacterCheckIfBeingChased
     {
         private static readonly Collider[] _near = new Collider[256];
 

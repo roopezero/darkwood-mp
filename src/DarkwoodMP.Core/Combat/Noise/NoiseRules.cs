@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Noise
 {
-    /// Players' noise for the host's enemies (PlayerNoisePatch and
-    /// PlayerNoiseSourcePatch). These run with no session too.
+    /// Players' noise for the host's enemies (CharacterAlertInArea and
+    /// OwnNoiseMakers). These run with no session too.
     public static class NoiseRules
     {
         /// The most range a client's noise may have.

@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Damage
 {
     /// A character's effects starting in a client's game
-    /// (ClientNoPuppetEffectsPatch).
+    /// (CharacterEffectsActivateOnCopy).
     public readonly struct HostEffectsFacts
     {
         /// NetEnemies.ClientMode and NetEnemies.Instance exists.

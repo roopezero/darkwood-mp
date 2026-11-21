@@ -120,7 +120,7 @@ kinds stand still and never attack. `Redneck*` are the other human-shaped enemie
   about 1.1 s; a dog shows its 18-frame `Idle`. So a savage between attacks holds one pose by the game's design (in
   single player too); that isn't the bug, but it is the likeliest thing a player would describe as "stuck".
 
-### How the mod copies it (Combat/NetEnemies.cs)
+### How the mod copies it (Combat/Enemies/NetEnemies.cs)
 
 - Host, every 0.05 s (`StateInterval`): per enemy, up to 8 animators by path hash, each with clip name hash,
   `CurrentFrame` and `Playing` (`WriteState`).
