@@ -230,7 +230,7 @@ namespace DarkwoodMP.World
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
-                last = coop.Fuel.LastDrain;
+                last = coop.Fuel.Drain.Last;
             }
 
             r.Info =

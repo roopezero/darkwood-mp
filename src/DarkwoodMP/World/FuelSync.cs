@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using DarkwoodMP.World.Fuel;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -56,14 +55,14 @@ namespace DarkwoodMP.World
         public FuelSync(CoopSession coop)
         {
             _coop = coop;
+            Drain = new GeneratorDrain(coop);
             coop.Handle(MsgType.Fuel, OnFuel);
         }
 
         /// <summary>
-        /// For the tests: the last drain's generator, whose skill it used, and
-        /// the modifier (GeneratorDrainSkillPatch).
+        /// Generator.drainFuel: whose skill burns the fuel.
         /// </summary>
-        public string LastDrain { get; set; }
+        public readonly GeneratorDrain Drain;
 
         private Session Net => _coop.Net;
 
@@ -161,6 +160,20 @@ namespace DarkwoodMP.World
             }
 
             return facts;
+        }
+
+        /// <summary>
+        /// Item.turnOn, before it: what was poured goes out first, so a
+        /// generator that was just filled also starts in the other games
+        /// (Generator.turnOn does nothing without fuel).
+        /// </summary>
+        internal void BeforeOn()
+        {
+            var guards = _coop.Guards;
+            if (PourRules.FlushesBeforeOn(guards.Sharing, guards.Replaying))
+            {
+                Flush();
+            }
         }
 
         /// <summary>
@@ -612,219 +625,6 @@ namespace DarkwoodMP.World
             {
                 g.powerDown();
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(Generator), nameof(Generator.addFuel))]
-    static class GeneratorFuelPatch
-    {
-        static void Prefix(Generator __instance, out float __state) =>
-            __state = __instance.fuel;
-        static void Postfix(Generator __instance, float __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fuel.Poured(__instance, __instance.fuel - __state);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Saw), nameof(Saw.addFuel))]
-    static class SawFuelPatch
-    {
-        static void Prefix(Saw __instance, out float __state) =>
-            __state = __instance.fuel;
-        static void Postfix(Saw __instance, float __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fuel.Poured(__instance, __instance.fuel - __state);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Cutting a log (Saw.convert) uses fuelToConvert of the saw's fuel; it
-    /// goes out like a pour.
-    /// </summary>
-    [HarmonyPatch(typeof(Saw), nameof(Saw.convert))]
-    static class SawConvertPatch
-    {
-        // A finalizer, not a postfix: the fuel is taken before Saw.refresh,
-        // which throws when the saw's window isn't set up (a test calling it
-        // directly).
-        static void Prefix(Saw __instance, out float __state) =>
-            __state = __instance.fuel;
-
-        static System.Exception Finalizer(
-            Saw __instance, System.Exception __exception, float __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fuel.Poured(__instance, __instance.fuel - __state);
-            }
-
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch(typeof(Generator), "Start")]
-    static class GeneratorListPatch
-    {
-        static void Postfix(Generator __instance) =>
-            Plugin.Instance.Host.Generators.Add(__instance);
-    }
-
-    /// <summary>
-    /// Fuel just poured goes out before the switch-on does (ItemOnPatch sends
-    /// it in its postfix).
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
-    static class FuelBeforeOnPatch
-    {
-        [HarmonyPriority(Priority.First)]
-        static void Prefix()
-        {
-            if (Coop.Guards.Sharing && !Coop.Guards.Replaying)
-            {
-                CoopSession coop = Coop.Current;
-                if (coop != null)
-                {
-                    coop.Fuel.Flush();
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Host: a generator burns fuel by the electricity skill of the player
-    /// nearest it (Generator.drainFuel uses our own player's
-    /// Player.electricityModifier for every generator). A joiner's skill is
-    /// read from the character it last sent (Characters.Electrician); while it
-    /// isn't known yet, ours is used, as before. The host's fuel is the one
-    /// every game keeps (FuelSync).
-    ///
-    /// Client: its generators burn nothing (the modifier is 0 for the call);
-    /// the level comes from the host. The rest of drainFuel still runs, so the
-    /// lights dim on low fuel as the host's level says.
-    /// </summary>
-    [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
-    static class GeneratorDrainSkillPatch
-    {
-        static void Prefix(Generator __instance, out float? __state)
-        {
-            __state = null;
-            var s = Session.Instance;
-            var p = Player.Instance;
-            var start = DrainRules.Start(new DrainFacts
-            {
-                Session = s != null,
-                Client = s != null && s.IsClient,
-                Host = s != null && s.IsHost,
-                Player = p != null,
-                Sharing = Coop.Guards.Sharing,
-                Proxies = Proxies.Any,
-                Characters = Characters.Instance != null,
-            });
-
-            if (start == DrainStart.Zero)
-            {
-                __state = p.electricityModifier;
-                p.electricityModifier = 0f;
-                return;
-            }
-
-            if (start == DrainStart.Leave)
-            {
-                return;
-            }
-
-            var standIns = new List<NetPlayerProxy>(NetPlayerProxy.All.Values);
-            var players = new List<DrainPlayer>(standIns.Count);
-            foreach (var x in standIns)
-            {
-                players.Add(PlayerOf(x));
-            }
-
-            int i = DrainRules.Nearest(new NearestFacts
-            {
-                Generator = Flat(__instance.transform.position),
-                Host = Flat(p.transform.position),
-                HostAway = SharedCullingPatch.HostAway,
-                Players = players,
-            });
-
-            NetPlayerProxy nearest = null;
-            if (i >= 0)
-            {
-                nearest = standIns[i];
-            }
-
-            bool? has = null;
-            string ownerName = "ours";
-            if (nearest != null)
-            {
-                has = Characters.Instance.Electrician(nearest.Owner);
-                ownerName = nearest.OwnerName;
-            }
-
-            float modifier = p.electricityModifier;
-            if (has.HasValue)
-            {
-                modifier = DrainRules.Modifier(has.Value);
-            }
-
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fuel.LastDrain =
-                    $"{__instance.name}: {ownerName}'s skill, {modifier}";
-            }
-
-            if (has == null)
-            {
-                return;
-            }
-
-            __state = p.electricityModifier;
-            p.electricityModifier = modifier;
-        }
-
-        /// <summary>
-        /// A stand-in, for DrainRules.Nearest: the only code reading it
-        /// there.
-        /// </summary>
-        static DrainPlayer PlayerOf(NetPlayerProxy x)
-        {
-            if (x == null)
-            {
-                return default;
-            }
-
-            return new DrainPlayer
-            {
-                Exists = true,
-                Away = x.Away,
-                InLocation = x.InLocation != null,
-                Dummy = x.Owner == Sync.PlayerSync.DummyId,
-                Pos = Flat(x.transform.position),
-            };
-        }
-
-        static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
-
-        static System.Exception Finalizer(
-            System.Exception __exception, float? __state)
-        {
-            if (__state.HasValue && Player.Instance != null)
-            {
-                Player.Instance.electricityModifier = __state.Value;
-            }
-
-            return __exception;
         }
     }
 }
