@@ -123,7 +123,7 @@ namespace DarkwoodMP.World.Dreaming
                 Replaying = _coop.Guards.Replaying,
                 Marked = _hostLevelDream,
                 PendingStart = _pendingStart != null,
-                EpiloguePlaying = EpilogueSync.Playing,
+                EpiloguePlaying = _coop.Epilogue.Playing,
             };
         }
 
@@ -375,7 +375,7 @@ namespace DarkwoodMP.World.Dreaming
             share = share with
             {
                 OutcomeAllowed =
-                    asks && EpilogueSync.OutcomeAllowed(d, end.Outcome),
+                    asks && _coop.Epilogue.OutcomeAllowed(d, end.Outcome),
             };
 
             HostEndStep step = DreamRules.HostEnd(dream, share);

@@ -188,6 +188,9 @@ namespace DarkwoodMP
         /// A player dead for good watching the others.
         public readonly World.Spectating.Spectator Spectator;
 
+        /// The epilogue played together.
+        public readonly World.Story.EpilogueSync Epilogue;
+
         /// Where separate locations stand, and the host's locations kept
         /// running for the joiners in them.
         public readonly World.Places.Locations Locations;
@@ -273,6 +276,7 @@ namespace DarkwoodMP
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
             Spectator = new World.Spectating.Spectator(this);
+            Epilogue = new World.Story.EpilogueSync(this);
             Locations = new World.Places.Locations(this);
             Porter = new World.Hideout.Porter(this);
             Ovens = new World.Hideout.Ovens(this);

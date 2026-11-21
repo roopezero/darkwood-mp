@@ -326,7 +326,7 @@ namespace DarkwoodMP.World.Story
             _ran.Add(StoryRequestRules.KeyOf(StoryKind.Epilogue, 0));
             if (kind == EndKind.Epilogue)
             {
-                EpilogueSync.HostStarts();
+                _coop.Epilogue.HostStarts();
                 return;
             }
 
@@ -465,7 +465,7 @@ namespace DarkwoodMP.World.Story
                 $"The host reached the game's end ({kind}, phase {phase})");
             if (step != GameEndStep.Solo)
             {
-                EpilogueSync.OnGameEnd((byte)kind, phase);
+                _coop.Epilogue.OnGameEnd((byte)kind, phase);
                 return;
             }
 

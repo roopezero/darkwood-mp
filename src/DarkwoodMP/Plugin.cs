@@ -116,7 +116,7 @@ namespace DarkwoodMP
                         + "world.";
                 }
 
-                if (EpilogueSync.InEpilogueAlone())
+                if (World.Story.EpilogueSync.InEpilogueAlone())
                 {
                     return "This world is in the epilogue, which can't be "
                         + "shared once it has begun. Host from a save before "
@@ -440,7 +440,6 @@ namespace DarkwoodMP
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            EpilogueSync.Register(_host.Session);
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);

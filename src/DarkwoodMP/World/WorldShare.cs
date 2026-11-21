@@ -1186,7 +1186,13 @@ namespace DarkwoodMP.World
 
         private bool HostBeforeWelcome(ulong peer, byte[] clientHash)
         {
-            string ending = EpilogueSync.JoinRefusal();
+            string ending = null;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                ending = coop.Epilogue.JoinRefusal();
+            }
+
             if (ending != null)
             {
                 _session.Refuse(peer, ending);
