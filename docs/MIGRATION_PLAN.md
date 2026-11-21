@@ -578,6 +578,12 @@ Finish with `tools/run-test.sh full`.
         since `SaveManager.Save` writes them also alone; `WorldShare` on
         `ModHost`), thin patches, the feature folders and the split of
         `WorldShare` into files of about 600 lines.
+        `Characters` is done: it is `CoopSession.Characters`
+        (`World/KeptCharacters`, split into `Characters.cs`, `.Client.cs`
+        and `.Placing.cs`), and the host's kept records are
+        `ModHost.Kept` (`CharacterRecords`, with `CharacterRecord`), written
+        by `CharacterPatches.SaveManagerSaveCharacters` also alone. The box
+        waits for `WorldShare`.
 
 Finish with `tools/run-test.sh full`.
 
