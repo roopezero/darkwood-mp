@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Hideout;
-using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -578,10 +577,34 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Location.spawnPorter (the porter whistle, InvItemClass.use) is about
-        /// to run in this game; false: it mustn't. A joiner's whistle asks the
-        /// host (PorterCalled), which calls the porter in every game.
+        /// to run in this game; false: it mustn't. calls: the host sends
+        /// PorterCalled once it has run (SendCalled), as it makes the porter's
+        /// spawner by the game's own conditions.
         /// </summary>
-        internal bool CallPorter(Location loc)
+        internal bool Whistled(Location loc, out bool calls)
+        {
+            bool made = PorterRules.SpawnerMade(
+                loc.porterPosition != null,
+                loc.porter != null,
+                Singleton<Flags>.Instance.isFlagTrue(PorterRules.Killed));
+            bool runs = CallPorter(loc);
+            calls = PorterRules.CalledHere(new CalledFacts
+            {
+                SpawnerMade = made,
+                RanGame = runs,
+                Together = Hideouts.Together,
+                IsHost = S.IsHost,
+                HasPorterPlace = loc.porterPosition != null,
+            });
+
+            return runs;
+        }
+
+        /// <summary>
+        /// Whistled: whether spawnPorter runs here. A joiner's whistle asks
+        /// the host (PorterCalled), which calls the porter in every game.
+        /// </summary>
+        private bool CallPorter(Location loc)
         {
             var s = S;
 
@@ -617,22 +640,8 @@ namespace DarkwoodMP.World
         /// Host: the porter was called in our game (its spawner made at loc):
         /// call it in the others' too.
         /// </summary>
-        internal void PorterCalledHere(Location loc)
+        internal void SendCalled(Location loc)
         {
-            var called = PorterRules.CalledHere(new CalledFacts
-            {
-                SpawnerMade = true,
-                RanGame = true,
-                Together = Hideouts.Together,
-                IsHost = S != null && S.IsHost,
-                HasPorterPlace = loc.porterPosition != null,
-            });
-
-            if (!called)
-            {
-                return;
-            }
-
             var w = S.Begin(MsgType.PorterCalled);
             PorterCalledMessage.Write(
                 w, VecOf(loc.porterPosition.transform.position));
@@ -730,7 +739,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                // PorterCallPatch sends it to everyone, the whistler too
+                // LocationSpawnPorter sends it to everyone, the whistler too
                 loc.spawnPorter();
                 return;
             }
@@ -823,10 +832,32 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// Player.setExperienceMachine is about to run; false: done here
+        /// (Light).
+        /// </summary>
+        internal bool SetOven(Player p, ExperienceMachine machine, bool enable)
+        {
+            var call = new OvenCallFacts
+            {
+                HasOven = machine != null,
+                Enable = enable,
+                Replaying = Coop.Guards.Replaying,
+                Together = Hideouts.Together,
+            };
+
+            if (!OvenRules.TakesOver(call))
+            {
+                return true;
+            }
+
+            return Light(p, machine);
+        }
+
+        /// <summary>
         /// Player.setExperienceMachine(machine, doEnable: true) while playing
         /// together; false: done here.
         /// </summary>
-        internal bool Light(Player p, ExperienceMachine machine)
+        private bool Light(Player p, ExperienceMachine machine)
         {
             var s = S;
             var prev = p.experienceMachine;
@@ -1114,86 +1145,6 @@ namespace DarkwoodMP.World
                     p.experienceMachine = mine;
                 }
             }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(Location), nameof(Location.transportAllItemsToCurrentHideout))]
-    static class PorterTransportPatch
-    {
-        static bool Prefix(Location __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
-
-            return coop.Porter.Transport(__instance);
-        }
-    }
-
-    /// <summary>
-    /// The porter whistle (Location.spawnPorter): the host calls the porter, in
-    /// every game.
-    /// </summary>
-    [HarmonyPatch(typeof(Location), nameof(Location.spawnPorter))]
-    static class PorterCallPatch
-    {
-        static bool Prefix(Location __instance, out bool __state)
-        {
-            // Whether it will make the porter's spawner (its own conditions).
-            __state = PorterRules.SpawnerMade(
-                __instance.porterPosition != null,
-                __instance.porter != null,
-                Singleton<Flags>.Instance.isFlagTrue(PorterRules.Killed));
-            CoopSession coop = Coop.Current;
-            if (coop == null || coop.Porter.CallPorter(__instance))
-            {
-                return true;
-            }
-
-            __state = false;
-            return false;
-        }
-
-        static void Postfix(Location __instance, bool __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (__state && coop != null)
-            {
-                coop.Porter.PorterCalledHere(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(Player), nameof(Player.setExperienceMachine),
-        typeof(ExperienceMachine), typeof(bool))]
-    static class SetOvenPatch
-    {
-        static bool Prefix(
-            Player __instance, ExperienceMachine machine, bool doEnable)
-        {
-            if (Coop.Current == null)
-            {
-                return true;
-            }
-
-            var call = new OvenCallFacts
-            {
-                HasOven = machine != null,
-                Enable = doEnable,
-                Replaying = Coop.Guards.Replaying,
-                Together = Hideouts.Together,
-            };
-
-            if (!OvenRules.TakesOver(call))
-            {
-                return true;
-            }
-
-            return Coop.Current.Ovens.Light(__instance, machine);
         }
     }
 }
