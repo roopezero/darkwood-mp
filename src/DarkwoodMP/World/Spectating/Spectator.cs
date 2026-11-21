@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
-using DarkwoodMP.World.Spectating;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Spectating
 {
     /// <summary>
     /// Dying for good with others still playing. On Nightmare, and on Hard with
@@ -646,25 +645,6 @@ namespace DarkwoodMP.World
                 $"You're dead. Watching {name}. Click for the next player, "
                     + "right-click for the one before.",
                 Plugin.NameTagStyle);
-        }
-    }
-
-    /// <summary>
-    /// The permadeath screen, unless there are others to watch (see Spectator).
-    /// </summary>
-    [HarmonyPatch(typeof(UI), nameof(UI.PreparePermadeathVideo))]
-    static class PermadeathPatch
-    {
-        static bool Prefix(ref IEnumerator __result)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null || !coop.Spectator.TryBegin())
-            {
-                return true;
-            }
-
-            __result = ScriptedEvents.Nothing();
-            return false;
         }
     }
 }

@@ -176,7 +176,7 @@ namespace DarkwoodMP
         public readonly World.Rolls.WorldEvents WorldEvents;
 
         /// A player dead for good watching the others.
-        public readonly World.Spectator Spectator;
+        public readonly World.Spectating.Spectator Spectator;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -240,7 +240,7 @@ namespace DarkwoodMP
             Pause = new World.Pause.CoopPause(this);
             Mornings = new World.Mornings.AfterNight(this);
             WorldEvents = new World.Rolls.WorldEvents(this);
-            Spectator = new World.Spectator(this);
+            Spectator = new World.Spectating.Spectator(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

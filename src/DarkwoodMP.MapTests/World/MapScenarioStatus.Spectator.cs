@@ -2,6 +2,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.World.Spectating;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
