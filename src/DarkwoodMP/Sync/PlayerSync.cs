@@ -170,7 +170,7 @@ namespace DarkwoodMP.Sync
         /// it be (false if not known).
         /// </summary>
         public bool TryChecked(ulong from, out Vector3 pos) =>
-            _moves.TryGood(from, out pos);
+            _moves.TryAccepted(from, out pos);
 
         /// <summary>
         /// Host: an event it agreed to takes this client's player to `to`

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using DarkwoodMP.Net;
 using UnityEngine;
 
@@ -21,36 +20,24 @@ namespace DarkwoodMP.Sync
     /// the event that makes it (ExpectTrip): a jump to near its destination
     /// within a few seconds starts the check again there, instead of being put
     /// back as a speed hack.
+    ///
+    /// The core decides (MoveRules) and remembers (MoveTracker); this reads
+    /// the game's clock, logs, and sends or applies the correction.
     /// </summary>
     public sealed class MoveCheck
     {
         /// <summary>
         /// Units a second; running is about a quarter of this.
         /// </summary>
-        public const float MaxSpeed = 2000f;
-        public const float Teleport = 3000f;
-        private const float Window = 0.5f;
+        public const float MaxSpeed = MoveRules.MaxSpeed;
+        public const float Teleport = MoveRules.Teleport;
 
-        private sealed class Track
-        {
-            public Vector3 Good;
-            public Vector3 WindowStart;
-            public float WindowAt;
-            public float LastCorrection = -10f;
-        }
-
-        private readonly Dictionary<ulong, Track> _tracks =
-            new Dictionary<ulong, Track>();
-        /// <summary>
-        /// Trips the host agreed to, per player: where to, and until when
-        /// (realtime).
-        /// </summary>
-        private readonly Dictionary<ulong, List<(Vector3 to, float until)>>
-            _trips = new Dictionary<ulong, List<(Vector3, float)>>();
         /// <summary>
         /// How near the trip's destination the player must land.
         /// </summary>
-        public const float TripLanding = 400f;
+        public const float TripLanding = MoveRules.TripLanding;
+
+        private readonly MoveTracker _tracker = new MoveTracker();
         private readonly Session _session;
 
         public static int Corrections { get; private set; }
@@ -58,37 +45,25 @@ namespace DarkwoodMP.Sync
         public MoveCheck(Session session)
         {
             _session = session;
-            session.OnPeerDisconnected += id =>
-            {
-                _tracks.Remove(id);
-                _trips.Remove(id);
-            };
-
-            session.OnSessionEnded += () =>
-            {
-                _tracks.Clear();
-                _trips.Clear();
-            };
-
+            session.OnPeerDisconnected += id => _tracker.Leave(id);
+            session.OnSessionEnded += () => _tracker.Clear();
             session.Register(MsgType.PlayerCorrection, OnCorrection);
         }
+
+        private static Seconds Now => new Seconds(Time.realtimeSinceStartup);
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         /// <summary>
         /// Where this player last was, as the check let them be (their newest
         /// PlayerState, or where they were put back).
         /// </summary>
-        public bool TryGood(ulong from, out Vector3 pos)
+        public bool TryAccepted(ulong from, out Vector3 pos)
         {
-            bool known = _tracks.TryGetValue(from, out var t);
-            if (known)
-            {
-                pos = t.Good;
-            }
-            else
-            {
-                pos = default;
-            }
-
+            bool known = _tracker.TryAccepted(from, out var accepted);
+            pos = VectorOf(accepted);
             return known;
         }
 
@@ -96,7 +71,7 @@ namespace DarkwoodMP.Sync
         /// Stop tracking this player: the next position they send is taken as
         /// it is.
         /// </summary>
-        public void Forget(ulong from) => _tracks.Remove(from);
+        public void Forget(ulong from) => _tracker.Forget(from);
 
         /// <summary>
         /// Host: an event it agreed to will take this player to
@@ -106,44 +81,8 @@ namespace DarkwoodMP.Sync
         /// </summary>
         public void ExpectTrip(ulong from, Vector3 to, float seconds)
         {
-            if (!_trips.TryGetValue(from, out var l))
-            {
-                _trips[from] = l = new List<(Vector3, float)>();
-            }
-
-            l.Add((to, Time.realtimeSinceStartup + seconds));
-        }
-
-        /// <summary>
-        /// Whether pos is where a trip this player was granted lands (and that
-        /// trip is used up).
-        /// </summary>
-        private bool Landed(ulong from, Vector3 pos, float now)
-        {
-            if (!_trips.TryGetValue(from, out var l))
-            {
-                return false;
-            }
-
-            l.RemoveAll(x => x.until < now);
-            int i = l.FindIndex(x => Flat(pos - x.to) < TripLanding);
-            if (l.Count == 0)
-            {
-                _trips.Remove(from);
-            }
-
-            if (i < 0)
-            {
-                return false;
-            }
-
-            l.RemoveAt(i);
-            if (l.Count == 0)
-            {
-                _trips.Remove(from);
-            }
-
-            return true;
+            var until = new Seconds(Time.realtimeSinceStartup + seconds);
+            _tracker.ExpectTrip(from, VecOf(to).Ground, until);
         }
 
         /// <summary>
@@ -152,56 +91,33 @@ namespace DarkwoodMP.Sync
         /// </summary>
         public Vector3 Check(ulong from, Vector3 pos)
         {
-            float now = Time.realtimeSinceStartup;
-            if (!_tracks.TryGetValue(from, out var t)
-                || Flat(pos - t.Good) > Teleport
-                || (Flat(pos - t.Good) > TripLanding && Landed(from, pos, now)))
+            var step = _tracker.Check(from, VecOf(pos), Now);
+            if (step.Outcome == MoveOutcome.Tripped)
             {
-                if (t != null && Flat(pos - t.Good) <= Teleport)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)} was taken to "
-                            + $"{pos} by an event the host agreed to");
-                }
-
-                _tracks[from] =
-                    new Track { Good = pos, WindowStart = pos, WindowAt = now };
-                return pos;
+                Plugin.Log.LogInfo(
+                    $"[authority] {_session.NameOf(from)} was taken to "
+                        + $"{pos} by an event the host agreed to");
             }
 
-            float dt = now - t.WindowAt;
-            float speed = Flat(pos - t.WindowStart) / Mathf.Max(dt, Window);
-            if (speed > MaxSpeed)
+            if (step.SendCorrection)
             {
-                if (now - t.LastCorrection > Window)
-                {
-                    t.LastCorrection = now;
-                    Corrections++;
-                    Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)} moved at "
-                            + $"{speed:0} a second (most {MaxSpeed:0}): put "
-                            + "back");
-                    var w = _session.Begin(MsgType.PlayerCorrection);
-                    w.Write(t.Good);
-                    _session.SendTo(from, w, Channel.Control, reliable: true);
-                }
-
-                t.WindowStart = t.Good;
-                t.WindowAt = now;
-                return t.Good;
+                Corrections++;
+                Plugin.Log.LogInfo(
+                    $"[authority] {_session.NameOf(from)} moved at "
+                        + $"{step.Speed:0} a second (most {MaxSpeed:0}): put "
+                        + "back");
+                var w = _session.Begin(MsgType.PlayerCorrection);
+                PlayerCorrection.Write(w, step.Accepted);
+                _session.SendTo(from, w, Channel.Control, reliable: true);
             }
 
-            t.Good = pos;
-            if (dt >= Window)
+            if (step.Outcome == MoveOutcome.PutBack)
             {
-                t.WindowStart = pos;
-                t.WindowAt = now;
+                return VectorOf(step.Accepted);
             }
 
             return pos;
         }
-
-        private static float Flat(Vector3 d) => new Vector2(d.x, d.z).magnitude;
 
         /// <summary>Client: the host put our player back.</summary>
         private void OnCorrection(ulong from, PacketReader r)
@@ -211,7 +127,7 @@ namespace DarkwoodMP.Sync
                 return;
             }
 
-            var pos = r.ReadVector3();
+            var pos = VectorOf(PlayerCorrection.Read(r));
             var p = Player.Instance;
             if (p == null)
             {
