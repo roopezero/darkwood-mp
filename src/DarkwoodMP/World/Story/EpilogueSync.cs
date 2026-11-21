@@ -198,7 +198,7 @@ namespace DarkwoodMP.World.Story
         private PacketWriter GameEnd(byte phase)
         {
             var w = S.Begin(MsgType.GameEnd);
-            w.W.Write((byte)Chapters.EndKind.Epilogue);
+            w.W.Write((byte)EndKind.Epilogue);
             w.W.Write(phase);
             return w;
         }
@@ -213,7 +213,7 @@ namespace DarkwoodMP.World.Story
         {
             Playing = true;
             Reset();
-            _coop.Dreaming.Share(Chapters.EpilogueDream);
+            _coop.Dreaming.Share(StoryRequestRules.EpilogueDream);
 
             Plugin.Log.LogInfo(
                 "[epilogue] the host starts the epilogue: the players in its "

@@ -207,7 +207,7 @@ namespace DarkwoodMP.World.Story
                 return false;
             }
 
-            _coop.Dreaming.Share(Chapters.EpilogueDream);
+            _coop.Dreaming.Share(StoryRequestRules.EpilogueDream);
 
             Core.forbidInputs = true;
             p.halt();
@@ -247,7 +247,8 @@ namespace DarkwoodMP.World.Story
 
             yield return null;
             yield return null;
-            dreams.StartCoroutine(dreams.prepareDream(Chapters.EpilogueDream));
+            dreams.StartCoroutine(
+                dreams.prepareDream(StoryRequestRules.EpilogueDream));
         }
     }
 }
