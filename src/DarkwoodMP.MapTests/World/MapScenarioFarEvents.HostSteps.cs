@@ -17,7 +17,7 @@ namespace DarkwoodMP.World
         private static List<string> Flickers(float t)
         {
             var list = new List<string>();
-            foreach (var g in Since(FarEvents.Switches, t).GroupBy(
+            foreach (var g in Since(Coop.Current.FarEvents.Switches, t).GroupBy(
                 e => e.Location))
             {
                 var es = g.OrderBy(e => e.At).ToList();
@@ -61,10 +61,10 @@ namespace DarkwoodMP.World
                         l => StateDump.Flat(
                             l.transform.position - j.transform.position)
                             <= 2000f).Select(Name));
-            var switched = Since(FarEvents.Switches, t0)
+            var switched = Since(Coop.Current.FarEvents.Switches, t0)
                 .Where(e => near.Contains(e.Location)).ToList();
             var flickers = Flickers(_since);
-            var all = Since(FarEvents.Switches, _since);
+            var all = Since(Coop.Current.FarEvents.Switches, _since);
             string kinds = string.Join(
                 ", ",
                 switched.Select(e => e.Location + " " + e.Kind));
@@ -98,7 +98,7 @@ namespace DarkwoodMP.World
             List<FarEvents.Entry> es = null;
             while (Time.realtimeSinceStartup < until)
             {
-                es = Since(FarEvents.Log, _hostArrived, _shared);
+                es = Since(Coop.Current.FarEvents.Log, _hostArrived, _shared);
                 if (es.Any(e => e.Kind == "enter"))
                 {
                     break;
@@ -132,7 +132,7 @@ namespace DarkwoodMP.World
             }
 
             yield return new WaitForSeconds(2f);
-            var es = Since(FarEvents.Log, _hostArrived, _shared);
+            var es = Since(Coop.Current.FarEvents.Log, _hostArrived, _shared);
             r.Info =
                 $"{_shared}: entered {l.entered}, its events since we came "
                     + $"[{Show(es)}]";
@@ -162,7 +162,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
 
-            var es = Since(FarEvents.Log, _hostArrived, _shared);
+            var es = Since(Coop.Current.FarEvents.Log, _hostArrived, _shared);
             r.Info =
                 $"{_shared}: entered {l.entered}, its events since we came "
                     + $"[{Show(es)}]";

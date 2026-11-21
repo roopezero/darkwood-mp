@@ -262,7 +262,12 @@ namespace DarkwoodMP.Combat
             }
 
             RefreshAll(__instance, __instance.currentGrid, pos, instant, force);
-            World.Scripted.FarEvents.Tick();
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.FarEvents.Tick();
+            }
+
             return false;
         }
 

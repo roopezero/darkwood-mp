@@ -130,6 +130,9 @@ namespace DarkwoodMP
         /// Who is still owed their own part of a fired once-only trigger.
         public readonly World.Owed.OwedParts Owed;
 
+        /// A location's enter and exit events with players far apart.
+        public readonly World.Scripted.FarEvents FarEvents;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -178,6 +181,7 @@ namespace DarkwoodMP
             PlayerFx = new Sync.PlayerFx(this);
             View = new Sync.ViewWatch();
             Owed = new World.Owed.OwedParts(this);
+            FarEvents = new World.Scripted.FarEvents(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -317,7 +317,7 @@ namespace DarkwoodMP.World
             {
                 l = NearestTo(j.transform.position, 2500f);
                 if (l != null && l.entered && l.finishedLoading
-                    && Since(FarEvents.Log, _since, Name(l)).Any(
+                    && Since(Coop.Current.FarEvents.Log, _since, Name(l)).Any(
                         e => e.Kind == "enter"))
                 {
                     break;
@@ -334,7 +334,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var es = Since(FarEvents.Log, _since, Name(l));
+            var es = Since(Coop.Current.FarEvents.Log, _since, Name(l));
             string info =
                 $"{Name(l)}: entered {l.entered}, its events here "
                     + $"[{Show(es)}], our player's steps run "
@@ -377,7 +377,7 @@ namespace DarkwoodMP.World
             {
                 l = NearestTo(p.transform.position, 2500f);
                 if (l != null && l.entered
-                    && Since(FarEvents.Log, _since, Name(l)).Any(
+                    && Since(Coop.Current.FarEvents.Log, _since, Name(l)).Any(
                         e => e.Kind == "enter"))
                 {
                     break;
@@ -392,7 +392,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var es = Since(FarEvents.Log, _since, Name(l));
+            var es = Since(Coop.Current.FarEvents.Log, _since, Name(l));
             r.Info =
                 $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
             if (!es.Any(
