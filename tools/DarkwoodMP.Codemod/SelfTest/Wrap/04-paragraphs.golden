@@ -1,0 +1,131 @@
+=== input
+class Paragraphs
+{
+    /// <summary>
+    /// After the night the trader leaves for everyone at once, when the host's morning is over for all of them
+    /// (in the game the trader goes when the player leaves; here it is one morning for everyone).
+    /// A player talking to the trader keeps him until the talk ends (issue #15, see DialogueGuard).
+    /// Once the morning is over, the joiners follow the host's next dawn.
+    /// </summary>
+    int A;
+
+    /// <summary>A step of the shared epilogue (see World.EpilogueSync):
+    /// host -> client, 1 the camera pans over the forest, and each game runs its own pan once, as it does alone.
+    /// host -> client, 2 the outcomes screen (value "1" when the forest burned), which the outcomes screen uses.
+    /// client -> host, 3 our player crawled out of the hole.
+    /// 4 a player set the Being on fire, which every game shows.</summary>
+    int B;
+
+    /// Main menu: Start Game, Join Game (the server browser; Plugin.OpenJoin), Options, Credits, Quit.
+    /// Pause menu: Resume, Multiplayer (the co-op panel), Help (the guide), Options, Back to main menu, Quit.
+    int C;
+
+    // "--dwmp-host": host the world named in the config at start, for this time only.
+    // "--dwmp-max-players N" (tests only): let in up to N players at once, as the map4 test with four clients needs.
+    int D;
+
+    // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
+    // (in order) before it's handled, so the tests can see what a slow link does to the game and to its players.
+    int E;
+
+    /// door: u8 flags (1 open, 2 barricaded, 4 broken, 8 locked, 16 blocked), i32 health, i32 barricade health.
+    /// gone: nothing (the thing is no longer there, so the client takes its copy away as well).
+    int K;
+
+    // Lights are checked every 0.3 s (Controller.updateLogicLights), which is the game's own rate for its lamps.
+    // A ward's check becomes "target == Wards.PlayerTarget(this)" for each player, so either of them counts as near.
+    int G;
+
+    /// <summary>A step is <c>Add("name", (args, r) => MyStep(args, r), timeout: 20f)</c> with a long tail here.</summary>
+    int H;
+
+    void F(int a)
+    {
+        a = 0;    // these only add slots; the inventory and hotbar below come with their own slots and their own two
+        a = 1;    // slot counts (loadValues adds or removes slots to match), fewer included
+        a = 2;    // short
+        a = 3;
+    }
+
+    const float Moved = 30f;        // sent when it moved this far
+    const float Snap = 600f;        // a client's copy this far off is put there at once, wherever it is
+    const float Close = 15f;        // and this close is left alone
+}
+=== wrap
+class Paragraphs
+{
+    /// <summary>
+    /// After the night the trader leaves for everyone at once, when the host's
+    /// morning is over for all of them (in the game the trader goes when the
+    /// player leaves; here it is one morning for everyone).
+    /// A player talking to the trader keeps him until the talk ends (issue #15,
+    /// see DialogueGuard).
+    /// Once the morning is over, the joiners follow the host's next dawn.
+    /// </summary>
+    int A;
+
+    /// <summary>A step of the shared epilogue (see World.EpilogueSync):
+    /// host -> client, 1 the camera pans over the forest, and each game runs
+    /// its own pan once, as it does alone.
+    /// host -> client, 2 the outcomes screen (value "1" when the forest
+    /// burned), which the outcomes screen uses.
+    /// client -> host, 3 our player crawled out of the hole.
+    /// 4 a player set the Being on fire, which every game shows.</summary>
+    int B;
+
+    /// Main menu: Start Game, Join Game (the server browser; Plugin.OpenJoin),
+    /// Options, Credits, Quit.
+    /// Pause menu: Resume, Multiplayer (the co-op panel), Help (the guide),
+    /// Options, Back to main menu, Quit.
+    int C;
+
+    // "--dwmp-host": host the world named in the config at start, for this time
+    // only.
+    // "--dwmp-max-players N" (tests only): let in up to N players at once, as
+    // the map4 test with four clients needs.
+    int D;
+
+    // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
+    // (in order) before it's handled, so the tests can see what a slow link
+    // does to the game and to its players.
+    int E;
+
+    /// door: u8 flags (1 open, 2 barricaded, 4 broken, 8 locked, 16 blocked),
+    /// i32 health, i32 barricade health.
+    /// gone: nothing (the thing is no longer there, so the client takes its
+    /// copy away as well).
+    int K;
+
+    // Lights are checked every 0.3 s (Controller.updateLogicLights), which is
+    // the game's own rate for its lamps.
+    // A ward's check becomes "target == Wards.PlayerTarget(this)" for each
+    // player, so either of them counts as near.
+    int G;
+
+    /// <summary>
+    /// A step is <c>Add("name", (args, r) => MyStep(args, r), timeout: 20f)</c>
+    /// with a long tail here.
+    /// </summary>
+    int H;
+
+    void F(int a)
+    {
+        // these only add slots; the inventory and hotbar below come with their
+        // own slots and their own two slot counts (loadValues adds or removes
+        // slots to match), fewer included
+        a = 0;
+        a = 1;
+        // short
+        a = 2;
+        a = 3;
+    }
+
+    // sent when it moved this far
+    const float Moved = 30f;
+    // a client's copy this far off is put there at once, wherever it is
+    const float Snap = 600f;
+    // and this close is left alone
+    const float Close = 15f;
+}
+=== report
+34: a comment heading too long for the line
