@@ -804,7 +804,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     "Your character in this world died for good: you watch the "
                         + "others");
-                Spectator.BeginDead();
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Spectator.BeginDead();
+                }
+
                 return;
             }
 

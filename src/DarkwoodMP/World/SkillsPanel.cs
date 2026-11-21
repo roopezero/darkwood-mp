@@ -103,7 +103,8 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (Spectator.Active)
+            CoopSession coop = Coop.Current;
+            if (coop != null && coop.Spectator.Active)
             {
                 why = "watching";
                 return false;

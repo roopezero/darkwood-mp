@@ -2394,7 +2394,12 @@ namespace DarkwoodMP
             TestWorld.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
-                Spectator.Reset();
+                coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Spectator.Reset();
+                }
+
                 _host.Spawns.Clear();
             }
 
@@ -2548,7 +2553,12 @@ namespace DarkwoodMP
 
             _host.Players.DrawNameTags();
             TestWorld.DrawLabels();
-            Spectator.DrawGui();
+            CoopSession watching = Coop.Current;
+            if (watching != null)
+            {
+                watching.Spectator.DrawGui();
+            }
+
             Progression.OnGUI();
             SkillsPanel.OnGUI();
             ShowSystemCursor(

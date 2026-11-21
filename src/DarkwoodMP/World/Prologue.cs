@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Dreaming;
+using DarkwoodMP.World.Story;
 using HarmonyLib;
 using UnityEngine;
+using DreamSync = DarkwoodMP.World.Dreaming.DreamSync;
 
 namespace DarkwoodMP.World
 {
@@ -51,33 +53,46 @@ namespace DarkwoodMP.World
         private static Dreams D => Singleton<Dreams>.Instance;
 
         public static bool IsStage(string name) =>
-            name == "dream_tutorial_00" || name == "dream_tutorial_01";
+            PrologueRules.IsStage(name);
+
+        /// <summary>
+        /// The only code reading the game's Dreams for the rules.
+        /// Transition isn't read: no prologue rule looks at it.
+        /// </summary>
+        internal static DreamFacts DreamsOf(Dreams d)
+        {
+            if (d == null)
+            {
+                return new DreamFacts { Entering = Core.EnteringDream };
+            }
+
+            string preset = null;
+            string trueName = null;
+            if (d.preset != null)
+            {
+                preset = d.preset.name;
+                trueName = Core.getTrueLocationName(preset);
+            }
+
+            return new DreamFacts
+            {
+                Exists = true,
+                Entering = Core.EnteringDream,
+                Dreaming = d.dreaming,
+                Prepared = d.dreamPrepared,
+                Switching = d.switchingDream,
+                Wanted = d.wantToDream,
+                HasPreset = d.preset != null,
+                Preset = preset,
+                TrueName = trueName,
+            };
+        }
 
         /// <summary>
         /// The prologue stage our game is in, or going into or out of (null:
         /// not in the prologue).
         /// </summary>
-        public static string Stage
-        {
-            get
-            {
-                var d = D;
-                if (d == null || d.preset == null
-                    || !(d.dreaming || d.dreamPrepared || d.switchingDream
-                        || d.wantToDream))
-                {
-                    return null;
-                }
-
-                string name = Core.getTrueLocationName(d.preset.name);
-                if (IsStage(name))
-                {
-                    return name;
-                }
-
-                return null;
-            }
-        }
+        public static string Stage => PrologueRules.StageOf(DreamsOf(D));
 
         public static bool Active => Stage != null;
 
@@ -85,7 +100,7 @@ namespace DarkwoodMP.World
         /// In a stage, settled: not between stages or going in
         /// (Dreams.dreamPrepared stays set until the dream ends).
         /// </summary>
-        public static bool InStage => Active && D.dreaming && !D.switchingDream;
+        public static bool InStage => PrologueRules.InStage(DreamsOf(D));
 
         /// <summary>
         /// Host: why a joiner waits in the prologue, for the log (null: it
@@ -93,7 +108,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static string WhyWait(bool worldReady)
         {
-            if (InStage && worldReady)
+            if (PrologueRules.MayJoin(InStage, worldReady))
             {
                 return null;
             }
@@ -135,9 +150,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void ForSnapshot(Dreams.SaveState state, Dreams d)
         {
-            if (!WorldShare.Snapshotting || d == null || !d.dreaming
-                || d.preset == null
-                || !IsStage(Core.getTrueLocationName(d.preset.name)))
+            if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
             {
                 return;
             }
@@ -167,9 +180,7 @@ namespace DarkwoodMP.World
         internal static void ForSnapshot(OutsideLocations.SaveState state)
         {
             var d = D;
-            if (!WorldShare.Snapshotting || d == null || !d.dreaming
-                || d.preset == null
-                || !IsStage(Core.getTrueLocationName(d.preset.name)))
+            if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
             {
                 return;
             }
@@ -195,11 +206,11 @@ namespace DarkwoodMP.World
             // grid (OutsideLocations.locationPositions); give it the slot it
             // has here, so the players stand in the same place in both games.
             var o = Singleton<OutsideLocations>.Instance;
-            System.Collections.Generic.List<Vector3> slots = null;
+            List<Vector3> slots = null;
             if (o != null)
             {
                 slots = Traverse.Create(o).Field("locationPositions")
-                    .GetValue<System.Collections.Generic.List<Vector3>>();
+                    .GetValue<List<Vector3>>();
             }
 
             if (slots == null || d.dreamLocation == null)
@@ -208,43 +219,67 @@ namespace DarkwoodMP.World
             }
 
             var at = d.dreamLocation.transform.position;
-            for (int i = 0; i < slots.Count; i++)
+            var spots = new List<Vec3>();
+            foreach (Vector3 slot in slots)
             {
-                if (Mathf.Abs(slots[i].x - at.x) > 5000f
-                    || Mathf.Abs(slots[i].z - at.z) > 5000f)
-                {
-                    continue;
-                }
+                spots.Add(new Vec3(slot.x, slot.y, slot.z));
+            }
 
-                if (i == state.actualSpawnedLocationsCount - 1)
-                {
-                    state.actualSpawnedLocationsCount = i;
-                }
-                else
-                {
-                    Plugin.Log.LogWarning(
-                        $"[prologue] {d.preset.name} is in slot {i} of "
-                            + $"{state.actualSpawnedLocationsCount}: a joiner "
-                            + "makes it in another");
-                }
-
-                break;
+            SlotAnswer answer = PrologueRules.SlotOf(
+                spots,
+                new Vec3(at.x, at.y, at.z),
+                state.actualSpawnedLocationsCount);
+            if (answer.Kind == SlotKind.Last)
+            {
+                state.actualSpawnedLocationsCount = answer.Index;
+            }
+            else if (answer.Kind == SlotKind.Other)
+            {
+                Plugin.Log.LogWarning(
+                    $"[prologue] {d.preset.name} is in slot {answer.Index} of "
+                        + $"{state.actualSpawnedLocationsCount}: a joiner "
+                        + "makes it in another");
             }
         }
 
         private static bool _firstPlaySet;
-        private static float _loadedAt = -1f, _nextWhy;
+        private static bool _loaded;
+        private static Seconds _loadedAt;
+        private static float _nextWhy;
 
         /// <summary>Call every frame.</summary>
         public static void Update()
         {
             if (S == null || !S.Active || !WorldShare.InWorld)
             {
+                // the rule keeps the load's time out of a session
                 _firstPlaySet = false;
                 return;
             }
 
             var d = D;
+            var p = Player.Instance;
+            var facts = new PrologueFacts
+            {
+                InSession = true,
+                Dreams = DreamsOf(d),
+                Shared = DreamSync.SharedNow,
+                Joiner = NetEnemies.ClientMode,
+                HasPlayer = p != null,
+                Loading = Core.loadingGame,
+                Generated = Core.worldGenFinished(),
+                Forbidden = Core.forbidInputs,
+                HeldByNothing = DreamSync.InputsHeldByNothing(d),
+                WorldReady = WorldShare.WorldReady,
+                Now = new Seconds(Time.unscaledTime),
+                FirstPlaySet = _firstPlaySet,
+                Loaded = _loaded,
+                LoadedAt = _loadedAt,
+            };
+
+            PrologueStep step = PrologueRules.Update(facts);
+            _loaded = step.Loaded;
+            _loadedAt = step.LoadedAt;
             string stage = null;
             if (InStage)
             {
@@ -253,40 +288,25 @@ namespace DarkwoodMP.World
 
             // Every game in a stage dreams it together with the others.
             CoopSession coop = Coop.Current;
-            if (stage != null && coop != null && coop.Dreaming.Shared != stage)
+            if (step.Share != null && coop != null)
             {
-                coop.Dreaming.SharePrologue(stage);
+                coop.Dreaming.SharePrologue(step.Share);
             }
 
             // A joiner's player is a first play too, as the host's is, until
             // the prologue's end clears it (Dreams.endDreaming). Set once the
             // load has finished: it changes how the game ends a load.
-            var p = Player.Instance;
             // A joiner that loaded into a stage: the stage's place is entered
             // after the load has let the player go
             // (OutsideLocations.prepareLocation forbids inputs, and the game's
             // activatePlayer has already run), so let it go once, a few seconds
             // after the load, unless a cutscene holds it.
-            if (stage != null && NetEnemies.ClientMode && !_firstPlaySet
-                && p != null && !Core.loadingGame && Core.worldGenFinished())
+            if (step.LetGo)
             {
-                if (_loadedAt < 0f)
-                {
-                    _loadedAt = Time.unscaledTime;
-                }
-
-                if (Core.forbidInputs && Time.unscaledTime - _loadedAt > 4f
-                    && DreamSync.InputsHeldByNothing(d))
-                {
-                    Core.forbidInputs = false;
-                    Plugin.Log.LogInfo(
-                        $"[prologue] loaded into {stage}: the player is let "
-                            + "go");
-                }
-            }
-            else if (stage == null)
-            {
-                _loadedAt = -1f;
+                Core.forbidInputs = false;
+                Plugin.Log.LogInfo(
+                    $"[prologue] loaded into {stage}: the player is let "
+                        + "go");
             }
 
             // Why a joiner in a stage isn't ready yet, every 10 seconds, for
@@ -337,20 +357,15 @@ namespace DarkwoodMP.World
                         + $"{firstPlay}");
             }
 
-            if (stage != null && NetEnemies.ClientMode && !_firstPlaySet
-                && WorldShare.WorldReady && p != null)
+            if (step.MakeFirstPlay)
             {
-                _firstPlaySet = true;
                 Plugin.Log.LogInfo(
                     $"[prologue] in the host's prologue ({stage}): a first "
                         + $"play (was {p.firstPlay})");
                 p.firstPlay = true;
             }
 
-            if (stage == null && !Active)
-            {
-                _firstPlaySet = false;
-            }
+            _firstPlaySet = step.FirstPlaySet;
         }
 
         /// <summary>
@@ -359,7 +374,8 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void AfterEnd(Dreams d, string ended)
         {
-            if (ended != "dream_tutorial_01" || d == null || d.dreaming)
+            if (!PrologueRules.EndsPrologue(ended, d != null,
+                d != null && d.dreaming))
             {
                 return;
             }

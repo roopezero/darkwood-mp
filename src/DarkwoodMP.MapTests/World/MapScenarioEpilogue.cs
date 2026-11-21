@@ -14,6 +14,20 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class MapScenarioEpilogue
     {
+        /// Whether our player is watching the others.
+        private static bool Spectating()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Spectator.Active;
+        }
+
+        /// Whether our player watches the others in the epilogue.
+        private static bool WatchingEpilogue()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Spectator.Epilogue;
+        }
+
         private static Player P => Player.Instance;
         private static Dreams D => Singleton<Dreams>.Instance;
 
@@ -534,7 +548,7 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"pan released {EpilogueSync.PanReleased}; spectating "
-                    + $"{Spectator.Active}; host's burned "
+                    + $"{Spectating()}; host's burned "
                     + $"{EpilogueSync.HostBurned}; outcomes screen {text}";
             if (!EpilogueSync.PanReleased)
             {
@@ -560,7 +574,7 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(20f); // past the game's own 16 s
             r.Info =
                 $"pan released {EpilogueSync.PanReleased}; spectating "
-                    + $"{Spectator.Active} (epilogue {Spectator.Epilogue})";
+                    + $"{Spectating()} (epilogue {WatchingEpilogue()})";
             if (EpilogueSync.PanReleased)
             {
                 r.Fail($"the pan ran before the client died: {r.Info}");

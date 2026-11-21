@@ -182,6 +182,9 @@ namespace DarkwoodMP
         /// together.
         public readonly World.Dreaming.DreamSync Dreaming;
 
+        /// A player dead for good watching the others.
+        public readonly World.Spectating.Spectator Spectator;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -246,6 +249,7 @@ namespace DarkwoodMP
             WorldEvents = new World.Rolls.WorldEvents(this);
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
+            Spectator = new World.Spectating.Spectator(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
