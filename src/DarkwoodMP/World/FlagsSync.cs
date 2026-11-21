@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Story;
 using HarmonyLib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -744,12 +745,7 @@ namespace DarkwoodMP.World
             {
                 int n = Math.Min(64, entries.Count - start);
                 var w = _session.Begin(MsgType.FlagsDelta);
-                w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++)
-                {
-                    w.WriteStr(entries[i].Key);
-                    w.WriteStr(entries[i].Value);
-                }
+                FlagsDelta.Write(w, entries.GetRange(start, n));
 
                 if (_session.IsHost && to != 0)
                 {
@@ -786,13 +782,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int n = r.R.ReadUInt16();
-            var got = new List<KeyValuePair<string, string>>();
-            for (int i = 0; i < n; i++)
-            {
-                got.Add(
-                    new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
-            }
+            var got = FlagsDelta.Read(r);
 
             var relay = new List<KeyValuePair<string, string>>();
             foreach (var kv in got)
@@ -971,9 +961,11 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.FlagsDelta);
-            w.W.Write((ushort)1);
-            w.WriteStr("n:" + npc);
-            w.WriteStr(NpcJson(st));
+            FlagsDelta.Write(w, new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("n:" + npc, NpcJson(st))
+            });
+
             _session.SendTo(to, w, Channel.Control, reliable: true);
         }
 
