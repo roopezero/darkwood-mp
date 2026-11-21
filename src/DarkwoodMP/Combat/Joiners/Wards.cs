@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
+using DarkwoodMP.Combat.Beams;
+using DarkwoodMP.Combat.Joiners;
 using HarmonyLib;
 using UnityEngine;
 
@@ -26,12 +28,20 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static NetPlayerProxy TargetProxy(Character c)
         {
-            if (NetPlayerProxy.All.Count == 0 || c == null || c.target == null)
+            int standIns = NetPlayerProxy.All.Count;
+            bool target = c != null && c.target != null;
+            NetPlayerProxy proxy = null;
+            if (standIns != 0 && target)
+            {
+                proxy = c.target.GetComponent<NetPlayerProxy>();
+            }
+
+            if (!WardRules.TargetsStandIn(standIns, target, proxy != null))
             {
                 return null;
             }
 
-            return c.target.GetComponent<NetPlayerProxy>();
+            return proxy;
         }
 
         /// <summary>
@@ -39,21 +49,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static bool HasEffect(Character c, CharacterEffectType type)
         {
-            var p = TargetProxy(c);
-            if (p != null)
-            {
-                if (type == CharacterEffectType.shadowWard)
-                {
-                    return p.ShadowWard;
-                }
-
-                return type == CharacterEffectType.forestSpiritWard
-                    && p.ForestSpiritWard;
-            }
-
-            var host = Player.Instance;
-            return host != null && host.effects != null
-                && host.effects.hasEffectType(type);
+            return WardRules.HasEffect(FactsOf(TargetProxy(c), type));
         }
 
         /// <summary>
@@ -76,10 +72,11 @@ namespace DarkwoodMP.Combat
             var p = TargetProxy(c);
             if (p != null)
             {
-                return p.FriendOfTheForest;
+                return WardRules.SkillOf(true, p.FriendOfTheForest, false);
             }
 
-            return Player.Instance.skills.FriendOfTheForest;
+            return WardRules.SkillOf(
+                false, false, Player.Instance.skills.FriendOfTheForest);
         }
 
         public static bool EnemyOfTheForest(Character c)
@@ -87,10 +84,49 @@ namespace DarkwoodMP.Combat
             var p = TargetProxy(c);
             if (p != null)
             {
-                return p.EnemyOfTheForest;
+                return WardRules.SkillOf(true, p.EnemyOfTheForest, false);
             }
 
-            return Player.Instance.skills.EnemyOfTheForest;
+            return WardRules.SkillOf(
+                false, false, Player.Instance.skills.EnemyOfTheForest);
+        }
+
+        private static WardFacts FactsOf(
+            NetPlayerProxy proxy, CharacterEffectType type)
+        {
+            if (proxy != null)
+            {
+                return new WardFacts
+                {
+                    StandIn = true,
+                    Kind = KindOf(type),
+                    ShadowWard = proxy.ShadowWard,
+                    ForestSpiritWard = proxy.ForestSpiritWard,
+                };
+            }
+
+            var host = Player.Instance;
+            return new WardFacts
+            {
+                Kind = KindOf(type),
+                HostHas = host != null && host.effects != null
+                    && host.effects.hasEffectType(type),
+            };
+        }
+
+        private static WardKind KindOf(CharacterEffectType type)
+        {
+            if (type == CharacterEffectType.shadowWard)
+            {
+                return WardKind.ShadowWard;
+            }
+
+            if (type == CharacterEffectType.forestSpiritWard)
+            {
+                return WardKind.ForestSpiritWard;
+            }
+
+            return WardKind.Other;
         }
 
         private static MethodInfo GetInstance =>
@@ -224,88 +260,6 @@ namespace DarkwoodMP.Combat
                 $"Wards: {swapped} forest skill checks ({targets} with their "
                     + $"target) in {where} read the enemy's target");
             return list;
-        }
-    }
-
-    [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    static class WardSightPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) => Wards.SwapEffects(
-                instructions);
-    }
-
-    /// <summary>
-    /// An enemy afraid of a ward runs from the player it was after (who has
-    /// it), not from the host's.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    static class WardFleePatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(
-                instructions, PlayerPositionTranspiler.Flee,
-                "Character.canSeeEnemy");
-    }
-
-    [HarmonyPatch(typeof(Character), "processAnims")]
-    static class ForestSkillsAnimsPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) =>
-                Wards.SwapForestSkills(instructions, "Character.processAnims");
-    }
-
-    [HarmonyPatch(typeof(Character), "onSeeEnemyNear")]
-    static class ForestSkillsNearPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) =>
-                Wards.SwapForestSkills(
-                    instructions, "Character.onSeeEnemyNear");
-    }
-
-    /// <summary>
-    /// The game lights the path-finding nodes under each player light every
-    /// 0.3 s (Controller.updateLogicLights), and shadow creatures and shadow
-    /// armour check those nodes (Core.isInLight). A puppet's torch or lantern
-    /// is the item's own light prefab, which lights nodes as the game's do. A
-    /// puppet's flashlight beam is a copy of the host's "Flashlight", which the
-    /// game clips to the host's player's flashlight collider, so it would light
-    /// nothing where the puppet is. That collider is sized and placed only by
-    /// the host's own flashlight (Player.processFlashlight, from the host's
-    /// cursor), so it isn't used: the clip box is a square 1000 a side centred
-    /// 500 ahead of the puppet, which covers the beam from the puppet out to
-    /// 1000 ahead (we don't know where its player aims).
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Light2D), nameof(Light2D.lightGraphNodes),
-        new[] { typeof(Bounds) })]
-    static class PuppetBeamLightPatch
-    {
-        private const float Ahead = 500f, Side = 1000f;
-
-        static void Prefix(Light2D __instance, ref Bounds _bounds)
-        {
-            var parent = __instance.transform.parent;
-            if (parent == null || !parent.name.StartsWith("DarkwoodMP_Remote_"))
-            {
-                return;
-            }
-
-            // players are rotated Euler(90, yaw, 0): local up is ahead
-            Vector3 fwd = parent.TransformDirection(Vector3.up);
-            fwd.y = 0f;
-            if (fwd.sqrMagnitude < 0.01f)
-            {
-                return;
-            }
-
-            float side = Side * 1.42f; // covers the box turned any way
-            _bounds = new Bounds(
-                parent.position + fwd.normalized * Ahead,
-                new Vector3(side, 10000f, side));
         }
     }
 }

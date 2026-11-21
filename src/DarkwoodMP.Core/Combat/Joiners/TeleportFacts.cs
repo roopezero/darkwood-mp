@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Joiners
 {
     /// The forest spirit's teleport on the host (Character.waitToTeleport,
-    /// ForestSpiritTeleportPatch).
+    /// CharacterWaitToTeleport).
     public readonly struct TeleportFacts
     {
         /// Threat is on (ThreatRules.IsOn).

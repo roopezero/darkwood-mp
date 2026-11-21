@@ -49,6 +49,9 @@ namespace DarkwoodMP
         /// Each enemy's threat for each player, while there are stand-ins.
         public readonly Combat.Threats Threats;
 
+        /// The stand-in an enemy checking out a location chases.
+        public readonly Combat.JoinerChases Chases = new Combat.JoinerChases();
+
         /// Keeps a dialogue closable when its NPC goes away, also alone.
         public readonly World.Talk.DialogueGuard Dialogues =
             new World.Talk.DialogueGuard();

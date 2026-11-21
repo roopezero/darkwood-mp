@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Joiners
 {
     /// An enemy touched by a collider (Character.onCollideWith on the
-    /// host), for ProxyBumpPatch.
+    /// host), for CharacterOnCollideWith.
     public readonly struct BumpFacts
     {
         /// The collider isn't null.
