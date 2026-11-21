@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// The game's cursor is a sprite in its own UI (UI.cursor, with its

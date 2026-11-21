@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     // The screen's zoom and size matter alone as much as in co-op, so these
     // run with no session too.

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// Screens wider than 16:9 (21:9 ultrawide such as 3440x1440 or 2560x1080,

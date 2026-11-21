@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// A small modal question in the co-op windows' style ("Quit Darkwood?"

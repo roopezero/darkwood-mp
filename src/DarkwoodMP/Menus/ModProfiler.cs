@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// "--dwmp-profile-mod": what the mod's own per-frame work costs. Each part
