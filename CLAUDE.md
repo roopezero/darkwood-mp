@@ -26,6 +26,8 @@ src/DarkwoodMP/
 src/DarkwoodMP.Core/Net/        Session (handshake, relay), TcpBackend + PortMapper (UPnP/NAT-PMP), MsgType (the message list),
                                 Protocol (Version), PacketWriter/PacketReader, ServerBrowser/ServerInfo, PlayerKey
 src/DarkwoodMP.Core/            rules and small types with no Unity or game references (netstandard2.0); ships as a second DLL
+src/DarkwoodMP.MapTests/        the in-game map test steps (World/MapScenario*), a second plugin that needs --dwmp-test-control;
+                                deployed to the test game folders only, never in the zips
 src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0007
 src/GameReferences.props        the game's paths and DLL references
 tests/DarkwoodMP.Core.Tests/    unit tests of the core (net8.0, xUnit, Shouldly)
@@ -45,7 +47,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 ## Build and run
 
 - Tools are in the user's home, not on PATH: `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:~/.dotnet/tools:$PATH`.
-- `dotnet build src/DarkwoodMP -c Release` builds and deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to `<game>/BepInEx/plugins/DarkwoodMP/`. The game is at `~/.local/share/Steam/steamapps/common/Darkwood`. Restart the game to load a new build.
+- `dotnet build src/DarkwoodMP -c Release` builds and deploys both DLLs (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`) to `<game>/BepInEx/plugins/DarkwoodMP/`. The game is at `~/.local/share/Steam/steamapps/common/Darkwood`. Restart the game to load a new build. For the in-game tests build `src/DarkwoodMP.MapTests` instead: it builds the mod too and also deploys `DarkwoodMP.MapTests.dll` (the map test steps) there and to the client game folders.
 - The mod's version is `<Version>` in `Directory.Build.props`. The style rules are errors, so a build with any finding fails.
 - The mod's log is `<game>/BepInEx/LogOutput.log`. Unity's is `~/.config/unity3d/Acid Wizard Studio/Darkwood/Player.log`, which also has the game's exceptions. A good start logs `All N patches applied`.
 - To launch it yourself: `cd <game> && setsid timeout 300 ./darkwood_mp.sh --inner <--dwmp-* args> &`. Without `--inner` the script expects Steam's command line. Stop it with `kill $(pgrep -x Darkwood.x86_64)`; never `pkill -f Darkwood`, which matches your own shell.

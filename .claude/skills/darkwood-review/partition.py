@@ -14,7 +14,7 @@ cap = int(sys.argv[2]) if len(sys.argv) > 2 else 170000
 root = subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip()
 files = subprocess.check_output(["git", "ls-files", "src", "tests", "tools", "scripts", "pack.sh"], cwd=root, text=True).split()
 files = sorted(f for f in files if f.endswith((".cs", ".py", ".sh", ".csproj")))
-test_re = re.compile(r"/(MapScenario|WorldTest|TestWorld|StateDump|AwayTest|DragTest|OptionsTest|TestControl|ModProfiler|LoadProfiler)")
+test_re = re.compile(r"DarkwoodMP\.MapTests/|/(MapScenario|WorldTest|TestWorld|StateDump|AwayTest|DragTest|OptionsTest|TestControl|ModProfiler|LoadProfiler)")
 groups = {"prod": [], "test": [], "tools": []}
 for f in files:
     if f.startswith("tests/"):

@@ -12,8 +12,9 @@ it's next changed or in a planned refactor pass. Until a subsystem has moved,
 its old form (static classes, logic inside patches) still applies to it. The
 core, analyzer and unit test projects exist. The core has the rules and the
 network code (`Session`, the packets, `TcpBackend` and the server browser);
-the plugin keeps the Steam backend. `src/DarkwoodMP.MapTests`,
-`ModHost`, `CoopSession` and `WorldScope` don't exist yet.
+the plugin keeps the Steam backend. The map test steps are in
+`src/DarkwoodMP.MapTests`, a second plugin. `ModHost`, `CoopSession` and
+`WorldScope` don't exist yet.
 [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
 
 ## The idea: a core of rules, and a thin shell around the game
@@ -74,7 +75,10 @@ that needs one is in a method of its own with
 plugin as a dependency, so BepInEx loads it second, and it reaches the
 plugin's internal classes through `InternalsVisibleTo`. It does nothing unless
 the game was started with `--dwmp-test-control`. The main plugin never names a
-map step: the steps reach it through a small `ITestSteps` interface. The DLL
+map step: the steps reach it through a small `ITestSteps` interface, which
+the map tests plugin puts in `Plugin.TestSteps` at its `Awake` (null in a
+player's game). It applies the steps' Harmony patches itself, so the main
+plugin's "All N patches applied" counts only the mod's own. The DLL
 is deployed to the test game folders only, and `pack.sh` fails if it ends up
 in a zip.
 

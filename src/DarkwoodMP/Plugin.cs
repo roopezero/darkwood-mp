@@ -288,6 +288,12 @@ namespace DarkwoodMP
         /// </summary>
         public static bool TestMode { get; private set; }
 
+        /// <summary>
+        /// The map test steps, set by the DarkwoodMP.MapTests plugin at its
+        /// Awake; null when it isn't loaded (a player's game).
+        /// </summary>
+        internal ITestSteps TestSteps { get; set; }
+
         private UiWindow _panel;
 
         private void Awake()
@@ -905,7 +911,12 @@ namespace DarkwoodMP
             }
 
             _tests.Clear();
-            MapScenario.Stop();
+            ITestSteps steps = TestSteps;
+            if (steps != null)
+            {
+                steps.Stop();
+            }
+
             OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
@@ -915,11 +926,6 @@ namespace DarkwoodMP
             DoorPush.TestTouch = null;
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
-            MapScenarioItems2.AimAt = null;
-            MapScenarioItems2.Safe = false;
-            MapScenarioEnemies.TraceSpawns = false;
-            MapScenarioFarEvents.WatchSteps = false;
-            MapScenarioDogWatch.On = false;
             EnemyMotion.Stats.On = false;
             WorldActions.TestAsPlayer = false;
             var player = Player.Instance;
@@ -2128,8 +2134,7 @@ namespace DarkwoodMP
             {
                 if (type
                     .GetCustomAttributes(typeof(HarmonyPatch), false).Length
-                        == 0
-                    || TestOnlyPatch(type))
+                        == 0)
                 {
                     continue;
                 }
@@ -2170,73 +2175,6 @@ namespace DarkwoodMP
             {
                 Log.LogInfo($"All {ok} patches applied");
             }
-        }
-
-        /// <summary>
-        /// Patches that only the tests use (the map test's steps watch and
-        /// steer the game through them): patched by TestControl.Start, not in a
-        /// player's game, so a game update that breaks one doesn't warn players
-        /// and "All N patches applied" counts only the mod's own. They are the
-        /// patch classes in the MapScenario* files.
-        /// </summary>
-        private static bool TestOnlyPatch(Type type)
-        {
-            var outer = type;
-            while (outer.DeclaringType != null)
-            {
-                outer = outer.DeclaringType;
-            }
-
-            return outer.Name.StartsWith(
-                "MapScenario", StringComparison.Ordinal)
-                || outer == typeof(LocationSetsPatch)
-                || outer == typeof(EnemyTestSpawnTracePatch)
-                || outer == typeof(FarEventsTestCountPatch);
-        }
-
-        /// <summary>
-        /// TestControl.Start: apply the test-only patches (TestOnlyPatch).
-        /// </summary>
-        internal void PatchTestOnly()
-        {
-            int ok = 0;
-            foreach (var type in AccessTools.GetTypesFromAssembly(
-                typeof(Plugin).Assembly))
-            {
-                if (type
-                    .GetCustomAttributes(typeof(HarmonyPatch), false).Length
-                        == 0
-                    || !TestOnlyPatch(type))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    _harmony.CreateClassProcessor(type).Patch();
-                    ok++;
-                }
-                catch (Exception e)
-                {
-                    Exception innerException = e.InnerException;
-                    string message = null;
-                    if (innerException != null)
-                    {
-                        message = innerException.Message;
-                    }
-
-                    if (message == null)
-                    {
-                        message = e.Message;
-                    }
-
-                    Log.LogError(
-                        $"Test patch {type.Name} doesn't fit this build of the "
-                            + $"game, skipped: {message}");
-                }
-            }
-
-            Log.LogInfo($"{ok} test patches applied");
         }
 
         /// <summary>

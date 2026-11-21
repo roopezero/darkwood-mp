@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The in-game map test steps, as a second BepInEx plugin. It goes to the test
+    game folders only (the game folder the tests run in and the client game
+    folders), never into the players' zips: pack.sh fails if it finds it there.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>DarkwoodMP.MapTests</AssemblyName>
+    <RootNamespace>DarkwoodMP</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/DarkwoodMP.MapTests</PathMap>
+    <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
+    <ClientGamesRoot Condition="'$(ClientGamesRoot)' == ''">$(HOME)/.cache/darkwood-mp</ClientGamesRoot>
+  </PropertyGroup>
+
+  <Import Project="../GameReferences.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="../DarkwoodMP/DarkwoodMP.csproj" />
+    <ProjectReference Include="../DarkwoodMP.Core/DarkwoodMP.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Building this project builds the plugin too, and the plugin deploys
+       itself; this copies only the map tests' DLL, to the same folders. -->
+  <Target Name="DeployMapTests" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)/BepInEx')">
+    <ItemGroup>
+      <_TestDll Include="$(TargetPath)" />
+    </ItemGroup>
+    <MakeDir Directories="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Copy SourceFiles="@(_TestDll)" DestinationFolder="$(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <Message Importance="high" Text="Deployed @(_TestDll->'%(Filename)%(Extension)') to $(GameDir)/BepInEx/plugins/DarkwoodMP" />
+    <ItemGroup>
+      <_ClientGame Condition="Exists('$(ClientGamesRoot)')" Include="$([System.IO.Directory]::GetDirectories('$(ClientGamesRoot)', 'client-game*'))" />
+      <_ClientPlugins Include="@(_ClientGame->'%(FullPath)/BepInEx/plugins/DarkwoodMP')" Condition="Exists('%(FullPath)/BepInEx/plugins')" />
+    </ItemGroup>
+    <Copy Condition="'@(_ClientPlugins)' != ''" SourceFiles="@(_TestDll)" DestinationFolder="%(_ClientPlugins.Identity)" />
+    <Message Condition="'@(_ClientPlugins)' != ''" Importance="high" Text="Deployed @(_TestDll->'%(Filename)%(Extension)') to %(_ClientPlugins.Identity)" />
+  </Target>
+</Project>

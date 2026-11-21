@@ -206,6 +206,9 @@ needs capture world.pkl "client-*"
 mkdir -p "$WORK/logs"
 die() { echo "FAIL: $*"; [ "$BASH_SUBSHELL" -gt 0 ] || game_stop; exit 1; }
 [ -x "$GAME_DIR/darkwood_mp.sh" ] || { echo "FAIL: no $GAME_DIR/darkwood_mp.sh (install the mod first)"; exit 1; }
+# The test-control "do" steps are in the map tests' plugin, which only `dotnet build src/DarkwoodMP.MapTests` deploys
+# (with the mod); tools/setup-client-game.sh copies it to the client games with the rest of the plugins folder.
+[ -f "$GAME_DIR/BepInEx/plugins/DarkwoodMP/DarkwoodMP.MapTests.dll" ] || { echo "FAIL: no DarkwoodMP.MapTests.dll in $GAME_DIR/BepInEx/plugins/DarkwoodMP (dotnet build src/DarkwoodMP.MapTests -c Release)"; exit 1; }
 [ -d "$SAVES/prof1" ] || { echo "FAIL: no saved profile 1 in $SAVES (play once first)"; exit 1; }
 # Without a display the game stops at "Loading in SingleInstance mode" ("Desktop is 0 x 0" in Player.log).
 # From a shell outside the desktop session (an agent's), use the session's display :0 and its X authority file.
