@@ -22,34 +22,34 @@ namespace DarkwoodMP.World
     /// nothing to take down. The option's GameEvents runs by ScriptedEvents'
     /// parts: the builder's own steps only for the builder.
     /// </summary>
-    public static class Construction
+    internal sealed class Construction
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
 
         /// <summary>
         /// Joiner: builds waiting for the host's answer (one at a time per
         /// thing).
         /// </summary>
-        private static readonly HashSet<Constructible> Waiting =
+        private readonly HashSet<Constructible> _waiting =
             new HashSet<Constructible>();
 
         /// <summary>
         /// Joiner: true while building our copy after the host said yes (not
         /// sent again).
         /// </summary>
-        internal static bool Confirming;
+        private bool _confirming;
 
-        public static void Register(Session s)
+        public Construction(CoopSession coop)
         {
-            s.Register(MsgType.Construct, OnConstruct);
-            s.OnSessionEnded += Waiting.Clear;
+            _coop = coop;
+            coop.Handle(MsgType.Construct, OnConstruct);
         }
 
-        internal static bool IsWaiting(Constructible c) => Waiting.Contains(c);
+        private bool IsWaiting(Constructible c) => _waiting.Contains(c);
 
-        private static PacketWriter Write(ObjRef r, int option)
+        private PacketWriter Write(ObjRef r, int option)
         {
-            var w = S.Begin(MsgType.Construct);
+            var w = _coop.Net.Begin(MsgType.Construct);
             var order = new BuildOrder
             {
                 Site = ObjRef.NameOf(r),
@@ -64,7 +64,7 @@ namespace DarkwoodMP.World
         /// Sends our build (nothing if it can't be named): the host's to
         /// everyone, a joiner's as a request.
         /// </summary>
-        internal static void Send(Constructible c, int option)
+        internal void Send(Constructible c, int option)
         {
             var r = ObjRef.Of(c.gameObject);
             if (!r.Valid)
@@ -79,9 +79,9 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo($"[world] sent {what}");
             }
 
-            if (S.IsHost)
+            if (_coop.Net.IsHost)
             {
-                S.Broadcast(w, Channel.Control, reliable: true);
+                _coop.Net.Broadcast(w, Channel.Control, reliable: true);
                 return;
             }
 
@@ -91,10 +91,10 @@ namespace DarkwoodMP.World
                 sound = c.options[option].buildCompleteSound;
             }
 
-            Waiting.Add(c);
-            Coop.Current.Authority.Request(w, what, (ok, reason, _) =>
+            _waiting.Add(c);
+            _coop.Authority.Request(w, what, (ok, reason, _) =>
             {
-                Waiting.Remove(c);
+                _waiting.Remove(c);
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
@@ -108,7 +108,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                Confirming = true;
+                _confirming = true;
                 try
                 {
                     c.chosenOption = option;
@@ -133,14 +133,14 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    Confirming = false;
+                    _confirming = false;
                 }
             });
         }
 
-        private static void OnConstruct(ulong from, PacketReader r)
+        private void OnConstruct(ulong from, PacketReader r)
         {
-            var s = S;
+            var s = _coop.Net;
             if (s == null || !WorldShare.InWorld)
             {
                 return;
@@ -213,18 +213,18 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: a joiner's build is one this world can still take, near them.
         /// </summary>
-        private static bool Allowed(Constructible c, int option)
+        private bool Allowed(Constructible c, int option)
         {
             // The reach is Authority's to check: ConstructionRules.MayBuild
             // decides the rest, with no request it would check reach for.
             var verdict = ConstructionRules.MayBuild(BuildOf(c, option));
             if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(verdict);
+                _coop.Authority.Refuse(verdict);
                 return false;
             }
 
-            return Coop.Current.Authority.InReach(
+            return _coop.Authority.InReach(
                 c.transform.position, ConstructionRules.Reach, c.name);
         }
 
@@ -233,7 +233,7 @@ namespace DarkwoodMP.World
         /// the only code that reads it for ConstructionRules.MayBuild. c may
         /// be null (not found).
         /// </summary>
-        private static BuildFacts BuildOf(Constructible c, int option)
+        private BuildFacts BuildOf(Constructible c, int option)
         {
             if (c == null)
             {
@@ -257,18 +257,17 @@ namespace DarkwoodMP.World
         /// What Constructible.construct does as it starts: the only code that
         /// reads the game for ConstructionRules.Start.
         /// </summary>
-        internal static BuildStart StartOf(Constructible c, bool manual)
+        internal BuildStart StartOf(Constructible c, bool manual)
         {
             var facts = new StartFacts
             {
-                Confirming = Confirming,
+                Confirming = _confirming,
                 Sharing = Coop.Guards.Sharing,
                 Manual = manual,
                 TestAsPlayer = WorldActions.TestAsPlayer,
             };
 
-            var s = Session.Instance;
-            if (s != null && s.IsClient)
+            if (_coop.Net.IsClient)
             {
                 facts = facts with { Client = true, Waiting = IsWaiting(c) };
             }
@@ -291,7 +290,13 @@ namespace DarkwoodMP.World
             out bool __state)
         {
             __state = false;
-            switch (Construction.StartOf(__instance, manual))
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            switch (coop.Construction.StartOf(__instance, manual))
             {
                 case BuildStart.Game:
                     return true;
@@ -345,21 +350,22 @@ namespace DarkwoodMP.World
                 }
             }
 
-            Construction.Send(__instance, option);
+            coop.Construction.Send(__instance, option);
             return false;
         }
 
         static void Postfix(
             Constructible __instance, int forceOption, bool __state)
         {
-            if (!__state || !Coop.Guards.Outermost())
+            CoopSession coop = Coop.Current;
+            if (!__state || !Coop.Guards.Outermost() || coop == null)
             {
                 return;
             }
 
             int option = ConstructionRules.OptionOf(
                 forceOption, __instance.chosenOption);
-            Construction.Send(__instance, option);
+            coop.Construction.Send(__instance, option);
         }
     }
 }

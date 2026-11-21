@@ -23,13 +23,16 @@ namespace DarkwoodMP.World
     /// the host's save and in a joiner's snapshot. Once it's set, the
     /// requirement passes for every player (and its "no tank" counterpart
     /// doesn't), without giving anyone an item.
+    ///
+    /// One lives as long as the game, in ModHost.Tank: the flag is kept in a
+    /// game played alone too, for when others join.
     /// </summary>
-    public static class SharedTank
+    internal sealed class SharedTank
     {
         public const string Item = SharedTankRules.Item;
         public const string Flag = FlagsSync.ModPrefix + "oxygenTankFilled";
-        private static Seconds _next;
-        private static Object _tankPrefab;
+        private Seconds _next;
+        private Object _tankPrefab;
 
         /// <summary>
         /// Whether a player has filled the tank in this world.
@@ -52,7 +55,7 @@ namespace DarkwoodMP.World
         /// Every couple of seconds in a world: if our player holds a full tank,
         /// set the flag.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var now = new Seconds(Time.unscaledTime);
             if (!SharedTankRules.Due(now, _next))
@@ -135,13 +138,13 @@ namespace DarkwoodMP.World
         /// The item and the flag are looked at only for a haveItem
         /// requirement on the tank.
         /// </summary>
-        internal static bool Requirement(
+        internal bool Requirement(
             EventTriggerRequirement need, bool result)
         {
             return SharedTankRules.Requirement(RequirementOf(need, result));
         }
 
-        private static RequirementFacts RequirementOf(
+        private RequirementFacts RequirementOf(
             EventTriggerRequirement need, bool result)
         {
             var facts = new RequirementFacts
@@ -168,7 +171,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Whether this requirement's item is the full tank.</summary>
-        private static bool IsTank(Object itemType)
+        private bool IsTank(Object itemType)
         {
             if (itemType == null)
             {
@@ -208,7 +211,13 @@ namespace DarkwoodMP.World
         static void Postfix(
             EventTriggerRequirement __instance, ref bool __result)
         {
-            __result = SharedTank.Requirement(__instance, __result);
+            Plugin plugin = Plugin.Instance;
+            if (plugin == null || plugin.Host == null)
+            {
+                return;
+            }
+
+            __result = plugin.Host.Tank.Requirement(__instance, __result);
         }
     }
 }

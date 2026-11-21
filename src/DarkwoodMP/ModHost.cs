@@ -30,6 +30,12 @@ namespace DarkwoodMP
         /// (HostIds.NewId), so ids made in the same millisecond differ.
         public readonly Random IdRandom = new Random();
 
+        /// The village cellar's full oxygen tank, shared once filled.
+        public readonly World.SharedTank Tank = new World.SharedTank();
+
+        /// One stack size for every stackable item.
+        public readonly World.StackSizes Stacks;
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
@@ -49,6 +55,7 @@ namespace DarkwoodMP
 
             Session.Add(Tcp);
             Browser = new ServerBrowser(Paths.ConfigPath, log);
+            Stacks = new World.StackSizes();
             // First, so a CoopSession exists before any other handler of
             // the start runs, and is gone before the others' cleanups.
             Session.OnSessionStarted += StartCoop;
@@ -77,6 +84,7 @@ namespace DarkwoodMP
         public void Dispose()
         {
             Coop.End();
+            Stacks.Dispose();
             Session.Dispose();
         }
     }

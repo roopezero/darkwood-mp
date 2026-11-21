@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Stacks;
@@ -32,16 +33,25 @@ namespace DarkwoodMP.World
     /// a client uses its own setting again when the session ends. The host
     /// refuses a container slot holding more than one stack of its size
     /// (SlotShare).
+    ///
+    /// One lives as long as the game, in ModHost.Stacks: the main menu and a
+    /// game played alone use it too. The session's part (the host's size, its
+    /// message) is StackShare, in CoopSession.Stacks.
     /// </summary>
-    public static class StackSizes
+    internal sealed class StackSizes : IDisposable
     {
-        private static readonly Dictionary<InvItem, int> Original =
+        private readonly Dictionary<InvItem, int> _original =
             new Dictionary<InvItem, int>();
         // holds the changed prefabs loaded
-        private static readonly List<InvItem> Kept = new List<InvItem>();
-        private static Session _session;
-        // client: the host's size, -1 when not in a session
-        private static int _hostSize = StackRules.NoHostSize;
+        private readonly List<InvItem> _kept = new List<InvItem>();
+
+        public StackSizes()
+        {
+            Plugin.Cfg.StackSize.SettingChanged += OnSettingChanged;
+            // a database made before the mod loaded (if none yet, this does
+            // nothing)
+            Apply(Current);
+        }
 
         /// <summary>
         /// The size in use now: the host's in a session as a client, otherwise
@@ -51,81 +61,39 @@ namespace DarkwoodMP.World
         {
             get
             {
-                return StackRules.Current(
-                    _hostSize, Plugin.Cfg.StackSize.Value);
+                int host = StackRules.NoHostSize;
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    host = coop.Stacks.HostSize;
+                }
+
+                return StackRules.Current(host, Plugin.Cfg.StackSize.Value);
             }
         }
 
-        public static void Register(Session s)
+        private void OnSettingChanged(object sender, EventArgs args)
         {
-            _session = s;
-            s.Register(MsgType.StackSize, OnStackSize);
-            s.OnPeerConnected += id =>
+            int host = StackRules.NoHostSize;
+            bool hosting = false;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                if (s.IsHost)
-                {
-                    SendTo(id);
-                }
-            };
+                host = coop.Stacks.HostSize;
+                hosting = coop.Net.IsHost;
+            }
 
-            s.OnSessionEnded += () =>
+            var change = StackRules.OnSettingChanged(host, hosting);
+            if (change == StackChange.Ignore)
             {
-                if (!StackRules.FollowsHost(_hostSize))
-                {
-                    return;
-                }
+                return; // a client keeps the host's until it leaves
+            }
 
-                _hostSize = StackRules.NoHostSize;
-                Plugin.Log.LogInfo(
-                    "[stacks] session over: our own setting again "
-                        + $"({Current})");
-                Apply(Current);
-            };
-
-            Plugin.Cfg.StackSize.SettingChanged += (_, __) =>
-            {
-                var change = StackRules.OnSettingChanged(_hostSize, s.IsHost);
-                if (change == StackChange.Ignore)
-                {
-                    return; // a client keeps the host's until it leaves
-                }
-
-                Apply(Current);
-                if (change == StackChange.ApplyAndSend)
-                {
-                    s.Broadcast(
-                        Write(Current), Channel.Control, reliable: true);
-                    Plugin.Log.LogInfo($"[stacks] sent {Current} to everyone");
-                }
-            };
-
-            // a database made before the mod loaded (if none yet, this does
-            // nothing)
             Apply(Current);
-        }
-
-        private static PacketWriter Write(int size)
-        {
-            var w = _session.Begin(MsgType.StackSize);
-            StackSize.Write(w, size);
-            return w;
-        }
-
-        private static void SendTo(ulong id) => _session.SendTo(
-            id, Write(Current), Channel.Control, reliable: true);
-
-        private static void OnStackSize(ulong from, PacketReader r)
-        {
-            bool host = from == _session.HostId;
-            if (!StackRules.TakesSize(_session.IsClient, host))
+            if (change == StackChange.ApplyAndSend)
             {
-                return;
+                coop.Stacks.SendAll(Current);
             }
-
-            int size = StackSize.Read(r);
-            _hostSize = size;
-            Plugin.Log.LogInfo($"[stacks] the host's stack size: {size}");
-            Apply(size);
         }
 
         /// <summary>
@@ -175,7 +143,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Make every eligible item stack to size (0: the game's own sizes).
         /// </summary>
-        public static void Apply(int size)
+        public void Apply(int size)
         {
             var db = Singleton<ItemsDatabase>.Instance;
             if (db == null || db.itemsDict == null)
@@ -200,10 +168,10 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                if (!Original.TryGetValue(it, out int orig))
+                if (!_original.TryGetValue(it, out int orig))
                 {
                     orig = it.maxAmount;
-                    Original[it] = orig;
+                    _original[it] = orig;
                 }
 
                 if (!StackRules.Eligible(ItemOf(it, orig)))
@@ -225,9 +193,9 @@ namespace DarkwoodMP.World
                 }
 
                 it.maxAmount = max;
-                if (!Kept.Contains(it))
+                if (!_kept.Contains(it))
                 {
-                    Kept.Add(it);
+                    _kept.Add(it);
                 }
             }
 
@@ -252,7 +220,7 @@ namespace DarkwoodMP.World
         /// For tests: the game's own stack size of an item type (before Apply),
         /// or its size now if never seen.
         /// </summary>
-        internal static int OriginalOf(string type)
+        internal int OriginalOf(string type)
         {
             ItemsDatabase instance = Singleton<ItemsDatabase>.Instance;
             InvItem it = null;
@@ -266,12 +234,17 @@ namespace DarkwoodMP.World
                 return 0;
             }
 
-            if (Original.TryGetValue(it, out int o))
+            if (_original.TryGetValue(it, out int o))
             {
                 return o;
             }
 
             return it.maxAmount;
+        }
+
+        public void Dispose()
+        {
+            Plugin.Cfg.StackSize.SettingChanged -= OnSettingChanged;
         }
 
         /// <summary>
@@ -281,7 +254,14 @@ namespace DarkwoodMP.World
         [HarmonyPatch(typeof(ItemsDatabase), "Awake")]
         private static class AwakePatch
         {
-            private static void Postfix() => Apply(Current);
+            private static void Postfix()
+            {
+                Plugin plugin = Plugin.Instance;
+                if (plugin != null && plugin.Host != null)
+                {
+                    plugin.Host.Stacks.Apply(Current);
+                }
+            }
         }
     }
 }

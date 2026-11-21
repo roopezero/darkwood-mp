@@ -467,13 +467,11 @@ namespace DarkwoodMP
             new ThrowSync(_host.Session);
             new FireSync(_host.Session);
             new SlotShare(_host.Session);
-            Construction.Register(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
             TalkLock.Register(_host.Session);
             Progression.Register(_host.Session);
-            StackSizes.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
             FarEvents.Register(_host.Session);
@@ -2281,7 +2279,7 @@ namespace DarkwoodMP
             _flags.Update();
             ModProfiler.Mark("flags");
             // also without co-op: the flag is kept for when others join
-            World.SharedTank.Update();
+            _host.Tank.Update();
             _drag.Update();
             ModProfiler.Mark("drag");
             DoorPush.Update();

@@ -41,6 +41,13 @@ namespace DarkwoodMP
         /// Host: the save id counters of the joiners let in to the world.
         public readonly JoinerSaveIds Joiners;
 
+        /// Building and repairing, and a joiner's builds waiting for the
+        /// host's answer.
+        public readonly Construction Construction;
+
+        /// The host's stack size, sent to the clients.
+        public readonly StackShare Stacks;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -55,6 +62,8 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
+            Construction = new Construction(this);
+            Stacks = new StackShare(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
