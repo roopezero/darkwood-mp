@@ -295,7 +295,7 @@ namespace DarkwoodMP.World
         /// An explosive as it goes off, for BreakRules.Tracks: the only code
         /// that reads it. ex may be null.
         /// </summary>
-        internal static ExplodeFacts ExplodeOf(Explodes ex)
+        private static ExplodeFacts ExplodeOf(Explodes ex)
         {
             if (ex == null)
             {
@@ -316,7 +316,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The guards' depth and replay flag now.</summary>
-        internal static Breaking.Guards GuardsNow()
+        private static Breaking.Guards GuardsNow()
         {
             return new Breaking.Guards
             {
@@ -326,92 +326,27 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Set the guards' depth and replay flag.</summary>
-        internal static void SetGuards(Breaking.Guards set)
+        private static void SetGuards(Breaking.Guards set)
         {
             Coop.Guards.Depth = set.Depth;
             Coop.Guards.Replaying = set.Replaying;
         }
-    }
 
-    [HarmonyPatch(
-        typeof(Item), nameof(Item.getHit),
-        new[] { typeof(int), typeof(Transform), typeof(bool) })]
-    static class ItemHitPatch
-    {
         /// <summary>
-        /// On a client, a hit the host makes too (an explosion, fire) isn't
-        /// made here: the host's ItemHit is.
+        /// Item.die or setNormalState is starting: one call deeper, and
+        /// whether the item was broken before.
         /// </summary>
-        static bool Prefix(Item __instance, out ItemState __state) =>
-            BreakSync.BeforeHit(__instance, out __state);
-
-        static void Postfix(
-            Item __instance, int damage, Transform attackerTransform,
-            bool normalHit, ItemState __state)
-        {
-            var hit = new BreakSync.Hit
-            {
-                Attacker = attackerTransform,
-                Damage = damage,
-                Normal = normalHit,
-                Before = __state,
-            };
-
-            BreakSync.AfterHit(__instance, hit);
-        }
-    }
-
-    /// <summary>
-    /// Broken by itself (not by a hit, which ItemHit carries, breaking it in
-    /// the other games too).
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.die))]
-    static class ItemBrokenPatch
-    {
-        static void Prefix(Item __instance, out bool __state)
+        internal static bool BeforeChange(Item item)
         {
             Coop.Guards.Depth++;
-            __state = __instance.destroyed;
+            return item.destroyed;
         }
 
-        static void Postfix(Item __instance, bool __state) =>
-            BreakSync.AfterBreak(__instance, __state);
-    }
-
-    /// <summary>
-    /// A broken item repaired (Constructible.construct calls setNormalState).
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.setNormalState))]
-    static class ItemRepairedPatch
-    {
-        static void Prefix(Item __instance, out bool __state)
-        {
-            Coop.Guards.Depth++;
-            __state = __instance.destroyed;
-        }
-
-        static void Postfix(Item __instance, bool __state) =>
-            BreakSync.AfterRepair(__instance, __state);
-    }
-
-    /// <summary>
-    /// An exploding barrel or gas bottle set off in this game (a shot, fire, a
-    /// chain from another explosion). onActivate(bool) calls onActivate(), so
-    /// this covers both. Named before the call: it may destroy itself.
-    ///
-    /// On the host, each hit the explosion makes on a door, window or furniture
-    /// is sent (DoorHit, WindowHit, ItemHit), since the clients' copies of it
-    /// make none (BreakSync.HostsHit). So inside it the host counts as
-    /// outermost and sharing, even when the explosion is nested in a hit (a
-    /// shot barrel) or a replay of a client's Explode or ItemHit; the nesting
-    /// and the Replaying flag are put back after it, so the Explode itself is
-    /// still sent only when it's outermost and not a replay.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Explodes), nameof(Explodes.onActivate), new System.Type[0])]
-    static class ExplodePatch
-    {
-        public struct State
+        /// <summary>
+        /// A tracked explosive going off: its name, whether this game hosts,
+        /// and the guards from before it.
+        /// </summary>
+        public struct Explosion
         {
             public bool Track;
             public ObjRef Ref;
@@ -420,43 +355,60 @@ namespace DarkwoodMP.World
             public Breaking.Guards Saved;
         }
 
-        static void Prefix(Explodes __instance, out State __state)
+        /// <summary>
+        /// Explodes.onActivate is starting: an exploding barrel or gas bottle
+        /// set off in this game (a shot, fire, a chain from another
+        /// explosion). onActivate(bool) calls onActivate(), so this covers
+        /// both. Named before the call: it may destroy itself.
+        ///
+        /// On the host, each hit the explosion makes on a door, window or
+        /// furniture is sent (DoorHit, WindowHit, ItemHit), since the clients'
+        /// copies of it make none (HostsHit). So inside it the host counts as
+        /// outermost and sharing, even when the explosion is nested in a hit
+        /// (a shot barrel) or a replay of a client's Explode or ItemHit; the
+        /// nesting and the Replaying flag are put back after it, so the
+        /// Explode itself is still sent only when it's outermost and not a
+        /// replay.
+        /// </summary>
+        internal static Explosion BeforeExplode(Explodes ex)
         {
-            __state = default;
-            if (!BreakRules.Tracks(BreakSync.ExplodeOf(__instance)))
+            if (!BreakRules.Tracks(ExplodeOf(ex)))
             {
-                return;
+                return default;
             }
 
             bool host = Session.Instance != null && Session.Instance.IsHost;
-            var now = BreakSync.GuardsNow();
-            __state = new State
+            var now = GuardsNow();
+            var bomb = new Explosion
             {
                 Track = true,
-                Ref = ObjRef.Of(__instance.gameObject),
-                Name = __instance.name,
+                Ref = ObjRef.Of(ex.gameObject),
+                Name = ex.name,
                 Host = host,
                 Saved = now,
             };
 
-            BreakSync.SetGuards(BreakRules.Enter(host, now));
+            SetGuards(BreakRules.Enter(host, now));
+            return bomb;
         }
 
-        static void Postfix(Explodes __instance, State __state)
+        /// <summary>
+        /// Explodes.onActivate ran: the guards are put back, and our player's
+        /// explosion is sent.
+        /// </summary>
+        internal static void AfterExplode(Explodes ex, in Explosion bomb)
         {
-            if (!__state.Track)
+            if (!bomb.Track)
             {
                 return;
             }
 
-            BreakSync.SetGuards(
-                BreakRules.Leave(
-                    __state.Host, __state.Saved, BreakSync.GuardsNow()));
+            SetGuards(BreakRules.Leave(bomb.Host, bomb.Saved, GuardsNow()));
             var facts = new ExplodeSendFacts
             {
                 Outermost = Coop.Guards.Outermost(),
                 Sharing = Coop.Guards.Sharing,
-                Activated = BreakSync.Activated(__instance),
+                Activated = Activated(ex),
                 ClientMode = NetEnemies.ClientMode,
             };
 
@@ -475,8 +427,8 @@ namespace DarkwoodMP.World
             }
 
             WorldActions.Send(
-                WorldActions.Action.Explode, __state.Ref, __state.Name,
-                f1: BreakSync.Flaming(__instance));
+                WorldActions.Action.Explode, bomb.Ref, bomb.Name,
+                f1: Flaming(ex));
         }
     }
 }

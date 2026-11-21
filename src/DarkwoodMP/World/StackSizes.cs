@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Stacks;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -245,23 +244,6 @@ namespace DarkwoodMP.World
         public void Dispose()
         {
             Plugin.Cfg.StackSize.SettingChanged -= OnSettingChanged;
-        }
-
-        /// <summary>
-        /// The items database is made with each world (and the main menu's):
-        /// set the sizes on it.
-        /// </summary>
-        [HarmonyPatch(typeof(ItemsDatabase), "Awake")]
-        private static class AwakePatch
-        {
-            private static void Postfix()
-            {
-                Plugin plugin = Plugin.Instance;
-                if (plugin != null && plugin.Host != null)
-                {
-                    plugin.Host.Stacks.Apply(Current);
-                }
-            }
         }
     }
 }

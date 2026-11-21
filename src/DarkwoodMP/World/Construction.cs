@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Building;
-using HarmonyLib;
 
 namespace DarkwoodMP.World
 {
@@ -64,7 +63,7 @@ namespace DarkwoodMP.World
         /// Sends our build (nothing if it can't be named): the host's to
         /// everyone, a joiner's as a request.
         /// </summary>
-        internal void Send(Constructible c, int option)
+        private void Send(Constructible c, int option)
         {
             var r = ObjRef.Of(c.gameObject);
             if (!r.Valid)
@@ -257,7 +256,7 @@ namespace DarkwoodMP.World
         /// What Constructible.construct does as it starts: the only code that
         /// reads the game for ConstructionRules.Start.
         /// </summary>
-        internal BuildStart StartOf(Constructible c, bool manual)
+        private BuildStart StartOf(Constructible c, bool manual)
         {
             var facts = new StartFacts
             {
@@ -274,57 +273,54 @@ namespace DarkwoodMP.World
 
             return ConstructionRules.Start(facts);
         }
-    }
 
-    /// <summary>
-    /// Our player built or repaired something (manual: with the ingredients):
-    /// the others build it too.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Constructible), nameof(Constructible.construct),
-        new[] { typeof(bool), typeof(int) })]
-    static class ConstructPatch
-    {
-        static bool Prefix(
-            Constructible __instance, bool manual, int forceOption,
-            out bool __state)
+        /// <summary>
+        /// One Constructible.construct call: manual (the player built it,
+        /// with the ingredients) and the option it forces (-1 for none).
+        /// </summary>
+        public struct Call
         {
-            __state = false;
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return true;
-            }
+            public bool Manual;
+            public int Force;
+        }
 
-            switch (coop.Construction.StartOf(__instance, manual))
+        /// <summary>
+        /// Constructible.construct is starting: whether the game builds it
+        /// (false: swallowed, or a joiner's build sent to the host first),
+        /// and sent true when the host sends it once it's built.
+        /// </summary>
+        internal bool BeforeBuild(Constructible site, Call call, out bool sent)
+        {
+            sent = false;
+            switch (StartOf(site, call.Manual))
             {
                 case BuildStart.Game:
                     return true;
                 case BuildStart.Swallow:
                     return false;
                 case BuildStart.Host:
-                    __state = true;
+                    sent = true;
                     Coop.Guards.Depth++;
                     return true;
             }
 
             // A joiner asks first: the ingredients go now (to come back if
             // refused), the build once the host agrees.
-            if (ConstructionRules.ReadsMenu(forceOption, manual))
+            if (ConstructionRules.ReadsMenu(call.Force, call.Manual))
             {
                 // sets chosenOption from the construction menu
-                __instance.getSelectedOption();
+                site.getSelectedOption();
             }
 
             int option = ConstructionRules.OptionOf(
-                forceOption, __instance.chosenOption);
+                call.Force, site.chosenOption);
             // Not one we can name to the host, or no such option: built
             // here alone, as the game would.
-            int options = __instance.options.Count;
+            int options = site.options.Count;
             bool named = false;
             if (ConstructionRules.HasOption(option, options))
             {
-                named = ObjRef.Of(__instance.gameObject).Valid;
+                named = ObjRef.Of(site.gameObject).Valid;
             }
 
             if (!ConstructionRules.Asks(option, options, named))
@@ -332,7 +328,7 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            if (manual)
+            if (call.Manual)
             {
                 var menu = Singleton<ConstructionMenu>.Instance;
                 ConstructionIcon icon = null;
@@ -350,22 +346,23 @@ namespace DarkwoodMP.World
                 }
             }
 
-            coop.Construction.Send(__instance, option);
+            Send(site, option);
             return false;
         }
 
-        static void Postfix(
-            Constructible __instance, int forceOption, bool __state)
+        /// <summary>
+        /// Constructible.construct ran: the host sends the outermost build of
+        /// its own player (sent, from BeforeBuild).
+        /// </summary>
+        internal void AfterBuild(Constructible site, int force, bool sent)
         {
-            CoopSession coop = Coop.Current;
-            if (!__state || !Coop.Guards.Outermost() || coop == null)
+            if (!sent || !Coop.Guards.Outermost())
             {
                 return;
             }
 
-            int option = ConstructionRules.OptionOf(
-                forceOption, __instance.chosenOption);
-            coop.Construction.Send(__instance, option);
+            int option = ConstructionRules.OptionOf(force, site.chosenOption);
+            Send(site, option);
         }
     }
 }

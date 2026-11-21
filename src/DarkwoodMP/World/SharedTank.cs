@@ -1,5 +1,4 @@
 using DarkwoodMP.World.Dive;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -196,28 +195,6 @@ namespace DarkwoodMP.World
 
             _tankPrefab = itemType;
             return true;
-        }
-    }
-
-    /// <summary>
-    /// "The player has a full oxygen tank" holds for every player once one of
-    /// them has filled it (SharedTank).
-    /// </summary>
-    [HarmonyPatch(
-        typeof(EventTriggerRequirement),
-        nameof(EventTriggerRequirement.requirementsMet))]
-    static class SharedTankRequirementPatch
-    {
-        static void Postfix(
-            EventTriggerRequirement __instance, ref bool __result)
-        {
-            Plugin plugin = Plugin.Instance;
-            if (plugin == null || plugin.Host == null)
-            {
-                return;
-            }
-
-            __result = plugin.Host.Tank.Requirement(__instance, __result);
         }
     }
 }
