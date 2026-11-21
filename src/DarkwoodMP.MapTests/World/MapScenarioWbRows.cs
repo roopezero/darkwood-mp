@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DarkwoodMP.World.Workbenches;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -407,7 +408,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
 
-                if (st.slots.Count != before + WorkbenchStorage.RowSize)
+                if (st.slots.Count != before + WorkbenchRules.RowSize)
                 {
                     r.Fail(
                         $"the storage didn't grow by a row at level {Level}: "

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.World.Workbenches;
 using HarmonyLib;
 using UnityEngine;
 
@@ -27,30 +28,13 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class WorkbenchStorage
     {
-        /// <summary>
-        /// Slots added for each level above the first: one row of the storage's
-        /// six columns.
-        /// </summary>
-        public const int RowSize = 6;
-
-        /// <summary>
-        /// The level a new game starts at (Controller.workbenchLevel's
-        /// default).
-        /// </summary>
-        public const int BaseLevel = 1;
-
-        /// <summary>
-        /// The storage's slot count at the base level when its prefab can't be
-        /// found.
-        /// </summary>
-        public const int FallbackBase = 30;
+        private const string WorldLoaded = "world loaded";
 
         private const string DefaultPrefab = "Furnitures/workbench_01";
 
         private static readonly Dictionary<string, int> _base =
             new Dictionary<string, int>();
-        private static int _appliedScene = -1;
-        private static int _appliedLevel = -1;
+        private static RowsApplied _applied = RowsApplied.None;
 
         /// <summary>
         /// The storage's slot count at the base level: its prefab's.
@@ -107,10 +91,11 @@ namespace DarkwoodMP.World
 
             if (n == 0)
             {
-                n = FallbackBase;
+                n = WorkbenchRules.FallbackBase;
                 Plugin.Log.LogWarning(
                     $"[workbench] no prefab for {wb.name} ('{name}'): its "
-                        + $"storage counts {n} slots at level {BaseLevel}");
+                        + $"storage counts {n} slots at level "
+                        + $"{WorkbenchRules.BaseLevel}");
             }
 
             _base[name] = n;
@@ -121,7 +106,7 @@ namespace DarkwoodMP.World
         /// The slot count the storage should have at this level.
         /// </summary>
         public static int Wanted(Workbench wb, int level) =>
-            BaseSlots(wb) + RowSize * Mathf.Max(0, level - BaseLevel);
+            WorkbenchRules.Wanted(BaseSlots(wb), level);
 
         private static int Level
         {
@@ -132,7 +117,7 @@ namespace DarkwoodMP.World
                     return Singleton<Controller>.Instance.workbenchLevel;
                 }
 
-                return BaseLevel;
+                return WorkbenchRules.BaseLevel;
             }
         }
 
@@ -142,31 +127,34 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update()
         {
+            RowsUpdate next = WorkbenchRules.Update(_applied, FactsOf());
+            _applied = next.Applied;
+            if (next.Why == RowsWhy.WorldLoaded)
+            {
+                ApplyAll(WorldLoaded);
+            }
+            else if (next.Why == RowsWhy.LevelChanged)
+            {
+                ApplyAll("level changed");
+            }
+        }
+
+        /// The world, scene and level this frame: the only code here that
+        /// reads them for Update.
+        private static RowsFacts FactsOf()
+        {
             if (!WorldShare.WorldReady)
             {
-                _appliedScene = -1;
-                return;
+                return new RowsFacts { Ready = false };
             }
 
-            int scene =
-                UnityEngine.SceneManagement.SceneManager
-                    .GetActiveScene().handle;
-            int level = Level;
-            if (scene == _appliedScene && level == _appliedLevel)
+            return new RowsFacts
             {
-                return;
-            }
-
-            bool loaded = scene != _appliedScene;
-            _appliedScene = scene;
-            _appliedLevel = level;
-            string why = "level changed";
-            if (loaded)
-            {
-                why = "world loaded";
-            }
-
-            ApplyAll(why);
+                Ready = true,
+                Scene = UnityEngine.SceneManagement.SceneManager
+                    .GetActiveScene().handle,
+                Level = Level,
+            };
         }
 
         /// <summary>
@@ -192,7 +180,7 @@ namespace DarkwoodMP.World
                             + $"{wb.normalInventory.slots.Count} slots "
                             + $"(level {level}, {why})");
                 }
-                else if (why == "world loaded")
+                else if (why == WorldLoaded)
                 {
                     Plugin.Log.LogInfo(
                         $"[workbench] {wb.name} "
@@ -213,7 +201,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Fit(Inventory inv, int count)
         {
-            if (inv == null || inv.slots.Count >= count)
+            if (inv == null || !WorkbenchRules.Grows(inv.slots.Count, count))
             {
                 return false;
             }
@@ -238,10 +226,9 @@ namespace DarkwoodMP.World
                 inv.slots.Add(slot);
             }
 
-            if (inv.slots.Count >= 30)
+            if (WorkbenchRules.Wide(inv.slots.Count))
             {
-                // the game's rule for big containers (Inventory.init)
-                inv.maxColumns = RowSize;
+                inv.maxColumns = WorkbenchRules.RowSize;
             }
 
             if (open)
