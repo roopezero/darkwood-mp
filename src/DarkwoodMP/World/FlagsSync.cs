@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -235,7 +236,7 @@ namespace DarkwoodMP.World
             get
             {
                 var d = Singleton<Dreams>.Instance;
-                return DreamSync.Shared != null && d != null && d.dreaming;
+                return DreamSync.SharedNow != null && d != null && d.dreaming;
             }
         }
 

@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Dreaming;
 using HarmonyLib;
 using UnityEngine;
 
@@ -251,9 +252,10 @@ namespace DarkwoodMP.World
             }
 
             // Every game in a stage dreams it together with the others.
-            if (stage != null && DreamSync.Shared != stage)
+            CoopSession coop = Coop.Current;
+            if (stage != null && coop != null && coop.Dreaming.Shared != stage)
             {
-                DreamSync.SharePrologue(stage);
+                coop.Dreaming.SharePrologue(stage);
             }
 
             // A joiner's player is a first play too, as the host's is, until

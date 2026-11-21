@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -19,9 +20,9 @@ namespace DarkwoodMP.World
                 name = a[0];
             }
 
-            if (DreamSync.Shared != null)
+            if (DreamSync.SharedNow != null)
             {
-                r.Fail($"already in the shared dream {DreamSync.Shared}");
+                r.Fail($"already in the shared dream {DreamSync.SharedNow}");
                 yield break;
             }
 
@@ -41,7 +42,7 @@ namespace DarkwoodMP.World
                 presetName = preset.name;
             }
 
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -51,7 +52,7 @@ namespace DarkwoodMP.World
                 $"dreaming {presetName} (shared {shared}) at "
                     + $"{Locations.Current()}; host runs here "
                     + $"{Locations.HostRunsHere()}";
-            if (!D.dreaming || DreamSync.Shared != null
+            if (!D.dreaming || DreamSync.SharedNow != null
                 || Locations.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");

@@ -163,6 +163,10 @@ namespace DarkwoodMP
         /// The morning after a night, which ends for everyone at once.
         public readonly World.Mornings.AfterNight Mornings;
 
+        /// The level dreams, the prologue's stages and the epilogue, dreamt
+        /// together.
+        public readonly World.Dreaming.DreamSync Dreaming;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -221,6 +225,7 @@ namespace DarkwoodMP
             Resets = new World.Deaths.WorldResets(this);
             Pause = new World.Pause.CoopPause(this);
             Mornings = new World.Mornings.AfterNight(this);
+            Dreaming = new World.Dreaming.DreamSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

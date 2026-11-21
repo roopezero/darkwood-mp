@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using DarkwoodMP.World.Inventories;
 using System;
 using System.Collections.Generic;
@@ -218,7 +219,7 @@ namespace DarkwoodMP.World
             }
 
             var d = Singleton<Dreams>.Instance;
-            if (d != null && DreamSync.Shared == null
+            if (d != null && DreamSync.SharedNow == null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream))
             {
                 return true;
@@ -250,10 +251,10 @@ namespace DarkwoodMP.World
             }
 
             var d = Singleton<Dreams>.Instance;
-            if (DreamSync.Shared != null && d != null
+            if (DreamSync.SharedNow != null && d != null
                 && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
-                && (d.preset == null || d.preset.name == DreamSync.Shared)
+                && (d.preset == null || d.preset.name == DreamSync.SharedNow)
                 && go.transform.IsChildOf(d.dreamLocation.transform))
             {
                 return false;

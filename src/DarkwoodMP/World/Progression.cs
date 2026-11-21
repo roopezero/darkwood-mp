@@ -806,7 +806,12 @@ namespace DarkwoodMP.World
                 }
             }
 
-            DreamSync.AfterConfirm(d);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dreaming.AfterConfirm(d);
+            }
+
             LevelTaken();
             Plugin.Log.LogInfo(
                 $"[progress] took level {p.currentLevel} at the stove: "

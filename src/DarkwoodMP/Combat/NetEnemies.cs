@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Net;
@@ -139,8 +140,8 @@ namespace DarkwoodMP.Combat
             if (d != null && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
                 && go.transform.IsChildOf(d.dreamLocation.transform)
-                && (World.DreamSync.Shared == null || World.Prologue.IsStage(
-                    World.DreamSync.Shared)))
+                && (DreamSync.SharedNow == null || World.Prologue.IsStage(
+                    DreamSync.SharedNow)))
             {
                 return true;
             }

@@ -452,7 +452,6 @@ namespace DarkwoodMP
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);
-            DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
@@ -2341,7 +2340,12 @@ namespace DarkwoodMP
             Chapters.Update();
             Progression.Update();
             SkillsPanel.Update(_showMenu);
-            DreamSync.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dreaming.Update();
+            }
+
             Prologue.Update();
             Locations.Update();
             coop = Coop.Current;

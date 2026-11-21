@@ -1,9 +1,8 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Dreaming
 {
     /// <summary>
     /// The level-up dreams are dreamt together. In Darkwood, taking certain
@@ -32,49 +31,142 @@ namespace DarkwoodMP.World
     /// are frozen and hidden and the host's are shown, and the host's enemies
     /// there go for whoever has the most threat. Dreams that come from the
     /// story or from a kill (the night trader's) stay the player's own.
+    ///
+    /// What happens is the core's DreamRules; DreamPatches hand the game's
+    /// calls here.
     /// </summary>
-    public static class DreamSync
+    internal sealed class DreamSync
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
+
+        /// Host: our confirmSkills just started a level dream.
+        private bool _hostLevelDream;
+
+        /// The shared dream's end was sent or replayed.
+        private bool _ended;
+        private string _pendingStart;
+        private string _pendingEnd;
+        private Seconds _startBy;
+        private Seconds _startAt;
+
+        /// Client: when the held-player check begins (0: no check). A dream
+        /// ended by another game's say can end in the middle of one of our
+        /// own cutscenes or fades, and their end (which gives the player
+        /// back) may never come then. A few seconds after the end, once
+        /// nothing of the game's own holds the player (no cutscene,
+        /// transition, load or dialogue), let them go.
+        private Seconds _inputsFrom;
+
+        public DreamSync(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.DreamStart, OnStart);
+            coop.Handle(MsgType.DreamEnd, OnEnd);
+        }
+
+        private Session S => _coop.Net;
+
+        private static Seconds Now => new Seconds(Time.unscaledTime);
 
         /// <summary>
         /// The shared dream's preset name while it runs (null: none).
         /// </summary>
-        public static string Shared { get; private set; }
-        // host: our confirmSkills just started a level dream
-        private static bool _hostLevelDream;
-        // the shared dream's end was sent or replayed
-        private static bool _ended;
-        private static string _pendingStart, _pendingEnd;
-        private static float _startBy, _startAt;
+        public string Shared { get; private set; }
 
-        public static void Register(Session s)
+        /// <summary>
+        /// The running session's shared dream (null: none, or no session).
+        /// </summary>
+        public static string SharedNow
         {
-            s.Register(MsgType.DreamStart, OnStart);
-            s.Register(MsgType.DreamEnd, OnEnd);
-            s.OnSessionEnded += () =>
+            get
             {
-                Shared = null;
-                _hostLevelDream = false;
-                _pendingStart = _pendingEnd = null;
-                _inputsCheckFrom = 0f;
+                CoopSession coop = Coop.Current;
+                if (coop == null)
+                {
+                    return null;
+                }
+
+                return coop.Dreaming.Shared;
+            }
+        }
+
+        private static DreamFacts DreamOf(Dreams d)
+        {
+            if (d == null)
+            {
+                return new DreamFacts { LoadingGame = Core.loadingGame };
+            }
+
+            return new DreamFacts
+            {
+                HasDreams = true,
+                Dreaming = d.dreaming,
+                Prepared = d.dreamPrepared,
+                Switching = d.switchingDream,
+                WantToDream = d.wantToDream,
+                EnteringDream = Core.EnteringDream,
+                LoadingGame = Core.loadingGame,
             };
         }
 
-        private static bool InDream(Dreams d) => d != null
-            && (d.dreaming || d.dreamPrepared || d.switchingDream
-                || Core.EnteringDream);
+        private DreamShareFacts ShareOf()
+        {
+            return new DreamShareFacts
+            {
+                HasSession = true,
+                IsHost = S.IsHost,
+                ClientMode = NetEnemies.ClientMode,
+                Together = Hideouts.Together,
+                Shared = Shared != null,
+                Ended = _ended,
+                Replaying = _coop.Guards.Replaying,
+                Marked = _hostLevelDream,
+                PendingStart = _pendingStart != null,
+                EpiloguePlaying = EpilogueSync.Playing,
+            };
+        }
 
         // ---- host -----------------------------------------------------------
 
-        internal static void AfterConfirm(Dreams d)
+        /// <summary>
+        /// SkillsMenu.confirmSkills is about to run: a client's level brings
+        /// no dream of its own (Dreams.disabled for the call), the host's
+        /// levels bring the shared ones. Returns what disabled was, for
+        /// Confirmed (false when it wasn't changed).
+        /// </summary>
+        public bool Confirming(Dreams d)
         {
-            if (S == null || !S.IsHost || !Hideouts.Together || d == null)
+            bool off = DreamRules.ClientDreamOff(
+                d != null, NetEnemies.ClientMode, Hideouts.Together);
+            if (!off)
             {
-                return;
+                return false;
             }
 
-            if (d.wantToDream && Core.EnteringDream)
+            bool was = d.disabled;
+            d.disabled = true;
+            return was;
+        }
+
+        /// <summary>
+        /// SkillsMenu.confirmSkills ran: a client's Dreams.disabled goes back
+        /// as it was, and the host draws its level dream at once.
+        /// </summary>
+        public void Confirmed(Dreams d, bool was)
+        {
+            bool off = DreamRules.ClientDreamOff(
+                d != null, NetEnemies.ClientMode, Hideouts.Together);
+            if (off)
+            {
+                d.disabled = was;
+            }
+
+            AfterConfirm(d);
+        }
+
+        public void AfterConfirm(Dreams d)
+        {
+            if (DreamRules.DrawsEarly(DreamOf(d), ShareOf()))
             {
                 _hostLevelDream = true;
                 DrawNow(d);
@@ -84,10 +176,11 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The game draws the dream only after its transition has played
         /// (DreamTransition.onFinishedVideo -> Dreams.prepareDream ->
-        /// getPreset), several seconds after the level. Drawing it here, as the
-        /// transition starts, sends it (PresetChosen) then, so every client's
-        /// transition plays at the same time as ours; the transition then goes
-        /// into the dream drawn (getPreset by name doesn't draw again).
+        /// getPreset), several seconds after the level. Drawing it here, as
+        /// the transition starts, sends it (PresetChosen) then, so every
+        /// client's transition plays at the same time as ours; the transition
+        /// then goes into the dream drawn (getPreset by name doesn't draw
+        /// again).
         /// </summary>
         private static void DrawNow(Dreams d)
         {
@@ -113,15 +206,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        internal static void PresetChosen(DreamPreset preset)
+        public void PresetChosen(DreamPreset preset)
         {
-            if (!_hostLevelDream || Core.loadingGame)
+            var share = ShareOf() with { HasPreset = preset != null };
+            PresetStep step = DreamRules.PresetChosen(DreamOf(null), share);
+            if (step == PresetStep.Keep)
             {
                 return;
             }
 
             _hostLevelDream = false;
-            if (preset == null || S == null || !S.IsHost || !Hideouts.Together)
+            if (step == PresetStep.Clear)
             {
                 return;
             }
@@ -129,7 +224,7 @@ namespace DarkwoodMP.World
             Shared = preset.name;
             _ended = false;
             var w = S.Begin(MsgType.DreamStart);
-            w.WriteStr(preset.name);
+            DreamStart.Write(w, preset.name);
             S.Broadcast(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo(
                 $"[dream] level dream {preset.name}: everyone goes in");
@@ -140,27 +235,21 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Dreams.initiateEndDreaming is about to run in our game.
         /// </summary>
-        internal static void Ending(Dreams d)
+        public void Ending(Dreams d)
         {
-            if (Shared == null || d == null || !d.dreaming || _ended
-                || Coop.Guards.Replaying || S == null)
+            EndSend send = DreamRules.Ending(DreamOf(d), ShareOf());
+            if (send == EndSend.None)
             {
                 return;
             }
 
             _ended = true;
-            string outcome = d.outcome;
-            if (outcome == null)
-            {
-                outcome = "";
-            }
-
-            var w = EndMessage(outcome);
-            if (S.IsHost)
+            var w = EndMessage(d.outcome);
+            if (send == EndSend.Broadcast)
             {
                 S.Broadcast(w, Channel.Control, reliable: true);
             }
-            else if (NetEnemies.ClientMode)
+            else if (send == EndSend.ToHost)
             {
                 S.SendToHost(w, Channel.Control, reliable: true);
             }
@@ -170,21 +259,15 @@ namespace DarkwoodMP.World
                     + "does");
         }
 
-        private static PacketWriter EndMessage(string outcome)
+        private PacketWriter EndMessage(string outcome)
         {
             var w = S.Begin(MsgType.DreamEnd);
-            w.WriteStr(outcome);
-            string shared = Shared;
-            if (shared == null)
-            {
-                shared = "";
-            }
-
-            w.WriteStr(shared);
+            var end = new DreamEnded { Outcome = outcome, Dream = Shared };
+            DreamEnd.Write(w, end);
             return w;
         }
 
-        internal static void Started()
+        public void Started()
         {
             _ended = false;
             EnteredAt =
@@ -195,13 +278,13 @@ namespace DarkwoodMP.World
         /// For tests: when our game last started dreaming (Unix seconds; the
         /// test games share one clock).
         /// </summary>
-        internal static double EnteredAt { get; private set; }
+        internal double EnteredAt { get; private set; }
 
         /// <summary>
-        /// The prologue's stages are dreamt together too (World.Prologue): this
-        /// is the one every game is in.
+        /// The prologue's stages are dreamt together too (World.Prologue):
+        /// this is the one every game is in.
         /// </summary>
-        internal static void SharePrologue(string stage)
+        public void SharePrologue(string stage)
         {
             Share(stage);
             Plugin.Log.LogInfo(
@@ -212,91 +295,67 @@ namespace DarkwoodMP.World
         /// A dream from the story everyone dreams together (the epilogue,
         /// EpilogueSync).
         /// </summary>
-        internal static void Share(string name)
+        public void Share(string name)
         {
             Shared = name;
             _ended = false;
         }
 
-        internal static void AfterEnd(Dreams d)
+        public void AfterEnd(Dreams d)
         {
-            if (Shared != null && d != null && !d.dreaming
-                && !d.switchingDream && !EpilogueSync.Playing)
+            if (DreamRules.Over(DreamOf(d), ShareOf()))
             {
                 Plugin.Log.LogInfo($"[dream] back from {Shared}");
                 Shared = null;
             }
         }
 
-        private static void EndHere(Dreams d, string outcome)
+        private void EndHere(Dreams d, string outcome)
         {
             _ended = true;
             if (NetEnemies.ClientMode)
             {
-                _inputsCheckFrom = Time.unscaledTime + InputsGrace;
+                _inputsFrom = DreamRules.InputsFrom(Now);
             }
 
             d.outcome = outcome;
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 d.initiateEndDreaming();
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
         }
 
-        private static void OnEnd(ulong from, PacketReader r)
+        private void OnEnd(ulong from, PacketReader r)
         {
-            string outcome = r.ReadStr();
-            string dream = r.ReadStr();
+            DreamEnded end = DreamEnd.Read(r);
+            string outcome = end.Outcome;
             var d = Singleton<Dreams>.Instance;
+            DreamFacts dream = DreamOf(d);
+            DreamShareFacts share = ShareOf() with
+            {
+                FromHost = from == S.HostId,
+                SameDream = end.Dream == Shared,
+            };
+
             if (S.IsHost)
             {
-                if (Shared == null || d == null || !d.dreaming || _ended
-                    || !EpilogueSync.OutcomeAllowed(d, outcome))
-                {
-                    return;
-                }
-
-                // The end of a dream we're no longer in (a prologue stage that
-                // ended here a moment before).
-                if (dream != Shared)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[dream] {S.NameOf(from)}'s {dream} ended, but we're "
-                            + $"in {Shared}: not passed on");
-                    return;
-                }
-
-                Plugin.Log.LogInfo(
-                    $"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours "
-                        + "and everyone's end");
-                S.Broadcast(
-                    EndMessage(outcome), Channel.Control, reliable: true,
-                    except: from);
-                EndHere(d, outcome);
+                OnClientEnd(from, d, end, dream, share);
                 return;
             }
 
-            if (from != S.HostId || Shared == null || d == null)
+            ClientEndStep step = DreamRules.ClientEnd(dream, share);
+            if (step == ClientEndStep.KeepPending)
             {
+                _pendingEnd = outcome;
                 return;
             }
 
-            if (!d.dreaming)
-            {
-                if (InDream(d) || _pendingStart != null)
-                {
-                    _pendingEnd = outcome;
-                }
-
-                return;
-            }
-
-            if (_ended)
+            if (step != ClientEndStep.End)
             {
                 return;
             }
@@ -306,23 +365,57 @@ namespace DarkwoodMP.World
             EndHere(d, outcome);
         }
 
+        private void OnClientEnd(
+            ulong from, Dreams d, DreamEnded end, DreamFacts dream,
+            DreamShareFacts share)
+        {
+            // The epilogue is asked only once the other checks pass.
+            bool asks = share.Shared && d != null && d.dreaming && !_ended;
+            share = share with
+            {
+                OutcomeAllowed =
+                    asks && EpilogueSync.OutcomeAllowed(d, end.Outcome),
+            };
+
+            HostEndStep step = DreamRules.HostEnd(dream, share);
+            if (step == HostEndStep.Drop)
+            {
+                return;
+            }
+
+            // The end of a dream we're no longer in (a prologue stage that
+            // ended here a moment before).
+            if (step == HostEndStep.NotPassedOn)
+            {
+                Plugin.Log.LogInfo(
+                    $"[dream] {S.NameOf(from)}'s {end.Dream} ended, but we're "
+                        + $"in {Shared}: not passed on");
+                return;
+            }
+
+            Plugin.Log.LogInfo(
+                $"[dream] {S.NameOf(from)}'s dream ended ({end.Outcome}): "
+                    + "ours and everyone's end");
+            S.Broadcast(
+                EndMessage(end.Outcome), Channel.Control, reliable: true,
+                except: from);
+            EndHere(d, end.Outcome);
+        }
+
         // ---- client ---------------------------------------------------------
 
-        private static void OnStart(ulong from, PacketReader r)
+        private void OnStart(ulong from, PacketReader r)
         {
-            string name = r.ReadStr();
-            if (from != S.HostId || !NetEnemies.ClientMode)
-            {
-                return;
-            }
-
+            string name = DreamStart.Read(r);
             var d = Singleton<Dreams>.Instance;
-            if (d == null)
+            var share = ShareOf() with { FromHost = from == S.HostId };
+            StartStep step = DreamRules.Start(DreamOf(d), share);
+            if (step == StartStep.Drop)
             {
                 return;
             }
 
-            if (InDream(d))
+            if (step == StartStep.AlreadyIn)
             {
                 Plugin.Log.LogInfo(
                     $"[dream] the host's level dream {name}: we're in a dream "
@@ -332,80 +425,88 @@ namespace DarkwoodMP.World
 
             _pendingStart = name;
             _pendingEnd = null;
-            _startBy = Time.unscaledTime + 60f;
-            _startAt = 0f;
+            _startBy = DreamRules.StartBy(Now);
+            _startAt = new Seconds(0f);
             Plugin.Log.LogInfo(
                 $"[dream] the host's level dream {name}: we go in");
         }
 
-        // A client: a dream ended by another game's say can end in the middle
-        // of one of our own cutscenes or fades, and their end (which gives the
-        // player back) may never come then. A few seconds after the end, once
-        // nothing of the game's own holds the player (no cutscene, transition,
-        // load or dialogue), let them go.
-        private const float InputsGrace = 6f, InputsGiveUp = 40f;
-        private static float _inputsCheckFrom;
-
-        private static void CheckInputs(Dreams d)
+        private void CheckInputs(Dreams d)
         {
-            if (Time.unscaledTime > _inputsCheckFrom + InputsGiveUp
-                || !WorldShare.InWorld)
+            var facts = new InputFacts
             {
-                _inputsCheckFrom = 0f;
+                Now = Now,
+                From = _inputsFrom,
+                InWorld = WorldShare.InWorld,
+                ForbidInputs = Core.forbidInputs,
+            };
+
+            bool checks = _inputsFrom.Value > 0f && facts.InWorld;
+            if (checks && facts.ForbidInputs)
+            {
+                facts = facts with { HeldByNothing = InputsHeldByNothing(d) };
+            }
+
+            InputStep step = DreamRules.Inputs(facts);
+            if (step == InputStep.NotYet || step == InputStep.Wait)
+            {
                 return;
             }
 
-            if (!Core.forbidInputs)
-            {
-                _inputsCheckFrom = 0f;
-                return;
-            }
-
-            if (!InputsHeldByNothing(d))
+            _inputsFrom = new Seconds(0f);
+            if (step == InputStep.Stop)
             {
                 return;
             }
 
-            _inputsCheckFrom = 0f;
             Core.forbidInputs = false;
             Plugin.Log.LogInfo(
                 "[dream] the shared dream's end left our player held: let go");
         }
 
         /// <summary>
-        /// Nothing of the game's own holds the player now (Core.forbidInputs is
-        /// left over, if set).
+        /// Nothing of the game's own holds the player now (Core.forbidInputs
+        /// is left over, if set).
         /// </summary>
         internal static bool InputsHeldByNothing(Dreams d)
+        {
+            return DreamRules.HeldByNothing(HoldOf(d));
+        }
+
+        private static HoldFacts HoldOf(Dreams d)
         {
             var ctl = Singleton<Controller>.Instance;
             var o = Singleton<OutsideLocations>.Instance;
             var p = Player.Instance;
-            return p != null && !Core.cantChangeForbidInputs
-                && !Core.loadingGame && (ctl == null || !ctl.playingCutscene)
-                && (o == null || !o.loading)
-                && (d == null || !d.switchingDream) && !Core.EnteringDream
-                && !p.inDialogue;
+            return new HoldFacts
+            {
+                HasPlayer = p != null,
+                Locked = Core.cantChangeForbidInputs,
+                LoadingGame = Core.loadingGame,
+                Cutscene = ctl != null && ctl.playingCutscene,
+                OutsideLoading = o != null && o.loading,
+                Switching = d != null && d.switchingDream,
+                EnteringDream = Core.EnteringDream,
+                InDialogue = p != null && p.inDialogue,
+            };
         }
 
         /// <summary>
         /// Call every frame: a client starts the host's dream once its own
         /// menus let it, and ends it if the host's already did.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var d = Singleton<Dreams>.Instance;
-            if (_inputsCheckFrom > 0f && Time.unscaledTime > _inputsCheckFrom)
-            {
-                CheckInputs(d);
-            }
-
-            if (_pendingEnd != null && d != null && d.dreaming
-                && !d.switchingDream)
+            CheckInputs(d);
+            DreamFacts dream = DreamOf(d);
+            PendingEnd end =
+                DreamRules.OnPendingEnd(dream, _pendingEnd != null, _ended);
+            if (end != PendingEnd.Keep)
             {
                 string o = _pendingEnd;
                 _pendingEnd = null;
-                if (!_ended)
+                if (end == PendingEnd.End)
                 {
                     Plugin.Log.LogInfo(
                         $"[dream] the host's dream had ended ({o}): ours ends");
@@ -418,21 +519,20 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var p = Player.Instance;
-            if (!NetEnemies.ClientMode || !WorldShare.InWorld || d == null
-                || p == null)
+            Join(d);
+        }
+
+        private void Join(Dreams d)
+        {
+            JoinStep step = DreamRules.Join(JoinOf(d));
+            _startAt = step.StartAt;
+            if (step.Action == JoinAction.Drop)
             {
                 _pendingStart = null;
                 return;
             }
 
-            if (InDream(d))
-            {
-                _pendingStart = null;
-                return;
-            }
-
-            if (Time.unscaledTime > _startBy)
+            if (step.Action == JoinAction.GiveUp)
             {
                 Plugin.Log.LogWarning(
                     "[dream] couldn't go into the host's dream "
@@ -441,29 +541,66 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var skills = Singleton<SkillsMenu>.Instance;
-            if ((skills != null && skills.opened) || p.inDialogue)
+            if (step.Action == JoinAction.Stove)
             {
-                return; // a skill to choose, a talk to finish: then
-            }
-
-            var menu = Singleton<UI>.Instance.LevelingMenu;
-            if (p.inLevelingMenu && menu != null)
-            {
+                var menu = Singleton<UI>.Instance.LevelingMenu;
                 if (menu.openedAndTweened)
                 {
                     menu.hide(forceHide: true);
                 }
 
-                _startAt = Time.unscaledTime + 0.7f;
                 return;
             }
 
-            if (Time.unscaledTime < _startAt)
+            if (step.Action == JoinAction.Go)
             {
-                return;
+                Go(d);
+            }
+        }
+
+        private JoinFacts JoinOf(Dreams d)
+        {
+            var p = Player.Instance;
+            var facts = new JoinFacts
+            {
+                ClientMode = NetEnemies.ClientMode,
+                InWorld = WorldShare.InWorld,
+                HasDreams = d != null,
+                HasPlayer = p != null,
+                Now = Now,
+                StartBy = _startBy,
+                StartAt = _startAt,
+            };
+
+            if (!facts.ClientMode || !facts.InWorld || d == null || p == null)
+            {
+                return facts;
             }
 
+            facts = facts with { InDream = DreamRules.InDream(DreamOf(d)) };
+            if (facts.InDream || facts.Now > facts.StartBy)
+            {
+                return facts;
+            }
+
+            var skills = Singleton<SkillsMenu>.Instance;
+            facts = facts with
+            {
+                SkillsMenuOpen = skills != null && skills.opened,
+                InDialogue = p.inDialogue,
+            };
+
+            if (facts.SkillsMenuOpen || facts.InDialogue)
+            {
+                return facts;
+            }
+
+            var menu = Singleton<UI>.Instance.LevelingMenu;
+            return facts with { AtStove = p.inLevelingMenu && menu != null };
+        }
+
+        private void Go(Dreams d)
+        {
             string name = _pendingStart;
             _pendingStart = null;
             try
@@ -502,80 +639,27 @@ namespace DarkwoodMP.World
         /// For tests (client): the host's dream we go into once our menus let
         /// us (null: none).
         /// </summary>
-        internal static string Pending => _pendingStart;
+        internal string Pending => _pendingStart;
 
         /// <summary>
         /// For tests (client): go into a dream of our own (as a story step's
         /// startDream does), not shared.
         /// </summary>
-        internal static void TestOwnDream(string name) =>
+        internal static void TestOwnDream(string name)
+        {
             GoInto(Singleton<Dreams>.Instance, name);
+        }
 
         /// <summary>
         /// For tests (host): start a level dream as SkillsMenu.confirmSkills
         /// does after a level.
         /// </summary>
-        internal static void TestLevelDream(string name)
+        internal void TestLevelDream(string name)
         {
             var d = Singleton<Dreams>.Instance;
             GoInto(d, name);
             _hostLevelDream = true;
             DrawNow(d);
         }
-    }
-
-    [HarmonyPatch(typeof(SkillsMenu), nameof(SkillsMenu.confirmSkills))]
-    static class ConfirmSkillsPatch
-    {
-        static void Prefix(out bool __state)
-        {
-            __state = false;
-            var d = Singleton<Dreams>.Instance;
-            // A client's level brings no dream of its own: the host's levels
-            // bring the shared ones.
-            if (d != null && NetEnemies.ClientMode && Hideouts.Together)
-            {
-                __state = d.disabled;
-                d.disabled = true;
-            }
-        }
-
-        static void Postfix(bool __state)
-        {
-            var d = Singleton<Dreams>.Instance;
-            if (d != null && NetEnemies.ClientMode && Hideouts.Together)
-            {
-                d.disabled = __state;
-            }
-
-            DreamSync.AfterConfirm(d);
-            Progression.LevelTaken();
-        }
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.getPreset))]
-    static class DreamPresetPatch
-    {
-        static void Postfix(DreamPreset __result) =>
-            DreamSync.PresetChosen(__result);
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.initiateEndDreaming))]
-    static class DreamEndingPatch
-    {
-        static void Prefix(Dreams __instance) => DreamSync.Ending(__instance);
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.startDreaming))]
-    static class DreamStartedPatch
-    {
-        static void Postfix() => DreamSync.Started();
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
-    static class DreamEndedPatch
-    {
-        static void Postfix(Dreams __instance) =>
-            DreamSync.AfterEnd(__instance);
     }
 }
