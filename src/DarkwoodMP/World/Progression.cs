@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Progress;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -309,8 +310,9 @@ namespace DarkwoodMP.World
         {
             var s = S;
             var w = s.Begin(MsgType.ProgressState);
-            w.W.Write(SharedExp);
-            w.W.Write((byte)Mathf.Clamp(SharedLevel, 0, 255));
+            Progress.ProgressState.Write(
+                w,
+                new ProgressNumbers { Exp = SharedExp, Level = SharedLevel });
             if (to == 0)
             {
                 s.Broadcast(w, Channel.Control, reliable: true);
@@ -394,7 +396,7 @@ namespace DarkwoodMP.World
 
         private static void OnEssence(ulong from, PacketReader r)
         {
-            int amount = r.R.ReadInt32();
+            int amount = Progress.EssenceAdd.Read(r);
             var p = Player.Instance;
             if (!S.IsHost || HostSaved(start: true) == null || p == null)
             {
@@ -428,7 +430,7 @@ namespace DarkwoodMP.World
 
         private static void OnLevelTaken(ulong from, PacketReader r)
         {
-            int level = r.R.ReadByte();
+            int level = Progress.LevelTaken.Read(r);
             var p = Player.Instance;
             if (!S.IsHost || HostSaved(start: true) == null || p == null)
             {
@@ -570,8 +572,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            SharedExp = r.R.ReadInt32();
-            SharedLevel = r.R.ReadByte();
+            var shared = Progress.ProgressState.Read(r);
+            SharedExp = shared.Exp;
+            SharedLevel = shared.Level;
             bool first = !_known;
             _known = true;
             if (first)
@@ -603,7 +606,7 @@ namespace DarkwoodMP.World
             }
 
             var w = S.Begin(MsgType.LevelTaken);
-            w.W.Write((byte)Mathf.Clamp(p.currentLevel, 0, 255));
+            Progress.LevelTaken.Write(w, p.currentLevel);
             S.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -636,7 +639,7 @@ namespace DarkwoodMP.World
                 // predicted; the host's ProgressState follows
                 SharedExp += amount;
                 var w = S.Begin(MsgType.EssenceAdd);
-                w.W.Write(amount);
+                Progress.EssenceAdd.Write(w, amount);
                 Coop.Current.Authority.Request(w, $"cook {amount} essence");
             }
             else if (HostSide)
