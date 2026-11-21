@@ -44,6 +44,9 @@ namespace DarkwoodMP
         /// Larva eggs and other items broken open, shared.
         public readonly World.Eggs.Eggs Eggs;
 
+        /// The infection's patches: clears and the host's spread.
+        public readonly World.Infections.Infections Infections;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -59,6 +62,7 @@ namespace DarkwoodMP
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
             Eggs = new World.Eggs.Eggs(this);
+            Infections = new World.Infections.Infections(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

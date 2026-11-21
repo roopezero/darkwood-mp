@@ -586,7 +586,7 @@ namespace DarkwoodMP.Net
         /// Either way (a client's is a request): u16 n, then n times:
         /// ObjRef (u8 kind, i64 id), f32 x, f32 z. These patches of infection
         /// (the damaging ground fire clears) were burned away in the sender's
-        /// game in one frame; clear yours (see World.InfectionSync). A client
+        /// game in one frame; clear yours (see World.Infections). A client
         /// sends only what its player's burning weapon cleared.
         /// </summary>
         InfectionCleared = 0xD1,
@@ -596,7 +596,7 @@ namespace DarkwoodMP.Net
         /// of infection appeared in the host's world (it spreads, or a spider
         /// laid it);
         /// make yours with that id (ObjRef Spawned). Clients' infection never
-        /// spreads by itself (see World.InfectionSync).
+        /// spreads by itself (see World.Infections).
         /// </summary>
         InfectionSpawned = 0xD2,
         /// <summary>
