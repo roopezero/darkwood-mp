@@ -5,15 +5,15 @@ How the code moves from what it is today to the layout in
 going; this one says in what order, how each step is done, and how each step
 is checked.
 
-**Status:** Phases 0 to 3 are done, apart from their in-game gates, which
-move to the final run, and the hand tests of a test build on Windows and on
-GOG, which are still to do. The formatting pass over all the code is done, and
-the style rules are errors in every project. The rules of Phases 4 to 8 are
-written in the core with their unit tests; the plugin calls them as each
-subsystem moves. Phase 4 is under way. See [Changes made
-while carrying out the plan](#changes-made-while-carrying-out-the-plan). Tick
-the boxes below as steps are merged, and delete this file when Phase 8 is
-finished.
+**Status:** the code of every phase is done: the core holds the rules with
+their unit tests, the subsystems are instances on `CoopSession` or `ModHost`,
+the patches are thin, and the style rules are errors in every project. Left:
+the final in-game run (`tools/run-test.sh full` and `map4`, compared with the
+[Baseline](#baseline)), the `--dwmp-profile-mod` comparison with the baseline,
+the hand tests of a build on Windows and on GOG (Phases 1 and 3), and a real
+co-op session. Then delete this plan and `tools/DarkwoodMP.Codemod`, and
+release. See [Changes made while carrying out the
+plan](#changes-made-while-carrying-out-the-plan).
 
 ## Where the code is today
 
@@ -684,7 +684,7 @@ Finish with `tools/run-test.sh full`.
       `StateDump` keep static methods with no state, so the map steps didn't
       change. It has no messages, rules or patches, so steps 3, 4 and 6 had
       nothing to do. `WorldTest` is a partial class over six files.
-- [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
+- [x] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
   - [x] Part a: `Plugin`, the Steam files and `IGuiSection`. Done:
         `Plugin.cs` is split into partial files (startup, `TestArgs`,
@@ -693,10 +693,8 @@ Finish with `tools/run-test.sh full`.
         `Presence`, `Hosting`, `FpsCap`, `WindowBefore`, `SpawnType`); and it
         calls `TestArgRules`, `SteamStartupRules`, `PlayerNameRules`,
         `PresenceRules` and `HostRules`. The Steam files are in `Net/Steam`,
-        namespace unchanged, and have no patches. Left: `SteamBackend`,
-        `Lobby` and `SteamTransport` don't call `LobbyRules`,
-        `SteamPeerRules`, `SteamSendRules`, `SteamPieces` and `PieceJoiner`
-        yet.
+        namespace unchanged, and have no patches. Their own rules are part
+        c.
   - [x] Part b: the singletons and pass-throughs. Done: `Session.Instance`
         is gone (callers use `Plugin.Instance.Host.Session`), and so are
         `NetEnemies.Instance` with its static `Frozen`, `Hidden`,
@@ -709,8 +707,9 @@ Finish with `tools/run-test.sh full`.
         `Plugin.cs` code part a moves), `MenuSkin`, `PixelFont` and
         `MenuWindows` (about 230 calls, and transpiler targets), and
         `SaveBook`, whose static methods hold logic over `ModHost.Book`.
-        namespace unchanged, and have no patches or statics (`SteamBackend`
-        is on `ModHost`). `SteamBackend`, `Lobby` and `SteamTransport` call
+  - [x] Part c: the Steam files call their rules. Done: the Steam files
+        have no patches or statics (`SteamBackend` is on `ModHost`).
+        `SteamBackend`, `Lobby` and `SteamTransport` call
         `LobbyRules`, `SteamPeerRules` and `SteamSendRules`, and split and
         join long messages with `SteamPieces` and `PieceJoiner`, whose bytes
         were already in the core; `AcceptOf`, `LostOf`, `EnterOf`,
@@ -718,8 +717,11 @@ Finish with `tools/run-test.sh full`.
         facts inside those files. Steam can't run in the test box, so only
         the unit tests check this until the final in-game run.
 - [x] Turn style warnings into errors for the whole plugin.
-- [ ] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
-      `CLAUDE.md`, then delete this plan.
+- [x] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
+      `CLAUDE.md`. Done with the docs pass, which brought every doc and
+      skill in step with the code. `TECHNICAL.md` has no Status line; its
+      file paths were updated.
+- [ ] Delete this plan and `tools/DarkwoodMP.Codemod`, after the final run.
 
 **Gate:** `tools/run-test.sh full` and `map4`, with results matching the
 baseline; a real co-op session on Windows, on Linux and on GOG. Then release
