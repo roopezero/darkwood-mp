@@ -47,9 +47,20 @@ namespace DarkwoodMP.World
     /// and leaves for the main menu. A joiner that gets to the credits first
     /// leaves the session then.
     /// </summary>
-    public static class EpilogueSync
+    internal sealed class EpilogueSync
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
+
+        public EpilogueSync(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.EpilogueStep, OnStep);
+            coop.Net.OnPeerDisconnected += OnPeerLeft;
+            coop.Hook(() => coop.Net.OnPeerDisconnected -= OnPeerLeft);
+            coop.Hook(Ended);
+        }
+
+        private Session S => _coop.Net;
 
         public const string PanEvent = EpilogueRules.PanEvent;
 
@@ -63,65 +74,62 @@ namespace DarkwoodMP.World
         /// The shared epilogue is on (host or joiner): from GameEnd phase 0
         /// until the credits.
         /// </summary>
-        public static bool Playing { get; private set; }
-        private static bool _ownPan, _toMenu, _panGo, _ownDeath, _burnShared;
+        public bool Playing { get; private set; }
+        private bool _ownPan, _toMenu, _panGo, _ownDeath, _burnShared;
         /// <summary>
         /// Where our player crawled to their death (the pan starts there).
         /// </summary>
-        private static Vector3 _deathAt;
+        private Vector3 _deathAt;
         /// <summary>
         /// Host: who has crawled to their death (our own LocalId too), and
         /// whether anyone has.
         /// </summary>
-        private static readonly CrawlTally _crawled = new CrawlTally();
+        private readonly CrawlTally _crawled = new CrawlTally();
         /// <summary>
         /// Joiner: the host's EpilogueOutcomes.burnedForest, once heard.
         /// </summary>
-        private static HostBurned _hostBurned;
+        private HostBurned _hostBurned;
 
-        public static void Register(Session s)
+        /// <summary>
+        /// Host: a player who left may have been the last one still crawling.
+        /// </summary>
+        private void OnPeerLeft(ulong peer)
         {
-            s.Register(MsgType.EpilogueStep, OnStep);
-            s.OnPeerDisconnected += _ =>
+            if (Playing && S != null && S.IsHost)
             {
-                if (Playing && S != null && S.IsHost)
-                {
-                    CheckPan();
-                }
-            };
-
-            s.OnSessionEnded += () =>
-            {
-                // The host went away in the middle of the epilogue: our game
-                // plays it to the end on its own, and the co-op panel opens at
-                // the main menu after the credits.
-                if (Playing && S != null && S.IsClient)
-                {
-                    Plugin.Instance.StartCoroutine(PanelAfterCredits());
-                }
-
-                Playing = false;
-                Reset();
-            };
+                CheckPan();
+            }
         }
 
-        private static void Reset()
+        /// <summary>
+        /// The session's end. If the host went away in the middle of the
+        /// epilogue, our game plays it to the end on its own, and the co-op
+        /// panel opens at the main menu after the credits.
+        /// </summary>
+        private void Ended()
+        {
+            if (Playing && S != null && S.IsClient)
+            {
+                Plugin.Instance.StartCoroutine(PanelAfterCredits());
+            }
+
+            Playing = false;
+            Reset();
+        }
+
+        private void Reset()
         {
             _ownPan = _panGo = _ownDeath = _burnShared = false;
             _crawled.Reset();
             _hostBurned = HostBurned.Unheard;
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Spectator.EndWatch();
-            }
+            _coop.Spectator.EndWatch();
         }
 
         /// <summary>
         /// A joiner whose host left mid-epilogue: once the game's own credits
         /// are over, the co-op panel.
         /// </summary>
-        private static IEnumerator PanelAfterCredits()
+        private IEnumerator PanelAfterCredits()
         {
             Plugin.Log.LogInfo(
                 "[epilogue] the host left during the epilogue: we finish it "
@@ -160,17 +168,24 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool InEpilogueAlone()
         {
+            bool playing = false;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                playing = coop.Epilogue.Playing;
+            }
+
             Player p = Player.Instance;
             bool inEpilogue = p != null && p.inEpilogue;
             Story.DreamFacts dreams =
                 Prologue.DreamsOf(Singleton<Dreams>.Instance);
-            return EpilogueRules.InEpilogueAlone(Playing, inEpilogue, dreams);
+            return EpilogueRules.InEpilogueAlone(playing, inEpilogue, dreams);
         }
 
         /// <summary>
         /// Host: why a new player can't join now (null: they can).
         /// </summary>
-        internal static string JoinRefusal()
+        internal string JoinRefusal()
         {
             bool host = S != null && S.IsHost;
             Verdict verdict = EpilogueRules.JoinRefusal(Playing, host);
@@ -182,7 +197,7 @@ namespace DarkwoodMP.World
             return Refusals.Text(verdict);
         }
 
-        private static PacketWriter GameEnd(byte phase)
+        private PacketWriter GameEnd(byte phase)
         {
             var w = S.Begin(MsgType.GameEnd);
             w.W.Write((byte)Chapters.EndKind.Epilogue);
@@ -196,15 +211,11 @@ namespace DarkwoodMP.World
         /// Host: our game is preparing the epilogue dream. The players in our
         /// world come along.
         /// </summary>
-        internal static void HostStarts()
+        internal void HostStarts()
         {
             Playing = true;
             Reset();
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Dreaming.Share(Chapters.EpilogueDream);
-            }
+            _coop.Dreaming.Share(Chapters.EpilogueDream);
 
             Plugin.Log.LogInfo(
                 "[epilogue] the host starts the epilogue: the players in its "
@@ -220,7 +231,7 @@ namespace DarkwoodMP.World
         /// Test: once the epilogue is on, go to the credits (as
         /// EpilogueOutcomes.goToCredits does).
         /// </summary>
-        private static IEnumerator TestHostQuick()
+        private IEnumerator TestHostQuick()
         {
             float until = Time.realtimeSinceStartup + 60f;
             while (Time.realtimeSinceStartup < until
@@ -244,7 +255,7 @@ namespace DarkwoodMP.World
         /// Host: a joiner's dream ended with this outcome. In the epilogue,
         /// only one its current part has.
         /// </summary>
-        internal static bool OutcomeAllowed(Dreams d, string outcome)
+        internal bool OutcomeAllowed(Dreams d, string outcome)
         {
             List<string> outcomes = OutcomeNamesOf(d);
             if (EpilogueRules.OutcomeAllowed(Playing, outcomes, outcome))
@@ -262,7 +273,7 @@ namespace DarkwoodMP.World
         /// The only code reading a dream's outcomes for the rules: the names
         /// of its preset's outcomes (null: no Dreams or no preset).
         /// </summary>
-        private static List<string> OutcomeNamesOf(Dreams d)
+        private List<string> OutcomeNamesOf(Dreams d)
         {
             if (d == null || d.preset == null)
             {
@@ -286,7 +297,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// EpilogueOutcomes.goToCredits is about to run in our game.
         /// </summary>
-        internal static void BeforeCredits()
+        internal void BeforeCredits()
         {
             var s = S;
             bool session = s != null && s.Active;
@@ -319,7 +330,7 @@ namespace DarkwoodMP.World
             Leave("The game has ended.");
         }
 
-        private static void Leave(string why)
+        private void Leave(string why)
         {
             Session s = S;
             if (s != null)
@@ -346,7 +357,7 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(ToMenu());
         }
 
-        private static IEnumerator ToMenu()
+        private IEnumerator ToMenu()
         {
             try
             {
@@ -363,7 +374,7 @@ namespace DarkwoodMP.World
         /// (16 s after its player crawled to their death) waits in co-op until
         /// the host says (EpilogueStep 1). False holds it back.
         /// </summary>
-        internal static bool WorldEventFired(string type)
+        internal bool WorldEventFired(string type)
         {
             var facts = new PanEventFacts
             {
@@ -397,7 +408,7 @@ namespace DarkwoodMP.World
         /// Player.die has run: if that was the second death of the crawl in the
         /// burning forest, tell the host.
         /// </summary>
-        internal static void AfterDie(Player p)
+        internal void AfterDie(Player p)
         {
             var s = S;
             if (!EpilogueRules.CountsDeath(DeathOf(p)))
@@ -425,7 +436,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The only code reading the game's Player for the death rule.
         /// </summary>
-        private static DeathFacts DeathOf(Player p)
+        private DeathFacts DeathOf(Player p)
         {
             bool has = p != null;
             return new DeathFacts
@@ -444,20 +455,18 @@ namespace DarkwoodMP.World
         /// After the game's own 8 s on the body, watch the players still
         /// crawling, until the pan.
         /// </summary>
-        private static IEnumerator WatchSoon()
+        private IEnumerator WatchSoon()
         {
             yield return new WaitForSeconds(8.5f);
-            CoopSession coop = Coop.Current;
-            if (coop != null
-                && EpilogueRules.WatchesSoon(
-                    Playing, _panGo, coop.Spectator.Active))
+            Spectating.Spectator spectator = _coop.Spectator;
+            if (EpilogueRules.WatchesSoon(Playing, _panGo, spectator.Active))
             {
-                coop.Spectator.BeginWatch();
+                spectator.BeginWatch();
             }
         }
 
         /// <summary>Host: this player crawled to their death.</summary>
-        private static void Crawled(ulong who)
+        private void Crawled(ulong who)
         {
             CrawlStep step = _crawled.Crawled(who);
             if (step == CrawlStep.Repeat)
@@ -473,7 +482,7 @@ namespace DarkwoodMP.World
             CheckPan();
         }
 
-        private static IEnumerator PanTimeout()
+        private IEnumerator PanTimeout()
         {
             yield return new WaitForSecondsRealtime(EpilogueRules.PanWait);
             if (EpilogueRules.PanTimesOut(Playing, _panGo))
@@ -490,7 +499,7 @@ namespace DarkwoodMP.World
         /// Host: once every player has crawled to their death, the pan, in
         /// every game.
         /// </summary>
-        private static void CheckPan()
+        private void CheckPan()
         {
             var s = S;
             if (s == null)
@@ -518,7 +527,7 @@ namespace DarkwoodMP.World
             ReleasePan();
         }
 
-        private static void ReleasePan()
+        private void ReleasePan()
         {
             var s = S;
             var w = s.Begin(MsgType.EpilogueStep);
@@ -534,7 +543,7 @@ namespace DarkwoodMP.World
         /// camera drifts away from where our player died over 30 s, and 8 s in,
         /// the world event shows the burning forest and then the outcomes.
         /// </summary>
-        private static void RunPan()
+        private void RunPan()
         {
             if (_panGo)
             {
@@ -542,11 +551,7 @@ namespace DarkwoodMP.World
             }
 
             _panGo = true;
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Spectator.EndWatch();
-            }
+            _coop.Spectator.EndWatch();
 
             var p = Player.Instance;
             if (p == null || !p.inEpilogue)
@@ -574,7 +579,7 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(Pan(from));
         }
 
-        private static IEnumerator Pan(Vector3 from)
+        private IEnumerator Pan(Vector3 from)
         {
             var follow = new GameObject("camera follow");
             follow.transform.position = from;
@@ -619,7 +624,7 @@ namespace DarkwoodMP.World
         /// Host: our outcomes (the forest burned or not) go to the joiners,
         /// whose screens use them.
         /// </summary>
-        internal static void SendOutcomes(bool burned)
+        internal void SendOutcomes(bool burned)
         {
             var s = S;
             if (s == null
@@ -638,7 +643,7 @@ namespace DarkwoodMP.World
         /// EpilogueOutcomes.Start: the host sends its outcomes; a joiner's
         /// screen takes the host's.
         /// </summary>
-        internal static void OutcomesStart(EpilogueOutcomes o)
+        internal void OutcomesStart(EpilogueOutcomes o)
         {
             switch (EpilogueRules.OutcomesStart(OutcomesOf(o)))
             {
@@ -661,7 +666,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The only code reading the game's EpilogueOutcomes for the rules.
         /// </summary>
-        private static OutcomeFacts OutcomesOf(EpilogueOutcomes o)
+        private OutcomeFacts OutcomesOf(EpilogueOutcomes o)
         {
             var s = S;
             bool session = s != null && s.Active;
@@ -681,7 +686,7 @@ namespace DarkwoodMP.World
         /// the part's start, so a joiner moves to a free spot beside the others
         /// (Sync.Players.SpawnSpot) once the part is in place.
         /// </summary>
-        internal static void PartStarted()
+        internal void PartStarted()
         {
             var s = S;
             if (s == null || !EpilogueRules.OffsetsPart(Playing, s.IsClient))
@@ -692,7 +697,7 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(OffsetSoon());
         }
 
-        private static IEnumerator OffsetSoon()
+        private IEnumerator OffsetSoon()
         {
             yield return new WaitForSecondsRealtime(0.5f);
             var p = Player.Instance;
@@ -737,7 +742,7 @@ namespace DarkwoodMP.World
         /// GameEnd from the host. Returns false if it isn't the shared
         /// epilogue's (Chapters handles it).
         /// </summary>
-        internal static bool OnGameEnd(byte kind, byte phase)
+        internal bool OnGameEnd(byte kind, byte phase)
         {
             var p = Player.Instance;
             var facts = new GameEndFacts
@@ -799,7 +804,7 @@ namespace DarkwoodMP.World
         /// Joiner: into the host's epilogue, once our game can (not mid-dream,
         /// not loading).
         /// </summary>
-        private static IEnumerator JoinEpilogue()
+        private IEnumerator JoinEpilogue()
         {
             yield return new WaitForSecondsRealtime(1f); // the notice
             float until = Time.realtimeSinceStartup + EndingRules.TryFor;
@@ -861,7 +866,7 @@ namespace DarkwoodMP.World
         /// As the epilogue's startDream step does it: inputs off, a black
         /// screen, then the epilogue dream.
         /// </summary>
-        private static bool StartHere()
+        private bool StartHere()
         {
             var dreams = Singleton<Dreams>.Instance;
             var p = Player.Instance;
@@ -870,11 +875,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Dreaming.Share(Chapters.EpilogueDream);
-            }
+            _coop.Dreaming.Share(Chapters.EpilogueDream);
 
             Core.forbidInputs = true;
             p.halt();
@@ -888,7 +889,7 @@ namespace DarkwoodMP.World
         /// The only code reading the game for whether the epilogue can start
         /// here.
         /// </summary>
-        private static StartFacts StartOf(Dreams dreams, Player p)
+        private StartFacts StartOf(Dreams dreams, Player p)
         {
             var o = Singleton<OutsideLocations>.Instance;
             return new StartFacts
@@ -900,7 +901,7 @@ namespace DarkwoodMP.World
             };
         }
 
-        private static IEnumerator PrepareSoon(Dreams dreams)
+        private IEnumerator PrepareSoon(Dreams dreams)
         {
             yield return new WaitForSecondsRealtime(2.1f);
             var o = Singleton<OutsideLocations>.Instance;
@@ -917,7 +918,7 @@ namespace DarkwoodMP.World
             dreams.StartCoroutine(dreams.prepareDream(Chapters.EpilogueDream));
         }
 
-        private static void OnStep(ulong from, PacketReader r)
+        private void OnStep(ulong from, PacketReader r)
         {
             var s = S;
             if (s == null)
@@ -979,7 +980,7 @@ namespace DarkwoodMP.World
         /// room and lying down to sleep, is a dream's end and moves everyone on
         /// through the shared dream.)
         /// </summary>
-        internal static void EventsFired(GameEvents ge)
+        internal void EventsFired(GameEvents ge)
         {
             var s = S;
             string name = null;
@@ -993,7 +994,7 @@ namespace DarkwoodMP.World
                 Playing = Playing,
                 Shared = _burnShared,
                 Name = name,
-                Replaying = Coop.Guards.Replaying,
+                Replaying = _coop.Guards.Replaying,
                 InSession = s != null && s.Active,
             };
 
@@ -1023,7 +1024,7 @@ namespace DarkwoodMP.World
         /// Someone else set the Being on fire: run the same events here (the
         /// host passes it on first).
         /// </summary>
-        private static void Burned(ulong who)
+        private void Burned(ulong who)
         {
             var s = S;
             if (s == null)
@@ -1064,7 +1065,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"[epilogue] {s.NameOf(who)} set the Being on fire: running "
                     + $"{BurnEvents} here too");
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 found.fire();
@@ -1076,14 +1077,14 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
         }
 
         /// <summary>
         /// The crater's events in our part (null: none).
         /// </summary>
-        private static GameEvents BurnEventsHere()
+        private GameEvents BurnEventsHere()
         {
             foreach (var ge in UnityEngine.Object
                 .FindObjectsOfType<GameEvents>(true))
@@ -1100,7 +1101,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The only code reading the crater's GameEvents for the fire rule.
         /// </summary>
-        private static BurnFacts BurnOf(GameEvents found)
+        private BurnFacts BurnOf(GameEvents found)
         {
             bool has = found != null;
             return new BurnFacts
@@ -1114,17 +1115,24 @@ namespace DarkwoodMP.World
 
         // ---- for the tests ----
 
-        internal static bool BurnShared => _burnShared;
+        public bool BurnShared => _burnShared;
 
-        internal static bool PanReleased => _panGo;
-        internal static bool OwnDeath => _ownDeath;
-        internal static HostBurned HostBurned => _hostBurned;
+        public bool PanReleased => _panGo;
+        public bool OwnDeath => _ownDeath;
+        public HostBurned HostBurned => _hostBurned;
     }
 
     [HarmonyPatch(typeof(EpilogueOutcomes), "goToCredits")]
     static class EpilogueCreditsPatch
     {
-        static void Prefix() => EpilogueSync.BeforeCredits();
+        static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.BeforeCredits();
+            }
+        }
     }
 
     [HarmonyPatch(
@@ -1133,28 +1141,55 @@ namespace DarkwoodMP.World
     static class EpilogueWorldEventPatch
     {
         [HarmonyPriority(Priority.First)]
-        static bool Prefix(string type) => EpilogueSync.WorldEventFired(type);
+        static bool Prefix(string type)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Epilogue.WorldEventFired(type);
+        }
     }
 
     [HarmonyPatch(typeof(GameEvents), nameof(GameEvents.fire))]
     static class EpilogueBurnPatch
     {
-        static void Postfix(GameEvents __instance) =>
-            EpilogueSync.EventsFired(__instance);
+        static void Postfix(GameEvents __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.EventsFired(__instance);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Player), nameof(Player.die))]
     static class EpilogueDiePatch
     {
-        static void Postfix(Player __instance) =>
-            EpilogueSync.AfterDie(__instance);
+        static void Postfix(Player __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.AfterDie(__instance);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(EpilogueOutcomes), "Start")]
     static class EpilogueOutcomesPatch
     {
-        static void Prefix(EpilogueOutcomes __instance) =>
-            EpilogueSync.OutcomesStart(__instance);
+        static void Prefix(EpilogueOutcomes __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.OutcomesStart(__instance);
+            }
+        }
     }
 
     /// <summary>
@@ -1164,6 +1199,13 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.startDreaming))]
     static class EpilogueSpawnPatch
     {
-        static void Postfix() => EpilogueSync.PartStarted();
+        static void Postfix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.PartStarted();
+            }
+        }
     }
 }

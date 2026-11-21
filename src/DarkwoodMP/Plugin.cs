@@ -445,7 +445,6 @@ namespace DarkwoodMP
             ScriptedEvents.Register(_host.Session);
             SkillTree.Register(_host.Session);
             Chapters.Register(_host.Session);
-            EpilogueSync.Register(_host.Session);
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);

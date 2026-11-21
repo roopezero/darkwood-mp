@@ -29,6 +29,46 @@ namespace DarkwoodMP.World
             return coop != null && coop.Spectator.Epilogue;
         }
 
+        /// Whether the shared epilogue is on.
+        private static bool Playing()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Epilogue.Playing;
+        }
+
+        /// Whether a player's fire was shared.
+        private static bool BurnShared()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Epilogue.BurnShared;
+        }
+
+        /// Whether our player's crawl to their death was counted.
+        private static bool OwnDeath()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Epilogue.OwnDeath;
+        }
+
+        /// Whether the pan over the burning forest was released.
+        private static bool PanReleased()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Epilogue.PanReleased;
+        }
+
+        /// The host's outcomes as this joiner heard them.
+        private static HostBurned HeardBurned()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return HostBurned.Unheard;
+            }
+
+            return coop.Epilogue.HostBurned;
+        }
+
         private static Player P => Player.Instance;
         private static Dreams D => Singleton<Dreams>.Instance;
 
@@ -76,7 +116,7 @@ namespace DarkwoodMP.World
             }
 
             return $"preset {name} dreaming {dreaming} inEpilogue {inEpilogue} "
-                + $"shared {shared} playing {EpilogueSync.Playing}";
+                + $"shared {shared} playing {Playing()}";
         }
 
         private static bool InPart(string name) => P != null && P.inEpilogue
@@ -122,7 +162,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             r.Info = Where();
-            if (!EpilogueSync.Playing || DreamSync.SharedNow == null)
+            if (!Playing() || DreamSync.SharedNow == null)
             {
                 r.Fail($"the epilogue isn't shared: {r.Info}");
             }
@@ -151,7 +191,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{state}; session {active}; a friend's puppet shown "
                     + $"{FriendShown()}";
-            if (!EpilogueSync.Playing || DreamSync.SharedNow == null
+            if (!Playing() || DreamSync.SharedNow == null
                 || Net.Session.Instance == null || !Net.Session.Instance.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");
@@ -233,7 +273,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Credits(string[] a, Result r)
         {
-            EpilogueSync.BeforeCredits();
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.BeforeCredits();
+            }
+
             Chapters.ToCredits();
             while (SceneManager.GetActiveScene().name != "credits")
             {
@@ -431,8 +476,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             r.Info =
                 $"{EpilogueSync.BurnEvents} fired {found.fired}; shared "
-                    + $"{EpilogueSync.BurnShared}";
-            if (!EpilogueSync.BurnShared)
+                    + $"{BurnShared()}";
+            if (!BurnShared())
             {
                 r.Fail($"not sent: {r.Info}");
             }
@@ -464,7 +509,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{EpilogueSync.BurnEvents} found {found != null} fired "
                     + $"{found != null && found.fired}; heard "
-                    + $"{EpilogueSync.BurnShared}";
+                    + $"{BurnShared()}";
             if (found == null || !found.fired)
             {
                 r.Fail($"the Being didn't burn here: {r.Info}");
@@ -509,9 +554,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"crawled {P.crawling} dying {P.dying}; our death told "
-                    + $"{EpilogueSync.OwnDeath}; pan released "
-                    + $"{EpilogueSync.PanReleased}";
-            if (!EpilogueSync.OwnDeath)
+                    + $"{OwnDeath()}; pan released "
+                    + $"{PanReleased()}";
+            if (!OwnDeath())
             {
                 r.Fail($"the second death wasn't the crawl's: {r.Info}");
             }
@@ -527,7 +572,7 @@ namespace DarkwoodMP.World
         {
             float until = Time.realtimeSinceStartup + 90f;
             while (Time.realtimeSinceStartup < until
-                && !EpilogueSync.PanReleased)
+                && !PanReleased())
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -548,15 +593,15 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"pan released {EpilogueSync.PanReleased}; spectating "
+                $"pan released {PanReleased()}; spectating "
                     + $"{Spectating()}; host's burned "
-                    + $"{EpilogueSync.HostBurned}; outcomes screen {text}";
-            if (!EpilogueSync.PanReleased)
+                    + $"{HeardBurned()}; outcomes screen {text}";
+            if (!PanReleased())
             {
                 r.Fail($"no pan: {r.Info}");
             }
             else if (Net.Session.Instance.IsClient
-                && EpilogueSync.HostBurned != HostBurned.Yes)
+                && HeardBurned() != HostBurned.Yes)
             {
                 r.Fail($"the host's outcomes didn't come: {r.Info}");
             }
@@ -574,9 +619,9 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(20f); // past the game's own 16 s
             r.Info =
-                $"pan released {EpilogueSync.PanReleased}; spectating "
+                $"pan released {PanReleased()}; spectating "
                     + $"{Spectating()} (epilogue {WatchingEpilogue()})";
-            if (EpilogueSync.PanReleased)
+            if (PanReleased())
             {
                 r.Fail($"the pan ran before the client died: {r.Info}");
             }

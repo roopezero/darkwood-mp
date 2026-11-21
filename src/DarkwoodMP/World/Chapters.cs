@@ -712,7 +712,12 @@ namespace DarkwoodMP.World
             _ran.Add(KeyOf(StoryKind.Epilogue, 0));
             if (kind == EndKind.Epilogue)
             {
-                EpilogueSync.HostStarts();
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Epilogue.HostStarts();
+                }
+
                 return;
             }
 
@@ -824,7 +829,8 @@ namespace DarkwoodMP.World
             byte phase = r.R.ReadByte();
             Plugin.Log.LogInfo(
                 $"The host reached the game's end ({kind}, phase {phase})");
-            if (EpilogueSync.OnGameEnd((byte)kind, phase))
+            CoopSession coop = Coop.Current;
+            if (coop != null && coop.Epilogue.OnGameEnd((byte)kind, phase))
             {
                 return;
             }
