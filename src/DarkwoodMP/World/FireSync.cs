@@ -26,16 +26,14 @@ namespace DarkwoodMP.World
     ///
     /// Burning: the core's Burning (ObjRef, u8 what, f32 burn time, u8 on).
     /// </summary>
-    public sealed class FireSync
+    internal sealed class FireSync
     {
-        public static FireSync Instance { get; private set; }
-        private readonly Session _session;
+        private readonly CoopSession _coop;
 
-        public FireSync(Session session)
+        public FireSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.Burning, OnBurning);
+            _coop = coop;
+            coop.Handle(MsgType.Burning, OnBurning);
         }
 
         /// <summary>
@@ -71,7 +69,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var w = _session.Begin(MsgType.Burning);
+            var w = _coop.Net.Begin(MsgType.Burning);
             Burning.Write(w, new FireReport
             {
                 Thing = ObjRef.NameOf(r),
@@ -80,7 +78,7 @@ namespace DarkwoodMP.World
                 On = on,
             });
 
-            _session.Broadcast(w, Channel.Control, reliable: true);
+            _coop.Net.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
                 string text = "stopped burning";
@@ -115,8 +113,8 @@ namespace DarkwoodMP.World
             {
                 Exists = true,
                 Replaying = Coop.Guards.Replaying,
-                Host = _session.IsHost,
-                Peers = _session.Peers.Count,
+                Host = _coop.Net.IsHost,
+                Peers = _coop.Net.Peers.Count,
                 InWorld = WorldShare.InWorld,
                 Kind = kind,
                 Named = r.Valid,
@@ -201,7 +199,7 @@ namespace DarkwoodMP.World
                 seconds = burn.burnTime;
             }
 
-            var w = _session.Begin(MsgType.Burning);
+            var w = _coop.Net.Begin(MsgType.Burning);
             Burning.Write(w, new FireReport
             {
                 Thing = ObjRef.NameOf(r),
@@ -210,7 +208,7 @@ namespace DarkwoodMP.World
                 On = true,
             });
 
-            Coop.Current.Authority.Request(w, $"set {go.name} alight",
+            _coop.Authority.Request(w, $"set {go.name} alight",
                 (ok, reason, result) => Answered(go, ok));
         }
 
@@ -286,7 +284,7 @@ namespace DarkwoodMP.World
             var fire = FireRules.MayIgnite(FactsOf(c, sent));
             if (fire.Verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(fire.Verdict);
+                _coop.Authority.Refuse(fire.Verdict);
                 return;
             }
 
@@ -300,7 +298,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     "[world] "
-                        + _session.NameOf(Coop.Current.Authority.From)
+                        + _coop.Net.NameOf(_coop.Authority.From)
                         + $" set {c.name} alight ({obj})");
             }
         }
@@ -310,9 +308,9 @@ namespace DarkwoodMP.World
         /// names (null: not found here). The only code that reads it for
         /// them.
         /// </summary>
-        private static IgniteFacts FactsOf(Component c, in FireReport sent)
+        private IgniteFacts FactsOf(Component c, in FireReport sent)
         {
-            var authority = Coop.Current.Authority;
+            var authority = _coop.Authority;
             var facts = new IgniteFacts
             {
                 On = sent.On,
@@ -368,7 +366,7 @@ namespace DarkwoodMP.World
 
         private void OnBurning(ulong from, PacketReader r)
         {
-            var s = _session;
+            var s = _coop.Net;
             var arrival = new ArrivalFacts
             {
                 Session = true,
@@ -470,10 +468,10 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Burn __instance)
         {
-            FireSync instance = FireSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Changed(__instance, on: true);
+                coop.Fire.Changed(__instance, on: true);
             }
         }
     }
@@ -483,10 +481,10 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Burn __instance)
         {
-            FireSync instance = FireSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Changed(__instance, on: false);
+                coop.Fire.Changed(__instance, on: false);
             }
         }
     }

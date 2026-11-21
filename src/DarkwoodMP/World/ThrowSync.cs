@@ -584,10 +584,10 @@ namespace DarkwoodMP.World
             NetEnemies.HitEffects = null;
             if (__state != null && __state.GetComponent<Burn>() != null)
             {
-                FireSync instance = FireSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.ClientIgnited(__state);
+                    coop.Fire.ClientIgnited(__state);
                 }
             }
         }

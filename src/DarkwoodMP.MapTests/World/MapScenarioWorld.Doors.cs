@@ -158,10 +158,10 @@ namespace DarkwoodMP.World
                 {
                     AsPlayer(() =>
                     {
-                        FireSync instance = FireSync.Instance;
-                        if (instance != null)
+                        CoopSession coop = Coop.Current;
+                        if (coop != null)
                         {
-                            instance.ClientIgnited(d.gameObject);
+                            coop.Fire.ClientIgnited(d.gameObject);
                         }
                     });
                 }
