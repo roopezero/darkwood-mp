@@ -130,6 +130,19 @@ namespace DarkwoodMP
         /// Game window reads at the main menu.
         public readonly World.SaveBookFile Book = new World.SaveBookFile();
 
+        /// The game's skill tiers, found once (SkillTree.Tiers).
+        internal readonly World.SkillTierCache Tiers =
+            new World.SkillTierCache();
+
+        /// Learning skills, also alone; each session handles the host's
+        /// side and forgets a choice still waiting when it ends.
+        internal readonly World.SkillLearning Learning =
+            new World.SkillLearning();
+
+        /// The Skills panel, also alone (World.SkillsPanel).
+        internal readonly World.SkillsWindow SkillsPanel =
+            new World.SkillsWindow();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

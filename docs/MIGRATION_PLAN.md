@@ -576,7 +576,7 @@ Finish with `tools/run-test.sh full`.
         `.Nights` (`World/Nights/NightObjects`, split in two parts), each
         folder with its `...Patches.cs`. Their five messages' bytes are in the
         core.
-- [ ] 7.3 Skills and progress.
+- [x] 7.3 Skills and progress.
   - [x] Part a: `DreamSync`. It is `CoopSession.Dreaming`
         (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'
         bytes are the core's `DreamStart` and `DreamEnd`. Others read the
@@ -588,9 +588,15 @@ Finish with `tools/run-test.sh full`.
         the record when the session ends. Its bytes are the core's
         `ProgressState`, `EssenceAdd` and `LevelTaken`. Its patches run
         with no session too.
-  - [ ] Part c: `SkillTree`, `SkillsPanel`. They also run playing alone,
-        so their state goes on `ModHost`, with their message handlers made
-        per session.
+  - [x] Part c: `SkillTree`, `SkillsPanel` (`World/Skills`). Their state is
+        on `ModHost`: the tiers (`SkillTierCache`), learning
+        (`SkillLearning`, whose `SkillSpend` handler each `CoopSession`
+        registers, forgetting the waiting choice when it ends) and the panel
+        (`SkillsWindow`). `SkillTree` keeps static functions that read the
+        game and call the rules, and `SkillsPanel` is a way in with no state,
+        so its callers didn't change. `SkillSpend`'s bytes are the core's
+        `SkillSpend`; `SkillReset` has no payload. The panel's patches run
+        with no session, as the panel works playing alone.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's

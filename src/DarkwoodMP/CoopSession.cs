@@ -277,6 +277,12 @@ namespace DarkwoodMP
             // the save book's file lives as long as the game (ModHost.Book);
             // a host notes who joins while this runs
             DarkwoodMP.World.SaveBook.Watch(this);
+            // learning skills lives as long as the game (ModHost.Learning);
+            // the session answers the requests, and a choice still waiting
+            // for an answer is forgotten when it ends
+            var learning = Plugin.Instance.Host.Learning;
+            Handle(MsgType.SkillSpend, learning.OnSpend);
+            Hook(learning.Forget);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

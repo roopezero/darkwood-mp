@@ -439,7 +439,6 @@ namespace DarkwoodMP
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            SkillTree.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             UpdateLocalName();
