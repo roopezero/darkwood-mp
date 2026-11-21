@@ -463,7 +463,6 @@ namespace DarkwoodMP
             _fuel = new FuelSync(_host.Session);
             new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new ThrowSync(_host.Session);
             new FireSync(_host.Session);
             new SlotShare(_host.Session);
             Construction.Register(_host.Session);
@@ -482,7 +481,6 @@ namespace DarkwoodMP
             EggSync.Register(_host.Session);
             InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
-            _host.Session.OnSessionEnded += ThrownHits.Clear;
             _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
 
@@ -2351,7 +2349,6 @@ namespace DarkwoodMP
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
                 Spectator.Reset();
-                ThrownHits.Clear();
                 EnemyAreaHits.Clear();
             }
 

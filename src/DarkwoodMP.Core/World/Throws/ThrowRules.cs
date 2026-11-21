@@ -19,7 +19,8 @@ namespace DarkwoodMP.World.Throws
         /// up again goes (the thrower's lands; this one doesn't).
         public const float RecoverDelay = 2f;
 
-        /// Whether a throw or drop of ours is shared (ThrowSync.Thrown):
+        /// Whether a throw or drop of ours is shared (ThrowSync.Thrown and
+        /// Dropped):
         /// while sharing, for a held thing of a known type that is a
         /// ThrownItem with a Rigidbody.
         public static bool Shares(in ThrowFacts throwing)

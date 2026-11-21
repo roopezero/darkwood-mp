@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Fire
 {
-    /// What a client's flame touched (ThrowSync.FlameTouchPatch): a
+    /// What a client's flame touched (ThrowSync.FlameTouching): a
     /// collider, and the transform the touch came through.
     public readonly struct FlameFacts
     {

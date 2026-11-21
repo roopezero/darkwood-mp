@@ -16,7 +16,7 @@ namespace DarkwoodMP.Combat
     ///
     /// - explosions (Explodes.explode: enemy bombs, and every other explosion
     ///   in the host's world, since a client's own game doesn't hurt its player
-    ///   with explosions; see ThrowSync's ClientExplosionSelfHitPatch),
+    ///   with explosions; see ThrowSync.HostReports),
     ///   damage * (radius - distance) / radius, and the explosion's effect;
     /// - damage auras (Character.waitToDamageAroundMe),
     ///   aroundMeDamage * (range / 2 - distance) / range;
