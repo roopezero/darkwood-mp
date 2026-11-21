@@ -49,6 +49,11 @@ namespace DarkwoodMP
         /// Each enemy's threat for each player, while there are stand-ins.
         public readonly Combat.Threats Threats;
 
+        /// The host's night attackers and worms for every player, and each
+        /// hideout's budget; the test dummy needs them alone too.
+        internal readonly Combat.NightSpawner Nights =
+            new Combat.NightSpawner();
+
         /// Keeps a dialogue closable when its NPC goes away, also alone.
         public readonly World.Talk.DialogueGuard Dialogues =
             new World.Talk.DialogueGuard();
