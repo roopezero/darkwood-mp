@@ -9,7 +9,7 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// The client side: animation, despawns, sounds and our hits. See
+    /// The client side: animation, despawns and sounds. See
     /// NetEnemies.cs.
     /// </summary>
     internal sealed partial class NetEnemies
@@ -444,132 +444,6 @@ namespace DarkwoodMP.Combat
                 IsLoop = IsLoop(snd, audio),
             };
         }
-
-        /// <summary>
-        /// Client: we hit a host's enemy; the host applies it.
-        /// </summary>
-        public void ClientHit(
-            uint id, float damage, bool cut, bool byPlayer, bool interrupt,
-            bool normal, List<InvItemEffect> effects)
-        {
-            int flags = 0;
-            if (cut)
-            {
-                flags |= EnemyHitMessage.Cut;
-            }
-
-            if (byPlayer)
-            {
-                flags |= EnemyHitMessage.ByPlayer;
-            }
-
-            if (interrupt)
-            {
-                flags |= EnemyHitMessage.Interrupt;
-            }
-
-            if (normal)
-            {
-                flags |= EnemyHitMessage.Normal;
-            }
-
-            InvItemClass item = null;
-            if (Player.Instance != null)
-            {
-                item = Player.Instance.currentItem;
-            }
-
-            string s;
-            if (InvItemClass.isNull(item))
-            {
-                s = "";
-            }
-            else
-            {
-                s = Newtonsoft.Json.JsonConvert.SerializeObject(
-                    new InvItemClass.SaveState(item, 0));
-            }
-
-            var w = _session.Begin(MsgType.EnemyHit);
-            EnemyHitMessage.Write(w, new EnemyHitRequest
-            {
-                Id = id,
-                Damage = damage,
-                Flags = (byte)flags,
-                Effects = PlayerDamage.SentOf(effects),
-                Weapon = s,
-            });
-
-            _puppets.TryGetValue(id, out var p);
-            Character hit = null;
-            if (p != null)
-            {
-                hit = p.C;
-            }
-
-            Coop.Current.Authority.Request(
-                w, $"hit on enemy #{id} for {damage:0}",
-                (ok, reason, result) =>
-            {
-                if (ok)
-                {
-                    ScriptedEvents.HitApplied(hit, result);
-                }
-            });
-
-            // Our own hit shows its health bar, as getHit does; the host's
-            // health for it follows in its next state.
-            if (p == null || p.C == null)
-            {
-                return;
-            }
-
-            if (CopyRules.ShowsBar(damage))
-            {
-                HealthBar(p.C, show: true);
-            }
-
-            // Predicted: the blood shows at once; the host's for this hit (a
-            // moment later) isn't shown again.
-            Core.AddPrefab(
-                CopyRules.BloodFor(false), p.C.transform.position,
-                Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f),
-                null);
-            _predictedBlood[id] = Time.realtimeSinceStartup;
-        }
-
-        private readonly Dictionary<uint, float> _predictedBlood =
-            new Dictionary<uint, float>();
-
-        /// <summary>
-        /// Client: the effects of the weapon hitting right now (set around a
-        /// player's MeleeSensor hit), the session's: with no session it reads
-        /// null and keeps nothing.
-        /// </summary>
-        public static List<InvItemEffect> HitEffects
-        {
-            get
-            {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return null;
-                }
-
-                return enemies._hitEffects;
-            }
-
-            set
-            {
-                NetEnemies enemies = Instance;
-                if (enemies != null)
-                {
-                    enemies._hitEffects = value;
-                }
-            }
-        }
-
-        private List<InvItemEffect> _hitEffects;
 
         // ---- shared helpers -------------------------------------------------
 
