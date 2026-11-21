@@ -47,6 +47,9 @@ namespace DarkwoodMP
         /// The infection's patches: clears and the host's spread.
         public readonly World.Infections.Infections Infections;
 
+        /// Things on fire, shown from the host's world.
+        public readonly World.Fire.Fire Fire;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -63,6 +66,7 @@ namespace DarkwoodMP
             Joiners = new JoinerSaveIds();
             Eggs = new World.Eggs.Eggs(this);
             Infections = new World.Infections.Infections(this);
+            Fire = new World.Fire.Fire(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

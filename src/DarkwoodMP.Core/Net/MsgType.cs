@@ -224,7 +224,7 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// Host -> client: ObjRef, u8 what (1 enemy, 2 door, 3 window, 4 item),
         /// f32 burn time, u8 on: something started or stopped burning (see
-        /// World.FireSync). Client -> host, inside a Request, the same bytes
+        /// World.Fire.Fire). Client -> host, inside a Request, the same bytes
         /// with on = 1: our player's flames set this door, window or item
         /// alight.
         /// </summary>

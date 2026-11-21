@@ -58,8 +58,8 @@ namespace DarkwoodMP.World
         /// sends each hit it makes (DoorHit, WindowHit, ItemHit), which this
         /// game applies outside any explosion or flame: so each hit lands here
         /// once.
-        /// Burn's damage over time doesn't run on a client at all (FireSync's
-        /// ClientBurnDamagePatch).
+        /// Burn's damage over time doesn't run on a client at all (Fire's
+        /// BurnWaitToGetHit).
         /// </summary>
         internal static bool HostsHit()
         {
