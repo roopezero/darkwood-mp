@@ -5,6 +5,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using DarkwoodMP.World.Scripted;
+using DarkwoodMP.World.Story;
 
 namespace DarkwoodMP.World
 {
@@ -56,19 +57,6 @@ namespace DarkwoodMP.World
         /// The game's last chapter: the epilogue comes after it.
         /// </summary>
         public const int LastChapter = 2;
-        internal enum EndKind : byte
-        {
-            Epilogue = 1,
-            EndScreen = 2
-        }
-
-        internal enum StoryKind : byte
-        {
-            None = 0,
-            Chapter = 1,
-            Epilogue = 2,
-            EndScreen = 3
-        }
 
         /// <summary>
         /// Host: its next chapter is being built (from generateChapter until
@@ -286,22 +274,26 @@ namespace DarkwoodMP.World
             }
 
             var w = S.Begin(MsgType.StoryRequest);
-            r.Write(w);
             int index = 0;
             if (ge != null)
             {
                 index = Math.Max(0, ge.events.IndexOf(e));
             }
 
-            w.W.Write((byte)index);
-            w.W.Write((byte)kind);
             int chapter = 0;
             if (kind == StoryKind.Chapter)
             {
                 chapter = e.intValue;
             }
 
-            w.W.Write(chapter);
+            StoryRequest.Write(w, new StoryAsk
+            {
+                Event = ObjRef.NameOf(r),
+                Index = (byte)index,
+                Kind = kind,
+                Chapter = chapter,
+            });
+
             string what = What(kind, e.intValue);
             Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
             {
@@ -336,10 +328,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            int index = r.R.ReadByte();
-            var kind = (StoryKind)r.R.ReadByte();
-            int chapter = r.R.ReadInt32();
+            StoryAsk ask = StoryRequest.Read(r);
+            var obj = ObjRef.RefOf(ask.Event);
+            int index = ask.Index;
+            var kind = ask.Kind;
+            int chapter = ask.Chapter;
             if (!Coop.Current.Authority.Handling)
             {
                 return; // only as a Request
@@ -670,7 +663,7 @@ namespace DarkwoodMP.World
                 $"Starting chapter {chapter}: the players in your world follow "
                     + "once it's ready");
             var w = s.Begin(MsgType.ChapterStart);
-            w.W.Write(chapter);
+            ChapterStart.Write(w, chapter);
             s.Broadcast(w, Channel.Control, reliable: true);
         }
 
@@ -720,8 +713,8 @@ namespace DarkwoodMP.World
                 $"The game's end ({kind}): the players in your world see it "
                     + "too, and the server stops");
             var w = s.Begin(MsgType.GameEnd);
-            w.W.Write((byte)kind);
-            w.W.Write((byte)1); // phase 1: the session ends
+            // phase 1: the session ends
+            GameEnd.Write(w, new EndWord { Kind = kind, Phase = 1 });
             WorldShare instance = WorldShare.Instance;
             if (instance != null)
             {
@@ -751,7 +744,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int chapter = r.R.ReadInt32();
+            int chapter = ChapterStart.Read(r);
             // before the host's game saves and moves on
             Characters instance = Characters.Instance;
             if (instance != null)
@@ -820,8 +813,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var kind = (EndKind)r.R.ReadByte();
-            byte phase = r.R.ReadByte();
+            EndWord word = GameEnd.Read(r);
+            var kind = word.Kind;
+            byte phase = word.Phase;
             Plugin.Log.LogInfo(
                 $"The host reached the game's end ({kind}, phase {phase})");
             if (EpilogueSync.OnGameEnd((byte)kind, phase))
