@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Traders
 {
-    /// What TraderTradePatch saw around DialogueWindow.acceptTrade. The
+    /// What TraderSync.AfterTrade saw around DialogueWindow.acceptTrade. The
     /// counts are of item types (TradeRules.Count(...).Count).
     public readonly struct AcceptFacts
     {

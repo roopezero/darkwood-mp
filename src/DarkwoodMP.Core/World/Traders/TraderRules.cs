@@ -1,8 +1,9 @@
 namespace DarkwoodMP.World.Traders
 {
     /// Who stocks a trader, and which trader another game's message names
-    /// (the plugin's TraderSync and TraderStockPatch). A trader's stock is
-    /// rolled on the host only: a client's game uses the host's.
+    /// (the plugin's TraderSync and its RandomizeTraderInv patch). A
+    /// trader's stock is rolled on the host only: a client's game uses the
+    /// host's.
     public static class TraderRules
     {
         /// Whether the game's own roll of a trader's stock

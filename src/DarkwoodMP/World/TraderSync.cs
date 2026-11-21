@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Traders;
-using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -749,7 +748,7 @@ namespace DarkwoodMP.World
             facts = facts with
             {
                 Reach = _coop.Authority.ReachOf(at),
-                Has = TraderTradePatch.Stacks(Inv(npc)),
+                Has = Stacks(Inv(npc)),
                 Reputation = rep,
             };
 
@@ -926,51 +925,95 @@ namespace DarkwoodMP.World
                 Position = new Vec2(at.x, at.z),
             };
         }
-    }
 
-    /// <summary>
-    /// A trader stocking up (appearing, a new day): the host's game does it and
-    /// sends it; a client's asks.
-    /// </summary>
-    [HarmonyPatch(typeof(NPC), "randomizeTraderInv")]
-    static class TraderStockPatch
-    {
-        static bool Prefix(NPC __instance)
+        // ---- what the patches hand over -------------------------------------
+
+        /// <summary>
+        /// NPC.randomizeTraderInv is about to roll this trader's stock:
+        /// whether it may (the host's game; a client's asks the host). Rolls
+        /// with no session.
+        /// </summary>
+        internal static bool BeforeStocking(NPC npc)
         {
-            if (TraderRules.RollsHere(NetEnemies.ClientMode))
+            CoopSession coop = Coop.Current;
+            if (coop == null
+                || TraderRules.RollsHere(NetEnemies.ClientMode))
             {
                 return true;
             }
 
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Traders.ClientStocking(__instance);
-            }
-
+            coop.Traders.ClientStocking(npc);
             return false;
         }
 
-        static void Postfix(NPC __instance)
+        /// <summary>
+        /// NPC.randomizeTraderInv ran: the host sends the new stock.
+        /// </summary>
+        internal static void AfterStocking(NPC npc)
         {
-            if (TraderRules.RollsHere(NetEnemies.ClientMode))
+            CoopSession coop = Coop.Current;
+            if (coop != null && TraderRules.RollsHere(NetEnemies.ClientMode))
             {
-                CoopSession coop = Coop.Current;
-                if (coop != null)
-                {
-                    coop.Traders.HostStocked(__instance);
-                }
+                coop.Traders.HostStocked(npc);
             }
         }
-    }
 
-    /// <summary>An accepted trade (DialogueWindow.acceptTrade moves what's in
-    /// the two exchange windows to the trader and to the player): share the
-    /// trader's new stock. What was in the windows before is what was
-    /// traded.</summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.acceptTrade))]
-    static class TraderTradePatch
-    {
+        /// <summary>
+        /// DialogueWindow.acceptTrade is about to move what's in the two
+        /// exchange windows: what they hold, and the trader's reputation.
+        /// Nothing (null took) with no session, for a replay or no trader.
+        /// </summary>
+        internal static TradeWindows BeforeTrade(DialogueWindow window)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null || window == null || window.npc == null
+                || coop.Guards.Replaying)
+            {
+                return default;
+            }
+
+            return new TradeWindows
+            {
+                Took = Count(window.exchangeTrader),
+                Gave = Count(window.exchangePlayer),
+                Reputation = window.npc.reputation,
+            };
+        }
+
+        /// <summary>
+        /// DialogueWindow.acceptTrade ran: an accepted trade is shared. What
+        /// was in the windows before is what was traded.
+        /// </summary>
+        internal static void AfterTrade(
+            DialogueWindow window, TradeWindows before)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null || before.Took == null || window.npc == null)
+            {
+                return;
+            }
+
+            // Accepted: both windows were emptied. Not accepted (not enough
+            // reputation, no room): the things are still in them.
+            var accept = new AcceptFacts
+            {
+                Counted = true,
+                Took = before.Took.Count,
+                Gave = before.Gave.Count,
+                TraderLeft = Count(window.exchangeTrader).Count,
+                PlayerLeft = Count(window.exchangePlayer).Count,
+            };
+
+            if (!TradeRules.Accepted(accept))
+            {
+                return;
+            }
+
+            coop.Traders.LocalTrade(
+                window.npc, before.Took, before.Gave,
+                window.npc.reputation - before.Reputation);
+        }
+
         /// <summary>Item type -> how many, in this inventory.</summary>
         internal static Dictionary<string, int> Count(Inventory inv)
         {
@@ -1000,57 +1043,17 @@ namespace DarkwoodMP.World
 
             return stacks;
         }
+    }
 
-        static void Prefix(
-            DialogueWindow __instance,
-            out (Dictionary<string, int> took, Dictionary<string, int> gave,
-                int rep) __state)
-        {
-            __state = default;
-            if (__instance == null || __instance.npc == null
-                || Coop.Guards.Replaying)
-            {
-                return;
-            }
-
-            __state = (Count(__instance.exchangeTrader), Count(
-                __instance.exchangePlayer), __instance.npc.reputation);
-        }
-
-        static void Postfix(
-            DialogueWindow __instance,
-            (Dictionary<string, int> took, Dictionary<string, int> gave,
-                int rep) __state)
-        {
-            var (took, gave, rep) = __state;
-            if (took == null || __instance.npc == null)
-            {
-                return;
-            }
-
-            // Accepted: both windows were emptied. Not accepted (not enough
-            // reputation, no room): the things are still in them.
-            var accept = new AcceptFacts
-            {
-                Counted = true,
-                Took = took.Count,
-                Gave = gave.Count,
-                TraderLeft = Count(__instance.exchangeTrader).Count,
-                PlayerLeft = Count(__instance.exchangePlayer).Count,
-            };
-
-            if (!TradeRules.Accepted(accept))
-            {
-                return;
-            }
-
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Traders.LocalTrade(
-                    __instance.npc, took, gave,
-                    __instance.npc.reputation - rep);
-            }
-        }
+    /// <summary>
+    /// What the trade window's two exchange windows held before
+    /// DialogueWindow.acceptTrade (item type -> count), and the trader's
+    /// reputation then. Took is null when nothing is to be shared.
+    /// </summary>
+    internal struct TradeWindows
+    {
+        public Dictionary<string, int> Took;
+        public Dictionary<string, int> Gave;
+        public int Reputation;
     }
 }

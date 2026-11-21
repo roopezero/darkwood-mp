@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Traders
 {
-    /// What TraderStockPatch and TraderSync look at when a trader stocks
-    /// up (NPC.randomizeTraderInv).
+    /// What TraderSync looks at when a trader stocks up
+    /// (NPC.randomizeTraderInv).
     public readonly struct StockFacts
     {
         /// NetEnemies.ClientMode: this game is a client's.

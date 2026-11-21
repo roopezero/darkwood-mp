@@ -238,7 +238,7 @@ namespace DarkwoodMP.World
                 }
 
                 npc.reputation += repChange;
-                // What TraderTradePatch does after acceptTrade.
+                // What the AcceptTrade patch does after acceptTrade.
                 CoopSession coop = Coop.Current;
                 if (coop != null)
                 {
