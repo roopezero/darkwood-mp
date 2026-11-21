@@ -686,6 +686,18 @@ Finish with `tools/run-test.sh full`.
       nothing to do. `WorldTest` is a partial class over six files.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
+  - [x] Part b: the singletons and pass-throughs. Done: `Session.Instance`
+        is gone (callers use `Plugin.Instance.Host.Session`), and so are
+        `NetEnemies.Instance` with its static `Frozen`, `Hidden`,
+        `HitEffects` and `Thaw` (members of `CoopSession.Enemies` now),
+        `HostileNpcs`' pass-throughs to `NpcHostility`, `NightSpawns`',
+        `Threat`'s and `SaveRedirect`'s pass-throughs to `ModHost`,
+        `DreamSync.SharedNow` and `ViewRects.For`. `Threat` keeps
+        `PursuitTarget`, `NearestPlayerPos` and `FleeFrom`, which transpilers
+        call. Left as they were: `SkillsPanel` (most of its callers are the
+        `Plugin.cs` code part a moves), `MenuSkin`, `PixelFont` and
+        `MenuWindows` (about 230 calls, and transpiler targets), and
+        `SaveBook`, whose static methods hold logic over `ModHost.Book`.
 - [x] Turn style warnings into errors for the whole plugin.
 - [ ] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
       `CLAUDE.md`, then delete this plan.
