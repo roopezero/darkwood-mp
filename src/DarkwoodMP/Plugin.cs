@@ -80,7 +80,6 @@ namespace DarkwoodMP
         private NetEnemies _enemies;
         private Characters _characters;
         private FlagsSync _flags;
-        private World.Rolls.WorldEvents _events;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
         private bool? _cursorBefore;
@@ -448,7 +447,6 @@ namespace DarkwoodMP
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
-            _events = new World.Rolls.WorldEvents(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
@@ -2304,7 +2302,12 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("fuel");
-            _events.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.WorldEvents.Update();
+            }
+
             ModProfiler.Mark("events");
             coop = Coop.Current;
             if (coop != null)

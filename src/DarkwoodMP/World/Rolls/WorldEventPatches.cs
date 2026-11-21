@@ -49,10 +49,19 @@ namespace DarkwoodMP.World.Rolls
         new[] { typeof(bool), typeof(bool) })]
     static class RandomEventPatch
     {
-        static bool Prefix(RandomEvent __instance) =>
-            !WorldEvents.Follows
-                || (WorldEvents.Presentation > 0
+        static bool Prefix(RandomEvent __instance)
+        {
+            CoopSession coop = Coop.Current;
+            int presentation = 0;
+            if (coop != null)
+            {
+                presentation = coop.WorldEvents.Presentation;
+            }
+
+            return !WorldEvents.Follows
+                || (presentation > 0
                     && __instance.type == RandomEvent.Type.locationEvent);
+        }
     }
 
     /// <summary>Host: a night event fired; send it.</summary>
@@ -61,10 +70,10 @@ namespace DarkwoodMP.World.Rolls
     {
         static void Postfix(CustomEvent __instance)
         {
-            WorldEvents instance = WorldEvents.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.SendNightEvent(__instance);
+                coop.WorldEvents.SendNightEvent(__instance);
             }
         }
     }
@@ -80,14 +89,16 @@ namespace DarkwoodMP.World.Rolls
     {
         static void Postfix(GameEvent __instance, ref IEnumerator __result)
         {
-            if (WorldEvents.Presentation <= 0 || !WorldEvents.Follows)
+            CoopSession coop = Coop.Current;
+            if (coop == null || coop.WorldEvents.Presentation <= 0
+                || !WorldEvents.Follows)
             {
                 return;
             }
 
             if (WorldEvents.PresentationOnly(__instance))
             {
-                __result = WorldEvents.AsPresentation(__result);
+                __result = coop.WorldEvents.AsPresentation(__result);
             }
             else
             {
@@ -117,10 +128,11 @@ namespace DarkwoodMP.World.Rolls
                 return false;
             }
 
+            CoopSession coop = Coop.Current;
             if (Session.Instance != null && Session.Instance.IsHost
-                && Coop.Guards.Sharing && WorldEvents.Instance != null)
+                && Coop.Guards.Sharing && coop != null)
             {
-                WorldEvents.Instance.HostShadowLights(__instance);
+                coop.WorldEvents.HostShadowLights(__instance);
                 return false;
             }
 
@@ -137,10 +149,10 @@ namespace DarkwoodMP.World.Rolls
         {
             if (!NetEnemies.ClientMode)
             {
-                WorldEvents instance = WorldEvents.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.RandomObjectsMade();
+                    coop.WorldEvents.RandomObjectsMade();
                 }
             }
         }
@@ -193,10 +205,10 @@ namespace DarkwoodMP.World.Rolls
             if (list.Count > __state.count && big != null
                 && big.nightMushroom != null)
             {
-                WorldEvents instance = WorldEvents.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendNightObject(
+                    coop.WorldEvents.SendNightObject(
                         list[list.Count - 1], big.nightMushroom.name);
                 }
             }

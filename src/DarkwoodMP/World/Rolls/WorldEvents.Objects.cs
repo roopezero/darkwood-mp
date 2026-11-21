@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace DarkwoodMP.World.Rolls
 {
-    public sealed partial class WorldEvents
+    internal sealed partial class WorldEvents
     {
         // ---- random objects at dawn, night mushrooms ------------------------
 
@@ -106,10 +106,10 @@ namespace DarkwoodMP.World.Rolls
                 }
             }
 
-            var w = _session.Begin(MsgType.RandomObjects);
+            var w = Net.Begin(MsgType.RandomObjects);
             RandomObjectsMessage.WriteDawn(w, all);
 
-            _session.Broadcast(w, Channel.Control, reliable: true);
+            Net.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -130,7 +130,7 @@ namespace DarkwoodMP.World.Rolls
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             Vector3 pos = go.transform.position;
-            var w = _session.Begin(MsgType.RandomObjects);
+            var w = Net.Begin(MsgType.RandomObjects);
             var sent = new NightMushroom
             {
                 Id = id,
@@ -139,7 +139,7 @@ namespace DarkwoodMP.World.Rolls
             };
 
             RandomObjectsMessage.WriteNight(w, sent);
-            _session.Broadcast(w, Channel.Control, reliable: true);
+            Net.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -205,7 +205,7 @@ namespace DarkwoodMP.World.Rolls
             }
 
             int made = 0;
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 foreach (var o in list)
@@ -251,11 +251,7 @@ namespace DarkwoodMP.World.Rolls
                     var inv = go.GetComponent<Inventory>();
                     if (inv != null && o.Contents.Length > 0)
                     {
-                        CoopSession coop = Coop.Current;
-                        if (coop != null)
-                        {
-                            coop.Containers.Apply(inv, o.Contents);
-                        }
+                        _coop.Containers.Apply(inv, o.Contents);
                     }
 
                     made++;
@@ -263,7 +259,7 @@ namespace DarkwoodMP.World.Rolls
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
 
             if (WorldActions.Debug)
@@ -307,7 +303,7 @@ namespace DarkwoodMP.World.Rolls
             }
 
             GameObject go;
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 go = Core.AddPrefab(
@@ -316,7 +312,7 @@ namespace DarkwoodMP.World.Rolls
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
 
             if (go == null)

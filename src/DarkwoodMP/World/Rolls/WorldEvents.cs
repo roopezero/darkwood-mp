@@ -37,32 +37,27 @@ namespace DarkwoodMP.World.Rolls
     /// Enemies the events spawn on the host reach joiners through NetEnemies,
     /// and lamps switched on through ItemOn.
     /// </summary>
-    public sealed partial class WorldEvents
+    internal sealed partial class WorldEvents
     {
-        public static WorldEvents Instance { get; private set; }
-        private readonly Session _session;
+        private readonly CoopSession _coop;
         private readonly HostRollClock _clock = new HostRollClock();
 
         /// <summary>
         /// Above 0 while a joiner plays a night event the host sent: only its
         /// presentation runs.
         /// </summary>
-        public static int Presentation;
+        public int Presentation { get; private set; }
 
-        public WorldEvents(Session session)
+        public WorldEvents(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.NightScenario, OnScenario);
-            session.Register(MsgType.NightEvent, OnNightEvent);
-            session.Register(MsgType.RandomObjects, OnRandomObjects);
-            session.Register(MsgType.Weather, OnWeather);
-            session.OnSessionEnded += () =>
-            {
-                _clock.SessionEnded();
-                Presentation = 0;
-            };
+            _coop = coop;
+            coop.Handle(MsgType.NightScenario, OnScenario);
+            coop.Handle(MsgType.NightEvent, OnNightEvent);
+            coop.Handle(MsgType.RandomObjects, OnRandomObjects);
+            coop.Handle(MsgType.Weather, OnWeather);
         }
+
+        private Session Net => _coop.Net;
 
         /// <summary>
         /// A joiner in the shared world: the host rolls the world's events,
@@ -81,14 +76,14 @@ namespace DarkwoodMP.World.Rolls
             }
         }
 
-        private bool HostSharing => _session.IsHost && Coop.Guards.Sharing;
+        private bool HostSharing => Net.IsHost && _coop.Guards.Sharing;
 
         private static Seconds Now => new Seconds(Time.unscaledTime);
 
         private bool FromHost(ulong from)
         {
             return RollRules.FromHost(
-                from, _session.HostId, WorldShare.InWorld);
+                from, Net.HostId, WorldShare.InWorld);
         }
 
         public void Update()
@@ -124,9 +119,9 @@ namespace DarkwoodMP.World.Rolls
                         $"[world] sent night scenario '{scenario}'");
                 }
 
-                var w = _session.Begin(MsgType.NightScenario);
+                var w = Net.Begin(MsgType.NightScenario);
                 NightScenarioMessage.Write(w, scenario);
-                _session.Broadcast(w, Channel.Control, reliable: true);
+                Net.Broadcast(w, Channel.Control, reliable: true);
             }
 
             var rain = Singleton<Rain>.Instance;
@@ -142,9 +137,9 @@ namespace DarkwoodMP.World.Rolls
                         Plugin.Log.LogInfo($"[world] sent weather {key}");
                     }
 
-                    var w = _session.Begin(MsgType.Weather);
+                    var w = Net.Begin(MsgType.Weather);
                     WeatherMessage.Write(w, facts);
-                    _session.Broadcast(w, Channel.Control, reliable: true);
+                    Net.Broadcast(w, Channel.Control, reliable: true);
                 }
             }
         }

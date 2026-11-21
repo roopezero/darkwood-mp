@@ -2059,8 +2059,9 @@ namespace DarkwoodMP.World
                         + $"{made} in the chunks now");
             }
 
-            bool lights = WorldEvents.Instance != null
-                && WorldEvents.Instance.ShadowLightsAnyTime(player);
+            CoopSession coop = Coop.Current;
+            bool lights = coop != null
+                && coop.WorldEvents.ShadowLightsAnyTime(player);
             string text = "not here (no generator with lamps)";
             if (lights)
             {

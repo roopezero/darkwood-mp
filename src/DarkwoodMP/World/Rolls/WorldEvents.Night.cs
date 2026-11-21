@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace DarkwoodMP.World.Rolls
 {
-    public sealed partial class WorldEvents
+    internal sealed partial class WorldEvents
     {
         // ---- night events ---------------------------------------------------
 
@@ -15,7 +15,7 @@ namespace DarkwoodMP.World.Rolls
         /// </summary>
         internal void SendNightEvent(CustomEvent ev)
         {
-            if (!HostSharing || Coop.Guards.Replaying || ev == null)
+            if (!HostSharing || _coop.Guards.Replaying || ev == null)
             {
                 return;
             }
@@ -39,7 +39,7 @@ namespace DarkwoodMP.World.Rolls
                 sentName = big.name;
             }
 
-            var w = _session.Begin(MsgType.NightEvent);
+            var w = Net.Begin(MsgType.NightEvent);
             var fired = new NightFired
             {
                 Scenario = s,
@@ -48,7 +48,7 @@ namespace DarkwoodMP.World.Rolls
             };
 
             NightEventMessage.WriteFired(w, fired);
-            _session.Broadcast(w, Channel.Control, reliable: true);
+            Net.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
                 string shownName = "nowhere";
@@ -65,12 +65,12 @@ namespace DarkwoodMP.World.Rolls
 
         private void SendShadowLights(Generator gen, Item keep)
         {
-            var w = _session.Begin(MsgType.NightEvent);
+            var w = Net.Begin(MsgType.NightEvent);
             NightEventMessage.WriteShadowLights(
                 w,
                 ObjRef.NameOf(ObjRef.Of(gen.gameObject)),
                 ObjRef.NameOf(ObjRef.Of(keep.gameObject)));
-            _session.Broadcast(w, Channel.Control, reliable: true);
+            Net.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -170,14 +170,14 @@ namespace DarkwoodMP.World.Rolls
 
             ns.currentScenario = sc;
             Presentation++;
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 ev.fire(force: true);
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
                 Presentation--;
             }
 
@@ -205,14 +205,14 @@ namespace DarkwoodMP.World.Rolls
                 return;
             }
 
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 ShadowLights(gen, keep);
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
 
             if (WorldActions.Debug)
@@ -401,21 +401,21 @@ namespace DarkwoodMP.World.Rolls
         /// Runs a played event's step with Presentation and Replaying set, so
         /// what it fires later is filtered too.
         /// </summary>
-        internal static IEnumerator AsPresentation(IEnumerator inner)
+        internal IEnumerator AsPresentation(IEnumerator inner)
         {
             while (true)
             {
                 // the first step runs at once, inside OnNightEvent's own replay
-                bool more, was = Coop.Guards.Replaying;
+                bool more, was = _coop.Guards.Replaying;
                 Presentation++;
-                Coop.Guards.Replaying = true;
+                _coop.Guards.Replaying = true;
                 try
                 {
                     more = inner.MoveNext();
                 }
                 finally
                 {
-                    Coop.Guards.Replaying = was;
+                    _coop.Guards.Replaying = was;
                     Presentation--;
                 }
 
