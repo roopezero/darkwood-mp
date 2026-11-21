@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using DarkwoodMP.World.Workbenches;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -34,6 +33,12 @@ namespace DarkwoodMP.World
         private const string WorldLoaded = "world loaded";
 
         private const string DefaultPrefab = "Furnitures/workbench_01";
+
+        /// <summary>
+        /// Room under the last row's centre for its lower half and the Sort
+        /// &amp; Stack button (UI units at 1080p).
+        /// </summary>
+        private const float Below = 30f + 70f;
 
         // Each prefab's slot count at the base level, read from the game's
         // resources once.
@@ -255,29 +260,18 @@ namespace DarkwoodMP.World
             UiRefresh.Changed(inv);
             return true;
         }
-    }
 
-    /// <summary>
-    /// The workbench's storage was drawn (Inventory.show): if its rows and the
-    /// Sort &amp; Stack button under them would run off the bottom of the
-    /// screen, the whole window is drawn smaller to fit. Runs after the button
-    /// is added (StorageSortButtonPatch), so the button shrinks with it. The
-    /// game's ScaleToResolution takes the window's scale as its base on the
-    /// next frame, so a change of resolution keeps the fit.
-    /// </summary>
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-    [HarmonyPriority(Priority.Low)]
-    static class StorageFitPatch
-    {
         /// <summary>
-        /// Room under the last row's centre for its lower half and the Sort
-        /// &amp; Stack button (UI units at 1080p).
+        /// The workbench's storage was drawn (Inventory.show): if its rows and
+        /// the Sort &amp; Stack button under them would run off the bottom of
+        /// the screen, the whole window is drawn smaller to fit. Runs after
+        /// the button is added (StorageSortButtonPatch), so the button shrinks
+        /// with it. The game's ScaleToResolution takes the window's scale as
+        /// its base on the next frame, so a change of resolution keeps the
+        /// fit.
         /// </summary>
-        private const float Below = 30f + 70f;
-
-        static void Postfix(Inventory __instance)
+        public static void FitToScreen(Inventory inv)
         {
-            var inv = __instance;
             if (inv == null || !inv.open || inv.thisUI == null)
             {
                 return;
@@ -324,28 +318,22 @@ namespace DarkwoodMP.World
                 $"[workbench] storage of {inv.slots.Count} slots ({rows} rows) "
                     + $"drawn at {scale:0.00} of its size to fit the screen");
         }
-    }
 
-    /// <summary>
-    /// A workbench opened: its storage has the rows of the current level before
-    /// it's drawn.
-    /// </summary>
-    [HarmonyPatch(typeof(Workbench), nameof(Workbench.open))]
-    static class WorkbenchOpenRowsPatch
-    {
-        static void Prefix(Workbench __instance)
+        /// <summary>
+        /// A workbench opened (Workbench.open): its storage has the rows of
+        /// the current level before it's drawn.
+        /// </summary>
+        public void Opened(Workbench wb)
         {
-            if (__instance == null || __instance.normalInventory == null
+            if (wb == null || wb.normalInventory == null
                 || Singleton<Controller>.Instance == null)
             {
                 return;
             }
 
-            WorkbenchStorage storage = Plugin.Instance.Host.Workbenches;
-            WorkbenchStorage.Fit(
-                __instance.normalInventory,
-                storage.Wanted(
-                    __instance, Singleton<Controller>.Instance.workbenchLevel));
+            Fit(
+                wb.normalInventory,
+                Wanted(wb, Singleton<Controller>.Instance.workbenchLevel));
         }
     }
 }
