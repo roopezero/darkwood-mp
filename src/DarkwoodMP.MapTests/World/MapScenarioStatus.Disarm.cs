@@ -173,7 +173,7 @@ namespace DarkwoodMP.World
             }
 
             // the bar ends in its own Update, as the player's action
-            WorldActions.TestAsPlayer = true;
+            Plugin.Instance.Host.TestAsPlayer = true;
             P.progressBar.time = 0.01f;
             float until = Time.realtimeSinceStartup + 4f;
             while (t != null && !t.triggered
@@ -182,7 +182,7 @@ namespace DarkwoodMP.World
                 yield return null;
             }
 
-            WorldActions.TestAsPlayer = false;
+            Plugin.Instance.Host.TestAsPlayer = false;
             until = Time.realtimeSinceStartup + 4f;
             while ((P.gettingInventory || P.performingAction)
                 && Time.realtimeSinceStartup < until)

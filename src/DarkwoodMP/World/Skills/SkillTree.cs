@@ -10,7 +10,7 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Spending skill points, from the Skills panel (SkillsPanel), at any time
+    /// Spending skill points, from the Skills panel (SkillsWindow), at any time
     /// and anywhere.
     ///
     /// In the game a full essence bar at the stove raises Player.currentLevel

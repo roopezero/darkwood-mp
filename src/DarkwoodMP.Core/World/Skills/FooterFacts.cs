@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Skills
     /// What the Skills panel's footer line looks at.
     public readonly struct FooterFacts
     {
-        /// Why the last Learn didn't go is still shown (SkillsPanel's
+        /// Why the last Learn didn't go is still shown (SkillsWindow's
         /// _message isn't null).
         public bool HasMessage { get; init; }
 

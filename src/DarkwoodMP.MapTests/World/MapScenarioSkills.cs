@@ -9,13 +9,16 @@ namespace DarkwoodMP.World
 {
     /// <summary>
     /// Map test steps for skill points and the morning skill reset
-    /// (World.SkillTree, SkillsPanel, Progression). The list is
+    /// (World.SkillTree, SkillsWindow, Progression). The list is
     /// tools/tests/map_scenario_skills.py.
     /// </summary>
     public static class MapScenarioSkills
     {
         private static Progression Progress =>
             Plugin.Instance.Host.Progress;
+
+        private static SkillsWindow Skills =>
+            Plugin.Instance.Host.SkillsPanel;
 
         private static Player P => Player.Instance;
 
@@ -63,9 +66,9 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(1.5f);
             }
 
-            SkillsPanel.TestPressKey();
+            Skills.TestPressKey();
             yield return new WaitForSecondsRealtime(2f);
-            bool open = SkillsPanel.Open,
+            bool open = Skills.Open,
                 bag = P.Inventory.open || P.gettingInventory;
             if (!open)
             {
@@ -93,7 +96,7 @@ namespace DarkwoodMP.World
                             continue;
                         }
 
-                        if (!SkillsPanel.TestRects(
+                        if (!Skills.TestRects(
                             sk.name, out var icon, out var cell))
                         {
                             fails.Add($"{sk.name} not drawn");
@@ -122,29 +125,29 @@ namespace DarkwoodMP.World
                 }
             }
 
-            float hBefore = SkillsPanel.TestWindow.height;
+            float hBefore = Skills.TestWindow.height;
             string atEdge = null, atGap = null, outside = null;
             if (first != null)
             {
                 // The icon's bottom right pixel, then the middle of the space
                 // between it and the icon below.
-                SkillsPanel.TestMouse =
+                Skills.TestMouse =
                     new Vector2(firstIcon.xMax - 1f, firstIcon.yMax - 1f);
                 yield return null;
                 yield return null;
-                atEdge = SkillsPanel.TestHover;
-                SkillsPanel.TestRects(below, out var belowIcon, out _);
-                SkillsPanel.TestMouse = new Vector2(
+                atEdge = Skills.TestHover;
+                Skills.TestRects(below, out var belowIcon, out _);
+                Skills.TestMouse = new Vector2(
                     firstIcon.center.x, (firstIcon.yMax + belowIcon.yMin) / 2f);
                 yield return null;
                 yield return null;
-                atGap = SkillsPanel.TestHover;
-                float hHover = SkillsPanel.TestWindow.height;
-                SkillsPanel.TestMouse = new Vector2(1f, 1f);
+                atGap = Skills.TestHover;
+                float hHover = Skills.TestWindow.height;
+                Skills.TestMouse = new Vector2(1f, 1f);
                 yield return null;
                 yield return null;
-                outside = SkillsPanel.TestHover;
-                SkillsPanel.TestMouse = null;
+                outside = Skills.TestHover;
+                Skills.TestMouse = null;
                 if (atEdge != first)
                 {
                     string overEdge = atEdge;
@@ -174,13 +177,13 @@ namespace DarkwoodMP.World
                 }
 
                 if (Mathf.Abs(hHover - hBefore) > 0.5f
-                    || Mathf.Abs(SkillsPanel.TestWindow.height - hBefore)
+                    || Mathf.Abs(Skills.TestWindow.height - hBefore)
                         > 0.5f)
                 {
                     fails.Add(
                         "the window's height changed with the hover: "
                             + $"{hBefore} -> {hHover} -> "
-                            + $"{SkillsPanel.TestWindow.height}");
+                            + $"{Skills.TestWindow.height}");
                 }
             }
             else
@@ -191,11 +194,11 @@ namespace DarkwoodMP.World
             // The backpack with its own key: both stay open.
             P.getIntoInventory();
             yield return new WaitForSecondsRealtime(2f);
-            bool both = SkillsPanel.Open && P.Inventory.open;
+            bool both = Skills.Open && P.Inventory.open;
             if (!both)
             {
                 fails.Add(
-                    $"backpack opened: panel {SkillsPanel.Open}, backpack "
+                    $"backpack opened: panel {Skills.Open}, backpack "
                         + $"{P.Inventory.open}");
             }
 
@@ -205,15 +208,15 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(1.5f);
             }
 
-            bool stillOpen = SkillsPanel.Open;
+            bool stillOpen = Skills.Open;
             if (!stillOpen)
             {
                 fails.Add("closing the backpack closed the panel");
             }
 
-            if (SkillsPanel.Open)
+            if (Skills.Open)
             {
-                SkillsPanel.TestPressKey();
+                Skills.TestPressKey();
             }
 
             yield return new WaitForSecondsRealtime(1f);
@@ -230,8 +233,8 @@ namespace DarkwoodMP.World
                 $"between: {atGap}, outside: {outsideHover}; height {hBefore}; "
                     + $"with the backpack both open {both}, " +
                 $"after it closed panel open {stillOpen}; closed "
-                    + $"{!SkillsPanel.Open}";
-            if (SkillsPanel.Open)
+                    + $"{!Skills.Open}";
+            if (Skills.Open)
             {
                 fails.Add("the key didn't close the panel");
             }
@@ -256,7 +259,7 @@ namespace DarkwoodMP.World
             }
 
             int before = SkillTree.Points(P);
-            string why = SkillsPanel.TestLearn(choice[0], choice[1]);
+            string why = Skills.TestLearn(choice[0], choice[1]);
             if (why != null)
             {
                 r.Fail($"{choice[0]}: {why}");
@@ -296,13 +299,13 @@ namespace DarkwoodMP.World
         private static IEnumerator LearnAll(string[] a, Result r)
         {
             var fails = new List<string>();
-            if (!SkillsPanel.Open)
+            if (!Skills.Open)
             {
-                SkillsPanel.TestPressKey();
+                Skills.TestPressKey();
             }
 
             yield return new WaitForSecondsRealtime(1f);
-            if (!SkillsPanel.Open)
+            if (!Skills.Open)
             {
                 r.Fail("the panel didn't open");
                 yield break;
@@ -324,14 +327,14 @@ namespace DarkwoodMP.World
                 // The Learn button takes a click once it's ready (not while a
                 // choice waits for the host).
                 float until = Time.realtimeSinceStartup + 8f;
-                while (!SkillsPanel.TestReady(choice[0], choice[1])
+                while (!Skills.TestReady(choice[0], choice[1])
                     && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
 
                 int before = SkillTree.Points(P);
-                string why = SkillsPanel.TestLearn(choice[0], choice[1]);
+                string why = Skills.TestLearn(choice[0], choice[1]);
                 n++;
                 string text = "";
                 if (choice[1] != null)
@@ -361,7 +364,7 @@ namespace DarkwoodMP.World
                 }
 
                 yield return null;
-                if (!SkillsPanel.Open)
+                if (!Skills.Open)
                 {
                     fails.Add($"the panel closed after choice {n}");
                     break;
@@ -392,7 +395,7 @@ namespace DarkwoodMP.World
                 fails.Add("still waiting for the host");
             }
 
-            if (!SkillsPanel.Open)
+            if (!Skills.Open)
             {
                 fails.Add("the panel isn't open");
             }
@@ -404,9 +407,9 @@ namespace DarkwoodMP.World
                 fails.Add("negative skills: " + wrong);
             }
 
-            if (SkillsPanel.Open)
+            if (Skills.Open)
             {
-                SkillsPanel.TestPressKey();
+                Skills.TestPressKey();
             }
 
             r.Info =

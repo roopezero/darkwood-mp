@@ -257,7 +257,7 @@ namespace DarkwoodMP.World.Scripted
                 Sharing = Coop.Guards.Sharing,
                 Current = Parts.Current,
                 PlayerEntered = PlayerEntered,
-                TestAsPlayer = WorldActions.TestAsPlayer,
+                TestAsPlayer = Plugin.Instance.Host.TestAsPlayer,
                 Leaving = leaving,
                 LeftType = leaving && LeftToActor.Contains(type),
             };

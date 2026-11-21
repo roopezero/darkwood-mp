@@ -188,7 +188,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            WorldActions.TestAsPlayer = false;
+            Plugin.Instance.Host.TestAsPlayer = false;
             string line = "done";
             if (r.Failure != null)
             {
@@ -259,14 +259,14 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void AsPlayer(Action a)
         {
-            WorldActions.TestAsPlayer = true;
+            Plugin.Instance.Host.TestAsPlayer = true;
             try
             {
                 a();
             }
             finally
             {
-                WorldActions.TestAsPlayer = false;
+                Plugin.Instance.Host.TestAsPlayer = false;
             }
         }
 

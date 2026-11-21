@@ -153,7 +153,7 @@ namespace DarkwoodMP.World.Progress
                 $"[progress] took level {p.currentLevel} at the stove: "
                     + $"{SkillTree.Points(p)} skill points to spend");
             p.displayMessage(
-                $"A skill point to spend: press {SkillsPanel.KeyName} for the "
+                $"A skill point to spend: press {SkillsKeyName} for the "
                     + "Skills");
         }
 
