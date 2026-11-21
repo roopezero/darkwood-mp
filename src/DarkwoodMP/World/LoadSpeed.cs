@@ -13,20 +13,26 @@ namespace DarkwoodMP.World
     /// Measured with --dwmp-profile-load, most of the time went to three things
     /// the game does slowly, not to work it has to do:
     ///
-    /// 1. After making the saved objects, SaveManager.Load walks its 21,000-entry loadedObjects dictionary with
-    ///    Values.ElementAt(i) and Keys.ElementAt(i). Those can't index a dictionary, so each call counts from the
-    ///    start: about 450 million steps. Here they read from an array copy of each collection instead (made
-    ///    again whenever its size changes, and dropped when the load ends).
-    /// 2. WorldGrid.registerToNode, called for each of about 8,000 objects as a grid registers them on load, looks
-    ///    through all of the grid's objects to see if it's already listed, and through all of its nodes to find the
-    ///    one it's in. While a grid registers its objects, both are looked up in an index instead; the node found
-    ///    is the same one (the first in the grid's list that the object is in).
-    /// 3. Load reads the save's two JSON files (about 11 MB) and parses them on the main thread, about 1.3 s,
-    ///    right after the game's fixed 1.6 s wait (below). They're parsed on a background thread during that wait
-    ///    instead, and Load takes the result if the text it read is the same; otherwise, or if the background
-    ///    parse failed, it parses as before.
-    /// 4. Core.AddPrefab(path) calls Resources.Load for each of about 19,000 saved objects, though there are only
-    ///    a few hundred kinds. While a world loads, each path's prefab is looked up once.
+    /// 1. After making the saved objects, SaveManager.Load walks its
+    ///    21,000-entry loadedObjects dictionary with Values.ElementAt(i) and
+    ///    Keys.ElementAt(i). Those can't index a dictionary, so each call
+    ///    counts from the start: about 450 million steps. Here they read from
+    ///    an array copy of each collection instead (made again whenever its
+    ///    size changes, and dropped when the load ends).
+    /// 2. WorldGrid.registerToNode, called for each of about 8,000 objects as a
+    ///    grid registers them on load, looks through all of the grid's objects
+    ///    to see if it's already listed, and through all of its nodes to find
+    ///    the one it's in. While a grid registers its objects, both are looked
+    ///    up in an index instead; the node found is the same one (the first in
+    ///    the grid's list that the object is in).
+    /// 3. Load reads the save's two JSON files (about 11 MB) and parses them on
+    ///    the main thread, about 1.3 s, right after the game's fixed 1.6 s wait
+    ///    (below). They're parsed on a background thread during that wait
+    ///    instead, and Load takes the result if the text it read is the same;
+    ///    otherwise, or if the background parse failed, it parses as before.
+    /// 4. Core.AddPrefab(path) calls Resources.Load for each of about 19,000
+    ///    saved objects, though there are only a few hundred kinds. While a
+    ///    world loads, each path's prefab is looked up once.
     ///
     /// (The game's fixed 1.6 s wait before loading is left alone: it lets the
     /// black screen finish fading out before Load stops every running tween,
@@ -37,8 +43,8 @@ namespace DarkwoodMP.World
     {
         // ---- 1. ElementAt on the dictionary's keys and values ---------------
 
-        private static readonly Dictionary<object, (int count, Array copy)> _copies =
-            new Dictionary<object, (int, Array)>();
+        private static readonly Dictionary<object, (int count, Array copy)>
+            _copies = new Dictionary<object, (int, Array)>();
 
         public static T ElementAt<T>(IEnumerable<T> source, int index)
         {
@@ -156,8 +162,8 @@ namespace DarkwoodMP.World
         // ---- 4. Resources.Load once per prefab path while loading -----------
 
         internal static bool Loading;
-        private static readonly Dictionary<string, UnityEngine.Object> _prefabs =
-            new Dictionary<string, UnityEngine.Object>();
+        private static readonly Dictionary<string, UnityEngine.Object>
+            _prefabs = new Dictionary<string, UnityEngine.Object>();
         private static int PrefabLookups, PrefabLoads;
 
         internal static UnityEngine.Object Prefab(string path)
@@ -189,7 +195,8 @@ namespace DarkwoodMP.World
             AheadUsed = AheadMissed = 0;
         }
 
-        // ---- 2. WorldGrid.registerToNode during a grid's registerCullablesOnLoad ---------------------------------
+        // ---- 2. WorldGrid.registerToNode in registerCullablesOnLoad ---------
+        // During a grid's registerCullablesOnLoad.
 
         internal static bool Batch;
         /// <summary>
@@ -559,8 +566,8 @@ namespace DarkwoodMP.World
                             fast.MakeGenericMethod(m.GetGenericArguments());
                         n++;
                     }
-                    // JsonConvert.DeserializeObject<DynamicSave or StaticSave>(string):
-                    // the parse made ahead.
+                    // JsonConvert.DeserializeObject<T>(string), where T is
+                    // DynamicSave or StaticSave: the parse made ahead.
                     else if (m.Name == "DeserializeObject"
                         && m.DeclaringType
                             == typeof(Newtonsoft.Json.JsonConvert)

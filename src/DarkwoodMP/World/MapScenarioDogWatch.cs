@@ -14,11 +14,15 @@ namespace DarkwoodMP.World
     /// Map test steps that log what the enemies near the players do and why
     /// ([dogwatch] lines), to find what wakes the save's sleeping and eating
     /// dogs.
-    ///   dw-on / dw-off   start / stop the watch in this game. Host: each enemy near a player, when its sleeping,
-    ///                    waking, eating, behaviour, target or life changes, with how far it is from each player;
-    ///                    what woke or alerted it (Character.wakeup / beAlerted / the sounds it heard, with their
-    ///                    source). Client: where our player is and how close our copies of the host's enemies are.
-    ///   dw-list          the enemies within 3000 of the centre, with their state.
+    ///   dw-on / dw-off   start / stop the watch in this game. Host: each enemy
+    ///                    near a player, when its sleeping, waking, eating,
+    ///                    behaviour, target or life changes, with how far it is
+    ///                    from each player; what woke or alerted it
+    ///                    (Character.wakeup / beAlerted / the sounds it heard,
+    ///                    with their source). Client: where our player is and
+    ///                    how close our copies of the host's enemies are.
+    ///   dw-list          the enemies within 3000 of the centre, with their
+    ///                    state.
     /// </summary>
     public static class MapScenarioDogWatch
     {

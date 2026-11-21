@@ -23,15 +23,21 @@ namespace DarkwoodMP.World
     /// Player.shadowLightsTurnOff, WorldGenerator.spawnRandomObjects and
     /// despawnRandomObjects, WormsSpawner.spawn, and Rain.onNewDay /
     /// setUpNextRain / setUpFog. The host sends:
-    ///   NightScenario  the scenario it chose (checked every second, sent when it changes and every 10 seconds).
-    ///   NightEvent     a night event that fired. A joiner plays it at its own hideout, presentation only: of the
-    ///                  event's GameEvent steps it runs sounds, particles, camera effects, colour tweens, animations
-    ///                  and messages, and none of those that change the world (spawns, doors, items, flags...), whose
-    ///                  results come from the host as they do. The shadows' lights come as their own NightEvent:
-    ///                  which lamp stays on, so every game flickers the same lamps.
-    ///   RandomObjects  the dawn's random objects (chunk, which object, where, what it holds), a moment after the
-    ///                  host made them so their contents are filled; or one night mushroom.
-    ///   Weather        the day's rain and fog plan, when it changes and every 10 seconds.
+    ///   NightScenario  the scenario it chose (checked every second, sent when
+    ///                  it changes and every 10 seconds).
+    ///   NightEvent     a night event that fired. A joiner plays it at its own
+    ///                  hideout, presentation only: of the event's GameEvent
+    ///                  steps it runs sounds, particles, camera effects, colour
+    ///                  tweens, animations and messages, and none of those that
+    ///                  change the world (spawns, doors, items, flags...),
+    ///                  whose results come from the host as they do. The
+    ///                  shadows' lights come as their own NightEvent: which
+    ///                  lamp stays on, so every game flickers the same lamps.
+    ///   RandomObjects  the dawn's random objects (chunk, which object, where,
+    ///                  what it holds), a moment after the host made them so
+    ///                  their contents are filled; or one night mushroom.
+    ///   Weather        the day's rain and fog plan, when it changes and every
+    ///                  10 seconds.
     /// Enemies the events spawn on the host reach joiners through NetEnemies,
     /// and lamps switched on through ItemOn.
     /// </summary>
@@ -508,9 +514,10 @@ namespace DarkwoodMP.World
         // ---- random objects at dawn, night mushrooms ------------------------
 
         private const byte DawnObjects = 1, NightObject = 2;
-        private static readonly AccessTools.FieldRef<WorldChunk, List<GameObject>> RandomObjectsOf =
-            AccessTools.FieldRefAccess<WorldChunk, List<GameObject>>(
-                "randomObjects");
+        private static readonly
+            AccessTools.FieldRef<WorldChunk, List<GameObject>> RandomObjectsOf =
+                AccessTools.FieldRefAccess<WorldChunk, List<GameObject>>(
+                    "randomObjects");
         private readonly System.Random _rng = new System.Random();
         private long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
 
@@ -534,8 +541,8 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var all =
-                new List<(long id, int chunk, int obj, Vector3 local, string contents)>();
+            var all = new List<(long id, int chunk, int obj, Vector3 local,
+                string contents)>();
             for (int c = 0; c < gen.worldChunks.Count; c++)
             {
                 var chunk = gen.worldChunks[c];
@@ -634,8 +641,8 @@ namespace DarkwoodMP.World
             if (kind == DawnObjects)
             {
                 int n = r.R.ReadUInt16();
-                var list =
-                    new List<(long id, int chunk, int obj, Vector3 local, string contents)>(n);
+                var list = new List<(long id, int chunk, int obj,
+                    Vector3 local, string contents)>(n);
                 for (int i = 0; i < n; i++)
                 {
                     list.Add(

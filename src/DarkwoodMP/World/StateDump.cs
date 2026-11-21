@@ -718,10 +718,11 @@ namespace DarkwoodMP.World
             n.Replace("(Clone)", "").Trim();
 
         /// <summary>The story flags that are set (Flags.flagsDict).</summary>
-        internal static readonly HarmonyLib.AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
-            HarmonyLib.AccessTools
-                .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
-                    "flagsDict");
+        internal static readonly HarmonyLib.AccessTools
+            .FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
+                HarmonyLib.AccessTools
+                    .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
+                        "flagsDict");
 
         private static bool IsDropped(Inventory inv) =>
             inv.name.StartsWith("DroppedItem", StringComparison.Ordinal);

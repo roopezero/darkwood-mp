@@ -190,13 +190,14 @@ namespace DarkwoodMP.World
         /// by itself (scripts that barricade a house at dusk, enemies breaking
         /// in): that's the host's to say, and its game does it there too.
         /// </summary>
-        private static readonly System.Collections.Generic.HashSet<Type> PlayerSide =
-            new System.Collections.Generic.HashSet<Type>
-        {
-            typeof(Player), typeof(InputScript), typeof(InvSlot),
-            typeof(InventoryController), typeof(ConstructionMenu),
-            typeof(Padlock), typeof(global::Button),
-        };
+        private static readonly
+            System.Collections.Generic.HashSet<Type> PlayerSide =
+                new System.Collections.Generic.HashSet<Type>
+            {
+                typeof(Player), typeof(InputScript), typeof(InvSlot),
+                typeof(InventoryController), typeof(ConstructionMenu),
+                typeof(Padlock), typeof(global::Button),
+            };
 
         /// <summary>
         /// Tests only: count what's done now as our own player's doing.
@@ -799,7 +800,8 @@ namespace DarkwoodMP.World
         private static T Got<T>(Action a, ObjRef obj) where T : Component =>
             Logged(a, obj, ObjRef.Resolve<T>(obj));
 
-        private static T Logged<T>(Action a, ObjRef obj, T found) where T : Component
+        private static T Logged<T>(Action a, ObjRef obj, T found)
+            where T : Component
         {
             if (Debug)
             {
@@ -1784,8 +1786,8 @@ namespace DarkwoodMP.World
     static class HammerStroke
     {
         internal static int Depth;
-        internal static readonly System.Collections.Generic.List<System.Action> Held =
-            new System.Collections.Generic.List<System.Action>();
+        internal static readonly System.Collections.Generic.List<System.Action>
+            Held = new System.Collections.Generic.List<System.Action>();
 
         static void Prefix() => Depth++;
         static void Finalizer()
@@ -2206,8 +2208,9 @@ namespace DarkwoodMP.World
             public GameObject Target; // a vine trap's: who its vine holds
             public bool Done;
         }
-        private static readonly System.Collections.Generic.Dictionary<string, Held> _held =
-            new System.Collections.Generic.Dictionary<string, Held>();
+        private static readonly
+            System.Collections.Generic.Dictionary<string, Held> _held =
+                new System.Collections.Generic.Dictionary<string, Held>();
 
         /// <summary>
         /// Client: the player's health before the trap they stepped on bit them

@@ -422,8 +422,8 @@ namespace DarkwoodMP.World
         private Snapshot _hostWorld;
         // What each joiner was offered, and in which loaded world (scene
         // handle): a reload makes the offer stale.
-        private readonly Dictionary<ulong, (Snapshot World, int Scene)> _offered =
-            new Dictionary<ulong, (Snapshot, int)>();
+        private readonly Dictionary<ulong, (Snapshot World, int Scene)>
+            _offered = new Dictionary<ulong, (Snapshot, int)>();
         // Joiners waiting for the world being made for them (PrepareWorld),
         // offered it when it's ready.
         private readonly HashSet<ulong> _waiting = new HashSet<ulong>();
@@ -1277,8 +1277,8 @@ namespace DarkwoodMP.World
         // Hashing a cached world reads all of it (tens of MB), and Hello (sent
         // every 3 s while the host keeps us waiting) asks for it: so each
         // folder's hash is kept until a file in it changes.
-        private static readonly Dictionary<string, (string Stamp, byte[] Hash)> _hashCache =
-            new Dictionary<string, (string, byte[])>();
+        private static readonly Dictionary<string, (string Stamp, byte[] Hash)>
+            _hashCache = new Dictionary<string, (string, byte[])>();
 
         private static byte[] HashOfCached(string worldDir)
         {

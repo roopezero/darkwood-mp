@@ -10,10 +10,11 @@ namespace DarkwoodMP.World
     /// enemy is respawned, and on a hard night the rest of it is skipped. With
     /// others playing, that's not one player's to decide:
     ///
-    ///   a client's death never does it (the host runs the enemies and the clock; doing it here would only tear
-    ///   down the host's enemies it's showing);
-    ///   the host's own death doesn't either while others are in the world, who may still be fighting; it does
-    ///   when the host is alone.
+    ///   a client's death never does it (the host runs the enemies and the
+    ///   clock; doing it here would only tear down the host's enemies it's
+    ///   showing);
+    ///   the host's own death doesn't either while others are in the world, who
+    ///   may still be fighting; it does when the host is alone.
     /// </summary>
     static class DeathRules
     {

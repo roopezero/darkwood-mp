@@ -18,7 +18,8 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight))]
     static class ShadowArmorJoinerLightPatch
     {
-        private static readonly AccessTools.FieldRef<ShadowArmor, float> RefreshRate =
+        private static readonly
+            AccessTools.FieldRef<ShadowArmor, float> RefreshRate =
             AccessTools.FieldRefAccess<ShadowArmor, float>("damageRefreshRate");
         private static readonly System.Action<ShadowArmor, bool> Particles =
             AccessTools.MethodDelegate<System.Action<ShadowArmor, bool>>(
@@ -154,7 +155,8 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch]
     static class ShadowArmorCopyPatch
     {
-        static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
+        static System.Collections.Generic.IEnumerable<
+            System.Reflection.MethodBase> TargetMethods()
         {
             yield return AccessTools.Method(
                 typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight));

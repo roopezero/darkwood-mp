@@ -9,29 +9,46 @@ namespace DarkwoodMP.World
     /// <summary>
     /// Smaller world objects, shared as WorldAction kinds:
     ///
-    ///   InteractiveSwitch  an InteractiveItem switched in its window (InteractiveItem.switchMe). The others set
-    ///                      isOn; the switch's on/off events run in the switcher's game and, for a client's switch,
-    ///                      in the host's too (outside the replay, so what they change there reaches everyone).
-    ///   Removed            a note picked up off the ground (Item.activate's JournalNoteReference branch), a death
-    ///                      bag's experience taken (its DeathDrop branch), and, from the host only, a lure its
-    ///                      animals ate (Lure.removeHealth). The others destroy their copy.
-    ///   FeederUsed         a feeder used (Feeder.activate): it's empty for everyone until the next dawn. A client's
-    ///                      use waits for the host's yes before its player gets the feeder's effect, since the
-    ///                      effect can't be taken back.
+    ///   InteractiveSwitch  an InteractiveItem switched in its window
+    ///                      (InteractiveItem.switchMe). The others set isOn;
+    ///                      the switch's on/off events run in the switcher's
+    ///                      game and, for a client's switch, in the host's too
+    ///                      (outside the replay, so what they change there
+    ///                      reaches everyone).
+    ///   Removed            a note picked up off the ground (Item.activate's
+    ///                      JournalNoteReference branch), a death bag's
+    ///                      experience taken (its DeathDrop branch), and, from
+    ///                      the host only, a lure its animals ate
+    ///                      (Lure.removeHealth). The others destroy their copy.
+    ///   FeederUsed         a feeder used (Feeder.activate): it's empty for
+    ///                      everyone until the next dawn. A client's use waits
+    ///                      for the host's yes before its player gets the
+    ///                      feeder's effect, since the effect can't be taken
+    ///                      back.
     ///
-    ///   LiquidLit          spilt gasoline catching fire (Liquid.startBurning). Every trail a player pours is shared
-    ///                      (Containers.SharedPrefabs), and fire spreads along it by itself in each game, so only
-    ///                      where it started is sent: by the host, for any fire that starts there (not a spread),
-    ///                      and by a client only when its own player's burning weapon touched it (MeleeSensor);
-    ///                      the client's thrown matches and molotovs light it in the host's copy of the throw.
+    ///   LiquidLit          spilt gasoline catching fire (Liquid.startBurning).
+    ///                      Every trail a player pours is shared
+    ///                      (Containers.SharedPrefabs), and fire spreads along
+    ///                      it by itself in each game, so only where it started
+    ///                      is sent: by the host, for any fire that starts
+    ///                      there (not a spread), and by a client only when its
+    ///                      own player's burning weapon touched it
+    ///                      (MeleeSensor); the client's thrown matches and
+    ///                      molotovs light it in the host's copy of the throw.
     ///
-    ///   VineHit            a vine (ChainParent) cut at (ChainParent.getHit, from MeleeSensor). The host sends every
-    ///                      hit in its world, with the health it left; a client sends its own player's, as a
-    ///                      request (reach and a damage cap). Each game's own detach follows when health reaches 0,
-    ///                      and with it the parent's break (Item.getHit(999), nested, so not sent again).
-    ///   ShadowArmorDied    the shadow on a shadow-covered item (ShadowArmor.die) died. The host decides: hits on the
-    ///                      item reach it as ItemHit (the shadow takes them), its light check runs there, and it
-    ///                      sends the death. A client's own copy of the shadow never dies by itself.
+    ///   VineHit            a vine (ChainParent) cut at (ChainParent.getHit,
+    ///                      from MeleeSensor). The host sends every hit in its
+    ///                      world, with the health it left; a client sends its
+    ///                      own player's, as a request (reach and a damage
+    ///                      cap). Each game's own detach follows when health
+    ///                      reaches 0, and with it the parent's break
+    ///                      (Item.getHit(999), nested, so not sent again).
+    ///   ShadowArmorDied    the shadow on a shadow-covered item
+    ///                      (ShadowArmor.die) died. The host decides: hits on
+    ///                      the item reach it as ItemHit (the shadow takes
+    ///                      them), its light check runs there, and it sends the
+    ///                      death. A client's own copy of the shadow never dies
+    ///                      by itself.
     ///
     /// Keys and quest items aren't objects lying in the world: KeyReference /
     /// QuestItemReference.pickup is called on the item's database prefab when

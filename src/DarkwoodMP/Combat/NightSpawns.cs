@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
 
@@ -44,8 +45,8 @@ namespace DarkwoodMP.Combat
             public NetPlayerProxy Proxy;
             public Location Loc;
         }
-        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Character, Sent> _sent =
-            new System.Runtime.CompilerServices.ConditionalWeakTable<Character, Sent>();
+        private static readonly ConditionalWeakTable<Character, Sent> _sent =
+            new ConditionalWeakTable<Character, Sent>();
 
         /// <summary>
         /// A night attacker this sent at a joiner's hideout: that joiner and
@@ -126,15 +127,15 @@ namespace DarkwoodMP.Combat
 
         // Host: the attackers out at each hideout, by kind, and which hideout
         // and kind each one counts against.
-        private static readonly Dictionary<Location, Dictionary<string, int>> _out =
-            new Dictionary<Location, Dictionary<string, int>>();
+        private static readonly Dictionary<Location, Dictionary<string, int>>
+            _out = new Dictionary<Location, Dictionary<string, int>>();
         private sealed class Spent
         {
             public Location Loc;
             public string Kind;
         }
-        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Character, Spent> _spent =
-            new System.Runtime.CompilerServices.ConditionalWeakTable<Character, Spent>();
+        private static readonly ConditionalWeakTable<Character, Spent> _spent =
+            new ConditionalWeakTable<Character, Spent>();
 
         /// <summary>
         /// The attackers of a kind out at a hideout now (counted against its
@@ -154,8 +155,8 @@ namespace DarkwoodMP.Combat
         /// Every attacker sent while playing together since the day began: its
         /// hideout's name, who it was aimed at (for the map test).
         /// </summary>
-        public static readonly List<(string Hideout, string At, Character C)> SentLog =
-            new List<(string, string, Character)>();
+        public static readonly List<(string Hideout, string At, Character C)>
+            SentLog = new List<(string, string, Character)>();
 
         /// <summary>
         /// Host, with other players: replaces CharacterSpawner.spawnNightChar.

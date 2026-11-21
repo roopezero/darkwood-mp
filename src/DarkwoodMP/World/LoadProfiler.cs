@@ -45,8 +45,8 @@ namespace DarkwoodMP.World
         }
         private static readonly Dictionary<MethodBase, Stat> _stats =
             new Dictionary<MethodBase, Stat>();
-        private static readonly List<(int frame, float ms, float at)> _longFrames =
-            new List<(int, float, float)>();
+        private static readonly List<(int frame, float ms, float at)>
+            _longFrames = new List<(int, float, float)>();
         private static bool _on;
         private static float _lastFrame;
 

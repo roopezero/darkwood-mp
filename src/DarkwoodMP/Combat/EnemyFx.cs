@@ -11,19 +11,29 @@ namespace DarkwoodMP.Combat
     /// screen, beyond their sounds and blood (NetEnemies) and explosions
     /// (EnemyAreaHits):
     ///
-    /// - Combat music (CombatMusic). The game plays it while `Player.charactersAttackingMe` has someone in it, which
-    ///   `Character.addToPlayerAttackers` fills only for the host's player. The host checks twice a second, for each
-    ///   joiner's proxy, whether one of its enemies is chasing that proxy (behaviour chasingTarget with the proxy as
-    ///   target, as `addToPlayerAttackers` counts it for the host's player), and tells that joiner when it changes.
-    /// - Effect prefabs (EnemyEffect): the banshee's scream (`Character.bansheeScream` spawns FX/BansheeScream, whose
-    ///   collider shakes the player's camera and switches off lights it reaches), the forest spirit's teleport and
-    ///   spawn effect (ForestSpirit_fastSpawnEff from the FX pool), and an enemy's particle emitter switched by its
-    ///   animation (`Character.modifyEmitter`), which frozen copies on a joiner never run. A joiner makes the same
-    ///   prefab in its game, so the scream there shakes its own camera and switches off its own copies of the lights.
-    /// - The banshee's sight (no message): what a player sees is their own screen, so a joiner checks itself, twice a
-    ///   second, whether its player sees one of its copies of the host's banshees (`Player.isInSight`, as the
-    ///   banshee's `checkIfInSightOfPlayer` does), and shows the overlay, the agitated sound, the shake and the
-    ///   banshee's sight light as `onBansheeSeePlayer` / `bansheeAgitated` do. Where the banshee goes is the host's.
+    /// - Combat music (CombatMusic). The game plays it while
+    ///   `Player.charactersAttackingMe` has someone in it, which
+    ///   `Character.addToPlayerAttackers` fills only for the host's player. The
+    ///   host checks twice a second, for each joiner's proxy, whether one of
+    ///   its enemies is chasing that proxy (behaviour chasingTarget with the
+    ///   proxy as target, as `addToPlayerAttackers` counts it for the host's
+    ///   player), and tells that joiner when it changes.
+    /// - Effect prefabs (EnemyEffect): the banshee's scream
+    ///   (`Character.bansheeScream` spawns FX/BansheeScream, whose collider
+    ///   shakes the player's camera and switches off lights it reaches), the
+    ///   forest spirit's teleport and spawn effect (ForestSpirit_fastSpawnEff
+    ///   from the FX pool), and an enemy's particle emitter switched by its
+    ///   animation (`Character.modifyEmitter`), which frozen copies on a joiner
+    ///   never run. A joiner makes the same prefab in its game, so the scream
+    ///   there shakes its own camera and switches off its own copies of the
+    ///   lights.
+    /// - The banshee's sight (no message): what a player sees is their own
+    ///   screen, so a joiner checks itself, twice a second, whether its player
+    ///   sees one of its copies of the host's banshees (`Player.isInSight`, as
+    ///   the banshee's `checkIfInSightOfPlayer` does), and shows the overlay,
+    ///   the agitated sound, the shake and the banshee's sight light as
+    ///   `onBansheeSeePlayer` / `bansheeAgitated` do. Where the banshee goes is
+    ///   the host's.
     /// </summary>
     public static class EnemyFx
     {

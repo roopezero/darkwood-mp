@@ -87,8 +87,8 @@ namespace DarkwoodMP.World
         private bool _claimed;
         // client: where the host (or the player who owns the drag) last said
         // the thing we're holding is, for letting go
-        private readonly Dictionary<GameObject, (Vector3 pos, Quaternion rot)> _hostAt =
-            new Dictionary<GameObject, (Vector3, Quaternion)>();
+        private readonly Dictionary<GameObject, (Vector3 pos, Quaternion rot)>
+            _hostAt = new Dictionary<GameObject, (Vector3, Quaternion)>();
         // client: where we said a thing came to rest, oldest first, until the
         // host passes each back to us (its echo)
         private readonly Dictionary<GameObject, List<Vector3>> _unechoed =
@@ -464,8 +464,9 @@ namespace DarkwoodMP.World
 
         // Host: every loose object where the last snapshot for joiners has it
         // (WorldShare.SaveSnapshot).
-        private static readonly Dictionary<Rigidbody, (Vector3 pos, Quaternion rot)> _atSnapshot =
-            new Dictionary<Rigidbody, (Vector3, Quaternion)>();
+        private static readonly
+            Dictionary<Rigidbody, (Vector3 pos, Quaternion rot)> _atSnapshot =
+                new Dictionary<Rigidbody, (Vector3, Quaternion)>();
         /// <summary>
         /// When the last snapshot's positions were noted (Time.unscaledTime;
         /// -1: none). For the tests.

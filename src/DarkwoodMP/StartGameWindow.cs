@@ -13,14 +13,18 @@ namespace DarkwoodMP
     /// window to pick a save (or a new game), the new game's settings, and
     /// whether to host it.
     ///
-    /// 1. Save: a list of the saved slots (the slot, the name you gave it, its day, chapter and difficulty, when it
-    ///    was last played, and who has played it with you, from SaveBook), and New Game in the first free slot. With
-    ///    every slot in use, New Game asks which save to overwrite (ConfirmDialog). A save can be renamed and deleted
-    ///    (as the game's own Delete, asked first).
-    /// 2. New game: the game's own choices (difficulty, skip the prologue, backer content); off for a save, where
-    ///    they show what the save was started with.
-    /// 3. Host a multiplayer game: Steam or Direct, your name, the server's name, port, password and most players,
-    ///    and what new players start with. Off until the box is ticked.
+    /// 1. Save: a list of the saved slots (the slot, the name you gave it, its
+    ///    day, chapter and difficulty, when it was last played, and who has
+    ///    played it with you, from SaveBook), and New Game in the first free
+    ///    slot. With every slot in use, New Game asks which save to overwrite
+    ///    (ConfirmDialog). A save can be renamed and deleted (as the game's own
+    ///    Delete, asked first).
+    /// 2. New game: the game's own choices (difficulty, skip the prologue,
+    ///    backer content); off for a save, where they show what the save was
+    ///    started with.
+    /// 3. Host a multiplayer game: Steam or Direct, your name, the server's
+    ///    name, port, password and most players, and what new players start
+    ///    with. Off until the box is ticked.
     ///
     /// Start goes through the game's own code: a save loads as its Play button
     /// does (UI.initLoadGame), a new game starts as the profiles screen's new

@@ -1157,8 +1157,8 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static readonly Dictionary<InvItem, List<InvItemEffect>> _weaponEffects =
-            new Dictionary<InvItem, List<InvItemEffect>>();
+        private static readonly Dictionary<InvItem, List<InvItemEffect>>
+            _weaponEffects = new Dictionary<InvItem, List<InvItemEffect>>();
 
         /// <summary>
         /// Of the effects a hit came with, those the weapon's class can cause,
@@ -1803,8 +1803,8 @@ namespace DarkwoodMP.Combat
         /// view's shadow layers then cut the player's view to nothing beside
         /// the corpse.
         /// </summary>
-        private static readonly Dictionary<Character, List<Component>> _switchedOff =
-            new Dictionary<Character, List<Component>>();
+        private static readonly Dictionary<Character, List<Component>>
+            _switchedOff = new Dictionary<Character, List<Component>>();
 
         private static void SetVisible(Character c, bool on)
         {

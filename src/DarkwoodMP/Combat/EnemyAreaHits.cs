@@ -14,14 +14,19 @@ namespace DarkwoodMP.Combat
     /// PlayerDamage to every proxy it would have caught, with the game's own
     /// falloff:
     ///
-    /// - explosions (Explodes.explode: enemy bombs, and every other explosion in the host's world, since a
-    ///   client's own game doesn't hurt its player with explosions; see ThrowSync's ClientExplosionSelfHitPatch),
+    /// - explosions (Explodes.explode: enemy bombs, and every other explosion
+    ///   in the host's world, since a client's own game doesn't hurt its player
+    ///   with explosions; see ThrowSync's ClientExplosionSelfHitPatch),
     ///   damage * (radius - distance) / radius, and the explosion's effect;
-    /// - damage auras (Character.waitToDamageAroundMe), aroundMeDamage * (range / 2 - distance) / range;
-    /// - a diving flier (Flier.Update), 5 to whoever it dove at, not always the host;
-    /// - a Shooter on one of the host's enemies, damage / distance to each proxy it can see;
-    /// - flames an enemy spawned (its projectiles and what their explosions leave burning), which the proxy
-    ///   otherwise drops: Flame calls every hit byPlayer.
+    /// - damage auras (Character.waitToDamageAroundMe),
+    ///   aroundMeDamage * (range / 2 - distance) / range;
+    /// - a diving flier (Flier.Update), 5 to whoever it dove at, not always the
+    ///   host;
+    /// - a Shooter on one of the host's enemies, damage / distance to each
+    ///   proxy it can see;
+    /// - flames an enemy spawned (its projectiles and what their explosions
+    ///   leave burning), which the proxy otherwise drops: Flame calls every hit
+    ///   byPlayer.
     ///
     /// The host decides all of it. A client's frozen copies of the host's
     /// enemies don't dive or shoot. Explosions of the host's enemies happen

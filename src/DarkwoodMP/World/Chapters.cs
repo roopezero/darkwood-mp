@@ -384,8 +384,8 @@ namespace DarkwoodMP.World
         /// Host: the story steps run for a joiner or started by our own game in
         /// this session (KeyOf): none runs twice.
         /// </summary>
-        private static readonly System.Collections.Generic.HashSet<string> _ran =
-            new System.Collections.Generic.HashSet<string>();
+        private static readonly System.Collections.Generic.HashSet<string>
+            _ran = new System.Collections.Generic.HashSet<string>();
         private static string KeyOf(StoryKind kind, int chapter)
         {
             if (kind == StoryKind.Chapter)

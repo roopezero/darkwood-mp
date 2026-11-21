@@ -58,10 +58,11 @@ namespace DarkwoodMP.World
             public byte Armed = 255;
         }
         private static readonly List<Live> _live = new List<Live>();
-        private static readonly List<(byte kind, long id, Tag tag, Vector3 pos, Quaternion rot, ObjRef parent)> _incoming =
-            new List<(byte, long, Tag, Vector3, Quaternion, ObjRef)>();
-        private static readonly List<(GameObject go, byte armed, float at)> _rearm =
-            new List<(GameObject, byte, float)>();
+        private static readonly List<(byte kind, long id, Tag tag,
+            Vector3 pos, Quaternion rot, ObjRef parent)> _incoming =
+                new List<(byte, long, Tag, Vector3, Quaternion, ObjRef)>();
+        private static readonly List<(GameObject go, byte armed, float at)>
+            _rearm = new List<(GameObject, byte, float)>();
         private static Session _session;
         private static float _nextCheck;
         private static readonly System.Random _rng = new System.Random();

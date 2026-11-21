@@ -17,11 +17,15 @@ namespace DarkwoodMP.World
     /// (endAfterNight destroys the trader); this is the safety for anything
     /// else that takes an NPC away mid-dialogue:
     ///
-    /// - With the NPC destroyed, closeTrade, close and escPress do the game's own closing steps without the NPC
-    ///   (ForceClose): what the player put on the table comes back, the trader's window goes, the screen fades back
-    ///   and onTweenClose gives the controls back. A frame watch does the same if nobody presses anything.
-    /// - With the NPC switched off while playing together, the dialogue is closed the game's way.
-    /// - A dialogue whose NPC is gone and that hasn't closed in StuckAfter seconds is closed by force.
+    /// - With the NPC destroyed, closeTrade, close and escPress do the game's
+    ///   own closing steps without the NPC (ForceClose): what the player put on
+    ///   the table comes back, the trader's window goes, the screen fades back
+    ///   and onTweenClose gives the controls back. A frame watch does the same
+    ///   if nobody presses anything.
+    /// - With the NPC switched off while playing together, the dialogue is
+    ///   closed the game's way.
+    /// - A dialogue whose NPC is gone and that hasn't closed in StuckAfter
+    ///   seconds is closed by force.
     /// </summary>
     public static class DialogueGuard
     {

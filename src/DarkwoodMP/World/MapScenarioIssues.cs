@@ -286,7 +286,8 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Things of a kind in the scene (culled ones too), nearest a spot.
         /// </summary>
-        internal static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
+        internal static T NearestAll<T>(Vector3 to, Func<T, bool> ok)
+            where T : Component =>
             StateDump.All<T>().Where(ok)
                 .OrderBy(t => StateDump.Flat(t.transform.position - to))
                 .FirstOrDefault();
@@ -351,8 +352,10 @@ namespace DarkwoodMP.World
             yield return WaitLog(0, new[]
             {
                 @"\[join\] loading screen shown",
-                @"\[join\] loading screen: (download|load|connect|wait)\w* \d+%",
-                @"\[join\] loading screen: (handed over to the game's|the game's loading has it now)"
+                @"\[join\] loading screen: "
+                    + @"(download|load|connect|wait)\w* \d+%",
+                @"\[join\] loading screen: (handed over to the game's"
+                    + @"|the game's loading has it now)"
             }, 6f, missing);
             var lines = LogLines();
             var join = lines.Where(l => l.Contains("[join]"))
@@ -1558,10 +1561,10 @@ namespace DarkwoodMP.World
             int mark = LogMark();
             string seen = "";
             // MeleeSensor hits a patch only if Core.canSeeAttack passes: rays
-            // from our player at a character's height
-            // (14) towards the patch (at y -40), as long as the flat distance, must hit the patch's collider.
-            // The sensor's check is against the collider it touched, which may
-            // be on a child of the patch.
+            // from our player at a character's height (14) towards the patch
+            // (at y -40), as long as the flat distance, must hit the patch's
+            // collider. The sensor's check is against the collider it touched,
+            // which may be on a child of the patch.
             Collider hitCollider = inf.GetComponentInChildren<Collider>();
             Transform hitT = null;
             if (hitCollider != null)

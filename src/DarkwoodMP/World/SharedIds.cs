@@ -16,9 +16,11 @@ namespace DarkwoodMP.World
     /// made next, which differs.
     ///
     ///   Client: the counter in the save it loaded (the host's snapshot).
-    ///   Host:   the counter in the snapshot each joiner was let in with. ObjRef.Of uses the lowest of them, so
-    ///           every joiner has the object; Resolve accepts up to the highest, since a joiner only names ids
-    ///           below its own. Both start again when the host's world changes (the joiners load it again).
+    ///   Host:   the counter in the snapshot each joiner was let in with.
+    ///           ObjRef.Of uses the lowest of them, so every joiner has the
+    ///           object; Resolve accepts up to the highest, since a joiner only
+    ///           names ids below its own. Both start again when the host's
+    ///           world changes (the joiners load it again).
     ///
     /// ObjRef names anything above the limit by name and position instead, and
     /// drops a Saved ref above it.

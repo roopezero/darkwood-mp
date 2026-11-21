@@ -31,8 +31,9 @@ namespace DarkwoodMP.World
     public sealed class ThrowSync
     {
         private readonly Session _session;
-        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem =
-            AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
+        private static readonly
+            AccessTools.FieldRef<Player, GameObject> HeldItem =
+                AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
 
         public static ThrowSync Instance { get; private set; }
 

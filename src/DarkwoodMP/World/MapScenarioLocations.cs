@@ -243,7 +243,8 @@ namespace DarkwoodMP.World
         /// Characters within a location's reach of its marker
         /// (Locations.HostRunsAt's 15000), active or not.
         /// </summary>
-        private static IEnumerable<Character> LocationCharacters(Location loc) =>
+        private static IEnumerable<Character> LocationCharacters(
+            Location loc) =>
             Object.FindObjectsOfType<Character>(true).Where(
                 c => NetEnemies.Eligible(c)
                     && StateDump.Flat(
@@ -870,7 +871,8 @@ namespace DarkwoodMP.World
                 var missing = new List<string>();
                 yield return MapScenarioIssues.WaitLog(mark, new[]
                 {
-                    @"corpse at .* lies outside .*: kept as that location is left"
+                    @"corpse at .* lies outside .*: "
+                        + "kept as that location is left"
                 }, 3f, missing);
                 if (missing.Count > 0)
                 {

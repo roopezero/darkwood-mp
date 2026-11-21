@@ -358,7 +358,8 @@ namespace DarkwoodMP.World
         /// The Nth of these (a[0]), or null after failing with the usage of the
         /// "what-..." steps.
         /// </summary>
-        private static T NthArg<T>(string[] a, Result r, string what) where T : Component
+        private static T NthArg<T>(string[] a, Result r, string what)
+            where T : Component
         {
             T t = null;
             if (a.Length > 0)
@@ -1661,8 +1662,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed =
-            AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
+        private static readonly
+            AccessTools.FieldRef<Player, Item> TrapBeingDisarmed =
+                AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
 
         /// <summary>
         /// The progress bar's end as the player's action, with it as the trap

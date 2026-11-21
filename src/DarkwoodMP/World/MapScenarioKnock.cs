@@ -18,17 +18,28 @@ namespace DarkwoodMP.World
     /// compares the dropped items in both games: an item both games move must
     /// come to rest at the same place in each.
     ///
-    ///   kn-info [R]          the dropped items within R (250) of the centre: where, their body and colliders, and
-    ///                        whether DragSync watches them. The first call notes their order (nearest first), which
-    ///                        the other steps' INDEX counts in, so both games pick the same item.
-    ///   kn-player INDEX      our player walks straight through that item (and 80 past it), then waits for it to rest.
-    ///   kn-enemy INDEX [KIND] (host) a KIND (Dog) is spawned beside that item and driven straight through it, then
-    ///                        removed; the client's frozen copy of it passes through the client's copy of the item.
-    ///   kn-slide [TYPE]      (host, before the join) TYPE (rope) dropped as the game drops it (spawnDroppedInvItemm:
-    ///                        a random push of 100-250 away from the player), and kept sliding to and fro until the
-    ///                        world is read for the joiner's snapshot; then pushed once more, so it comes to rest while
-    ///                        the joiner is still loading, away from where the snapshot has it. That is what the test
-    ///                        world's kit does when it doesn't fit the host's bags and a client joins at once.
+    ///   kn-info [R]          the dropped items within R (250) of the centre:
+    ///                        where, their body and colliders, and whether
+    ///                        DragSync watches them. The first call notes their
+    ///                        order (nearest first), which the other steps'
+    ///                        INDEX counts in, so both games pick the same
+    ///                        item.
+    ///   kn-player INDEX      our player walks straight through that item (and
+    ///                        80 past it), then waits for it to rest.
+    ///   kn-enemy INDEX [KIND] (host) a KIND (Dog) is spawned beside that item
+    ///                        and driven straight through it, then removed; the
+    ///                        client's frozen copy of it passes through the
+    ///                        client's copy of the item.
+    ///   kn-slide [TYPE]      (host, before the join) TYPE (rope) dropped as
+    ///                        the game drops it (spawnDroppedInvItemm: a random
+    ///                        push of 100-250 away from the player), and kept
+    ///                        sliding to and fro until the world is read for
+    ///                        the joiner's snapshot; then pushed once more, so
+    ///                        it comes to rest while the joiner is still
+    ///                        loading, away from where the snapshot has it.
+    ///                        That is what the test world's kit does when it
+    ///                        doesn't fit the host's bags and a client joins at
+    ///                        once.
     ///
     /// The dropped items are on layer 25, which players' and enemies' bodies
     /// don't collide with: kn-player and kn-enemy check that walking through

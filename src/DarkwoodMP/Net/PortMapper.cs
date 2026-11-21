@@ -433,7 +433,8 @@ namespace DarkwoodMP.Net
                     }
                     try
                     {
-                        if (Soap(m, "GetExternalIPAddress", "", out _) is Dictionary<string, string> f
+                        if (Soap(m, "GetExternalIPAddress", "", out _)
+                                is Dictionary<string, string> f
                             && f.TryGetValue(
                                 "NewExternalIPAddress", out string ext)
                             && ext.Length > 0)
@@ -742,7 +743,8 @@ namespace DarkwoodMP.Net
             string body =
                 "<?xml version=\"1.0\"?>\r\n<s:Envelope "
                     + "xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
-                    + "s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">" +
+                    + "s:encodingStyle="
+                    + "\"http://schemas.xmlsoap.org/soap/encoding/\">" +
                 $"<s:Body><u:{action} xmlns:u=\"{m.ServiceType}\">{args}</u:{action}></s:Body></s:Envelope>";
             string text = Http(
                 "POST", m.ControlUrl, body, $"\"{m.ServiceType}#{action}\"",

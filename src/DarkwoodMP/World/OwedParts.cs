@@ -16,15 +16,19 @@ namespace DarkwoodMP.World
     /// someone else used a hole (or anyone, after the world was loaded again)
     /// found it fired and was stuck on the wrong side.
     ///
-    /// - A joiner is owed every once-only trigger with such steps that is fired in the world it loaded, except those
-    ///   it had its own part of in this world (it set them off, or got its part since). It asks the host (kind 5) when
-    ///   its player sets one off.
-    /// - The host remembers, by player key, which triggers each joiner had its part of, and refuses a second one. It's
-    ///   kept in memory across world reloads (as the joiners' characters are, so it matches where they stand) and
-    ///   written beside the save when the host's game saves: prof&lt;id&gt;/darkwoodmp_later.json.
-    /// - The host's own player is owed only the triggers a joiner set off first (the ones fired before the mod kept
-    ///   this, it went through itself). That list goes back to the saved one when the host's world is loaded again,
-    ///   as the host's player goes back to where the save has it.
+    /// - A joiner is owed every once-only trigger with such steps that is fired
+    ///   in the world it loaded, except those it had its own part of in this
+    ///   world (it set them off, or got its part since). It asks the host (kind
+    ///   5) when its player sets one off.
+    /// - The host remembers, by player key, which triggers each joiner had its
+    ///   part of, and refuses a second one. It's kept in memory across world
+    ///   reloads (as the joiners' characters are, so it matches where they
+    ///   stand) and written beside the save when the host's game saves:
+    ///   prof&lt;id&gt;/darkwoodmp_later.json.
+    /// - The host's own player is owed only the triggers a joiner set off first
+    ///   (the ones fired before the mod kept this, it went through itself).
+    ///   That list goes back to the saved one when the host's world is loaded
+    ///   again, as the host's player goes back to where the save has it.
     ///
     /// A trigger is named by its object's save id (or scene, name and place)
     /// and its index in the object's triggers.

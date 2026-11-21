@@ -7,10 +7,10 @@ namespace DarkwoodMP
 {
     /// <summary>
     /// For tests on Linux: moves the system's real mouse pointer with ydotool
-    /// (its daemon's socket at
-    /// /tmp/.ydotool_socket) and clicks with it, so the game gets real input events, which made-up ones can't stand
-    /// in for. Moves are relative and accelerated, so it moves, reads where the
-    /// game sees the mouse, and moves again.
+    /// (its daemon's socket at /tmp/.ydotool_socket) and clicks with it, so the
+    /// game gets real input events, which made-up ones can't stand in for.
+    /// Moves are relative and accelerated, so it moves, reads where the game
+    /// sees the mouse, and moves again.
     /// </summary>
     internal static class RealMouse
     {

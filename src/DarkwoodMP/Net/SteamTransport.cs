@@ -22,7 +22,8 @@ namespace DarkwoodMP.Net
         /// </summary>
         public Func<CSteamID, bool> ShouldAccept = _ => false;
 
-        private Callback<SteamNetworkingMessagesSessionRequest_t> _sessionRequest;
+        private Callback<SteamNetworkingMessagesSessionRequest_t>
+            _sessionRequest;
         private Callback<SteamNetworkingMessagesSessionFailed_t> _sessionFailed;
         private readonly IntPtr[] _msgPtrs = new IntPtr[64];
         private byte[] _recvBuf = new byte[4096];
@@ -426,7 +427,8 @@ namespace DarkwoodMP.Net
                                     handler(from, _recvBuf, len, channel);
                                 }
                             }
-                            else if (AddPiece(from, channel, _recvBuf, len) is Joining whole)
+                            else if (AddPiece(from, channel, _recvBuf, len)
+                                is Joining whole)
                             {
                                 MessageHandler receiver = OnMessage;
                                 if (receiver != null)

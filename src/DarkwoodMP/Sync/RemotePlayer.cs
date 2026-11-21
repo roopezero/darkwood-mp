@@ -93,7 +93,9 @@ namespace DarkwoodMP.Sync
             ApplyLights();
         }
 
-        // ---- what lights them: a torch or lamp in hand (its light and flames), the flashlight's beam ----------
+        // ---- what lights them -----------------------------------------------
+        // A torch or lamp in hand (its light and flames), or the flashlight's
+        // beam.
 
         private string _heldShown = "";
         private Transform _heldLight, _heldFlames;
@@ -593,8 +595,8 @@ namespace DarkwoodMP.Sync
     /// </summary>
     public static class SpriteCollections
     {
-        private static readonly Dictionary<int, tk2dSpriteCollectionData> _byHash =
-            new Dictionary<int, tk2dSpriteCollectionData>();
+        private static readonly Dictionary<int, tk2dSpriteCollectionData>
+            _byHash = new Dictionary<int, tk2dSpriteCollectionData>();
         private static float _lastRescan = -999f;
 
         private static readonly HashSet<string> _loadedLibraries =
@@ -614,8 +616,8 @@ namespace DarkwoodMP.Sync
                 return c;
             }
             var lib =
-                Resources
-                    .Load(library, typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
+                Resources.Load(library, typeof(tk2dSpriteAnimation))
+                    as tk2dSpriteAnimation;
             string data;
             if (lib != null)
             {

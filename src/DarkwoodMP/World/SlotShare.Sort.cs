@@ -288,7 +288,8 @@ namespace DarkwoodMP.World
                         dst.Base.maxAmount - dst.State.amount);
                     dst.State.durability =
                         (dst.State.amount * dst.State.durability
-                            + src.State.durability * n) / (dst.State.amount + n);
+                            + src.State.durability * n)
+                        / (dst.State.amount + n);
                     dst.State.amount += n;
                     src.State.amount -= n;
                 }

@@ -15,13 +15,20 @@ namespace DarkwoodMP.World
     /// own random numbers that could make two games' worlds differ. The list is
     /// tools/tests/map_scenario_dice.py.
     ///
-    ///   dice-sets    the set of children each Location kept (Location.Awake picks one of Location.sets at random,
-    ///                every time the location is made, and destroys the others; the pick isn't saved). Replies with
-    ///                the count and a digest, and logs every pick, so the host's and the client's can be compared.
-    ///   dice-events  the scripted-event steps in the loaded world whose target is a random object of their location
-    ///                (Location.GetObject.returnObjects without getAll or getClosest) or the object nearest the local
-    ///                player (getClosestToPlayer), in a step every game runs (the shared part, ScriptedEvents), and
-    ///                with more than one object to pick from. Also the runFunction steps of the shared part.
+    ///   dice-sets    the set of children each Location kept (Location.Awake
+    ///                picks one of Location.sets at random, every time the
+    ///                location is made, and destroys the others; the pick isn't
+    ///                saved). Replies with the count and a digest, and logs
+    ///                every pick, so the host's and the client's can be
+    ///                compared.
+    ///   dice-events  the scripted-event steps in the loaded world whose target
+    ///                is a random object of their location
+    ///                (Location.GetObject.returnObjects without getAll or
+    ///                getClosest) or the object nearest the local player
+    ///                (getClosestToPlayer), in a step every game runs (the
+    ///                shared part, ScriptedEvents), and with more than one
+    ///                object to pick from. Also the runFunction steps of the
+    ///                shared part.
     /// </summary>
     public static class MapScenarioDice
     {

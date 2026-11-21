@@ -813,7 +813,8 @@ namespace DarkwoodMP.Combat
         typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop))]
     public static class HostLoopStopPatch
     {
-        private static void Prefix(CharacterSounds __instance, out bool __state) =>
+        private static void Prefix(
+            CharacterSounds __instance, out bool __state) =>
             __state = __instance.idleAudioObject != null;
 
         private static void Postfix(

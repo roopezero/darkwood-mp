@@ -883,7 +883,8 @@ namespace DarkwoodMP.World
 
         static void Prefix(
             DialogueWindow __instance,
-            out (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
+            out (Dictionary<string, int> took, Dictionary<string, int> gave,
+                int rep) __state)
         {
             __state = default;
             if (__instance == null || __instance.npc == null
@@ -897,7 +898,8 @@ namespace DarkwoodMP.World
 
         static void Postfix(
             DialogueWindow __instance,
-            (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
+            (Dictionary<string, int> took, Dictionary<string, int> gave,
+                int rep) __state)
         {
             var (took, gave, rep) = __state;
             if (took == null || __instance.npc == null)

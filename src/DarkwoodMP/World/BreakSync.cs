@@ -32,10 +32,12 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class BreakSync
     {
-        private static readonly AccessTools.FieldRef<Explodes, bool> ActivatedField =
-            AccessTools.FieldRefAccess<Explodes, bool>("activated");
-        private static readonly AccessTools.FieldRef<Explodes, bool> FlamingField =
-            AccessTools.FieldRefAccess<Explodes, bool>("flaming");
+        private static readonly
+            AccessTools.FieldRef<Explodes, bool> ActivatedField =
+                AccessTools.FieldRefAccess<Explodes, bool>("activated");
+        private static readonly
+            AccessTools.FieldRef<Explodes, bool> FlamingField =
+                AccessTools.FieldRefAccess<Explodes, bool>("flaming");
 
         /// <summary>
         /// Whether this Explodes has gone off (it goes off once).
@@ -110,8 +112,9 @@ namespace DarkwoodMP.World
             return WorldActions.ByLocalPlayer();
         }
 
-        private static readonly AccessTools.FieldRef<ShadowArmor, float> ShadowHealthField =
-            AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
+        private static readonly
+            AccessTools.FieldRef<ShadowArmor, float> ShadowHealthField =
+                AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
 
         /// <summary>
         /// The health a shadow-covered item's shadow is going down to (a hit

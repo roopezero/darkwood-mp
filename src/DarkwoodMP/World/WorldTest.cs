@@ -17,7 +17,8 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class WorldTest
     {
-        private static T Nearest<T>(IEnumerable<T> xs, Vector3 at) where T : Component =>
+        private static T Nearest<T>(IEnumerable<T> xs, Vector3 at)
+            where T : Component =>
             xs.OrderBy(x => (x.transform.position
                         - at).sqrMagnitude).FirstOrDefault();
 
@@ -1806,7 +1807,8 @@ namespace DarkwoodMP.World
         /// Triggers a player walks into or uses, near pos, that haven't fired
         /// and whose events have no steps of the player's own.
         /// </summary>
-        private static List<(EventTriggers et, int i)> AreaTriggers(Vector3 pos) =>
+        private static List<(EventTriggers et, int i)> AreaTriggers(
+            Vector3 pos) =>
             Object.FindObjectsOfType<EventTriggers>()
                 .SelectMany(et => et.eventTriggers.Select((t, i) => (et, t, i)))
                 .Where(
@@ -1936,7 +1938,8 @@ namespace DarkwoodMP.World
                         && (x.t.type == global::EventTrigger.Type.onTime
                             || x.t.type == global::EventTrigger.Type.onDeath
                             || x.t.type
-                                == global::EventTrigger.Type.refreshWhenTurnedOn)).ToList();
+                                == global::EventTrigger.Type.refreshWhenTurnedOn))
+                .ToList();
             Plugin.Log.LogInfo(
                 $"[world test] world triggers (time, death, turned on): {worldTriggers.Count}, not fired {worldTriggers.Count(x => !x.t.fired)}");
             foreach (var x in worldTriggers.OrderBy(

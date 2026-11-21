@@ -61,10 +61,12 @@ namespace DarkwoodMP.World
                 typeof(Player), "attack", new[] { typeof(float) });
         private static readonly System.Reflection.MethodInfo ReloadM =
             AccessTools.Method(typeof(Player), "reload", Type.EmptyTypes);
-        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem =
-            AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
-        private static readonly AccessTools.FieldRef<Explodes, bool> ExplodesActivated =
-            AccessTools.FieldRefAccess<Explodes, bool>("activated");
+        private static readonly
+            AccessTools.FieldRef<Player, GameObject> HeldItem =
+                AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
+        private static readonly
+            AccessTools.FieldRef<Explodes, bool> ExplodesActivated =
+                AccessTools.FieldRefAccess<Explodes, bool>("activated");
 
         /// <summary>
         /// Where the mouse points, as Core.mouseWorldPosition says (while a
@@ -77,8 +79,9 @@ namespace DarkwoodMP.World
         /// The sounds the host's characters heard lately
         /// (Character.heardSound): who, where, dangerous.
         /// </summary>
-        internal static readonly List<(Character c, Vector3 pos, bool dangerous)> Heard =
-            new List<(Character, Vector3, bool)>();
+        internal static readonly
+            List<(Character c, Vector3 pos, bool dangerous)> Heard =
+                new List<(Character, Vector3, bool)>();
 
         /// <summary>
         /// "i2-safe on|off": our player is healed whenever it's below half

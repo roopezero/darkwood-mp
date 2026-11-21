@@ -192,7 +192,8 @@ namespace DarkwoodMP.World
             return n;
         }
 
-        private static bool HasGood(SkillTiers.Tier t, HashSet<string> chosen) =>
+        private static bool HasGood(
+            SkillTiers.Tier t, HashSet<string> chosen) =>
             t.skills.Any(sk => sk != null
                     && chosen.Contains(sk.name));
         private static int GoodIn(SkillTiers.Tier t, HashSet<string> chosen) =>

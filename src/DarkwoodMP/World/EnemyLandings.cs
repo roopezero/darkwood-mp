@@ -206,7 +206,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- a ranged sensor thrown (Character.rangedAttack: the human spider's projectile) -------------
+        // ---- a ranged sensor thrown -----------------------------------------
+        // Character.rangedAttack: the human spider's projectile.
 
         /// <summary>
         /// Host: the ranged sensor one of our shared enemies is throwing, while

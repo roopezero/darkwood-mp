@@ -12,18 +12,25 @@ namespace DarkwoodMP.World
     /// until the next save), so without this ObjRef could only name them by
     /// name and position.
     ///
-    ///   Host:   every saveable object that starts while it shares its world (SaveableObject.init) and, a moment
-    ///           later, still has no shared name (not a spawn of ours, not an enemy, no save id every joiner has)
-    ///           gets a random id. The ids made in a frame go out together as HostIds: id, name, position.
-    ///           A joiner let in later gets all the live ones (flagged as made before it came, so it doesn't look
-    ///           for them by time).
-    ///   Client: ties the id to its own copy: an object of that name, made within Window seconds before or after the
-    ///           message, the nearest within ObjRef.PlacedSlack of the host's position (of those equally near, the one in the
-    ///           same place in its hierarchy, PlaceOf), not tied already. Until one
-    ///           is tied (or when none ever is), a ref to the id is looked up by that name and position, as Placed.
-    ///           An id not tied within Window (the host loaded a location this joiner only goes to minutes later),
-    ///           or one made before it came, is kept by name: an object of that name that starts here later, still
-    ///           unnamed after Settle, is tied to the nearest such id within PlacedSlack that isn't tied to a live one.
+    ///   Host:   every saveable object that starts while it shares its world
+    ///           (SaveableObject.init) and, a moment later, still has no shared
+    ///           name (not a spawn of ours, not an enemy, no save id every
+    ///           joiner has) gets a random id. The ids made in a frame go out
+    ///           together as HostIds: id, name, position. A joiner let in later
+    ///           gets all the live ones (flagged as made before it came, so it
+    ///           doesn't look for them by time).
+    ///   Client: ties the id to its own copy: an object of that name, made
+    ///           within Window seconds before or after the message, the nearest
+    ///           within ObjRef.PlacedSlack of the host's position (of those
+    ///           equally near, the one in the same place in its hierarchy,
+    ///           PlaceOf), not tied already. Until one is tied (or when none
+    ///           ever is), a ref to the id is looked up by that name and
+    ///           position, as Placed. An id not tied within Window (the host
+    ///           loaded a location this joiner only goes to minutes later), or
+    ///           one made before it came, is kept by name: an object of that
+    ///           name that starts here later, still unnamed after Settle, is
+    ///           tied to the nearest such id within PlacedSlack that isn't tied
+    ///           to a live one.
     /// Objects with a save id every game shares keep being named by it; this
     /// only changes what was Placed.
     /// </summary>
@@ -39,19 +46,22 @@ namespace DarkwoodMP.World
 
         private static readonly List<(GameObject go, float at)> _started =
             new List<(GameObject, float)>();
-        private static readonly List<(long id, string name, Vector3 pos, int place, float until)> _pending =
-            new List<(long, string, Vector3, int, float)>();
+        private static readonly List<(long id, string name, Vector3 pos,
+            int place, float until)> _pending =
+                new List<(long, string, Vector3, int, float)>();
         // Client: ids the host gave out that weren't tied in time (or were made
         // before we came), by name.
-        private static readonly Dictionary<string, List<(long id, Vector3 pos, int place)>> _late =
-            new Dictionary<string, List<(long, Vector3, int)>>();
+        private static readonly
+            Dictionary<string, List<(long id, Vector3 pos, int place)>> _late =
+                new Dictionary<string, List<(long, Vector3, int)>>();
         private static readonly HashSet<GameObject> _lateChecked =
             new HashSet<GameObject>();
         // still in _started: a fresh id may take over
         private static readonly HashSet<GameObject> _lateTied =
             new HashSet<GameObject>();
-        private static readonly List<(long id, string name, Vector3 pos, int place)> _outgoing =
-            new List<(long, string, Vector3, int)>();
+        private static readonly
+            List<(long id, string name, Vector3 pos, int place)> _outgoing =
+                new List<(long, string, Vector3, int)>();
         // Client: where the host last had each announced object (as announced,
         // or where an ObjMove for it that came before we tied it put it), for
         // our copy to go there once it's tied (Place).
@@ -438,8 +448,8 @@ namespace DarkwoodMP.World
             var all = new List<(long, string, Vector3, int)>();
             foreach (var kv in ObjRef.SharedObjects)
             {
-                all.Add(
-                    (kv.Key, kv.Value.name, kv.Value.transform.position, PlaceOf(kv.Value)));
+                all.Add((kv.Key, kv.Value.name, kv.Value.transform.position,
+                    PlaceOf(kv.Value)));
             }
             if (all.Count > 0)
             {
@@ -495,8 +505,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly AccessTools.FieldRef<SaveableObject, bool> InitializedRef =
-            AccessTools.FieldRefAccess<SaveableObject, bool>("initialized");
+        private static readonly
+            AccessTools.FieldRef<SaveableObject, bool> InitializedRef =
+                AccessTools.FieldRefAccess<SaveableObject, bool>("initialized");
         private static bool Initialized(SaveableObject s) => InitializedRef(s);
     }
 }

@@ -432,7 +432,8 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), "onCollideWith")]
     static class ProxyBumpPatch
     {
-        private static readonly Action<Character, Character, Transform, bool> React =
+        private static readonly
+            Action<Character, Character, Transform, bool> React =
             AccessTools
                 .MethodDelegate<Action<Character, Character, Transform, bool>>(
                     AccessTools.Method(typeof(Character), "reactToCharacter"));

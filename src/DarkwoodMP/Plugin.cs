@@ -545,8 +545,8 @@ namespace DarkwoodMP
                 {
                     if (_sizeBefore == null)
                     {
-                        _sizeBefore =
-                            (Screen.width, Screen.height, Screen.fullScreenMode);
+                        _sizeBefore = (Screen.width, Screen.height,
+                            Screen.fullScreenMode);
                     }
                     Screen.SetResolution(ww, hh, FullScreenMode.Windowed);
                     Log.LogInfo($"--dwmp-window: {ww}x{hh}");
@@ -1093,9 +1093,13 @@ namespace DarkwoodMP
             if (controls != null)
             {
                 var keys = new List<string>();
-                foreach (var a in ("Aim|Attack|Context "
-                        + "Menu|Cycle|Dodge|Effects Cycle|Far "
-                        + "Look|Hotbar1|Hotbar2|Hotbar3|Hotbar4|Hotbar5|Hotbar6|Hotbar7|Hotbar8|Hotbar9|Inventory|Journal|Jump|Map|Move Horizontal|Move Vertical|Player Menu|Primary Action|Reload|Run|Secondary Attack|Skill Menu|Start|CycleLight|ToggleLightFlash|Menu").Split('|'))
+                foreach (var a in ("Aim|Attack|Context Menu|Cycle|Dodge|"
+                    + "Effects Cycle|Far Look|Hotbar1|Hotbar2|Hotbar3|"
+                    + "Hotbar4|Hotbar5|Hotbar6|Hotbar7|Hotbar8|Hotbar9|"
+                    + "Inventory|Journal|Jump|Map|Move Horizontal|"
+                    + "Move Vertical|Player Menu|Primary Action|Reload|Run|"
+                    + "Secondary Attack|Skill Menu|Start|CycleLight|"
+                    + "ToggleLightFlash|Menu").Split('|'))
                 {
                     try
                     {

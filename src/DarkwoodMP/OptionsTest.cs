@@ -91,7 +91,8 @@ namespace DarkwoodMP
             File.WriteAllText(
                 Path.Combine(dir, $"prefs-before-{where}.xml"), beforeText);
             var sizeBefore =
-                (w: Screen.width, h: Screen.height, mode: Screen.fullScreenMode);
+                (w: Screen.width, h: Screen.height,
+                    mode: Screen.fullScreenMode);
             _before = before;
             _sizeBefore = sizeBefore;
             Log(
@@ -414,7 +415,8 @@ namespace DarkwoodMP
         private static bool Unity(string name) => name.StartsWith("unity.")
             || name.StartsWith("Screenmanager") || name == "UnitySelectMonitor";
 
-        private static Dictionary<string, (string type, string value)> ReadPrefs()
+        private static Dictionary<string, (string type, string value)>
+            ReadPrefs()
         {
             PlayerPrefs.Save();
             var d = new Dictionary<string, (string, string)>();

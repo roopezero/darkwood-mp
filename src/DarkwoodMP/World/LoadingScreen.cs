@@ -90,8 +90,8 @@ namespace DarkwoodMP.World
                     && s.CollectionInst != null && s.spriteId >= 0
                     && s.spriteId < s.CollectionInst.spriteDefinitions.Length)
                 {
-                    r.sharedMaterial.mainTexture =
-                        s.CollectionInst.spriteDefinitions[s.spriteId].materialInst.mainTexture;
+                    r.sharedMaterial.mainTexture = s.CollectionInst
+                        .spriteDefinitions[s.spriteId].materialInst.mainTexture;
                 }
             }
             foreach (var t in ui.loadingScreen

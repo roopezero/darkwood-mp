@@ -9,8 +9,9 @@ namespace DarkwoodMP.Combat
     /// PlayerDamage, host -> client: an enemy on the host hit this client's
     /// proxy.
     ///   f32 damage, u8 flags (1: shadow), str attacker, u8 n, n x effect
-    ///   effect: i32 type, f32 startDelay, f32 duration, f32 modifier, f32 interval, u8 flags
-    ///           (1 stopsBleeding, 2 stopsPoison, 4 hasPoisonOverlay), str activateSound
+    ///   effect: i32 type, f32 startDelay, f32 duration, f32 modifier,
+    ///           f32 interval, u8 flags (1 stopsBleeding, 2 stopsPoison,
+    ///           4 hasPoisonOverlay), str activateSound
     /// The client applies it to its own Player as the game would have, effects
     /// (bleeding, poison...) included.
     /// </summary>

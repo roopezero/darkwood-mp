@@ -18,8 +18,8 @@ namespace DarkwoodMP.World
         /// <summary>
         /// "npc-move": the NPC moved (its save id) and where it was.
         /// </summary>
-        private static readonly Dictionary<string, (int id, Vector3 was)> _moved =
-            new Dictionary<string, (int, Vector3)>();
+        private static readonly Dictionary<string, (int id, Vector3 was)>
+            _moved = new Dictionary<string, (int, Vector3)>();
 
         public static void Register()
         {
@@ -57,7 +57,8 @@ namespace DarkwoodMP.World
         /// "follow-recruit": the NPC made a follower, its aggressiveness and
         /// behaviour before.
         /// </summary>
-        private static (Character c, Aggressiveness ag, Character.Behaviour be, Vector3 was) _follower;
+        private static (Character c, Aggressiveness ag,
+            Character.Behaviour be, Vector3 was) _follower;
 
         /// <summary>"follow-recruit NAME" (host): our NPC of that name nearest
         /// the centre is made a follower by a scripted step (GameEvent
@@ -348,13 +349,15 @@ namespace DarkwoodMP.World
                 $"{npc.name} {ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> {Fmt(npc.transform.position)}";
         }
 
-        // ---- a world event from a character's animation (the musician under the tractor) ------------------------
+        // ---- a world event from a character's animation ---------------------
+        // The musician under the tractor.
 
         /// <summary>The world event the anim-* steps make: it switches the
         /// NPC's talking back on, as the musician's musician_setUnderTractor
         /// does for the tractor's NPC (tractor_muzyk).</summary>
         private const string AnimEvent = "dwmp_test_animWakesNpc";
-        private static (NPC npc, GameEvents ge, AnimationTriggerListener added) _anim;
+        private static (NPC npc, GameEvents ge,
+            AnimationTriggerListener added) _anim;
 
         /// <summary>"anim-setup NAME DX DZ" (host and client): our NPC of that
         /// name nearest centre + (DX, DZ) is switched off for talking

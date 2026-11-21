@@ -736,8 +736,9 @@ namespace DarkwoodMP.World
 
         // ---- 40: a held throwable dropped -----------------------------------
 
-        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem =
-            AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
+        private static readonly
+            AccessTools.FieldRef<Player, GameObject> HeldItem =
+                AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
         private static readonly System.Reflection.MethodInfo DropItemM =
             AccessTools.Method(
                 typeof(Player), "dropItem", new[] { typeof(bool) });

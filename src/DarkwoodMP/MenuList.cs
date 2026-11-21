@@ -9,14 +9,18 @@ namespace DarkwoodMP
     /// Hooks for the mod's own menu windows, so the main menu and the pause
     /// menu (MenuList) can open them and know when one is up.
     ///
-    /// - <see cref="OpenStartGame"/>: the main menu's Start Game. Until it's set, Start Game opens the game's own
-    ///   profiles screen (continue a profile or start a new one).
-    /// - <see cref="OpenOptions"/>: Options in both menus. Until it's set, the game's own options screen.
-    /// - <see cref="Register"/>: a window says how to tell it's open. While any is (or the co-op panel, or a
-    ///   ConfirmDialog), the menu's list takes no clicks or keys, the game's own menu buttons and its Escape are off,
+    /// - <see cref="OpenStartGame"/>: the main menu's Start Game. Until it's
+    ///   set, Start Game opens the game's own profiles screen (continue a
+    ///   profile or start a new one).
+    /// - <see cref="OpenOptions"/>: Options in both menus. Until it's set, the
+    ///   game's own options screen.
+    /// - <see cref="Register"/>: a window says how to tell it's open. While any
+    ///   is (or the co-op panel, or a ConfirmDialog), the menu's list takes no
+    ///   clicks or keys, the game's own menu buttons and its Escape are off,
     ///   and the system mouse cursor is shown.
-    /// - <see cref="Draw"/>: called from the mod's OnGUI with MenuSkin's skin set, after the menu's list and the
-    ///   co-op panel and before a ConfirmDialog (which stays on top). Draw the window's UiWindow there.
+    /// - <see cref="Draw"/>: called from the mod's OnGUI with MenuSkin's skin
+    ///   set, after the menu's list and the co-op panel and before a
+    ///   ConfirmDialog (which stays on top). Draw the window's UiWindow there.
     /// </summary>
     public static class MenuWindows
     {
@@ -386,12 +390,14 @@ namespace DarkwoodMP
             {
                 return false; // credits starting, a world loading
             }
-            foreach (var box in new[] { mm.confirmBox, mm.applySettingsBox, mm.newGameBox, mm.resolutionBox, mm.earlyAccessBox, mm.gammaBox, mm.helpBox,
-                                        mm.profilesMenu, mm.gameProfileAdvanced,
-                                        mm.restartBox, mm.newVerBox,
-                                        mm.profileErrorBox,
-                                        mm.profileCorruptedBox,
-                                        mm.OptionsMenu })
+            foreach (var box in new[]
+                {
+                    mm.confirmBox, mm.applySettingsBox, mm.newGameBox,
+                    mm.resolutionBox, mm.earlyAccessBox, mm.gammaBox,
+                    mm.helpBox, mm.profilesMenu, mm.gameProfileAdvanced,
+                    mm.restartBox, mm.newVerBox, mm.profileErrorBox,
+                    mm.profileCorruptedBox, mm.OptionsMenu
+                })
             {
                 if (box != null && box.activeInHierarchy)
                 {

@@ -9,13 +9,14 @@ namespace DarkwoodMP.Combat
     /// Each enemy keeps a threat value for every player it knows of, instead of
     /// going for whoever its sight check happened to list last:
     ///
-    ///   damage      every point of damage a player deals to it                         x1.0
-    ///   noise       sounds a player makes that it hears: their footsteps, running and
-    ///               shots (the game's Character.alertInArea, raised from Player code;
-    ///               remote players' come from their games as PlayerNoise)               volume x NoiseWeight
-    ///   being seen  every second it can see a player                                    SeenPerSecond
-    ///   closeness   at choosing time, not stored: up to CloseWeight for a player
-    ///               right next to it, nothing at the edge of its sight
+    ///   damage      every point of damage a player deals to it: x1.0
+    ///   noise       sounds a player makes that it hears: their footsteps,
+    ///               running and shots (the game's Character.alertInArea,
+    ///               raised from Player code; remote players' come from their
+    ///               games as PlayerNoise): volume x NoiseWeight
+    ///   being seen  every second it can see a player: SeenPerSecond
+    ///   closeness   at choosing time, not stored: up to CloseWeight for a
+    ///               player right next to it, nothing at the edge of its sight
     ///
     /// Stored threat fades (half-life HalfLife seconds), so an enemy loses
     /// interest in someone who stopped bothering it. It goes for the player

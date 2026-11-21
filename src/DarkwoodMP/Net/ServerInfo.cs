@@ -6,10 +6,10 @@ namespace DarkwoodMP.Net
 {
     /// <summary>
     /// The server browser's info query, the same as goasis's (package protocol,
-    /// after Half-Life's A2S_INFO):
-    /// one UDP datagram "info" SEP END to the game's port number, answered with
-    /// one datagram
-    ///   INFO SEP name SEP players SEP maxplayers SEP password SEP localchars SEP version SEP [key=value SEP]* END
+    /// after Half-Life's A2S_INFO): one UDP datagram "info" SEP END to the
+    /// game's port number, answered with one datagram
+    ///   INFO SEP name SEP players SEP maxplayers SEP password SEP localchars
+    ///       SEP version SEP [key=value SEP]* END
     /// where SEP is byte 0 and END is byte 237. DarkwoodMP adds the fields
     /// game=darkwood and proto=&lt;version&gt;.
     /// </summary>

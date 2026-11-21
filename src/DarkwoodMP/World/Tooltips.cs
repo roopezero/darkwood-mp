@@ -20,8 +20,10 @@ namespace DarkwoodMP.World
     ///
     /// Tooltips.tsv lines (tab separated, "\n" written as a backslash and n):
     ///   item KEY DRAFT TEXT   a description for Items/KEY_desc
-    ///   loc  KEY DRAFT TEXT   a line for the map element KEY, shown above the game's "you are here" line
-    ///   skip KEY REASON       an item that needs no text (journal items, which have their own page, and dev items)
+    ///   loc  KEY DRAFT TEXT   a line for the map element KEY, shown above the
+    ///                         game's "you are here" line
+    ///   skip KEY REASON       an item that needs no text (journal items, which
+    ///                         have their own page, and dev items)
     /// DRAFT is 1 when the text isn't taken from the game's data and waits for
     /// review; it isn't used in the game.
     /// </summary>

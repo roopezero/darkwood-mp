@@ -535,7 +535,8 @@ namespace DarkwoodMP.World
         /// The dream location's characters (within a location's reach of its
         /// marker), active or not.
         /// </summary>
-        private static System.Collections.Generic.IEnumerable<Character> DreamCharacters() =>
+        private static System.Collections.Generic.IEnumerable<Character>
+            DreamCharacters() =>
             Object.FindObjectsOfType<Character>(true).Where(
                 c => D.dreamLocation != null && Combat.NetEnemies.Eligible(c)
                     && StateDump.Flat(
@@ -908,9 +909,10 @@ namespace DarkwoodMP.World
             }
             var p = P;
             var to = door.transform.position
-                + (p.transform.position - door.transform.position).normalized * 150f;
-            p.transform.position =
-                new Vector3(to.x, p.transform.position.y, to.z);
+                + (p.transform.position - door.transform.position).normalized
+                    * 150f;
+            p.transform.position = new Vector3(
+                to.x, p.transform.position.y, to.z);
             var rb = p.GetComponent<Rigidbody>();
             if (rb != null)
             {

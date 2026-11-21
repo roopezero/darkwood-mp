@@ -10,11 +10,15 @@ namespace DarkwoodMP.World
     /// A slot's icon already follows a remote change: InvSlot.createItem and
     /// removeItem draw and remove it while its inventory is open. What the game
     /// draws once and keeps until the player does something is the rest:
-    /// - the workbench's recipes, red or not by what the player carries plus the storage (CraftingRequirement.met,
-    ///   set by CraftingRecipes.refresh), and its upgrade button: Player.refreshRecipes, which the game calls after
-    ///   each of the player's own moves, redraws those, the backpack and the hotbar;
-    /// - the saw's "Fuel: N" label and whether its Convert button can be pressed: Saw.refresh;
-    /// - the fuel bar of the generator or saw under the cursor: EnemyHealthBar.show with onlyRefresh.
+    /// - the workbench's recipes, red or not by what the player carries plus
+    ///   the storage (CraftingRequirement.met, set by CraftingRecipes.refresh),
+    ///   and its upgrade button: Player.refreshRecipes, which the game calls
+    ///   after each of the player's own moves, redraws those, the backpack and
+    ///   the hotbar;
+    /// - the saw's "Fuel: N" label and whether its Convert button can be
+    ///   pressed: Saw.refresh;
+    /// - the fuel bar of the generator or saw under the cursor:
+    ///   EnemyHealthBar.show with onlyRefresh.
     ///
     /// These only redraw. They run with WorldActions.Replaying set, and none of
     /// them changes a slot, so nothing goes back out from them. Nothing is done

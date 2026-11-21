@@ -122,8 +122,8 @@ namespace DarkwoodMP.Net
         /// </summary>
         public Func<ulong, MsgType, bool> AllowBare;
 
-        private readonly Dictionary<MsgType, Action<ulong, PacketReader>> _handlers =
-            new Dictionary<MsgType, Action<ulong, PacketReader>>();
+        private readonly Dictionary<MsgType, Action<ulong, PacketReader>>
+            _handlers = new Dictionary<MsgType, Action<ulong, PacketReader>>();
         private readonly PacketWriter _pw = new PacketWriter();
         private readonly List<INetBackend> _backends = new List<INetBackend>();
         private float _welcomedAt;
@@ -274,9 +274,10 @@ namespace DarkwoodMP.Net
             };
         }
 
-        // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
-        // (in order) before it's handled, as a link over the internet does.
-        // Tests only; a localhost run has none.
+        // ---- test lag -------------------------------------------------------
+        // DWMP_LAG_MS=N in the game's environment holds every message that
+        // arrives N ms (in order) before it's handled, as a link over the
+        // internet does. Tests only; a localhost run has none.
         private static readonly float LagSecs = ReadLag();
         private readonly Queue<(float at, ulong from, byte[] data)> _late =
             new Queue<(float, ulong, byte[])>();
@@ -314,7 +315,8 @@ namespace DarkwoodMP.Net
             }
         }
 
-        public void Register(MsgType type, Action<ulong, PacketReader> handler) =>
+        public void Register(
+            MsgType type, Action<ulong, PacketReader> handler) =>
             _handlers[type] = handler;
 
         public string NameOf(ulong id)

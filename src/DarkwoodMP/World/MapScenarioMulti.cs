@@ -154,8 +154,8 @@ namespace DarkwoodMP.World
         // host: who it was after, in order, and for each time it was after
         // someone, who else was nearer to it then
         private static readonly List<string> _targets = new List<string>();
-        private static readonly Dictionary<string, HashSet<string>> _nearerWhile =
-            new Dictionary<string, HashSet<string>>();
+        private static readonly Dictionary<string, HashSet<string>>
+            _nearerWhile = new Dictionary<string, HashSet<string>>();
 
         private static string NameOf(Transform t)
         {

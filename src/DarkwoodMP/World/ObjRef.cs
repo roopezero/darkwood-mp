@@ -9,20 +9,29 @@ namespace DarkwoodMP.World
     /// Names a world object the same way in every player's game, so a change to
     /// it can be sent.
     ///
-    ///   Spawned  made while playing together (a dropped item...): a random id its maker gave it, sent with it.
-    ///            Also what the world made by itself after a player joined (a location's characters, a delayed
-    ///            event's spawn): the host gives it an id and sends it with its name and position (HostIds), and
-    ///            each client ties its own copy to that id. A client that hasn't tied one finds it by that name and
-    ///            position, as Placed.
-    ///   Enemy    one of the host's enemies (its corpse's loot): the host's net id for it
-    ///   Saved    anything from the shared save: its save id (SaveableObject.uniqueId), the same for everyone,
-    ///            since everyone loaded the host's save. Only ids below SharedIds.SendLimit: a game gives later
-    ///            ids out itself, to whatever it makes while it's played, so those differ between games and the
-    ///            object is named as Placed instead. A Saved ref above SharedIds.ResolveLimit names nothing.
-    ///   Placed   anything else that stands where the level put it: its name and position. The id holds a 24-bit
-    ///            hash of the name and the position (x and z, rounded, 20 bits each), and the object is found as
-    ///            the one of that name standing nearest to it, within PlacedSlack. So it's still found when it lies
-    ///            a little differently in another game (physics settling after loading, a nudge).
+    ///   Spawned  made while playing together (a dropped item...): a random id
+    ///            its maker gave it, sent with it. Also what the world made by
+    ///            itself after a player joined (a location's characters, a
+    ///            delayed event's spawn): the host gives it an id and sends it
+    ///            with its name and position (HostIds), and each client ties
+    ///            its own copy to that id. A client that hasn't tied one finds
+    ///            it by that name and position, as Placed.
+    ///   Enemy    one of the host's enemies (its corpse's loot): the host's net
+    ///            id for it
+    ///   Saved    anything from the shared save: its save id
+    ///            (SaveableObject.uniqueId), the same for everyone, since
+    ///            everyone loaded the host's save. Only ids below
+    ///            SharedIds.SendLimit: a game gives later ids out itself, to
+    ///            whatever it makes while it's played, so those differ between
+    ///            games and the object is named as Placed instead. A Saved ref
+    ///            above SharedIds.ResolveLimit names nothing.
+    ///   Placed   anything else that stands where the level put it: its name
+    ///            and position. The id holds a 24-bit hash of the name and the
+    ///            position (x and z, rounded, 20 bits each), and the object is
+    ///            found as the one of that name standing nearest to it, within
+    ///            PlacedSlack. So it's still found when it lies a little
+    ///            differently in another game (physics settling after loading,
+    ///            a nudge).
     ///
     /// Written as u8 kind, i64 id.
     /// </summary>

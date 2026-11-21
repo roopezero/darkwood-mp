@@ -117,7 +117,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- what the fights spawn (logged, to find where a thing only one game has came from) -------------------
+        // ---- what the fights spawn ------------------------------------------
+        // Logged, to find where a thing only one game has came from.
 
         /// <summary>
         /// While the fights run: things made by name (Core.AddPrefab) are

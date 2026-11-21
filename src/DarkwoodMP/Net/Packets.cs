@@ -9,7 +9,7 @@ namespace DarkwoodMP.Net
     /// Message types: the first byte of every message's payload.
     ///
     /// Modelled on goasis's package wire. Over TCP every message is framed as
-    ///   u32 length (bytes that follow), u8 type, payload        — all little-endian
+    ///   u32 length (bytes that follow), u8 type, payload  — all little-endian
     /// and payloads are built from u8/u16/u32/u64, f32, str (u16 length + UTF-8
     /// bytes), bigstr (u32 length + UTF-8, for JSON), blob (u16 length +
     /// bytes), big (u32 length + bytes) and vec3 (3 x f32). Steam carries the

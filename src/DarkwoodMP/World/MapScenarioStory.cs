@@ -35,8 +35,9 @@ namespace DarkwoodMP.World
         private static readonly Dictionary<string, Made> _made =
             new Dictionary<string, Made>();
 
-        private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed =
-            AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
+        private static readonly
+            AccessTools.FieldRef<Player, Item> TrapBeingDisarmed =
+                AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
 
         private static PlayerStepCounter Counter()
         {

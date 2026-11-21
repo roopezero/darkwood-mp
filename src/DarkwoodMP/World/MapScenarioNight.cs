@@ -13,11 +13,15 @@ namespace DarkwoodMP.World
     /// Map test steps for what the night brings
     /// (tools/tests/map_scenario_night.py) and for how smoothly a client draws
     /// the host's enemies.
-    ///   nl-inventory (host)   every night scenario's events and what their steps do, in the log ([night] lines).
-    ///   nl-event NAME (host)  the night event NAME fired at the nearest hideout, as the night fires it.
-    ///   nl-herd N (host)      N enemies that run at the client's player, by it.
-    ///   nl-motion SECS        (client) walks in a circle for SECS while counting how its copies of the host's
-    ///                         enemies are drawn (EnemyMotion.Stats).
+    ///   nl-inventory (host)   every night scenario's events and what their
+    ///                         steps do, in the log ([night] lines).
+    ///   nl-event NAME (host)  the night event NAME fired at the nearest
+    ///                         hideout, as the night fires it.
+    ///   nl-herd N (host)      N enemies that run at the client's player, by
+    ///                         it.
+    ///   nl-motion SECS        (client) walks in a circle for SECS while
+    ///                         counting how its copies of the host's enemies
+    ///                         are drawn (EnemyMotion.Stats).
     ///   nl-clear (host)       the herd removed.
     /// Dump section "nightobjects": every chunk's night-spawned objects
     /// (WorldChunk.nightSpawnedObjects, gone at dawn) and every object of a
@@ -498,7 +502,8 @@ namespace DarkwoodMP.World
             else if (EnemyMotion.Stats.Stalls * 10 > EnemyMotion.Stats.Moving)
             {
                 r.Fail(
-                    "enemies stood still in over 10% of the frames they moved: " + s);
+                    "enemies stood still in over 10% of the frames they "
+                    + "moved: " + s);
             }
             r.Info = s;
         }

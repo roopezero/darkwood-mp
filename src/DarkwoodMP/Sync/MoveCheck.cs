@@ -44,8 +44,8 @@ namespace DarkwoodMP.Sync
         /// Trips the host agreed to, per player: where to, and until when
         /// (realtime).
         /// </summary>
-        private readonly Dictionary<ulong, List<(Vector3 to, float until)>> _trips =
-            new Dictionary<ulong, List<(Vector3, float)>>();
+        private readonly Dictionary<ulong, List<(Vector3 to, float until)>>
+            _trips = new Dictionary<ulong, List<(Vector3, float)>>();
         /// <summary>
         /// How near the trip's destination the player must land.
         /// </summary>

@@ -42,13 +42,17 @@ namespace DarkwoodMP.World
     ///
     /// Numbers that more than one game changes at about the same time aren't
     /// sent whole:
-    /// - An NPC's reputation ("r:" key) goes as the change ("+d"), so two trades close together both count. A
-    ///   reputation not sent before goes whole ("=v"). The "n:" state is sent without it. Changes that every game
-    ///   makes by itself aren't sent at all (Absorb): a shared scripted event's reputation step, and a trade, whose
-    ///   change TraderTrade carries.
-    /// - The after-night reward for a trader ("ra:" key, "day|amount") counts once a day, not once per game: the
-    ///   host keeps the first one it gets for a day, and a joiner's own is replaced by the host's.
-    /// - Karma ("k") is the host's: every game adds the same +20 at dawn, and only the host sends it.
+    /// - An NPC's reputation ("r:" key) goes as the change ("+d"), so two
+    ///   trades close together both count. A reputation not sent before goes
+    ///   whole ("=v"). The "n:" state is sent without it. Changes that every
+    ///   game makes by itself aren't sent at all (Absorb): a shared scripted
+    ///   event's reputation step, and a trade, whose change TraderTrade
+    ///   carries.
+    /// - The after-night reward for a trader ("ra:" key, "day|amount") counts
+    ///   once a day, not once per game: the host keeps the first one it gets
+    ///   for a day, and a joiner's own is replaced by the host's.
+    /// - Karma ("k") is the host's: every game adds the same +20 at dawn, and
+    ///   only the host sends it.
     /// </summary>
     public sealed class FlagsSync
     {
@@ -73,9 +77,11 @@ namespace DarkwoodMP.World
         private int _baselineScene = -1; // the world (scene) the baseline is of
         private float _next;
 
-        private static readonly AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
-            AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
-                "flagsDict");
+        private static readonly
+            AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>>
+            FlagsDict = AccessTools
+                .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
+                    "flagsDict");
 
         public FlagsSync(Session session)
         {

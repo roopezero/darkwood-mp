@@ -13,15 +13,23 @@ namespace DarkwoodMP.World
     /// rebuilt from its construction menu, by the client, must stay repaired in
     /// both games.
     ///
-    ///   rp-door N            the Nth door from the centre (MapScenarioWorld.Nth), noted for the other steps.
+    ///   rp-door N            the Nth door from the centre
+    ///                        (MapScenarioWorld.Nth), noted for the other
+    ///                        steps.
     ///   rp-door-break        our player breaks it (Door.destroyDoor).
-    ///   rp-door-fix          our player rebuilds it: the hammer's three strokes (Door.barricade(byPlayer), which on
-    ///                        a broken door calls unDestroy).
-    ///   rp-furniture DX DZ   the breakable item nearest centre + (DX, DZ), noted; if it has no construction menu for
-    ///                        when it's broken, it's given one (in every game that runs the step) with one option.
+    ///   rp-door-fix          our player rebuilds it: the hammer's three
+    ///                        strokes (Door.barricade(byPlayer), which on a
+    ///                        broken door calls unDestroy).
+    ///   rp-furniture DX DZ   the breakable item nearest centre + (DX, DZ),
+    ///                        noted; if it has no construction menu for when
+    ///                        it's broken, it's given one (in every game that
+    ///                        runs the step) with one option.
     ///   rp-furniture-break   our player smashes it (Item.getHit).
-    ///   rp-furniture-fix     our player builds it again (Constructible.construct, as the progress bar's end does).
-    ///   rp-hold SECS         for SECS, neither the door nor the furniture may break here; both repaired at the end.
+    ///   rp-furniture-fix     our player builds it again
+    ///                        (Constructible.construct, as the progress bar's
+    ///                        end does).
+    ///   rp-hold SECS         for SECS, neither the door nor the furniture may
+    ///                        break here; both repaired at the end.
     /// </summary>
     public static class MapScenarioRepair
     {

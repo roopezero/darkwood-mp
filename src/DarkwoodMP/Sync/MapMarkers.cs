@@ -19,8 +19,9 @@ namespace DarkwoodMP.Sync
     {
         private static readonly Dictionary<ulong, Transform> Markers =
             new Dictionary<ulong, Transform>();
-        private static readonly AccessTools.FieldRef<Map, Map.Type> CurrentType =
-            AccessTools.FieldRefAccess<Map, Map.Type>("currentType");
+        private static readonly
+            AccessTools.FieldRef<Map, Map.Type> CurrentType =
+                AccessTools.FieldRefAccess<Map, Map.Type>("currentType");
         private static readonly Color Tint = new Color(0.35f, 0.75f, 1f);
 
         private static Map.Type WorldType(Map map)

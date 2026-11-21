@@ -362,9 +362,9 @@ namespace DarkwoodMP.World
                             {
                                 if (f.spriteCollection != null)
                                 {
-                                    frames.Add(
-                                        (Net.StableHash.Of(
-                                            f.spriteCollection.spriteCollectionName), f.spriteId));
+                                    frames.Add((Net.StableHash.Of(f
+                                        .spriteCollection.spriteCollectionName),
+                                        f.spriteId));
                                 }
                             }
                         }

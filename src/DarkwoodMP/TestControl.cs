@@ -18,22 +18,30 @@ namespace DarkwoodMP
     /// connection on 127.0.0.1 (never from another machine). One command per
     /// line, its words separated by tabs; each gets one line back.
     ///
-    ///   title TEXT        show TEXT at the top of the screen ("Test (3/15): host-world - ...")      -> ok
-    ///   reset             stop the last test, leave its session and world, wait for the main menu   -> ready
-    ///   args ARG...       apply --dwmp-* arguments, as on the command line (host, join, test hooks)  -> ok
-    ///   quit              close the game                                                           -> ok
-    ///   do STEP ARG...    run a scenario step (World/MapScenario.cs) to its end              -> done [INFO] / fail REASON
-    ///   dump PATH [X Z R] write the shared world's state as JSON (World/StateDump.cs), around X Z within R -> ok N entries
-    ///   wait EVENT SECS [N]  world-ready (our world loaded and settled), player-joined (host: a player, or N
-    ///                     players, in and out of loading)                                     -> ok / fail timeout
+    ///   title TEXT        show TEXT at the top of the screen ("Test (3/15):
+    ///                     host-world - ...") -> ok
+    ///   reset             stop the last test, leave its session and world,
+    ///                     wait for the main menu -> ready
+    ///   args ARG...       apply --dwmp-* arguments, as on the command line
+    ///                     (host, join, test hooks) -> ok
+    ///   quit              close the game -> ok
+    ///   do STEP ARG...    run a scenario step (World/MapScenario.cs) to its
+    ///                     end -> done [INFO] / fail REASON
+    ///   dump PATH [X Z R] write the shared world's state as JSON
+    ///                     (World/StateDump.cs), around X Z within R
+    ///                     -> ok N entries
+    ///   wait EVENT SECS [N]  world-ready (our world loaded and settled),
+    ///                     player-joined (host: a player, or N players, in and
+    ///                     out of loading) -> ok / fail timeout
     /// </summary>
     public static class TestControl
     {
         public static string Title { get; private set; }
 
         private static Plugin _plugin;
-        private static readonly ConcurrentQueue<(string line, ReplyWriter reply)> _commands =
-            new ConcurrentQueue<(string, ReplyWriter)>();
+        private static readonly
+            ConcurrentQueue<(string line, ReplyWriter reply)> _commands =
+                new ConcurrentQueue<(string, ReplyWriter)>();
         private static bool _busy;
 
         public static void Start(Plugin plugin, int port)
@@ -114,7 +122,8 @@ namespace DarkwoodMP
             private readonly StreamWriter _to;
             private readonly ManualResetEventSlim _done;
             public bool Sent { get; private set; }
-            public ReplyWriter(StreamWriter to, ManualResetEventSlim done) : base(Stream.Null)
+            public ReplyWriter(StreamWriter to, ManualResetEventSlim done)
+                : base(Stream.Null)
             {
                 _to = to;
                 _done = done;

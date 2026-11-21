@@ -13,17 +13,24 @@ namespace DarkwoodMP
     /// written to the game's own store (GameSettings, which is Unity's
     /// PlayerPrefs; Rewired's key maps through ReInput.userDataStore, also
     /// PlayerPrefs), and applied with the game's own calls, as its screen did:
-    /// - Resolution and full screen change at once and ask "Keep these settings?", going back after 15 seconds
-    ///   without an answer (the game's resolution box, with a countdown).
-    /// - Brightness changes at once (VideoMenu.setGamma), as in the game's brightness box.
-    /// - Post-processing, light quality, V-Sync, camera zoom, language and the two volumes wait for Apply (the
-    ///   volumes are heard at once, as the game's sliders did); Revert, or closing and choosing Discard, puts them
-    ///   back. A new language needs Darkwood started again, so applying one asks to quit, as the game's restart box.
-    /// - Controls: the game's switches change at once. Keys and mouse buttons are changed by clicking one and pressing
-    ///   the new one (Rewired's InputMapper, set up as the game's ControlsMenu: a key that another action has is taken
-    ///   from it, unless that one can't be changed; Escape cancels). Controller buttons are shown; the game doesn't
-    ///   let you change them. "Reset to defaults" is the game's revertControls.
-    /// - Multiplayer: your name (the mod's General.PlayerName) and the hosting settings from the mod's config.
+    /// - Resolution and full screen change at once and ask "Keep these
+    ///   settings?", going back after 15 seconds without an answer (the game's
+    ///   resolution box, with a countdown).
+    /// - Brightness changes at once (VideoMenu.setGamma), as in the game's
+    ///   brightness box.
+    /// - Post-processing, light quality, V-Sync, camera zoom, language and the
+    ///   two volumes wait for Apply (the volumes are heard at once, as the
+    ///   game's sliders did); Revert, or closing and choosing Discard, puts
+    ///   them back. A new language needs Darkwood started again, so applying
+    ///   one asks to quit, as the game's restart box.
+    /// - Controls: the game's switches change at once. Keys and mouse buttons
+    ///   are changed by clicking one and pressing the new one (Rewired's
+    ///   InputMapper, set up as the game's ControlsMenu: a key that another
+    ///   action has is taken from it, unless that one can't be changed; Escape
+    ///   cancels). Controller buttons are shown; the game doesn't let you
+    ///   change them. "Reset to defaults" is the game's revertControls.
+    /// - Multiplayer: your name (the mod's General.PlayerName) and the hosting
+    ///   settings from the mod's config.
     /// </summary>
     public static class OptionsWindow
     {
@@ -1995,7 +2002,9 @@ namespace DarkwoodMP
         /// <summary>
         /// The keyboard rows (label, key) as the window lists them.
         /// </summary>
-        internal static List<(string label, string key, int actionId, int range)> TestRows()
+        internal static
+            List<(string label, string key, int actionId, int range)>
+            TestRows()
         {
             BuildRows();
             var l = new List<(string, string, int, int)>();

@@ -183,8 +183,8 @@ namespace DarkwoodMP.Net
         private void OnLobbyEntered(LobbyEnter_t r, bool ioFailure)
         {
             if (ioFailure
-                || r.m_EChatRoomEnterResponse
-                    != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+                || r.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse
+                    .k_EChatRoomEnterResponseSuccess)
             {
                 Status =
                     $"Failed to join lobby ({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";

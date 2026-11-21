@@ -119,8 +119,8 @@ namespace DarkwoodMP.World
                 id = saveable.uniqueId;
             }
             return head +
-                   $"target {target}, hostile {hostile}, run by host {byHost}, " +
-                   $"frozen {frozen}, save id {id}";
+                $"target {target}, hostile {hostile}, run by host {byHost}, " +
+                $"frozen {frozen}, save id {id}";
         }
 
         /// <summary>

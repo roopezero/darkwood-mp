@@ -17,17 +17,23 @@ namespace DarkwoodMP.World
     /// padlock's events, a built option. Each step belongs to one of these
     /// parts:
     ///
-    /// - the player's own: dialogue, dreams, being moved to a place, items given or taken, camera, messages,
-    ///   journal, recipes, input and UI. They run only in the game of the player who set the event off.
-    /// - the host's: doors and switching things on or off, which the host's patched calls then send to everyone,
-    ///   and the clock. They run only on the host.
-    /// - the story's turning points (a new chapter, the game's end): the host's whoever set them off, and never
-    ///   run in a joiner's game (World.Chapters).
-    /// - shared: everything else (objects shown, hidden, moved or removed, sprites, animations, sounds, flags,
-    ///   characters spawned, chained events). It runs in every game. Except in an area trigger that fires each
-    ///   time a player walks in: there the steps that only change how the place looks and sounds (colour fades,
-    ///   particles, sounds) are the player's own (IsAreaLook). A joiner's own copies of enemies an event
-    ///   spawns stay frozen and hidden as always (NetEnemies.LocalOnly); the host's are the ones that show.
+    /// - the player's own: dialogue, dreams, being moved to a place, items
+    ///   given or taken, camera, messages, journal, recipes, input and UI. They
+    ///   run only in the game of the player who set the event off.
+    /// - the host's: doors and switching things on or off, which the host's
+    ///   patched calls then send to everyone, and the clock. They run only on
+    ///   the host.
+    /// - the story's turning points (a new chapter, the game's end): the host's
+    ///   whoever set them off, and never run in a joiner's game
+    ///   (World.Chapters).
+    /// - shared: everything else (objects shown, hidden, moved or removed,
+    ///   sprites, animations, sounds, flags, characters spawned, chained
+    ///   events). It runs in every game. Except in an area trigger that fires
+    ///   each time a player walks in: there the steps that only change how the
+    ///   place looks and sounds (colour fades, particles, sounds) are the
+    ///   player's own (IsAreaLook). A joiner's own copies of enemies an event
+    ///   spawns stay frozen and hidden as always (NetEnemies.LocalOnly); the
+    ///   host's are the ones that show.
     ///
     /// A joiner that sets one off asks the host first (EventFired as a Request)
     /// and runs nothing until the host says yes; then it runs its own part and
@@ -495,8 +501,8 @@ namespace DarkwoodMP.World
             public EventTriggers Triggers;
             public int Index;
         }
-        internal static readonly ConditionalWeakTable<object, Started> Coroutines =
-            new ConditionalWeakTable<object, Started>();
+        internal static readonly ConditionalWeakTable<object, Started>
+            Coroutines = new ConditionalWeakTable<object, Started>();
         internal static void Remember(object coroutine, Started st)
         {
             Coroutines.Remove(coroutine);
@@ -524,7 +530,8 @@ namespace DarkwoodMP.World
         /// Trigger types the host's world sets off for everyone (see the class
         /// comment).
         /// </summary>
-        private static readonly HashSet<global::EventTrigger.Type> HostWorldTypes =
+        private static readonly
+            HashSet<global::EventTrigger.Type> HostWorldTypes =
             new HashSet<global::EventTrigger.Type>
         {
             global::EventTrigger.Type.onTime, global::EventTrigger.Type.onDeath,
@@ -559,16 +566,17 @@ namespace DarkwoodMP.World
         /// Trigger types a player's shared action on a thing sets off (see
         /// above).
         /// </summary>
-        internal static readonly HashSet<global::EventTrigger.Type> ActionTypes =
-            new HashSet<global::EventTrigger.Type>
-        {
-            global::EventTrigger.Type.onOpenDoor,
-            global::EventTrigger.Type.onCloseDoor,
-            global::EventTrigger.Type.onOpenCloseDoor,
-            global::EventTrigger.Type.onTurnOn,
-            global::EventTrigger.Type.onTurnOff,
-            global::EventTrigger.Type.onDisarmed,
-        };
+        internal static readonly
+            HashSet<global::EventTrigger.Type> ActionTypes =
+                new HashSet<global::EventTrigger.Type>
+            {
+                global::EventTrigger.Type.onOpenDoor,
+                global::EventTrigger.Type.onCloseDoor,
+                global::EventTrigger.Type.onOpenCloseDoor,
+                global::EventTrigger.Type.onTurnOn,
+                global::EventTrigger.Type.onTurnOff,
+                global::EventTrigger.Type.onDisarmed,
+            };
         /// <summary>
         /// Trigger types a player's hit on a character sets off
         /// (Character.getHit as byPlayer).
@@ -1040,27 +1048,37 @@ namespace DarkwoodMP.World
         /// Whether a later player gets this step of a once-only trigger that
         /// fired for someone else. Decided per step type, by what the step
         /// changes:
-        /// - Trips (transportPlayerToObject without activeModifier, transportToOutsideLocation, startDream, endDream,
-        ///   returnToWorld): yes. They move only the player who runs them, and leaving one player behind is the bug.
-        ///   A new chapter (transportPlayerToObject with activeModifier) is not a trip: World.Chapters runs it once for
-        ///   everyone.
-        /// - What goes with a trip and only shows on that player's screen (displayMessage, cameraEffect, timeScale,
-        ///   forbidInputs, switchCantChangeForbidInputs, switchVisibleUI): yes, all of them, so inputs taken away for a
-        ///   trip also come back.
-        /// - The player's own records (addJournalItem, addAllJournalItems, addRecipes, unlockAchievement): yes; each
-        ///   player has their own.
-        /// - addOrRemoveInvItem: only an addition to the player's own inventory (activeModifier) of ordinary items. Not
-        ///   an important item (InvItem.isImportantItem: the story's quest items) or a key (KeyReference): the story has
-        ///   one of those, the first player holds it and can hand it over, and a second copy would let a quest step be
-        ///   done twice or sold. Not a removal or a swap (activeModifier2, relentlessPursuit): the story took its one
-        ///   item from the first player, and taking it again would cost the next player something for nothing. Not one
-        ///   into a world inventory (no activeModifier): containers are shared, and it was added there once.
-        /// - openDialogue: no. A conversation's outcome (flags, world events, what the speaker gives or takes) is the
-        ///   shared story's, and it happened once.
+        /// - Trips (transportPlayerToObject without activeModifier,
+        ///   transportToOutsideLocation, startDream, endDream, returnToWorld):
+        ///   yes. They move only the player who runs them, and leaving one
+        ///   player behind is the bug. A new chapter (transportPlayerToObject
+        ///   with activeModifier) is not a trip: World.Chapters runs it once
+        ///   for everyone.
+        /// - What goes with a trip and only shows on that player's screen
+        ///   (displayMessage, cameraEffect, timeScale, forbidInputs,
+        ///   switchCantChangeForbidInputs, switchVisibleUI): yes, all of them,
+        ///   so inputs taken away for a trip also come back.
+        /// - The player's own records (addJournalItem, addAllJournalItems,
+        ///   addRecipes, unlockAchievement): yes; each player has their own.
+        /// - addOrRemoveInvItem: only an addition to the player's own inventory
+        ///   (activeModifier) of ordinary items. Not an important item
+        ///   (InvItem.isImportantItem: the story's quest items) or a key
+        ///   (KeyReference): the story has one of those, the first player holds
+        ///   it and can hand it over, and a second copy would let a quest step
+        ///   be done twice or sold. Not a removal or a swap (activeModifier2,
+        ///   relentlessPursuit): the story took its one item from the first
+        ///   player, and taking it again would cost the next player something
+        ///   for nothing. Not one into a world inventory (no activeModifier):
+        ///   containers are shared, and it was added there once.
+        /// - openDialogue: no. A conversation's outcome (flags, world events,
+        ///   what the speaker gives or takes) is the shared story's, and it
+        ///   happened once.
         /// - moveInventory: no; it moves things into a shared container.
-        /// - endGame and every shared or host step: no; they ran once, in every game.
-        /// - Any other step that acts on the player (TargetsPlayer: a runFunction on "player", such as diveIn): yes;
-        ///   it acted only on the first player's own.
+        /// - endGame and every shared or host step: no; they ran once, in every
+        ///   game.
+        /// - Any other step that acts on the player (TargetsPlayer: a
+        ///   runFunction on "player", such as diveIn): yes; it acted only on
+        ///   the first player's own.
         /// </summary>
         internal static bool LaterStep(GameEvent e)
         {
@@ -2220,13 +2238,14 @@ namespace DarkwoodMP.World
         /// are about the player who set it off (what they carry, their state),
         /// or are flags and fired events that reach the host a moment later.
         /// </summary>
-        private static readonly HashSet<EventTriggerRequirement.Type> HostChecks =
-            new HashSet<EventTriggerRequirement.Type>
-        {
-            EventTriggerRequirement.Type.itemState,
-            EventTriggerRequirement.Type.itemTurnedOn,
-            EventTriggerRequirement.Type.npcStateIsDead,
-        };
+        private static readonly
+            HashSet<EventTriggerRequirement.Type> HostChecks =
+                new HashSet<EventTriggerRequirement.Type>
+            {
+                EventTriggerRequirement.Type.itemState,
+                EventTriggerRequirement.Type.itemTurnedOn,
+                EventTriggerRequirement.Type.npcStateIsDead,
+            };
 
         /// <summary>
         /// Host: a joiner's player can have left this area trigger: it's an
@@ -2376,10 +2395,11 @@ namespace DarkwoodMP.World
 
         static void Prefix(
             object __instance,
-            out (ScriptedEvents.Part, ScriptedEvents.Started, bool, ulong) __state)
+            out (ScriptedEvents.Part, ScriptedEvents.Started, bool, ulong)
+                __state)
         {
-            __state =
-                (ScriptedEvents.Current, ScriptedEvents.Firing, false, ScriptedEvents.By);
+            __state = (ScriptedEvents.Current, ScriptedEvents.Firing, false,
+                ScriptedEvents.By);
             if (__instance.GetType().DeclaringType == typeof(GameEvent))
             {
                 ScriptedEvents.StepDepth++;

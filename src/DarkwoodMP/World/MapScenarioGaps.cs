@@ -200,7 +200,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static List<string> Refused(int mark) => LogSince(mark)
             .Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
-        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
+        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok)
+            where T : Component =>
             MapScenarioIssues.NearestAll(to, ok);
 
         private static GameObject Place(
@@ -222,7 +223,8 @@ namespace DarkwoodMP.World
             "Furnitures/Cottage/Wardrobe_low_small_01";
         private static readonly string[] ShadowPrefabs =
         {
-            "Locations/med_hideout_05/LootContainer_MetalCrate_med_hideout_05_level",
+            "Locations/med_hideout_05/"
+                + "LootContainer_MetalCrate_med_hideout_05_level",
             "Loot_containers/_Locations/LootContainer_WoodenCrate_1A"
         };
 

@@ -18,27 +18,45 @@ namespace DarkwoodMP.World
     /// in the host's game and in every other client's, and a second player then
     /// bumps the same thing where their game has it.
     ///
-    ///   ps-list [R] [new]        the loose things within R (400) of the centre that a player's body can move: each
-    ///                            one's ObjRef, where it is, its mass, and whether this game watches it for pushes
-    ///                            (DragSync) or as a door's leaf (DoorPush). The first call notes their order
-    ///                            (nearest the centre first), which INDEX counts in, so every game picks the same one.
-    ///                            Fails if one isn't watched. "new" notes the order again (at another centre).
-    ///   ps-bump INDEX DEG [DIST] our player walks into thing INDEX from the side away from DEG (degrees about up,
-    ///                            0 = +x, 90 = -z) and goes on along DEG, its body pushing it, until it moved DIST (60)
-    ///                            or 6 s went by; then backs off and waits for it to come to rest. If a wall is in
-    ///                            the way on that side, the nearest way round (in 45 degree steps) that's clear is
-    ///                            taken. Fails if it didn't move.
-    ///   ps-lean INDEX DEG [SECS] the same, but keeps leaning on it for SECS (5) after it has moved, the player
-    ///                            pressed against it while it's still (pushed into a wall or a corner, or just held),
-    ///                            and backs off only then.
-    ///   ps-hit INDEX             our player hits it (Item.getHit and the shot's push, Player's AddForceAtPosition)
+    ///   ps-list [R] [new]        the loose things within R (400) of the centre
+    ///                            that a player's body can move: each one's
+    ///                            ObjRef, where it is, its mass, and whether
+    ///                            this game watches it for pushes (DragSync) or
+    ///                            as a door's leaf (DoorPush). The first call
+    ///                            notes their order (nearest the centre first),
+    ///                            which INDEX counts in, so every game picks
+    ///                            the same one. Fails if one isn't watched.
+    ///                            "new" notes the order again (at another
+    ///                            centre).
+    ///   ps-bump INDEX DEG [DIST] our player walks into thing INDEX from the
+    ///                            side away from DEG (degrees about up, 0 = +x,
+    ///                            90 = -z) and goes on along DEG, its body
+    ///                            pushing it, until it moved DIST (60) or 6 s
+    ///                            went by; then backs off and waits for it to
+    ///                            come to rest. If a wall is in the way on that
+    ///                            side, the nearest way round (in 45 degree
+    ///                            steps) that's clear is taken. Fails if it
+    ///                            didn't move.
+    ///   ps-lean INDEX DEG [SECS] the same, but keeps leaning on it for SECS
+    ///                            (5) after it has moved, the player pressed
+    ///                            against it while it's still (pushed into a
+    ///                            wall or a corner, or just held), and backs
+    ///                            off only then.
+    ///   ps-hit INDEX             our player hits it (Item.getHit and the
+    ///                            shot's push, Player's AddForceAtPosition)
     ///                            from 150 away.
-    ///   ps-door DEG              our player walks into the open leaf of the door nearest the centre, through it along
-    ///                            DEG, its body turning the leaf (from the other side if it doesn't turn that way).
-    ///   ps-at INDEX              where thing INDEX is here (for the log: the dumps compare it).
-    ///   ps-overlap               soft collision between players (Sync/PlayerSeparation): our player is put right
-    ///                            on the nearest other player's puppet and stands still; within 4 s the two must be
-    ///                            eased at least most of the way apart (both games move their own player).
+    ///   ps-door DEG              our player walks into the open leaf of the
+    ///                            door nearest the centre, through it along
+    ///                            DEG, its body turning the leaf (from the
+    ///                            other side if it doesn't turn that way).
+    ///   ps-at INDEX              where thing INDEX is here (for the log: the
+    ///                            dumps compare it).
+    ///   ps-overlap               soft collision between players
+    ///                            (Sync/PlayerSeparation): our player is put
+    ///                            right on the nearest other player's puppet
+    ///                            and stands still; within 4 s the two must be
+    ///                            eased at least most of the way apart (both
+    ///                            games move their own player).
     /// </summary>
     public static class MapScenarioPush
     {

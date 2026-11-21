@@ -36,8 +36,8 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: who last let go of each NPC, and when (unscaled time).
         /// </summary>
-        private static readonly Dictionary<string, KeyValuePair<ulong, float>> _released =
-            new Dictionary<string, KeyValuePair<ulong, float>>();
+        private static readonly Dictionary<string, KeyValuePair<ulong, float>>
+            _released = new Dictionary<string, KeyValuePair<ulong, float>>();
         /// <summary>
         /// Seconds after someone lets go of an NPC before a joiner may talk to
         /// them (their dialogue's changes on the way).

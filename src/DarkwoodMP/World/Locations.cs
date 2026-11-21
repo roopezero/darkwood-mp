@@ -77,9 +77,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Busy => _spawning != null || _toSpawn.Count > 0;
 
-        private static readonly AccessTools.FieldRef<OutsideLocations, List<Vector3>> PositionsOf =
-            AccessTools.FieldRefAccess<OutsideLocations, List<Vector3>>(
-                "locationPositions");
+        private static readonly
+            AccessTools.FieldRef<OutsideLocations, List<Vector3>> PositionsOf =
+                AccessTools.FieldRefAccess<OutsideLocations, List<Vector3>>(
+                    "locationPositions");
 
         public static void Register(Session s)
         {
@@ -557,8 +558,10 @@ namespace DarkwoodMP.World
             {
                 _real = new HashSet<string>(
                     System.StringComparer.OrdinalIgnoreCase);
-                for (int i = 0; i
-                    < UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings; i++)
+                for (int i = 0;
+                    i < UnityEngine.SceneManagement.SceneManager
+                        .sceneCountInBuildSettings;
+                    i++)
                 {
                     string path =
                         UnityEngine.SceneManagement.SceneUtility

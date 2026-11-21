@@ -26,7 +26,8 @@ namespace DarkwoodMP.Sync
         /// </summary>
         public const int HideMask = 16809985;
 
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
             HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
 
         /// <summary>

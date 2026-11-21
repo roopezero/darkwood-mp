@@ -15,12 +15,16 @@ namespace DarkwoodMP.World
     /// for them too (the host's game runs the enemies and the clock), so
     /// instead the player who died watches the others:
     ///
-    ///   the camera follows one of the players still playing (click for the next one, right-click for the one
-    ///   before); the dead character goes along with it, out of sight and touching nothing, so the game shows
+    ///   the camera follows one of the players still playing (click for the
+    ///   next one, right-click for the one before); the dead character goes
+    ///   along with it, out of sight and touching nothing, so the game shows
     ///   and runs the world around the player being watched;
-    ///   the others don't see them (their snapshot says they're spectating) and enemies leave them be;
-    ///   the profile is marked dead, as the game does, so leaving doesn't bring the character back;
-    ///   the view is all around (see AllAround): the game's view cone stays where the character faced when it died.
+    ///   the others don't see them (their snapshot says they're spectating) and
+    ///   enemies leave them be;
+    ///   the profile is marked dead, as the game does, so leaving doesn't bring
+    ///   the character back;
+    ///   the view is all around (see AllAround): the game's view cone stays
+    ///   where the character faced when it died.
     ///
     /// When nobody is left playing (the last player died, or left), the game's
     /// own permadeath screen follows.

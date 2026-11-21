@@ -53,10 +53,12 @@ namespace DarkwoodMP.World
             Add("tank-fire", TankFire, timeout: 30f);
         }
 
-        // ---- the full oxygen tank, once filled, for every player (SharedTank) ----------------------------------
+        // ---- the full oxygen tank, once filled, for everyone (SharedTank) ---
+        // For every player.
 
-        private static readonly Dictionary<string, (EventTriggers et, Vector3 pos)> _tanks =
-            new Dictionary<string, (EventTriggers, Vector3)>();
+        private static readonly
+            Dictionary<string, (EventTriggers et, Vector3 pos)> _tanks =
+                new Dictionary<string, (EventTriggers, Vector3)>();
 
         private static GameObject TankPrefab()
         {
@@ -247,7 +249,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- a short scripted trip, which the host's movement check must let through ---------------------------
+        // ---- a scripted trip the host's movement check must let through -----
+        // A short one, which the host's movement check must let through.
 
         private sealed class Trip
         {

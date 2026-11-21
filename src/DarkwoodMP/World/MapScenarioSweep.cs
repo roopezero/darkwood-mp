@@ -10,11 +10,13 @@ namespace DarkwoodMP.World
     /// <summary>
     /// Map test steps for leftover sync bugs (the order is
     /// tools/tests/map_scenario_sweep.py):
-    /// - a story flag set while flag sharing is paused (inputs forbidden, as while the player is dying) reaches the
-    ///   other game once it resumes (FlagsSync keeps what it last sent through such a pause);
-    /// - an enemy's loop stopped by other means than playIdleLoop("") (destroySounds) stops in the client's copy too
-    ///   (NetEnemies.LoopCheck);
-    /// - an open door whose leaf our player walks into rests at the same angle in every game (DoorPush).
+    /// - a story flag set while flag sharing is paused (inputs forbidden, as
+    ///   while the player is dying) reaches the other game once it resumes
+    ///   (FlagsSync keeps what it last sent through such a pause);
+    /// - an enemy's loop stopped by other means than playIdleLoop("")
+    ///   (destroySounds) stops in the client's copy too (NetEnemies.LoopCheck);
+    /// - an open door whose leaf our player walks into rests at the same angle
+    ///   in every game (DoorPush).
     /// </summary>
     public static class MapScenarioSweep
     {

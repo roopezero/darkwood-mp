@@ -16,22 +16,27 @@ namespace DarkwoodMP.World
     /// running speed, together and far behind each other, while every game
     /// watches its own view light (Player.FOVLight) every frame:
     ///
-    ///   black: its renderer switched off (Light2D.LateUpdate's ray straight down hit something, Sync.ViewWatch);
-    ///   not its own: the cone's mesh doesn't match rays cast from where our player stands now (a mesh drawn by
-    ///   another light, somewhere else, as a puppet's copied lantern once did);
-    ///   ghost blockers: a collider that cuts the view (the light's shadow layers) inside the light's reach whose
-    ///   saved object is switched off (SaveableObject.Active false), or one of the mod's own objects;
-    ///   one side cut: how far the view reaches on the left and on the right of where our player faces, and what
-    ///   stops it there.
+    ///   black: its renderer switched off (Light2D.LateUpdate's ray straight
+    ///   down hit something, Sync.ViewWatch);
+    ///   not its own: the cone's mesh doesn't match rays cast from where our
+    ///   player stands now (a mesh drawn by another light, somewhere else, as a
+    ///   puppet's copied lantern once did);
+    ///   ghost blockers: a collider that cuts the view (the light's shadow
+    ///   layers) inside the light's reach whose saved object is switched off
+    ///   (SaveableObject.Active false), or one of the mod's own objects;
+    ///   one side cut: how far the view reaches on the left and on the right of
+    ///   where our player faces, and what stops it there.
     ///
     /// Steps: "vw-find PATTERN [N]", "vw-mark PATTERN INDEX", "vw-stage SPEC",
     /// "vw-approach LEN [SPEED]", "vw-check [DIR TAG]".
     /// </summary>
     public static class MapScenarioView
     {
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
             HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, float> CurrentFov =
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, float> CurrentFov =
             HarmonyLib.AccessTools.FieldRefAccess<Player, float>("currentFOV");
 
         private static Vector3? _mark;

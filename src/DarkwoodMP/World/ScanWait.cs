@@ -28,10 +28,12 @@ namespace DarkwoodMP.World
         new[] { typeof(OnScanStatus), typeof(int) })]
     static class ScanWaitPatch
     {
-        private static readonly AccessTools.FieldRef<AstarPath, bool> ProcessingWorkItems =
+        private static readonly
+            AccessTools.FieldRef<AstarPath, bool> ProcessingWorkItems =
             AccessTools.FieldRefAccess<AstarPath, bool>("processingWorkItems");
-        private static readonly AccessTools.FieldRef<AstarPath, bool> WorkItemsQueued =
-            AccessTools.FieldRefAccess<AstarPath, bool>("workItemsQueued");
+        private static readonly
+            AccessTools.FieldRef<AstarPath, bool> WorkItemsQueued =
+                AccessTools.FieldRefAccess<AstarPath, bool>("workItemsQueued");
 
         static void Prefix(AstarPath __instance)
         {

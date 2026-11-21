@@ -422,7 +422,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- R03: a container's window when the container goes while it's open -------------------------------------
+        // ---- R03: a container's window when it goes while it's open ---------
+        // When the container goes while it's open.
 
         // host: the dog killed by cw-dog
         private static Character _cwDog;

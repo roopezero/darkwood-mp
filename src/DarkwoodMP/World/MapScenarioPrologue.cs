@@ -30,7 +30,8 @@ namespace DarkwoodMP.World
             Add("prologue-key-reset", KeyReset, timeout: 60f);
         }
 
-        // ---- the key in the wardrobe of the house at the forest's start (dream_tutorial_00) and the door it opens ----------------------------------
+        // ---- the key in the first house's wardrobe and the door it opens ----
+        // The house at the forest's start (dream_tutorial_00).
 
         /// <summary>
         /// The things of this kind in the stage's place, switched on or not:
@@ -38,7 +39,8 @@ namespace DarkwoodMP.World
         /// the world, whose own things must not be picked: walking there leaves
         /// the dream).
         /// </summary>
-        private static System.Collections.Generic.IEnumerable<T> Here<T>() where T : Component =>
+        private static System.Collections.Generic.IEnumerable<T> Here<T>()
+            where T : Component =>
             StateDump.All<T>().Where(
                 c => WorldActions.FlatSq(
                     c.transform.position,
@@ -525,7 +527,8 @@ namespace DarkwoodMP.World
             var pick = outcomes.FirstOrDefault(o => o.name != "playerDeath"
                     && o.effects.Any(
                         e => e.type
-                            == DreamPreset.Outcome.Effect.Type.transferToDream) != last);
+                            == DreamPreset.Outcome.Effect.Type.transferToDream)
+                        != last);
             string names = string.Join(",", outcomes.Select(o => o.name));
             if (pick == null)
             {

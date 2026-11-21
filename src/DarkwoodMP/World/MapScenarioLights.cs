@@ -17,13 +17,18 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class MapScenarioLights
     {
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
-            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovDot =
-            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVDot");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> OwnBeam =
-            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>(
-                "Flashlight");
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
+                HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>(
+                    "FOVLight");
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovDot =
+                HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>(
+                    "FOVDot");
+        private static readonly
+            HarmonyLib.AccessTools.FieldRef<Player, Light2D> OwnBeam =
+                HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>(
+                    "Flashlight");
 
         public static void Register()
         {

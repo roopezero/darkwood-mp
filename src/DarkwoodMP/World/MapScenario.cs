@@ -43,8 +43,8 @@ namespace DarkwoodMP.World
         }
 
         public delegate IEnumerator Step(string[] args, Result r);
-        private static readonly Dictionary<string, (Step run, float timeout)> _steps =
-            new Dictionary<string, (Step, float)>();
+        private static readonly Dictionary<string, (Step run, float timeout)>
+            _steps = new Dictionary<string, (Step, float)>();
 
         public static void Add(string name, Step step, float timeout = 20f) =>
             _steps[name] = (step, timeout);
@@ -390,7 +390,8 @@ namespace DarkwoodMP.World
             return w;
         }
 
-        public static T Nearest<T>(IEnumerable<T> things, Vector3 to) where T : Component =>
+        public static T Nearest<T>(IEnumerable<T> things, Vector3 to)
+            where T : Component =>
             things.Where(t => t != null)
                 .OrderBy(t => StateDump.Flat(t.transform.position - to))
                 .FirstOrDefault();
