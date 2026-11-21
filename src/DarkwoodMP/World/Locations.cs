@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Places;
 using HarmonyLib;
 using UnityEngine;
 
@@ -631,8 +632,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            bool dream = (r.R.ReadByte() & 1) != 0;
-            string name = r.ReadStr();
+            LocationAsk ask = LocationAskMessage.Read(r);
+            bool dream = ask.Dream;
+            string name = ask.Name;
             var o = Singleton<OutsideLocations>.Instance;
             if (o == null || string.IsNullOrEmpty(name))
             {
@@ -695,9 +697,17 @@ namespace DarkwoodMP.World
             }
 
             var w = s.Begin(MsgType.LocationSlot);
-            w.WriteStr(name);
-            w.Write(slot.Pos);
-            w.W.Write((short)slot.Rot);
+            var answer = new LocationSlot
+            {
+                Name = name,
+                Spot = new Spot
+                {
+                    Pos = new Vec3(slot.Pos.x, slot.Pos.y, slot.Pos.z),
+                    Turn = slot.Rot,
+                },
+            };
+
+            LocationSlotMessage.Write(w, answer);
             s.SendTo(from, w, Channel.Control, reliable: true);
         }
 
@@ -884,14 +894,9 @@ namespace DarkwoodMP.World
 
             var d = Singleton<Dreams>.Instance;
             var w = s.Begin(MsgType.LocationAsk);
-            int dreamFlag = 0;
-            if (d != null && (d.dreamPrepared || d.dreaming))
-            {
-                dreamFlag = 1;
-            }
-
-            w.W.Write((byte)dreamFlag);
-            w.WriteStr(name);
+            bool dream = d != null && (d.dreamPrepared || d.dreaming);
+            LocationAskMessage.Write(
+                w, new LocationAsk { Dream = dream, Name = name });
             s.SendToHost(w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo(
                 $"[locations] asked the host where {name} stands");
@@ -905,9 +910,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            string name = r.ReadStr();
-            var pos = r.ReadVector3();
-            int rot = r.R.ReadInt16();
+            LocationSlot slot = LocationSlotMessage.Read(r);
+            string name = slot.Name;
+            var pos = new Vector3(
+                slot.Spot.Pos.X, slot.Spot.Pos.Y, slot.Spot.Pos.Z);
+            int rot = slot.Spot.Turn;
             _slots[name] = new Slot { Pos = pos, Rot = rot };
             _asked.Remove(name);
             Plugin.Log.LogInfo(
