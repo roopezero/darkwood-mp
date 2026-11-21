@@ -142,7 +142,7 @@ namespace DarkwoodMP.Sync.Players
             snap.EnemyOfTheForest =
                 player.skills != null && player.skills.EnemyOfTheForest;
             snap.Away = LocalAway();
-            snap.AfterNight = World.AfterNight.Local;
+            snap.AfterNight = World.Mornings.AfterNight.Local;
             snap.Place = World.Locations.Current();
             snap.Health = PlayerLookRules.HealthPercent(
                 player.health, player.maxHealth);

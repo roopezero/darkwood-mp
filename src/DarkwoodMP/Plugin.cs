@@ -443,7 +443,6 @@ namespace DarkwoodMP
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
-            AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
@@ -2359,7 +2358,11 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("pause");
-            AfterNight.Update();
+            if (coop != null)
+            {
+                coop.Mornings.Update();
+            }
+
             coop = Coop.Current;
             if (_host.Session.IsHost && WorldShare.InWorld && coop != null)
             {

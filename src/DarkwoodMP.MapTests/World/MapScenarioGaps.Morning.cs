@@ -141,14 +141,14 @@ namespace DarkwoodMP.World
         /// (AfterNight.HostDawn).</summary>
         private static IEnumerator AnDawn(string[] a, Result r)
         {
-            AfterNight.HostDawn();
+            Coop.Current.Mornings.HostDawn();
             r.Info = "a new morning";
             yield break;
         }
 
         /// <summary>"an-end": our player's morning ends, as walking out of the
         /// hideout does (Location.OnTriggerExit -> endAfterNight, and on a
-        /// joiner AfterNightWalkOutPatch telling the host).</summary>
+        /// joiner LocationOnTriggerExit telling the host).</summary>
         private static IEnumerator AnEnd(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
@@ -161,10 +161,7 @@ namespace DarkwoodMP.World
             AsPlayer(() =>
             {
                 c.endAfterNight();
-                if (!c.isAfterNight)
-                {
-                    AfterNight.LocalWalkedOut();
-                }
+                Coop.Current.Mornings.TriggerExited(true);
             });
 
             yield return new WaitForSecondsRealtime(0.5f);

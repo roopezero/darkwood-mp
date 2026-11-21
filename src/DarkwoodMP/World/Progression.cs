@@ -497,7 +497,7 @@ namespace DarkwoodMP.World
         {
             if (peer == 0)
             {
-                return AfterNight.Local;
+                return Mornings.AfterNight.Local;
             }
 
             var sync = Plugin.Instance.Host.Players;
