@@ -74,7 +74,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static GameObject PlaceShared(string prefab, Vector3 at)
         {
-            Containers.Placing = true;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.Placing = true;
+            }
+
             try
             {
                 return Core.AddPrefab(
@@ -83,7 +88,10 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Containers.Placing = false;
+                if (coop != null)
+                {
+                    coop.Containers.Placing = false;
+                }
             }
         }
 

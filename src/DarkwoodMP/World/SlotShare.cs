@@ -1093,8 +1093,9 @@ namespace DarkwoodMP.World
             // host's world (a locked crate not picked open here isn't), and
             // nobody else may have it open (but its storage).
             string refusedAll = Containers.Refusal(from, inv);
-            if (refusedAll == null && !Is(inv) && Containers.Instance != null
-                && Containers.Instance.LockedByOther(
+            CoopSession coop = Coop.Current;
+            if (refusedAll == null && !Is(inv) && coop != null
+                && coop.Containers.LockedByOther(
                     obj, from, out string holder))
             {
                 refusedAll = holder + " has it open";

@@ -79,7 +79,6 @@ namespace DarkwoodMP
         private WorldShare _world;
         private NetEnemies _enemies;
         private TimeSync _time;
-        private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
         private DragSync _drag;
@@ -455,7 +454,6 @@ namespace DarkwoodMP
             _enemies = new NetEnemies(_host.Session);
             _time = new TimeSync(_host.Session);
             WorldActions.Register(_host.Session);
-            _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
             _drag = new DragSync(_host.Session);
@@ -2274,7 +2272,14 @@ namespace DarkwoodMP
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
             _host.Workbenches.Update();
-            _containers.Update();
+            // also without co-op: see Containers.EachFrame
+            Containers.EachFrame();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.Update();
+            }
+
             ModProfiler.Mark("containers");
             _characters.Update();
             ModProfiler.Mark("characters");

@@ -891,10 +891,13 @@ namespace DarkwoodMP.World
                 yield return inner.Current;
             }
 
-            if (!Together || !S.IsHost || Containers.Instance == null)
+            CoopSession coop = Coop.Current;
+            if (!Together || !S.IsHost || coop == null)
             {
                 yield break;
             }
+
+            Containers containers = coop.Containers;
 
             Inventory src = null;
             if (ge.sourceTransform != null)
@@ -904,7 +907,7 @@ namespace DarkwoodMP.World
 
             if (src != null)
             {
-                Containers.Instance.SendContents(src);
+                containers.SendContents(src);
             }
 
             foreach (var go in Targets(ge))
@@ -912,7 +915,7 @@ namespace DarkwoodMP.World
                 var inv = go.GetComponent<Inventory>();
                 if (inv != null)
                 {
-                    Containers.Instance.SendContents(inv);
+                    containers.SendContents(inv);
                 }
             }
 

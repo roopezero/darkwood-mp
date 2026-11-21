@@ -680,13 +680,23 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            Containers.ThrownSpawning = path;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.ThrownSpawning = path;
+            }
+
             return true;
         }
 
         static System.Exception Finalizer(System.Exception __exception)
         {
-            Containers.ThrownSpawning = null;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.ThrownSpawning = null;
+            }
+
             return __exception;
         }
 

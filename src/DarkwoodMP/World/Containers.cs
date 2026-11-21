@@ -32,7 +32,7 @@ namespace DarkwoodMP.World
     /// says so (ContainerBusy: ObjRef, str who) and it closes again. Traders'
     /// stock is a container like the others while someone trades with them.
     /// </summary>
-    public sealed class Containers
+    internal sealed class Containers
     {
         /// <summary>
         /// Sent at once, not once at rest: a trail doesn't move, and the
@@ -46,91 +46,15 @@ namespace DarkwoodMP.World
         /// True while the local player is placing something (a trap...), set
         /// around Player.progressBarCompleted.
         /// </summary>
-        public static bool Placing;
-
-        /// <summary>
-        /// What a player can place, by prefab: each item that canBePlaced
-        /// (InvItem.item, which Player.progressBarCompleted makes with the
-        /// Object overload of Core.AddPrefab), with its path under
-        /// Resources/Prefabs ("Traps/beartrap"), which is what ObjSpawn names.
-        /// Built once from the item database.
-        /// </summary>
-        private static Dictionary<Object, string> _placeables;
-        private static HashSet<string> _placeablePaths;
-        /// <summary>
-        /// The item types that place each path (more than one item may place
-        /// the same trap).
-        /// </summary>
-        private static Dictionary<string, HashSet<string>> _placeableTypes;
-
-        private static void EnsurePlaceables()
-        {
-            if (_placeables != null)
-            {
-                return;
-            }
-
-            var db = Singleton<ItemsDatabase>.Instance;
-            if (db == null || db.itemsDict == null || db.itemsDict.Count == 0)
-            {
-                return;
-            }
-
-            _placeables = new Dictionary<Object, string>();
-            _placeablePaths = new HashSet<string>();
-            _placeableTypes = new Dictionary<string, HashSet<string>>();
-            foreach (var kv in db.itemsDict)
-            {
-                GameObject gameObject = Resources.Load(kv.Value) as GameObject;
-                InvItem item = null;
-                if (gameObject != null)
-                {
-                    item = gameObject.GetComponent<InvItem>();
-                }
-
-                if (item == null || !item.canBePlaced || item.item == null)
-                {
-                    continue;
-                }
-
-                string path = "Traps/" + item.item.name;
-                if (Resources.Load("Prefabs/" + path) != item.item)
-                {
-                    Plugin.Log.LogWarning(
-                        $"Placeable {kv.Key}: its prefab {item.item.name} "
-                            + "isn't in Prefabs/Traps; placing it won't be "
-                            + "shared");
-                    continue;
-                }
-
-                _placeables[item.item] = path;
-                _placeablePaths.Add(path);
-                if (!_placeableTypes.TryGetValue(path, out var types))
-                {
-                    _placeableTypes[path] = types = new HashSet<string>();
-                }
-
-                types.Add(kv.Key);
-            }
-
-            Plugin.Log.LogInfo(
-                $"Placeable things: {string.Join(", ", _placeablePaths)}");
-        }
+        public bool Placing;
 
         /// <summary>
         /// The path (under Resources/Prefabs) of a prefab a player can place,
-        /// or null.
+        /// or null (ModHost.Placeables).
         /// </summary>
         public static string PlaceablePath(Object prefab)
         {
-            EnsurePlaceables();
-            if (prefab != null && _placeables != null
-                && _placeables.TryGetValue(prefab, out var path))
-            {
-                return path;
-            }
-
-            return null;
+            return Plugin.Instance.Host.Placeables.PathOf(prefab);
         }
 
         /// <summary>
@@ -139,8 +63,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool IsPlaceable(string path)
         {
-            EnsurePlaceables();
-            return _placeablePaths != null && _placeablePaths.Contains(path);
+            return Plugin.Instance.Host.Placeables.Has(path);
         }
 
         /// <summary>
@@ -149,38 +72,27 @@ namespace DarkwoodMP.World
         /// </summary>
         public static HashSet<string> PlacedWith(string path)
         {
-            EnsurePlaceables();
-            if (_placeableTypes != null
-                && _placeableTypes.TryGetValue(path, out var types))
-            {
-                return types;
-            }
-
-            return null;
+            return Plugin.Instance.Host.Placeables.TypesOf(path);
         }
 
-        public static Containers Instance { get; private set; }
         private readonly Session _session;
         private readonly System.Random _rng = new System.Random();
 
-        public Containers(Session session)
+        public Containers(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.ContainerState, OnContainer);
-            session.Register(MsgType.ObjSpawn, OnSpawn);
-            session.Register(MsgType.DeathBagMarker, OnBagMarker);
-            session.Register(MsgType.ContainerLock, OnLock);
-            session.Register(MsgType.ContainerBusy, OnBusy);
-            session.OnPeerDisconnected += peer => _locks.Leave(peer);
+            _session = coop.Net;
+            coop.Handle(MsgType.ContainerState, OnContainer);
+            coop.Handle(MsgType.ObjSpawn, OnSpawn);
+            coop.Handle(MsgType.DeathBagMarker, OnBagMarker);
+            coop.Handle(MsgType.ContainerLock, OnLock);
+            coop.Handle(MsgType.ContainerBusy, OnBusy);
+            _session.OnPeerDisconnected += OnPeerLeft;
+            coop.Hook(() => _session.OnPeerDisconnected -= OnPeerLeft);
+        }
 
-            session.OnSessionEnded += () =>
-            {
-                _watched.Clear();
-                _pending.Clear();
-                _corpsesSent.Clear();
-                _locks.Clear();
-            };
+        private void OnPeerLeft(ulong peer)
+        {
+            _locks.Leave(peer);
         }
 
         private static bool Sharing => Coop.Guards.Sharing;
@@ -194,10 +106,22 @@ namespace DarkwoodMP.World
         private readonly List<Inventory> _slotGone = new List<Inventory>();
         private float _nextCheck;
 
-        public void Update()
+        /// <summary>
+        /// Plugin.Update, each frame, also with no session: the guards'
+        /// depth goes back to 0, and a window left by a container that went
+        /// while open is removed.
+        /// </summary>
+        public static void EachFrame()
         {
             Coop.Guards.ResetDepth();
             DropOrphanedWindows();
+        }
+
+        /// <summary>
+        /// Plugin.Update, each frame while a session runs, after EachFrame.
+        /// </summary>
+        public void Update()
+        {
             if (!Sharing)
             {
                 return;
@@ -1121,7 +1045,7 @@ namespace DarkwoodMP.World
         /// What the spawn rules look at in something Core.AddPrefab made:
         /// the only code that reads it for them.
         /// </summary>
-        private static MadeFacts FactsOf(string prefab, GameObject go)
+        private MadeFacts FactsOf(string prefab, GameObject go)
         {
             var facts = new MadeFacts
             {
@@ -1169,7 +1093,7 @@ namespace DarkwoodMP.World
         /// path is only looked up once the checks before it passed, as
         /// before.
         /// </summary>
-        private static MadeFromFacts FactsOf(Object prefab, GameObject go)
+        private MadeFromFacts FactsOf(Object prefab, GameObject go)
         {
             var facts = new MadeFromFacts
             {
@@ -1205,7 +1129,14 @@ namespace DarkwoodMP.World
         /// Set while an Explodes on a thrown item spawns its objects on the
         /// host: their prefab path.
         /// </summary>
-        internal static string ThrownSpawning;
+        internal string ThrownSpawning;
+
+        /// <summary>
+        /// How deep inside the string overload of Core.AddPrefab we are,
+        /// which makes it with the Object overload: shared from there only
+        /// (MadeFrom is skipped while it's above 0).
+        /// </summary>
+        internal int MakingDepth;
 
         /// <summary>
         /// Host: a thrown item that went off made this (ThrownSpawns): send it
@@ -1675,7 +1606,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Player __instance)
         {
-            Containers.Placing = __instance.placingItem;
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            coop.Containers.Placing = __instance.placingItem;
             // A client's character goes to the host first, the item to place
             // still in it (it's used up below), so the host's check of what it
             // carries (Containers.OnSpawn) sees what was picked up or made a
@@ -1693,21 +1630,28 @@ namespace DarkwoodMP.World
 
         static void Postfix()
         {
-            bool placed = Containers.Placing;
-            Containers.Placing = false;
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            bool placed = coop.Containers.Placing;
+            coop.Containers.Placing = false;
             if (placed)
             {
-                Containers instance = Containers.Instance;
-                if (instance != null)
-                {
-                    instance.SendPlacedNow();
-                }
+                coop.Containers.SendPlacedNow();
             }
         }
 
         static System.Exception Finalizer(System.Exception __exception)
         {
-            Containers.Placing = false;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.Placing = false;
+            }
+
             return __exception;
         }
     }
@@ -1726,27 +1670,35 @@ namespace DarkwoodMP.World
     })]
     static class SharedPrefabPatch
     {
-        /// <summary>
-        /// Inside the string overload, which makes it with the Object overload:
-        /// shared from here only.
-        /// </summary>
-        internal static int Depth;
-        static void Prefix() => Depth++;
+        static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.MakingDepth++;
+            }
+        }
+
         static void Postfix(string prefab, GameObject __result)
         {
-            Containers instance = Containers.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Made(prefab, __result);
+                coop.Containers.Made(prefab, __result);
             }
         }
 
         static System.Exception Finalizer(System.Exception __exception)
         {
-            Depth--;
-            if (Depth < 0)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                Depth = 0;
+                Containers containers = coop.Containers;
+                containers.MakingDepth--;
+                if (containers.MakingDepth < 0)
+                {
+                    containers.MakingDepth = 0;
+                }
             }
 
             return __exception;
@@ -1771,13 +1723,10 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Object prefab, GameObject __result)
         {
-            if (SharedPrefabPatch.Depth == 0)
+            CoopSession coop = Coop.Current;
+            if (coop != null && coop.Containers.MakingDepth == 0)
             {
-                Containers instance = Containers.Instance;
-                if (instance != null)
-                {
-                    instance.MadeFrom(prefab, __result);
-                }
+                coop.Containers.MadeFrom(prefab, __result);
             }
         }
     }
@@ -1788,14 +1737,15 @@ namespace DarkwoodMP.World
     {
         static void Postfix(Inventory inv)
         {
-            if (inv == null || Containers.Instance == null)
+            CoopSession coop = Coop.Current;
+            if (inv == null || coop == null)
             {
                 return;
             }
 
             try
             {
-                Containers.Instance.OpenedNow();
+                coop.Containers.OpenedNow();
             }
             catch (System.Exception e)
             {

@@ -831,10 +831,10 @@ namespace DarkwoodMP.World
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             _applied[npc.GetInstanceID()] = seen + 1;
-            Containers instance = Containers.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Apply(Inv(npc), stock);
+                coop.Containers.Apply(Inv(npc), stock);
             }
 
             Plugin.Log.LogInfo(
