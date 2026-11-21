@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Traders;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -82,8 +83,7 @@ namespace DarkwoodMP.World
             }
 
             var w = _session.Begin(MsgType.TraderAsk);
-            WriteWho(
-                w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
+            TraderAsk.Write(w, WhoOf(npc));
             _session.SendToHost(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -108,22 +108,27 @@ namespace DarkwoodMP.World
         /// Which trader a message is about: his name, his ObjRef, where he
         /// stands in the sender's game (x, z).
         /// </summary>
-        private static void WriteWho(
-            PacketWriter w, string name, ObjRef r, Vector3 at)
+        private static TraderWho WhoOf(string name, ObjRef r, Vector3 at)
         {
-            w.WriteStr(name);
-            r.Write(w);
-            w.W.Write(at.x);
-            w.W.Write(at.z);
+            return new TraderWho
+            {
+                Name = name,
+                Who = ObjRef.NameOf(r),
+                At = new Vec2(at.x, at.z),
+            };
         }
 
-        private static (string name, ObjRef r, Vector3 at) ReadWho(
-            PacketReader r)
+        private static TraderWho WhoOf(NPC npc)
         {
-            string name = r.ReadStr();
-            var o = ObjRef.Read(r);
-            return (name, o, new Vector3(
-                r.R.ReadSingle(), 0f, r.R.ReadSingle()));
+            return WhoOf(
+                npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
+        }
+
+        private static (string name, ObjRef r, Vector3 at) Unpack(
+            TraderWho who)
+        {
+            return (who.Name, ObjRef.RefOf(who.Who), new Vector3(
+                who.At.X, 0f, who.At.Z));
         }
 
         /// <summary>
@@ -159,16 +164,14 @@ namespace DarkwoodMP.World
 
         private void Send(NPC npc, ulong to, string stock = null)
         {
-            var w = _session.Begin(MsgType.TraderStock);
-            WriteWho(
-                w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             string sent = stock;
             if (sent == null)
             {
                 sent = StockOf(npc);
             }
 
-            w.WriteBigStr(sent);
+            var w = _session.Begin(MsgType.TraderStock);
+            TraderStock.Write(w, WhoOf(npc), sent);
             if (to != 0)
             {
                 _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -193,7 +196,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var (name, who, at) = ReadWho(r);
+            var (name, who, at) = Unpack(TraderAsk.Read(r));
             var npc = Find(name, who, at);
             if (npc != null)
             {
@@ -410,8 +413,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var (name, who, at) = ReadWho(r);
-            string stock = r.ReadBigStr();
+            var (name, who, at) = Unpack(
+                TraderStock.Read(r, out string stock));
             if (!ApplyTo(name, who, at, stock))
             {
                 _waiting[Key(name, who)] = stock;
@@ -474,7 +477,15 @@ namespace DarkwoodMP.World
 
             var at = npc.transform.position;
             var who = ObjRef.Of(npc.gameObject);
-            var w = WriteTrade(name, who, at, took, gave, stock, repChange);
+            var w = WriteTrade(new Trade
+            {
+                Trader = WhoOf(name, who, at),
+                Took = took,
+                Gave = gave,
+                Stock = stock,
+                Change = repChange,
+            });
+
             Plugin.Log.LogInfo(
                 $"Traded with {name}: took {Text(took)}, gave {Text(gave)}");
             if (_session.IsHost)
@@ -567,49 +578,21 @@ namespace DarkwoodMP.World
             }, inventory: false);
         }
 
-        private PacketWriter WriteTrade(
-            string name, ObjRef who, Vector3 at, Dictionary<string, int> took,
-            Dictionary<string, int> gave, string stock, int repChange)
+        private PacketWriter WriteTrade(in Trade trade)
         {
             var w = _session.Begin(MsgType.TraderTrade);
-            WriteWho(w, name, who, at);
-            foreach (var d in new[] { took, gave })
-            {
-                w.W.Write((ushort)d.Count);
-                foreach (var kv in d)
-                {
-                    w.WriteStr(kv.Key);
-                    w.W.Write(kv.Value);
-                }
-            }
-
-            w.WriteBigStr(stock);
-            w.W.Write(repChange);
+            TraderTrade.Write(w, trade);
             return w;
-        }
-
-        private static Dictionary<string, int> ReadItems(PacketReader r)
-        {
-            var d = new Dictionary<string, int>();
-            int n = r.R.ReadUInt16();
-            for (int i = 0; i < n; i++)
-            {
-                string t = r.ReadStr();
-                int c = r.R.ReadInt32();
-                d.TryGetValue(t, out int was);
-                d[t] = was + c;
-            }
-
-            return d;
         }
 
         private void OnTrade(ulong from, PacketReader r)
         {
-            var (name, who, at) = ReadWho(r);
-            var took = ReadItems(r);
-            var gave = ReadItems(r);
-            string stock = r.ReadBigStr();
-            int repChange = r.R.ReadInt32();
+            var trade = TraderTrade.Read(r);
+            var (name, who, at) = Unpack(trade.Trader);
+            var took = (Dictionary<string, int>)trade.Took;
+            var gave = (Dictionary<string, int>)trade.Gave;
+            string stock = trade.Stock;
+            int repChange = trade.Change;
             if (!_session.IsHost)
             {
                 if (from != _session.HostId)
@@ -673,9 +656,7 @@ namespace DarkwoodMP.World
                     + $"{Text(took)}, gave {Text(gave)}, reputation "
                     + $"{repChange:+0;-0;0}");
             _session.Broadcast(
-                WriteTrade(
-                    name, ObjRef.Of(npc.gameObject), npc.transform.position,
-                    took, gave, stock, repChange),
+                WriteTrade(trade with { Trader = WhoOf(npc) }),
                 Channel.Control, reliable: true, except: from);
         }
 
