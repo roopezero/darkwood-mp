@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using HarmonyLib;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Doors;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -751,8 +752,7 @@ namespace DarkwoodMP.World
         private static PacketWriter Write(ObjRef r, float angle)
         {
             var pw = _s.Begin(MsgType.DoorLeaf);
-            r.Write(pw);
-            pw.W.Write(angle);
+            DoorLeafMessage.Write(pw, ObjRef.NameOf(r), angle);
             return pw;
         }
 
@@ -768,8 +768,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            float angle = r.R.ReadSingle();
+            var obj = ObjRef.RefOf(DoorLeafMessage.Read(r, out float angle));
             if (float.IsNaN(angle) || float.IsInfinity(angle))
             {
                 return;
