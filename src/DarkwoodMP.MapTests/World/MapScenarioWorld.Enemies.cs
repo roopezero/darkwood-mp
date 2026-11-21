@@ -51,7 +51,12 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static Character HostEnemyNear(float radius)
         {
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;

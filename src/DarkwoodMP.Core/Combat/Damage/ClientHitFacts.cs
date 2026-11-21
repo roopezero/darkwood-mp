@@ -3,7 +3,7 @@ namespace DarkwoodMP.Combat.Damage
     /// A hit on a character in a client's game (CharacterGetHitFromClient).
     public readonly struct ClientHitFacts
     {
-        /// NetEnemies.Instance exists and NetEnemies.ClientMode.
+        /// a session (CoopSession.Enemies) exists and NetEnemies.ClientMode.
         public bool Handled { get; init; }
 
         /// NetEnemies.IsPuppet: the character is the host's enemy.

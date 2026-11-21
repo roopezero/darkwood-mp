@@ -126,7 +126,7 @@ namespace DarkwoodMP.Combat
                 return false; // made from its prefab: it goes
             }
 
-            NetEnemies.Thaw(c);
+            _coop.Enemies.Thaw(c);
             Plugin.Log.LogInfo(
                 $"[npc] the host stopped sending {c.name} (#{id}): it's ours "
                     + "to run again");
@@ -218,7 +218,7 @@ namespace DarkwoodMP.Combat
         public bool ClientHit(in HostileNpcs.Hit hit)
         {
             var c = hit.Npc;
-            var effects = NetEnemies.HitEffects;
+            var effects = _coop.Enemies.HitEffects;
             var way = NpcHitRules.Way(FactsOf(hit, effects));
             if (way == NpcHitWay.Ours)
             {
@@ -415,7 +415,7 @@ namespace DarkwoodMP.Combat
             }
 
             bool copy = false;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = _coop.Enemies;
             if (ne != null)
             {
                 copy = ne.IsPuppet(c, out _);
@@ -429,7 +429,7 @@ namespace DarkwoodMP.Combat
                 ClientMode = NetEnemies.ClientMode,
                 LocalOnly = NetEnemies.LocalOnly(c),
                 Copy = copy,
-                Frozen = NetEnemies.Frozen.Contains(c),
+                Frozen = _coop.Enemies.Frozen.Contains(c),
                 Replaying = _coop.Guards.Replaying,
                 SharedOnly =
                     Plugin.Instance.Host.Parts.Current == EventPart.SharedOnly,
@@ -487,7 +487,7 @@ namespace DarkwoodMP.Combat
             float damage = hit.Damage;
             Plugin.Log.LogInfo(
                 $"[npc] {s.NameOf(from)} hit {c.name} for {damage:0}");
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = _coop.Enemies;
             if (instance != null)
             {
                 var effects = PlayerDamage.GameOf(hit.Effects);

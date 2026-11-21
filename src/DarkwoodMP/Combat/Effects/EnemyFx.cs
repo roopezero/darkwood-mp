@@ -310,7 +310,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            var e = NetEnemies.Instance;
+            NetEnemies e = _coop.Enemies;
             if (e == null || !e.IdOf(c, out uint id))
             {
                 return;
@@ -401,7 +401,12 @@ namespace DarkwoodMP.Combat
 
         private static void ShowEmitter(in EnemyEffect fx)
         {
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = null;
+            if (Coop.Current != null)
+            {
+                instance = Coop.Current.Enemies;
+            }
+
             Character c = null;
             if (instance != null)
             {
@@ -457,7 +462,7 @@ namespace DarkwoodMP.Combat
         private void BansheeSight()
         {
             var me = Player.Instance;
-            var e = NetEnemies.Instance;
+            NetEnemies e = _coop.Enemies;
             if (me == null || e == null)
             {
                 return;

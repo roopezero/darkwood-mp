@@ -65,7 +65,12 @@ namespace DarkwoodMP.World
                 return new NpcFacts();
             }
 
-            NetEnemies enemies = NetEnemies.Instance;
+            NetEnemies enemies = null;
+            if (Coop.Current != null)
+            {
+                enemies = Coop.Current.Enemies;
+            }
+
             return new NpcFacts
             {
                 HasCharacter = true,

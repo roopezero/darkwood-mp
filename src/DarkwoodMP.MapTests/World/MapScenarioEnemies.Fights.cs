@@ -23,7 +23,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerable<(Character c, uint id)> HostEnemies()
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 yield break;
@@ -543,7 +548,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Corpse(string[] a, Result r)
         {
             var p = P;
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = null;
+            if (Coop.Current != null)
+            {
+                instance = Coop.Current.Enemies;
+            }
+
             Character c = null;
             if (instance != null)
             {

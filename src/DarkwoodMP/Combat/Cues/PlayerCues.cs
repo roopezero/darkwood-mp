@@ -117,7 +117,9 @@ namespace DarkwoodMP.Combat
         public static bool Reacts(Character c)
         {
             return CueRules.Reacts(
-                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(c));
+                NetEnemies.ClientMode,
+                Coop.Current != null
+                    && Coop.Current.Enemies.Frozen.Contains(c));
         }
 
         private static CueFacts FactsOf(

@@ -72,7 +72,7 @@ namespace DarkwoodMP.World
 
             _dog = c;
             yield return new WaitForSeconds(1.5f);
-            NetEnemies.Instance.NetIdOf(c, out uint id);
+            Coop.Current.Enemies.NetIdOf(c, out uint id);
             float away = StateDump.Flat(
                 c.transform.position - proxy.transform.position);
             r.Info =
@@ -104,7 +104,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Hit(string[] a, Result r)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var p = Player.Instance;
             var dog = Object.FindObjectsOfType<Character>()
                 .Where(
@@ -206,7 +211,12 @@ namespace DarkwoodMP.World
         private static IEnumerator DogCheck(string[] a, Result r)
         {
             bool wantAlive = a.Length == 0 || a[0] != "dead";
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var me = Player.Instance.transform.position;
             Character dog = null;
             float until = Time.realtimeSinceStartup + 8f;
@@ -230,7 +240,7 @@ namespace DarkwoodMP.World
 
             int ownActive = Object.FindObjectsOfType<Character>().Count(
                 c => NetEnemies.Eligible(c) && c.enabled
-                    && !NetEnemies.Frozen.Contains(c)
+                    && !Coop.Current.Enemies.Frozen.Contains(c)
                     && StateDump.Flat(c.transform.position - me) < 3000f);
             if (dog == null)
             {

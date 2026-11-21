@@ -157,7 +157,12 @@ namespace DarkwoodMP.World
         private static Character DogOf(string name)
         {
             var s = Plugin.Instance.Host.Session;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (s == null || !s.IsClient)
             {
                 if (_dogs.TryGetValue(name, out var d) && d != null)

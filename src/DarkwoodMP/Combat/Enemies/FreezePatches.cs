@@ -12,7 +12,12 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(Character __instance)
         {
-            NetEnemies enemies = NetEnemies.Instance;
+            NetEnemies enemies = null;
+            if (Coop.Current != null)
+            {
+                enemies = Coop.Current.Enemies;
+            }
+
             if (enemies == null
                 || !FreezeRules.FreezesAtStart(FactsOf(enemies, __instance)))
             {

@@ -82,7 +82,12 @@ namespace DarkwoodMP.World
             // stopped, in every game.
             StateDump.AddSection("enemylooks", ctx =>
             {
-                var ne = NetEnemies.Instance;
+                NetEnemies ne = null;
+                if (Coop.Current != null)
+                {
+                    ne = Coop.Current.Enemies;
+                }
+
                 foreach (var c in StateDump.All<Character>())
                 {
                     if (!NetEnemies.Eligible(c)
@@ -171,7 +176,12 @@ namespace DarkwoodMP.World
         private static Character Shared(
             Vector3 at, Func<Character, bool> ok = null, float within = 900f)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;
@@ -189,7 +199,12 @@ namespace DarkwoodMP.World
         internal static uint IdOf(Character c)
         {
             uint id = 0;
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = null;
+            if (Coop.Current != null)
+            {
+                instance = Coop.Current.Enemies;
+            }
+
             if (instance != null)
             {
                 instance.NetIdOf(c, out id);

@@ -84,7 +84,12 @@ namespace DarkwoodMP.World
 
         private static Character CopyNear(Vector3 at, float within)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;
@@ -127,7 +132,12 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator FarDogActive(string[] a, Result r)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             bool Outside(Character c)
             {
                 var d = c.transform.position - P.transform.position;
@@ -311,7 +321,7 @@ namespace DarkwoodMP.World
 
             for (float t = 0f; t < 10f
                 && (Shown(_copy)
-                    || NetEnemies.Instance.IsPuppet(_copy, out _)); t += 0.5f)
+                    || Coop.Current.Enemies.IsPuppet(_copy, out _)); t += 0.5f)
             {
                 yield return new WaitForSeconds(0.5f);
                 if (_copy == null)
@@ -322,7 +332,7 @@ namespace DarkwoodMP.World
             }
 
             r.Info = Describe(_copy);
-            if (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _))
+            if (Shown(_copy) || Coop.Current.Enemies.IsPuppet(_copy, out _))
             {
                 r.Fail($"{r.Info}: still shown");
             }

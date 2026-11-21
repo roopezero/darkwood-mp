@@ -23,7 +23,12 @@ namespace DarkwoodMP.World
         /// <summary>The enemy with this net id in this game, or null.</summary>
         internal static Character ById(uint id)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return null;

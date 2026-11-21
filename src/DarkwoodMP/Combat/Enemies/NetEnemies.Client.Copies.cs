@@ -368,22 +368,9 @@ namespace DarkwoodMP.Combat
         private readonly HashSet<Character> _frozen = new HashSet<Character>();
 
         /// <summary>
-        /// Client: our own characters frozen (Freeze), the session's; with no
-        /// session an empty set that keeps nothing.
+        /// Client: our own characters frozen (Freeze).
         /// </summary>
-        public static HashSet<Character> Frozen
-        {
-            get
-            {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return new HashSet<Character>();
-                }
-
-                return enemies._frozen;
-            }
-        }
+        public HashSet<Character> Frozen => _frozen;
 
         /// <summary>
         /// Client: our own characters hidden while the host runs the world
@@ -393,21 +380,8 @@ namespace DarkwoodMP.Combat
         /// CharacterSounds.OnEnable starts their idle loop again
         /// (CharacterSoundsPlayIdleLoopHidden keeps them silent): a dead dog
         /// camp's dogs barked on in a joiner's game.
-        /// The session's; with no session an empty set that keeps nothing.
         /// </summary>
-        public static HashSet<Character> Hidden
-        {
-            get
-            {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return new HashSet<Character>();
-                }
-
-                return enemies._hidden;
-            }
-        }
+        public HashSet<Character> Hidden => _hidden;
 
         private readonly HashSet<Character> _hidden = new HashSet<Character>();
 

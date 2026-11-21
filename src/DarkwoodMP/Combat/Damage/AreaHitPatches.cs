@@ -137,8 +137,10 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Flier __instance) =>
             !AreaHitRules.Frozen(
                 NetEnemies.ClientMode,
-                NetEnemies.ClientMode && NetEnemies.Frozen.Contains(
-                    __instance.GetComponent<Character>()));
+                NetEnemies.ClientMode
+                    && Coop.Current != null
+                    && Coop.Current.Enemies.Frozen.Contains(
+                        __instance.GetComponent<Character>()));
 
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions)
@@ -201,8 +203,10 @@ namespace DarkwoodMP.Combat
             // A client's frozen copy of the host's enemy doesn't shoot.
             if (AreaHitRules.Frozen(
                     NetEnemies.ClientMode,
-                    NetEnemies.ClientMode && NetEnemies.Frozen.Contains(
-                        __instance.GetComponentInParent<Character>())))
+                    NetEnemies.ClientMode
+                        && Coop.Current != null
+                        && Coop.Current.Enemies.Frozen.Contains(
+                            __instance.GetComponentInParent<Character>())))
             {
                 return false;
             }

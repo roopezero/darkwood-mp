@@ -76,8 +76,7 @@ namespace DarkwoodMP.World
             var at = new Vec2(body.X, body.Y);
             var npc = WorldActions.Logged(a, obj, Dying(obj, body.Text, at));
             bool puppet = npc != null
-                && Combat.NetEnemies.Instance != null
-                && Combat.NetEnemies.Instance.IsPuppet(npc, out _);
+                && _coop.Enemies.IsPuppet(npc, out _);
             if (npc != null && npc.alive && !puppet)
             {
                 npc.die();

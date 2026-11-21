@@ -592,7 +592,9 @@ namespace DarkwoodMP.World
                 return facts;
             }
 
-            facts = facts with { Frozen = NetEnemies.Frozen.Contains(c) };
+            bool frozen = Coop.Current != null
+                && Coop.Current.Enemies.Frozen.Contains(c);
+            facts = facts with { Frozen = frozen };
             if (facts.Frozen)
             {
                 return facts;
@@ -600,8 +602,8 @@ namespace DarkwoodMP.World
 
             return facts with
             {
-                Puppet = NetEnemies.Instance != null
-                    && NetEnemies.Instance.IsPuppet(c, out _),
+                Puppet = Coop.Current != null
+                    && Coop.Current.Enemies.IsPuppet(c, out _),
             };
         }
 

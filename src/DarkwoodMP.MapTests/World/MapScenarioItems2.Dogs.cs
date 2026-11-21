@@ -68,7 +68,7 @@ namespace DarkwoodMP.World
             }
 
             _noted[name] = c.health;
-            NetEnemies.Instance.NetIdOf(c, out uint id);
+            Coop.Current.Enemies.NetIdOf(c, out uint id);
             string info =
                 $"{c.name} #{id} at {Fmt(c.transform.position)}, health "
                     + $"{c.health}, eats {c.lureType}";

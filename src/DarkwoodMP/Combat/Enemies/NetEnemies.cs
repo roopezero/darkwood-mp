@@ -44,24 +44,6 @@ namespace DarkwoodMP.Combat
         public const float RelevantRange = EnemyRelayRules.RelevantRange;
         public const float StateInterval = EnemyRelayRules.StateInterval;
 
-        /// <summary>
-        /// The session's NetEnemies (CoopSession.Enemies), or null when
-        /// there's no session.
-        /// </summary>
-        public static NetEnemies Instance
-        {
-            get
-            {
-                CoopSession coop = Coop.Current;
-                if (coop == null)
-                {
-                    return null;
-                }
-
-                return coop.Enemies;
-            }
-        }
-
         private readonly Session _session;
 
         internal NetEnemies(CoopSession coop)
@@ -203,25 +185,16 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: undo Freeze, for a character that turned out to be in an
-        /// area of our own.
-        /// </summary>
-        public static void Thaw(Character c)
-        {
-            NetEnemies enemies = Instance;
-            if (enemies != null)
-            {
-                enemies.ThawHere(c);
-            }
-        }
-
-        /// <summary>
-        /// Set while ThawHere starts a character itself, so the Character.Start
+        /// Set while Thaw starts a character itself, so the Character.Start
         /// patch lets it start.
         /// </summary>
         public bool Starting { get; private set; }
 
-        private void ThawHere(Character c)
+        /// <summary>
+        /// Client: undo Freeze, for a character that turned out to be in an
+        /// area of our own.
+        /// </summary>
+        public void Thaw(Character c)
         {
             if (c == null || !_frozen.Remove(c))
             {

@@ -91,7 +91,7 @@ namespace DarkwoodMP.Combat
                 var step = FreezeRules.Sweep(SweepOf(c));
                 if (step == SweepStep.Thaw)
                 {
-                    ThawHere(c);
+                    Thaw(c);
                 }
                 else if (step == SweepStep.Freeze)
                 {

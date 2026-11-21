@@ -90,16 +90,16 @@ namespace DarkwoodMP.Combat
             }
 
             var c = a.GetComponent<Character>();
-            NetEnemies enemies = Instance;
-            if (c == null || enemies == null)
+            CoopSession coop = Coop.Current;
+            if (c == null || coop == null)
             {
                 return false;
             }
 
             return FreezeRules.IsCopy(
                 s.IsClient,
-                enemies._frozen.Contains(c),
-                enemies._byChar.ContainsKey(c));
+                coop.Enemies._frozen.Contains(c),
+                coop.Enemies._byChar.ContainsKey(c));
         }
     }
 }

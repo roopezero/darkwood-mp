@@ -117,29 +117,18 @@ namespace DarkwoodMP.Combat
 
         /// <summary>
         /// Client: the effects of the weapon hitting right now (set around a
-        /// player's MeleeSensor hit), the session's: with no session it reads
-        /// null and keeps nothing.
+        /// player's MeleeSensor hit).
         /// </summary>
-        public static List<InvItemEffect> HitEffects
+        public List<InvItemEffect> HitEffects
         {
             get
             {
-                NetEnemies enemies = Instance;
-                if (enemies == null)
-                {
-                    return null;
-                }
-
-                return enemies._hitEffects;
+                return _hitEffects;
             }
 
             set
             {
-                NetEnemies enemies = Instance;
-                if (enemies != null)
-                {
-                    enemies._hitEffects = value;
-                }
+                _hitEffects = value;
             }
         }
 

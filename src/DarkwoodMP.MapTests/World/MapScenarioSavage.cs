@@ -137,7 +137,7 @@ namespace DarkwoodMP.World
             var sb = new StringBuilder();
             foreach (var c in made)
             {
-                NetEnemies.Instance.NetIdOf(c, out uint id);
+                Coop.Current.Enemies.NetIdOf(c, out uint id);
                 float range = Core.trueDistance(
                     c.transform.position,
                     proxy.transform.position);

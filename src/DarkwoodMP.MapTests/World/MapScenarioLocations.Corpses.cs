@@ -130,7 +130,12 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(1f);
             var p = Player.Instance;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var c = Object.FindObjectsOfType<Character>()
                 .Where(x =>
                 {

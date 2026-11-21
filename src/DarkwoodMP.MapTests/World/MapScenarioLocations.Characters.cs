@@ -245,7 +245,12 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Approach(string[] a, Result r)
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var p = Player.Instance;
             var c = Object.FindObjectsOfType<Character>()
                 .Where(
@@ -320,7 +325,12 @@ namespace DarkwoodMP.World
         private static IEnumerator Noise(string[] a, Result r)
         {
             var at = Player.Instance.transform.position;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             // Until the host's nearest sleeper (its copy here says it's asleep,
             // from EnemyState) wakes, or 20 steps.
             var sleeper = Object.FindObjectsOfType<Character>()
@@ -368,7 +378,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             var c = LocationCharacters(proxy.InLocation)
                 .Where(
                     x => x.alive && x.gameObject.activeInHierarchy

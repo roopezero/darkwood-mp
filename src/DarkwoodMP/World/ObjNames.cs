@@ -240,7 +240,7 @@ namespace DarkwoodMP.World
             uint eid = 0;
             bool enemy = false;
             var c = go.GetComponent<Character>();
-            NetEnemies enemies = NetEnemies.Instance;
+            NetEnemies enemies = _coop.Enemies;
             if (c != null && enemies != null)
             {
                 enemy = enemies.NetIdOf(c, out eid);
@@ -433,7 +433,12 @@ namespace DarkwoodMP.World
 
         private static GameObject EnemyOf(long id)
         {
-            NetEnemies instance = NetEnemies.Instance;
+            NetEnemies instance = null;
+            if (Coop.Current != null)
+            {
+                instance = Coop.Current.Enemies;
+            }
+
             Character c = null;
             if (instance != null)
             {

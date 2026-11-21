@@ -323,7 +323,12 @@ namespace DarkwoodMP.World.Inventories
         /// </summary>
         private void SendCorpseLoot()
         {
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             if (ne == null)
             {
                 return;

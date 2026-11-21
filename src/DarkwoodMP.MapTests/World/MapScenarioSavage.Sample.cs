@@ -74,7 +74,12 @@ namespace DarkwoodMP.World
             }
 
             double end = at + secs;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             NetPlayerProxy proxy = null;
             if (host)
             {

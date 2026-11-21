@@ -130,7 +130,12 @@ namespace DarkwoodMP.World
                 () => et.fireEventTrigger(
                     global::EventTrigger.Type.onCloseContainer));
 
-            var ne = Combat.NetEnemies.Instance;
+            Combat.NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             float until = Time.realtimeSinceStartup + 15f;
             Character ours = null;
             while (ours == null && Time.realtimeSinceStartup < until)
@@ -211,7 +216,7 @@ namespace DarkwoodMP.World
             {
                 string place = Fmt(ours.transform.position);
                 string state = " running";
-                if (Combat.NetEnemies.Frozen.Contains(ours))
+                if (Coop.Current.Enemies.Frozen.Contains(ours))
                 {
                     state = " (frozen)";
                 }
@@ -246,7 +251,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"our wardrobe was destroyed: {r.Info}");
             }
-            else if (ours == null || Combat.NetEnemies.Frozen.Contains(ours))
+            else if (ours == null || Coop.Current.Enemies.Frozen.Contains(ours))
             {
                 r.Fail($"the wardrobe's event didn't run here: {r.Info}");
             }

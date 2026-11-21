@@ -394,8 +394,8 @@ namespace DarkwoodMP.World.Story
 
             var c = npc.GetComponent<Character>();
             bool alive = c != null && c.alive;
-            bool puppet = alive && Combat.NetEnemies.Instance != null
-                && Combat.NetEnemies.Instance.IsPuppet(c, out _);
+            bool puppet = alive && Coop.Current != null
+                && Coop.Current.Enemies.IsPuppet(c, out _);
             return new NpcCopyFacts
             {
                 SameName = true,

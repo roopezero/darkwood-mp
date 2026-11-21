@@ -59,7 +59,12 @@ namespace DarkwoodMP.World
         private static IEnumerator AttackDog(string[] a, Result r)
         {
             var p = Player.Instance;
-            var ne = NetEnemies.Instance;
+            NetEnemies ne = null;
+            if (Coop.Current != null)
+            {
+                ne = Coop.Current.Enemies;
+            }
+
             Character dog = null;
             float until = Time.realtimeSinceStartup + 6f;
             while (dog == null && Time.realtimeSinceStartup < until)
@@ -429,10 +434,10 @@ namespace DarkwoodMP.World
 
             yield return null;
             yield return null;
-            bool hidden = NetEnemies.Hidden.Contains(mine);
+            bool hidden = Coop.Current.Enemies.Hidden.Contains(mine);
 
             var toggled = new List<Character>();
-            foreach (var c in NetEnemies.Hidden.ToList())
+            foreach (var c in Coop.Current.Enemies.Hidden.ToList())
             {
                 if (c == null || !c.gameObject.activeInHierarchy)
                 {
@@ -481,8 +486,8 @@ namespace DarkwoodMP.World
                     + $"idle loop {idleName} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and "
                     + $"on, playing [{string.Join(", ", loud)}]";
-            NetEnemies.Hidden.Remove(mine);
-            NetEnemies.Frozen.Remove(mine);
+            Coop.Current.Enemies.Hidden.Remove(mine);
+            Coop.Current.Enemies.Frozen.Remove(mine);
             Object.Destroy(mine.gameObject);
             if (spawned)
             {
