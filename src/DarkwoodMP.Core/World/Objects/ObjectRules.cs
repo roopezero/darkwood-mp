@@ -136,9 +136,9 @@ namespace DarkwoodMP.World.Objects
         }
 
         /// Whether a game tells the others that spilt gasoline caught fire
-        /// (LiquidLitPatch): where a fire started, not a spread. A client
-        /// tells only of a fire its own player's swing lit; the host's copy
-        /// of a client's throw lights the rest there.
+        /// (ObjectActions.AfterLight): where a fire started, not a spread.
+        /// A client tells only of a fire its own player's swing lit; the
+        /// host's copy of a client's throw lights the rest there.
         public static bool SendsLit(in LitFacts lit)
         {
             if (!lit.WasOut || lit.Spreading || !lit.Burning)
@@ -155,16 +155,17 @@ namespace DarkwoodMP.World.Objects
         }
 
         /// Whether Item.activate is watched for a pickup that is sent
-        /// (PickupPatch): a note that is destroyed when read, or a death
-        /// drop.
+        /// (ObjectActions.BeforeActivate): a note that is destroyed when
+        /// read, or a death drop.
         public static bool WatchesPickup(bool note, bool kept, bool drop)
         {
             return (note && !kept) || drop;
         }
 
-        /// What happens when a shadow dies here (ShadowArmorDiedPatch). Out
-        /// of a session or a world, on a character, or from the save: as
-        /// alone. A client's dies only as the host's replay.
+        /// What happens when a shadow dies here
+        /// (ObjectActions.BeforeShadowDies). Out of a session or a world, on
+        /// a character, or from the save: as alone. A client's dies only as
+        /// the host's replay.
         public static ShadowDeath OnShadowDied(in ShadowFacts shadow)
         {
             if (shadow.Instant || !shadow.OnItem)
@@ -191,8 +192,8 @@ namespace DarkwoodMP.World.Objects
         }
 
         /// Client: whether its player's use of a feeder waits for the
-        /// host's yes (FeederPatch). Not for a feeder that isn't shared or
-        /// is ours alone.
+        /// host's yes (ObjectActions.BeforeFeeder). Not for a feeder that
+        /// isn't shared or is ours alone.
         public static bool AsksForFeeder(in FeederAskFacts feeder)
         {
             if (!feeder.Sharing || !feeder.ClientMode)

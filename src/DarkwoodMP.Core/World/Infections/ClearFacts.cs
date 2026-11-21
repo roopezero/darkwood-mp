@@ -17,7 +17,7 @@ namespace DarkwoodMP.World.Infections
         public bool ClientMode { get; init; }
 
         /// The local player's own melee swing is running
-        /// (LiquidLitPatch.OwnSwing).
+        /// (ObjectActions.OwnSwing).
         public bool OwnSwing { get; init; }
     }
 }

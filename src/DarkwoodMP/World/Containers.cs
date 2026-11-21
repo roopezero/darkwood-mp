@@ -1141,7 +1141,7 @@ namespace DarkwoodMP.World
         /// What a thrown item leaves behind when it goes off
         /// (Explodes.spawnObject: a molotov's gasoline), by prefab. The host's
         /// game makes it and sends it; a client's game makes none of its own
-        /// (ThrownLeavesPatch), so the fire the host then lights in it
+        /// (ObjectActions.BeforeSpawn), so the fire the host then lights in it
         /// (ObjectActions, LiquidLit) is found by ObjRef in every game.
         /// Accepted from the host only: Items/Gasoline is also what each game
         /// merges gasoline trails into by itself.

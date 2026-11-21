@@ -496,69 +496,24 @@ namespace DarkwoodMP.World
                 }
                 else if (ObjectActions.Handles(a))
                 {
-                    ObjectActions.Apply(a, obj, f1, x, ref y);
+                    Coop.Current.Objects.Apply(a, obj, ref values);
+                    y = values.Y;
                 }
                 else if (a == Action.Explode)
                 {
-                    var ex = Got<Explodes>(a, obj);
-                    if (ex == null || ex.GetComponent<Character>() != null)
+                    if (!Coop.Current.Breaks.Explode(obj, f1))
                     {
-                        return; // never an enemy's (see BreakSync)
-                    }
-
-                    if (!BreakSync.Activated(ex))
-                    {
-                        ex.onActivate(f1);
+                        return;
                     }
                 }
                 else if (a >= Action.ItemHit)
                 {
-                    var item = Got<Item>(a, obj);
-                    if (item == null)
+                    if (!Coop.Current.Breaks.Apply(a, obj, ref values))
                     {
                         return;
                     }
 
-                    switch (a)
-                    {
-                        case Action.ItemHit:
-                            if (item.destroyed)
-                            {
-                                break;
-                            }
-
-                            // A client's hit is applied to the host's health;
-                            // the host's own says what health it left, so a
-                            // copy that missed a hit (or took one more) comes
-                            // back in step.
-                            if (!s.IsHost && item.shadowArmor == null)
-                            {
-                                // a shadow takes the hit, not the item
-                                item.health = (int)y + (int)x;
-                            }
-
-                            item.getHit((int)x, null, f1);
-                            if (s.IsHost)
-                            {
-                                y = item.health;
-                            }
-
-                            break;
-                        case Action.ItemBroken:
-                            if (!item.destroyed)
-                            {
-                                item.die();
-                            }
-
-                            break;
-                        case Action.ItemRepaired:
-                            if (item.destroyed)
-                            {
-                                item.setNormalState();
-                            }
-
-                            break;
-                    }
+                    y = values.Y;
                 }
                 else if (a == Action.NpcDied)
                 {
@@ -614,7 +569,7 @@ namespace DarkwoodMP.World
 
             if (s.IsHost)
             {
-                ObjectActions.AfterOnHost(a, obj, f1);
+                Coop.Current.Objects.AfterOnHost(a, obj, f1);
                 // The host passes a client's action on to the others.
                 var w = s.Begin(MsgType.WorldAction);
                 WriteAction(w, a, obj, x, y, f1, f2, str, byPlayer: true);
@@ -668,75 +623,18 @@ namespace DarkwoodMP.World
         {
             if (ObjectActions.Handles(a))
             {
-                return ObjectActions.Allowed(a, obj, f1, x);
+                var values = new ActionValues { X = x, F1 = f1 };
+                return Coop.Current.Objects.Allowed(a, obj, values);
             }
 
             if (a == Action.Explode)
             {
-                var ex = ObjRef.Resolve<Explodes>(obj);
-                if (ex == null || ex.GetComponent<Character>() != null)
-                {
-                    Coop.Current.Authority.Refuse(
-                        "it isn't here (gone or already blown up)");
-                    return false;
-                }
-
-                if (BreakSync.Activated(ex))
-                {
-                    Coop.Current.Authority.Refuse("it had already gone off");
-                    return false;
-                }
-
-                return Coop.Current.Authority.InReach(
-                    ex.transform.position, ShotReach, ex.name);
+                return Coop.Current.Breaks.MayExplode(obj);
             }
 
             if (a >= Action.ItemHit)
             {
-                var item = ObjRef.Resolve<Item>(obj);
-                if (item == null)
-                {
-                    Coop.Current.Authority.Refuse("not here");
-                    return false;
-                }
-
-                float reach;
-                if (a == Action.ItemHit)
-                {
-                    reach = ShotReach;
-                }
-                else
-                {
-                    reach = Reach;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    item.transform.position, reach, item.name))
-                {
-                    return false;
-                }
-
-                switch (a)
-                {
-                    case Action.ItemHit when item.destroyed:
-                        Coop.Current.Authority.Refuse("it is already broken");
-                        return false;
-                    case Action.ItemHit when x > 1000f || x < 0f:
-                        Coop.Current.Authority.Refuse(
-                            $"a hit of {x:0} is more than any weapon does");
-                        return false;
-                    case Action.ItemBroken when item.destroyed:
-                        Coop.Current.Authority.Refuse("it is already broken");
-                        return false;
-                    case Action.ItemBroken when !item.destructible:
-                        Coop.Current.Authority.Refuse("it can't be broken");
-                        return false;
-                    case Action.ItemRepaired when !item.destroyed:
-                        Coop.Current.Authority.Refuse("it isn't broken");
-                        return false;
-                }
-
-                return true;
+                return Coop.Current.Breaks.MayChange(a, obj, x);
             }
 
             if (a == Action.NpcDied)
@@ -932,54 +830,14 @@ namespace DarkwoodMP.World
             }
             else if (item != null)
             {
-                var l = item.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Item);
-                var ii = item.GetComponent<InteractiveItem>();
-                var feeder = item.GetComponent<Feeder>();
-                int itemFlags = 0;
-                if (item.isOn)
-                {
-                    itemFlags |= 1;
-                }
-
-                if (l != null && l.locked)
-                {
-                    itemFlags |= 2;
-                }
-
-                if (item.searched)
-                {
-                    itemFlags |= 4;
-                }
-
-                if (item.destroyed)
-                {
-                    itemFlags |= 8;
-                }
-
-                if (ii != null && ii.isOn)
-                {
-                    itemFlags |= 16;
-                }
-
-                if (feeder != null && feeder.Active)
-                {
-                    itemFlags |= 32;
-                }
-
-                w.W.Write((byte)itemFlags);
-                w.W.Write(item.health);
+                Coop.Current.Breaks.WriteState(w, item);
             }
             else if (go != null && go.GetComponent<Explodes>() != null)
             {
                 w.W.Write((byte)Kind.Explosive);
-                int activated = 0;
-                if (BreakSync.Activated(go.GetComponent<Explodes>()))
-                {
-                    activated = 1;
-                }
-
-                w.W.Write((byte)activated);
+                Coop.Current.Breaks.WriteExplosiveState(
+                    w, go.GetComponent<Explodes>());
             }
             else
             {
@@ -1088,80 +946,12 @@ namespace DarkwoodMP.World
                         break;
 
                     case Kind.Item:
-                        {
-                            byte f = r.R.ReadByte();
-                            int health = r.R.ReadInt32();
-                            bool on = (f & 1) != 0, broken = (f & 8) != 0;
-                            Item item = null;
-                            if (go != null)
-                            {
-                                item = go.GetComponent<Item>();
-                            }
-
-                            if (item == null)
-                            {
-                                break;
-                            }
-
-                            if (item.isOn != on)
-                            {
-                                if (on)
-                                {
-                                    item.turnOn();
-                                }
-                                else
-                                {
-                                    item.turnOff();
-                                }
-                            }
-
-                            var l = item.GetComponent<Locked>();
-                            if (l != null)
-                            {
-                                l.locked = (f & 2) != 0;
-                            }
-
-                            item.searched = (f & 4) != 0;
-                            var ii = item.GetComponent<InteractiveItem>();
-                            if (ii != null)
-                            {
-                                ii.isOn = (f & 16) != 0;
-                            }
-
-                            var feeder = item.GetComponent<Feeder>();
-                            if (feeder != null
-                                && feeder.Active != ((f & 32) != 0))
-                            {
-                                if ((f & 32) != 0)
-                                {
-                                    feeder.makeActive();
-                                }
-                                else
-                                {
-                                    feeder.makeInactive();
-                                }
-                            }
-
-                            if (broken && !item.destroyed && item.destructible)
-                            {
-                                item.die();
-                            }
-                            else if (!broken && item.destroyed)
-                            {
-                                item.setNormalState();
-                            }
-
-                            item.health = health;
-                            break;
-                        }
+                        Coop.Current.Breaks.ReadState(r, go);
+                        break;
 
                     case Kind.Explosive:
-                        {
-                            // an explosion here can't be taken back; the next
-                            // state the host sends is how it is
-                            r.R.ReadByte();
-                            break;
-                        }
+                        Coop.Current.Breaks.ReadExplosiveState(r);
+                        break;
 
                     case Kind.Padlock:
                         Coop.Current.Locks.ReadState(r, go);

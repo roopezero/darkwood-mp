@@ -114,6 +114,12 @@ namespace DarkwoodMP
         /// What the host's enemies do that a joiner sees or hears.
         public readonly Combat.EnemyFx EnemyFx;
 
+        /// Items hit, broken and repaired, and explosives going off, shared.
+        public readonly World.BreakActions Breaks;
+
+        /// Notes, feeders, gasoline, vines and shadows, shared.
+        public readonly World.ObjectActions Objects;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -157,6 +163,8 @@ namespace DarkwoodMP
             Damage = new Combat.PlayerDamage(this);
             Explosions = new Combat.EnemyExplosions(this);
             EnemyFx = new Combat.EnemyFx(this);
+            Breaks = new World.BreakActions(this);
+            Objects = new World.ObjectActions(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
