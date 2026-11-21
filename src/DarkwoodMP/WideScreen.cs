@@ -1,4 +1,3 @@
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP
@@ -84,21 +83,17 @@ namespace DarkwoodMP
                 tk.ZoomFactor = zoom;
             }
         }
-    }
 
-    /// <summary>
-    /// The first start on an ultrawide monitor: its own size, full screen, not
-    /// 1920x1200 stretched.
-    /// </summary>
-    [HarmonyPatch(typeof(Core), "machineSettingsInit")]
-    static class WideScreenFirstStartPatch
-    {
-        static void Postfix()
+        /// <summary>
+        /// The first start on an ultrawide monitor: its own size, full
+        /// screen, not 1920x1200 stretched (Core.machineSettingsInit).
+        /// </summary>
+        internal static void FirstStart()
         {
             var mm = Singleton<MainMenu>.Instance;
             var native = Screen.currentResolution;
             if (mm == null || !mm.firstStart
-                || !WideScreen.IsWide(native.width, native.height))
+                || !IsWide(native.width, native.height))
             {
                 return;
             }
@@ -118,12 +113,5 @@ namespace DarkwoodMP
                 "First start on a wide screen: "
                     + $"{native.width}x{native.height}, full screen");
         }
-    }
-
-    [HarmonyPatch(typeof(Controller), nameof(Controller.refreshZoom))]
-    static class WideScreenZoomPatch
-    {
-        static void Postfix(Controller __instance) =>
-            WideScreen.Apply(__instance);
     }
 }
