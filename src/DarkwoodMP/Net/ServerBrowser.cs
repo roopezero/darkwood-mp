@@ -59,8 +59,11 @@ namespace DarkwoodMP.Net
             new ConcurrentQueue<Action>();
         private const int QueryTimeoutMs = 1500;
 
-        public ServerBrowser(string configDir)
+        private readonly ILog _log;
+
+        public ServerBrowser(string configDir, ILog log)
         {
+            _log = log;
             _path = Path.Combine(configDir, "DarkwoodMP.servers.ini");
             Load();
         }
@@ -205,7 +208,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't read {_path}: {e.Message}");
+                _log.LogWarning($"Couldn't read {_path}: {e.Message}");
             }
         }
 
@@ -231,7 +234,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't write {_path}: {e.Message}");
+                _log.LogWarning($"Couldn't write {_path}: {e.Message}");
             }
         }
 
@@ -316,7 +319,7 @@ namespace DarkwoodMP.Net
         /// broadcast, and, on the default port, to every address in the /24
         /// around each of our addresses: answers to those are let through.
         /// </summary>
-        private static List<IPEndPoint> LanTargets()
+        private List<IPEndPoint> LanTargets()
         {
             var list = new List<IPEndPoint>();
             // after every broadcast: it's the slow part
@@ -396,7 +399,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning(
+                _log.LogWarning(
                     "Couldn't list the network adapters, searching by "
                         + $"broadcast only: {e.Message}");
             }
@@ -530,7 +533,7 @@ namespace DarkwoodMP.Net
                             });
                         }
 
-                        Plugin.Log.LogInfo(
+                        _log.LogInfo(
                             $"LAN search: asked {targets.Count} addresses "
                                 + $"({failed} couldn't be sent), the last at "
                                 + $"{Interlocked.Read(ref sentAt)} ms");
@@ -538,7 +541,7 @@ namespace DarkwoodMP.Net
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Log.LogWarning($"LAN search failed: {ex.Message}");
+                    _log.LogWarning($"LAN search failed: {ex.Message}");
                 }
 
                 _done.Enqueue(() => SearchingLan = false);

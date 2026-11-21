@@ -370,8 +370,8 @@ namespace DarkwoodMP.Combat
         private readonly Dictionary<ulong, HashSet<uint>> _corpseKnown =
             new Dictionary<ulong, HashSet<uint>>();
         private float _nextScan, _nextState;
-        private readonly PacketWriter _batch = new PacketWriter();
-        private readonly PacketWriter _one = new PacketWriter();
+        private readonly PacketWriter _batch = new PacketWriter(new BepInLog());
+        private readonly PacketWriter _one = new PacketWriter(new BepInLog());
         /// <summary>
         /// Corpses sent to one client in one state pass at most (a joiner can
         /// have dozens near them).

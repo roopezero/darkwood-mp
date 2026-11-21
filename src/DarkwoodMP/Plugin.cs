@@ -393,16 +393,21 @@ namespace DarkwoodMP
                         + "synced/skipped)."),
             };
 
-            _session =
-                new Session { LocalKey = PlayerKey.Load(Paths.ConfigPath) };
-            _tcp = new TcpBackend
+            var log = new BepInLog();
+            _session = new Session(new UnityClock(), log, PluginInfo.Version)
+            {
+                LocalKey = PlayerKey.Load(Paths.ConfigPath, log)
+            };
+
+            _tcp = new TcpBackend(log, PluginInfo.Version)
             {
                 PlayerCount = () => _session.PlayerCount,
-                MapPort = OpensPort
+                MapPort = OpensPort,
+                BeforeLeave = World.Characters.SaveBeforeLeaving
             };
 
             _session.Add(_tcp);
-            _browser = new ServerBrowser(Paths.ConfigPath);
+            _browser = new ServerBrowser(Paths.ConfigPath, log);
             _direct = new DirectPanel(_tcp, _browser, _session);
             _direct.OnJoining = () =>
             {

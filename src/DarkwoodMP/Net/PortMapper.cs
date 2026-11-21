@@ -38,6 +38,12 @@ namespace DarkwoodMP.Net
 
         private const int LeaseSeconds = 3600, RenewMs = 1800 * 1000;
         private const string Description = "DarkwoodMP";
+        private readonly ILog _log;
+
+        public PortMapper(ILog log)
+        {
+            _log = log;
+        }
 
         public volatile string Status = "";
         public volatile string ExternalIp;
@@ -198,7 +204,7 @@ namespace DarkwoodMP.Net
                     }
 
                     Status = status;
-                    Plugin.Log.LogInfo("[port mapping] " + Status);
+                    _log.LogInfo("[port mapping] " + Status);
                     return;
                 }
 
@@ -271,7 +277,7 @@ namespace DarkwoodMP.Net
                         data = "[port mapping] renewed";
                     }
 
-                    Plugin.Log.LogInfo(data);
+                    _log.LogInfo(data);
                     if (!ok)
                     {
                         Status =
@@ -288,7 +294,7 @@ namespace DarkwoodMP.Net
                         "Couldn't open the port on your router: " + e.Message;
                 }
 
-                Plugin.Log.LogWarning("[port mapping] " + e);
+                _log.LogWarning("[port mapping] " + e);
             }
         }
 
@@ -362,7 +368,7 @@ namespace DarkwoodMP.Net
                 nat = " (private: another NAT in front)";
             }
 
-            Plugin.Log.LogInfo(
+            _log.LogInfo(
                 $"[port mapping] {how}: {internalIp}:{port} -> {ports}, "
                     + $"external address {shownIp}{text}{nat}");
         }
@@ -388,12 +394,12 @@ namespace DarkwoodMP.Net
                     text = "UPnP";
                 }
 
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     $"[port mapping] removed {text} mapping of port {m.Port}");
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning(
+                _log.LogWarning(
                     "[port mapping] couldn't remove the mapping: " + e.Message);
             }
         }
@@ -484,14 +490,14 @@ namespace DarkwoodMP.Net
                     }
                     catch (Exception e)
                     {
-                        Plugin.Log.LogInfo(
+                        _log.LogInfo(
                             "[port mapping] GetExternalIPAddress at "
                                 + $"{control}: {e.Message}");
                     }
 
                     if (!AddUpnp(m, "TCP", LeaseSeconds, out string why))
                     {
-                        Plugin.Log.LogInfo(
+                        _log.LogInfo(
                             $"[port mapping] UPnP router at {loc} refused TCP "
                                 + $"{port}: {why}");
                         if (why.StartsWith("718"))
@@ -519,7 +525,7 @@ namespace DarkwoodMP.Net
                     {
                         // The game itself still works over TCP; only the
                         // browser's info query is missing.
-                        Plugin.Log.LogInfo(
+                        _log.LogInfo(
                             $"[port mapping] UPnP router refused UDP {port}: "
                                 + $"{why}");
                         m.ExternalUdp = 0;
@@ -529,7 +535,7 @@ namespace DarkwoodMP.Net
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogInfo(
+                    _log.LogInfo(
                         $"[port mapping] UPnP device at {loc}: {e.Message}");
                 }
             }
@@ -546,7 +552,7 @@ namespace DarkwoodMP.Net
         /// router's address and not the group's; answers to a search sent to
         /// the router itself get through.
         /// </summary>
-        private static List<string> Discover()
+        private List<string> Discover()
         {
             var found = new List<string>();
             var socks = new List<UdpClient>();
@@ -562,7 +568,7 @@ namespace DarkwoodMP.Net
 
             try
             {
-                foreach (string ip in TcpBackend.LocalAddresses())
+                foreach (string ip in TcpBackend.LocalAddresses(_log))
                 {
                     UdpClient u;
                     try
@@ -576,7 +582,7 @@ namespace DarkwoodMP.Net
                     }
                     catch (Exception e)
                     {
-                        Plugin.Log.LogInfo(
+                        _log.LogInfo(
                             $"[port mapping] SSDP from {ip}: {e.Message}");
                         continue;
                     }
@@ -597,7 +603,7 @@ namespace DarkwoodMP.Net
                         }
                         catch (Exception e)
                         {
-                            Plugin.Log.LogInfo(
+                            _log.LogInfo(
                                 $"[port mapping] SSDP from {ip} to "
                                     + $"{to}: {e.Message}");
                         }
@@ -682,7 +688,7 @@ namespace DarkwoodMP.Net
                 text = ": " + string.Join(", ", found);
             }
 
-            Plugin.Log.LogInfo(
+            _log.LogInfo(
                 $"[port mapping] SSDP: {found.Count} answer(s){text}");
             return found;
         }
@@ -933,7 +939,7 @@ namespace DarkwoodMP.Net
         /// Our address on the network that leads to the router (what it should
         /// forward to).
         /// </summary>
-        private static string LocalAddressToward(string host, int port)
+        private string LocalAddressToward(string host, int port)
         {
             try
             {
@@ -948,7 +954,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     $"[port mapping] no route to {host}: {e.Message}");
                 return null;
             }
@@ -982,7 +988,7 @@ namespace DarkwoodMP.Net
                 m.ExternalTcp = PmpMap(gw, 2, port, port, LeaseSeconds);
                 if (m.ExternalTcp <= 0)
                 {
-                    Plugin.Log.LogInfo(
+                    _log.LogInfo(
                         $"[port mapping] NAT-PMP at {gw} refused TCP {port}");
                     continue;
                 }
@@ -1059,7 +1065,7 @@ namespace DarkwoodMP.Net
         /// The NAT-PMP endpoints: the default gateways on port 5351, or the
         /// test router.
         /// </summary>
-        private static List<IPEndPoint> Gateways()
+        private List<IPEndPoint> Gateways()
         {
             if (TestRouter != null
                 && TcpBackend.TryParseAddress(
@@ -1078,7 +1084,7 @@ namespace DarkwoodMP.Net
         /// The default gateways (IPv4): Mono's list, or Linux's route table if
         /// that's empty.
         /// </summary>
-        private static List<IPAddress> GatewayAddresses()
+        private List<IPAddress> GatewayAddresses()
         {
             var list = new List<IPAddress>();
             void Add(IPAddress a)
@@ -1107,7 +1113,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     "[port mapping] couldn't list gateways: " + e.Message);
             }
 

@@ -699,6 +699,18 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// Direct's BeforeLeave: our character goes to the host before we go.
+        /// </summary>
+        public static void SaveBeforeLeaving()
+        {
+            Characters instance = Instance;
+            if (instance != null)
+            {
+                instance.SaveNow();
+            }
+        }
+
+        /// <summary>
         /// Client: send our character to the host now (also as we leave, and as
         /// the game quits).
         /// </summary>

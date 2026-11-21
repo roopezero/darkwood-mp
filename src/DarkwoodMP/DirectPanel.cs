@@ -233,7 +233,7 @@ namespace DarkwoodMP
                     f,
                     "Friends find you in their LAN tab, or add one of these:",
                     MenuSkin.Dim);
-                foreach (var ip in TcpBackend.LocalAddresses())
+                foreach (var ip in TcpBackend.LocalAddresses(new BepInLog()))
                 {
                     AddressRow(f, $"{ip}:{_tcp.Port}", "LAN / VPN");
                 }

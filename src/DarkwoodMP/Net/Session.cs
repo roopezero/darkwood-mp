@@ -129,7 +129,11 @@ namespace DarkwoodMP.Net
 
         private readonly Dictionary<MsgType, Action<ulong, PacketReader>>
             _handlers = new Dictionary<MsgType, Action<ulong, PacketReader>>();
-        private readonly PacketWriter _pw = new PacketWriter();
+        private readonly PacketWriter _pw;
+        private readonly IClock _clock;
+        private readonly ILog _log;
+        // The mod's version, sent in Hello and named in a version refusal.
+        private readonly string _modVersion;
         private readonly List<INetBackend> _backends = new List<INetBackend>();
         private float _welcomedAt;
         // Client: when the last Hello went, until anything comes back from the
@@ -147,11 +151,15 @@ namespace DarkwoodMP.Net
         private readonly Dictionary<ulong, string> _joining =
             new Dictionary<ulong, string>();
 
-        private static float Now => UnityEngine.Time.realtimeSinceStartup;
+        private float Now => _clock.RealTime;
 
-        public Session()
+        public Session(IClock clock, ILog log, string modVersion)
         {
             Instance = this;
+            _clock = clock;
+            _log = log;
+            _modVersion = modVersion;
+            _pw = new PacketWriter(log);
             Register(MsgType.Hello, HandleHello);
             Register(MsgType.Welcome, HandleWelcome);
             Register(MsgType.Refused, HandleRefused);
@@ -320,12 +328,12 @@ namespace DarkwoodMP.Net
             var copy = new byte[length];
             Buffer.BlockCopy(data, 0, copy, 0, length);
             _late.Enqueue(
-                (UnityEngine.Time.unscaledTime + LagSecs, from, copy));
+                (_clock.UnscaledTime + LagSecs, from, copy));
         }
 
         private void DeliverLate()
         {
-            float now = UnityEngine.Time.unscaledTime;
+            float now = _clock.UnscaledTime;
             while (_late.Count > 0 && _late.Peek().at <= now)
             {
                 var m = _late.Dequeue();
@@ -440,7 +448,7 @@ namespace DarkwoodMP.Net
             w.WriteStr(Protocol.Game);
             w.WriteStr(LocalKey);
             w.WriteStr(Backend.JoinPassword);
-            w.WriteStr(PluginInfo.Version);
+            w.WriteStr(_modVersion);
             w.WriteStr(LocalName);
             Func<byte[]> handler = ClientWorldHash;
             byte[] hash = null;
@@ -468,7 +476,7 @@ namespace DarkwoodMP.Net
                 _heardHostAt = _helloAt;
             }
 
-            Plugin.Log.LogInfo("Sent Hello to host");
+            _log.LogInfo("Sent Hello to host");
         }
 
         private void HandleHello(ulong from, PacketReader r)
@@ -484,7 +492,7 @@ namespace DarkwoodMP.Net
             // join.
             if (Peers.Contains(from))
             {
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     $"{NameOf(from)} sent Hello again: joining them anew");
                 OnPeerLost(from);
             }
@@ -518,7 +526,7 @@ namespace DarkwoodMP.Net
             }
             else if (version != Protocol.Version)
             {
-                why = $"The host has DarkwoodMP {PluginInfo.Version}, you have "
+                why = $"The host has DarkwoodMP {_modVersion}, you have "
                     + $"{modVersion}. Use the same version.";
             }
             else if (Backend.HostPassword.Length > 0
@@ -564,7 +572,7 @@ namespace DarkwoodMP.Net
 
             if (old != 0)
             {
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     $"{NameOf(old)} (#{old}) joined again as #{from}: dropping "
                         + "the old connection");
                 Backend.Kick(old);
@@ -582,7 +590,7 @@ namespace DarkwoodMP.Net
             if (!_joining.ContainsKey(from))
             {
                 _joining[from] = name;
-                Plugin.Log.LogInfo($"{name} (#{from}) is joining");
+                _log.LogInfo($"{name} (#{from}) is joining");
                 Action<string> handler = OnPlayerJoining;
                 if (handler != null)
                 {
@@ -619,7 +627,7 @@ namespace DarkwoodMP.Net
                 except: from);
 
             Peers.Add(from);
-            Plugin.Log.LogInfo($"Player connected: {name} (#{from})");
+            _log.LogInfo($"Player connected: {name} (#{from})");
             Action<string> joined = OnPlayerJoined;
             if (joined != null)
             {
@@ -635,7 +643,7 @@ namespace DarkwoodMP.Net
 
         public void Refuse(ulong peer, string reason)
         {
-            Plugin.Log.LogInfo($"Refused #{peer}: {reason}");
+            _log.LogInfo($"Refused #{peer}: {reason}");
             var w = Begin(MsgType.Refused);
             w.WriteStr(reason);
             SendTo(peer, w, Channel.Control, reliable: true);
@@ -680,7 +688,7 @@ namespace DarkwoodMP.Net
             Names[LocalId] = LocalName;
             Connected = true;
             _welcomedAt = Now;
-            Plugin.Log.LogInfo($"Joined the host's game as #{LocalId}");
+            _log.LogInfo($"Joined the host's game as #{LocalId}");
             Action<ulong> handler = OnPeerConnected;
             if (handler != null)
             {
@@ -703,7 +711,7 @@ namespace DarkwoodMP.Net
 
             string reason = r.ReadStr();
             LastRefusal = reason;
-            Plugin.Log.LogWarning($"Host refused us: {reason}");
+            _log.LogWarning($"Host refused us: {reason}");
             Action<string> handler = OnRefused;
             if (handler != null)
             {
@@ -726,7 +734,7 @@ namespace DarkwoodMP.Net
         {
             if (IsHost && Peers.Remove(who))
             {
-                Plugin.Log.LogInfo($"Player left: {NameOf(who)}");
+                _log.LogInfo($"Player left: {NameOf(who)}");
                 Action<string> handler = OnPlayerLeft;
                 if (handler != null)
                 {
@@ -739,7 +747,7 @@ namespace DarkwoodMP.Net
             }
             else if (IsHost && _joining.TryGetValue(who, out var was))
             {
-                Plugin.Log.LogInfo($"{was} (#{who}) stopped joining");
+                _log.LogInfo($"{was} (#{who}) stopped joining");
                 Action<string> stopped = OnPlayerStoppedJoining;
                 if (stopped != null)
                 {
@@ -823,13 +831,13 @@ namespace DarkwoodMP.Net
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError(
+                    _log.LogError(
                         $"Error handling {r.Type} from #{from}: {e}");
                 }
             }
             else
             {
-                Plugin.Log.LogWarning(
+                _log.LogWarning(
                     $"Unhandled message {r.Type} from #{from}");
             }
         }
@@ -872,7 +880,7 @@ namespace DarkwoodMP.Net
             if (IsClient && !Connected && _helloAt >= 0f
                 && Now - _helloAt > HelloRetry)
             {
-                Plugin.Log.LogInfo(
+                _log.LogInfo(
                     $"No answer to Hello in {HelloRetry:0} s: sending it "
                         + "again");
                 SendHello();
@@ -884,7 +892,7 @@ namespace DarkwoodMP.Net
                 string why =
                     $"The host hasn't answered for {JoinSilence:0} s, so "
                         + "joining stopped.";
-                Plugin.Log.LogWarning(why);
+                _log.LogWarning(why);
                 _heardHostAt = -1f;
                 Action<string> handler = OnJoinTimedOut;
                 if (handler != null)

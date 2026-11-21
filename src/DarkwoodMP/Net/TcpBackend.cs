@@ -72,11 +72,26 @@ namespace DarkwoodMP.Net
         /// Opens the port on the router while hosting, when
         /// <see cref="MapPort"/> says so.
         /// </summary>
-        public readonly PortMapper Mapper = new PortMapper();
+        public readonly PortMapper Mapper;
         /// <summary>
         /// Host: how many are playing, for the info query (set by the session).
         /// </summary>
         public Func<int> PlayerCount = () => 1;
+        /// <summary>
+        /// Runs at the start of Leave, while still connected: a client sends
+        /// its character to the host there (set by Plugin).
+        /// </summary>
+        public Action BeforeLeave;
+        private readonly ILog _log;
+        // The mod's version, for the info query's "version" field.
+        private readonly string _modVersion;
+
+        public TcpBackend(ILog log, string modVersion)
+        {
+            _log = log;
+            _modVersion = modVersion;
+            Mapper = new PortMapper(log);
+        }
 
         public event Action OnEntered;
         public event Action OnLeft;
@@ -200,7 +215,7 @@ namespace DarkwoodMP.Net
             catch (Exception e)
             {
                 // Still playable by address; only the browser can't see it.
-                Plugin.Log.LogWarning(
+                _log.LogWarning(
                     $"Couldn't open UDP port {port} for the server browser: "
                         + $"{e.Message}");
                 _info = null;
@@ -247,7 +262,7 @@ namespace DarkwoodMP.Net
                 StartThread("DarkwoodMP info", () => InfoLoop(udp, gen));
             }
 
-            Plugin.Log.LogInfo(Status);
+            _log.LogInfo(Status);
             if (MapPort())
             {
                 Mapper.Start(port);
@@ -350,7 +365,7 @@ namespace DarkwoodMP.Net
                         MaxPlayers = MaxPlayers,
                         Password = HostPassword.Length > 0,
                         LocalChars = false,
-                        Version = PluginInfo.Version,
+                        Version = _modVersion,
                     };
 
                     info.Fields["game"] = Protocol.Game;
@@ -790,7 +805,7 @@ namespace DarkwoodMP.Net
 
                         if (IsHost)
                         {
-                            Plugin.Log.LogInfo(
+                            _log.LogInfo(
                                 $"Connection from {ev.Conn.Remote} as "
                                     + $"#{ev.Conn.Id}");
                         }
@@ -824,7 +839,7 @@ namespace DarkwoodMP.Net
 
                         if (IsHost)
                         {
-                            Plugin.Log.LogInfo(
+                            _log.LogInfo(
                                 $"#{ev.Conn.Id} disconnected: {ev.Error}");
                             Drop(ev.Conn, notify: true, flush: false);
                         }
@@ -874,7 +889,7 @@ namespace DarkwoodMP.Net
                 else if (c.Inbound && !c.SaidHello
                     && now - c.ConnectedAt > HelloTimeoutMs)
                 {
-                    Plugin.Log.LogInfo(
+                    _log.LogInfo(
                         $"#{c.Id} ({c.Remote}) didn't say Hello in "
                             + $"{HelloTimeoutMs / 1000} s: closed");
                     Drop(c, notify: false, flush: false);
@@ -935,11 +950,10 @@ namespace DarkwoodMP.Net
 
         public void Leave()
         {
-            // our character goes to the host before we go
-            World.Characters instance = World.Characters.Instance;
-            if (instance != null)
+            Action before = BeforeLeave;
+            if (before != null)
             {
-                instance.SaveNow();
+                before();
             }
 
             Shutdown("Not connected");
@@ -1020,7 +1034,7 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// This machine's IPv4 addresses (LAN, VPN), for the host to give out.
         /// </summary>
-        public static List<string> LocalAddresses()
+        public static List<string> LocalAddresses(ILog log)
         {
             var list = new List<string>();
             try
@@ -1047,7 +1061,7 @@ namespace DarkwoodMP.Net
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning(
+                log.LogWarning(
                     $"Couldn't list network interfaces: {e.Message}");
             }
 

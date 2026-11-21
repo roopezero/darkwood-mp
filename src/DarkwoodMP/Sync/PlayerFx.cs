@@ -35,7 +35,7 @@ namespace DarkwoodMP.Sync
 
         private readonly Session _s;
         // our own: these are sent from inside game calls
-        private readonly PacketWriter _w = new PacketWriter();
+        private readonly PacketWriter _w = new PacketWriter(new BepInLog());
         private readonly List<KeyValuePair<string, float>> _sounds =
             new List<KeyValuePair<string, float>>();
         private float _nextSounds;

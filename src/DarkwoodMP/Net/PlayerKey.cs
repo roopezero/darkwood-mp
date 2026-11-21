@@ -12,7 +12,7 @@ namespace DarkwoodMP.Net
     /// </summary>
     public static class PlayerKey
     {
-        public static string Load(string configDir)
+        public static string Load(string configDir, ILog log)
         {
             string path = Path.Combine(configDir, "DarkwoodMP.player.key");
             try
@@ -38,12 +38,12 @@ namespace DarkwoodMP.Net
                 string key = BitConverter.ToString(bytes).Replace("-", "")
                     .ToLowerInvariant();
                 File.WriteAllText(path, key);
-                Plugin.Log.LogInfo($"Made a new player key in {path}");
+                log.LogInfo($"Made a new player key in {path}");
                 return key;
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError(
+                log.LogError(
                     $"Couldn't read or write the player key ({e.Message}); "
                         + "using a temporary one");
                 return Guid.NewGuid().ToString("N") + Guid.NewGuid()

@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Text;
-using UnityEngine;
 
 namespace DarkwoodMP.Net
 {
@@ -890,9 +889,11 @@ namespace DarkwoodMP.Net
     {
         private readonly MemoryStream _ms = new MemoryStream(1024);
         private readonly BinaryWriter _w;
+        private readonly ILog _log;
 
-        public PacketWriter()
+        public PacketWriter(ILog log)
         {
+            _log = log;
             _w = new BinaryWriter(_ms, Encoding.UTF8);
         }
 
@@ -907,11 +908,11 @@ namespace DarkwoodMP.Net
         public byte[] Buffer => _ms.GetBuffer();
         public int Length => (int)_ms.Length;
 
-        public void Write(Vector3 v)
+        public void Write(Vec3 v)
         {
-            _w.Write(v.x);
-            _w.Write(v.y);
-            _w.Write(v.z);
+            _w.Write(v.X);
+            _w.Write(v.Y);
+            _w.Write(v.Z);
         }
 
         /// <summary>
@@ -930,7 +931,7 @@ namespace DarkwoodMP.Net
             int n = Math.Min(b.Length, ushort.MaxValue);
             if (n < b.Length)
             {
-                Plugin.Log.LogError(
+                _log.LogError(
                     $"A {b.Length}-byte string was cut to {n} bytes in a "
                         + "message: use WriteBigStr for "
                         + $"it\n{Environment.StackTrace}");
@@ -973,8 +974,8 @@ namespace DarkwoodMP.Net
         }
 
         public BinaryReader R => _r;
-        public Vector3 ReadVector3() =>
-            new Vector3(_r.ReadSingle(), _r.ReadSingle(), _r.ReadSingle());
+        public Vec3 ReadVec3() =>
+            new Vec3(_r.ReadSingle(), _r.ReadSingle(), _r.ReadSingle());
 
         public string ReadStr()
         {
