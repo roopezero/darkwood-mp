@@ -106,7 +106,7 @@ namespace DarkwoodMP.World
             // initNewGame turns the buttons off itself, and the next scene has
             // its own Controller
             _buttonsOffOn = null;
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             string line = null;
             if (instance != null)
             {

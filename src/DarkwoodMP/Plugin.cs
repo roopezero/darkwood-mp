@@ -76,7 +76,6 @@ namespace DarkwoodMP
         }
 
         private DirectPanel _direct;
-        private WorldShare _world;
         private Characters _characters;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
@@ -107,7 +106,7 @@ namespace DarkwoodMP
 
                 // After leaving someone's game you're still in your copy of
                 // their world (your own saves are untouched).
-                WorldShare share = WorldShare.Instance;
+                WorldShare share = Plugin.Instance.Host.Share;
                 if (share != null && share.PlayingHostCopy)
                 {
                     return "This is your copy of another host's world. To "
@@ -437,7 +436,7 @@ namespace DarkwoodMP
             _host.Session.OnPlayerStoppedJoining += n => Notice(
                 $"{n} stopped joining");
             _host.Players.OnRemoteDied += n => Notice($"{n} died");
-            _world = new WorldShare(_host.Session, this, Paths.CachePath);
+            _host.AddShare(this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
             WorldActions.Register(_host.Session);
@@ -611,7 +610,7 @@ namespace DarkwoodMP
             if (int.TryParse(Arg("--dwmp-continue"), out int profileId))
             {
                 StartTest(
-                    _world.ContinueOwnProfile(
+                    _host.Share.ContinueOwnProfile(
                         profileId, Arg("--dwmp-sandbox")));
             }
 
@@ -774,7 +773,8 @@ namespace DarkwoodMP
             // screenshots of the area once it's built.
             if (Has("--dwmp-testworld"))
             {
-                StartTest(TestWorld.Start(_world, reset: Has("--dwmp-reset")));
+                StartTest(
+                    TestWorld.Start(_host.Share, reset: Has("--dwmp-reset")));
                 if (Arg("--dwmp-shots") is string tdir)
                 {
                     StartTest(TestWorldShots(tdir));
@@ -881,7 +881,7 @@ namespace DarkwoodMP
                 session.Traps.TestRefuse = World.Traps.TrapTest.None;
             }
 
-            WorldShare.TestHoldSecs = 0f;
+            _host.Share.TestHoldSecs = 0f;
 
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
@@ -2328,7 +2328,7 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("enemy fx");
-            _world.Update();
+            _host.Share.Update();
             ModProfiler.Mark("world");
             if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
             {
@@ -2343,7 +2343,7 @@ namespace DarkwoodMP
                 UpdatePresence();
             }
 
-            JoinScreen.Update(_host.Session, _world);
+            JoinScreen.Update(_host.Session, _host.Share);
             LoadingScreen.Update();
             Chapters.Update();
             Progression.Update();
@@ -2623,7 +2623,7 @@ namespace DarkwoodMP
                 }
             }
 
-            if (_world.Progress is var p && p.HasValue)
+            if (_host.Share.Progress is var p && p.HasValue)
             {
                 Ui.Text(
                     f,
@@ -2632,9 +2632,9 @@ namespace DarkwoodMP
                         + $"{p.Value.Total / 1048576f:0.0} MB",
                     MenuSkin.Bright);
             }
-            else if (_world.LoadStatus != null)
+            else if (_host.Share.LoadStatus != null)
             {
-                Ui.Text(f, _world.LoadStatus, MenuSkin.Bright);
+                Ui.Text(f, _host.Share.LoadStatus, MenuSkin.Bright);
             }
 
             if (TestWorld.Active)
@@ -2753,13 +2753,13 @@ namespace DarkwoodMP
                 if (Ui.Button(r[0], label))
                 {
                     SetPanel(false);
-                    StartCoroutine(TestWorld.Start(_world, reset: false));
+                    StartCoroutine(TestWorld.Start(_host.Share, reset: false));
                 }
 
                 if (TestWorld.Exists && Ui.Button(r[1], "Reset it"))
                 {
                     SetPanel(false);
-                    StartCoroutine(TestWorld.Start(_world, reset: true));
+                    StartCoroutine(TestWorld.Start(_host.Share, reset: true));
                 }
 
                 if (TestWorld.Status != null)

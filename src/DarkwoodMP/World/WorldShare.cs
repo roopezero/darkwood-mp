@@ -31,7 +31,6 @@ namespace DarkwoodMP.World
     /// </summary>
     public sealed class WorldShare
     {
-        public static WorldShare Instance { get; private set; }
         private const int PieceSize = OfferRules.PieceSize;
         private const int PiecesInFlight = OfferRules.PiecesInFlight;
         private const int KeepWorlds = 3;
@@ -43,7 +42,6 @@ namespace DarkwoodMP.World
         public WorldShare(
             Session session, MonoBehaviour runner, string cacheRoot)
         {
-            Instance = this;
             _session = session;
             _runner = runner;
             _cacheDir = Path.Combine(cacheRoot, "DarkwoodMP", "worlds");
@@ -423,16 +421,46 @@ namespace DarkwoodMP.World
                         Forbid = Core.forbidInputs,
                     });
 
+                // the game's WorldShare keeps when it started looking ready
+                WorldShare share = Current;
+                float since = -1f;
+                if (share != null)
+                {
+                    since = share._readySince;
+                }
+
                 var step = GameStateRules.Ready(
                     looks,
-                    new Seconds(_readySince),
+                    new Seconds(since),
                     new Seconds(Time.realtimeSinceStartup));
-                _readySince = step.Since.Value;
+                if (share != null)
+                {
+                    share._readySince = step.Since.Value;
+                }
+
                 return step.Ready;
             }
         }
 
-        private static float _readySince = -1f;
+        private float _readySince = -1f;
+
+        /// <summary>
+        /// The game's WorldShare (ModHost.Share), for the static questions
+        /// above and below; null before Plugin.Load has made it.
+        /// </summary>
+        private static WorldShare Current
+        {
+            get
+            {
+                Plugin plugin = Plugin.Instance;
+                if (plugin == null || plugin.Host == null)
+                {
+                    return null;
+                }
+
+                return plugin.Host.Share;
+            }
+        }
 
         /// <summary>
         /// The loaded world's scene handle: it changes whenever the world is
@@ -497,7 +525,16 @@ namespace DarkwoodMP.World
         /// <summary>
         /// True while the host saves a snapshot of its world for a joiner.
         /// </summary>
-        public static bool Snapshotting { get; private set; }
+        public static bool Snapshotting
+        {
+            get
+            {
+                WorldShare share = Current;
+                return share != null && share._snapshotting;
+            }
+        }
+
+        private bool _snapshotting;
         private float _lastSnapshot = -999f;
         private int _lastSnapshotScene;
         private static readonly float SnapshotReuse =
@@ -624,7 +661,7 @@ namespace DarkwoodMP.World
                         Broken = _offThreadBroken,
                     }))
                 {
-                    Snapshotting = true;
+                    _snapshotting = true;
                     SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
                     try
                     {
@@ -650,7 +687,7 @@ namespace DarkwoodMP.World
                         SaveRedirect.EndTemporary();
                         // SnapshotSave.Begin set them to the snapshot folder's
                         sm.updateFilePaths();
-                        Snapshotting = false;
+                        _snapshotting = false;
                     }
                 }
             }
@@ -721,22 +758,22 @@ namespace DarkwoodMP.World
         /// Set when SnapshotSave couldn't read this game's world: only the
         /// game's own save is used after.
         /// </summary>
-        private static bool _offThreadBroken;
+        private bool _offThreadBroken;
         /// <summary>
         /// How long the host's game stopped for the last snapshot, in ms (-1:
         /// none yet).
         /// </summary>
-        public static long LastSnapshotStopMs { get; private set; } = -1;
+        public long LastSnapshotStopMs { get; private set; } = -1;
         /// <summary>
         /// Whether the last snapshot's sav.dat was written on a worker thread
         /// (SnapshotSave), not by the game's save.
         /// </summary>
-        public static bool LastSnapshotOffThread { get; private set; }
+        public bool LastSnapshotOffThread { get; private set; }
         /// <summary>
         /// The longest host frame while the last joiner joined, in ms (-1: none
         /// yet).
         /// </summary>
-        public static float LastJoinLongestFrameMs { get; private set; } = -1f;
+        public float LastJoinLongestFrameMs { get; private set; } = -1f;
 
         /// <summary>
         /// The snapshot saved by the game's own SaveManager.Save, in one go on
@@ -749,7 +786,7 @@ namespace DarkwoodMP.World
             try
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
-                Snapshotting = true;
+                _snapshotting = true;
                 SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
                 sm.Save(
                     doJson: true, doSaveProfile: true, force: true,
@@ -793,7 +830,7 @@ namespace DarkwoodMP.World
             {
                 SaveRedirect.EndTemporary();
                 sm.updateFilePaths();
-                Snapshotting = false;
+                _snapshotting = false;
             }
         }
 
@@ -1158,7 +1195,7 @@ namespace DarkwoodMP.World
         /// got, and be sent to load again when the host comes out. The
         /// prologue's stages are the exception (World.Prologue).
         /// </summary>
-        private static string HostNotReady()
+        private string HostNotReady()
         {
             return JoinWaits.Text(JoinGateRules.NotReady(ReadyNow()));
         }
@@ -1166,7 +1203,7 @@ namespace DarkwoodMP.World
         /// The facts of the join gate. The test hold starts at the first ask
         /// in a world, and the prologue says why it waits (and logs it) only
         /// when that is what decides, as before.
-        private static ReadyFacts ReadyNow()
+        private ReadyFacts ReadyNow()
         {
             bool inWorld = InWorld;
             bool holding = false;
@@ -1220,13 +1257,13 @@ namespace DarkwoodMP.World
         /// <summary>Test (map test's "hold-joiners"): for this many seconds
         /// from the first joiner, answer as if the host were watching the
         /// prologue's intro film.</summary>
-        internal static float TestHoldSecs
+        internal float TestHoldSecs
         {
             get => _testHold.Secs;
             set => _testHold = _testHold with { Secs = value };
         }
 
-        private static TestHold _testHold = TestHold.Off;
+        private TestHold _testHold = TestHold.Off;
 
         private bool HostBeforeWelcome(ulong peer, byte[] clientHash)
         {
@@ -1465,10 +1502,10 @@ namespace DarkwoodMP.World
         // Hashing a cached world reads all of it (tens of MB), and Hello (sent
         // every 3 s while the host keeps us waiting) asks for it: so each
         // folder's hash is kept until a file in it changes.
-        private static readonly Dictionary<string, (string Stamp, byte[] Hash)>
+        private readonly Dictionary<string, (string Stamp, byte[] Hash)>
             _hashCache = new Dictionary<string, (string, byte[])>();
 
-        private static byte[] HashOfCached(string worldDir)
+        private byte[] HashOfCached(string worldDir)
         {
             string stamp;
             try
@@ -2220,13 +2257,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix()
         {
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.HostToMainMenu();
             }
 
-            WorldShare share = WorldShare.Instance;
+            WorldShare share = Plugin.Instance.Host.Share;
             if (share != null)
             {
                 share.ClientToMainMenu();

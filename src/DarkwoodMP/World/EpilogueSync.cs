@@ -305,7 +305,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     "[epilogue] to the credits: the players go too, and the "
                         + "server stops");
-                WorldShare instance = WorldShare.Instance;
+                WorldShare instance = Plugin.Instance.Host.Share;
                 if (instance != null)
                 {
                     instance.StopServer(GameEnd(1));
@@ -332,7 +332,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.SetLoadStatus(why);

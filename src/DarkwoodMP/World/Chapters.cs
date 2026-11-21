@@ -722,7 +722,7 @@ namespace DarkwoodMP.World
             var w = s.Begin(MsgType.GameEnd);
             w.W.Write((byte)kind);
             w.W.Write((byte)1); // phase 1: the session ends
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.StopServer(w);
@@ -848,7 +848,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            WorldShare instance = WorldShare.Instance;
+            WorldShare instance = Plugin.Instance.Host.Share;
             if (instance != null)
             {
                 instance.SetLoadStatus("The host reached the end of the game.");

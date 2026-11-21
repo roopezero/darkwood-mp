@@ -66,7 +66,7 @@ namespace DarkwoodMP.World
                         BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
                 }
 
-                WorldShare instance = WorldShare.Instance;
+                WorldShare instance = Plugin.Instance.Host.Share;
                 if (instance == null || instance.PlayingHostCopy)
                 {
                     return null;
@@ -427,7 +427,7 @@ namespace DarkwoodMP.World
             var sm = Singleton<SaveManager>.Instance;
             if (sm != null)
             {
-                WorldShare share = WorldShare.Instance;
+                WorldShare share = Plugin.Instance.Host.Share;
                 if (share == null || !share.PlayingHostCopy)
                 {
                     SaveBook.DeletePlayersDir(
@@ -456,7 +456,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            WorldShare share = WorldShare.Instance;
+            WorldShare share = Plugin.Instance.Host.Share;
             if (share != null && share.PlayingHostCopy)
             {
                 return;
