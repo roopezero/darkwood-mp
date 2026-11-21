@@ -332,10 +332,10 @@ namespace DarkwoodMP.World
             }
 
             // story changes made since the snapshot it loaded
-            FlagsSync flags = FlagsSync.Instance;
-            if (flags != null)
+            coop = Coop.Current;
+            if (coop != null)
             {
-                flags.JoinerInWorld(from);
+                coop.Story.JoinerInWorld(from);
             }
 
             if (dead)

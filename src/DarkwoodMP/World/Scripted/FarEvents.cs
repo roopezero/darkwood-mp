@@ -18,7 +18,7 @@ namespace DarkwoodMP.World.Scripted
     /// (World.Culling.SharedCulling), so a location near a joiner is entered in
     /// the host's game even when the host's player is nowhere near it. Its
     /// events are then run on the host as the host's and the shared part only
-    /// (ScriptedEvents.Part.HostAndShared): the world's side of them
+    /// (EventPart.HostAndShared): the world's side of them
     /// (characters spawned, flags, objects shown or hidden) happens, but the
     /// host's player gets no message, dialogue, item or trip to a place it
     /// isn't at. Its events run in full only when the host's player is in the
@@ -52,7 +52,7 @@ namespace DarkwoodMP.World.Scripted
             public float At;
             public string Location;
             public string Kind;
-            public ScriptedEvents.Part Part;
+            public EventPart Part;
             public Vector3 Pos;
         }
 
@@ -85,7 +85,7 @@ namespace DarkwoodMP.World.Scripted
                     l.isSubLocation, l.isOutsideLocation);
 
         internal static void Note(
-            List<Entry> list, Location l, string kind, ScriptedEvents.Part part)
+            List<Entry> list, Location l, string kind, EventPart part)
         {
             if (list.Count > 2000)
             {
@@ -130,7 +130,7 @@ namespace DarkwoodMP.World.Scripted
                 Together = Together,
                 Sub = l.isSubLocation,
                 Outside = l.isOutsideLocation,
-                Current = (EventPart)ScriptedEvents.Current,
+                Current = ScriptedEvents.Current,
                 Replaying = Coop.Guards.Replaying,
                 Client = client,
                 AnyProxies = Proxies.Any,
@@ -190,7 +190,7 @@ namespace DarkwoodMP.World.Scripted
         /// The part a location's enter (or exit) events run in now; null: as
         /// the game runs them.
         /// </summary>
-        internal ScriptedEvents.Part? PartFor(Location l, bool enter)
+        internal EventPart? PartFor(Location l, bool enter)
         {
             // not together: as the game runs them (FarEventRules.OnEnter)
             if (l == null || !Together)
@@ -219,7 +219,7 @@ namespace DarkwoodMP.World.Scripted
                 return null;
             }
 
-            return (ScriptedEvents.Part)part.Part;
+            return part.Part;
         }
 
         /// <summary>
@@ -229,18 +229,18 @@ namespace DarkwoodMP.World.Scripted
         /// back).
         /// </summary>
         internal bool Begin(
-            Location l, bool enter, ScriptedEvents.Part? part, string more = "")
+            Location l, bool enter, EventPart? part, string more = "")
         {
             if (Together && WorldLocation(l))
             {
-                ScriptedEvents.Part ran;
+                EventPart ran;
                 if (part.HasValue)
                 {
                     ran = part.Value;
                 }
                 else
                 {
-                    ran = ScriptedEvents.Part.All;
+                    ran = EventPart.All;
                 }
 
                 string kind = "exit";
@@ -358,7 +358,7 @@ namespace DarkwoodMP.World.Scripted
                     kind = "enter";
                 }
 
-                Note(Log, l, kind, ScriptedEvents.Part.PlayerOnly);
+                Note(Log, l, kind, EventPart.PlayerOnly);
                 if (Debug)
                 {
                     string text = "went out of";
@@ -379,7 +379,7 @@ namespace DarkwoodMP.World.Scripted
                             + "player's part only");
                 }
 
-                ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly,
+                ScriptedEvents.RunAs(EventPart.PlayerOnly,
                     replaying: false, () =>
                 {
                     foreach (var et in l.events)

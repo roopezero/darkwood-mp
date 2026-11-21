@@ -1,6 +1,7 @@
+using DarkwoodMP.Combat;
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
-using DarkwoodMP.Combat;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -255,7 +256,7 @@ namespace DarkwoodMP.World
 
             string wanted = a[0];
             bool dreaming = D.dreaming;
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -433,10 +434,10 @@ namespace DarkwoodMP.World
 
             d.lockMe(a[0]);
             Singleton<UI>.Instance.journal.keysDict.Remove(a[0]);
-            FlagsSync instance = FlagsSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.FlushNow();
+                coop.Story.FlushNow();
             }
 
             var free = inv.slots.FirstOrDefault(

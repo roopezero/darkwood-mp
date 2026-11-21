@@ -21,7 +21,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal sealed class Started
         {
-            public Part Part;
+            public EventPart Part;
             /// <summary>The host's By when it was started.</summary>
             public ulong By;
             /// <summary>
@@ -294,7 +294,7 @@ namespace DarkwoodMP.World
                 Loading = WorldShare.Loading,
                 Replaying = Coop.Guards.Replaying,
                 Sharing = Coop.Guards.Sharing,
-                Current = (EventPart)Current,
+                Current = Current,
                 PlayerEntered = PlayerEntered,
                 TestAsPlayer = WorldActions.TestAsPlayer,
                 Leaving = leaving,
@@ -321,7 +321,7 @@ namespace DarkwoodMP.World
                 Index = firing.Index,
                 World = firing.World,
                 By = firing.By,
-                Current = (EventPart)Current,
+                Current = Current,
                 Fired = ge.fired,
                 MultipleFire = ge.multipleFire,
                 Sharing = Coop.Guards.Sharing,
@@ -399,7 +399,7 @@ namespace DarkwoodMP.World
                     || fired == global::EventTrigger.Type.onGameObjectActivated,
                 Active = s != null && s.Active,
                 Client = s != null && s.IsClient,
-                Current = (EventPart)Current,
+                Current = Current,
                 StepDepth = StepDepth,
             };
 

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Dreaming;
 using UnityEngine;
 
 namespace DarkwoodMP.Combat
@@ -39,9 +41,8 @@ namespace DarkwoodMP.Combat
     /// </summary>
     internal sealed partial class NetEnemies
     {
-        public const float RelevantRange = 3000f;
-        public const float StateInterval = 0.05f;
-        private const float CorpseLinger = 6f;
+        public const float RelevantRange = EnemyRelayRules.RelevantRange;
+        public const float StateInterval = EnemyRelayRules.StateInterval;
 
         /// <summary>
         /// The session's NetEnemies (CoopSession.Enemies), or null when
@@ -89,8 +90,16 @@ namespace DarkwoodMP.Combat
         /// host's copy turned on a player, or a client's copy is one the host
         /// runs).
         /// </summary>
-        public static bool Eligible(Character c) =>
-            c != null && (c.npc == null || HostileNpcs.Running(c));
+        public static bool Eligible(Character c)
+        {
+            if (c == null)
+            {
+                return false;
+            }
+
+            return EnemyTrackRules.Eligible(
+                c.npc != null, HostileNpcs.Running(c));
+        }
 
         /// <summary>
         /// Still in the fight: alive, or in a pre-death stage
@@ -98,8 +107,15 @@ namespace DarkwoodMP.Combat
         /// left until a hit finishes it or it bleeds out; getHit and the
         /// player's melee still hit it).
         /// </summary>
-        public static bool InPlay(Character c) =>
-            c != null && (c.alive || (c.hasPreDeath && c.health > 0f));
+        public static bool InPlay(Character c)
+        {
+            if (c == null)
+            {
+                return false;
+            }
+
+            return EnemyTrackRules.InPlay(c.alive, c.hasPreDeath, c.health);
+        }
 
         /// <summary>
         /// Client: a character of an area only this player is in: a dream of
@@ -141,8 +157,8 @@ namespace DarkwoodMP.Combat
             if (d != null && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
                 && go.transform.IsChildOf(d.dreamLocation.transform)
-                && (World.DreamSync.Shared == null || World.Prologue.IsStage(
-                    World.DreamSync.Shared)))
+                && (DreamSync.SharedNow == null || World.Prologue.IsStage(
+                    DreamSync.SharedNow)))
             {
                 return true;
             }
@@ -260,8 +276,8 @@ namespace DarkwoodMP.Combat
 
         public void Update()
         {
-            if (_session.IsHost && _session.Peers.Count > 0
-                && WorldShare.InWorld)
+            if (EnemyRelayRules.HostRuns(
+                _session.IsHost, _session.Peers.Count, WorldShare.InWorld))
             {
                 HostUpdate();
             }

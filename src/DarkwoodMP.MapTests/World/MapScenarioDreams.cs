@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -116,7 +117,7 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            DreamSync.TestLevelDream(name);
+            Coop.Current.Dreaming.TestLevelDream(name);
             while (!D.dreaming)
             {
                 yield return new WaitForSeconds(0.5f);
@@ -131,9 +132,9 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.Shared}) at "
+                $"dreaming {presetName} (shared {DreamSync.SharedNow}) at "
                     + $"{Locations.Current()}";
-            if (DreamSync.Shared != name)
+            if (DreamSync.SharedNow != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
             }
@@ -178,10 +179,10 @@ namespace DarkwoodMP.World
             }
 
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.Shared}) at "
+                $"dreaming {presetName} (shared {DreamSync.SharedNow}) at "
                     + $"{Locations.Current()}; a friend's puppet shown {seen}";
             if (D.preset == null || D.preset.name != name
-                || DreamSync.Shared != name)
+                || DreamSync.SharedNow != name)
             {
                 r.Fail($"not in the host's dream {name}: {r.Info}");
             }
@@ -208,7 +209,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -229,14 +230,14 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
             }
 
             r.Info = $"back at {spot}; shared dream {shared}";
-            if (DreamSync.Shared != null)
+            if (DreamSync.SharedNow != null)
             {
                 r.Fail($"still in a shared dream: {r.Info}");
             }

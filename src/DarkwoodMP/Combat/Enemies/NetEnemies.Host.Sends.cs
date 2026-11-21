@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -37,7 +38,7 @@ namespace DarkwoodMP.Combat
         private void ArmorSync(Tracked t)
         {
             bool now = HasArmor(t.C);
-            if (now == t.Armor)
+            if (!EnemyRelayRules.ArmorChanged(now, t.Armor))
             {
                 return;
             }
@@ -46,14 +47,12 @@ namespace DarkwoodMP.Combat
             foreach (var peer in Knowing(t.Id))
             {
                 var w = _one.Begin(MsgType.EnemyArmor);
-                w.W.Write(t.Id);
-                int armorFlag = 0;
-                if (now)
+                EnemyMarkMessage.Write(w, new EnemyMark
                 {
-                    armorFlag = 1;
-                }
+                    Id = t.Id,
+                    On = now,
+                });
 
-                w.W.Write((byte)armorFlag);
                 _session.SendTo(peer, w, Channel.Control, reliable: true);
             }
 
@@ -88,26 +87,24 @@ namespace DarkwoodMP.Combat
                 path = "Characters/" + name;
             }
 
-            var w = _session.Begin(MsgType.EnemySpawn);
-            w.W.Write(t.Id);
             int savedId = 0;
             if (save != null)
             {
                 savedId = save.uniqueId;
             }
 
-            w.W.Write(savedId);
-            w.WriteStr(path);
-            w.WriteStr(name);
-            w.Write(c.transform.position);
-            WriteRot(w, c.transform.rotation);
-            int armorFlag = 0;
-            if (t.Armor)
+            var w = _session.Begin(MsgType.EnemySpawn);
+            EnemySpawnMessage.Write(w, new EnemySpawned
             {
-                armorFlag = 1;
-            }
+                Id = t.Id,
+                SavedId = savedId,
+                Prefab = path,
+                Kind = name,
+                At = VecOf(c.transform.position),
+                Rot = QuatOf(c.transform.rotation),
+                Armor = t.Armor,
+            });
 
-            w.W.Write((byte)armorFlag);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             // The loop it's playing now (one that started before it was sent,
             // e.g. an NPC's aggressive one as it turned hostile): after the
@@ -133,9 +130,13 @@ namespace DarkwoodMP.Combat
             ulong peer, uint id, string audio, float volume, bool reliable)
         {
             var w = _session.Begin(MsgType.EnemySound);
-            w.W.Write(id);
-            w.WriteStr(audio);
-            w.W.Write(volume);
+            EnemySoundMessage.Write(w, new EnemySound
+            {
+                Id = id,
+                Audio = audio,
+                Volume = volume,
+            });
+
             int channel;
             if (reliable)
             {
@@ -173,9 +174,9 @@ namespace DarkwoodMP.Combat
         {
             SendSpawn(peer, t);
             var w = _one.Begin(MsgType.EnemyState);
-            w.W.Write(Time.unscaledTime);
-            w.W.Write((ushort)1);
+            int at = EnemyStateMessage.WriteHead(w, Time.unscaledTime);
             WriteState(w, t);
+            EnemyStateMessage.SetCount(w, at, 1);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             SendDespawn(peer, t.Id, keepCorpse: true);
             SendCorpseLoot(peer, t.Id);
@@ -203,14 +204,12 @@ namespace DarkwoodMP.Combat
         private void SendDespawn(ulong peer, uint id, bool keepCorpse)
         {
             var w = _session.Begin(MsgType.EnemyDespawn);
-            w.W.Write(id);
-            int corpseFlag = 0;
-            if (keepCorpse)
+            EnemyMarkMessage.Write(w, new EnemyMark
             {
-                corpseFlag = 1;
-            }
+                Id = id,
+                On = keepCorpse,
+            });
 
-            w.W.Write((byte)corpseFlag);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
@@ -237,67 +236,54 @@ namespace DarkwoodMP.Combat
         private static void WriteState(PacketWriter w, Tracked t)
         {
             var c = t.C;
-            w.W.Write(t.Id);
-            w.Write(c.transform.position);
-            WriteRot(w, c.transform.rotation);
-            int flags = 0;
-            if (InPlay(c))
-            {
-                flags |= 1;
-            }
-
-            if (c.sleeping)
-            {
-                flags |= 2;
-            }
-
-            if (c.cuttingInHalf)
-            {
-                flags |= 4;
-            }
-
-            w.W.Write((byte)flags);
             float health = 1f;
             if (c.maxHealth > 0)
             {
                 health = Mathf.Clamp01(c.health / c.maxHealth);
             }
 
-            w.W.Write(health);
-            int n = Mathf.Min(t.Animators.Count, 8);
-            w.W.Write((byte)n);
+            int n = Mathf.Min(t.Animators.Count, EnemyStateMessage.MostAnims);
+            var frame = new EnemyFrame
+            {
+                Id = t.Id,
+                At = VecOf(c.transform.position),
+                Rot = QuatOf(c.transform.rotation),
+                Flags = EnemyStateMessage.FlagsOf(
+                    InPlay(c), c.sleeping, c.cuttingInHalf),
+                Health = health,
+            };
+
+            EnemyStateMessage.WriteFrame(w, frame, n);
             for (int i = 0; i < n; i++)
             {
-                var a = t.Animators[i];
-                tk2dSpriteAnimationClip clip = null;
-                if (a != null)
-                {
-                    clip = a.CurrentClip;
-                }
-
-                w.W.Write(t.AnimatorPaths[i]);
-                int hash = 0;
-                if (clip != null)
-                {
-                    hash = StableHash.Of(clip.name);
-                }
-
-                w.W.Write(hash);
-                int frame = 0;
-                if (clip != null)
-                {
-                    frame = Mathf.Clamp(a.CurrentFrame, 0, 65535);
-                }
-
-                w.W.Write((ushort)frame);
-                int playing = 0;
-                if (a != null && a.Playing)
-                {
-                    playing = 1;
-                }
-
-                w.W.Write((byte)playing);
+                EnemyStateMessage.WriteAnim(w, AnimOf(t, i));
             }
+        }
+
+        private static EnemyAnim AnimOf(Tracked t, int i)
+        {
+            var a = t.Animators[i];
+            tk2dSpriteAnimationClip clip = null;
+            if (a != null)
+            {
+                clip = a.CurrentClip;
+            }
+
+            int hash = 0;
+            int frame = 0;
+            if (clip != null)
+            {
+                hash = StableHash.Of(clip.name);
+                frame = Mathf.Clamp(a.CurrentFrame, 0, 65535);
+            }
+
+            return new EnemyAnim
+            {
+                Animator = t.AnimatorPaths[i],
+                Clip = hash,
+                Frame = (ushort)frame,
+                Playing = a != null && a.Playing,
+            };
         }
 
         /// <summary>
@@ -314,15 +300,13 @@ namespace DarkwoodMP.Combat
             foreach (var peer in Knowing(t.Id))
             {
                 var w = _session.Begin(MsgType.EnemyBlood);
-                w.W.Write(t.Id);
-                w.W.Write(yRot);
-                int waterFlag = 0;
-                if (c.inWater)
+                EnemyBloodMessage.Write(w, new EnemyBlood
                 {
-                    waterFlag = 1;
-                }
+                    Id = t.Id,
+                    RotY = yRot,
+                    Water = c.inWater,
+                });
 
-                w.W.Write((byte)waterFlag);
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
@@ -334,12 +318,14 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            uint id = r.R.ReadUInt32();
-            float y = r.R.ReadSingle();
-            bool water = r.R.ReadByte() != 0;
+            var blood = EnemyBloodMessage.Read(r);
+            uint id = blood.Id;
+            float y = blood.RotY;
+            bool water = blood.Water;
             // shown already
             if (_predictedBlood.TryGetValue(id, out float at)
-                && Time.realtimeSinceStartup - at < 1f)
+                && !CopyRules.ShowsBlood(
+                    true, new Seconds(Time.realtimeSinceStartup - at)))
             {
                 _predictedBlood.Remove(id);
                 return;
@@ -347,11 +333,7 @@ namespace DarkwoodMP.Combat
 
             if (_puppets.TryGetValue(id, out var p) && p.C != null)
             {
-                string prefab = "FX/Bloodsplats/Shotsplat_stay";
-                if (water)
-                {
-                    prefab = "FX/Bloodsplats/Shotsplat";
-                }
+                string prefab = CopyRules.BloodFor(water);
 
                 Core.AddPrefab(
                     prefab, p.C.transform.position,

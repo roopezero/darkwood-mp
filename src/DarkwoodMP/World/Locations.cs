@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -458,7 +459,7 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// The dream location our player is in when it is the shared level
-        /// dream (World.DreamSync.Shared), else null. The host dreams it first
+        /// dream (DreamSync.SharedNow), else null. The host dreams it first
         /// and every player's copy stands at the host's spot (OnAsk), so, like
         /// a location the host placed, the host runs its characters and events
         /// and the others get the host's.
@@ -467,12 +468,12 @@ namespace DarkwoodMP.World
         {
             var d = Singleton<Dreams>.Instance;
             if (d == null || !d.dreaming || d.dreamLocation == null
-                || DreamSync.Shared == null)
+                || DreamSync.SharedNow == null)
             {
                 return null;
             }
 
-            if (d.preset != null && d.preset.name == DreamSync.Shared)
+            if (d.preset != null && d.preset.name == DreamSync.SharedNow)
             {
                 return d.dreamLocation;
             }
@@ -538,7 +539,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (place.StartsWith("dream:") && DreamSync.Shared == null)
+            if (place.StartsWith("dream:") && DreamSync.SharedNow == null)
             {
                 return false; // someone else's own dream
             }

@@ -493,6 +493,16 @@ Finish with `tools/run-test.sh full`.
         the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
   - [x] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
         Done: `EnemyMotion` is `CoopSession.Motion` on
+        is `ModHost.Characters`. Its messages' bytes are the core's
+        (`EnemySpawnMessage`, `EnemyStateMessage`, `EnemyMarkMessage` for
+        EnemyArmor and EnemyDespawn, `EnemySoundMessage`,
+        `EnemyHitMessage`, `EnemyBloodMessage`), and the shell calls
+        `EnemyTrackRules`, `EnemyRelayRules`, `EnemyLoopRules` (but
+        `Stopped`), `EnemyHitRules`, `HitRate` and `CopyRules`. Left:
+        calling `CopyStateRules` and the rest of `FreezeRules`, and
+        thinning `FreezePatches` and `EnemySoundPatches`.
+  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
         the core's `MotionClock`; the hostile NPCs' state is
         `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
         `NpcHitMessage` and `NpcAttackMessage`; the night spawns are
@@ -520,20 +530,32 @@ Finish with `tools/run-test.sh full`.
 | 7.4 | `Chapters`, `Prologue`, `EpilogueSync`, `Spectator` | 1,588 | `story map:chapter map:prologue map:epilogue` |
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
-- [ ] 7.1 Flags and scripted events. `WorldEvents` is done: it moved to
-      `World/Rolls` (beside the core's `RollRules`, `ShadowRules` and
-      `AmbushRules`) as a partial class in four files with its patches in
-      `WorldEventPatches.cs`, and the session owns it. Its message classes
-      are `NightScenarioMessage`, `NightEventMessage`,
-      `RandomObjectsMessage` and `WeatherMessage`.
+- [ ] 7.1 Flags and scripted events.
+  - [x] Part b: `WorldEvents`. It moved to `World/Rolls` (beside the
+        core's `RollRules`, `ShadowRules` and `AmbushRules`) as a partial
+        class in four files with its patches in `WorldEventPatches.cs`, and
+        the session owns it. Its message classes are `NightScenarioMessage`,
+        `NightEventMessage`, `RandomObjectsMessage` and `WeatherMessage`.
+  - [x] Part c: `FlagsSync`. It is `CoopSession.Story`, in `World/Story`
+        (four files: `FlagsSync`, `FlagsSync.Npcs`, `StoryRead`,
+        `StoryApply`); its bytes are the core's `FlagsDelta`. The journal
+        popup patch (`JournalShowJournalInfoPopup`) still runs in a game
+        played alone, since the game's own small places have no text.
+  - [ ] `ScriptedEvents`. Done: its bytes (`EventFiredMessage`), and every
+        rule called from the shell (`StepRules`, `DoerRules`, `TriggerRules`,
+        `FiringRules`, `WorldTriggerRules`, `LaterRules`, `FiredEventRules`,
+        `WorldEventRules`, `TripRules`); `ScriptedEvents.Part` is the core's
+        `EventPart`. Left: its state (an instance on `CoopSession`, with
+        what solo play needs on `ModHost`), thin patches, `World/Scripted/`.
 - [ ] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
         (`World/Pause/CoopPause`) and `.Mornings`
         (`World/Mornings/AfterNight`), each with its `...Patches.cs`.
-        `AfterNight`'s two messages have no payload, so no bytes moved. The
-        after-night reward's part of `ControllerStartAfterNight` still runs
-        with no session, since `FlagsSync` is there from the start.
+        `AfterNight`'s two messages have no payload, so no bytes moved. Since
+        `FlagsSync` became `CoopSession.Story` (7.1 part c), the after-night
+        reward's part of `ControllerStartAfterNight` does nothing with no
+        session.
   - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
 - [ ] 7.3 Skills and progress.
   - [x] Part a: `DreamSync`. It is `CoopSession.Dreaming`

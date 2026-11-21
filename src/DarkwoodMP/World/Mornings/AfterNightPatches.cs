@@ -8,8 +8,8 @@ namespace DarkwoodMP.World.Mornings
     /// (AfterNight.HostDawn). The after-night reward (the trader's
     /// reputation += 100 to 250) is given in each game whose player is in a
     /// hideout at dawn. It goes to the others as the reward for that day,
-    /// which counts once (FlagsSync). The reward's part runs with no session
-    /// too, as FlagsSync is there from the start.
+    /// which counts once (the session's Story). Without a session there is
+    /// no one to tell.
     /// </summary>
     [HarmonyPatch(typeof(Controller), nameof(Controller.startAfterNight))]
     static class ControllerStartAfterNight
@@ -24,7 +24,7 @@ namespace DarkwoodMP.World.Mornings
 
             __state = null;
             var f = Singleton<Flags>.Instance;
-            if (f == null || FlagsSync.Instance == null)
+            if (f == null || coop == null)
             {
                 return;
             }
@@ -43,7 +43,8 @@ namespace DarkwoodMP.World.Mornings
             Controller __instance, Dictionary<string, int> __state)
         {
             var f = Singleton<Flags>.Instance;
-            if (__state == null || f == null)
+            CoopSession coop = Coop.Current;
+            if (__state == null || f == null || coop == null)
             {
                 return;
             }
@@ -57,8 +58,8 @@ namespace DarkwoodMP.World.Mornings
                     continue;
                 }
 
-                FlagsSync.Instance.Absorb(n.name, n.reputation - was);
-                FlagsSync.Instance.LocalReward(
+                coop.Story.Absorb(n.name, n.reputation - was);
+                coop.Story.LocalReward(
                     n.name, __instance.day, n.reputation - was);
             }
         }

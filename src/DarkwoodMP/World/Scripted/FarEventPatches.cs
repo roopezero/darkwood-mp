@@ -11,7 +11,7 @@ namespace DarkwoodMP.World.Scripted
     static class LocationCheckEnterEvents
     {
         static void Prefix(
-            Location __instance, out (bool, ScriptedEvents.Part) __state)
+            Location __instance, out (bool, EventPart) __state)
         {
             __state = (false, ScriptedEvents.Current);
             CoopSession coop = Coop.Current;
@@ -22,7 +22,7 @@ namespace DarkwoodMP.World.Scripted
         }
 
         static Exception Finalizer(
-            Exception __exception, (bool, ScriptedEvents.Part) __state)
+            Exception __exception, (bool, EventPart) __state)
         {
             if (__state.Item1)
             {
@@ -42,7 +42,7 @@ namespace DarkwoodMP.World.Scripted
     static class LocationCheckExitEvents
     {
         static void Prefix(
-            Location __instance, out (bool, ScriptedEvents.Part, bool) __state)
+            Location __instance, out (bool, EventPart, bool) __state)
         {
             __state = (false, ScriptedEvents.Current, false);
             CoopSession coop = Coop.Current;
@@ -56,7 +56,7 @@ namespace DarkwoodMP.World.Scripted
         }
 
         static Exception Finalizer(
-            Exception __exception, (bool, ScriptedEvents.Part, bool) __state)
+            Exception __exception, (bool, EventPart, bool) __state)
         {
             if (__state.Item1)
             {

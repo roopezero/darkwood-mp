@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Combat.Enemies;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
@@ -51,17 +52,16 @@ namespace DarkwoodMP.Combat
         /// Corpses sent to one client in one state pass at most (a joiner can
         /// have dozens near them).
         /// </summary>
-        private const int CorpsesPerPass = 4;
-
         private void HostUpdate()
         {
             float now = Time.unscaledTime;
-            if (now >= _nextScan)
+            if (EnemyTrackRules.Due(new Seconds(now), new Seconds(_nextScan)))
             {
-                _nextScan = now + 0.5f;
+                _nextScan = now + EnemyTrackRules.ScanInterval;
                 foreach (var c in Plugin.Instance.Host.Characters.Active())
                 {
-                    if (Eligible(c) && !_byCharHost.ContainsKey(c))
+                    if (EnemyTrackRules.Tracks(
+                        Eligible(c), _byCharHost.ContainsKey(c)))
                     {
                         var t = new Tracked { Id = _nextId++, C = c };
                         Animators(
@@ -78,32 +78,20 @@ namespace DarkwoodMP.Combat
                 var gone = new List<Character>();
                 foreach (var kv in _byCharHost)
                 {
-                    if (kv.Key == null)
-                    {
-                        gone.Add(kv.Key);
-                        continue;
-                    }
-
                     // An NPC that calmed down (and stayed calm a while) is each
                     // player's own again.
-                    if (kv.Key.npc == null || !InPlay(kv.Key))
-                    {
-                        continue;
-                    }
-
-                    if (HostileNpcs.StillHostile(kv.Key))
-                    {
-                        kv.Value.CalmSince = -1f;
-                        continue;
-                    }
-
-                    if (kv.Value.CalmSince < 0f)
-                    {
-                        kv.Value.CalmSince = now;
-                    }
-                    else if (now - kv.Value.CalmSince > HostileNpcs.CalmTime)
+                    var step = EnemyTrackRules.Calm(CalmOf(kv.Value, now));
+                    if (step == CalmStep.Gone)
                     {
                         gone.Add(kv.Key);
+                    }
+                    else if (step == CalmStep.Hostile)
+                    {
+                        kv.Value.CalmSince = -1f;
+                    }
+                    else if (step == CalmStep.StartCalm)
+                    {
+                        kv.Value.CalmSince = now;
                     }
                 }
 
@@ -121,9 +109,10 @@ namespace DarkwoodMP.Combat
                 }
             }
 
-            if (now >= _nextLoopCheck)
+            if (EnemyTrackRules.Due(
+                new Seconds(now), new Seconds(_nextLoopCheck)))
             {
-                _nextLoopCheck = now + LoopCheckInterval;
+                _nextLoopCheck = now + EnemyLoopRules.LoopCheckInterval;
                 LoopCheck(now);
                 foreach (var t in _byCharHost.Values)
                 {
@@ -143,19 +132,16 @@ namespace DarkwoodMP.Combat
 
             foreach (var peer in _session.Peers)
             {
-                if (!NetPlayerProxy.All.TryGetValue(peer, out var proxy)
-                    || proxy == null)
-                {
-                    continue;
-                }
-
+                NetPlayerProxy.All.TryGetValue(peer, out var proxy);
+                bool standIn = proxy != null;
+                bool away = standIn && proxy.Away;
                 // Away (a dream, or a separate location we haven't got where
                 // they have it): their own game runs the enemies there
                 // (LocalOnly), so none of ours go to them; what they have of
                 // ours waits for their return. In a location we run for them
                 // (proxy.InLocation) they get ours there, by the same range
                 // check.
-                if (proxy.Away)
+                if (!EnemyRelayRules.Serves(standIn, away))
                 {
                     continue;
                 }
@@ -176,90 +162,75 @@ namespace DarkwoodMP.Combat
                 var w = _batch.Begin(MsgType.EnemyState);
                 // the host's clock, which the client draws them by
                 // (EnemyMotion)
-                w.W.Write(now);
-                long countPos = w.Length;
-                w.W.Write((ushort)0);
+                int countAt = EnemyStateMessage.WriteHead(w, now);
                 int count = 0;
                 var drop = new List<(uint, bool)>();
                 foreach (var t in _byCharHost.Values)
                 {
                     var c = t.C;
-                    if (c == null)
-                    {
-                        continue;
-                    }
-
-                    if (!InPlay(c) && t.DiedAt < 0)
+                    if (c != null
+                        && EnemyRelayRules.Dies(InPlay(c), t.DiedAt >= 0))
                     {
                         t.DiedAt = Time.time;
                     }
 
-                    bool dead = t.DiedAt >= 0;
-                    bool corpseDone =
-                        dead && Time.time - t.DiedAt > CorpseLinger;
-                    bool near = c.gameObject.activeInHierarchy
-                        && (c.transform.position - at).sqrMagnitude
-                            < RelevantRange * RelevantRange;
-                    if (dead && corpses.Contains(t.Id))
+                    // A corpse the client has isn't sent again (it would make
+                    // a second body); one it never saw settle goes once it's
+                    // near; out of range, or settled, the dead stay where they
+                    // fell (the client settles it now if it hadn't).
+                    var facts = RelayOf(t, at) with
                     {
-                        // it has it, settled or not (sending it again would
-                        // make a second body)
-                        continue;
+                        Known = known.Contains(t.Id),
+                        CorpseKept = corpses.Contains(t.Id),
+                        CorpsesSent = corpsesSent,
+                    };
+
+                    var step = EnemyRelayRules.Choose(facts);
+                    if (step == RelayStep.SendCorpse)
+                    {
+                        SendCorpse(peer, t);
+                        corpses.Add(t.Id);
+                        corpsesSent++;
                     }
-
-                    if (corpseDone && !known.Contains(t.Id))
+                    else if (step == RelayStep.Drop)
                     {
-                        // A corpse it never saw settle: it gets it once it's
-                        // near.
-                        if (near && corpsesSent < CorpsesPerPass)
-                        {
-                            SendCorpse(peer, t);
-                            corpses.Add(t.Id);
-                            corpsesSent++;
-                        }
-
-                        continue;
+                        drop.Add((t.Id, false));
                     }
-
-                    if (corpseDone || !near)
+                    else if (step == RelayStep.DropCorpse)
                     {
-                        // Out of range, or settled: the dead stay where they
-                        // fell (the client settles it now if it hadn't).
-                        if (known.Contains(t.Id))
-                        {
-                            drop.Add((t.Id, dead));
-                        }
-
-                        continue;
+                        drop.Add((t.Id, true));
                     }
-
-                    if (known.Add(t.Id))
+                    else if (step == RelayStep.Spawn)
                     {
+                        known.Add(t.Id);
                         SendSpawn(peer, t);
+                        WriteState(w, t);
+                        count++;
                     }
-
-                    WriteState(w, t);
-                    count++;
+                    else if (step == RelayStep.State)
+                    {
+                        WriteState(w, t);
+                        count++;
+                    }
                 }
 
                 foreach (var (id, corpse) in drop)
                 {
                     known.Remove(id);
                     SendDespawn(peer, id, corpse);
-                    if (corpse && corpses.Add(id))
+                    if (corpse && EnemyRelayRules.SendsLoot(
+                        corpse, corpses.Add(id)))
                     {
                         SendCorpseLoot(peer, id);
                     }
                 }
 
-                if (count == 0)
+                if (!EnemyRelayRules.SendsBatch(count))
                 {
                     continue;
                 }
 
-                var buf = w.Buffer; // patch the count in
-                buf[countPos] = (byte)count;
-                buf[countPos + 1] = (byte)(count >> 8);
+                EnemyStateMessage.SetCount(w, countAt, count);
                 _session.SendTo(peer, w, Channel.State, reliable: false);
             }
         }
@@ -269,14 +240,31 @@ namespace DarkwoodMP.Combat
         /// character.
         /// </summary>
         private static bool IsLoop(CharacterSounds snd, string audio) =>
-            snd != null
-                && (audio == snd.idleLoop || audio == snd.idleLoopAggressive
-                    || audio == snd.aggressive
-                    || audio == snd.defensive || audio == snd.sleeping
-                    || audio == snd.escapingLoop);
+            EnemyLoopRules.IsLoop(LoopsOf(snd), audio);
+
+        /// <summary>
+        /// The loops playIdleLoop plays with these sounds.
+        /// </summary>
+        private static LoopNames LoopsOf(CharacterSounds snd)
+        {
+            if (snd == null)
+            {
+                return new LoopNames { Exists = false };
+            }
+
+            return new LoopNames
+            {
+                Exists = true,
+                Idle = snd.idleLoop,
+                IdleAggressive = snd.idleLoopAggressive,
+                Aggressive = snd.aggressive,
+                Defensive = snd.defensive,
+                Sleeping = snd.sleeping,
+                Escaping = snd.escapingLoop,
+            };
+        }
 
         private float _nextLoopCheck, _nextLoopResend;
-        private const float LoopCheckInterval = 0.5f, LoopResendInterval = 2f;
 
         /// <summary>
         /// Host: the loop each living enemy plays, made sure of in the clients'
@@ -290,50 +278,92 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private void LoopCheck(float now)
         {
-            bool resend = now >= _nextLoopResend;
+            bool resend = EnemyTrackRules.Due(
+                new Seconds(now), new Seconds(_nextLoopResend));
             if (resend)
             {
-                _nextLoopResend = now + LoopResendInterval;
+                _nextLoopResend = now + EnemyLoopRules.LoopResendInterval;
             }
 
             foreach (var t in _byCharHost.Values)
             {
-                var c = t.C;
-                if (c == null || t.DiedAt >= 0 || !InPlay(c))
+                // A sound that isn't one the client takes as a loop (OnSound)
+                // sends nothing.
+                var facts = LoopOf(t) with { Resend = resend };
+                var send = EnemyLoopRules.Check(facts);
+                if (send == LoopSend.None)
                 {
                     continue;
                 }
 
-                AudioObject loop = null;
-                if (c.sounds != null)
-                {
-                    loop = c.sounds.idleAudioObject;
-                }
-
-                string cur = "";
-                if (loop != null && loop.IsPlaying()
-                    && !string.IsNullOrEmpty(loop.audioID))
-                {
-                    cur = loop.audioID;
-                }
-
-                if (cur != "" && !IsLoop(c.sounds, cur))
-                {
-                    continue; // not one the client takes as a loop (OnSound)
-                }
-
-                bool changed = cur != t.Loop;
-                if (!changed && !resend)
-                {
-                    continue;
-                }
-
-                t.Loop = cur;
+                t.Loop = facts.Current;
                 foreach (var peer in Knowing(t.Id))
                 {
-                    SendSound(peer, t.Id, cur, 1f, reliable: changed);
+                    SendSound(
+                        peer, t.Id, facts.Current, 1f,
+                        reliable: send == LoopSend.Changed);
                 }
             }
+        }
+
+        /// <summary>
+        /// The loop check's facts for one tracked enemy, but Resend.
+        /// </summary>
+        private static LoopFacts LoopOf(Tracked t)
+        {
+            var c = t.C;
+            if (c == null)
+            {
+                return new LoopFacts { Exists = false };
+            }
+
+            AudioObject loop = null;
+            if (c.sounds != null)
+            {
+                loop = c.sounds.idleAudioObject;
+            }
+
+            string audio = null;
+            bool playing = loop != null && loop.IsPlaying();
+            if (playing)
+            {
+                audio = loop.audioID;
+            }
+
+            string current = EnemyLoopRules.CurrentLoop(playing, audio);
+            return new LoopFacts
+            {
+                Exists = true,
+                Dead = t.DiedAt >= 0,
+                InPlay = InPlay(c),
+                Current = current,
+                IsLoop = IsLoop(c.sounds, current),
+                Told = t.Loop,
+            };
+        }
+
+        /// <summary>
+        /// The state pass's facts for one tracked enemy and a client's
+        /// stand-in, without what the client has.
+        /// </summary>
+        private static RelayFacts RelayOf(Tracked t, Vector3 standIn)
+        {
+            var c = t.C;
+            if (c == null)
+            {
+                return new RelayFacts { Exists = false };
+            }
+
+            bool dead = t.DiedAt >= 0;
+            return new RelayFacts
+            {
+                Exists = true,
+                Dead = dead,
+                SinceDeath = new Seconds(Time.time - t.DiedAt),
+                Active = c.gameObject.activeInHierarchy,
+                Enemy = VecOf(c.transform.position),
+                StandIn = VecOf(standIn),
+            };
         }
 
         /// <summary>
@@ -343,12 +373,34 @@ namespace DarkwoodMP.Combat
         internal static string KindOf(Character c)
         {
             var save = c.GetComponent<SaveableObject>();
-            if (save != null && !string.IsNullOrEmpty(save.prefabName))
+            string prefab = null;
+            if (save != null)
             {
-                return save.prefabName;
+                prefab = save.prefabName;
             }
 
-            return c.name.Replace("(Clone)", "").Trim();
+            return EnemyTrackRules.KindOf(prefab, c.name);
+        }
+
+        /// <summary>
+        /// The scan's facts for one tracked character.
+        /// </summary>
+        private static CalmFacts CalmOf(Tracked t, float now)
+        {
+            var c = t.C;
+            bool exists = c != null;
+            bool npc = exists && c.npc != null;
+            bool inPlay = npc && InPlay(c);
+            return new CalmFacts
+            {
+                Exists = exists,
+                Npc = npc,
+                InPlay = inPlay,
+                Hostile = inPlay && HostileNpcs.StillHostile(c),
+                Calming = t.CalmSince >= 0f,
+                CalmSince = new Seconds(t.CalmSince),
+                Now = new Seconds(now),
+            };
         }
     }
 }

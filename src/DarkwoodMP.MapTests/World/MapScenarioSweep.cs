@@ -80,10 +80,10 @@ namespace DarkwoodMP.World
                 }
 
                 f.setFlag(name, true);
-                // Longer than FlagsSync.Interval, so a flush happens while
+                // Longer than StoryRules.Interval, so a flush happens while
                 // sharing is paused.
                 yield return new WaitForSecondsRealtime(
-                    FlagsSync.Interval + 1.5f);
+                    Story.StoryRules.Interval + 1.5f);
             }
             finally
             {
@@ -92,7 +92,7 @@ namespace DarkwoodMP.World
 
             // WorldReady comes back 2 s after, then the next flush sends it.
             yield return new WaitForSecondsRealtime(
-                2f + FlagsSync.Interval + 1.5f);
+                2f + Story.StoryRules.Interval + 1.5f);
             bool set = dict.TryGetValue(name, out var fl) && fl.isTrue;
             r.Info = $"{name} set {set} while sharing was paused";
             // Not set here: the compare that follows would agree on

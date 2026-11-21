@@ -140,7 +140,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
 
-            yield return new WaitForSeconds(FlagsSync.Interval + 2f);
+            yield return new WaitForSeconds(Story.StoryRules.Interval + 2f);
             r.Info =
                 $"alive again {P != null && P.alive} at "
                     + $"{Fmt(P.transform.position)}";
