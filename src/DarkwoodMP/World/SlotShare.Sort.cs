@@ -63,61 +63,73 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var ctl = Singleton<Controller>.Instance;
-            if (ctl != null && !InvItemClass.isNull(ctl.pickedUpItem))
-            {
-                return; // an item on the cursor still belongs to a slot
-            }
-
             var s = _session;
-            if (s.IsClient && WorldShare.InWorld)
+            var r = ObjRef.Of(inv.gameObject);
+            switch (SortRules.Pressed(FactsOf(inv, r)))
             {
-                var r = ObjRef.Of(inv.gameObject);
-                if (!r.Valid)
-                {
-                    Plugin.Log.LogWarning(
-                        $"[slots] can't sort {inv.name}: no name for it in the "
-                            + "host's world");
+                case SortPress.Nothing:
                     return;
-                }
-
-                // The host's contents must be our starting point, and what we
-                // changed before pressing goes first.
-                if (_awaiting.ContainsKey(inv))
-                {
+                case SortPress.NoName:
+                    Plugin.Log.LogWarning(
+                        $"[slots] can't sort {inv.name}: no name for it in "
+                            + "the host's world");
+                    return;
+                case SortPress.StillWaiting:
                     Plugin.Log.LogInfo(
                         $"[slots] sort of {inv.name}: still waiting for the "
                             + "host's contents");
                     return;
-                }
-
-                if (_watched.ContainsKey(inv))
-                {
-                    Check(inv);
-                }
-
-                var changed = Sort(inv);
-                var w = s.Begin(MsgType.StorageSort);
-                StorageSortMessage.Write(w, ObjRef.NameOf(r));
-                Coop.Current.Authority.Request(
-                    w, $"sort {inv.name}", inventory: false);
-                Plugin.Log.LogInfo(
-                    $"[slots] sorted {inv.name} here ({changed.Count} slot(s) "
-                        + "changed); asked the host to sort it");
-                return;
+                case SortPress.PredictAndAsk:
+                    PredictSort(inv, r);
+                    return;
             }
 
             var done = Sort(inv);
             Plugin.Log.LogInfo(
                 $"[slots] sorted {inv.name}: {done.Count} slot(s) changed");
-            if (s.IsHost && done.Count > 0)
+            if (SortRules.SendsSorted(s.IsHost, done.Count, r.Valid))
             {
-                var r = ObjRef.Of(inv.gameObject);
-                if (r.Valid)
-                {
-                    SendChanges(r, done);
-                }
+                SendChanges(r, done);
             }
+        }
+
+        /// <summary>
+        /// What pressing Sort &amp; Stack looks at: the only code that reads
+        /// the cursor and the storage's state for SortRules.Pressed.
+        /// </summary>
+        private SortPressFacts FactsOf(Inventory inv, ObjRef r)
+        {
+            var ctl = Singleton<Controller>.Instance;
+            return new SortPressFacts
+            {
+                Holding = ctl != null && !InvItemClass.isNull(ctl.pickedUpItem),
+                IsClient = _session.IsClient,
+                InWorld = WorldShare.InWorld,
+                Named = r.Valid,
+                Waiting = _awaiting.ContainsKey(inv),
+            };
+        }
+
+        /// <summary>
+        /// Client: sort our copy as a prediction and ask the host to sort.
+        /// The host's contents are our starting point, and what we changed
+        /// before pressing goes first.
+        /// </summary>
+        private void PredictSort(Inventory inv, ObjRef r)
+        {
+            if (_watched.ContainsKey(inv))
+            {
+                Check(inv);
+            }
+
+            var changed = Sort(inv);
+            var w = _session.Begin(MsgType.StorageSort);
+            StorageSortMessage.Write(w, ObjRef.NameOf(r));
+            Coop.Current.Authority.Request(
+                w, $"sort {inv.name}", inventory: false);
+            Plugin.Log.LogInfo(
+                $"[slots] sorted {inv.name} here ({changed.Count} slot(s) "
+                    + "changed); asked the host to sort it");
         }
 
         /// <summary>
@@ -133,25 +145,16 @@ namespace DarkwoodMP.World
 
             var obj = ObjRef.RefOf(StorageSortMessage.Read(r));
             var inv = ObjRef.Resolve<Inventory>(obj);
-            if (inv == null || !Is(inv))
+            var verdict = SortRules.MaySort(FactsOf(from, inv));
+            if (verdict.Reason == Refusal.NoSuchStorage)
             {
-                Coop.Current.Authority.Refuse("no such workbench storage here");
+                Coop.Current.Authority.Refuse(Refusals.Text(verdict));
                 return;
             }
 
             var before = Keys(inv);
-            string why = Containers.Refusal(from, inv);
-            var ctl = Singleton<Controller>.Instance;
-            if (why == null && ctl != null
-                && !InvItemClass.isNull(ctl.pickedUpItem)
-                && ctl.pickedUpItem.slot != null
-                && ctl.pickedUpItem.slot.inventory == inv)
-            {
-                why = "the host is moving an item in it";
-            }
-
             List<SlotChange> done;
-            if (why == null)
+            if (!verdict.Refused)
             {
                 done = Sort(inv);
             }
@@ -174,8 +177,9 @@ namespace DarkwoodMP.World
             }
 
             SendChanges(obj, all, from, toOnly: true);
-            if (why != null)
+            if (verdict.Refused)
             {
+                string why = Refusals.Text(verdict);
                 Coop.Current.Authority.Refuse(why);
                 Plugin.Log.LogInfo(
                     $"[authority] {s.NameOf(from)} sorted {inv.name}: refused "
@@ -191,6 +195,30 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} "
                     + "slot(s) changed here");
+        }
+
+        /// <summary>
+        /// What the host knows of a client's Sort &amp; Stack: the only code
+        /// that reads the storage and the host's cursor for SortRules.MaySort.
+        /// </summary>
+        private SortFacts FactsOf(ulong from, Inventory inv)
+        {
+            if (inv == null || !Is(inv))
+            {
+                return new SortFacts { StorageHere = false };
+            }
+
+            var ctl = Singleton<Controller>.Instance;
+            bool moving = ctl != null
+                && !InvItemClass.isNull(ctl.pickedUpItem)
+                && ctl.pickedUpItem.slot != null
+                && ctl.pickedUpItem.slot.inventory == inv;
+            return new SortFacts
+            {
+                StorageHere = true,
+                Container = Containers.MayChange(from, inv),
+                HostMoving = moving,
+            };
         }
 
         /// <summary>
@@ -228,46 +256,16 @@ namespace DarkwoodMP.World
             }
         }
 
-        private sealed class Stack
-        {
-            public InvItemClass.SaveState State;
-            public InvItem Base;
-            public bool Mergeable =>
-                Base != null && Base.stackable && !Base.hasAmmo
-                    && Base.maxAmount > 1
-                    && (State.upgrades == null || State.upgrades.Count == 0)
-                    && (State.modifiers == null || State.modifiers.Count == 0);
-            /// <summary>
-            /// Fuel kept as durability: poured into another of its type, never
-            /// stacked (see the class comment).
-            /// </summary>
-            public bool Pours =>
-                Base != null && Base.stacksDurability && Base.maxDurability > 0f
-                    && (State.upgrades == null || State.upgrades.Count == 0)
-                    && (State.modifiers == null || State.modifiers.Count == 0);
-            /// <summary>
-            /// Whether the game takes this item away when it's empty
-            /// (InvItemClass.drainDurability).
-            /// </summary>
-            public bool GoneWhenEmpty =>
-                !Base.hasAmmo && !Base.canBeReloaded && !Base.repairable
-                    && !Base.regeneratesWhenInactive && Base.rottenItem == null;
-            public bool Empty =>
-                Pours && GoneWhenEmpty && State.durability <= 0.001f;
-            public bool SameItem(Stack o) => State.type == o.State.type
-                && State.isRecipe == o.State.isRecipe
-                && State.recipeFor == o.State.recipeFor;
-        }
-
         /// <summary>
-        /// Merge and sort this storage's slots here (each changed slot set as
-        /// Set does, so it's the slot's starting point and isn't sent by
-        /// Check). Returns the slots that changed: what each held (key) and
-        /// holds (JSON).
+        /// Merge and sort this storage's slots here as SortRules.Sort says
+        /// (each changed slot set as Set does, so it's the slot's starting
+        /// point and isn't sent by Check). Returns the slots that changed:
+        /// what each held (key) and holds (JSON).
         /// </summary>
         private List<SlotChange> Sort(Inventory inv)
         {
-            var stacks = new List<Stack>();
+            var states = new Dictionary<int, InvItemClass.SaveState>();
+            var stacks = new List<SortStack>();
             for (int i = 0; i < inv.slots.Count; i++)
             {
                 var it = inv.slots[i].invItem;
@@ -276,131 +274,24 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                stacks.Add(new Stack
-                {
-                    State = new InvItemClass.SaveState(it, i),
-                    Base = it.baseClass
-                });
+                var state = new InvItemClass.SaveState(it, i);
+                states[i] = state;
+                stacks.Add(FactsOf(state, it.baseClass));
             }
 
-            // Merge: each mergeable stack tops up the earlier stacks of the
-            // same item, in slot order.
-            for (int b = 0; b < stacks.Count; b++)
-            {
-                var src = stacks[b];
-                if (!src.Mergeable)
-                {
-                    continue;
-                }
-
-                for (int a = 0; a < b && src.State.amount > 0; a++)
-                {
-                    var dst = stacks[a];
-                    if (!dst.Mergeable || !dst.SameItem(src)
-                        || dst.State.amount <= 0
-                        || dst.State.amount >= dst.Base.maxAmount)
-                    {
-                        continue;
-                    }
-
-                    int n = Mathf.Min(
-                        src.State.amount,
-                        dst.Base.maxAmount - dst.State.amount);
-                    dst.State.durability =
-                        (dst.State.amount * dst.State.durability
-                            + src.State.durability * n)
-                            / (dst.State.amount + n);
-                    dst.State.amount += n;
-                    src.State.amount -= n;
-                }
-            }
-
-            // Pour: each item whose fuel is its durability tops up the earlier
-            // ones of its type, in slot order.
-            for (int b = 0; b < stacks.Count; b++)
-            {
-                var src = stacks[b];
-                if (!src.Pours)
-                {
-                    continue;
-                }
-
-                for (int a = 0; a < b && src.State.durability > 0.001f; a++)
-                {
-                    var dst = stacks[a];
-                    float max = dst.Base.maxDurability;
-                    if (!dst.Pours || dst.State.type != src.State.type
-                        || dst.State.durability >= max)
-                    {
-                        continue;
-                    }
-
-                    float n = Mathf.Min(
-                        src.State.durability, max - dst.State.durability);
-                    dst.State.durability += n;
-                    src.State.durability -= n;
-                }
-            }
-
-            stacks.RemoveAll(
-                st => (st.State.amount <= 0 && st.Mergeable) || st.Empty);
-
-            stacks.Sort((x, y) =>
-            {
-                int c = Category(x).CompareTo(Category(y));
-                if (c == 0)
-                {
-                    string left;
-                    if (x.State.isRecipe)
-                    {
-                        left = "~" + x.State.recipeFor;
-                    }
-                    else
-                    {
-                        left = x.State.type;
-                    }
-
-                    string right;
-                    if (y.State.isRecipe)
-                    {
-                        right = "~" + y.State.recipeFor;
-                    }
-                    else
-                    {
-                        right = y.State.type;
-                    }
-
-                    c = string.CompareOrdinal(left, right);
-                }
-
-                if (c == 0)
-                {
-                    c = y.State.amount.CompareTo(x.State.amount);
-                }
-
-                if (c == 0)
-                {
-                    c = y.State.durability.CompareTo(x.State.durability);
-                }
-
-                if (c == 0)
-                {
-                    // stable: equal items keep their order
-                    c = x.State.slotId.CompareTo(y.State.slotId);
-                }
-
-                return c;
-            });
-
+            var sorted = SortRules.Sort(stacks);
             var before = Keys(inv);
             var changes = new List<SlotChange>();
             for (int i = 0; i < inv.slots.Count; i++)
             {
                 string json = "";
-                if (i < stacks.Count)
+                if (i < sorted.Count)
                 {
-                    stacks[i].State.slotId = i;
-                    json = JsonConvert.SerializeObject(stacks[i].State);
+                    var state = states[sorted[i].From];
+                    state.amount = sorted[i].Amount;
+                    state.durability = sorted[i].Durability;
+                    state.slotId = i;
+                    json = JsonConvert.SerializeObject(state);
                 }
 
                 if (json == Json(inv, i))
@@ -420,15 +311,64 @@ namespace DarkwoodMP.World
             return changes;
         }
 
-        private static int Category(Stack s)
+        /// <summary>
+        /// What Sort &amp; Stack looks at in one filled slot: the only code
+        /// that reads an item's saved state and its baseClass for
+        /// SortRules.Sort.
+        /// </summary>
+        private static SortStack FactsOf(
+            InvItemClass.SaveState state, InvItem item)
         {
-            if (s.Base != null && s.Base.categories != null
-                && s.Base.categories.Count > 0)
+            int upgrades = 0;
+            if (state.upgrades != null)
             {
-                return (int)s.Base.categories[0];
+                upgrades = state.upgrades.Count;
             }
 
-            return 10000;
+            int modifiers = 0;
+            if (state.modifiers != null)
+            {
+                modifiers = state.modifiers.Count;
+            }
+
+            var stack = new SortStack
+            {
+                Slot = state.slotId,
+                Type = state.type,
+                Amount = state.amount,
+                Durability = state.durability,
+                Recipe = state.isRecipe,
+                RecipeFor = state.recipeFor,
+                Upgrades = upgrades,
+                Modifiers = modifiers,
+                Category = SortRules.NoCategory,
+            };
+
+            if (item == null)
+            {
+                return stack;
+            }
+
+            int category = SortRules.NoCategory;
+            if (item.categories != null && item.categories.Count > 0)
+            {
+                category = (int)item.categories[0];
+            }
+
+            return stack with
+            {
+                HasBase = true,
+                Stackable = item.stackable,
+                HasAmmo = item.hasAmmo,
+                MaxAmount = item.maxAmount,
+                StacksDurability = item.stacksDurability,
+                MaxDurability = item.maxDurability,
+                Reloadable = item.canBeReloaded,
+                Repairable = item.repairable,
+                Regenerates = item.regeneratesWhenInactive,
+                Rots = item.rottenItem != null,
+                Category = category,
+            };
         }
 
         internal const string ButtonName = "DarkwoodMP_SortStack";
