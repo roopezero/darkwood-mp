@@ -75,7 +75,7 @@ namespace DarkwoodMP.Sync.Players
         }
 
         /// The puppet is seen: not a spectator, and in the same place as
-        /// our player (Locations.SamePlace(Away, Place)).
+        /// our player (Whereabouts.SamePlace(Away, Place)).
         public static bool Shown(bool spectating, bool samePlace) =>
             !spectating && samePlace;
 

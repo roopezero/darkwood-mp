@@ -39,7 +39,7 @@ namespace DarkwoodMP.World.Dragging
         public bool Host { get; init; }
 
         /// The host runs the area our player is in
-        /// (Locations.HostRunsHere).
+        /// (Whereabouts.HostRunsHere).
         public bool HostRunsHere { get; init; }
 
         /// It has a collider (Loose.Col).

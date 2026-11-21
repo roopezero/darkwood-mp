@@ -207,7 +207,7 @@ namespace DarkwoodMP.World
         /// Client: our player is somewhere the host doesn't run: a dream of our
         /// own (not the shared one, DreamSync.Shared), also while going into
         /// it, or a separate location the host didn't place
-        /// (Locations.HostRunsHere). What happens there is ours alone, as in
+        /// (Whereabouts.HostRunsHere). What happens there is ours alone, as in
         /// single player.
         /// </summary>
         public static bool InOwnArea()
@@ -225,7 +225,7 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            return !Locations.HostRunsHere();
+            return !Places.Whereabouts.HostRunsHere();
         }
 
         /// <summary>

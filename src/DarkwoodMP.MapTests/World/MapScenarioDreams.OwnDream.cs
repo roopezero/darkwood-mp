@@ -2,6 +2,7 @@ using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -50,10 +51,10 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"dreaming {presetName} (shared {shared}) at "
-                    + $"{Locations.Current()}; host runs here "
-                    + $"{Locations.HostRunsHere()}";
+                    + $"{Whereabouts.Current()}; host runs here "
+                    + $"{Whereabouts.HostRunsHere()}";
             if (!D.dreaming || DreamSync.SharedNow != null
-                || Locations.HostRunsHere())
+                || Whereabouts.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");
             }

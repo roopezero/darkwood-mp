@@ -446,7 +446,6 @@ namespace DarkwoodMP
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);
-            Locations.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             UpdateLocalName();
@@ -2355,7 +2354,12 @@ namespace DarkwoodMP
             }
 
             Prologue.Update();
-            Locations.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Locations.Update();
+            }
+
             coop = Coop.Current;
             if (coop != null)
             {

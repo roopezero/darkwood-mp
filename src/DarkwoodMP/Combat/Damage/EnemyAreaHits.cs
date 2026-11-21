@@ -108,7 +108,8 @@ namespace DarkwoodMP.Combat
         /// (a dream, or a separate location the host didn't place for us), so
         /// nothing the host's enemies do reaches them there.
         /// </summary>
-        public static bool PlayerAway() => !World.Locations.HostRunsHere();
+        public static bool PlayerAway() =>
+            !World.Places.Whereabouts.HostRunsHere();
 
         private static IEnumerable<NetPlayerProxy> LivingProxies()
         {

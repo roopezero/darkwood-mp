@@ -185,6 +185,10 @@ namespace DarkwoodMP
         /// A player dead for good watching the others.
         public readonly World.Spectating.Spectator Spectator;
 
+        /// Where separate locations stand, and the host's locations kept
+        /// running for the joiners in them.
+        public readonly World.Places.Locations Locations;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -250,6 +254,8 @@ namespace DarkwoodMP
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
             Spectator = new World.Spectating.Spectator(this);
+
+            Locations = new World.Places.Locations(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -16,7 +16,7 @@ namespace DarkwoodMP.Combat.Joiners
         /// RemotePlayer.Last isn't null.
         public bool HasSnapshot { get; init; }
 
-        /// Locations.HostRunsAt(snapshot's place, the stand-in's position)
+        /// Whereabouts.HostRunsAt(snapshot's place, the stand-in's position)
         /// isn't null: the host runs that location for them. Read only when
         /// Hosting, Away and HasSnapshot are all true.
         public bool HostRuns { get; init; }

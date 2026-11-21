@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using DarkwoodMP.World.Places;
 using Object = UnityEngine.Object;
 using static DarkwoodMP.World.MapScenario;
 
@@ -203,7 +204,7 @@ namespace DarkwoodMP.World
             if (et == null)
             {
                 string wanted = a[0];
-                string location = Locations.Current();
+                string location = Whereabouts.Current();
                 if (location == null)
                 {
                     location = "the world";
@@ -230,7 +231,7 @@ namespace DarkwoodMP.World
             global::EventTrigger.Type kind = t.type;
             string eventName = a[0];
             string spot = Pos(et.transform);
-            string place = Locations.Current();
+            string place = Whereabouts.Current();
             if (place == null)
             {
                 place = "the world";

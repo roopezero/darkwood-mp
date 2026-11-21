@@ -101,7 +101,7 @@ namespace DarkwoodMP.Sync.Players
         public bool AfterNight;
         /// <summary>
         /// Where, when Away: the location's name, or "dream:" and the dream's
-        /// (World.Locations.Current).
+        /// (World.Places.Whereabouts.Current).
         /// </summary>
         public string Place = "";
         /// <summary>

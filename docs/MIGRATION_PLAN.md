@@ -557,6 +557,13 @@ Finish with `tools/run-test.sh full`.
         reward's part of `ControllerStartAfterNight` does nothing with no
         session.
   - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
+        `Locations` done: it is `CoopSession.Locations`
+        (`World/Places/Locations`), with the host's kept locations as its
+        `KeptLocations` and its patches in `LocationPatches.cs`. Where a
+        player is (`Current`, `SamePlace`, `HostRunsHere`, `HostRunsAt`,
+        `SharedDream`) is the stateless `Whereabouts`, which also works
+        with no session. The build's location names are read once per
+        session, not once per game.
 - [ ] 7.3 Skills and progress.
   - [x] Part a: `DreamSync`. It is `CoopSession.Dreaming`
         (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'

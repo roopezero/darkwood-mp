@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
 
@@ -12,6 +13,20 @@ namespace DarkwoodMP.World
     /// <summary>A location's characters: sight, saves, taming, noise.</summary>
     public static partial class MapScenarioLocations
     {
+        /// <summary>
+        /// Host: whether we keep this location running for a joiner in it.
+        /// </summary>
+        private static bool KeptForOthers(Location loc)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return false;
+            }
+
+            return coop.Locations.Kept.KeptForOthers(loc);
+        }
+
         /// <summary>
         /// What a character's sight check
         /// (Character.checkForCharactersInViewRange, canSeeEnemy) finds of
@@ -138,7 +153,7 @@ namespace DarkwoodMP.World
             if (o.playerInOutsideLocation)
             {
                 r.Fail(
-                    $"our player is in {Locations.Current()}: this checks a "
+                    $"our player is in {Whereabouts.Current()}: this checks a "
                         + "location kept only for the joiner");
                 yield break;
             }
@@ -159,7 +174,7 @@ namespace DarkwoodMP.World
             var os = new OutsideLocations.SaveState(o);
             r.Info =
                 $"saved: {loc.name} entered {ls.entered} (live: entered "
-                    + $"{loc.entered}, kept {Locations.KeptForOthers(loc)}), " +
+                    + $"{loc.entered}, kept {KeptForOthers(loc)}), " +
                      $"our player in a location {os.playerInOutsideLocation}, "
                     + $"current '{os.currentLocationName}'";
             if (ls.entered)
@@ -170,7 +185,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"the save puts our player in a location: {r.Info}");
             }
-            else if (!loc.entered || !Locations.KeptForOthers(loc))
+            else if (!loc.entered || !KeptForOthers(loc))
             {
                 r.Fail($"saving switched it off for the joiner: {r.Info}");
             }
@@ -178,7 +193,7 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Characters within a location's reach of its marker
-        /// (Locations.HostRunsAt's 15000), active or not.
+        /// (Whereabouts.HostRunsAt's 15000), active or not.
         /// </summary>
         private static IEnumerable<Character> LocationCharacters(
             Location loc) =>
@@ -413,7 +428,7 @@ namespace DarkwoodMP.World
                 on = LocationCharacters(loc).Count(
                     c => c.alive && c.gameObject.activeInHierarchy
                         && c.enabled);
-                if (!Locations.KeptForOthers(loc) && !loc.entered && on == 0
+                if (!KeptForOthers(loc) && !loc.entered && on == 0
                     && Joiner() == null)
                 {
                     break;
@@ -424,11 +439,11 @@ namespace DarkwoodMP.World
 
             int dead = LocationCharacters(loc).Count(c => !c.alive);
             r.Info =
-                $"{loc.name}: kept {Locations.KeptForOthers(loc)}, entered "
+                $"{loc.name}: kept {KeptForOthers(loc)}, entered "
                     + $"{loc.entered}, characters running {on}, dead ones "
                     + $"{dead}, " +
                      $"a joiner in a location we run: {Joiner() != null}";
-            if (Locations.KeptForOthers(loc) || loc.entered || on > 0
+            if (KeptForOthers(loc) || loc.entered || on > 0
                 || Joiner() != null)
             {
                 r.Fail($"it still runs: {r.Info}");

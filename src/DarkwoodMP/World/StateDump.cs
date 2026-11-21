@@ -703,7 +703,7 @@ namespace DarkwoodMP.World
                     }
                 }
 
-                ctx.Set("place", Locations.Current());
+                ctx.Set("place", Places.Whereabouts.Current());
             });
 
             AddLocal("popups", ctx =>

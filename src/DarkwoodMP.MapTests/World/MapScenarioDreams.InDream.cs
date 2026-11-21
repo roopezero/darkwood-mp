@@ -3,6 +3,7 @@ using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -35,7 +36,7 @@ namespace DarkwoodMP.World
             sb.Append(
                 $"dream {loc.name} at {Fmt(loc.transform.position)}, us at "
                     + $"{Fmt(P.transform.position)}, hostRunsHere "
-                    + $"{Locations.HostRunsHere()}; ");
+                    + $"{Whereabouts.HostRunsHere()}; ");
             foreach (var c in Object.FindObjectsOfType<Character>(true))
             {
                 if (StateDump.Flat(
@@ -298,7 +299,7 @@ namespace DarkwoodMP.World
                 c => !ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy
                     && !Combat.NetEnemies.Frozen.Contains(c)).ToList();
             string line =
-                $"host runs it here {Locations.HostRunsHere()}; the host's "
+                $"host runs it here {Whereabouts.HostRunsHere()}; the host's "
                     + $"shown {puppets}; ours running {running.Count}";
             string names = "";
             if (running.Count > 0)
@@ -307,7 +308,8 @@ namespace DarkwoodMP.World
             }
 
             r.Info = line + names;
-            if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0)
+            if (!Whereabouts.HostRunsHere() || puppets == 0
+                || running.Count > 0)
             {
                 r.Fail($"the dream's characters aren't the host's: {r.Info}");
             }

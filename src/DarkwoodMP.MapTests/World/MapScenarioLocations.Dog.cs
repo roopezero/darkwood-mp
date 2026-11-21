@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using DarkwoodMP.Combat;
 using UnityEngine;
+using DarkwoodMP.World.Places;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
 
@@ -235,7 +236,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail(
                     "no copy of the host's dog near our player in "
-                        + $"{Locations.Current()}");
+                        + $"{Whereabouts.Current()}");
                 yield break;
             }
 

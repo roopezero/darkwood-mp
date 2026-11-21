@@ -41,7 +41,7 @@ namespace DarkwoodMP.Combat
         public bool Away;
         /// <summary>
         /// The separate location the player is in, when the host has it at the
-        /// same spot and runs it for them (World.Locations.HostRunsAt,
+        /// same spot and runs it for them (Whereabouts.HostRunsAt,
         /// KeepRunning): the host's enemies there see, chase and hit this proxy
         /// as in the world.
         /// </summary>

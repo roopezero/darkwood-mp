@@ -21,11 +21,27 @@ namespace DarkwoodMP.World
     /// (its rigidbody given a speed, as a kick or a blast would), and the push
     /// sent when it comes to rest is logged. At the end it waits for the
     /// location the observer asked about (LocationAsk) to be loaded here, where
-    /// it was promised (World.Locations logs the spot and turn it got next to
-    /// the ones promised).
+    /// it was promised (World.Places.Locations logs the spot and turn it got
+    /// next to the ones promised).
     /// </summary>
     public static class AwayTest
     {
+        /// <summary>
+        /// Host: a location promised to a joiner is still to load, or none has
+        /// loaded yet.
+        /// </summary>
+        private static bool LoadingForOthers()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return false;
+            }
+
+            var locations = coop.Locations;
+            return locations.Busy || locations.LoadedForOthers == 0;
+        }
+
         private static int ActiveNear(Vector3 at)
         {
             int n = 0;
@@ -211,17 +227,22 @@ namespace DarkwoodMP.World
             // The observer (worldobs.py --ask-location) asked where a location
             // stands: it's loaded here too, without going there.
             wait = Time.realtimeSinceStartup + 60f;
-            while ((Locations.Busy || Locations.LoadedForOthers == 0)
-                && Time.realtimeSinceStartup < wait)
+            while (LoadingForOthers() && Time.realtimeSinceStartup < wait)
             {
                 yield return null;
             }
 
-            int loaded = Locations.LoadedForOthers;
+            int loaded = 0;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                loaded = coop.Locations.LoadedForOthers;
+            }
+
             string place = "the world";
             if (PlayerCapture.LocalAway())
             {
-                place = Locations.Current();
+                place = Places.Whereabouts.Current();
             }
 
             Plugin.Log.LogInfo(

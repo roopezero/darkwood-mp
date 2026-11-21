@@ -111,7 +111,8 @@ namespace DarkwoodMP.Combat
             Location loc = null;
             if (hosting && r.Away && snap != null)
             {
-                loc = World.Locations.HostRunsAt(snap.Place, t.position);
+                loc = World.Places.Whereabouts.HostRunsAt(
+                    snap.Place, t.position);
             }
 
             Presence presence = ProxyRules.PresenceOf(new PresenceFacts

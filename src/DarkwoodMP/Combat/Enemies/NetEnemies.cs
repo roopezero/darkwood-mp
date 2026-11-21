@@ -120,8 +120,8 @@ namespace DarkwoodMP.Combat
         /// <summary>
         /// Client: a character of an area only this player is in: a dream of
         /// its own (the shared level dream is the host's,
-        /// World.Locations.SharedDream), or a separate location the host didn't
-        /// place for us (World.Locations.HostRunsHere), or anything still in a
+        /// Whereabouts.SharedDream), or a separate location the host didn't
+        /// place for us (Whereabouts.HostRunsHere), or anything still in a
         /// scene of its own. The host doesn't run it, so it runs here, as in
         /// single player. A separate location the host placed is the host's to
         /// run, as the world is (it loads it at the same spot even when its
@@ -152,7 +152,7 @@ namespace DarkwoodMP.Combat
             // way in (a stage's start event fires before the player stands
             // there), when the distance below doesn't tell yet. Not a shared
             // level dream's (or the epilogue's): the host runs those
-            // (World.Locations.SharedDream); a prologue stage each game runs.
+            // (Whereabouts.SharedDream); a prologue stage each game runs.
             var d = Singleton<Dreams>.Instance;
             if (d != null && d.dreamLocation != null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream)
@@ -163,7 +163,7 @@ namespace DarkwoodMP.Combat
                 return true;
             }
 
-            if (World.Locations.HostRunsHere())
+            if (World.Places.Whereabouts.HostRunsHere())
             {
                 return false;
             }

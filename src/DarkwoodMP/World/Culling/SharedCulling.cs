@@ -16,7 +16,7 @@ namespace DarkwoodMP.World.Culling
     /// grid and calls setGrid), so the world's grid is also walked, around the
     /// other players only, and the enemies near them keep running. In the same
     /// way, the grid of each separate location the host runs for a joiner in it
-    /// (NetPlayerProxy.InLocation, World.Locations.KeepRunning) is walked
+    /// (NetPlayerProxy.InLocation, KeptLocations.KeepRunning) is walked
     /// around the joiners there, whether or not the host's player is in it.
     ///
     /// One pass runs per grid at a time: a new refresh stops the grid's pass

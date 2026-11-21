@@ -10,7 +10,7 @@ namespace DarkwoodMP.Sync.Players
         /// Its root is there (not destroyed).
         public bool HasRoot { get; init; }
 
-        /// PuppetRules.IsAway: its own, not Locations.SamePlace.
+        /// PuppetRules.IsAway: its own, not Whereabouts.SamePlace.
         public bool Away { get; init; }
 
         /// PuppetRules.IsSpectating.
