@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Infections;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -55,9 +54,79 @@ namespace DarkwoodMP.World
         public int Growing { get; set; }
 
         /// <summary>
+        /// Before Infection.disappear: whether the patch was fading already
+        /// (or isn't there), so the call can't have started its fade.
+        /// </summary>
+        public static bool WasFading(Infection inf)
+        {
+            return inf == null || inf.disappearing;
+        }
+
+        /// <summary>
+        /// After Infection.disappear: send the clear if the rules say it's
+        /// this game's to send.
+        /// </summary>
+        public void Disappeared(Infection inf, bool wasFading)
+        {
+            // A client's own player's burning weapon only; its copy of the
+            // host's fire clears what the host's does, and the host says so.
+            if (!InfectionRules.SendsClear(ClearOf(inf, wasFading)))
+            {
+                return;
+            }
+
+            Cleared(inf);
+        }
+
+        /// <summary>
+        /// Before Infection.spawnInfection: whether it runs. One that runs
+        /// counts as growing until EndGrowing.
+        /// </summary>
+        public bool BeginSpread()
+        {
+            bool spreads = InfectionRules.MaySpread(NetEnemies.ClientMode);
+            if (spreads)
+            {
+                Growing++;
+            }
+
+            return spreads;
+        }
+
+        /// <summary>
+        /// Before Character.waitToSpawnEgg: a spider laying grows infection.
+        /// </summary>
+        public void BeginLaying()
+        {
+            Growing++;
+        }
+
+        /// <summary>
+        /// A counted spread or laying ended (or threw).
+        /// </summary>
+        public void EndGrowing()
+        {
+            Growing = InfectionRules.Left(Growing);
+        }
+
+        /// <summary>
+        /// After Infection.init: send the patch if the world made it by
+        /// itself on the host.
+        /// </summary>
+        public void Started(Infection inf)
+        {
+            if (!InfectionRules.SendsSpawned(SpawnOf(inf)))
+            {
+                return;
+            }
+
+            Spawned(inf);
+        }
+
+        /// <summary>
         /// A patch was cleared in this game, by something that's ours to send.
         /// </summary>
-        internal void Cleared(Infection inf)
+        private void Cleared(Infection inf)
         {
             var r = ObjRef.Of(inf.gameObject);
             if (!r.Valid)
@@ -227,7 +296,7 @@ namespace DarkwoodMP.World
         /// What the infection rules know of a patch told to fade: whether it
         /// was fading before the call (wasFading), and the game's state now.
         /// </summary>
-        internal ClearFacts ClearOf(Infection inf, bool wasFading)
+        private ClearFacts ClearOf(Infection inf, bool wasFading)
         {
             var facts = new ClearFacts
             {
@@ -248,7 +317,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Host: what the infection rules know of a patch that starts.
         /// </summary>
-        internal SpawnFacts SpawnOf(Infection inf)
+        private SpawnFacts SpawnOf(Infection inf)
         {
             var s = S;
             return new SpawnFacts
@@ -325,7 +394,7 @@ namespace DarkwoodMP.World
         /// Host: a new patch was made by the world (spread or a spider): send
         /// it.
         /// </summary>
-        internal void Spawned(Infection inf)
+        private void Spawned(Infection inf)
         {
             long id = HostIds.NewId();
             ObjRef.RegisterSpawned(id, inf.gameObject);
@@ -423,114 +492,6 @@ namespace DarkwoodMP.World
             {
                 _coop.Guards.Replaying = false;
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(Infection), nameof(Infection.disappear))]
-    static class InfectionDisappearPatch
-    {
-        static void Prefix(Infection __instance, out bool __state) =>
-            __state = __instance == null || __instance.disappearing;
-        static void Postfix(Infection __instance, bool __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            // A client's own player's burning weapon only; its copy of the
-            // host's fire clears what the host's does, and the host says so.
-            var facts = coop.Infections.ClearOf(__instance, __state);
-            if (!InfectionRules.SendsClear(facts))
-            {
-                return;
-            }
-
-            coop.Infections.Cleared(__instance);
-        }
-    }
-
-    /// <summary>
-    /// A patch spreading: the host's, sent; a client's copy never spreads by
-    /// itself.
-    /// </summary>
-    [HarmonyPatch(typeof(Infection), "spawnInfection")]
-    static class InfectionSpreadPatch
-    {
-        static bool Prefix(out bool __state)
-        {
-            __state = InfectionRules.MaySpread(NetEnemies.ClientMode);
-            CoopSession coop = Coop.Current;
-            if (__state && coop != null)
-            {
-                coop.Infections.Growing++;
-            }
-
-            return __state;
-        }
-
-        static System.Exception Finalizer(
-            System.Exception __exception, bool __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (__state && coop != null)
-            {
-                InfectionSync infections = coop.Infections;
-                infections.Growing = InfectionRules.Left(infections.Growing);
-            }
-
-            return __exception;
-        }
-    }
-
-    /// <summary>
-    /// A spider laying its eggs: a patch of infection where it stands (the
-    /// host's spiders only).
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "waitToSpawnEgg")]
-    static class SpiderLaysInfectionPatch
-    {
-        static void Prefix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Infections.Growing++;
-            }
-        }
-
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                InfectionSync infections = coop.Infections;
-                infections.Growing = InfectionRules.Left(infections.Growing);
-            }
-
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch(typeof(Infection), nameof(Infection.init))]
-    static class InfectionInitPatch
-    {
-        static void Postfix(Infection __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            var facts = coop.Infections.SpawnOf(__instance);
-            if (!InfectionRules.SendsSpawned(facts))
-            {
-                return;
-            }
-
-            coop.Infections.Spawned(__instance);
         }
     }
 }
