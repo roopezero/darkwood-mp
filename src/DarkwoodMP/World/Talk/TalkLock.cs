@@ -329,7 +329,7 @@ namespace DarkwoodMP.World.Talk
 
             // What the dialogue did goes first, so it's there before the NPC is
             // free for the next player.
-            FlagsSync instance = _coop.Story;
+            var instance = _coop.Story;
             if (instance != null)
             {
                 instance.FlushNow();

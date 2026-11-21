@@ -207,7 +207,7 @@ Ranked by what two players would notice first in normal play.
 | Lights in the "shadows" night event | One lamp picked at random stays, others flicker off. Changes `isOn`, `disabled` | `Player` (around line 1205) -> `turnOn`, `enable`, `empDisable(30)` | Partly: runs in every game with its own random pick; the `turnOn` is sent as a player action (Player is a "player side" type), so games can disagree |
 | Item re-enables after a disable | Timer. Changes `disabled` | `Item.Update` -> `Item.enable` | Local in each game (fine once the disable is shared) |
 | ExperienceMachine (the stove/pot where you cook for exp) | Cook. Changes the player's exp and items | `ExperienceMachine.tryToCook` -> `Player.setExperienceMachine`, `LevelingMenu` | Each player's own (not world state) |
-| ExperienceMachine on an NPC | Talk. Changes dialogue flags | `tryToTalk` -> `NPC.talkTo` | Shared (World/FlagsSync.cs) |
+| ExperienceMachine on an NPC | Talk. Changes dialogue flags | `tryToTalk` -> `NPC.talkTo` | Shared (World/Story/FlagsSync.cs) |
 | Feeder | Built / enabled. Changes `isEnabled` | `Constructible.construct` -> `Feeder.enable` | Shared (World/Construction.cs) |
 | Feeder | Use once a day for an effect. Changes `Active`, `isEnabled` (saved) | `Feeder.onClick` -> `activate` (`makeInactive`, player effect); `Controller.onDayStart` -> `makeActive` | Shared: World/ObjectActions.cs `FeederUsed`, a joiner's waits for the host (gap 36) |
 | TimeSkip object | Skip to dusk. Changes `Controller.currentTime` | `Item.activate` -> `Controller.useTimeSkip` | n/a: never happens; `Item.activate` calls it only when `Controller.isHardNight` is false, and `Controller.Awake` sets it true for good (gap 16) |
@@ -250,9 +250,9 @@ Ranked by what two players would notice first in normal play.
 | Thing | Interaction | Game method(s) | Mod status |
 |---|---|---|---|
 | Note lying in the world (`JournalNoteReference` on an Item) | Pick up / read. Changes journal notes, map | `JournalNoteReference.pickup` (+ `InvItem.markLocationsOnMap` for maps), then `Destroy` | Shared: the entry by FlagsSync, the object's removal as `Removed` (gap 32) |
-| Key lying in the world (`KeyReference`) | Pick up. Changes journal keys | `KeyReference.pickup` -> `journal.keysDict`, `Destroy` | Partly: the key is shared (World/FlagsSync.cs); the object stays for the others (harmless: they already have it) |
+| Key lying in the world (`KeyReference`) | Pick up. Changes journal keys | `KeyReference.pickup` -> `journal.keysDict`, `Destroy` | Partly: the key is shared (World/Story/FlagsSync.cs); the object stays for the others (harmless: they already have it) |
 | Quest item lying in the world (`QuestItemReference`) | Pick up. Changes journal items | `QuestItemReference.pickup` -> `journal.itemsDict`, `Destroy` | Partly: as keys |
-| Map | Open, places found. Changes found places, directions | `Map.open`, `MapElement.initialize`, `Map.addElement` | Shared (World/FlagsSync.cs: journal); the map window is each player's own |
+| Map | Open, places found. Changes found places, directions | `Map.open`, `MapElement.initialize`, `Map.addElement` | Shared (World/Story/FlagsSync.cs: journal); the map window is each player's own |
 | Examinable object | Examine. Changes `examined`, message, `onExamine` trigger | `Examinable.examine` | Not shared; only a message (its `onExamine` GameEvents run locally) |
 
 ### Story objects and events
@@ -321,13 +321,13 @@ Ranked by what two players would notice first in normal play.
 | Thing | Interaction | Game method(s) | Mod status |
 |---|---|---|---|
 | NPC objects (traders, wolf, quest characters) | Run their own `Character` AI and `NPC` component | `NPC.init`, `initNPCState`, `Character.Update` | Each player's own: each game runs its own copy ("NPCs stay each player's own", `Combat/NetEnemies.cs`). Position isn't shared |
-| NPC state (reputation, wants to talk, attacked by, dead) | Kept in `Flags.npcStates` | `Flags.getNPCState`, `NPC.setWantToTalk`, `setDontWantToTalk` | Shared (`World/FlagsSync.cs`, every 2 s); reputation as changes, the after-night reward once a day (gap 59) |
+| NPC state (reputation, wants to talk, attacked by, dead) | Kept in `Flags.npcStates` | `Flags.getNPCState`, `NPC.setWantToTalk`, `setDontWantToTalk` | Shared (`World/Story/FlagsSync.cs`, every 2 s); reputation as changes, the after-night reward once a day (gap 59) |
 | NPC death | `die` for an NPC | `Character.die` | Shared: `NpcDied` (`World/WorldActions.cs`, `NpcDiedPatch`), host checks reach |
 | Night trader killed | Sets `nightTrader_killedYesterday`, gives the killer the `Transition_onKillNightTrader` dream, then lie-down, then `endAfterNight` | `Character.die` (isNightTrader), `Player.special_onKillNightTrader` | Shared: the replayed `NpcDied` calls `die()` in every game, and `special_onKillNightTrader` is skipped there while replaying, so only the killer dreams (gap 24; read, not tested) |
 | Hostile NPCs | An attacked NPC turns on the player | `Character.reactToCharacter`, faction change, `attackOrRunAway` | Yes: the host runs it as an enemy while it's hostile (Combat.HostileNpcs; gap 33) |
 | NPC movement by script | GameEvents move/teleport NPCs, set activities | `GameEvent` types `moveMe`, `moveTo`, `teleportObjects`, `addActivity` | Shared when a player's event does it (shared part, World/ScriptedEvents.cs); world-driven events run in each game |
-| Talking | Wolf location flags, oven first-use flag, `onEnterDialogue` trigger, opens the window | `NPC.talkTo`, `DialogueWindow.initiateDialogue` | Shared: flags (World/FlagsSync.cs); one talker per NPC, the others are told who (World/Talk/TalkLock.cs, gap 23) |
-| Dialogue progress | Which lines and boards were said, enabled dialogues, special options | `CharacterDialogue.SaveState`, `DialogueWindow.displayNextBoard`, `finishedElement` | Shared: `d:` entries (`World/FlagsSync.cs`) |
+| Talking | Wolf location flags, oven first-use flag, `onEnterDialogue` trigger, opens the window | `NPC.talkTo`, `DialogueWindow.initiateDialogue` | Shared: flags (World/Story/FlagsSync.cs); one talker per NPC, the others are told who (World/Talk/TalkLock.cs, gap 23) |
+| Dialogue progress | Which lines and boards were said, enabled dialogues, special options | `CharacterDialogue.SaveState`, `DialogueWindow.displayNextBoard`, `finishedElement` | Shared: `d:` entries (`World/Story/FlagsSync.cs`) |
 | Outcome: give item / remove item | Item added to (or taken from) the talker's inventory | `displayNextBoard` (`giveItem`, `removeItem`) | Each player's own (the talker's inventory). The dialogue's progress goes out when it closes, before the talk lock lets go, and joiners wait 1.5 s after someone lets go, so a one-time reward isn't given twice (gap 60). A journal item, key or note handed over leaves every journal (gap 61) |
 | Outcome: reputation | `npc.reputation += amount` | `displayNextBoard` (`modifyReputation`) | Shared as a change (`r:` in `World/FlagsSync.cs`, gap 59) |
 | Outcome: world flag | `Flags.setFlag` | `displayNextBoard` (`worldFlag`) | Shared (`World/FlagsSync.cs`) |

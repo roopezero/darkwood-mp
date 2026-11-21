@@ -50,7 +50,7 @@ namespace DarkwoodMP.World
 
             string name = npc.name, stock = StockOf(npc);
             // it goes with the trade
-            FlagsSync instance = _coop.Story;
+            var instance = _coop.Story;
             if (instance != null)
             {
                 instance.Absorb(name, repChange);
@@ -65,7 +65,7 @@ namespace DarkwoodMP.World
             // the trade's is built in.
             if (!_session.IsHost)
             {
-                FlagsSync flags = _coop.Story;
+                var flags = _coop.Story;
                 if (flags != null)
                 {
                     flags.FlushNow();
@@ -189,7 +189,7 @@ namespace DarkwoodMP.World
 
                 // the reputation is in the NPC's state, here whether he is or
                 // not
-                FlagsSync instance = _coop.Story;
+                var instance = _coop.Story;
                 if (instance != null)
                 {
                     instance.AddReputation(name, repChange);
@@ -219,7 +219,7 @@ namespace DarkwoodMP.World
             }
 
             Apply(npc, stock);
-            FlagsSync flags = _coop.Story;
+            var flags = _coop.Story;
             if (flags != null)
             {
                 flags.AddReputation(name, repChange);

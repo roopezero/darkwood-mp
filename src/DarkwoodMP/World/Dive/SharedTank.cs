@@ -74,7 +74,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            FlagsSync.SetModFlag(Singleton<Flags>.Instance, Flag, true, 0);
+            Story.StoryApply.SetModFlag(
+                Singleton<Flags>.Instance, Flag, true, 0);
             Plugin.Log.LogInfo(
                 "[world] our player holds a full oxygen tank: every player "
                     + $"can dive in the village cellar now ({Flag})");

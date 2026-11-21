@@ -155,7 +155,7 @@ namespace DarkwoodMP
         public readonly World.Scripted.FarEvents FarEvents;
 
         /// The story's state (flags, NPCs, dialogues, the journal), shared.
-        public readonly World.FlagsSync Story;
+        public readonly World.Story.FlagsSync Story;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -212,7 +212,7 @@ namespace DarkwoodMP
             Hostiles = new Combat.NpcHostility(this);
             Owed = new World.Owed.OwedParts(this);
             FarEvents = new World.Scripted.FarEvents(this);
-            Story = new World.FlagsSync(this);
+            Story = new World.Story.FlagsSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// A "journal updated" popup the game has no text for isn't shown

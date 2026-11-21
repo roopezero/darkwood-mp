@@ -1,7 +1,6 @@
 using System;
-using DarkwoodMP.World.Story;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// The "journal updated" popup (Journal.showJournalInfoPopup) shows the
