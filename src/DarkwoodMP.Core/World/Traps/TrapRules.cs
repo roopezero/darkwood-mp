@@ -1,8 +1,8 @@
 namespace DarkwoodMP.World.Traps
 {
     /// Traps: the host's checks of a client's TrapFired, TrapSwitched and
-    /// TrapDisarm (the plugin's WorldActions.Allowed), and a client's side
-    /// of a trap going off (TrapFiredPatch, ClientTrapIgnoresCharacters).
+    /// TrapDisarm (the plugin's TrapSync.Allowed), and a client's side
+    /// of a trap going off (TrapSync).
     public static class TrapRules
     {
         /// Host: whether a client's player could have set this trap off.
@@ -76,7 +76,7 @@ namespace DarkwoodMP.World.Traps
         }
 
         /// Whether this game's own player, or something it threw, set the
-        /// trap off (TrapFiredPatch.Ours). A level's trigger zone (no
+        /// trap off (TrapSync.IsOurs). A level's trigger zone (no
         /// Item, not set by a player) never is. The host counts every trap
         /// as its own; a client counts only those set off by a Player or a
         /// ThrownItem, and none that is ours alone.
@@ -101,7 +101,7 @@ namespace DarkwoodMP.World.Traps
         }
 
         /// Client: whether what the trap spawns waits for the host's yes
-        /// (TrapFiredPatch's prefix): the outermost call, while sharing, a
+        /// (TrapSync.BeforeTrigger): the outermost call, while sharing, a
         /// trap not loaded from the save, that spawns something, set off
         /// by us.
         public static bool HoldsSpawn(in HoldFacts trap)
@@ -154,7 +154,7 @@ namespace DarkwoodMP.World.Traps
         }
 
         /// Client: whether a trap ignores what touched it here
-        /// (ClientTrapIgnoresCharactersPatch): the host's enemies, and our
+        /// (TrapSync.BeforeCollision): the host's enemies, and our
         /// frozen copies of them, set traps off in the host's game.
         public static bool Ignores(in TouchFacts touch)
         {

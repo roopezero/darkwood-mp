@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Traps;
 using HarmonyLib;
 using UnityEngine;
 
@@ -122,9 +121,6 @@ namespace DarkwoodMP.World
             ShadowArmorDied = 131,
         }
 
-        private static readonly System.Reflection.MethodInfo OnAfterTrigger =
-            AccessTools.Method(typeof(Trigger), "OnAfterTrigger");
-
         /// <summary>
         /// "--dwmp-debug-world": log every shared-world message sent and
         /// applied.
@@ -137,7 +133,6 @@ namespace DarkwoodMP.World
         {
             s.Register(MsgType.WorldAction, OnAction);
             s.Register(MsgType.ObjState, OnObjState);
-            s.OnSessionEnded += TrapFiredPatch.Reset;
         }
 
         /// <summary>
@@ -516,45 +511,10 @@ namespace DarkwoodMP.World
                 }
                 else if (a == Action.TrapDisarm)
                 {
-                    // Only ever a request to the host: roll it here, as the
-                    // game rolls it for its own player.
-                    var item = ObjRef.Resolve<Item>(obj);
-                    float chance = 0f;
-                    float roll = 0f;
-                    if (item != null)
-                    {
-                        chance = item.disarmChance;
-                        roll = UnityEngine.Random.Range(0f, 1f);
-                    }
-
-                    bool worked = DisarmRules.Works(item != null, chance, roll);
-                    string outcome = DisarmRules.Failed;
-                    if (worked)
-                    {
-                        outcome = DisarmRules.Worked;
-                    }
-
-                    Coop.Current.Authority.Result(outcome);
-                    if (Debug)
-                    {
-                        string disarm = "failed";
-                        if (worked)
-                        {
-                            disarm = "worked";
-                        }
-
-                        Plugin.Log.LogInfo(
-                            $"[world] {s.NameOf(from)} disarms {obj}: "
-                                + $"{disarm}");
-                    }
-
-                    if (item != null)
-                    {
-                        // gone (or set off) here either way; the trap goes for
-                        // the others as TrapSwitched
-                        item.switchTriggerState();
-                    }
-
+                    // Only ever a request to the host: rolled here
+                    // (TrapDisarms.Roll). The trap goes for the others as
+                    // TrapSwitched.
+                    Coop.Current.Traps.Disarms.Roll(from, obj);
                     a = Action.TrapSwitched;
                 }
                 else if (ObjectActions.Handles(a))
@@ -690,35 +650,9 @@ namespace DarkwoodMP.World
                 }
                 else if (a >= Action.TrapFired)
                 {
-                    var trap = Got<Trigger>(a, obj);
-                    // Our own firing of it, not answered yet, left its spawn
-                    // for this (TrapFiredPatch).
-                    if (a == Action.TrapFired && s.IsClient
-                        && TrapFiredPatch.SpawnHeld(obj))
+                    if (!Coop.Current.Traps.Apply(a, obj))
                     {
                         return;
-                    }
-
-                    if (trap == null)
-                    {
-                        return;
-                    }
-
-                    if (a == Action.TrapFired)
-                    {
-                        if (trap.active)
-                        {
-                            OnAfterTrigger.Invoke(
-                                trap, new object[] { null, false });
-                        }
-                    }
-                    else
-                    {
-                        Item trapItem = trap.GetComponent<Item>();
-                        if (trapItem != null)
-                        {
-                            trapItem.switchTriggerState();
-                        }
                     }
                 }
                 else if (a < Action.WindowBarricade)
@@ -821,7 +755,7 @@ namespace DarkwoodMP.World
         /// Resolve the thing an action names, logging it with
         /// --dwmp-debug-world.
         /// </summary>
-        private static T Got<T>(Action a, ObjRef obj) where T : Component =>
+        internal static T Got<T>(Action a, ObjRef obj) where T : Component =>
             Logged(a, obj, ObjRef.Resolve<T>(obj));
 
         private static T Logged<T>(Action a, ObjRef obj, T found)
@@ -1147,28 +1081,7 @@ namespace DarkwoodMP.World
 
             if (a >= Action.TrapFired)
             {
-                var trap = ObjRef.Resolve<Trigger>(obj);
-                Verdict verdict;
-                if (a == Action.TrapFired)
-                {
-                    verdict = TrapRules.MayFire(
-                        TrapFactsOf(
-                            trap, TrapTestOf(TrapFiredPatch.TestRefuse)));
-                    MakeTestRefusal(trap, verdict);
-                }
-                else if (a == Action.TrapDisarm)
-                {
-                    verdict = TrapRules.MayDisarm(
-                        TrapFactsOf(trap, TrapTest.None));
-                }
-                else
-                {
-                    verdict = TrapRules.MaySwitch(
-                        TrapFactsOf(trap, TrapTest.None));
-                }
-
-                Coop.Current.Authority.Refuse(verdict);
-                return !verdict.Refused;
+                return Coop.Current.Traps.Allowed(a, obj);
             }
 
             if (a < Action.WindowBarricade)
@@ -1351,66 +1264,6 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>
-        /// What the trap rules know of a trap the host is asked about: the
-        /// only code that reads the Trigger for them.
-        /// </summary>
-        private static TrapFacts TrapFactsOf(Trigger trap, TrapTest test)
-        {
-            if (trap == null)
-            {
-                return new TrapFacts();
-            }
-
-            return new TrapFacts
-            {
-                Exists = true,
-                Active = trap.active,
-                CanDisarm = trap.canDisarm,
-                Test = test,
-                Requester = Coop.Current.Authority.ReachOf(
-                    trap.transform.position, trap.name),
-            };
-        }
-
-        /// <summary>
-        /// The map test's trap-refuse as the rule names it: null is off,
-        /// "race" went off here first, anything else is gone.
-        /// </summary>
-        private static TrapTest TrapTestOf(string test)
-        {
-            if (test == null)
-            {
-                return TrapTest.None;
-            }
-
-            if (test == "race")
-            {
-                return TrapTest.Race;
-            }
-
-            return TrapTest.Gone;
-        }
-
-        /// <summary>
-        /// Tests ("trap-refuse"): what makes a real refusal, made here just
-        /// before refusing this request.
-        /// </summary>
-        private static void MakeTestRefusal(Trigger trap, Verdict verdict)
-        {
-            if (verdict.Reason == Refusal.TestTrapWentOff)
-            {
-                // it went off here first, and that went to everyone
-                OnAfterTrigger.Invoke(trap, new object[] { null, false });
-            }
-            else if (verdict.Reason == Refusal.TestTrapGone)
-            {
-                // it isn't here
-                trap.active = false;
-                UnityEngine.Object.DestroyImmediate(trap.gameObject);
-            }
-        }
-
         // ---- the state to roll back to --------------------------------------
 
         private enum Kind : byte
@@ -1558,13 +1411,7 @@ namespace DarkwoodMP.World
             else if (trap != null)
             {
                 w.W.Write((byte)Kind.Trap);
-                int activeFlag = 0;
-                if (trap.active)
-                {
-                    activeFlag = 1;
-                }
-
-                w.W.Write((byte)activeFlag);
+                Coop.Current.Traps.WriteState(w, trap);
             }
             else if (item != null)
             {
@@ -1788,21 +1635,8 @@ namespace DarkwoodMP.World
                         }
 
                     case Kind.Trap:
-                        {
-                            bool armed = (r.R.ReadByte() & 1) != 0;
-                            Trigger trap = null;
-                            if (go != null)
-                            {
-                                trap = go.GetComponent<Trigger>();
-                            }
-
-                            if (trap != null && trap.active != armed)
-                            {
-                                trap.active = armed;
-                            }
-
-                            break;
-                        }
+                        Coop.Current.Traps.ReadState(r, go);
+                        break;
 
                     case Kind.Item:
                         {
@@ -2376,374 +2210,6 @@ namespace DarkwoodMP.World
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// A trap going off. In each game its own player sets traps off as they
-    /// step on them; the host's enemies set them off on the host only (a
-    /// client's traps ignore characters: the ones it shows are the host's,
-    /// moved by the host, and their traps went off there). Who saw it go off
-    /// tells the others, who set theirs off too:
-    /// its sound, what it spawns (an explosion hurts the host's enemies on the
-    /// host), and its sprung look.
-    /// A client tells only of traps its own player (or something it threw) set
-    /// off.
-    ///
-    /// A client's own trap is a request the host may refuse (it had gone off
-    /// there already, or isn't there). So on a client the trap goes off at once
-    /// (its sound, its sprung look, the bear trap's bite and hold), but what it
-    /// spawns (Trigger.prefabToSpawn: a vine trap's vine) waits for the host's
-    /// yes, as a feeder's effect does: a spawned thing is shared world, and a
-    /// vine that already holds the player can't be taken back cleanly. If the
-    /// host refuses, nothing is spawned and the bite is undone (the hold
-    /// released, the health it took given back). If the host's own TrapFired
-    /// for the same trap comes first (it went off there just before), that one
-    /// spawns it, untargeted, as any replay of the host's trap does.
-    /// </summary>
-    [HarmonyPatch(typeof(Trigger), "OnAfterTrigger")]
-    static class TrapFiredPatch
-    {
-        /// <summary>A client's trap spawn waiting for the host's yes.</summary>
-        private sealed class Held
-        {
-            public UnityEngine.Object Prefab;
-            public Vector3 At;
-            public GameObject Target; // a vine trap's: who its vine holds
-            public bool Done;
-        }
-
-        private static readonly
-            System.Collections.Generic.Dictionary<string, Held> _held =
-                new System.Collections.Generic.Dictionary<string, Held>();
-
-        /// <summary>
-        /// Client: the player's health before the trap they stepped on bit them
-        /// (ClientTrapBitePatch).
-        /// </summary>
-        internal static float HealthBefore = -1f;
-
-        /// <summary>
-        /// Tests only (the map step "trap-refuse"): the host refuses the next
-        /// TrapFired requests, having first set the trap off itself ("race") or
-        /// taken it away ("gone"). Null: off.
-        /// </summary>
-        public static string TestRefuse;
-
-        static void Prefix(
-            Trigger __instance, Collider other, out UnityEngine.Object __state)
-        {
-            Coop.Guards.Depth++;
-            __state = null;
-            if (Coop.Guards.Depth != 1 || !Coop.Guards.Sharing
-                || !Net.Session.Instance.IsClient || __instance.loadedFromSave)
-            {
-                return;
-            }
-
-            if (__instance.prefabToSpawn == null || !Ours(__instance, other))
-            {
-                return;
-            }
-
-            __state = __instance.prefabToSpawn;
-            // nonPooledPrefabToSpawn alone spawns
-            // nothing (Trigger.OnAfterTrigger)
-            __instance.prefabToSpawn = null;
-        }
-
-        static void Postfix(
-            Trigger __instance, Collider other, bool doConnectChain,
-            UnityEngine.Object __state)
-        {
-            if (__state != null && __instance != null)
-            {
-                // pooled: the next one spawns again
-                __instance.prefabToSpawn = __state;
-            }
-
-            float healthBefore = HealthBefore;
-            HealthBefore = -1f;
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __instance == null)
-            {
-                return;
-            }
-
-            if (!Ours(__instance, other))
-            {
-                return;
-            }
-
-            var s = Net.Session.Instance;
-            if (s.IsHost)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.TrapFired, __instance.gameObject,
-                    byPlayerKnown: true);
-                return;
-            }
-
-            var r = ObjRef.Of(__instance.gameObject);
-            if (!r.Valid)
-            {
-                return;
-            }
-
-            string key = r.ToString();
-            Held held;
-            if (__state == null)
-            {
-                held = null;
-            }
-            else
-            {
-                held = new Held
-                {
-                    Prefab = __state,
-                    At = __instance.transform.position + new Vector3(
-                        0f, 1f, 0f),
-                };
-
-                if (__instance.isChainTrap && doConnectChain && other != null)
-                {
-                    held.Target = other.gameObject;
-                }
-            }
-
-            if (held != null)
-            {
-                _held[key] = held;
-            }
-
-            Player player = null;
-            if (other != null)
-            {
-                player = other.GetComponent<Player>();
-            }
-
-            float lost = 0f;
-            if (player != null && healthBefore > 0f)
-            {
-                lost = healthBefore - player.health;
-            }
-
-            bool bearHold = player != null && __instance.isBearTrap;
-
-            var w = s.Begin(MsgType.WorldAction);
-            WorldActions.WriteAction(
-                w, WorldActions.Action.TrapFired, r, 0f, 0f, false, false, "");
-            if (WorldActions.Debug)
-            {
-                string waits = "";
-                if (held != null)
-                {
-                    waits = ", its " + held.Prefab.name + " waits for the host";
-                }
-
-                Plugin.Log.LogInfo(
-                    $"[world] sent TrapFired {r} ({__instance.name}){waits}");
-            }
-
-            Coop.Current.Authority.Request(
-                w, $"TrapFired {r} ({__instance.name})",
-                (ok, reason, result) =>
-            {
-                if (held != null && _held.TryGetValue(key, out var h)
-                    && h == held)
-                {
-                    _held.Remove(key);
-                }
-
-                if (ok)
-                {
-                    if (held != null)
-                    {
-                        Spawn(held, key);
-                    }
-
-                    return;
-                }
-
-                if (held != null && !held.Done)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] TrapFired {key}: refused, so its "
-                            + $"{held.Prefab.name} isn't spawned");
-                }
-
-                if (player == null || player != Player.Instance)
-                {
-                    return;
-                }
-
-                if (bearHold && player.inBearTrap)
-                {
-                    player.stopAllPerformingActionAnims();
-                }
-
-                if (lost > 0f && player.health > 0f)
-                {
-                    player.health =
-                        Mathf.Min(player.maxHealth, player.health + lost);
-                }
-
-                if (bearHold || lost > 0f)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] TrapFired {key}: refused, so the bite is "
-                            + $"undone (hold released, {lost:0} health back)");
-                }
-            }, inventory: false);
-        }
-
-        /// <summary>
-        /// Client, applying the host's TrapFired: if our own firing of it holds
-        /// a spawn, it's spawned now, for the host's.
-        /// </summary>
-        internal static bool SpawnHeld(ObjRef r)
-        {
-            string key = r.ToString();
-            if (!_held.TryGetValue(key, out var held))
-            {
-                return false;
-            }
-
-            _held.Remove(key);
-            // as the host's replay does: it went off there, not on our player
-            held.Target = null;
-            Spawn(held, key);
-            return true;
-        }
-
-        private static void Spawn(Held held, string key)
-        {
-            if (held.Done)
-            {
-                return;
-            }
-
-            held.Done = true;
-            var go = Core.AddPrefab(
-                held.Prefab, held.At, Quaternion.Euler(90f, 0f, 0f), null);
-            if (go == null)
-            {
-                return;
-            }
-
-            if (held.Target != null)
-            {
-                var cp = go.GetComponent<ChainParent>();
-                if (cp != null)
-                {
-                    cp.target = held.Target;
-                }
-            }
-
-            if (WorldActions.Debug)
-            {
-                Plugin.Log.LogInfo(
-                    $"[world] TrapFired {key}: spawned {held.Prefab.name}");
-            }
-        }
-
-        /// <summary>
-        /// A trap set off by this game's own player or something it threw (on a
-        /// client, only those are sent).
-        /// </summary>
-        private static bool Ours(Trigger trap, Collider other)
-        {
-            if (!trap.setByPlayer && trap.GetComponent<Item>() == null)
-            {
-                return false; // a level's scripted trigger zone, not a trap
-            }
-
-            if (!Net.Session.Instance.IsClient)
-            {
-                return true;
-            }
-
-            if (WorldActions.OursAlone(trap.gameObject))
-            {
-                return false; // in a dream of our own: the game's own, as alone
-            }
-
-            return other != null
-                && (other.GetComponent<Player>() != null
-                    || other.GetComponent<ThrownItem>() != null);
-        }
-
-        internal static void Reset() => _held.Clear();
-    }
-
-    /// <summary>
-    /// Client: notes the player's health before a trap bites, so a refused trap
-    /// can give it back (TrapFiredPatch).
-    /// </summary>
-    [HarmonyPatch(typeof(Trigger), nameof(Trigger.checkCollision))]
-    static class ClientTrapBitePatch
-    {
-        static void Prefix(Collider other)
-        {
-            if (!Combat.NetEnemies.ClientMode || other == null
-                || Player.Instance == null)
-            {
-                return;
-            }
-
-            if (other.GetComponent<Player>() != null)
-            {
-                TrapFiredPatch.HealthBefore = Player.Instance.health;
-            }
-        }
-
-        static void Postfix() => TrapFiredPatch.HealthBefore = -1f;
-    }
-
-    /// <summary>
-    /// Client: traps don't go off on characters here (see TrapFiredPatch).
-    /// </summary>
-    [HarmonyPatch(typeof(Trigger), nameof(Trigger.checkCollision))]
-    static class ClientTrapIgnoresCharactersPatch
-    {
-        static bool Prefix(Collider other)
-        {
-            if (!Combat.NetEnemies.ClientMode || other == null)
-            {
-                return true;
-            }
-
-            var c = other.GetComponent<Character>();
-            if (c == null)
-            {
-                return true;
-            }
-
-            // The host's enemies (and our frozen copies) set traps off on the
-            // host; ones of an area of our own do here.
-            return !(Combat.NetEnemies.Frozen.Contains(c)
-                    || (Combat.NetEnemies.Instance != null
-                        && Combat.NetEnemies.Instance.IsPuppet(c, out _)));
-        }
-    }
-
-    /// <summary>
-    /// A trap disarmed (or failed to be): it's taken away, or left sprung, for
-    /// everyone.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.switchTriggerState))]
-    static class TrapSwitchedPatch
-    {
-        static void Prefix() => Coop.Guards.Depth++;
-        static void Postfix(Item __instance)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && __instance != null
-                && __instance.GetComponent<Trigger>() != null)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.TrapSwitched, __instance.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
     /// Lamps, generators, radios...: switched on or off for everyone.
     /// </summary>
     [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
@@ -2839,100 +2305,6 @@ namespace DarkwoodMP.World
                 "[world] the night trader was killed in another game: the "
                     + "killer's dream isn't ours");
             return false;
-        }
-    }
-}
-
-namespace DarkwoodMP.World
-{
-    /// <summary>
-    /// Client: disarming a shared trap is the host's roll. When our player's
-    /// progress bar for it completes, the game would roll here (disarmChance
-    /// against a random number) and disarm it or set it off. Instead the trap
-    /// goes to the host as a TrapDisarm request; the host rolls with its own
-    /// random numbers and says how it went (Verdict result "1" or "0"), and
-    /// then the game's own disarm (the item comes to our player) or failDisarm
-    /// runs here, with its message. While the host decides, the trap stays as
-    /// it is.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.progressBarCompleted))]
-    static class ClientDisarmPatch
-    {
-        private static readonly AccessTools.FieldRef<Player, Item> Trap =
-            AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
-
-        static void Prefix(Player __instance)
-        {
-            if (!__instance.disarmingTrap || !NetEnemies.ClientMode
-                || !Coop.Guards.Sharing)
-            {
-                return;
-            }
-
-            var trap = Trap(__instance);
-            if (trap == null)
-            {
-                return;
-            }
-
-            var r = ObjRef.Of(trap.gameObject);
-            if (!r.Valid || WorldActions.OursAlone(trap.gameObject))
-            {
-                // not a shared trap (or one only we have): the game rolls it,
-                // as alone
-                return;
-            }
-
-            __instance.disarmingTrap = false; // the game's own roll is skipped
-            // The crouch co-op adds (DisarmAnimation) ends here too: with
-            // disarmingTrap already cleared, the stand-up in DisarmDonePatch
-            // may not see that a disarm ended, which left our player crouched
-            // for good.
-            DisarmAnimation.StandUp(__instance);
-            var trigger = trap.GetComponent<Trigger>();
-            if (trigger != null && trigger.bendDownToDisarm)
-            {
-                __instance.hidingInventory = true;
-                __instance.gotInventory = false;
-            }
-
-            var s = Session.Instance;
-            var w = s.Begin(MsgType.WorldAction);
-            WorldActions.WriteAction(
-                w, WorldActions.Action.TrapDisarm, r, 0f, 0f, false, false, "");
-            Coop.Current.Authority.Request(w, $"TrapDisarm {r} ({trap.name})",
-                (ok, reason, result) =>
-            {
-                if (trap == null || Player.Instance == null)
-                {
-                    return;
-                }
-
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    if (ok && result == "1")
-                    {
-                        // Our player's disarm: its onDisarmed triggers are ours
-                        // to set off and share.
-                        ScriptedEvents.AsOwnAction(trap.disarm);
-                        Player.Instance.displayMessage(
-                            Language.Get("Playermsg_disarmedSuccess", "UI"));
-                    }
-                    else if (ok)
-                    {
-                        Player.Instance.displayMessage(
-                            Language.Get("Playermsg_disarmedFailure", "UI"));
-                        trap.failDisarm();
-                    }
-                    // refused: the trap was gone or had gone off on the host;
-                    // ObjState put ours as it is there
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                }
-            });
         }
     }
 }
@@ -3047,7 +2419,7 @@ namespace DarkwoodMP.World
     /// A locked crate picked open in the host's game (Item.disarm on an item
     /// with no Trigger sets searched and opens it): the others are told it's
     /// searched, so nobody has to pick it again. A client's picks go to the
-    /// host as TrapDisarm requests instead (ClientDisarmPatch), and the host
+    /// host as TrapDisarm requests instead (TrapDisarms.AskHost), and the host
     /// sends ItemSearched itself. Not a Depth call: a trap's disarm goes
     /// through switchTriggerState, which must stay the outermost call there.
     /// </summary>

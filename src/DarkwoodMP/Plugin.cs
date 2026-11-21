@@ -909,7 +909,12 @@ namespace DarkwoodMP
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
             UiRefresh.Enabled = true;
-            TrapFiredPatch.TestRefuse = null;
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Traps.TestRefuse = World.Traps.TrapTest.None;
+            }
+
             WorldShare.TestHoldSecs = 0f;
             DoorPush.TestTouch = null;
             SkillsPanel.TestMouse = null;

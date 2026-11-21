@@ -1,4 +1,4 @@
-using HarmonyLib;
+using DarkwoodMP.World.Traps;
 
 namespace DarkwoodMP.World
 {
@@ -14,76 +14,81 @@ namespace DarkwoodMP.World
     /// InventoryLoop while it lasts, and hidingInventory plays InventoryHide,
     /// at whose end the game lets the player go again.
     /// </summary>
-    static class DisarmAnimation
+    internal sealed class DisarmAnimation
     {
         /// <summary>
         /// We made the current disarm crouch (the trap wouldn't have).
         /// </summary>
-        internal static bool Crouching;
+        private bool _crouching;
 
-        internal static void StandUp(Player p)
+        /// <summary>
+        /// After Player.doDisarm: crouch for a trap the game doesn't crouch
+        /// for already.
+        /// </summary>
+        public void Crouch(Player p, Item item)
         {
-            if (!Crouching)
+            _crouching = false;
+            if (!DisarmRules.Crouches(CrouchOf(p, item)))
             {
                 return;
             }
 
-            Crouching = false;
+            p.performingAction = true;
+            p.gettingInventory = true;
+            p.dodging = false;
+            _crouching = true;
+        }
+
+        /// <summary>
+        /// The disarm ended (done or interrupted): stand up from our crouch.
+        /// </summary>
+        public void StandUp(Player p)
+        {
+            if (!_crouching)
+            {
+                return;
+            }
+
+            _crouching = false;
             p.hidingInventory = true;
             p.gotInventory = false;
         }
-    }
 
-    [HarmonyPatch(typeof(Player), nameof(Player.doDisarm))]
-    static class DisarmCrouchPatch
-    {
-        static void Postfix(Player __instance, Item trapToDisarm)
+        /// <summary>
+        /// What the crouch rule knows of a disarm starting: the only code
+        /// that reads it for the rule, in its order and no further than it
+        /// needs.
+        /// </summary>
+        private static CrouchFacts CrouchOf(Player p, Item item)
         {
-            DisarmAnimation.Crouching = false;
-            if (!CoopPause.InCoop || trapToDisarm == null
-                || !__instance.disarmingTrap)
+            var facts = new CrouchFacts
             {
-                return;
+                InCoop = CoopPause.InCoop,
+                HasItem = item != null,
+            };
+
+            if (!facts.InCoop || !facts.HasItem)
+            {
+                return facts;
             }
 
-            var trigger = trapToDisarm.GetComponent<Trigger>();
-            if (trigger == null || trigger.bendDownToDisarm)
+            facts = facts with { Disarming = p.disarmingTrap };
+            if (!facts.Disarming)
             {
-                return; // already crouches
+                return facts;
             }
 
-            __instance.performingAction = true;
-            __instance.gettingInventory = true;
-            __instance.dodging = false;
-            DisarmAnimation.Crouching = true;
-        }
-    }
-
-    [HarmonyPatch(typeof(Player), nameof(Player.progressBarCompleted))]
-    static class DisarmDonePatch
-    {
-        static void Prefix(Player __instance, out bool __state) =>
-            __state = __instance.disarmingTrap;
-        static void Postfix(Player __instance, bool __state)
-        {
-            if (__state)
+            var trigger = item.GetComponent<Trigger>();
+            if (trigger == null)
             {
-                DisarmAnimation.StandUp(__instance);
+                return facts;
             }
-        }
-    }
 
-    [HarmonyPatch(typeof(Player), nameof(Player.interruptProgressBar))]
-    static class DisarmInterruptedPatch
-    {
-        static void Prefix(Player __instance, out bool __state) =>
-            __state = __instance.disarmingTrap;
-        static void Postfix(Player __instance, bool __state)
-        {
-            if (__state)
+            return facts with
             {
-                DisarmAnimation.StandUp(__instance);
-            }
+                HasTrigger = true,
+                BendsDown = trigger.bendDownToDisarm,
+            };
         }
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.World.Traps;
 using HarmonyLib;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -130,23 +131,24 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// "trap-refuse race|gone|off" (host): refuse the client's next
-        /// TrapFired requests (TrapFiredPatch.TestRefuse).
+        /// TrapFired requests (TrapSync.TestRefuse).
         /// </summary>
         private static IEnumerator TrapRefuse(string[] a, Result r)
         {
+            var traps = Coop.Current.Traps;
+            string testRefuse = a[0];
             if (a[0] == "off")
             {
-                TrapFiredPatch.TestRefuse = null;
+                traps.TestRefuse = TrapTest.None;
+                testRefuse = "as usual";
+            }
+            else if (a[0] == "race")
+            {
+                traps.TestRefuse = TrapTest.Race;
             }
             else
             {
-                TrapFiredPatch.TestRefuse = a[0];
-            }
-
-            string testRefuse = TrapFiredPatch.TestRefuse;
-            if (testRefuse == null)
-            {
-                testRefuse = "as usual";
+                traps.TestRefuse = TrapTest.Gone;
             }
 
             r.Info = $"TrapFired requests: {testRefuse}";

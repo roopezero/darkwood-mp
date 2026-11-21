@@ -1,8 +1,8 @@
 namespace DarkwoodMP.World.Traps
 {
     /// Disarming a shared trap: the host's roll (the plugin's
-    /// WorldActions.OnAction), a client's handing of its disarm to the host
-    /// (ClientDisarmPatch), and the crouch co-op adds (DisarmAnimation).
+    /// TrapDisarms.Roll), a client's handing of its disarm to the host
+    /// (TrapDisarms.AskHost), and the crouch co-op adds (DisarmAnimation).
     public static class DisarmRules
     {
         /// What the host's answer says when the roll worked.
@@ -62,7 +62,7 @@ namespace DarkwoodMP.World.Traps
         }
 
         /// Whether co-op makes the player crouch for this disarm, so the
-        /// others see it (DisarmCrouchPatch): in co-op, disarming an item
+        /// others see it (DisarmAnimation.Crouch): in co-op, disarming an item
         /// with a Trigger the game doesn't crouch for already.
         public static bool Crouches(in CrouchFacts disarm)
         {
