@@ -1,5 +1,3 @@
-using HarmonyLib;
-
 namespace DarkwoodMP.World
 {
     /// <summary>
@@ -101,49 +99,25 @@ namespace DarkwoodMP.World
         {
             Counters.OnSaved(n);
         }
-    }
 
-    // SaveManager.SaveState's own methods are one line each, and Mono inlines
-    // them, so a patch on them never runs. The counter is read around them
-    // instead.
+        /// <summary>
+        /// SaveManager.Save has written the counter (SharedIdPatches).
+        /// </summary>
+        internal static void Saved(SaveManager sm)
+        {
+            OnSaved(sm.currentUniqueID);
+        }
 
-    /// <summary>
-    /// The counter as a save writes it: SaveManager.Save gives out the new ids,
-    /// then writes the counter, all before it returns.
-    /// </summary>
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new[]
-    {
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool)
-    })]
-    static class SaveIdCounterSavedPatch
-    {
-        static void Postfix(SaveManager __instance) =>
-            SharedIds.OnSaved(__instance.currentUniqueID);
-    }
-
-    /// <summary>
-    /// The counter as a loaded save sets it: the loading coroutine sets it
-    /// (SaveState.loadValues) just before it loads the player
-    /// (Player.SaveState.loadValues). Characters.cs calls that too, outside
-    /// loading.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Player.SaveState), nameof(Player.SaveState.loadValues),
-        new[] { typeof(bool) })]
-    static class SaveIdCounterLoadedPatch
-    {
-        static void Prefix(bool onlyState)
+        /// <summary>
+        /// Player.SaveState.loadValues is about to run (SharedIdPatches): while
+        /// a save loads, the counter it set just before.
+        /// </summary>
+        internal static void LoadingPlayer(bool onlyState)
         {
             var sm = Singleton<SaveManager>.Instance;
             if (!onlyState && Core.loadingGame && sm != null)
             {
-                SharedIds.OnLoaded(sm.currentUniqueID);
+                OnLoaded(sm.currentUniqueID);
             }
         }
     }

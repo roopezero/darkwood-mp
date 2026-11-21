@@ -101,6 +101,32 @@ namespace DarkwoodMP.World
         private bool Joined => Combat.NetEnemies.ClientMode
             && WorldShare.InWorld && !WorldShare.Loading;
 
+        private static readonly
+            AccessTools.FieldRef<SaveableObject, bool> InitializedRef =
+                AccessTools.FieldRefAccess<SaveableObject, bool>("initialized");
+
+        /// <summary>
+        /// SaveableObject.init is about to run (HostIdPatches): whether it is
+        /// to be watched, as it isn't initialized yet. False with no session.
+        /// </summary>
+        internal static bool BeforeInit(SaveableObject s)
+        {
+            return Coop.Current != null && !InitializedRef(s);
+        }
+
+        /// <summary>
+        /// SaveableObject.init ran: if it initialized s now (watched, from
+        /// BeforeInit), s started.
+        /// </summary>
+        internal static void AfterInit(SaveableObject s, bool watched)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null && watched && InitializedRef(s))
+            {
+                coop.HostIds.Started(s.gameObject);
+            }
+        }
+
         /// <summary>
         /// A saveable object started (SaveableObject.init ran for it).
         /// </summary>
@@ -531,28 +557,5 @@ namespace DarkwoodMP.World
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// A saveable object started: the host may give it an id (HostIds).
-    /// </summary>
-    [HarmonyPatch(typeof(SaveableObject), nameof(SaveableObject.init))]
-    static class SaveableStartedPatch
-    {
-        static void Prefix(SaveableObject __instance, ref bool __state) =>
-            __state = !Initialized(__instance);
-        static void Postfix(SaveableObject __instance, bool __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null && __state && Initialized(__instance))
-            {
-                coop.HostIds.Started(__instance.gameObject);
-            }
-        }
-
-        private static readonly
-            AccessTools.FieldRef<SaveableObject, bool> InitializedRef =
-                AccessTools.FieldRefAccess<SaveableObject, bool>("initialized");
-        private static bool Initialized(SaveableObject s) => InitializedRef(s);
     }
 }
