@@ -558,5 +558,66 @@ namespace DarkwoodMP
 
         /// The player who raised the workbench level isn't near a workbench.
         NotAtWorkbench,
+
+        // Getting the host's world: the client gives up on the download
+        // with one of these, in "Couldn't get the host's world: {text}".
+
+        /// The offer names a file the world doesn't have, or one twice. The
+        /// detail is the file's name.
+        UnexpectedFile,
+
+        /// The world was packed in a way this version can't unpack. The
+        /// detail is the packing's number.
+        UnknownPacking,
+
+        /// The offer's sizes don't add up, or are 0 or too large.
+        BadWorldSize,
+
+        /// The host's profile isn't JSON the game reads. The detail is the
+        /// reader's message.
+        UnreadableProfile,
+
+        /// The host's profile is missing, or its slot isn't 1 to 99.
+        InvalidProfile,
+
+        /// A piece is empty, not on a piece's boundary, or past the end.
+        BadPiece,
+
+        /// A piece holds fewer bytes than it says.
+        ShortPiece,
+
+        /// No piece came after too many stalls. The detail is
+        /// Refusals.Detail(got, total), both in KiB.
+        HostStoppedSending,
+
+        // Deleting a folder: the mod refuses to, logging
+        // "Not deleting {path}: {text}".
+
+        /// The path is null, empty or only spaces.
+        PathEmpty,
+
+        /// The path isn't rooted.
+        PathNotAbsolute,
+
+        /// The full path can't be made. The detail is the error's message.
+        PathInvalid,
+
+        /// The path is a filesystem's root.
+        FilesystemRoot,
+
+        /// The path is the user's home folder or holds it.
+        HomeFolder,
+
+        /// The path isn't strictly inside the mod's cache or the save
+        /// redirect's folder.
+        OutsideModFolders,
+
+        /// The players' folder of a slot outside 1 to 99. The detail is the
+        /// slot.
+        NotASaveSlot,
+
+        /// The players' folder isn't exactly prof<N>/darkwoodmp_players in the
+        /// save folder.
+        NotPlayersFolder,
     }
 }

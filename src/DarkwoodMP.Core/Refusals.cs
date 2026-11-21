@@ -372,6 +372,46 @@ namespace DarkwoodMP
                         "level {0} isn't one above {1}", detail, 2);
                 case Refusal.NotAtWorkbench:
                     return "they aren't at a workbench";
+                case Refusal.UnexpectedFile:
+                    return "the host offered an unexpected file \""
+                        + detail + "\"";
+                case Refusal.UnknownPacking:
+                    return "the host packed its world in a way this version"
+                        + " can't read (" + detail + ")";
+                case Refusal.BadWorldSize:
+                    return "the host's world has a bad size";
+                case Refusal.UnreadableProfile:
+                    return "couldn't read the host's profile: " + detail;
+                case Refusal.InvalidProfile:
+                    return "the host's profile is invalid";
+                case Refusal.BadPiece:
+                    return "bad piece from the host";
+                case Refusal.ShortPiece:
+                    return "a short piece from the host";
+                case Refusal.HostStoppedSending:
+                    return Fill(
+                        "the host stopped sending its world"
+                            + " ({0} of {1} KiB came)",
+                        detail,
+                        2);
+                case Refusal.PathEmpty:
+                    return "the path is empty";
+                case Refusal.PathNotAbsolute:
+                    return "the path isn't absolute";
+                case Refusal.PathInvalid:
+                    return "the path isn't valid (" + detail + ")";
+                case Refusal.FilesystemRoot:
+                    return "it's a filesystem root";
+                case Refusal.HomeFolder:
+                    return "it's your home folder or holds it";
+                case Refusal.OutsideModFolders:
+                    return "it isn't inside the mod's cache or save-redirect"
+                        + " folder";
+                case Refusal.NotASaveSlot:
+                    return "slot " + detail + " isn't a save slot";
+                case Refusal.NotPlayersFolder:
+                    return "it isn't prof<N>/darkwoodmp_players in the save"
+                        + " folder";
                 default:
                     return verdict.Reason.ToString();
             }

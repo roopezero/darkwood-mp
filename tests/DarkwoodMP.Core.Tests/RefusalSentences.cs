@@ -488,6 +488,67 @@ namespace DarkwoodMP.Tests
                     Refusal.NotAtWorkbench,
                     null,
                     "they aren't at a workbench"
+                {
+                    Refusal.UnexpectedFile,
+                    "sav.exe",
+                    "the host offered an unexpected file \"sav.exe\""
+                },
+                {
+                    Refusal.UnknownPacking,
+                    "2",
+                    "the host packed its world in a way this version can't"
+                        + " read (2)"
+                },
+                {
+                    Refusal.BadWorldSize,
+                    null,
+                    "the host's world has a bad size"
+                },
+                {
+                    Refusal.UnreadableProfile,
+                    "Unexpected character",
+                    "couldn't read the host's profile: Unexpected character"
+                },
+                {
+                    Refusal.InvalidProfile,
+                    null,
+                    "the host's profile is invalid"
+                },
+                { Refusal.BadPiece, null, "bad piece from the host" },
+                { Refusal.ShortPiece, null, "a short piece from the host" },
+                {
+                    Refusal.HostStoppedSending,
+                    Refusals.Detail("512", "9216"),
+                    "the host stopped sending its world (512 of 9216 KiB"
+                        + " came)"
+                },
+                { Refusal.PathEmpty, null, "the path is empty" },
+                { Refusal.PathNotAbsolute, null, "the path isn't absolute" },
+                {
+                    Refusal.PathInvalid,
+                    "Illegal characters",
+                    "the path isn't valid (Illegal characters)"
+                },
+                { Refusal.FilesystemRoot, null, "it's a filesystem root" },
+                {
+                    Refusal.HomeFolder,
+                    null,
+                    "it's your home folder or holds it"
+                },
+                {
+                    Refusal.OutsideModFolders,
+                    null,
+                    "it isn't inside the mod's cache or save-redirect folder"
+                },
+                {
+                    Refusal.NotASaveSlot,
+                    "100",
+                    "slot 100 isn't a save slot"
+                },
+                {
+                    Refusal.NotPlayersFolder,
+                    null,
+                    "it isn't prof<N>/darkwoodmp_players in the save folder"
                 },
             };
     }
