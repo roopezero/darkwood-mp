@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Places
     /// grid (Locations.AfterAddedToGrid).
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.addObjectsToGrid))]
-    static class LocationGridPatch
+    static class LocationAddObjectsToGrid
     {
         static void Postfix(Location __instance)
         {
@@ -31,7 +31,7 @@ namespace DarkwoodMP.World.Places
     /// player leaves it.
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.leave))]
-    static class LocationKeepPatch
+    static class LocationLeave
     {
         static bool Prefix(Location __instance, bool force)
         {
@@ -51,7 +51,7 @@ namespace DarkwoodMP.World.Places
     /// its enter events.
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.enter))]
-    static class LocationEnterPatch
+    static class LocationEnter
     {
         static void Prefix(Location __instance, bool force)
         {
@@ -69,7 +69,7 @@ namespace DarkwoodMP.World.Places
     /// (the joiner's game does).
     /// </summary>
     [HarmonyPatch(typeof(Location), "checkEnterEvents")]
-    static class LocationQuietEnterPatch
+    static class LocationCheckEnterEventsKept
     {
         static bool Prefix(Location __instance)
         {
@@ -95,7 +95,7 @@ namespace DarkwoodMP.World.Places
     [HarmonyPatch(
         typeof(Location.SaveState), MethodType.Constructor,
         new[] { typeof(Location) })]
-    static class LocationSaveKeptPatch
+    static class LocationSaveStateCtor
     {
         static void Postfix(Location.SaveState __instance, Location location)
         {
@@ -105,14 +105,7 @@ namespace DarkwoodMP.World.Places
                 return;
             }
 
-            if (!HostLocationRules.SavesAsLeft(
-                coop.Locations.Kept.KeptForOthers(location),
-                Whereabouts.OursNow(location)))
-            {
-                return;
-            }
-
-            __instance.entered = false;
+            coop.Locations.Kept.AfterSave(__instance, location);
         }
     }
 
@@ -123,7 +116,7 @@ namespace DarkwoodMP.World.Places
     [HarmonyPatch(
         typeof(OutsideLocations), nameof(OutsideLocations.prepareLocation),
         new[] { typeof(string), typeof(Transform) })]
-    static class LocationPreparePatch
+    static class OutsideLocationsPrepareLocation
     {
         static void Prefix(OutsideLocations __instance, string locationName)
         {
@@ -133,11 +126,7 @@ namespace DarkwoodMP.World.Places
                 return;
             }
 
-            if (coop.Locations.MustWait(locationName)
-                && !__instance.spawnedLocations.ContainsKey(locationName))
-            {
-                coop.Locations.Ask(locationName);
-            }
+            coop.Locations.BeforePrepare(__instance, locationName);
         }
     }
 
@@ -148,7 +137,7 @@ namespace DarkwoodMP.World.Places
     [HarmonyPatch(
         typeof(OutsideLocations), nameof(OutsideLocations.spawnLocation),
         new[] { typeof(string), typeof(bool) })]
-    static class LocationSpawnPatch
+    static class OutsideLocationsSpawnLocation
     {
         static bool Prefix(
             OutsideLocations __instance, string locationName,
@@ -160,14 +149,14 @@ namespace DarkwoodMP.World.Places
                 return true;
             }
 
-            coop.Locations.BeforeSpawn(__instance);
-            if (!coop.Locations.MustWait(locationName))
+            IEnumerator instead = coop.Locations.SpawnInstead(
+                __instance, locationName, transportAfterSpawn);
+            if (instead == null)
             {
                 return true;
             }
 
-            __result = coop.Locations.WaitThenSpawn(
-                __instance, locationName, transportAfterSpawn);
+            __result = instead;
             return false;
         }
     }
@@ -177,7 +166,7 @@ namespace DarkwoodMP.World.Places
     /// through PositionFor.
     /// </summary>
     [HarmonyPatch]
-    static class LocationSpotPatch
+    static class OutsideLocationsSpawnLocationBody
     {
         static Vector3 PositionFor(Vector3 picked, string name)
         {
@@ -224,7 +213,8 @@ namespace DarkwoodMP.World.Places
                 new CodeInstruction(
                     OpCodes.Call,
                     AccessTools.Method(
-                        typeof(LocationSpotPatch), nameof(PositionFor))),
+                        typeof(OutsideLocationsSpawnLocationBody),
+                        nameof(PositionFor))),
             });
 
             return list;
@@ -236,7 +226,7 @@ namespace DarkwoodMP.World.Places
     /// through RotationFor.
     /// </summary>
     [HarmonyPatch]
-    static class LocationTurnPatch
+    static class LocationMarkerSpawnLocationBody
     {
         /// The game's roll is always made, so its dice advance as they did.
         static int RotationFor(LocationMarker m)
@@ -292,7 +282,8 @@ namespace DarkwoodMP.World.Places
                     new CodeInstruction(
                         OpCodes.Call,
                         AccessTools.Method(
-                            typeof(LocationTurnPatch), nameof(RotationFor))),
+                            typeof(LocationMarkerSpawnLocationBody),
+                            nameof(RotationFor))),
                 });
 
                 done++;

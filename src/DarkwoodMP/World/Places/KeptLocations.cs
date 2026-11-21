@@ -44,6 +44,20 @@ namespace DarkwoodMP.World.Places
             l != null && _kept.Contains(l);
 
         /// <summary>
+        /// Host: the save records a location kept running only for a joiner
+        /// as our player left it (entered false): entered says our own player
+        /// went in (LocationPatches).
+        /// </summary>
+        internal void AfterSave(Location.SaveState state, Location location)
+        {
+            if (HostLocationRules.SavesAsLeft(
+                KeptForOthers(location), Whereabouts.OursNow(location)))
+            {
+                state.entered = false;
+            }
+        }
+
+        /// <summary>
         /// Kept locations whose loose objects DragSync has noted (once each
         /// time it starts being kept).
         /// </summary>

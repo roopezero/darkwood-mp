@@ -468,7 +468,7 @@ namespace DarkwoodMP.World.Places
         /// Client: ask the host where a location we haven't loaded stands
         /// (once).
         /// </summary>
-        internal void Ask(string name)
+        private void Ask(string name)
         {
             var s = S;
             if (s == null || !s.IsClient || !_spots.Ask(name))
@@ -507,7 +507,7 @@ namespace DarkwoodMP.World.Places
         /// <summary>
         /// Whether spawnLocation(name) should wait for the host's answer first.
         /// </summary>
-        internal bool MustWait(string name)
+        private bool MustWait(string name)
         {
             var s = S;
             var wait = new WaitFacts
@@ -520,7 +520,7 @@ namespace DarkwoodMP.World.Places
             return _spots.MustWait(wait, name);
         }
 
-        internal IEnumerator WaitThenSpawn(
+        private IEnumerator WaitThenSpawn(
             OutsideLocations o, string name, bool transport)
         {
             Ask(name);
@@ -546,12 +546,40 @@ namespace DarkwoodMP.World.Places
 
         // ---- the spot and the turn, as the game loads a location ------------
 
-        internal void BeforeSpawn(OutsideLocations o)
+        /// <summary>
+        /// OutsideLocations.spawnLocation: the list of spots gets room past
+        /// the next one, and a client loads a location only once the host has
+        /// said where it stands (or didn't, in time). Returns what the game
+        /// runs instead, or null for the game's own load.
+        /// </summary>
+        internal IEnumerator SpawnInstead(
+            OutsideLocations o, string name, bool transport)
         {
             if (S != null && S.Active)
             {
                 Extend(
                     o, LocationSlotRules.Need(o.actualSpawnedLocationsCount));
+            }
+
+            if (!MustWait(name))
+            {
+                return null;
+            }
+
+            return WaitThenSpawn(o, name, transport);
+        }
+
+        /// <summary>
+        /// OutsideLocations.prepareLocation: a client asks the host where a
+        /// location stands a little early, when the trip to it starts.
+        /// </summary>
+        internal void BeforePrepare(OutsideLocations o, string name)
+        {
+            bool loaded = name != null
+                && o.spawnedLocations.ContainsKey(name);
+            if (LocationSlotRules.AsksEarly(MustWait(name), loaded))
+            {
+                Ask(name);
             }
         }
 
