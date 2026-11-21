@@ -259,7 +259,12 @@ namespace DarkwoodMP.World
                 instance.Grew(inv);
             }
 
-            UiRefresh.Changed(inv);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Ui.Changed(inv);
+            }
+
             return true;
         }
     }

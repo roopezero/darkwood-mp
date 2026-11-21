@@ -41,6 +41,9 @@ namespace DarkwoodMP
         /// Host: the save id counters of the joiners let in to the world.
         public readonly JoinerSaveIds Joiners;
 
+        /// Redraws an open window after another player's change to it.
+        public readonly UiRefresh Ui;
+
         /// What traders have for sale, and trades with them.
         public readonly TraderSync Traders;
 
@@ -58,6 +61,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
+            Ui = new UiRefresh(this);
             Traders = new TraderSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.

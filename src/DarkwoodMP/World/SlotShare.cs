@@ -594,7 +594,11 @@ namespace DarkwoodMP.World
                     + "undone");
             if (differed > 0)
             {
-                UiRefresh.Changed(inv);
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Ui.Changed(inv);
+                }
             }
 
             RemoveIfEmptied(inv);
@@ -1083,7 +1087,12 @@ namespace DarkwoodMP.World
                     TakeHost(inv, c);
                 }
 
-                UiRefresh.Changed(inv);
+                CoopSession session = Coop.Current;
+                if (session != null)
+                {
+                    session.Ui.Changed(inv);
+                }
+
                 RemoveIfEmptied(inv);
                 return;
             }
@@ -1174,7 +1183,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            UiRefresh.Changed(inv);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Ui.Changed(inv);
+            }
+
             SendChanges(obj, accepted, from);
             RemoveIfEmptied(inv);
         }
@@ -1281,7 +1295,11 @@ namespace DarkwoodMP.World
                 Undo(sentKey, unsent, quiet: true);
             }
 
-            UiRefresh.Changed(inv);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Ui.Changed(inv);
+            }
         }
 
         /// <summary>

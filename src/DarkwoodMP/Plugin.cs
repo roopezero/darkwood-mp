@@ -907,7 +907,12 @@ namespace DarkwoodMP
             OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
-            UiRefresh.Enabled = true;
+            CoopSession session = Coop.Current;
+            if (session != null)
+            {
+                session.Ui.Enabled = true;
+            }
+
             TrapFiredPatch.TestRefuse = null;
             WorldShare.TestHoldSecs = 0f;
             DoorPush.TestTouch = null;
