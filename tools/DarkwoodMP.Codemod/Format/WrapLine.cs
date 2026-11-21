@@ -150,18 +150,129 @@ sealed class WrapLine
         return end;
     }
 
-    /// The break before a binary operator: one level in, or at this line's
-    /// own indentation when the line already starts with an operator of the
-    /// same kind, so a long chain of + or && stays in one column.
+    /// The break before a binary operator, at the column its chain takes
+    /// (ContinuationIndent).
     public string BreakFor(SyntaxToken op)
     {
-        var first = Root.FindToken(Start + Indent);
-        if (first.SpanStart == Start + Indent && first.IsKind(op.Kind())
-            && first.Parent is BinaryExpressionSyntax)
+        return "\n" + new string(' ', ContinuationIndent(op));
+    }
+
+    /// The break inside a string the stage splits: the new "+" joins the
+    /// string's own + chain when it is in one.
+    public string BreakForString(SyntaxToken literal)
+    {
+        if (literal.Parent?.Parent is BinaryExpressionSyntax chain
+            && chain.IsKind(SyntaxKind.AddExpression))
         {
-            return "\n" + Pad;
+            return BreakFor(chain.OperatorToken);
         }
-        return Inner;
+        return "\n" + new string(' ', ContinuationIndent(literal));
+    }
+
+    /// The column a continuation line that starts with token takes from the
+    /// syntax, not from the line it was cut from: one level in from the line
+    /// where the expression it continues starts, one more for each bracket
+    /// around that expression opened on that same line, and one more for an
+    /// operator that binds tighter than the chain it sits in. So the
+    /// operands of one && chain, or the links of one call chain, share a
+    /// column, and a nested group goes deeper than the chain around it.
+    public int ContinuationIndent(SyntaxToken token)
+    {
+        int level = 0;
+        SyntaxNode anchor = token.Parent;
+        if (anchor is BinaryExpressionSyntax binary)
+        {
+            while (binary.Parent is BinaryExpressionSyntax outer)
+            {
+                if (Rank(outer.OperatorToken) != Rank(binary.OperatorToken))
+                {
+                    level++;
+                }
+                binary = outer;
+            }
+            anchor = binary;
+        }
+        else
+        {
+            while (anchor.Parent is MemberAccessExpressionSyntax
+                    or InvocationExpressionSyntax
+                    or ElementAccessExpressionSyntax
+                && ChildIsHead(anchor))
+            {
+                anchor = anchor.Parent;
+            }
+        }
+        var lines = Source.Lines;
+        int home = lines.GetLineFromPosition(anchor.SpanStart).LineNumber;
+        for (var node = anchor.Parent; node != null; node = node.Parent)
+        {
+            if (node is StatementSyntax || node is MemberDeclarationSyntax)
+            {
+                break;
+            }
+            var open = OpenOf(node);
+            if (open == default)
+            {
+                continue;
+            }
+            if (lines.GetLineFromPosition(open.SpanStart).LineNumber != home)
+            {
+                break;
+            }
+            level++;
+        }
+        var text = lines[home].ToString();
+        int indent = text.Length - text.TrimStart().Length;
+        return indent + Wrap.Step * (1 + level);
+    }
+
+    /// True when node is the receiver of its parent's member access, call
+    /// or index, so the parent goes on with the same chain.
+    static bool ChildIsHead(SyntaxNode node)
+    {
+        return node.Parent switch
+        {
+            MemberAccessExpressionSyntax m => m.Expression == node,
+            InvocationExpressionSyntax i => i.Expression == node,
+            ElementAccessExpressionSyntax e => e.Expression == node,
+            _ => false,
+        };
+    }
+
+    static SyntaxToken OpenOf(SyntaxNode node)
+    {
+        return node switch
+        {
+            ArgumentListSyntax a => a.OpenParenToken,
+            BracketedArgumentListSyntax b => b.OpenBracketToken,
+            AttributeArgumentListSyntax aa => aa.OpenParenToken,
+            ParenthesizedExpressionSyntax p => p.OpenParenToken,
+            TupleExpressionSyntax t => t.OpenParenToken,
+            _ => default,
+        };
+    }
+
+    /// How loosely an operator binds: operators of one rank are one chain.
+    static int Rank(SyntaxToken op)
+    {
+        return op.Kind() switch
+        {
+            SyntaxKind.BarBarToken => 0,
+            SyntaxKind.AmpersandAmpersandToken => 1,
+            SyntaxKind.QuestionQuestionToken => 2,
+            SyntaxKind.BarToken => 3,
+            SyntaxKind.CaretToken => 4,
+            SyntaxKind.AmpersandToken => 5,
+            SyntaxKind.EqualsEqualsToken or SyntaxKind.ExclamationEqualsToken
+                => 6,
+            SyntaxKind.LessThanToken or SyntaxKind.GreaterThanToken
+                or SyntaxKind.LessThanEqualsToken
+                or SyntaxKind.GreaterThanEqualsToken => 7,
+            SyntaxKind.LessThanLessThanToken
+                or SyntaxKind.GreaterThanGreaterThanToken => 8,
+            SyntaxKind.PlusToken or SyntaxKind.MinusToken => 9,
+            _ => 10,
+        };
     }
 
     /// The whitespace before a binary operator, replaced by BreakFor.

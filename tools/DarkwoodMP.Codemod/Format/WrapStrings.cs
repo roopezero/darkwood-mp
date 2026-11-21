@@ -53,9 +53,8 @@ static class WrapStrings
         {
             edits.Add(new TextChange(new TextSpan(token.SpanStart, 0), "("));
         }
-        var plus = SyntaxFactory.Token(SyntaxKind.PlusToken);
         edits.Add(new TextChange(
-            new TextSpan(at, 0), "\"" + line.BreakFor(plus) + "+ \""));
+            new TextSpan(at, 0), "\"" + line.BreakForString(token) + "+ \""));
         if (parens)
         {
             edits.Add(new TextChange(new TextSpan(token.Span.End, 0), ")"));

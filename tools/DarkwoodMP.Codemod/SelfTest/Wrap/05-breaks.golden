@@ -1,0 +1,73 @@
+=== input
+using System;
+
+class Breaks
+{
+    static int Count;
+    static int Something;
+    static bool Enabled;
+    static object Method(Type type, string name, Type[] arguments) { return null; }
+    static void Request(int w, string what, Action<bool, string, string> done) { }
+    static bool Near(int from, int to, int reach) { return from - to < reach; }
+    static bool Check(int r, bool on, string text, bool enabled) { return on; }
+
+    static bool Wrapped(int r, bool on, string text, bool enabled) => Check(r, on, text, enabled && Enabled);
+
+    static void Run(int box, int vis, int n, int from, int to, int reach)
+    {
+        float height = (box - 4 * Count) * vis / (n + 1), top = box + 2 * Count + Something * vis;
+        object m = Method(typeof(Breaks), nameof(Breaks.Something), new[] { typeof(int), typeof(bool) });
+        Request(box, "a long description of the request that is sent", (ok, reason, result) =>
+        {
+        });
+        if (Near(from, to, reach) && Something == Count + Something * Something + vis * reach && n > 0)
+        {
+        }
+    }
+}
+=== wrap
+using System;
+
+class Breaks
+{
+    static int Count;
+    static int Something;
+    static bool Enabled;
+    static object Method(Type type, string name, Type[] arguments)
+    {
+        return null;
+    }
+    static void Request(int w, string what, Action<bool, string, string> done)
+    {
+    }
+    static bool Near(int from, int to, int reach)
+    {
+        return from - to < reach;
+    }
+    static bool Check(int r, bool on, string text, bool enabled)
+    {
+        return on;
+    }
+
+    static bool Wrapped(int r, bool on, string text, bool enabled) =>
+        Check(r, on, text, enabled && Enabled);
+
+    static void Run(int box, int vis, int n, int from, int to, int reach)
+    {
+        float height = (box - 4 * Count) * vis / (n + 1),
+            top = box + 2 * Count + Something * vis;
+        object m = Method(
+            typeof(Breaks), nameof(Breaks.Something),
+            new[] { typeof(int), typeof(bool) });
+        Request(box, "a long description of the request that is sent",
+            (ok, reason, result) =>
+        {
+        });
+        if (Near(from, to, reach)
+            && Something == Count + Something * Something + vis * reach
+            && n > 0)
+        {
+        }
+    }
+}
+=== report

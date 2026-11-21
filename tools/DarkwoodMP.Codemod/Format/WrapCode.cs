@@ -53,6 +53,16 @@ static class WrapCode
     public static LinePlan Plan(WrapLine line)
     {
         var tokens = line.Tokens();
+        var value = BreakBeforeValue(line, tokens);
+        if (value != null)
+        {
+            return value;
+        }
+        var declarators = BreakDeclarators(line, tokens);
+        if (declarators != null)
+        {
+            return declarators;
+        }
         var open = OpenInitializer(line);
         if (open != null)
         {
@@ -133,6 +143,10 @@ static class WrapCode
             {
                 continue;
             }
+            if (FitsAsArgument(line, node))
+            {
+                continue;
+            }
             var before = open.GetPreviousToken();
             var edits = new List<TextChange>();
             var pad = "\n" + line.Pad;
@@ -173,6 +187,36 @@ static class WrapCode
             return line.Break("initializer opened", edits);
         }
         return null;
+    }
+
+    /// True for a short array argument (new[] { typeof(int) }) of a list
+    /// that opens on this line, when the whole array fits on a line one
+    /// level in: breaking the list after its "(" keeps the array on one
+    /// line, so it isn't opened.
+    static bool FitsAsArgument(WrapLine line, SyntaxNode node)
+    {
+        if (!node.IsKind(SyntaxKind.ArrayInitializerExpression)
+            || node.Parent is not (ArrayCreationExpressionSyntax
+                or ImplicitArrayCreationExpressionSyntax))
+        {
+            return false;
+        }
+        var creation = node.Parent;
+        SyntaxToken open;
+        switch (creation.Parent?.Parent)
+        {
+            case ArgumentListSyntax a:
+                open = a.OpenParenToken;
+                break;
+            case AttributeArgumentListSyntax aa:
+                open = aa.OpenParenToken;
+                break;
+            default:
+                return false;
+        }
+        int width = line.GluedEnd(node.GetLastToken()) - creation.SpanStart;
+        return open.SpanStart >= line.Start
+            && line.Indent + Wrap.Step + width <= Wrap.Max;
     }
 
     static bool TryBraces(
@@ -452,6 +496,11 @@ static class WrapCode
         }
         switch (open.Parent)
         {
+            case ArgumentListSyntax a when IsNameOf(a):
+                return false;
+            case ParameterListSyntax when open.Parent.Parent
+                is ParenthesizedLambdaExpressionSyntax:
+                return false;
             case ArgumentListSyntax a:
                 close = a.CloseParenToken;
                 items = a.Arguments.GetWithSeparators().ToList();
@@ -471,6 +520,115 @@ static class WrapCode
             default:
                 return false;
         }
+    }
+
+    /// A nameof(...): its argument is one name and never breaks.
+    static bool IsNameOf(ArgumentListSyntax list)
+    {
+        return list.Parent is InvocationExpressionSyntax call
+            && call.Expression is IdentifierNameSyntax name
+            && name.Identifier.Text == "nameof";
+    }
+
+    /// When the value after a member's "=>", a single variable's "=" or an
+    /// assignment's "=" fits whole on the next line, the break goes there,
+    /// before any break inside the value.
+    static LinePlan BreakBeforeValue(WrapLine line, List<SyntaxToken> tokens)
+    {
+        int inner = line.Indent + Wrap.Step;
+        foreach (var token in tokens)
+        {
+            if (!HoldsValue(token))
+            {
+                continue;
+            }
+            var next = token.GetNextToken();
+            var owner = Owner(token);
+            if (owner == null || owner.Span.End > line.End
+                || owner.SpanStart < line.Start
+                || next.SpanStart >= line.End
+                || line.Col(token.Span.End) > Wrap.Max
+                || !line.OnlySpaceBetween(token, next))
+            {
+                continue;
+            }
+            int rest = line.End - next.SpanStart;
+            if (inner + rest > Wrap.Max)
+            {
+                return null;
+            }
+            return line.Break(
+                "broken before the value",
+                line.BreakBetween(token, next));
+        }
+        return null;
+    }
+
+    static bool HoldsValue(SyntaxToken token)
+    {
+        if (token.IsKind(SyntaxKind.EqualsGreaterThanToken))
+        {
+            return token.Parent is ArrowExpressionClauseSyntax;
+        }
+        if (!token.IsKind(SyntaxKind.EqualsToken))
+        {
+            return false;
+        }
+        return token.Parent switch
+        {
+            EqualsValueClauseSyntax
+            {
+                Parent: VariableDeclaratorSyntax
+                {
+                    Parent: VariableDeclarationSyntax { Variables.Count: 1 },
+                },
+            } => true,
+            EqualsValueClauseSyntax { Parent: PropertyDeclarationSyntax }
+                => true,
+            AssignmentExpressionSyntax { Parent: ExpressionStatementSyntax }
+                => true,
+            _ => false,
+        };
+    }
+
+    /// The statement or member the value belongs to.
+    static SyntaxNode Owner(SyntaxToken token)
+    {
+        return token.Parent.AncestorsAndSelf().FirstOrDefault(n =>
+            n is StatementSyntax || n is MemberDeclarationSyntax);
+    }
+
+    /// A declaration of several variables on this line that crosses the
+    /// limit: a break after every comma between them, one variable a line,
+    /// before any break inside one of them.
+    static LinePlan BreakDeclarators(WrapLine line, List<SyntaxToken> tokens)
+    {
+        var comma = tokens.FirstOrDefault(t => t.IsKind(SyntaxKind.CommaToken)
+            && t.Parent is VariableDeclarationSyntax);
+        if (comma == default)
+        {
+            return null;
+        }
+        var declaration = (VariableDeclarationSyntax)comma.Parent;
+        if (declaration.SpanStart < line.Start)
+        {
+            return null;
+        }
+        var edits = new List<TextChange>();
+        foreach (var separator in declaration.Variables.GetSeparators())
+        {
+            var next = separator.GetNextToken();
+            if (separator.SpanStart >= line.End)
+            {
+                break;
+            }
+            if (!line.OnlySpaceBetween(separator, next))
+            {
+                return null;
+            }
+            edits.Add(line.BreakBetween(separator, next));
+        }
+        return line.Break("one variable a line", edits);
     }
 
     /// Breaks after the last "=" or "=>" that fits, with code after it on
@@ -660,14 +818,23 @@ static class WrapCode
         var dot = chained;
         if (dot == default)
         {
-            dot = dots.LastOrDefault();
+            // A dot behind a plain name (InvItemClass.isNull, r.Read) is
+            // never a chain's link: breaking there hides the call.
+            dot = dots.LastOrDefault(t =>
+                ((MemberAccessExpressionSyntax)t.Parent).Expression
+                    .DescendantNodesAndSelf()
+                    .Any(n => n is InvocationExpressionSyntax
+                        or ElementAccessExpressionSyntax));
         }
         if (dot == default)
         {
             return null;
         }
+        var before = dot.GetPreviousToken();
         return line.Break(
             "broken before a member call",
-            line.BreakBetween(dot.GetPreviousToken(), dot));
+            new TextChange(
+                TextSpan.FromBounds(before.Span.End, dot.SpanStart),
+                "\n" + new string(' ', line.ContinuationIndent(dot))));
     }
 }
