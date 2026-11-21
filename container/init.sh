@@ -69,7 +69,9 @@ case "$what" in
     # Remote Control: sessions on this box, started and used from
     # claude.ai/code or the Claude app. It needs Claude logged in (/login).
     say "mode: ${DWMP_BOX:-unknown}, Remote Control"
-    exec claude remote-control "$@"
+    # same-dir: sessions work in the repo itself (without it, the first
+    # start asks which mode to use).
+    exec claude remote-control --spawn=same-dir "$@"
     ;;
   shell)
     exec bash "$@"

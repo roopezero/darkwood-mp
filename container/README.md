@@ -12,7 +12,7 @@ container/box --game           # Claude, and the box can run the game (game mode
 container/box shell            # a bash shell in the box (add --game for game mode)
 container/box -- --resume      # anything after -- is passed on to Claude
 container/box remote           # Remote Control in the background (add --game for game mode)
-container/box remote-logs      # follow it; Ctrl+C leaves it running
+container/box remote-attach    # its screen (link, QR code); Ctrl+P Ctrl+Q leaves it running
 container/box remote-stop      # stop it
 container/box refresh-saves    # copy your saves into the box again
 container/box build            # build the image again
@@ -23,7 +23,9 @@ The first start builds the image, then installs Claude Code, the .NET 8 SDK and 
 
 ## From the browser (Remote Control)
 
-`container/box remote` starts Claude's Remote Control in the box, in a background container (`darkwood-box-remote`) that keeps running after you close the terminal. Open claude.ai/code or the Claude app, pick the box (its sessions are named after the host `darkwood-box`), and start or continue sessions there. They run in the box with the same mounts and the same mode as `container/box`. Remote Control needs a claude.ai subscription, and the box must be logged in first: start `container/box` once and run `/login`. If it stops at once, `container/box remote` prints its log. Anything after `--` goes to `claude remote-control` (for example `-- --name darkwood`).
+`container/box remote` starts Claude's Remote Control in the box, in a background container (`darkwood-box-remote`) that keeps running after you close the terminal. Once it's connected it prints a link, `https://claude.ai/code?environment=...`. Open that link, or pick the box's environment in claude.ai/code or the Claude app. Sessions there run in the box, with the same mounts and mode as `container/box`, in the repo itself. **A new session started from claude.ai/code without picking the box runs in Anthropic's cloud instead:** an empty `/home/user`, with none of this repo.
+
+Remote Control needs a claude.ai subscription, and the box must be logged in first: start `container/box` once and run `/login`. The first `container/box remote` asks whether to enable Remote Control and shows its screen: answer `y`, then press Ctrl+P Ctrl+Q to leave it running. `container/box remote-attach` shows that screen again. Ctrl+C there would stop it. If it stops, `container/box remote` prints its log. Anything after `--` goes to `claude remote-control` (for example `-- --name darkwood`).
 
 To use one terminal session from the browser too, start it with `container/box -- --remote-control`.
 
