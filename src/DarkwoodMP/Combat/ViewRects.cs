@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Joiners;
 using DarkwoodMP.Net;
 using UnityEngine;
 
@@ -57,8 +58,7 @@ namespace DarkwoodMP.Combat
 
             _sent = (dx, dy);
             var w = s.Begin(MsgType.ViewRect);
-            w.W.Write((ushort)Mathf.Clamp(dx, 0, ushort.MaxValue));
-            w.W.Write((ushort)Mathf.Clamp(dy, 0, ushort.MaxValue));
+            ViewRectMessage.Write(w, new ViewRect(dx, dy));
             s.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -72,8 +72,9 @@ namespace DarkwoodMP.Combat
 
             // A rect no screen gives is kept within bounds: a huge one would
             // keep the whole map running.
-            int dx = Mathf.Clamp(r.R.ReadUInt16(), 600, 6000),
-                dy = Mathf.Clamp(r.R.ReadUInt16(), 600, 6000);
+            ViewRect reported = ViewRectMessage.Read(r);
+            int dx = Mathf.Clamp(reported.Dx, 600, 6000),
+                dy = Mathf.Clamp(reported.Dy, 600, 6000);
             if (Rects.TryGetValue(from, out var was) && was == (dx, dy))
             {
                 return;
