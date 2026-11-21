@@ -45,10 +45,12 @@ namespace DarkwoodMP.Combat
         public const float StateInterval = EnemyRelayRules.StateInterval;
 
         private readonly Session _session;
+        private readonly CoopSession _coop;
 
         internal NetEnemies(CoopSession coop)
         {
             _session = coop.Net;
+            _coop = coop;
             coop.Handle(MsgType.EnemySpawn, OnSpawn);
             coop.Handle(MsgType.EnemyState, OnState);
             coop.Handle(MsgType.EnemyDespawn, OnDespawn);

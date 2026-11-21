@@ -206,7 +206,7 @@ namespace DarkwoodMP.Combat
             // kind near where the host's is.
             if (c == null)
             {
-                c = HostileNpcs.OurCopy(
+                c = _coop.Hostiles.OurCopy(
                     name, pos, x => _byChar.ContainsKey(x), KindOf);
             }
 
@@ -273,7 +273,7 @@ namespace DarkwoodMP.Combat
             _byChar[c] = p;
             if (c.npc != null)
             {
-                HostileNpcs.ClientStarted(c, id);
+                _coop.Hostiles.ClientStarted(c, id);
             }
 
             SetArmor(c, armor, fade: false);

@@ -70,7 +70,7 @@ namespace DarkwoodMP.Combat
                         _byIdHost[t.Id] = t;
                         if (c.npc != null)
                         {
-                            HostileNpcs.HostStarted(c, t.Id);
+                            _coop.Hostiles.HostStarted(c, t.Id);
                         }
                     }
                 }
@@ -100,7 +100,7 @@ namespace DarkwoodMP.Combat
                     uint id = _byCharHost[g].Id;
                     if (g != null)
                     {
-                        HostileNpcs.HostStopped(g, id);
+                        _coop.Hostiles.HostStopped(g, id);
                     }
 
                     Forget(id);

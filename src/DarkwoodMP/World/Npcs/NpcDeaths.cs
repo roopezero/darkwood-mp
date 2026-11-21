@@ -182,7 +182,7 @@ namespace DarkwoodMP.World
         {
             if (wasAlive && c != null && c.npc != null && !c.alive)
             {
-                Combat.HostileNpcs.Died(c);
+                _coop.Hostiles.Died(c);
             }
 
             var facts = new DeathSentFacts

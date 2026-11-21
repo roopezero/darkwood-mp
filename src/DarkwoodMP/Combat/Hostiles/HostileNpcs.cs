@@ -26,10 +26,9 @@ namespace DarkwoodMP.Combat
     /// that NPC is the client's, and the hit or attack happens there.
     ///
     /// The decisions are the core's HostileRules and NpcHitRules; the state
-    /// is the session's NpcHostility (CoopSession.Hostiles). These statics
-    /// pass on to it, so NetEnemies, CombatPatches and NpcDeaths didn't
-    /// change; with no session nobody is running and nothing is left to the
-    /// host.
+    /// is the session's NpcHostility (CoopSession.Hostiles), which NetEnemies,
+    /// the patches and NpcDeaths call. The statics left here read a
+    /// character for HostileRules; with no session nobody is running.
     /// </summary>
     public static class HostileNpcs
     {
@@ -51,20 +50,6 @@ namespace DarkwoodMP.Combat
             public bool ByPlayer;
             public bool Interrupt;
             public bool Normal;
-        }
-
-        private static NpcHostility Session
-        {
-            get
-            {
-                var coop = Coop.Current;
-                if (coop == null)
-                {
-                    return null;
-                }
-
-                return coop.Hostiles;
-            }
         }
 
         /// <summary>
@@ -91,10 +76,10 @@ namespace DarkwoodMP.Combat
             }
 
             bool listed = false;
-            var hostility = Session;
-            if (hostility != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                listed = hostility.Listed(c);
+                listed = coop.Hostiles.Listed(c);
             }
 
             bool inPlay = NetEnemies.InPlay(c);
@@ -156,132 +141,6 @@ namespace DarkwoodMP.Combat
             }
 
             return t.name;
-        }
-
-        /// <summary>
-        /// Client: whether effects activating on this NPC now are those of a
-        /// hit just left to the host.
-        /// </summary>
-        internal static bool EffectsForwarded(Character c)
-        {
-            var hostility = Session;
-            return hostility != null && hostility.EffectsForwarded(c);
-        }
-
-        /// <summary>
-        /// Client: the melee hit is over (MeleeSensorNotesEffects).
-        /// </summary>
-        internal static void EndHit()
-        {
-            var hostility = Session;
-            if (hostility != null)
-            {
-                hostility.EndHit();
-            }
-        }
-
-        /// <summary>
-        /// An NPC died in this game (NpcDeaths.AfterDie): its corpse is
-        /// still our copy of that NPC.
-        /// </summary>
-        internal static void Died(Character c)
-        {
-            var hostility = Session;
-            if (hostility != null)
-            {
-                hostility.Died(c);
-            }
-        }
-
-        internal static void HostStarted(Character c, uint id)
-        {
-            var hostility = Session;
-            if (hostility != null)
-            {
-                hostility.HostStarted(c, id);
-            }
-        }
-
-        internal static void HostStopped(Character c, uint id)
-        {
-            var hostility = Session;
-            if (hostility != null)
-            {
-                hostility.HostStopped(c, id);
-            }
-        }
-
-        internal static void ClientStarted(Character c, uint id)
-        {
-            var hostility = Session;
-            if (hostility != null)
-            {
-                hostility.ClientStarted(c, id);
-            }
-        }
-
-        /// <summary>
-        /// Client: the host stopped sending this NPC. Ours from the save runs
-        /// again here; true if it was handled.
-        /// </summary>
-        internal static bool ClientStopped(Character c, uint id, bool ours)
-        {
-            var hostility = Session;
-            return hostility != null && hostility.ClientStopped(c, id, ours);
-        }
-
-        /// <summary>
-        /// Client: our copy of the host's NPC of this kind when its save id
-        /// didn't name it (NpcHostility.OurCopy).
-        /// </summary>
-        internal static Character OurCopy(
-            string kind, Vector3 pos, Func<Character, bool> driven,
-            Func<Character, string> kindOf)
-        {
-            var hostility = Session;
-            if (hostility == null)
-            {
-                return null;
-            }
-
-            return hostility.OurCopy(kind, pos, driven, kindOf);
-        }
-
-        /// <summary>
-        /// Client, from CharacterGetHitFromClient: a hit on an NPC of ours
-        /// that the host doesn't run yet. True if it's handled (sent, or left
-        /// to the host's copy): don't apply it here.
-        /// </summary>
-        internal static bool ClientHit(
-            Character c, float damage, Transform attacker, bool cut,
-            bool byPlayer, bool interrupt, bool normal)
-        {
-            var hostility = Session;
-            if (hostility == null)
-            {
-                return false;
-            }
-
-            return hostility.ClientHit(new Hit
-            {
-                Npc = c,
-                Damage = damage,
-                Attacker = attacker,
-                Cut = cut,
-                ByPlayer = byPlayer,
-                Interrupt = interrupt,
-                Normal = normal,
-            });
-        }
-
-        /// <summary>
-        /// Client, from Character.attackPlayer: a scripted "attack the player"
-        /// on an NPC of ours. True if it isn't to be done here.
-        /// </summary>
-        internal static bool ClientAttack(Character c)
-        {
-            var hostility = Session;
-            return hostility != null && hostility.ClientAttack(c);
         }
 
         /// <summary>
