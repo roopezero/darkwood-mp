@@ -42,7 +42,7 @@ namespace DarkwoodMP
         public readonly JoinerSaveIds Joiners;
 
         /// What's in the world's containers, and who has which open.
-        public readonly World.Containers Containers;
+        public readonly World.Inventories.Containers Containers;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -58,7 +58,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
-            Containers = new World.Containers(this);
+            Containers = new World.Inventories.Containers(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Inventories;
 using System.Collections;
 using System.Collections.Generic;
 using DarkwoodMP.Combat;

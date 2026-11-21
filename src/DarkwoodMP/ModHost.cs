@@ -32,7 +32,8 @@ namespace DarkwoodMP
             new World.Workbenches.WorkbenchStorage();
 
         /// What a player can place, built once from the item database.
-        public readonly World.Placeables Placeables = new World.Placeables();
+        public readonly World.Inventories.Placeables Placeables =
+            new World.Inventories.Placeables();
 
         /// One generator for the random ids of shared objects
         /// (HostIds.NewId), so ids made in the same millisecond differ.

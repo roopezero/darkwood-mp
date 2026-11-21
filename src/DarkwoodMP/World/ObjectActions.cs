@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Inventories;
 using HarmonyLib;
 using UnityEngine;
 using Action = DarkwoodMP.World.WorldActions.Action;

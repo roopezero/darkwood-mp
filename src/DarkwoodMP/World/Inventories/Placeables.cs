@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Inventories
 {
     /// <summary>
     /// What a player can place, by prefab: each item that canBePlaced

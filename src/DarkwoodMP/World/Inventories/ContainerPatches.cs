@@ -1,7 +1,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Inventories
 {
     /// <summary>
     /// What the player places (a trap...) is made in
