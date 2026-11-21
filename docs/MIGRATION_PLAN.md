@@ -515,6 +515,12 @@ Finish with `tools/run-test.sh full`.
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
 - [ ] 7.1 Flags and scripted events.
+  - [ ] `ScriptedEvents`. Done: its bytes (`EventFiredMessage`), and every
+        rule called from the shell (`StepRules`, `DoerRules`, `TriggerRules`,
+        `FiringRules`, `WorldTriggerRules`, `LaterRules`, `FiredEventRules`,
+        `WorldEventRules`, `TripRules`); `ScriptedEvents.Part` is the core's
+        `EventPart`. Left: its state (an instance on `CoopSession`, with
+        what solo play needs on `ModHost`), thin patches, `World/Scripted/`.
 - [ ] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
