@@ -27,6 +27,15 @@ namespace DarkwoodMP
         /// scans of the scene.
         public readonly World.ObjNames AloneNames = new World.ObjNames(null);
 
+        /// The workbenches' storage rows, which grow with each upgrade also
+        /// without co-op.
+        public readonly World.Workbenches.WorkbenchStorage Workbenches =
+            new World.Workbenches.WorkbenchStorage();
+
+        /// What a player can place, built once from the item database.
+        public readonly World.Inventories.Placeables Placeables =
+            new World.Inventories.Placeables();
+
         /// One generator for the random ids of shared objects
         /// (HostIds.NewId), so ids made in the same millisecond differ.
         public readonly Random IdRandom = new Random();

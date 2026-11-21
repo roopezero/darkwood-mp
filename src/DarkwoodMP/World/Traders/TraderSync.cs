@@ -280,11 +280,7 @@ namespace DarkwoodMP.World
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             _applied[npc.GetInstanceID()] = seen + 1;
-            Containers instance = Containers.Instance;
-            if (instance != null)
-            {
-                instance.Apply(Inv(npc), stock);
-            }
+            _coop.Containers.Apply(Inv(npc), stock);
 
             Plugin.Log.LogInfo(
                 $"{npc.name} has the host's stock: "

@@ -103,9 +103,10 @@ namespace DarkwoodMP.World
         private static IEnumerator Locks(string[] a, Result r)
         {
             int n = -1;
-            if (Containers.Instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                n = Containers.Instance.LockCount;
+                n = coop.Containers.LockCount;
             }
 
             r.Info = $"{n} container(s) held open";

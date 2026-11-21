@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Workbenches
 {
     /// <summary>
     /// Each workbench level adds a row of RowSize slots to the workbench's
@@ -24,38 +23,33 @@ namespace DarkwoodMP.World
     /// it. A client's world is the host's save, which has the host's slot count
     /// already; the host's contents (ContainerSlotsAll) carry it too, and
     /// SlotShare grows the storage to it before taking them.
+    ///
+    /// It works with no session too, so ModHost owns it (ModHost.Workbenches)
+    /// for as long as the game runs.
     /// </summary>
-    public static class WorkbenchStorage
+    internal sealed class WorkbenchStorage
     {
-        /// <summary>
-        /// Slots added for each level above the first: one row of the storage's
-        /// six columns.
-        /// </summary>
-        public const int RowSize = 6;
-
-        /// <summary>
-        /// The level a new game starts at (Controller.workbenchLevel's
-        /// default).
-        /// </summary>
-        public const int BaseLevel = 1;
-
-        /// <summary>
-        /// The storage's slot count at the base level when its prefab can't be
-        /// found.
-        /// </summary>
-        public const int FallbackBase = 30;
+        private const string WorldLoaded = "world loaded";
 
         private const string DefaultPrefab = "Furnitures/workbench_01";
 
-        private static readonly Dictionary<string, int> _base =
+        /// <summary>
+        /// Room under the last row's centre for its lower half and the Sort
+        /// &amp; Stack button (UI units at 1080p).
+        /// </summary>
+        private const float Below = 30f + 70f;
+
+        // Each prefab's slot count at the base level, read from the game's
+        // resources once.
+        private readonly Dictionary<string, int> _base =
             new Dictionary<string, int>();
-        private static int _appliedScene = -1;
-        private static int _appliedLevel = -1;
+
+        private RowsApplied _applied = RowsApplied.None;
 
         /// <summary>
         /// The storage's slot count at the base level: its prefab's.
         /// </summary>
-        public static int BaseSlots(Workbench wb)
+        public int BaseSlots(Workbench wb)
         {
             var so = wb.GetComponent<SaveableObject>();
             string name;
@@ -107,10 +101,11 @@ namespace DarkwoodMP.World
 
             if (n == 0)
             {
-                n = FallbackBase;
+                n = WorkbenchRules.FallbackBase;
                 Plugin.Log.LogWarning(
                     $"[workbench] no prefab for {wb.name} ('{name}'): its "
-                        + $"storage counts {n} slots at level {BaseLevel}");
+                        + $"storage counts {n} slots at level "
+                        + $"{WorkbenchRules.BaseLevel}");
             }
 
             _base[name] = n;
@@ -120,8 +115,8 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The slot count the storage should have at this level.
         /// </summary>
-        public static int Wanted(Workbench wb, int level) =>
-            BaseSlots(wb) + RowSize * Mathf.Max(0, level - BaseLevel);
+        public int Wanted(Workbench wb, int level) =>
+            WorkbenchRules.Wanted(BaseSlots(wb), level);
 
         private static int Level
         {
@@ -132,7 +127,7 @@ namespace DarkwoodMP.World
                     return Singleton<Controller>.Instance.workbenchLevel;
                 }
 
-                return BaseLevel;
+                return WorkbenchRules.BaseLevel;
             }
         }
 
@@ -140,39 +135,42 @@ namespace DarkwoodMP.World
         /// Every frame: once a world has loaded (again), or the level changed,
         /// give every workbench its rows.
         /// </summary>
-        public static void Update()
+        public void Update()
+        {
+            RowsUpdate next = WorkbenchRules.Update(_applied, FactsOf());
+            _applied = next.Applied;
+            if (next.Why == RowsWhy.WorldLoaded)
+            {
+                ApplyAll(WorldLoaded);
+            }
+            else if (next.Why == RowsWhy.LevelChanged)
+            {
+                ApplyAll("level changed");
+            }
+        }
+
+        /// The world, scene and level this frame: the only code here that
+        /// reads them for Update.
+        private static RowsFacts FactsOf()
         {
             if (!WorldShare.WorldReady)
             {
-                _appliedScene = -1;
-                return;
+                return new RowsFacts { Ready = false };
             }
 
-            int scene =
-                UnityEngine.SceneManagement.SceneManager
-                    .GetActiveScene().handle;
-            int level = Level;
-            if (scene == _appliedScene && level == _appliedLevel)
+            return new RowsFacts
             {
-                return;
-            }
-
-            bool loaded = scene != _appliedScene;
-            _appliedScene = scene;
-            _appliedLevel = level;
-            string why = "level changed";
-            if (loaded)
-            {
-                why = "world loaded";
-            }
-
-            ApplyAll(why);
+                Ready = true,
+                Scene = UnityEngine.SceneManagement.SceneManager
+                    .GetActiveScene().handle,
+                Level = Level,
+            };
         }
 
         /// <summary>
         /// Give every workbench's storage the slot count of the current level.
         /// </summary>
-        public static void ApplyAll(string why)
+        public void ApplyAll(string why)
         {
             int level = Level;
             foreach (var wb in Object.FindObjectsOfType<Workbench>(true))
@@ -192,7 +190,7 @@ namespace DarkwoodMP.World
                             + $"{wb.normalInventory.slots.Count} slots "
                             + $"(level {level}, {why})");
                 }
-                else if (why == "world loaded")
+                else if (why == WorldLoaded)
                 {
                     Plugin.Log.LogInfo(
                         $"[workbench] {wb.name} "
@@ -213,7 +211,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool Fit(Inventory inv, int count)
         {
-            if (inv == null || inv.slots.Count >= count)
+            if (inv == null || !WorkbenchRules.Grows(inv.slots.Count, count))
             {
                 return false;
             }
@@ -238,10 +236,9 @@ namespace DarkwoodMP.World
                 inv.slots.Add(slot);
             }
 
-            if (inv.slots.Count >= 30)
+            if (WorkbenchRules.Wide(inv.slots.Count))
             {
-                // the game's rule for big containers (Inventory.init)
-                inv.maxColumns = RowSize;
+                inv.maxColumns = WorkbenchRules.RowSize;
             }
 
             if (open)
@@ -253,43 +250,27 @@ namespace DarkwoodMP.World
                 }
             }
 
-            SlotShare instance = SlotShare.Instance;
-            if (instance != null)
-            {
-                instance.Grew(inv);
-            }
-
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
+                coop.Slots.Grew(inv);
                 coop.Ui.Changed(inv);
             }
 
             return true;
         }
-    }
 
-    /// <summary>
-    /// The workbench's storage was drawn (Inventory.show): if its rows and the
-    /// Sort &amp; Stack button under them would run off the bottom of the
-    /// screen, the whole window is drawn smaller to fit. Runs after the button
-    /// is added (StorageSortButtonPatch), so the button shrinks with it. The
-    /// game's ScaleToResolution takes the window's scale as its base on the
-    /// next frame, so a change of resolution keeps the fit.
-    /// </summary>
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-    [HarmonyPriority(Priority.Low)]
-    static class StorageFitPatch
-    {
         /// <summary>
-        /// Room under the last row's centre for its lower half and the Sort
-        /// &amp; Stack button (UI units at 1080p).
+        /// The workbench's storage was drawn (Inventory.show): if its rows and
+        /// the Sort &amp; Stack button under them would run off the bottom of
+        /// the screen, the whole window is drawn smaller to fit. Runs after
+        /// the button is added (SlotShare.Shown), so the button shrinks
+        /// with it. The game's ScaleToResolution takes the window's scale as
+        /// its base on the next frame, so a change of resolution keeps the
+        /// fit.
         /// </summary>
-        private const float Below = 30f + 70f;
-
-        static void Postfix(Inventory __instance)
+        public static void FitToScreen(Inventory inv)
         {
-            var inv = __instance;
             if (inv == null || !inv.open || inv.thisUI == null)
             {
                 return;
@@ -336,27 +317,22 @@ namespace DarkwoodMP.World
                 $"[workbench] storage of {inv.slots.Count} slots ({rows} rows) "
                     + $"drawn at {scale:0.00} of its size to fit the screen");
         }
-    }
 
-    /// <summary>
-    /// A workbench opened: its storage has the rows of the current level before
-    /// it's drawn.
-    /// </summary>
-    [HarmonyPatch(typeof(Workbench), nameof(Workbench.open))]
-    static class WorkbenchOpenRowsPatch
-    {
-        static void Prefix(Workbench __instance)
+        /// <summary>
+        /// A workbench opened (Workbench.open): its storage has the rows of
+        /// the current level before it's drawn.
+        /// </summary>
+        public void Opened(Workbench wb)
         {
-            if (__instance == null || __instance.normalInventory == null
+            if (wb == null || wb.normalInventory == null
                 || Singleton<Controller>.Instance == null)
             {
                 return;
             }
 
-            WorkbenchStorage.Fit(
-                __instance.normalInventory,
-                WorkbenchStorage.Wanted(
-                    __instance, Singleton<Controller>.Instance.workbenchLevel));
+            Fit(
+                wb.normalInventory,
+                Wanted(wb, Singleton<Controller>.Instance.workbenchLevel));
         }
     }
 }

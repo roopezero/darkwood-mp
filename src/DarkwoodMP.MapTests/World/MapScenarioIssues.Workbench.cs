@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using DarkwoodMP.World.Inventories;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -181,7 +182,7 @@ namespace DarkwoodMP.World
             int mark = LogMark();
             AsPlayer(() => wb.open());
             // it asks the host again as it opens; changes wait for the answer
-            yield return new WaitForSeconds(SlotShare.AskTimeout + 0.5f);
+            yield return new WaitForSeconds(SlotRules.AskTimeout + 0.5f);
             if (p.openedItemInventory2 != st)
             {
                 r.Fail("the workbench didn't open its storage");

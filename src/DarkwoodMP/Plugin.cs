@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Inventories;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -77,7 +78,6 @@ namespace DarkwoodMP
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
-        private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
         private WorldEvents _events;
@@ -446,11 +446,9 @@ namespace DarkwoodMP
             AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
             WorldActions.Register(_host.Session);
-            _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new SlotShare(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
@@ -2270,8 +2268,15 @@ namespace DarkwoodMP
 
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
-            World.WorkbenchStorage.Update();
-            _containers.Update();
+            _host.Workbenches.Update();
+            // also without co-op: see Containers.EachFrame
+            Containers.EachFrame();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.Update();
+            }
+
             ModProfiler.Mark("containers");
             _characters.Update();
             ModProfiler.Mark("characters");

@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Inventories;
 using DarkwoodMP.World.Objects;
 using DarkwoodMP.World.Switches;
 using UnityEngine;

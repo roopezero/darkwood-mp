@@ -41,6 +41,13 @@ namespace DarkwoodMP
         /// Host: the save id counters of the joiners let in to the world.
         public readonly JoinerSaveIds Joiners;
 
+        /// What's in the world's containers, and who has which open.
+        public readonly World.Inventories.Containers Containers;
+
+        /// The containers shared slot by slot: the workbench's storage, and
+        /// every container a client changes.
+        public readonly World.Inventories.SlotShare Slots;
+
         /// Building and repairing, and a joiner's builds waiting for the
         /// host's answer.
         public readonly Construction Construction;
@@ -148,6 +155,8 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
+            Containers = new World.Inventories.Containers(this);
+            Slots = new World.Inventories.SlotShare(this);
             Construction = new Construction(this);
             Stacks = new StackShare(this);
             Time = new TimeSync(this);

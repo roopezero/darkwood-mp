@@ -787,10 +787,10 @@ namespace DarkwoodMP.World
                         var inv = go.GetComponent<Inventory>();
                         if (inv != null && o.contents.Length > 0)
                         {
-                            Containers instance = Containers.Instance;
-                            if (instance != null)
+                            CoopSession coop = Coop.Current;
+                            if (coop != null)
                             {
-                                instance.Apply(inv, o.contents);
+                                coop.Containers.Apply(inv, o.contents);
                             }
                         }
 

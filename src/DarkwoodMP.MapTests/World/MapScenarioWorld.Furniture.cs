@@ -56,7 +56,12 @@ namespace DarkwoodMP.World
 
                 yield return null; // the tried one is gone
                 GameObject made;
-                Containers.Placing = true;
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Containers.Placing = true;
+                }
+
                 try
                 {
                     made = Core.AddPrefab(
@@ -65,7 +70,10 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    Containers.Placing = false;
+                    if (coop != null)
+                    {
+                        coop.Containers.Placing = false;
+                    }
                 }
 
                 yield return new WaitForSeconds(2f);

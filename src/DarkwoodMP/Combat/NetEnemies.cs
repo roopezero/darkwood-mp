@@ -855,10 +855,10 @@ namespace DarkwoodMP.Combat
 
             if (inv != null)
             {
-                Containers instance = Containers.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendContentsTo(peer, inv);
+                    coop.Containers.SendContentsTo(peer, inv);
                 }
             }
         }
@@ -2913,7 +2913,7 @@ namespace DarkwoodMP.Combat
                 var inv = c.GetComponent<Inventory>();
                 if (inv != null)
                 {
-                    World.Containers.CloseIfOpen(c.gameObject);
+                    World.Inventories.Containers.CloseIfOpen(c.gameObject);
                     Object.Destroy(inv);
                 }
 
@@ -3194,7 +3194,7 @@ namespace DarkwoodMP.Combat
                 // Destroyed, our copy from the save too: the host's is out of
                 // its world for good, and a hidden copy would still be in ours
                 // (its body searchable by name, saved with our world).
-                World.Containers.CloseIfOpen(p.C.gameObject);
+                World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
                 Object.Destroy(p.C.gameObject);
                 return;
             }
@@ -3231,7 +3231,7 @@ namespace DarkwoodMP.Combat
 
             // its window, if our player has its corpse open: gone or hidden, it
             // is gone for us
-            World.Containers.CloseIfOpen(p.C.gameObject);
+            World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
             if (p.Ours)
             {
                 Object.Destroy(p.C.gameObject);

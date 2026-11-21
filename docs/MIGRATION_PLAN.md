@@ -396,7 +396,14 @@ with the baseline.
       `WorldAction` and `ObjState` dispatch, `HasKey`, `Crate`, the
       `HammerStroke` patch) so its many callers don't change; it is still
       about 1,000 lines.
-- [ ] 5.3 Items.
+- [x] 5.3 Items.
+  - [x] Part a: `Containers`, `SlotShare` (with `SlotShare.Sort`) and
+        `WorkbenchStorage`. Done: the containers and the slot sharing are
+        `CoopSession.Containers` and `CoopSession.Slots` in
+        `World/Inventories`; the workbench storage works alone too, so it's
+        `ModHost.Workbenches` in `World/Workbenches`, and so is the
+        placeables cache (`ModHost.Placeables`). Sort & Stack still works
+        alone, through a static `SortAlone` that sends nothing.
   - [x] Part b: `UiRefresh`, `TraderSync`, `ThrowSync`. `UiRefresh` and
         `TraderSync` are `CoopSession.Ui` and `.Traders`, `ThrowSync` is
         `.Throws`, and its thrown things' state is `WorldScope.Thrown`
