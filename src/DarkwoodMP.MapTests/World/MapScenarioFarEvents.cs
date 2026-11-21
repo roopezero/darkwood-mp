@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;

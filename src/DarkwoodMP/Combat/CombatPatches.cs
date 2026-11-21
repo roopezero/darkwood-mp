@@ -262,7 +262,7 @@ namespace DarkwoodMP.Combat
             }
 
             RefreshAll(__instance, __instance.currentGrid, pos, instant, force);
-            World.FarEvents.Tick();
+            World.Scripted.FarEvents.Tick();
             return false;
         }
 

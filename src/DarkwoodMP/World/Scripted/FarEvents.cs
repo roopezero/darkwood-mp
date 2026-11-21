@@ -7,7 +7,7 @@ using HarmonyLib;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
     /// <summary>
     /// A world location's enter and exit events (EventTriggers of type
