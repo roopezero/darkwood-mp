@@ -45,11 +45,6 @@ namespace DarkwoodMP.World
 
         public static void OnGUI() => Panel.OnGUI();
 
-        internal static void CloseFromEscape() => Panel.CloseFromEscape();
-
-        internal static bool EatsAction(string action, bool down) =>
-            Panel.EatsAction(action, down);
-
         // ---- tests ----------------------------------------------------------
 
         /// <summary>For tests: the key pressed (as Update sees it).</summary>

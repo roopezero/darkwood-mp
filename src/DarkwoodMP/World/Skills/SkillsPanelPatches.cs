@@ -1,21 +1,26 @@
-using DarkwoodMP.World.Skills;
 using HarmonyLib;
 using RW = Rewired;
 
 namespace DarkwoodMP.World
 {
+    // The Skills panel's patches. The panel works playing alone too, so
+    // these run with no session; they do nothing before the mod's state is
+    // made (Plugin.Host).
+
     /// <summary>
     /// The game's mouse actions read as not pressed while they are pressed on
-    /// the Skills panel (SkillsPanel.EatsAction).
+    /// the Skills panel (SkillsWindow.EatsAction).
     /// </summary>
     [HarmonyPatch(
         typeof(RW.Player), nameof(RW.Player.GetButtonDown),
         new[] { typeof(string) })]
-    internal static class SkillsPanelMouse
+    static class RewiredPlayerGetButtonDown
     {
-        private static bool Prefix(string actionName, ref bool __result)
+        static bool Prefix(string actionName, ref bool __result)
         {
-            if (!SkillsPanel.EatsAction(actionName, true))
+            Plugin plugin = Plugin.Instance;
+            if (plugin == null || plugin.Host == null
+                || !plugin.Host.SkillsPanel.EatsAction(actionName, true))
             {
                 return true;
             }
@@ -25,14 +30,19 @@ namespace DarkwoodMP.World
         }
     }
 
+    /// <summary>
+    /// The same for a mouse action held (SkillsWindow.EatsAction).
+    /// </summary>
     [HarmonyPatch(
         typeof(RW.Player), nameof(RW.Player.GetButton),
         new[] { typeof(string) })]
-    internal static class SkillsPanelMouseHeld
+    static class RewiredPlayerGetButton
     {
-        private static bool Prefix(string actionName, ref bool __result)
+        static bool Prefix(string actionName, ref bool __result)
         {
-            if (!SkillsPanel.EatsAction(actionName, false))
+            Plugin plugin = Plugin.Instance;
+            if (plugin == null || plugin.Host == null
+                || !plugin.Host.SkillsPanel.EatsAction(actionName, false))
             {
                 return true;
             }
@@ -44,22 +54,20 @@ namespace DarkwoodMP.World
 
     /// <summary>
     /// Escape with the Skills panel open closes the panel, not the backpack or
-    /// into the pause menu.
+    /// into the pause menu (SkillsWindow.TakesEscape).
     /// </summary>
     [HarmonyPatch(typeof(InputScript), nameof(InputScript.onPressEsc))]
-    internal static class SkillsPanelEscape
+    static class InputScriptOnPressEsc
     {
-        private static bool Prefix()
+        static bool Prefix()
         {
-            // a film to skip goes first
-            if (!SkillPanelRules.TakesEscape(
-                SkillsPanel.Open, Core.forbidInputs))
+            Plugin plugin = Plugin.Instance;
+            if (plugin == null || plugin.Host == null)
             {
                 return true;
             }
 
-            SkillsPanel.CloseFromEscape();
-            return false;
+            return !plugin.Host.SkillsPanel.TakesEscape();
         }
     }
 }

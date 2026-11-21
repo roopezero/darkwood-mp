@@ -21,8 +21,9 @@ namespace DarkwoodMP.World
     /// scrollbar that narrows everything, while the mouse moves over it.
     /// Learned skills have a bright frame and a check mark. Clicks on the panel
     /// don't reach the world: while the mouse is over it, the game's mouse
-    /// actions read as not pressed (SkillsPanelMouse). Escape closes the panel
-    /// before the game's pause menu sees it (SkillsPanelEscape).
+    /// actions read as not pressed (RewiredPlayerGetButtonDown,
+    /// RewiredPlayerGetButton). Escape closes the panel before the game's
+    /// pause menu sees it (InputScriptOnPressEsc).
     /// </summary>
     internal sealed partial class SkillsWindow
     {
@@ -153,10 +154,21 @@ namespace DarkwoodMP.World
         private void Closed() =>
             Plugin.Log.LogInfo("[skills] panel closed");
 
-        internal void CloseFromEscape()
+        /// <summary>
+        /// Escape (InputScriptOnPressEsc): with the panel open and no film to
+        /// skip, it closes the panel and the game doesn't see it. Whether it
+        /// was taken.
+        /// </summary>
+        internal bool TakesEscape()
         {
+            if (!SkillPanelRules.TakesEscape(Open, Core.forbidInputs))
+            {
+                return false;
+            }
+
             Plugin.Log.LogInfo("[skills] Escape: the panel closes");
             Win.Close();
+            return true;
         }
 
         /// <summary>
@@ -173,7 +185,7 @@ namespace DarkwoodMP.World
                         + "the world went)");
             }
 
-            // Escape is taken in SkillsPanelEscape, before the game's pause
+            // Escape is taken in InputScriptOnPressEsc, before the game's pause
             // menu sees it.
             var key = SkillsPanel.Key;
             var facts = new KeyFacts

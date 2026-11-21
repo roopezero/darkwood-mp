@@ -272,7 +272,7 @@ namespace DarkwoodMP.World.Skills
         }
 
         /// Whether Escape closes the panel instead of reaching the game
-        /// (SkillsPanelEscape): open, and no film to skip (forbidInputs).
+        /// (InputScriptOnPressEsc): open, and no film to skip (forbidInputs).
         public static bool TakesEscape(bool open, bool forbidInputs)
         {
             return open && !forbidInputs;
