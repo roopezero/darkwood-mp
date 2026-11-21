@@ -10,6 +10,25 @@ namespace DarkwoodMP.World
     /// <summary>Permadeath and the spectator's view.</summary>
     public static partial class MapScenarioStatus
     {
+        /// The session's spectator (null with no session).
+        private static Spectator Watcher()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return null;
+            }
+
+            return coop.Spectator;
+        }
+
+        /// Whether our player is watching the others.
+        private static bool Spectating()
+        {
+            Spectator watcher = Watcher();
+            return watcher != null && watcher.Active;
+        }
+
         /// <summary>"permadeath" (after the dumps): our player dies on
         /// Nightmare, which is for good; with the host still playing, we watch
         /// them instead of the permadeath screen.</summary>
@@ -25,12 +44,12 @@ namespace DarkwoodMP.World
             Core.currentProfile.difficulty = GameProfile.Difficulty.nightmare;
             P.die();
             float until = Time.realtimeSinceStartup + 15f;
-            while (!Spectator.Active && Time.realtimeSinceStartup < until)
+            while (!Spectating() && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
 
-            if (!Spectator.Active)
+            if (!Spectating())
             {
                 Core.currentProfile.difficulty = was;
                 r.Fail(
@@ -77,15 +96,15 @@ namespace DarkwoodMP.World
         /// DIR/spectator-view.png.</summary>
         private static IEnumerator SpectatorView(string[] a, Result r)
         {
-            if (!Spectator.Active)
+            if (!Spectating())
             {
                 r.Fail("not spectating");
                 yield break;
             }
 
-            var first = Spectator.ConeAngles();
+            var first = Watcher().ConeAngles();
             yield return new WaitForSeconds(2f);
-            var later = Spectator.ConeAngles();
+            var later = Watcher().ConeAngles();
             if (a.Length > 0)
             {
                 Directory.CreateDirectory(a[0]);
@@ -112,22 +131,22 @@ namespace DarkwoodMP.World
         /// the angles it had when it began (not 360).</summary>
         private static IEnumerator SpectateEnd(string[] a, Result r)
         {
-            if (!Spectator.Active)
+            if (!Spectating())
             {
                 r.Fail("not spectating");
                 yield break;
             }
 
-            var saved = Spectator.SavedCone;
-            Spectator.TestEnd();
+            var saved = Watcher().SavedCone;
+            Watcher().TestEnd();
             yield return null;
-            var now = Spectator.ConeAngles();
+            var now = Watcher().ConeAngles();
             r.Info =
                 $"saved light {saved.light:0}, logic {saved.logic:0}, "
                     + $"currentFOV {saved.current:0}; now light {now.light:0}, "
                     + $"logic {now.logic:0}, currentFOV {now.current:0}; "
-                    + $"spectating {Spectator.Active}";
-            if (Spectator.Active || float.IsNaN(saved.light)
+                    + $"spectating {Spectating()}";
+            if (Spectating() || float.IsNaN(saved.light)
                 || now.light != saved.light || now.logic != saved.logic
                 || now.current != saved.current)
             {

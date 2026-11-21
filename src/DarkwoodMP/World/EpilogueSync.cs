@@ -122,9 +122,10 @@ namespace DarkwoodMP.World
             _crawled.Clear();
             _firstDeath = -1f;
             _hostBurned = -1;
-            if (Spectator.Epilogue)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                Spectator.EndWatch();
+                coop.Spectator.EndWatch();
             }
         }
 
@@ -422,9 +423,10 @@ namespace DarkwoodMP.World
         private static IEnumerator WatchSoon()
         {
             yield return new WaitForSeconds(8.5f);
-            if (Playing && !_panGo && !Spectator.Active)
+            CoopSession coop = Coop.Current;
+            if (Playing && !_panGo && coop != null && !coop.Spectator.Active)
             {
-                Spectator.BeginWatch();
+                coop.Spectator.BeginWatch();
             }
         }
 
@@ -514,9 +516,10 @@ namespace DarkwoodMP.World
             }
 
             _panGo = true;
-            if (Spectator.Epilogue)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                Spectator.EndWatch();
+                coop.Spectator.EndWatch();
             }
 
             var p = Player.Instance;

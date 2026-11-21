@@ -39,25 +39,35 @@ namespace DarkwoodMP.World
     /// For a client that deletes only its copy of the host's world in the mod's
     /// cache (SaveRedirect).
     /// </summary>
-    public static class Spectator
+    internal sealed class Spectator
     {
-        public static bool Active { get; private set; }
+        private readonly CoopSession _coop;
+
+        public Spectator(CoopSession coop)
+        {
+            _coop = coop;
+            // the session's end ends the epilogue's watching, as
+            // EpilogueSync's cleanup did
+            coop.Hook(EndWatch);
+        }
+
+        public bool Active { get; private set; }
 
         /// <summary>
         /// Watching in the epilogue (BeginWatch): no permadeath, the profile
         /// isn't touched.
         /// </summary>
-        public static bool Epilogue { get; private set; }
+        public bool Epilogue { get; private set; }
 
         /// <summary>
         /// Lets the game's permadeath screen through (when there's nobody left
         /// to watch).
         /// </summary>
-        internal static bool AllowPermadeath;
+        private bool _allowPermadeath;
 
-        private static ulong _watching;
-        private static readonly Roster _roster = new Roster();
-        private static Rigidbody _body;
+        private ulong _watching;
+        private readonly Roster _roster = new Roster();
+        private Rigidbody _body;
 
         private static readonly AccessTools.FieldRef<Player, Light2D> FovLight =
             AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
@@ -68,7 +78,7 @@ namespace DarkwoodMP.World
         /// The view cone as it was when spectating began, put back when it ends
         /// (NaN: not changed).
         /// </summary>
-        private static float _coneLight = float.NaN, _coneLogic, _currentFov;
+        private float _coneLight = float.NaN, _coneLogic, _currentFov;
 
         /// <summary>
         /// What the player sees is drawn through two lights on the player
@@ -82,7 +92,7 @@ namespace DarkwoodMP.World
         /// (Player.isInSight uses it). Called every frame while spectating;
         /// Restore puts the saved values back.
         /// </summary>
-        internal static void AllAround(Player p)
+        internal void AllAround(Player p)
         {
             if (p == null || p.FOVLogic == null)
             {
@@ -118,7 +128,7 @@ namespace DarkwoodMP.World
             CurrentFov(p) = 370f;
         }
 
-        private static void RestoreCone()
+        private void RestoreCone()
         {
             if (float.IsNaN(_coneLight))
             {
@@ -145,19 +155,19 @@ namespace DarkwoodMP.World
         /// For the tests: the cone saved when spectating began (NaN light:
         /// none).
         /// </summary>
-        internal static (float light, float logic, float current) SavedCone =>
+        internal (float light, float logic, float current) SavedCone =>
             (_coneLight, _coneLogic, _currentFov);
 
         /// <summary>
         /// For the tests: stop spectating as a world reload does.
         /// </summary>
-        internal static void TestEnd() => End();
+        internal void TestEnd() => End();
 
         /// <summary>
         /// For the tests: the visible cone's and the logic cone's angles, and
         /// currentFOV.
         /// </summary>
-        internal static (float light, float logic, float current) ConeAngles()
+        internal (float light, float logic, float current) ConeAngles()
         {
             var p = Player.Instance;
             if (p == null || p.FOVLogic == null)
@@ -180,7 +190,7 @@ namespace DarkwoodMP.World
         /// (an ordinary death on Hard brings them back within seconds). A
         /// player who is spectating, or has been dead a while, isn't.
         /// </summary>
-        private static List<RemotePlayer> Playing()
+        private List<RemotePlayer> Playing()
         {
             var list = new List<RemotePlayer>();
             var sync = Plugin.Instance.Host.Players;
@@ -205,7 +215,7 @@ namespace DarkwoodMP.World
         }
 
         /// The only code reading a remote player for the rules.
-        private static Watched WatchedOf(RemotePlayer r)
+        private Watched WatchedOf(RemotePlayer r)
         {
             return new Watched
             {
@@ -220,19 +230,19 @@ namespace DarkwoodMP.World
         /// Called instead of the permadeath screen: true if there's someone to
         /// watch, and we now do.
         /// </summary>
-        internal static bool TryBegin()
+        internal bool TryBegin()
         {
-            var s = Session.Instance;
+            var s = _coop.Net;
             bool inSession = s != null && s.Active && s.Connected;
             var playing = new List<RemotePlayer>();
-            if (!AllowPermadeath && inSession && WorldShare.InWorld)
+            if (!_allowPermadeath && inSession && WorldShare.InWorld)
             {
                 playing = Playing();
             }
 
             var facts = new BeginFacts
             {
-                AllowPermadeath = AllowPermadeath,
+                AllowPermadeath = _allowPermadeath,
                 InSession = inSession,
                 InWorld = WorldShare.InWorld,
                 Playing = playing.Count,
@@ -253,7 +263,7 @@ namespace DarkwoodMP.World
         /// playing (waiting up to 20 s for the others' players to come in), or,
         /// with nobody to watch, the game's permadeath screen.
         /// </summary>
-        internal static void BeginDead()
+        internal void BeginDead()
         {
             if (Active)
             {
@@ -263,7 +273,7 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(WaitAndBegin());
         }
 
-        private static IEnumerator WaitAndBegin()
+        private IEnumerator WaitAndBegin()
         {
             var p = Player.Instance;
             if (p != null)
@@ -320,9 +330,9 @@ namespace DarkwoodMP.World
         /// The epilogue: watch the players still playing, if any (true),
         /// without dying for good.
         /// </summary>
-        internal static bool BeginWatch()
+        internal bool BeginWatch()
         {
-            var s = Session.Instance;
+            var s = _coop.Net;
             bool session = s != null && s.Active;
             var playing = new List<RemotePlayer>();
             if (!Active && session)
@@ -370,7 +380,7 @@ namespace DarkwoodMP.World
         /// The epilogue's watching ends (the pan): the camera is the caller's
         /// again.
         /// </summary>
-        internal static void EndWatch()
+        internal void EndWatch()
         {
             if (!Epilogue)
             {
@@ -380,12 +390,12 @@ namespace DarkwoodMP.World
             End();
         }
 
-        private static void Begin(ulong first)
+        private void Begin(ulong first)
         {
             Epilogue = false;
             Active = true;
             _watching = first;
-            if (Session.Instance.IsClient)
+            if (_coop.Net.IsClient)
             {
                 // the host keeps it with our character
                 Characters instance = Characters.Instance;
@@ -398,7 +408,7 @@ namespace DarkwoodMP.World
             var player = Player.Instance;
             Plugin.Log.LogInfo(
                 "Dead for good, with others still playing: watching "
-                    + $"{Session.Instance.NameOf(first)}");
+                    + $"{_coop.Net.NameOf(first)}");
 
             // As the game does at the start of the permadeath screen: this
             // character is gone.
@@ -422,7 +432,7 @@ namespace DarkwoodMP.World
             ui.tweenBlackScreenTop(new Color(0f, 0f, 0f, 0f), 2f);
             Singleton<Controller>.Instance.fadeAudio(
                 fadeOut: false, 3f, musicToo: true);
-            if (Session.Instance.IsHost)
+            if (_coop.Net.IsHost)
             {
                 Singleton<Controller>.Instance.DoUpdateTime = true;
             }
@@ -454,13 +464,13 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(Run());
         }
 
-        private static IEnumerator Run()
+        private IEnumerator Run()
         {
             bool nobody = false;
             var nobodySince = new Seconds(0f);
             while (Active)
             {
-                var s = Session.Instance;
+                var s = _coop.Net;
                 bool inSession =
                     s != null && s.Active && s.Connected && WorldShare.InWorld;
                 List<RemotePlayer> playing;
@@ -551,7 +561,7 @@ namespace DarkwoodMP.World
         }
 
         /// The only code reading the player's input while watching.
-        private static Choice ChoiceOf()
+        private Choice ChoiceOf()
         {
             if (Input.GetMouseButtonDown(0)
                 || Input.GetKeyDown(KeyCode.Space))
@@ -567,7 +577,7 @@ namespace DarkwoodMP.World
             return Choice.None;
         }
 
-        private static void End()
+        private void End()
         {
             Active = false;
             Epilogue = false;
@@ -580,9 +590,9 @@ namespace DarkwoodMP.World
             RestoreCone();
         }
 
-        private static void Permadeath()
+        private void Permadeath()
         {
-            AllowPermadeath = true;
+            _allowPermadeath = true;
             var ui = Singleton<UI>.Instance;
             if (ui != null)
             {
@@ -591,26 +601,26 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>A new world: nothing to watch.</summary>
-        public static void Reset()
+        public void Reset()
         {
             // a living player's getFOVAngle sets the cone again every frame
             _coneLight = float.NaN;
             Active = false;
-            AllowPermadeath = false;
+            _allowPermadeath = false;
             Epilogue = false;
             _roster.Reset();
             _body = null;
         }
 
         /// <summary>The spectating line at the bottom of the screen.</summary>
-        public static void DrawGui()
+        public void DrawGui()
         {
             if (!Active || UiState.MenuOver)
             {
                 return; // not over the pause menu or the mod's windows
             }
 
-            Session instance = Session.Instance;
+            Session instance = _coop.Net;
             string name = null;
             if (instance != null)
             {
@@ -647,7 +657,8 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(ref IEnumerator __result)
         {
-            if (!Spectator.TryBegin())
+            CoopSession coop = Coop.Current;
+            if (coop == null || !coop.Spectator.TryBegin())
             {
                 return true;
             }

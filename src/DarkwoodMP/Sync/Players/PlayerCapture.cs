@@ -89,7 +89,8 @@ namespace DarkwoodMP.Sync.Players
             snap.Position = root.position;
             snap.Rotation = root.rotation;
             snap.Alive = PlayerLookRules.Alive(player.alive, player.dying);
-            snap.Spectating = World.Spectator.Active;
+            CoopSession coop = Coop.Current;
+            snap.Spectating = coop != null && coop.Spectator.Active;
             if (player.torsoAnimator != null
                 && player.torsoAnimator.Library != null)
             {
