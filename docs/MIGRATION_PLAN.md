@@ -477,6 +477,17 @@ Finish with `tools/run-test.sh full`.
         `<GameType><Method>` patch names.
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
+  - [ ] Part a: `NetEnemies`.
+  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
+        the core's `MotionClock`; the hostile NPCs' state is
+        `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
+        `NpcHitMessage` and `NpcAttackMessage`; the night spawns are
+        `ModHost.Nights` (`NightSpawner`), since the test dummy brings a
+        stand-in into a game played alone and the worm loop replaces the
+        game's coroutine with no session too. `HostileNpcs` and
+        `NightSpawns` keep static members that pass on to them, so callers
+        in files other steps were moving didn't change.
 
 Finish with `tools/run-test.sh full`.
 

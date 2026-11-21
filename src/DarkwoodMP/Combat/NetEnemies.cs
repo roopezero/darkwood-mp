@@ -65,18 +65,14 @@ namespace DarkwoodMP.Combat
                 _corpseKnown.Remove(id);
             };
 
-            session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
-            session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
             session.OnSessionEnded += () =>
             {
-                HostileNpcs.Clear();
                 _known.Clear();
                 _corpseKnown.Clear();
                 _byCharHost.Clear();
                 _byIdHost.Clear();
                 _puppets.Clear();
                 _byChar.Clear();
-                EnemyMotion.Reset();
                 _corpses.Clear();
                 _corpseIds.Clear();
                 Frozen.Clear();
@@ -268,7 +264,14 @@ namespace DarkwoodMP.Combat
         private void MovePuppets()
         {
             float now = Time.unscaledTime, dt = Time.unscaledDeltaTime;
-            EnemyMotion.Frame(dt);
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            var motion = coop.Motion;
+            motion.Frame(dt);
             foreach (var p in _puppets.Values)
             {
                 if (p.C != null && p.DiedAt >= 0f && !p.Settled
@@ -290,13 +293,13 @@ namespace DarkwoodMP.Combat
                     p.C.gameObject.SetActive(true);
                 }
 
-                if (!EnemyMotion.Where(p.Motion, now, out var pos, out var rot))
+                if (!motion.Where(p.Motion, now, out var pos, out var rot))
                 {
                     continue;
                 }
 
                 p.C.transform.SetPositionAndRotation(pos, rot);
-                EnemyMotion.Stats.Drawn(p.Motion, pos, dt);
+                motion.Drawn(p.Motion, pos, dt);
                 AlignShadow(p.C);
             }
         }
@@ -1504,7 +1507,8 @@ namespace DarkwoodMP.Combat
             // taken out of our culling while the host sends it (Uncull)
             public bool Unculled;
             public Location HomeLoc;
-            public readonly EnemyMotion.Track Motion = new EnemyMotion.Track();
+            public readonly DarkwoodMP.Combat.Motion.MotionTrack Motion =
+                new DarkwoodMP.Combat.Motion.MotionTrack();
         }
 
         /// <summary>
@@ -2254,7 +2258,12 @@ namespace DarkwoodMP.Combat
 
             float sent = r.R.ReadSingle();
             float now = Time.unscaledTime;
-            EnemyMotion.Arrived(sent, now);
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Motion.Arrived(sent, now);
+            }
+
             int n = r.R.ReadUInt16();
             for (int i = 0; i < n; i++)
             {

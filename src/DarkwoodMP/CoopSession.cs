@@ -141,6 +141,13 @@ namespace DarkwoodMP
         /// A client's swings and aims, which the host's enemies react to.
         public readonly Combat.PlayerCues Cues;
 
+        /// Client: where the host's enemies are drawn between its states.
+        public readonly Combat.EnemyMotion Motion;
+
+        /// The NPCs that turned on a player, and our hits and scripted
+        /// attacks on NPCs left to the host.
+        public readonly Combat.NpcHostility Hostiles;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -192,6 +199,10 @@ namespace DarkwoodMP
             PuppetFx = new Sync.Players.PuppetFx(this);
             View = new Sync.Players.ViewWatch();
             Cues = new Combat.PlayerCues(this);
+            PlayerFx = new Sync.PlayerFx(this);
+            View = new Sync.ViewWatch();
+            Motion = new Combat.EnemyMotion();
+            Hostiles = new Combat.NpcHostility(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
