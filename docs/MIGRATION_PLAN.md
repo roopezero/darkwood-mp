@@ -364,7 +364,12 @@ with the baseline.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.
-- [ ] 5.4 Dragging.
+- [x] 5.4 Dragging. Done: `CoopSession.Drags`, in `World/Dragging` (five
+      files of one partial class, namespace `DarkwoodMP.World` so callers
+      didn't change), its bytes the core's `ObjMove`, `DragClaim` and
+      `DragOwner`. Its state stays session-long, as before, not on
+      `WorldScope`. `Authority.ReachOf` gives `InReach`'s verdict without
+      refusing, for `DragRules.MayClaim` to take as a fact.
 
 Finish with `tools/run-test.sh full`.
 
