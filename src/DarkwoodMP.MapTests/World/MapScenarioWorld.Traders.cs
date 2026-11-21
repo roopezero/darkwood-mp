@@ -166,10 +166,10 @@ namespace DarkwoodMP.World
                 // Down to 0 first, shared as any reputation change is, so the
                 // host's copy can't pay for the trade by itself.
                 npc.reputation = 0;
-                FlagsSync instance = FlagsSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.FlushNow();
+                    coop.Story.FlushNow();
                 }
 
                 yield return new WaitForSeconds(3f);

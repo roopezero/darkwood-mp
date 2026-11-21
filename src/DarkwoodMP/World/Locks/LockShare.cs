@@ -344,13 +344,13 @@ namespace DarkwoodMP.World
 
             if (LockRules.SendsKeyFirst(facts))
             {
-                FlagsSync instance = FlagsSync.Instance;
+                var instance = _coop.Story;
                 if (instance != null)
                 {
                     instance.FlushNow();
                 }
 
-                FlagsSync flags = FlagsSync.Instance;
+                var flags = _coop.Story;
                 if (flags != null)
                 {
                     flags.SendKey(l.keyType);

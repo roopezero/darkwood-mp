@@ -520,20 +520,26 @@ Finish with `tools/run-test.sh full`.
 | 7.4 | `Chapters`, `Prologue`, `EpilogueSync`, `Spectator` | 1,588 | `story map:chapter map:prologue map:epilogue` |
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
-- [ ] 7.1 Flags and scripted events. `WorldEvents` is done: it moved to
-      `World/Rolls` (beside the core's `RollRules`, `ShadowRules` and
-      `AmbushRules`) as a partial class in four files with its patches in
-      `WorldEventPatches.cs`, and the session owns it. Its message classes
-      are `NightScenarioMessage`, `NightEventMessage`,
-      `RandomObjectsMessage` and `WeatherMessage`.
+- [ ] 7.1 Flags and scripted events.
+  - [x] Part b: `WorldEvents`. It moved to `World/Rolls` (beside the
+        core's `RollRules`, `ShadowRules` and `AmbushRules`) as a partial
+        class in four files with its patches in `WorldEventPatches.cs`, and
+        the session owns it. Its message classes are `NightScenarioMessage`,
+        `NightEventMessage`, `RandomObjectsMessage` and `WeatherMessage`.
+  - [x] Part c: `FlagsSync`. It is `CoopSession.Story`, in `World/Story`
+        (four files: `FlagsSync`, `FlagsSync.Npcs`, `StoryRead`,
+        `StoryApply`); its bytes are the core's `FlagsDelta`. The journal
+        popup patch (`JournalShowJournalInfoPopup`) still runs in a game
+        played alone, since the game's own small places have no text.
 - [ ] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
         (`World/Pause/CoopPause`) and `.Mornings`
         (`World/Mornings/AfterNight`), each with its `...Patches.cs`.
-        `AfterNight`'s two messages have no payload, so no bytes moved. The
-        after-night reward's part of `ControllerStartAfterNight` still runs
-        with no session, since `FlagsSync` is there from the start.
+        `AfterNight`'s two messages have no payload, so no bytes moved. Since
+        `FlagsSync` became `CoopSession.Story` (7.1 part c), the after-night
+        reward's part of `ControllerStartAfterNight` does nothing with no
+        session.
   - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
 - [ ] 7.3 Skills and progress.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so

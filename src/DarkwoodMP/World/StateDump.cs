@@ -639,11 +639,12 @@ namespace DarkwoodMP.World
 
                 var dict = FlagsDict(flags);
                 // Not the flags about this game's own player
-                // (FlagsSync.PlayersOwn: where it is, the help popups it has
+                // (StoryRules.PlayersOwn: where it is, the help popups it has
                 // seen): those are under "local", since each game keeps its
                 // own.
                 var shared = dict.Values.Where(
-                    f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
+                    f => f != null && !Story.StoryRules.PlayersOwn(f.name))
+                    .ToList();
                 var lines = shared.Select(f => f.name + "=" + f.isTrue)
                     .OrderBy(s => s, StringComparer.Ordinal).ToList();
                 var section = new Dictionary<string, object>
@@ -696,7 +697,7 @@ namespace DarkwoodMP.World
                 var dict = FlagsDict(flags);
                 foreach (var f in dict.Values)
                 {
-                    if (f != null && FlagsSync.PlayersPlace(f.name))
+                    if (f != null && Story.StoryRules.PlayersPlace(f.name))
                     {
                         ctx.Set(f.name, f.isTrue);
                     }
@@ -708,7 +709,7 @@ namespace DarkwoodMP.World
             AddLocal("popups", ctx =>
             {
                 // The one-time help popups this game's player has seen
-                // (FlagsSync.PlayersPopup): each game's own.
+                // (StoryRules.PlayersPopup): each game's own.
                 var flags = Singleton<Flags>.Instance;
                 if (flags == null)
                 {
@@ -717,7 +718,7 @@ namespace DarkwoodMP.World
 
                 foreach (var f in FlagsDict(flags).Values)
                 {
-                    if (f != null && FlagsSync.PlayersPopup(f.name))
+                    if (f != null && Story.StoryRules.PlayersPopup(f.name))
                     {
                         ctx.Set(f.name, f.isTrue);
                     }

@@ -433,10 +433,10 @@ namespace DarkwoodMP.World
 
             d.lockMe(a[0]);
             Singleton<UI>.Instance.journal.keysDict.Remove(a[0]);
-            FlagsSync instance = FlagsSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.FlushNow();
+                coop.Story.FlushNow();
             }
 
             var free = inv.slots.FirstOrDefault(

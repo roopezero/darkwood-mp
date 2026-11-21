@@ -47,7 +47,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            FlagsSync instance = FlagsSync.Instance;
+            var instance = _coop.Story;
             if (instance != null)
             {
                 string named;

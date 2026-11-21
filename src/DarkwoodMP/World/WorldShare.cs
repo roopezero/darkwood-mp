@@ -477,15 +477,17 @@ namespace DarkwoodMP.World
         private const float SnapshotReuse = 20f;
 
         /// <summary>
-        /// Where every loose object is in the snapshot being read
-        /// (DragSync.NoteSnapshot), while a session runs.
+        /// Where every loose object is (DragSync.NoteSnapshot) and what the
+        /// story is (FlagsSync.NoteSnapshot) in the snapshot being read,
+        /// while a session runs.
         /// </summary>
-        private static void NoteDragSnapshot()
+        private static void NoteSnapshot()
         {
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
                 coop.Drags.NoteSnapshot();
+                coop.Story.NoteSnapshot();
             }
         }
 
@@ -571,8 +573,7 @@ namespace DarkwoodMP.World
                     try
                     {
                         // the same frame the world is read in
-                        NoteDragSnapshot();
-                        FlagsSync.NoteSnapshot();
+                        NoteSnapshot();
                         writing = SnapshotSave.Begin(
                             sm, Path.Combine(profDir, "sav.dat"));
                         // as the patch on SaveManager.Save records it
@@ -653,8 +654,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            NoteDragSnapshot();
-            FlagsSync.NoteSnapshot();
+            NoteSnapshot();
             _snapshotDir = SaveSnapshotOnMainThread(
                 sm, dir, profDir, haveStatic, copied, newLocation);
             Restore();
@@ -829,9 +829,8 @@ namespace DarkwoodMP.World
                         if (coop != null)
                         {
                             coop.Drags.ForgetSnapshot();
+                            coop.Story.ForgetSnapshot();
                         }
-
-                        FlagsSync.ForgetSnapshot();
                     }
 
                     string profDir = snapDir;

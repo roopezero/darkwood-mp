@@ -184,7 +184,8 @@ namespace DarkwoodMP.World
 
             // Stay a moment, so that a game that still had it doesn't send it
             // back in its next snapshot.
-            yield return new WaitForSecondsRealtime(FlagsSync.Interval + 0.5f);
+            yield return new WaitForSecondsRealtime(
+                Story.StoryRules.Interval + 0.5f);
             if (Has() != want)
             {
                 string way = "back";
@@ -195,7 +196,7 @@ namespace DarkwoodMP.World
 
                 r.Fail(
                     $"{_jType} came {way} after "
-                        + $"{FlagsSync.Interval + 0.5f:0.#} s");
+                        + $"{Story.StoryRules.Interval + 0.5f:0.#} s");
             }
         }
     }
