@@ -572,19 +572,9 @@ namespace DarkwoodMP.World
                 }
                 else if (a >= Action.ItemOn)
                 {
-                    var item = Got<Item>(a, obj);
-                    if (item == null)
+                    if (!Coop.Current.Switches.Apply(a, obj))
                     {
                         return;
-                    }
-
-                    if (a == Action.ItemOn)
-                    {
-                        item.turnOn();
-                    }
-                    else
-                    {
-                        item.turnOff();
                     }
                 }
                 else if (a >= Action.TrapFired)
@@ -917,15 +907,7 @@ namespace DarkwoodMP.World
 
             if (a >= Action.ItemOn)
             {
-                var item = ObjRef.Resolve<Item>(obj);
-                if (item == null)
-                {
-                    Coop.Current.Authority.Refuse("not here");
-                    return false;
-                }
-
-                return Coop.Current.Authority.InReach(
-                    item.transform.position, Reach, item.name);
+                return Coop.Current.Switches.MayTurn(obj);
             }
 
             if (a >= Action.TrapFired)
@@ -2028,40 +2010,6 @@ namespace DarkwoodMP.World
                 WorldActions.Send(
                     WorldActions.Action.WindowHit, __instance.gameObject,
                     damage, f1: normalHit, byPlayerKnown: BreakSync.OwnFlame());
-            }
-        }
-    }
-}
-
-namespace DarkwoodMP.World
-{
-    /// <summary>
-    /// Lamps, generators, radios...: switched on or off for everyone.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
-    static class ItemOnPatch
-    {
-        static void Prefix() => Coop.Guards.Depth++;
-        static void Postfix(Item __instance)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.ItemOn, __instance.gameObject);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Item), nameof(Item.turnOff))]
-    static class ItemOffPatch
-    {
-        static void Prefix() => Coop.Guards.Depth++;
-        static void Postfix(Item __instance)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.ItemOff, __instance.gameObject);
             }
         }
     }
