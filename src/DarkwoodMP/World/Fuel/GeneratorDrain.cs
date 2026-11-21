@@ -47,7 +47,7 @@ namespace DarkwoodMP.World.Fuel
                 Player = p != null,
                 Sharing = Coop.Guards.Sharing,
                 Proxies = Proxies.Any,
-                Characters = Characters.Instance != null,
+                Characters = _coop.Characters != null,
             });
 
             if (start == DrainStart.Zero)
@@ -87,7 +87,7 @@ namespace DarkwoodMP.World.Fuel
             string ownerName = "ours";
             if (nearest != null)
             {
-                has = Characters.Instance.Electrician(nearest.Owner);
+                has = _coop.Characters.Electrician(nearest.Owner);
                 ownerName = nearest.OwnerName;
             }
 

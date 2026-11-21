@@ -253,10 +253,10 @@ namespace DarkwoodMP.Net
 
         public void Leave()
         {
-            World.Characters instance = World.Characters.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.SaveNow();
+                coop.Characters.SaveNow();
             }
 
             _lobby.Leave();

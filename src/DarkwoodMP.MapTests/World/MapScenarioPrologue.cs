@@ -305,10 +305,10 @@ namespace DarkwoodMP.World
             // prologue it isn't sent).
             if (NetEnemies.ClientMode)
             {
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SaveNow();
+                    coop.Characters.SaveNow();
                 }
             }
         }

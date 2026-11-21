@@ -224,7 +224,13 @@ namespace DarkwoodMP.Sync.Players
 
         private SendFacts SendOf()
         {
-            var characters = World.Characters.Instance;
+            World.Characters characters = null;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                characters = coop.Characters;
+            }
+
             return new SendFacts
             {
                 Active = _session.Active,

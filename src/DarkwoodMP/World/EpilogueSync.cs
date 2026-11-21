@@ -719,10 +719,10 @@ namespace DarkwoodMP.World
                 Playing = true;
                 Reset();
                 // before the epilogue's own save
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SaveNow();
+                    coop.Characters.SaveNow();
                 }
 
                 Plugin.Notice(

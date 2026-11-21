@@ -360,10 +360,10 @@ namespace DarkwoodMP.World
             if (Session.Instance.IsClient)
             {
                 // the host keeps it with our character
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendDead();
+                    coop.Characters.SendDead();
                 }
             }
 

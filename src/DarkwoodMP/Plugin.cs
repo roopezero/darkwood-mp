@@ -77,7 +77,6 @@ namespace DarkwoodMP
 
         private DirectPanel _direct;
         private WorldShare _world;
-        private Characters _characters;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
         private bool? _cursorBefore;
@@ -441,7 +440,6 @@ namespace DarkwoodMP
             SaveRedirect.Init();
             WorldTeardown.Init();
             WorldActions.Register(_host.Session);
-            _characters = new Characters(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
@@ -2016,8 +2014,8 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator ClientMenuRejoin(string address)
         {
             while (!(_host.Session.IsClient && WorldShare.WorldReady
-                    && World.Characters.Instance != null
-                    && World.Characters.Instance.HasCharacter))
+                    && Coop.Current != null
+                    && Coop.Current.Characters.HasCharacter))
             {
                 yield return null;
             }
@@ -2273,7 +2271,12 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("containers");
-            _characters.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Characters.Update();
+            }
+
             ModProfiler.Mark("characters");
             coop = Coop.Current;
             if (coop != null)
@@ -3081,10 +3084,10 @@ namespace DarkwoodMP
             // Our character goes to the host here, while the world is whole,
             // and only here: OnDestroy's Dispose leaves the session (which
             // waits for the TCP writers) without sending it again.
-            Characters characters = _characters;
-            if (characters != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                characters.SaveForQuit();
+                coop.Characters.SaveForQuit();
             }
         }
 

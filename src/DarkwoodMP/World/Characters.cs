@@ -45,191 +45,34 @@ namespace DarkwoodMP.World
     /// outside it. A kept place that isn't on the world's map at all starts
     /// beside the host too.
     /// </summary>
-    public sealed class Characters
+    internal sealed class Characters
     {
-
-        public sealed class Record
-        {
-            public string Name;
-            // Player.SaveState
-            public string Player;
-            // Inventory.SaveState of the player's inventory
-            public string Inv;
-            // Inventory.SaveState of the hotbar
-            public string Hotbar;
-            // unix time
-            public long Saved;
-            // the chapter the joiner's game was in when it was sent (0: not
-            // known, from before it was kept) died for good (CharacterDead): it
-            // comes back only to watch the others
-            public int Chapter;
-            public bool Dead;
-        }
-
-        public static Characters Instance { get; private set; }
         private readonly Session _session;
 
-        public Characters(Session session)
-        {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.CharacterRequest, OnRequest);
-            session.Register(MsgType.CharacterSave, OnSave);
-            session.Register(MsgType.CharacterLoad, OnLoad);
-            session.Register(MsgType.CharacterDead, OnDead);
-            session.OnSessionEnded += () =>
-            {
-                _asked = false;
-                _have = false;
-                _quitSent = false;
-                _carried.Clear();
-            };
+        /// The host's kept characters, which live as long as the game
+        /// (ModHost.Kept): SaveManager.Save writes them also alone.
+        private readonly CharacterRecords _kept;
 
-            session.OnPeerDisconnected += peer => _carried.Remove(peer);
+        public Characters(CoopSession coop)
+        {
+            _session = coop.Net;
+            _kept = Plugin.Instance.Host.Kept;
+            coop.Handle(MsgType.CharacterRequest, OnRequest);
+            coop.Handle(MsgType.CharacterSave, OnSave);
+            coop.Handle(MsgType.CharacterLoad, OnLoad);
+            coop.Handle(MsgType.CharacterDead, OnDead);
+            _session.OnPeerDisconnected += OnPeerLeft;
+            coop.Hook(() => _session.OnPeerDisconnected -= OnPeerLeft);
+        }
+
+        private void OnPeerLeft(ulong peer)
+        {
+            _carried.Remove(peer);
         }
 
         // =====================================================================
         // Host
         // =====================================================================
-
-        private readonly Dictionary<string, Record> _records =
-            new Dictionary<string, Record>();
-        private string _recordsDir; // which world _records belong to
-
-        internal static string KeyHash(string key)
-        {
-            using (var sha = SHA256.Create())
-            {
-                string hashed = key;
-                if (hashed == null)
-                {
-                    hashed = "";
-                }
-
-                return WorldFiles.Hex(
-                    sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
-                        0, 32);
-            }
-        }
-
-        private string RecordsDir()
-        {
-            var sm = Singleton<SaveManager>.Instance;
-            if (sm == null || Core.currentProfile == null)
-            {
-                return null;
-            }
-
-            return Path.Combine(
-                Path.Combine(
-                    sm.baseSaveDirectory, "prof" + Core.currentProfile.id),
-                "darkwoodmp_players");
-        }
-
-        /// <summary>
-        /// A new world in a save folder that had one (a new game in the slot, a
-        /// deleted slot, a reset test world):
-        /// what was read from that folder is dropped, so it's read again.
-        /// Records() only notices a different folder, so without this a new
-        /// world in the same one would get the old world's characters, one that
-        /// died for good too.
-        /// </summary>
-        public void Forget(string why)
-        {
-            if (_recordsDir == null && _records.Count == 0)
-            {
-                return;
-            }
-
-            if (_records.Count > 0)
-            {
-                Plugin.Log.LogInfo(
-                    "Players' characters of the last world in this folder "
-                        + $"forgotten ({why})");
-            }
-
-            _records.Clear();
-            _recordsDir = null;
-        }
-
-        /// <summary>
-        /// The characters of this world: loaded from beside its save the first
-        /// time they're needed.
-        /// </summary>
-        private Dictionary<string, Record> Records()
-        {
-            string dir = RecordsDir();
-            if (!CharacterRules.Rereads(dir, _recordsDir))
-            {
-                return _records;
-            }
-
-            _records.Clear();
-            _recordsDir = dir;
-            try
-            {
-                if (Directory.Exists(dir))
-                {
-                    foreach (var f in Directory.GetFiles(dir, "*.json"))
-                    {
-                        var rec = JsonConvert.DeserializeObject<Record>(
-                            File.ReadAllText(f));
-                        if (rec != null)
-                        {
-                            _records[Path.GetFileNameWithoutExtension(f)] = rec;
-                        }
-                    }
-                }
-
-                if (_records.Count > 0)
-                {
-                    Plugin.Log.LogInfo(
-                        $"This world keeps {_records.Count} other players' "
-                            + "characters");
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"Couldn't read players' characters in {dir}: {e.Message}");
-            }
-
-            return _records;
-        }
-
-        /// <summary>
-        /// Host: the game saved; write the characters beside it.
-        /// </summary>
-        public void HostSaved()
-        {
-            if (!CharacterRules.Writes(
-                WorldShare.Snapshotting, NetEnemies.ClientMode))
-            {
-                return; // a snapshot for a joiner, or a client's copy
-            }
-
-            var recs = Records();
-            if (!CharacterRules.HasToWrite(recs.Count, _recordsDir != null))
-            {
-                return;
-            }
-
-            try
-            {
-                Directory.CreateDirectory(_recordsDir);
-                foreach (var kv in recs)
-                {
-                    File.WriteAllText(
-                        Path.Combine(_recordsDir, kv.Key + ".json"),
-                        JsonConvert.SerializeObject(kv.Value));
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"Couldn't write players' characters: {e.Message}");
-            }
-        }
 
         /// A character message from this peer is taken, with its key.
         private bool Takes(ulong from, out string key)
@@ -238,7 +81,8 @@ namespace DarkwoodMP.World
             return CharacterRules.Takes(_session.IsHost, keyed);
         }
 
-        private static KindFacts FactsOf(Record rec, int hostChapter)
+        private static KindFacts FactsOf(
+            CharacterRecord rec, int hostChapter)
         {
             bool dead = false;
             int chapter = 0;
@@ -265,7 +109,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Records().TryGetValue(KeyHash(key), out var rec);
+            _kept.Records().TryGetValue(
+                CharacterRecords.KeyHash(key), out var rec);
             var host = Player.Instance;
             var w = _session.Begin(MsgType.CharacterLoad);
             // A character from an earlier chapter keeps what it is and carries,
@@ -391,7 +236,7 @@ namespace DarkwoodMP.World
             }
 
             var body = CharacterSave.Read(r);
-            var rec = new Record
+            var rec = new CharacterRecord
             {
                 Name = _session.NameOf(from),
                 Player = body.Player,
@@ -413,8 +258,8 @@ namespace DarkwoodMP.World
             _carried[from] = new Carried { Inv = rec.Inv, Hotbar = rec.Hotbar };
             // A character that died for good stays dead, whatever its game
             // sends after (it goes on sending while it watches).
-            var recs = Records();
-            string id = KeyHash(key);
+            var recs = _kept.Records();
+            string id = CharacterRecords.KeyHash(key);
             if (recs.TryGetValue(id, out var old) && old.Dead)
             {
                 rec.Dead = true;
@@ -515,11 +360,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var recs = Records();
-            string id = KeyHash(key);
+            var recs = _kept.Records();
+            string id = CharacterRecords.KeyHash(key);
             if (!recs.TryGetValue(id, out var rec))
             {
-                recs[id] = rec = new Record
+                recs[id] = rec = new CharacterRecord
                 {
                     Name = _session.NameOf(from),
                     Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
@@ -561,7 +406,8 @@ namespace DarkwoodMP.World
                 return null;
             }
 
-            if (!Records().TryGetValue(KeyHash(key), out var rec)
+            if (!_kept.Records().TryGetValue(
+                    CharacterRecords.KeyHash(key), out var rec)
                 || string.IsNullOrEmpty(rec.Player))
             {
                 return null;
@@ -732,10 +578,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void SaveBeforeLeaving()
         {
-            Characters instance = Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.SaveNow();
+                coop.Characters.SaveNow();
             }
         }
 
@@ -1232,10 +1078,177 @@ namespace DarkwoodMP.World
     {
         static void Postfix()
         {
-            Characters instance = Characters.Instance;
-            if (instance != null)
+            Plugin.Instance.Host.Kept.HostSaved();
+        }
+    }
+
+    /// <summary>
+    /// One kept character, as written to its JSON file.
+    /// </summary>
+    public sealed class CharacterRecord
+    {
+        public string Name;
+        // Player.SaveState
+        public string Player;
+        // Inventory.SaveState of the player's inventory
+        public string Inv;
+        // Inventory.SaveState of the hotbar
+        public string Hotbar;
+        // unix time
+        public long Saved;
+        // the chapter the joiner's game was in when it was sent (0: not
+        // known, from before it was kept) died for good (CharacterDead): it
+        // comes back only to watch the others
+        public int Chapter;
+        public bool Dead;
+    }
+
+    /// <summary>
+    /// Host: the characters of the players who joined this world, kept by
+    /// key beside its save (prof&lt;id&gt;/darkwoodmp_players/&lt;hash of
+    /// key&gt;.json) and written whenever its game saves. They live as long
+    /// as the game (ModHost.Kept): SaveManager.Save writes them also with no
+    /// session, and a new game or a deleted slot forgets them.
+    /// </summary>
+    internal sealed class CharacterRecords
+    {
+        private readonly Dictionary<string, CharacterRecord> _records =
+            new Dictionary<string, CharacterRecord>();
+        private string _recordsDir; // which world _records belong to
+
+        internal static string KeyHash(string key)
+        {
+            using (var sha = SHA256.Create())
             {
-                instance.HostSaved();
+                string hashed = key;
+                if (hashed == null)
+                {
+                    hashed = "";
+                }
+
+                return WorldFiles.Hex(
+                    sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
+                        0, 32);
+            }
+        }
+
+        private string RecordsDir()
+        {
+            var sm = Singleton<SaveManager>.Instance;
+            if (sm == null || Core.currentProfile == null)
+            {
+                return null;
+            }
+
+            return Path.Combine(
+                Path.Combine(
+                    sm.baseSaveDirectory, "prof" + Core.currentProfile.id),
+                "darkwoodmp_players");
+        }
+
+        /// <summary>
+        /// A new world in a save folder that had one (a new game in the slot, a
+        /// deleted slot, a reset test world):
+        /// what was read from that folder is dropped, so it's read again.
+        /// Records() only notices a different folder, so without this a new
+        /// world in the same one would get the old world's characters, one that
+        /// died for good too.
+        /// </summary>
+        public void Forget(string why)
+        {
+            if (_recordsDir == null && _records.Count == 0)
+            {
+                return;
+            }
+
+            if (_records.Count > 0)
+            {
+                Plugin.Log.LogInfo(
+                    "Players' characters of the last world in this folder "
+                        + $"forgotten ({why})");
+            }
+
+            _records.Clear();
+            _recordsDir = null;
+        }
+
+        /// <summary>
+        /// The characters of this world: loaded from beside its save the first
+        /// time they're needed.
+        /// </summary>
+        public Dictionary<string, CharacterRecord> Records()
+        {
+            string dir = RecordsDir();
+            if (!CharacterRules.Rereads(dir, _recordsDir))
+            {
+                return _records;
+            }
+
+            _records.Clear();
+            _recordsDir = dir;
+            try
+            {
+                if (Directory.Exists(dir))
+                {
+                    foreach (var f in Directory.GetFiles(dir, "*.json"))
+                    {
+                        var rec =
+                            JsonConvert.DeserializeObject<CharacterRecord>(
+                                File.ReadAllText(f));
+                        if (rec != null)
+                        {
+                            _records[Path.GetFileNameWithoutExtension(f)] = rec;
+                        }
+                    }
+                }
+
+                if (_records.Count > 0)
+                {
+                    Plugin.Log.LogInfo(
+                        $"This world keeps {_records.Count} other players' "
+                            + "characters");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning(
+                    $"Couldn't read players' characters in {dir}: {e.Message}");
+            }
+
+            return _records;
+        }
+
+        /// <summary>
+        /// Host: the game saved; write the characters beside it.
+        /// </summary>
+        public void HostSaved()
+        {
+            if (!CharacterRules.Writes(
+                WorldShare.Snapshotting, NetEnemies.ClientMode))
+            {
+                return; // a snapshot for a joiner, or a client's copy
+            }
+
+            var recs = Records();
+            if (!CharacterRules.HasToWrite(recs.Count, _recordsDir != null))
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.CreateDirectory(_recordsDir);
+                foreach (var kv in recs)
+                {
+                    File.WriteAllText(
+                        Path.Combine(_recordsDir, kv.Key + ".json"),
+                        JsonConvert.SerializeObject(kv.Value));
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning(
+                    $"Couldn't write players' characters: {e.Message}");
             }
         }
     }

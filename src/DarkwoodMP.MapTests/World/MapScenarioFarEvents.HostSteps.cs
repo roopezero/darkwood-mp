@@ -214,11 +214,11 @@ namespace DarkwoodMP.World
             // the low-power state as it was
             gen.drainFuel();
             gen.fuel = fuel;
-            Characters instance = Characters.Instance;
+            CoopSession coop = Coop.Current;
             bool? skill = null;
-            if (instance != null)
+            if (coop != null)
             {
-                skill = instance.Electrician(j.Owner);
+                skill = coop.Characters.Electrician(j.Owner);
             }
 
             string skillText = "not known";
@@ -228,7 +228,7 @@ namespace DarkwoodMP.World
             }
 
             string last = null;
-            CoopSession coop = Coop.Current;
+            coop = Coop.Current;
             if (coop != null)
             {
                 last = coop.Fuel.Drain.Last;

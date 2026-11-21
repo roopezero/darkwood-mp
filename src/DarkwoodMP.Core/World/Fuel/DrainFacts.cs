@@ -21,7 +21,7 @@ namespace DarkwoodMP.World.Fuel
         /// There are stand-ins for other players (Proxies.Any).
         public bool Proxies { get; init; }
 
-        /// The players' characters are known (Characters.Instance).
+        /// The players' characters are known (CoopSession.Characters).
         public bool Characters { get; init; }
     }
 }

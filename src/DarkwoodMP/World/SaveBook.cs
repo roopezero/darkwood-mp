@@ -299,7 +299,7 @@ namespace DarkwoodMP.World
                         .OrderByDescending(File.GetLastWriteTimeUtc))
                     {
                         var c =
-                            JsonConvert.DeserializeObject<Characters.Record>(
+                            JsonConvert.DeserializeObject<CharacterRecord>(
                                 File.ReadAllText(f));
                         if (c != null && !string.IsNullOrEmpty(c.Name)
                             && !names.Contains(c.Name))
@@ -418,11 +418,7 @@ namespace DarkwoodMP.World
             // save and leaves them, so a joiner would get their old character
             // (dead, if it died for good). They go with the old world, as when
             // the slot is deleted.
-            Characters instance = Characters.Instance;
-            if (instance != null)
-            {
-                instance.Forget("a new game");
-            }
+            Plugin.Instance.Host.Kept.Forget("a new game");
 
             var sm = Singleton<SaveManager>.Instance;
             if (sm != null)
@@ -463,11 +459,7 @@ namespace DarkwoodMP.World
             }
 
             SaveBook.Forget(p.id, "deleted");
-            Characters instance = Characters.Instance;
-            if (instance != null)
-            {
-                instance.Forget("the slot deleted");
-            }
+            Plugin.Instance.Host.Kept.Forget("the slot deleted");
 
             SaveBook.DeletePlayersDir(
                 __instance.baseSaveDirectory, p.id, "with it");

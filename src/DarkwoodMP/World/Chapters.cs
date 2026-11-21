@@ -753,10 +753,10 @@ namespace DarkwoodMP.World
 
             int chapter = r.R.ReadInt32();
             // before the host's game saves and moves on
-            Characters instance = Characters.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.SaveNow();
+                coop.Characters.SaveNow();
             }
 
             Plugin.Notice(
