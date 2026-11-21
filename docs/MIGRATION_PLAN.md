@@ -457,12 +457,26 @@ Finish with `tools/run-test.sh full`.
         half, threat, culling, freezing, noise and flee patches).
         Partly done: split into feature folders, the rules called from
         the shell, `PlayerNoiseMessage` in the core, and the culling
-        state on `ModHost.Culling` (`World/Culling/SharedCulling`). Left:
-        `PlayerNoisePatch.OwnNoise` and `ClientFreezeCharacterPatch.Starting`
-        to instances, the PlayerNoise handler to `coop.Handle`, and the
-        `<GameType><Method>` patch names.
+        state on `ModHost.Culling` (`World/Culling/SharedCulling`). Then,
+        with 6.4 part a: `OwnNoise` is `ModHost.Noise` (`PlayerNoise`,
+        which the noise patches hand their calls to), the PlayerNoise
+        handler is `CoopSession.Noise` (`RemoteNoise`), `Starting` is
+        `NetEnemies.Starting`, and the patches have `<GameType><Method>`
+        names. Left: thinning the freeze, threat, flee, melee and client
+        hit patches to one shell call each.
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
+  - [ ] Part a: `NetEnemies`. Partly done: it is `CoopSession.Enemies`,
+        a partial class over eight files in `Combat/Enemies` (host:
+        tracking, sends, hits; client: copies, states, deaths, sounds).
+        Its frozen and hidden sets, `HitEffects` and `Starting` are the
+        instance's; `Instance`, `Frozen`, `Hidden`, `HitEffects` and
+        `Thaw` pass on to it, so callers didn't change. `AllCharacters`
+        is `ModHost.Characters`. Left: its messages' bytes in the core,
+        calling the core's enemy rules (`EnemyTrackRules`,
+        `EnemyRelayRules`, `EnemyHitRules`, `EnemyLoopRules`,
+        `CopyRules`, `CopyStateRules`, the rest of `FreezeRules`) from
+        the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
 
 Finish with `tools/run-test.sh full`.
 
