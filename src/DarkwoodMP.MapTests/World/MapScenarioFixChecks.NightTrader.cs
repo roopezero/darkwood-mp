@@ -91,7 +91,7 @@ namespace DarkwoodMP.World
             else if (!logged)
             {
                 r.Fail(
-                    "the replayed death didn't go by NightTraderDreamPatch: "
+                    "the replayed death didn't go by SpecialOnKillNightTrader: "
                         + $"{r.Info}");
             }
         }

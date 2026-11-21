@@ -896,9 +896,9 @@ namespace DarkwoodMP
             {
                 session.Ui.Enabled = true;
                 session.Pushes.TestTouch = null;
+                session.Traps.TestRefuse = World.Traps.TrapTest.None;
             }
 
-            TrapFiredPatch.TestRefuse = null;
             WorldShare.TestHoldSecs = 0f;
 
             SkillsPanel.TestMouse = null;

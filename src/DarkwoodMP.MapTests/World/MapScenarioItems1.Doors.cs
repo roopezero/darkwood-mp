@@ -58,7 +58,7 @@ namespace DarkwoodMP.World
         /// "door-key N [--forged]" (client): open door N's lock with its key,
         /// as the player does: the key picked up (into the journal) and
         /// Locked.tryToOpenWithKey in the same frame. --forged: without the
-        /// key, a key unlock sent anyway (LockShare), which the host must
+        /// key, a key unlock sent anyway (LockShare.Send), which the host must
         /// refuse.
         /// </summary>
         private static IEnumerator DoorKey(string[] a, Result r)
@@ -87,7 +87,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
 
-                AsPlayer(() => LockShare.Send(l, 1f));
+                AsPlayer(() => Coop.Current.Locks.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
                 while (Coop.Current.Authority.RolledBack == refused
                     && Time.realtimeSinceStartup < giveUp)

@@ -85,8 +85,8 @@ namespace DarkwoodMP.World.Fuel
     }
 
     /// <summary>
-    /// Fuel just poured goes out before the switch-on does (ItemOnPatch sends
-    /// it in its postfix).
+    /// Fuel just poured goes out before the switch-on does (the TurnOn
+    /// patch sends it in its postfix).
     /// </summary>
     [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
     static class ItemTurnOn

@@ -79,7 +79,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
 ### Open
 
 - **Fixed**: opening a container the game's way (`Item.openInventory`) set `Item.searched` (and `Character.searched` on
-  a corpse) only in the opener's game. It's now sent as the WorldAction `ItemSearched` (`OpenSearchedPatch`); a
+  a corpse) only in the opener's game. It's now sent as the WorldAction `ItemSearched` (the `OpenInventory` patch, LockShare); a
   client's goes to the host as a request, checked for reach and refused for a crate that isn't picked open yet.
   `map:ui` afterwards: every step passed, `dumps: SAME` (`items: 43 matched, 0 differences`), 145 s.
 - Not shared, likely harmless: `Item.openInventory` also sets `inventory.RefreshingItems`, which makes the opener's

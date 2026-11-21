@@ -50,7 +50,7 @@ are under "In-game probe results" below.
 | Crafting | workbench recipes | items made | no rolls found | n/a | b | |
 | Item modifiers | `InvItemClass.addRandomModifiers` | weapon modifiers | nothing in the decompile calls it | n/a | b | |
 | `QuestRandomizer`, `UniqueItemSpawner`, `RandomSpawnArea`, `Shooter` | prototypes, or only used without random generation | | | | d | not seen in use in the real game |
-| The mod's `FindObjectsOfType` lookups | `TraderSync`, `Hideouts`, `WorldActions.DyingNpc`, `FlagsSync.KillNpc`, `ObjRef.NearestPlaced` | which copy of an object is meant | the copy nearest a sent position, or the one with the save id; never "the first found" | | a | `ObjRef.NearestPlaced` (`World/ObjRef.cs:168`) keeps the last of equal distances (`<=`), so two objects with the same name within about a unit of the key's spot could resolve differently in two games |
+| The mod's `FindObjectsOfType` lookups | `TraderSync`, `Hideouts`, `NpcDeaths.Dying`, `FlagsSync.KillNpc`, `ObjRef.NearestPlaced` | which copy of an object is meant | the copy nearest a sent position, or the one with the save id; never "the first found" | | a | `ObjRef.NearestPlaced` (`World/ObjRef.cs:168`) keeps the last of equal distances (`<=`), so two objects with the same name within about a unit of the key's spot could resolve differently in two games |
 | The mod's own `System.Random` | `HostIds`, `Containers`, `Hideouts`, `NightObjects`, `Infections`, `EnemyLandings`, `WorldEvents` | new ids | the game that makes the thing; the id is sent | yes | a | |
 
 ## What protects the shared world
