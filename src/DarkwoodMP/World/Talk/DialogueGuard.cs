@@ -26,6 +26,10 @@ namespace DarkwoodMP.World.Talk
     ///   closed the game's way.
     /// - A dialogue whose NPC is gone and that hasn't closed in StuckAfter
     ///   seconds is closed by force.
+    ///
+    /// All but the switched off NPC is a game bug that can happen in a game
+    /// played alone too, so one lives as long as the game
+    /// (ModHost.Dialogues).
     /// </summary>
     internal sealed class DialogueGuard
     {
@@ -39,17 +43,9 @@ namespace DarkwoodMP.World.Talk
         /// </summary>
         private GameObject _shopUI;
 
-        private readonly CoopSession _coop;
-
         private static readonly Action<DialogueWindow> TweenClose =
             AccessTools.MethodDelegate<Action<DialogueWindow>>(
                 AccessTools.Method(typeof(DialogueWindow), "onTweenClose"));
-
-        /// <summary>For one session (CoopSession.Dialogues).</summary>
-        public DialogueGuard(CoopSession coop)
-        {
-            _coop = coop;
-        }
 
         private static DialogueWindow Window
         {
@@ -65,14 +61,31 @@ namespace DarkwoodMP.World.Talk
         }
 
         /// <summary>
+        /// The game's guard (ModHost.Dialogues), null before the mod is up.
+        /// </summary>
+        internal static DialogueGuard Running
+        {
+            get
+            {
+                Plugin plugin = Plugin.Instance;
+                if (plugin == null || plugin.Host == null)
+                {
+                    return null;
+                }
+
+                return plugin.Host.Dialogues;
+            }
+        }
+
+        /// <summary>
         /// DialogueWindow.openTrade's postfix: keep the trader's window.
         /// </summary>
         internal static void AfterOpenTrade(DialogueWindow w)
         {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
+            DialogueGuard guard = Running;
+            if (guard != null)
             {
-                coop.Dialogues.OpenedTrade(w);
+                guard.OpenedTrade(w);
             }
         }
 
@@ -82,13 +95,13 @@ namespace DarkwoodMP.World.Talk
         /// </summary>
         internal static bool BeforeCloseTrade(DialogueWindow w)
         {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
+            DialogueGuard guard = Running;
+            if (guard == null)
             {
                 return true;
             }
 
-            return coop.Dialogues.RunCloseTrade(w);
+            return guard.RunCloseTrade(w);
         }
 
         /// <summary>
@@ -98,13 +111,13 @@ namespace DarkwoodMP.World.Talk
         /// </summary>
         internal static bool BeforeClose(DialogueWindow w)
         {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
+            DialogueGuard guard = Running;
+            if (guard == null)
             {
                 return true;
             }
 
-            return coop.Dialogues.RunClose(w);
+            return guard.RunClose(w);
         }
 
         /// <summary>
@@ -117,13 +130,13 @@ namespace DarkwoodMP.World.Talk
         /// </summary>
         internal static bool BeforeFinishedLine(DialogueWindow w)
         {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
+            DialogueGuard guard = Running;
+            if (guard == null)
             {
                 return true;
             }
 
-            return coop.Dialogues.RunFinishedLine(w);
+            return guard.RunFinishedLine(w);
         }
 
         /// <summary>
@@ -434,7 +447,12 @@ namespace DarkwoodMP.World.Talk
                 }
             }, 0.5f, timeScaleDependent: false);
 
-            _coop.Talk.Closed();
+            // a dialogue the talk lock holds is only ever a session's
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Talk.Closed();
+            }
         }
     }
 }

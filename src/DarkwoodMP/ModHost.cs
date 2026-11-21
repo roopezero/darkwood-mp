@@ -42,6 +42,10 @@ namespace DarkwoodMP
         public readonly HashSet<Generator> Generators =
             new HashSet<Generator>();
 
+        /// Keeps a dialogue closable when its NPC goes away, also alone.
+        public readonly World.Talk.DialogueGuard Dialogues =
+            new World.Talk.DialogueGuard();
+
         /// Doors opened here while their leaf was switched off, also alone;
         /// a session forgets them when it ends (CoopSession).
         public readonly World.Doors.DoorLeaf Leaves =

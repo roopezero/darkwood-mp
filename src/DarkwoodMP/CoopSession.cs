@@ -60,9 +60,6 @@ namespace DarkwoodMP
         /// One player at a time talks to an NPC.
         public readonly World.Talk.TalkLock Talk;
 
-        /// Keeps a dialogue closable when its NPC goes away.
-        public readonly World.Talk.DialogueGuard Dialogues;
-
         /// Things dragged and pushed, shared.
         public readonly DragSync Drags;
 
@@ -125,7 +122,6 @@ namespace DarkwoodMP
             Npcs = new NpcSync(this);
             Followers = new NpcFollowers(this);
             Talk = new World.Talk.TalkLock(this);
-            Dialogues = new World.Talk.DialogueGuard(this);
             Drags = new DragSync(this);
             Ui = new UiRefresh(this);
             Traders = new TraderSync(this);

@@ -430,7 +430,7 @@ namespace DarkwoodMP.World.Talk
             // that line again every time, so a refused dialogue never closed
             // (the map test's wolf). Any other menu closes at once, without a
             // goodbye from someone we never talked to.
-            _coop.Dialogues.Close(win);
+            Plugin.Instance.Host.Dialogues.Close(win);
             if (win.npc == npc)
             {
                 TryAgain(npc, tries - 1);
