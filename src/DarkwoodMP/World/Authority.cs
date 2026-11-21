@@ -419,9 +419,19 @@ namespace DarkwoodMP.World
         /// </summary>
         public bool Near(ulong player, Vector3 pos, float reach)
         {
-            NetPlayerProxy.All.TryGetValue(player, out var p);
-            var facts = FactsOf(p, pos) with { Reach = reach };
+            var facts = NearOf(player, pos) with { Reach = reach };
             return ReachRules.Near(facts);
+        }
+
+        /// <summary>
+        /// Host: what the reach rules know of this player's stand-in and a
+        /// thing at pos, for a rule that sets the reach itself and asks
+        /// ReachRules.Near (LeafGlideRules).
+        /// </summary>
+        public ReachFacts NearOf(ulong player, Vector3 pos)
+        {
+            NetPlayerProxy.All.TryGetValue(player, out var p);
+            return FactsOf(p, pos);
         }
 
         /// <summary>
