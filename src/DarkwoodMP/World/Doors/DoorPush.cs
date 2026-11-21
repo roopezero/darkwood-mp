@@ -242,16 +242,10 @@ namespace DarkwoodMP.World.Doors
         /// that second would never be sent, and each game's own swing from the
         /// open would leave the leaves apart. So where the opener's leaf comes
         /// to rest goes to the host, which passes it on, as a push.
-        /// Door.open, with where the opener stood: DoorLeaf remembers the
-        /// push first, for a leaf that's switched off here.
+        /// Door.open (DoorLeaf.OnOpen, after it remembered the push for a
+        /// leaf that's switched off here).
         /// </summary>
-        internal void Opened(Door d, Vector3 opener)
-        {
-            _leaves.Opened(d, opener);
-            Watch(d);
-        }
-
-        private void Watch(Door d)
+        internal void Opened(Door d)
         {
             var open = new LeafOpenFacts
             {

@@ -2355,11 +2355,8 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("npcs");
-            coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Dialogues.Update();
-            }
+            // also alone: a dialogue's NPC can go away then too
+            _host.Dialogues.Update();
 
             TestWorld.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world

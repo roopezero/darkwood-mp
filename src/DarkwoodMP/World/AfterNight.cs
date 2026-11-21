@@ -500,11 +500,8 @@ namespace DarkwoodMP.World
 
             // does nothing while the window is still opening: tried again next
             // frame
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Dialogues.Close(w);
-            }
+            var guard = Plugin.Instance.Host.Dialogues;
+            guard.Close(w);
 
             if (w.npc == null)
             {
@@ -517,10 +514,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     "[world] our dialogue with the trader didn't close: "
                         + "closing it without him and ending the morning");
-                if (coop != null)
-                {
-                    coop.Dialogues.ForceClose(w, "not closing");
-                }
+                guard.ForceClose(w, "not closing");
 
                 End(c);
             }

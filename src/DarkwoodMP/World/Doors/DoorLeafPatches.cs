@@ -20,17 +20,21 @@ namespace DarkwoodMP.World.Doors
         }
     }
 
+    // Door.open, close and OnEnable run DoorLeaf with or without a
+    // session (ModHost.Leaves); DoorLeaf.OnOpen hands the open on to the
+    // session's DoorPush.
+
     [HarmonyPatch(typeof(Door), nameof(Door.open))]
     static class DoorOpenLeaf
     {
         static void Postfix(
             Door __instance, Vector3 openerPosition, Transform openerTransform)
         {
-            var coop = Coop.Current;
-            if (coop != null)
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
             {
-                var at = Doors.Opener(openerPosition, openerTransform);
-                coop.Pushes.Opened(__instance, at);
+                plugin.Host.Leaves.OnOpen(
+                    __instance, openerPosition, openerTransform);
             }
         }
     }
@@ -40,10 +44,10 @@ namespace DarkwoodMP.World.Doors
     {
         static void Postfix(Door __instance)
         {
-            var coop = Coop.Current;
-            if (coop != null)
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
             {
-                coop.Leaves.Closed(__instance);
+                plugin.Host.Leaves.Closed(__instance);
             }
         }
     }
@@ -53,10 +57,10 @@ namespace DarkwoodMP.World.Doors
     {
         static void Postfix(Door __instance)
         {
-            var coop = Coop.Current;
-            if (coop != null)
+            Plugin plugin = Plugin.Instance;
+            if (plugin != null && plugin.Host != null)
             {
-                coop.Leaves.Enabled(__instance);
+                plugin.Host.Leaves.Enabled(__instance);
             }
         }
     }

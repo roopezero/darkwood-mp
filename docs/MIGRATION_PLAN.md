@@ -378,9 +378,10 @@ with the baseline.
         checks reach with `Authority.InReach` after `MayBuild`, so
         `BuildFacts.Reach` is left empty.
   - [x] Part c: `TimeSync`, `NpcSync`, `NpcFollowers`, `TalkLock`,
-        `DialogueGuard`. They are `CoopSession.Time`, `.Npcs`, `.Followers`,
-        `.Talk` and `.Dialogues`, in `World/Clock`, `World/Npcs` and
-        `World/Talk`. `DialogueGuard` now runs only in a session.
+        `DialogueGuard`. The first four are `CoopSession.Time`, `.Npcs`,
+        `.Followers` and `.Talk`, in `World/Clock`, `World/Npcs` and
+        `World/Talk`. `DialogueGuard` is `ModHost.Dialogues`, in
+        `World/Talk`: a game played alone needs it too.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.

@@ -60,9 +60,6 @@ namespace DarkwoodMP
         /// One player at a time talks to an NPC.
         public readonly World.Talk.TalkLock Talk;
 
-        /// Keeps a dialogue closable when its NPC goes away.
-        public readonly World.Talk.DialogueGuard Dialogues;
-
         /// Things dragged and pushed, shared.
         public readonly DragSync Drags;
 
@@ -89,9 +86,6 @@ namespace DarkwoodMP
         public readonly World.Doors.Doors Doors;
 
         public readonly World.Windows.Windows Windows;
-
-        /// Doors opened here while their leaf was switched off.
-        public readonly World.Doors.DoorLeaf Leaves;
 
         /// Open doors' leaves that players push, shared.
         public readonly World.Doors.DoorPush Pushes;
@@ -131,7 +125,6 @@ namespace DarkwoodMP
             Npcs = new NpcSync(this);
             Followers = new NpcFollowers(this);
             Talk = new World.Talk.TalkLock(this);
-            Dialogues = new World.Talk.DialogueGuard(this);
             Drags = new DragSync(this);
             Ui = new UiRefresh(this);
             Traders = new TraderSync(this);
@@ -142,8 +135,11 @@ namespace DarkwoodMP
             Fuel = new World.Fuel.Fuel(this);
             Doors = new World.Doors.Doors(this);
             Windows = new World.Windows.Windows(this);
-            Leaves = new World.Doors.DoorLeaf();
-            Pushes = new World.Doors.DoorPush(this, Leaves);
+            // the leaves live as long as the game (ModHost.Leaves); the
+            // doors waiting for their push are forgotten when this ends
+            var leaves = Plugin.Instance.Host.Leaves;
+            Hook(leaves.Clear);
+            Pushes = new World.Doors.DoorPush(this, leaves);
             Traps = new World.TrapSync(this);
             Locks = new World.LockShare(this);
             Switches = new World.SwitchSync(this);

@@ -49,6 +49,15 @@ namespace DarkwoodMP
         /// Each enemy's threat for each player, while there are stand-ins.
         public readonly Combat.Threats Threats;
 
+        /// Keeps a dialogue closable when its NPC goes away, also alone.
+        public readonly World.Talk.DialogueGuard Dialogues =
+            new World.Talk.DialogueGuard();
+
+        /// Doors opened here while their leaf was switched off, also alone;
+        /// a session forgets them when it ends (CoopSession).
+        public readonly World.Doors.DoorLeaf Leaves =
+            new World.Doors.DoorLeaf();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
