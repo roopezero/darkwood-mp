@@ -1,6 +1,6 @@
-using DarkwoodMP.Presence;
+using DarkwoodMP.Net.Presence;
 
-namespace DarkwoodMP.Tests.Presence
+namespace DarkwoodMP.Tests.Net.Presence
 {
     public class PresenceRulesTests
     {

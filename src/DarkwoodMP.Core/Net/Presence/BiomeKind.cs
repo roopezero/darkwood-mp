@@ -1,4 +1,4 @@
-namespace DarkwoodMP.Presence
+namespace DarkwoodMP.Net.Presence
 {
     /// The kinds of the map's parts, with the values of the game's
     /// Biome.Type, so the shell converts one with a cast.

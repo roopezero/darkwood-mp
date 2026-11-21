@@ -1,4 +1,4 @@
-namespace DarkwoodMP.Presence
+namespace DarkwoodMP.Net.Presence
 {
     /// Where our player is, for the presence's biome name
     /// (Plugin.BiomeName).

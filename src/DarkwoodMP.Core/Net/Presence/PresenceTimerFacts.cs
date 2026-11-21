@@ -1,4 +1,4 @@
-namespace DarkwoodMP.Presence
+namespace DarkwoodMP.Net.Presence
 {
     /// What decides whether the presence is worked out again this frame
     /// (Plugin.Update, before UpdatePresence).

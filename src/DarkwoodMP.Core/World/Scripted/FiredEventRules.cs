@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Scripted
     /// What a game does with an EventFired from another game, and what a
     /// client does with the host's answer to its own (the plugin's
     /// ScriptedEvents.OnFired, ExitArrived, Send and LaterPart).
-    public static class ArrivalRules
+    public static class FiredEventRules
     {
         /// How near the trigger a client's player must be to see the
         /// messages of an event the host's world set off. In 3D.

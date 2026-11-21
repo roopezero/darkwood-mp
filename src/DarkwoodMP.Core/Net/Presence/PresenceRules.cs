@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DarkwoodMP.Presence
+namespace DarkwoodMP.Net.Presence
 {
     /// What the player's friends and the server browser are told about our
     /// game: Plugin.PresenceText, UpdatePresence's limits, WorldLabel,

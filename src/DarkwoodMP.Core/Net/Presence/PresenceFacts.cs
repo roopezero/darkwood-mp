@@ -1,4 +1,4 @@
-namespace DarkwoodMP.Presence
+namespace DarkwoodMP.Net.Presence
 {
     /// What our Steam rich presence says (Plugin.PresenceText).
     public readonly struct PresenceFacts

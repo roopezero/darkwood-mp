@@ -3,7 +3,7 @@ using DarkwoodMP.World.Scripted;
 
 namespace DarkwoodMP.Tests.World.Scripted
 {
-    public class ArrivalRulesTests
+    public class FiredEventRulesTests
     {
         /// A trigger that hasn't fired, set off beside it.
         static readonly TriggerFacts Ready = new TriggerFacts
@@ -25,9 +25,9 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Pins_the_messages_distance_and_the_words()
             {
-                ArrivalRules.NearMessages.ShouldBe(2000f);
-                ArrivalRules.Alone.ShouldBe("alone");
-                ArrivalRules.ReachWords.ShouldBe("(reach");
+                FiredEventRules.NearMessages.ShouldBe(2000f);
+                FiredEventRules.Alone.ShouldBe("alone");
+                FiredEventRules.ReachWords.ShouldBe("(reach");
             }
         }
 
@@ -38,7 +38,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [InlineData(EventKind.WorldTriggerCaused)]
             public void Refuses_the_worlds_own_triggers(EventKind kind)
             {
-                var verdict = ArrivalRules.HostTakes(kind);
+                var verdict = FiredEventRules.HostTakes(kind);
 
                 verdict.Reason.ShouldBe(Refusal.HostRunsWorldEvents);
             }
@@ -50,7 +50,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [InlineData(EventKind.PlayerPart)]
             public void Takes_a_players_own_kinds(EventKind kind)
             {
-                ArrivalRules.HostTakes(kind).ShouldBe(Verdict.Allow);
+                FiredEventRules.HostTakes(kind).ShouldBe(Verdict.Allow);
             }
         }
 
@@ -64,7 +64,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Allows_a_trigger_that_can_fire()
             {
-                var answer = ArrivalRules.AnswerTrigger(Ready, false, false);
+                var answer = FiredEventRules.AnswerTrigger(Ready, false, false);
 
                 answer.ShouldBe(default(EventAnswer));
             }
@@ -72,7 +72,10 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Gives_a_missing_trigger_to_a_player_away()
             {
-                var answer = ArrivalRules.AnswerTrigger(Missing, true, false);
+                var answer = FiredEventRules.AnswerTrigger(
+                    Missing,
+                    true,
+                    false);
 
                 answer.Alone.ShouldBeTrue();
             }
@@ -81,7 +84,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Refuses_a_missing_trigger_with_unknown_world_events()
             {
                 var answer =
-                    ArrivalRules.AnswerTrigger(Missing, false, false);
+                    FiredEventRules.AnswerTrigger(Missing, false, false);
 
                 answer.Verdict.Reason.ShouldBe(Refusal.NoSuchEvent);
             }
@@ -89,7 +92,10 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Allows_a_missing_trigger_whose_world_events_are_known()
             {
-                var answer = ArrivalRules.AnswerTrigger(Missing, false, true);
+                var answer = FiredEventRules.AnswerTrigger(
+                    Missing,
+                    false,
+                    true);
 
                 answer.ShouldBe(default(EventAnswer));
             }
@@ -99,7 +105,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var t = Ready with { Fired = true };
 
-                var answer = ArrivalRules.AnswerTrigger(t, true, true);
+                var answer = FiredEventRules.AnswerTrigger(t, true, true);
 
                 answer.Verdict.Reason.ShouldBe(Refusal.AlreadyHappened);
             }
@@ -107,7 +113,10 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Gives_it_to_a_player_away_before_the_name_check()
             {
-                var answer = ArrivalRules.AnswerTrigger(Missing, true, false);
+                var answer = FiredEventRules.AnswerTrigger(
+                    Missing,
+                    true,
+                    false);
 
                 answer.Verdict.ShouldBe(Verdict.Allow);
             }
@@ -123,7 +132,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Allows_a_world_event_that_can_happen()
             {
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(Event, "open", false);
+                    FiredEventRules.AnswerWorldEvent(Event, "open", false);
 
                 answer.ShouldBe(default(EventAnswer));
             }
@@ -132,7 +141,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Gives_an_unknown_world_event_to_a_player_away()
             {
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(Missing, "open", true);
+                    FiredEventRules.AnswerWorldEvent(Missing, "open", true);
 
                 answer.Alone.ShouldBeTrue();
             }
@@ -141,7 +150,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Refuses_an_unknown_world_event()
             {
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(Missing, "open", false);
+                    FiredEventRules.AnswerWorldEvent(Missing, "open", false);
 
                 answer.Verdict.ShouldBe(
                     Verdict.Refuse(Refusal.NoSuchWorldEvent, "open"));
@@ -151,7 +160,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Refuses_a_world_event_that_happened()
             {
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(Happened, "open", false);
+                    FiredEventRules.AnswerWorldEvent(Happened, "open", false);
 
                 answer.Verdict.ShouldBe(
                     Verdict.Refuse(Refusal.WorldEventHappened, "open"));
@@ -161,7 +170,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Refuses_a_known_one_that_happened_also_when_away()
             {
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(Happened, "open", true);
+                    FiredEventRules.AnswerWorldEvent(Happened, "open", true);
 
                 answer.Verdict.Reason.ShouldBe(Refusal.WorldEventHappened);
             }
@@ -172,7 +181,7 @@ namespace DarkwoodMP.Tests.World.Scripted
                 var events = Happened with { MultipleFire = true };
 
                 var answer =
-                    ArrivalRules.AnswerWorldEvent(events, "open", false);
+                    FiredEventRules.AnswerWorldEvent(events, "open", false);
 
                 answer.ShouldBe(default(EventAnswer));
             }
@@ -190,7 +199,7 @@ namespace DarkwoodMP.Tests.World.Scripted
                 bool near,
                 EventPart part)
             {
-                ArrivalRules.WorldTriggerPart(ours, near).ShouldBe(part);
+                FiredEventRules.WorldTriggerPart(ours, near).ShouldBe(part);
             }
         }
 
@@ -201,7 +210,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var at = new Vec3(1999f, 0f, 0f);
 
-                var near = ArrivalRules.NearTrigger(true, default, at);
+                var near = FiredEventRules.NearTrigger(true, default, at);
 
                 near.ShouldBeTrue();
             }
@@ -211,7 +220,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var at = new Vec3(0f, 0f, 2000f);
 
-                var near = ArrivalRules.NearTrigger(true, default, at);
+                var near = FiredEventRules.NearTrigger(true, default, at);
 
                 near.ShouldBeFalse();
             }
@@ -221,7 +230,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var at = new Vec3(1200f, 1200f, 1200f);
 
-                var near = ArrivalRules.NearTrigger(true, default, at);
+                var near = FiredEventRules.NearTrigger(true, default, at);
 
                 near.ShouldBeFalse();
             }
@@ -229,7 +238,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Skips_a_game_with_no_player()
             {
-                var near = ArrivalRules.NearTrigger(false, default, default);
+                var near = FiredEventRules.NearTrigger(false, default, default);
 
                 near.ShouldBeFalse();
             }
@@ -240,13 +249,13 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Runs_active_events_that_can_happen()
             {
-                ArrivalRules.CanRun(Event).ShouldBeTrue();
+                FiredEventRules.CanRun(Event).ShouldBeTrue();
             }
 
             [Fact]
             public void Skips_missing_events()
             {
-                ArrivalRules.CanRun(default).ShouldBeFalse();
+                FiredEventRules.CanRun(default).ShouldBeFalse();
             }
 
             [Fact]
@@ -254,7 +263,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var events = Event with { Fired = true };
 
-                ArrivalRules.CanRun(events).ShouldBeFalse();
+                FiredEventRules.CanRun(events).ShouldBeFalse();
             }
 
             [Fact]
@@ -262,7 +271,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var events = Event with { Fired = true, MultipleFire = true };
 
-                ArrivalRules.CanRun(events).ShouldBeTrue();
+                FiredEventRules.CanRun(events).ShouldBeTrue();
             }
 
             [Fact]
@@ -270,7 +279,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var events = Event with { Active = false };
 
-                ArrivalRules.CanRun(events).ShouldBeFalse();
+                FiredEventRules.CanRun(events).ShouldBeFalse();
             }
 
             [Fact]
@@ -282,7 +291,7 @@ namespace DarkwoodMP.Tests.World.Scripted
                     RunsInactive = true,
                 };
 
-                ArrivalRules.CanRun(events).ShouldBeTrue();
+                FiredEventRules.CanRun(events).ShouldBeTrue();
             }
         }
 
@@ -293,7 +302,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Runs_the_exit_of_an_area()
             {
-                ArrivalRules.OnExit(Area, false).ShouldBe(ExitArrival.Run);
+                FiredEventRules.OnExit(Area, false).ShouldBe(ExitArrival.Run);
             }
 
             [Fact]
@@ -301,7 +310,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var t = Area with { MultipleFire = true };
 
-                var exit = ArrivalRules.OnExit(t, false);
+                var exit = FiredEventRules.OnExit(t, false);
 
                 exit.ShouldBe(ExitArrival.RunAndRearm);
             }
@@ -309,7 +318,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Waits_while_our_player_is_inside()
             {
-                var exit = ArrivalRules.OnExit(Area, true);
+                var exit = FiredEventRules.OnExit(Area, true);
 
                 exit.ShouldBe(ExitArrival.StillInside);
             }
@@ -319,7 +328,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var t = Area with { FiredExit = true };
 
-                var exit = ArrivalRules.OnExit(t, true);
+                var exit = FiredEventRules.OnExit(t, true);
 
                 exit.ShouldBe(ExitArrival.RanAlready);
             }
@@ -341,7 +350,7 @@ namespace DarkwoodMP.Tests.World.Scripted
                     FiredExit = true,
                 };
 
-                ArrivalRules.OnExit(t, true).ShouldBe(ExitArrival.Ignored);
+                FiredEventRules.OnExit(t, true).ShouldBe(ExitArrival.Ignored);
             }
         }
 
@@ -356,7 +365,7 @@ namespace DarkwoodMP.Tests.World.Scripted
                 int exited,
                 bool inside)
             {
-                ArrivalRules.Entered(entered, exited).ShouldBe(inside);
+                FiredEventRules.Entered(entered, exited).ShouldBe(inside);
             }
         }
 
@@ -365,7 +374,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [Fact]
             public void Runs_all_of_it_when_its_ours_alone()
             {
-                var part = ArrivalRules.PartAfterYes("alone");
+                var part = FiredEventRules.PartAfterYes("alone");
 
                 part.ShouldBe(EventPart.All);
             }
@@ -377,7 +386,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Runs_our_part_and_the_shared_part_otherwise(
                 string result)
             {
-                var part = ArrivalRules.PartAfterYes(result);
+                var part = FiredEventRules.PartAfterYes(result);
 
                 part.ShouldBe(EventPart.PlayerAndShared);
             }
@@ -390,7 +399,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             {
                 var reason = "et_cellar is 3500 away from them (reach 3000)";
 
-                ArrivalRules.AskAgain(reason).ShouldBeTrue();
+                FiredEventRules.AskAgain(reason).ShouldBeTrue();
             }
 
             [Theory]
@@ -399,7 +408,7 @@ namespace DarkwoodMP.Tests.World.Scripted
             [InlineData(null)]
             public void Stops_asking_after_any_other_refusal(string reason)
             {
-                ArrivalRules.AskAgain(reason).ShouldBeFalse();
+                FiredEventRules.AskAgain(reason).ShouldBeFalse();
             }
         }
     }

@@ -41,8 +41,8 @@ namespace DarkwoodMP.World.Scripted
         }
 
         /// Whether its events may run: they exist, and are active or may
-        /// run inactive. Unlike ArrivalRules.CanRun, whether they ran is
-        /// not looked at: being owed says they did.
+        /// run inactive. Unlike FiredEventRules.CanRun, whether they ran
+        /// is not looked at: being owed says they did.
         public static bool EventsRun(in EventsFacts events)
         {
             return events.Exists && (events.Active || events.RunsInactive);

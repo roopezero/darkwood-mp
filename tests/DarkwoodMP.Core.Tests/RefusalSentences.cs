@@ -488,6 +488,7 @@ namespace DarkwoodMP.Tests
                     Refusal.NotAtWorkbench,
                     null,
                     "they aren't at a workbench"
+                },
                 {
                     Refusal.UnexpectedFile,
                     "sav.exe",
@@ -549,6 +550,7 @@ namespace DarkwoodMP.Tests
                     Refusal.NotPlayersFolder,
                     null,
                     "it isn't prof<N>/darkwoodmp_players in the save folder"
+                },
                 { Refusal.WaitForMainMenu, null, "Wait for the main menu." },
                 { Refusal.NoSaveInSlot, null, "No save in that slot." },
                 {
@@ -565,6 +567,7 @@ namespace DarkwoodMP.Tests
                     Refusal.NameLocked,
                     null,
                     "You can change it when you're in no game."
+                },
                 {
                     Refusal.LoadWorldToHost,
                     null,
