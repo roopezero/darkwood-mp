@@ -264,7 +264,7 @@ namespace DarkwoodMP.World.Workbenches
         /// The workbench's storage was drawn (Inventory.show): if its rows and
         /// the Sort &amp; Stack button under them would run off the bottom of
         /// the screen, the whole window is drawn smaller to fit. Runs after
-        /// the button is added (StorageSortButtonPatch), so the button shrinks
+        /// the button is added (SlotShare.Shown), so the button shrinks
         /// with it. The game's ScaleToResolution takes the window's scale as
         /// its base on the next frame, so a change of resolution keeps the
         /// fit.

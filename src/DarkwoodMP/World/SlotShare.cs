@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Workbenches;
-using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -1567,111 +1566,80 @@ namespace DarkwoodMP.World
 
             return false;
         }
-    }
 
-    /// <summary>
-    /// The world's own durability changes in a watched storage (rot, drain,
-    /// recharge) aren't the player's: SlotShare.Drift.
-    /// </summary>
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.refreshItems))]
-    static class DriftPatch
-    {
-        static void Prefix(Inventory __instance, out string[] __state)
-        {
-            CoopSession coop = Coop.Current;
-            string[] state = null;
-            if (coop != null)
-            {
-                state = coop.Slots.BeforeDrift(__instance);
-            }
-
-            __state = state;
-        }
-
-        static void Postfix(Inventory __instance, string[] __state)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Slots.Drift(__instance, __state);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(CraftingRecipes), nameof(CraftingRecipes.doCraft))]
-    static class WorkbenchUpgradePatch
-    {
-        static void Prefix(out int __state)
-        {
-            if (Singleton<Controller>.Instance != null)
-            {
-                __state = Singleton<Controller>.Instance.workbenchLevel;
-            }
-            else
-            {
-                __state = 0;
-            }
-        }
-
-        static void Postfix(int __state)
+        /// <summary>
+        /// The workbench's level before a craft (DoCraft), 0 with no world.
+        /// </summary>
+        internal static int LevelNow()
         {
             var ctl = Singleton<Controller>.Instance;
-            if (ctl == null || ctl.workbenchLevel <= __state)
+            if (ctl == null)
+            {
+                return 0;
+            }
+
+            return ctl.workbenchLevel;
+        }
+
+        /// <summary>
+        /// A craft is done (DoCraft): if it was an upgrade, the storage gets
+        /// its new row (also without co-op), and the new level is sent.
+        /// </summary>
+        internal static void Crafted(int before)
+        {
+            var ctl = Singleton<Controller>.Instance;
+            if (ctl == null || ctl.workbenchLevel <= before)
             {
                 return;
             }
 
-            // the storage's new row (also without co-op)
             Plugin.Instance.Host.Workbenches.ApplyAll("upgraded");
-            if (!Coop.Guards.Replaying)
+            if (Coop.Guards.Replaying)
             {
-                CoopSession coop = Coop.Current;
-                if (coop != null)
-                {
-                    coop.Slots.LevelRaised(ctl.workbenchLevel);
-                }
+                return;
+            }
+
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Slots.LevelRaised(ctl.workbenchLevel);
             }
         }
-    }
 
-    /// <summary>
-    /// A dropped item picked up with a click (Item.getDroppedItem) moves its
-    /// slot to the player and destroys the object without opening its window,
-    /// so Containers never sees it. Look at its slot before and after, as if
-    /// the window had been open for that moment: the change goes out slot by
-    /// slot (a client's is the host's to accept), and the others' copy goes
-    /// once it's empty.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.getDroppedItem))]
-    static class ClickPickupPatch
-    {
-        private static readonly AccessTools.FieldRef<Item, Inventory> Inv =
-            AccessTools.FieldRefAccess<Item, Inventory>("inventory");
+        // ---- click pickups --------------------------------------------------
 
-        static void Prefix(Item __instance, out Inventory __state)
+        /// <summary>
+        /// A dropped item is about to be picked up with a click
+        /// (GetDroppedItem), which moves its slot to the player and destroys
+        /// the object without opening its window, so Containers never sees
+        /// it. Its slot is looked at before and after, as if the window had
+        /// been open for that moment: the change goes out slot by slot (a
+        /// client's is the host's to accept), and the others' copy goes once
+        /// it's empty. Returns the container to look at after, or null.
+        /// </summary>
+        internal Inventory PickingUp(Inventory inv)
         {
-            __state = null;
-            CoopSession coop = Coop.Current;
-            var inv = Inv(__instance);
-            if (coop == null || inv == null || !Coop.Guards.Sharing
-                || coop.Slots.Watching(inv))
+            if (inv == null || !Coop.Guards.Sharing || Watching(inv))
             {
-                return;
+                return null;
             }
 
             if (WorldActions.OursAlone(inv.gameObject))
             {
-                return; // the host hasn't got it (Containers.Poll)
+                return null; // the host hasn't got it (Containers.Poll)
             }
 
             // as it is now (over within this frame: no waiting for the host)
-            coop.Slots.Check(inv, askHost: false);
-            __state = inv;
+            Check(inv, askHost: false);
+            return inv;
         }
 
-        static void Postfix(Inventory __state)
+        /// <summary>
+        /// The click pickup PickingUp looked at is done.
+        /// </summary>
+        internal void PickedUp(Inventory inv)
         {
-            if (__state == null)
+            if (inv == null)
             {
                 return;
             }
@@ -1679,14 +1647,10 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] picked up {__state.name} with a click");
+                    $"[world] picked up {inv.name} with a click");
             }
 
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Slots.Closed(__state);
-            }
+            Closed(inv);
         }
     }
 }

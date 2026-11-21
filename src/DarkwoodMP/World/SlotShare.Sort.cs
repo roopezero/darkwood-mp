@@ -1,7 +1,6 @@
 using DarkwoodMP.World.Inventories;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
-using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -524,26 +523,23 @@ namespace DarkwoodMP.World
                         + $"{e.Message}");
             }
         }
-    }
 
-    /// <summary>
-    /// The workbench's storage was drawn (Workbench.open shows it): add Sort
-    /// &amp; Stack under it.
-    /// </summary>
-    [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
-    static class StorageSortButtonPatch
-    {
-        static void Postfix(Inventory __instance)
+        /// <summary>
+        /// A container was drawn (InventoryShow; Workbench.open shows its
+        /// storage): a workbench's storage gets Sort &amp; Stack under it,
+        /// also without co-op.
+        /// </summary>
+        internal static void Shown(Inventory inv)
         {
-            if (__instance == null || !__instance.open)
+            if (inv == null || !inv.open)
             {
                 return;
             }
 
-            var wb = __instance.GetComponent<Workbench>();
-            if (wb != null && wb.normalInventory == __instance)
+            var wb = inv.GetComponent<Workbench>();
+            if (wb != null && wb.normalInventory == inv)
             {
-                SlotShare.AddButton(__instance);
+                AddButton(inv);
             }
         }
     }
