@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using DarkwoodMP.Net.Steam;
 
 namespace DarkwoodMP.Tests.Net.Steam
@@ -58,6 +59,72 @@ namespace DarkwoodMP.Tests.Net.Steam
                 var pieces = SteamPieces.Split(Message(524289), Piece);
 
                 pieces[2].ShouldBe(new byte[] { 170, 524288 % 251 });
+            }
+
+            [Fact]
+            public void Makes_one_piece_of_a_message_one_piece_long()
+            {
+                var pieces = SteamPieces.Split(Message(262144), Piece);
+
+                pieces.ConvertAll(p => p.Length).ShouldBe(new[] { 262149 });
+            }
+
+            [Fact]
+            public void Makes_a_second_piece_for_one_byte_more()
+            {
+                var pieces = SteamPieces.Split(Message(262145), Piece);
+
+                pieces[1].ShouldBe(new byte[] { 170, 262144 % 251 });
+            }
+
+            [Fact]
+            public void Fills_both_pieces_of_a_message_two_pieces_long()
+            {
+                var pieces = SteamPieces.Split(Message(524288), Piece);
+
+                pieces.ConvertAll(p => p.Length)
+                    .ShouldBe(new[] { 262149, 262145 });
+            }
+
+            [Fact]
+            public void Makes_no_piece_of_an_empty_message()
+            {
+                var pieces = SteamPieces.Split(Message(0), Piece);
+
+                pieces.ShouldBeEmpty();
+            }
+
+            [Fact]
+            public void Copies_the_message_in_order_after_the_heads()
+            {
+                var message = Message(524289);
+
+                var pieces = SteamPieces.Split(message, Piece);
+
+                var data = new List<byte>();
+                data.AddRange(pieces[0][5..]);
+                data.AddRange(pieces[1][1..]);
+                data.AddRange(pieces[2][1..]);
+                data.ShouldBe(message.ToArray());
+            }
+
+            [Fact]
+            public void Writes_each_byte_of_the_length()
+            {
+                var data = new byte[0x030201];
+                var message = new ArraySegment<byte>(data);
+
+                var pieces = SteamPieces.Split(message, Piece);
+
+                pieces[0][..5].ShouldBe(new byte[] { 170, 1, 2, 3, 0 });
+            }
+
+            [Fact]
+            public void Heads_every_piece_with_the_type_given()
+            {
+                var pieces = SteamPieces.Split(Message(524289), 7);
+
+                pieces.ConvertAll(p => p[0]).ShouldBe(new byte[] { 7, 7, 7 });
             }
 
             [Fact]

@@ -686,7 +686,7 @@ Finish with `tools/run-test.sh full`.
       nothing to do. `WorldTest` is a partial class over six files.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
-  - [ ] Part a: `Plugin`, the Steam files and `IGuiSection`. Done so far:
+  - [x] Part a: `Plugin`, the Steam files and `IGuiSection`. Done:
         `Plugin.cs` is split into partial files (startup, `TestArgs`,
         `Shots`, `SoloTest`, `JoinTests`) and `ModConfig` binds the
         settings; its process state is on `ModHost` (`Panel`, `SteamStart`,
@@ -709,6 +709,14 @@ Finish with `tools/run-test.sh full`.
         `Plugin.cs` code part a moves), `MenuSkin`, `PixelFont` and
         `MenuWindows` (about 230 calls, and transpiler targets), and
         `SaveBook`, whose static methods hold logic over `ModHost.Book`.
+        namespace unchanged, and have no patches or statics (`SteamBackend`
+        is on `ModHost`). `SteamBackend`, `Lobby` and `SteamTransport` call
+        `LobbyRules`, `SteamPeerRules` and `SteamSendRules`, and split and
+        join long messages with `SteamPieces` and `PieceJoiner`, whose bytes
+        were already in the core; `AcceptOf`, `LostOf`, `EnterOf`,
+        `OwnerOf`, `CloseOf` and `ResultOf` turn Steamworks values into the
+        facts inside those files. Steam can't run in the test box, so only
+        the unit tests check this until the final in-game run.
 - [x] Turn style warnings into errors for the whole plugin.
 - [ ] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
       `CLAUDE.md`, then delete this plan.

@@ -1,5 +1,6 @@
 using System;
 using DarkwoodMP.Menus;
+using DarkwoodMP.Net.Steam;
 using Steamworks;
 
 namespace DarkwoodMP.Net
@@ -50,19 +51,7 @@ namespace DarkwoodMP.Net
             _transport.Init();
             _lobby.Init();
             _transport.ShouldAccept = id =>
-            {
-                if (!_lobby.InLobby)
-                {
-                    return false;
-                }
-
-                if (IsHost)
-                {
-                    return _lobby.IsMember(id);
-                }
-
-                return id == _lobby.Owner;
-            };
+                SteamPeerRules.MayAccept(AcceptOf(id));
 
             _transport.OnMessage += (from, data, len, ch) =>
             {
@@ -99,13 +88,8 @@ namespace DarkwoodMP.Net
             // sent again then.
             _transport.OnSessionLost += who =>
             {
-                var session = Plugin.Instance.Host.Session;
-                if (!_lobby.InLobby || session == null)
-                {
-                    return;
-                }
-
-                if (IsHost && session.Peers.Contains(who.m_SteamID))
+                var step = SteamPeerRules.Lost(LostOf(who));
+                if (step == LostStep.DropPeer)
                 {
                     Plugin.Log.LogInfo(
                         $"Lost the connection to #{who.m_SteamID}");
@@ -116,9 +100,9 @@ namespace DarkwoodMP.Net
                         lost(who.m_SteamID);
                     }
                 }
-                else if (!IsHost && who == _lobby.Owner && session.Connected)
+                else if (step == LostStep.LoseHost)
                 {
-                    _lobby.LoseHost("Lost the connection to the host");
+                    _lobby.LoseHost(SteamPeerRules.LostHost);
                 }
             };
 
@@ -127,7 +111,7 @@ namespace DarkwoodMP.Net
             // (and shows "X left", which needs the name still known then).
             _lobby.OnMemberLeft += who =>
             {
-                if (!IsHost && who != _lobby.Owner)
+                if (!SteamPeerRules.ActsOnLeft(IsHost, who == _lobby.Owner))
                 {
                     return;
                 }
@@ -138,6 +122,52 @@ namespace DarkwoodMP.Net
                 {
                     lost(who.m_SteamID);
                 }
+            };
+        }
+
+        /// <summary>
+        /// A P2P session request from id, for SteamPeerRules.MayAccept. The
+        /// lobby's members are read only for a host.
+        /// </summary>
+        private AcceptFacts AcceptOf(CSteamID id)
+        {
+            bool member = false;
+            if (_lobby.InLobby && IsHost)
+            {
+                member = _lobby.IsMember(id);
+            }
+
+            return new AcceptFacts
+            {
+                InLobby = _lobby.InLobby,
+                IsHost = IsHost,
+                Member = member,
+                FromHost = id == _lobby.Owner,
+            };
+        }
+
+        /// <summary>
+        /// A failed P2P session with who, for SteamPeerRules.Lost.
+        /// </summary>
+        private LostFacts LostOf(CSteamID who)
+        {
+            var session = Plugin.Instance.Host.Session;
+            bool known = false;
+            bool connected = false;
+            if (session != null)
+            {
+                known = session.Peers.Contains(who.m_SteamID);
+                connected = session.Connected;
+            }
+
+            return new LostFacts
+            {
+                InLobby = _lobby.InLobby,
+                HasSession = session != null,
+                IsHost = IsHost,
+                KnownPeer = known,
+                FromHost = who == _lobby.Owner,
+                Connected = connected,
             };
         }
 
@@ -191,7 +221,7 @@ namespace DarkwoodMP.Net
         public void Poll() => _transport.Poll();
         public void Rejoin()
         {
-            if (IsHost || !InSession)
+            if (!SteamPeerRules.MayRejoin(IsHost, InSession))
             {
                 return;
             }
