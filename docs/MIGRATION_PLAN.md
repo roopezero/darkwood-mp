@@ -221,18 +221,18 @@ Moves `Packets`, `Session`, `INetBackend`, `TcpBackend`, `PortMapper`,
 `ServerInfo`, `ServerBrowser` and `PlayerKey`. Only the Steam files and
 `IGuiSection` stay in the plugin.
 
-- [ ] Replace `UnityEngine.Time` in `Session` with `IClock`. It uses two
+- [x] Replace `UnityEngine.Time` in `Session` with `IClock`. It uses two
       clocks today, real time and unscaled time, and both must stay distinct.
-- [ ] Replace `Plugin.Log` with `ILog`, passed to each constructor. The five
+- [x] Replace `Plugin.Log` with `ILog`, passed to each constructor. The five
       `new PacketWriter` sites pass it too.
-- [ ] Pass in the mod's version instead of reading `PluginInfo.Version`.
-- [ ] Replace `Characters.Instance.SaveNow()` in `TcpBackend.Leave` with a
+- [x] Pass in the mod's version instead of reading `PluginInfo.Version`.
+- [x] Replace `Characters.Instance.SaveNow()` in `TcpBackend.Leave` with a
       callback that runs before leaving.
-- [ ] Use `Vec3` in `PacketWriter` and `PacketReader`, and add plugin extension
+- [x] Use `Vec3` in `PacketWriter` and `PacketReader`, and add plugin extension
       methods for `Write(Vector3)` and `ReadVector3()` so callers don't change.
-- [ ] Update the path to `Packets.cs` in `tools/tests/worldtest.py`, and in the
+- [x] Update the path to `Packets.cs` in `tools/tests/worldtest.py`, and in the
       skills that name it.
-- [ ] Split `Packets.cs` into one file per main type.
+- [x] Split `Packets.cs` into one file per main type.
 - [ ] Add `LoopbackBackend` and the unit tests: the handshake and each refusal,
       relaying to everyone but the sender, requests and verdicts, packet bytes,
       goasis's `INFO` format, and TCP framing on localhost.

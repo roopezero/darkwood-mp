@@ -10,8 +10,9 @@ multiplayer design itself (authority, prediction, the protocol);
 at a time. New code follows it from the start; existing code is moved when
 it's next changed or in a planned refactor pass. Until a subsystem has moved,
 its old form (static classes, logic inside patches) still applies to it. The
-core, analyzer and unit test projects exist, with the core's first small
-types; nothing has moved into the core yet. `src/DarkwoodMP.MapTests`,
+core, analyzer and unit test projects exist. The core has the rules and the
+network code (`Session`, the packets, `TcpBackend` and the server browser);
+the plugin keeps the Steam backend. `src/DarkwoodMP.MapTests`,
 `ModHost`, `CoopSession` and `WorldScope` don't exist yet.
 [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
 

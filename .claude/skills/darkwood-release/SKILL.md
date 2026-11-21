@@ -7,7 +7,7 @@ description: Make a DarkwoodMP release - bump the mod and protocol versions as n
 
 1. **Versions.**
    - `<Version>` in `Directory.Build.props` at the repo's root: bump it for any change players install (minor for features, patch for fixes). Both DLLs get it, and the plugin's `PluginInfo.Version` is generated from it.
-   - `Protocol.Version` in `src/DarkwoodMP/Net/Packets.cs`: bump it **only** if a message's bytes changed (a new type, or a field added or removed). Hosts refuse other protocol versions, so everyone must update together. Say so in the release notes.
+   - `Protocol.Version` in `src/DarkwoodMP.Core/Net/Protocol.cs`: bump it **only** if a message's bytes changed (a new type, or a field added or removed). Hosts refuse other protocol versions, so everyone must update together. Say so in the release notes.
 1. **Build (the release check):** `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:$PATH; dotnet build src/DarkwoodMP -c Release --no-incremental -warnaserror -clp:ErrorsOnly`. It must exit 0: any compiler warning fails it, and the style rules are errors already. `--no-incremental` is required, because a second build skips the compiler and shows no warnings at all. It deploys both DLLs to the user's game.
 1. **Unit tests:** `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`, then `dotnet test tests/DarkwoodMP.Analyzers.Tests` with the same options for the formatting rules. Every test must pass.
 1. **Test:** at least `tools/run-test.sh capture handshake host-combat client-enemies client-chars`, plus whatever covers the change (see the `darkwood-test` skill). Each must end with `no exceptions` and `your saves: unchanged`.

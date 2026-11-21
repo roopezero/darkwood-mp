@@ -86,7 +86,7 @@ A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then
 
 - Every test ends with `no exceptions` and `your saves: unchanged`. Anything else is a failure: read the printed exception (it comes from `Player.log`).
 - The mod's log for the last game run is `<game>/BepInEx/LogOutput.log`. `--dwmp-debug-world` and `--dwmp-debug-threat` (set by the runner where useful) log every shared-world message and threat decision.
-- Scripted peers that send an outdated message format cause `EndOfStreamException`s on the host. If you changed a message's bytes, update the matching script in `tools/tests/` too. The protocol version itself is read from `Net/Packets.cs` automatically.
+- Scripted peers that send an outdated message format cause `EndOfStreamException`s on the host. If you changed a message's bytes, update the matching script in `tools/tests/` too. The protocol version itself is read from `src/DarkwoodMP.Core/Net/Protocol.cs` automatically.
 - Timing matters. The first `PlayerState` of a joining client comes from a loading position (x = 75000) before the world is ready, so anything that waits on the client's world should wait for `WorldShare.WorldReady`.
 
 ## The map test
@@ -103,4 +103,4 @@ A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then
 
 - **Host side:** add a step to `World/WorldTest.cs` (it runs once a player has joined) or a `--dwmp-test-*` argument in `Plugin.cs`. Then decode the new message type in `tools/tests/worldobs.py` (or `combattest.py`), and add a case to `tools/run-test.sh`.
 - **Client side:** teach `worldtest.py serve` to send it (or replay it from a recording), and check the game's `[world]` debug lines.
-- Remember the scripts are a second implementation of the protocol, so keep them in step with `Net/Packets.cs`.
+- Remember the scripts are a second implementation of the protocol, so keep them in step with `MsgType` in `src/DarkwoodMP.Core/Net/MsgType.cs`.

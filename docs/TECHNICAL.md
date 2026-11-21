@@ -34,7 +34,7 @@ The design and the network protocol, for anyone reading or changing the code. [D
 
 ## Protocol
 
-Every message is `u8 type` + payload, little-endian. Over TCP, each is framed with a `u32 length` first. `str` means a u16 length + UTF-8; `bigstr`, used for JSON (inventories, characters, the profile), a u32 length + UTF-8. The current protocol version is in `src/DarkwoodMP/Net/Packets.cs`, and that file's comments are the authoritative byte layouts.
+Every message is `u8 type` + payload, little-endian. Over TCP, each is framed with a `u32 length` first. `str` means a u16 length + UTF-8; `bigstr`, used for JSON (inventories, characters, the profile), a u32 length + UTF-8. The current protocol version is in `src/DarkwoodMP.Core/Net/Protocol.cs`, and the comments in `MsgType.cs` beside it are the authoritative byte layouts.
 
 | Type | Name | Direction | Payload |
 |---|---|---|---|
@@ -48,18 +48,18 @@ Every message is `u8 type` + payload, little-endian. Over TCP, each is framed wi
 | 11 | PlayerLeft | H→C | u64 id |
 | 12 | PlayerInfo | H→C | u64 id, str name |
 | 13 | PlayerDamage | H→C | f32 damage, u8 flags, str attacker, effects |
-| 14–18 | EnemySpawn, EnemyState, EnemyDespawn, EnemyHit (C→H, in a Request, with the weapon), EnemySound | H→C | see `Packets.cs` |
+| 14–18 | EnemySpawn, EnemyState, EnemyDespawn, EnemyHit (C→H, in a Request, with the weapon), EnemySound | H→C | see `MsgType.cs` |
 | 19 | PlayerNoise | C→H | vec3, f32 range, f32 volume, u8 flags |
 | 20 | TimeSync | H→C | u32 day, u16 minute |
 | 21 | WorldAction | both | u8 action, ObjRef, f32 a, f32 b, u8 flags, str |
 | 22 | ContainerState | both | ObjRef, bigstr contents (JSON) |
 | 23 | ObjSpawn | both | i64 id, u8 flags, str prefab, vec3, quat, bigstr contents, i32 experience (a death bag); a client's placed thing (flags 1) is a request |
-| 24–26 | CharacterRequest (C→H), CharacterSave (C→H), CharacterLoad (H→C) | | see `Packets.cs` |
+| 24–26 | CharacterRequest (C→H), CharacterSave (C→H), CharacterLoad (H→C) | | see `MsgType.cs` |
 | 27 | FlagsDelta | both | u16 n, n × (str key, str value) |
 | 28–29 | ContainerLock (C→H), ContainerBusy (H→C) | | ObjRef, … |
 | 30 | EnemyBlood | H→C | u32 id, f32 rotation, u8 in water |
 | 31–32 | WorldReload, HostAway (the host went to its menu: the server stops) | H→C | (none) |
-| 33–39 | ObjMove, JoinWait, ItemThrown, Burning (also C→H in a Request: a friend's flames lit it), ContainerSlots, ContainerSlotRefused, WorkbenchLevel | | see `Packets.cs` |
+| 33–39 | ObjMove, JoinWait, ItemThrown, Burning (also C→H in a Request: a friend's flames lit it), ContainerSlots, ContainerSlotRefused, WorkbenchLevel | | see `MsgType.cs` |
 | 40 | Request | C→H | u32 seq, then a whole message the host must agree to |
 | 41 | Verdict | H→C | u32 seq, u8 ok, str reason, str result |
 | 42 | ObjState | H→C | ObjRef, u8 kind, the kind's state (to roll back to) |

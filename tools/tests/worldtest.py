@@ -9,7 +9,7 @@ T0 = time.time()  # our clock for EnemyState starts here
 
 GAME = "darkwood"
 # The protocol version, read from the mod's source so these tests never drift from it.
-_PACKETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src", "DarkwoodMP", "Net", "Packets.cs")
+_PACKETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src", "DarkwoodMP.Core", "Net", "Protocol.cs")
 PROTO = int(re.search(r"ushort Version = (\d+);", open(_PACKETS).read()).group(1))
 ENEMIES = "--enemies" in sys.argv
 REPLAY = sys.argv[sys.argv.index("--replay") + 1] if "--replay" in sys.argv else None

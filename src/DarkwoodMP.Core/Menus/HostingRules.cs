@@ -18,8 +18,8 @@ namespace DarkwoodMP.Menus
         /// The fewest players a game may be set to.
         public const int FewestPlayers = 2;
 
-        /// The most players a game may be set to: the plugin's
-        /// Protocol.MaxPlayers, in Net/Packets.cs.
+        /// The most players a game may be set to:
+        /// Protocol.MaxPlayers, in Net/Protocol.cs.
         public const int MostPlayers = 5;
 
         /// The setting HostWith's value that picks Direct over Steam.

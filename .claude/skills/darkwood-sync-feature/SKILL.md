@@ -37,7 +37,7 @@ Use the `darkwood-game-code` skill. Find:
 
 ## 4. Protocol
 
-- Add the message to `MsgType` in `Net/Packets.cs` with a `///` comment that gives its exact bytes, then **bump `Protocol.Version`**.
+- Add the message to `MsgType` in `src/DarkwoodMP.Core/Net/MsgType.cs` with a `///` comment that gives its exact bytes, then **bump `Protocol.Version`** (`Net/Protocol.cs`).
 - Register its handler in the feature's constructor (`session.Register`). Wire it into `Plugin.Awake` and `Plugin.Update` if the feature needs per-frame work.
 - `Session.Dispatch` drops anything from a client that hasn't finished the handshake, except `Hello` and `NeedSave`.
 
