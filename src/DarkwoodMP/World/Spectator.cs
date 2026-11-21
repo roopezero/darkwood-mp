@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 

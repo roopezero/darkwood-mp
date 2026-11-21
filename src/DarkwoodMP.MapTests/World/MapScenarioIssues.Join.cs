@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -69,20 +70,20 @@ namespace DarkwoodMP.World
             var ps = Plugin.Instance.Host.Players;
             float until = Time.realtimeSinceStartup + 5f;
             while ((ps == null || !ps.Remotes.Values.Any(
-                x => x.Owner != Sync.PlayerSync.DummyId && x.Last != null))
+                x => x.Owner != PlayerSync.DummyId && x.Last != null))
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
 
             // touching is fine, overlapping isn't
-            float apart = Sync.SpawnSpot.Apart(p) - 10f;
+            float apart = SpawnSpot.Apart(p) - 10f;
             var parts = new List<string>();
             if (ps != null)
             {
                 foreach (var rp in ps.Remotes.Values)
                 {
-                    if (rp.Owner == Sync.PlayerSync.DummyId || rp.Last == null)
+                    if (rp.Owner == PlayerSync.DummyId || rp.Last == null)
                     {
                         continue;
                     }

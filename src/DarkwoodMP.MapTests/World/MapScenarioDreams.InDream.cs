@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -239,7 +240,7 @@ namespace DarkwoodMP.World
             }
 
             var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(
-                x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+                x => x != null && x.Owner != PlayerSync.DummyId);
             ne.NetIdOf(c, out uint id);
             string chomper = c.name;
             string spot = Fmt(c.transform.position);

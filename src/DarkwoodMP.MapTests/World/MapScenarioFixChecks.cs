@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -236,7 +237,7 @@ namespace DarkwoodMP.World
             {
                 foreach (var rp in ps.Remotes.Values)
                 {
-                    if (rp.Owner != Sync.PlayerSync.DummyId && rp.Root != null)
+                    if (rp.Owner != PlayerSync.DummyId && rp.Root != null)
                     {
                         return rp.Root.transform;
                     }

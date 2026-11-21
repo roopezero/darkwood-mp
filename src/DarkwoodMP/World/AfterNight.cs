@@ -162,8 +162,8 @@ namespace DarkwoodMP.World
                 foreach (var kv in sync.Remotes)
                 {
                     var last = kv.Value.Last;
-                    if (kv.Key != Sync.PlayerSync.DummyId && last != null
-                        && !last.AfterNight)
+                    if (kv.Key != Sync.Players.PlayerSync.DummyId
+                        && last != null && !last.AfterNight)
                     {
                         someoneOut = true;
                         break;

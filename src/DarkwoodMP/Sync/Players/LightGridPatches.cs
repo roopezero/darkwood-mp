@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Runs with or without a session (LightGrid.Populates).

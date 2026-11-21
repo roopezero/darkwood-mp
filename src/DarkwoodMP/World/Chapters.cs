@@ -278,7 +278,7 @@ namespace DarkwoodMP.World
 
             // the host checks our reach (a stage starts as we arrive): our
             // newest position first
-            Sync.PlayerSync instance = Plugin.Instance.Host.Players;
+            Sync.Players.PlayerSync instance = Plugin.Instance.Host.Players;
             if (instance != null)
             {
                 instance.FlushNow();
@@ -344,7 +344,7 @@ namespace DarkwoodMP.World
                 return; // only as a Request
             }
 
-            Sync.RemotePlayer rp = null;
+            Sync.Players.RemotePlayer rp = null;
             if (Plugin.Instance.Host.Players != null
                 && Plugin.Instance.Host.Players.Remotes.TryGetValue(
                     from, out var remote))
@@ -549,7 +549,7 @@ namespace DarkwoodMP.World
                 return Verdict.Run;
             }
 
-            Sync.RemotePlayer rp = null;
+            Sync.Players.RemotePlayer rp = null;
             if (Plugin.Instance.Host.Players != null
                 && Plugin.Instance.Host.Players.Remotes.TryGetValue(
                     h.From, out var remote))

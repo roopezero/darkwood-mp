@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// The map opened: the other players' markers go on it. Runs with or

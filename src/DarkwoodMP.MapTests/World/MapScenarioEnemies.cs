@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -231,7 +232,7 @@ namespace DarkwoodMP.World
         /// <summary>The (one) remote player's stand-in on the host.</summary>
         internal static NetPlayerProxy ClientProxy() =>
             NetPlayerProxy.All.Values.FirstOrDefault(
-                p => p != null && p.Owner != Sync.PlayerSync.DummyId);
+                p => p != null && p.Owner != PlayerSync.DummyId);
 
         /// <summary>
         /// KIND spawned at the spot, sent after "the player" if attack (null:

@@ -135,7 +135,7 @@ namespace DarkwoodMP.World.Fuel
                 Exists = true,
                 Away = x.Away,
                 InLocation = x.InLocation != null,
-                Dummy = x.Owner == Sync.PlayerSync.DummyId,
+                Dummy = x.Owner == Sync.Players.PlayerSync.DummyId,
                 Pos = Flat(x.transform.position),
             };
         }

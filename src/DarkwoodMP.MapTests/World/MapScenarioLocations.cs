@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -87,7 +88,7 @@ namespace DarkwoodMP.World
             // "view-scan [KIND]" (either): the ground around the nearest dead
             // KIND, around the other players' puppets and around our player,
             // where the game would switch our player's view off
-            // (Sync.ViewWatch): nothing that is only there in co-op (a corpse,
+            // (ViewWatch): nothing that is only there in co-op (a corpse,
             // a character, a puppet, a stand-in) may, and the info names
             // whatever does.
             Add("view-scan", ViewScan, timeout: 20f);
@@ -96,7 +97,7 @@ namespace DarkwoodMP.World
         private static NetPlayerProxy Joiner() =>
             NetPlayerProxy.All.Values.FirstOrDefault(
                 p => p != null && p.InLocation != null
-                    && p.Owner != Sync.PlayerSync.DummyId);
+                    && p.Owner != PlayerSync.DummyId);
 
         private static IEnumerator Info(Result r, string info)
         {

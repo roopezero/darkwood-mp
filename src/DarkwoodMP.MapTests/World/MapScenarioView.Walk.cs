@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -180,14 +181,14 @@ namespace DarkwoodMP.World
                     Dark++;
                     foreach (var h in Physics.RaycastAll(
                         light.transform.position + new Vector3(0f, 100f, 0f),
-                        Vector3.down, 200f, Sync.ViewWatch.HideMask))
+                        Vector3.down, 200f, ViewWatch.HideMask))
                     {
                         if (h.collider == null)
                         {
                             continue;
                         }
 
-                        string k = Sync.ViewWatch.Path(h.collider.transform)
+                        string k = ViewWatch.Path(h.collider.transform)
                             + $" [layer {h.collider.gameObject.layer}]";
                         if (DarkBy.TryGetValue(k, out int n))
                         {

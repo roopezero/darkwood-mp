@@ -8,6 +8,7 @@ using BepInEx.Logging;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
 using HarmonyLib;
 using UnityEngine;

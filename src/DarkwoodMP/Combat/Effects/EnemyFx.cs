@@ -101,7 +101,7 @@ namespace DarkwoodMP.Combat
                 bool fight = proxy.alive && Chased(proxy, chars);
                 _inCombat.TryGetValue(proxy.Owner, out bool was);
                 var change = EffectRules.Change(
-                    fight, was, proxy.Owner == Sync.PlayerSync.DummyId);
+                    fight, was, proxy.Owner == Sync.Players.PlayerSync.DummyId);
                 if (change == CombatChange.Same)
                 {
                     continue;

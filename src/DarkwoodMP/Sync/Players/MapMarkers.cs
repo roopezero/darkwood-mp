@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Other players on the map. The game's map (Map.open) has no marker for

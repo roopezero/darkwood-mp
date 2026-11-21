@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using DarkwoodMP.Combat;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.World

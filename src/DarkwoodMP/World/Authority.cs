@@ -439,8 +439,9 @@ namespace DarkwoodMP.World
         /// further than reach from pos. The stand-in follows the puppet, which
         /// moves on the next frame; the player's newest position (a
         /// PlayerState flushed just before this request,
-        /// Sync.PlayerSync.FlushNow) has already been through MoveCheck, so
-        /// it's as trustworthy as the stand-in and newer: the nearer counts.
+        /// Sync.Players.PlayerSync.FlushNow) has already been through
+        /// MoveCheck, so it's as trustworthy as the stand-in and newer: the
+        /// nearer counts.
         /// </summary>
         public bool InReach(Vector3 pos, float reach, string what)
         {

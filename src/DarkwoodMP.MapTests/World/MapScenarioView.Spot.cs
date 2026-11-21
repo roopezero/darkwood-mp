@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -39,9 +40,9 @@ namespace DarkwoodMP.World
             var so = g.GetComponentInParent<SaveableObject>(true);
             var cols = g.GetComponentsInChildren<Collider>(true)
                 .Where(
-                    x => (Sync.ViewWatch.HideMask & (1 << x.gameObject.layer))
+                    x => (ViewWatch.HideMask & (1 << x.gameObject.layer))
                         != 0).ToList();
-            string path = Sync.ViewWatch.Path(g.transform);
+            string path = ViewWatch.Path(g.transform);
             string spot = Fmt(g.transform.position);
             float distance = StateDump.Flat(g.transform.position - Centre);
             bool active = g.activeInHierarchy;

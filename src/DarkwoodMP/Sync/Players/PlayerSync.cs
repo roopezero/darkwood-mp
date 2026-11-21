@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
-using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Sends the local player's snapshot at a fixed rate and drives puppets for

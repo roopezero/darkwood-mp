@@ -131,7 +131,7 @@ namespace DarkwoodMP.World
             foreach (var r in sync.Remotes.Values)
             {
                 if (r == null || r.Root == null || r.Away
-                    || r.Owner == Sync.PlayerSync.DummyId)
+                    || r.Owner == Sync.Players.PlayerSync.DummyId)
                 {
                     continue;
                 }

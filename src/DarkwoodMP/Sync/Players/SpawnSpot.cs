@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Where a joining player's character is put: the spot it should have

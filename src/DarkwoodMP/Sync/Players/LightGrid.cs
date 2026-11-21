@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
-using DarkwoodMP.Sync.Players;
 using Pathfinding;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Every 0.3 s the game marks the pathfinding nodes under each player light

@@ -527,7 +527,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool SamePlace(bool away, string place)
         {
-            bool meAway = Sync.PlayerCapture.LocalAway();
+            bool meAway = Sync.Players.PlayerCapture.LocalAway();
             if (!away || !meAway)
             {
                 return away == meAway;
