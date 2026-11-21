@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Make src/DarkwoodMP/World/Tooltips.tsv (the mod's item and map descriptions) from the game's data.
+"""Make src/DarkwoodMP/World/Texts/Tooltips.tsv (the mod's item and map descriptions) from the game's data.
 
     tools/run-test.sh tooltips                          # writes $WORK/tooltips/tooltips_dump.json
     tools/gen_tooltips.py $WORK/tooltips/tooltips_dump.json [--report reports/0.25.1/R07_TOOLTIPS.md]
 
-The dump (World/Tooltips.cs, --dwmp-test-tooltips) has every ItemsDatabase item's InvItem fields, effects and
+The dump (World/Texts/Tooltips.cs, --dwmp-test-tooltips) has every ItemsDatabase item's InvItem fields, effects and
 recipes, and every map element. It holds the game's own text (names), so it stays out of the repo. The report
 (with --report) lists every line with the item's English name beside it, for reviewing the drafts.
 
@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "src/DarkwoodMP/World/Tooltips.tsv"
+OUT = ROOT / "src/DarkwoodMP/World/Texts/Tooltips.tsv"
 
 # What an item is, in the game's voice: short, plain, often first person. (text, draft)
 ABOUT = {
@@ -362,7 +362,7 @@ def main():
         sys.exit("no text for: " + ", ".join(problems))
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as w:
-        w.write("# Made by tools/gen_tooltips.py from the game's item data; see World/Tooltips.cs for the format.\n")
+        w.write("# Made by tools/gen_tooltips.py from the game's item data; see World/Texts/Tooltips.cs for the format.\n")
         for kind, k, draft, text, _ in rows + locs:
             w.write("%s\t%s\t%d\t%s\n" % (kind, k, draft, tsv_text(text)))
         for k, why in skips:

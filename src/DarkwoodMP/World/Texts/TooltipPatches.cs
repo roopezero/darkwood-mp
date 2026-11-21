@@ -1,7 +1,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Texts
 {
     // Tooltips' patches. They run playing alone too: the texts are the
     // game's, not co-op's.

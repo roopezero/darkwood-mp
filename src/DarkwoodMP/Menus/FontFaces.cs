@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// The game's pixel fonts as PixelFont draws them, found once the menu

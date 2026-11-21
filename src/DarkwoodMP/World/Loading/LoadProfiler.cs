@@ -6,7 +6,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// "--dwmp-profile-load": times the game's own loading code, to find what

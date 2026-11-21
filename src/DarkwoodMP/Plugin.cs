@@ -1,3 +1,4 @@
+using DarkwoodMP.Menus;
 using DarkwoodMP.World.Inventories;
 using System;
 using System.Collections.Generic;
@@ -1098,14 +1099,14 @@ namespace DarkwoodMP
         /// </summary>
         private static void ShotsUi(string shot, bool hidden)
         {
-            bool now = World.UiState.WorldOverlaysHidden;
+            bool now = Menus.UiState.WorldOverlaysHidden;
             string text = "FAIL";
             if (now == hidden)
             {
                 text = "PASS";
             }
 
-            string reason = World.UiState.Reason;
+            string reason = Menus.UiState.Reason;
             if (reason == null)
             {
                 reason = "the world in play";

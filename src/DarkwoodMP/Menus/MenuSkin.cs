@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// The co-op windows' look: Darkwood's menu colours (near-black, grey words

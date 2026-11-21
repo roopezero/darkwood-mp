@@ -1,7 +1,7 @@
 using DarkwoodMP.Net;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// Client: one loading screen, the game's own (LoadingScreen), from the

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// MenuSkin's IMGUI skin, styles and text field font, made the first

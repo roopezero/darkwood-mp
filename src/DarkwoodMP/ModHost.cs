@@ -110,45 +110,56 @@ namespace DarkwoodMP
         public readonly World.Progress.Progression Progress;
 
         /// The game's pixel fonts for the mod's windows (PixelFont).
-        internal readonly FontFaces Fonts = new FontFaces();
+        internal readonly Menus.FontFaces Fonts =
+            new Menus.FontFaces();
 
         /// The mod's windows' IMGUI skin (MenuSkin).
-        internal readonly MenuStyles Styles = new MenuStyles();
+        internal readonly Menus.MenuStyles Styles =
+            new Menus.MenuStyles();
 
         /// The mod's windows' hooks into the menus (MenuWindows).
-        internal readonly MenuWindowList Windows = new MenuWindowList();
+        internal readonly Menus.MenuWindowList Windows =
+            new Menus.MenuWindowList();
 
         /// The main and pause menus' list of entries.
-        public readonly MenuList MenuList = new MenuList();
+        public readonly Menus.MenuList MenuList =
+            new Menus.MenuList();
 
         /// The main menu's backdrop dimmed behind the mod's windows.
-        public readonly MenuEntry MenuEntry = new MenuEntry();
+        public readonly Menus.MenuEntry MenuEntry =
+            new Menus.MenuEntry();
 
         /// The menus' words drawn over the game's pictures of them.
-        public readonly MenuWords MenuWords = new MenuWords();
+        public readonly Menus.MenuWords MenuWords =
+            new Menus.MenuWords();
 
         /// Where the menus' logo and version lines go.
-        public readonly MenuLayout MenuLayout = new MenuLayout();
+        public readonly Menus.MenuLayout MenuLayout =
+            new Menus.MenuLayout();
 
         /// The game's HUD hidden while the pause menu is up.
-        public readonly PauseHud PauseHud = new PauseHud();
+        public readonly Menus.PauseHud PauseHud =
+            new Menus.PauseHud();
 
         /// The loading screen's lines, bar and tips.
-        public readonly World.LoadingScreen Loading =
-            new World.LoadingScreen();
+        public readonly World.Loading.LoadingScreen Loading =
+            new World.Loading.LoadingScreen();
 
         /// The screen a client sees while it joins a game.
-        public readonly World.JoinScreen Join = new World.JoinScreen();
+        public readonly World.Loading.JoinScreen Join =
+            new World.Loading.JoinScreen();
 
         /// The faster loading of a world, and its check (--dwmp-verify-load).
-        public readonly World.LoadSpeed LoadSpeed = new World.LoadSpeed();
+        public readonly World.Loading.LoadSpeed LoadSpeed =
+            new World.Loading.LoadSpeed();
 
         /// Where a world's loading spends its time (--dwmp-profile-load).
-        public readonly World.LoadProfiler LoadProfiler =
-            new World.LoadProfiler();
+        public readonly World.Loading.LoadProfiler LoadProfiler =
+            new World.Loading.LoadProfiler();
 
         /// The mod's tooltip texts for items and places the game left bare.
-        public readonly World.Tooltips Tooltips = new World.Tooltips();
+        public readonly World.Texts.Tooltips Tooltips =
+            new World.Texts.Tooltips();
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>

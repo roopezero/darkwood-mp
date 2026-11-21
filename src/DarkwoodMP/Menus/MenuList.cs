@@ -4,7 +4,7 @@ using DarkwoodMP.Menus;
 using DarkwoodMP.World;
 using UnityEngine;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// Hooks for the mod's own menu windows, so the main menu and the pause

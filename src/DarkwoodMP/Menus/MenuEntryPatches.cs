@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     // MenuEntry's, MenuLayout's and PauseHud's patches. They run playing
     // alone too: the menus look the same with no session.

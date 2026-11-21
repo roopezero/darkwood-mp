@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Loading
 {
     /// <summary>
     /// The game's own loading screen (UI.loadingScreen: its art, its bar

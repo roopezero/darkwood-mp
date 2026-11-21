@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace DarkwoodMP
+namespace DarkwoodMP.Menus
 {
     /// <summary>
     /// What MenuWindows keeps: the windows' hooks, how to tell each is open

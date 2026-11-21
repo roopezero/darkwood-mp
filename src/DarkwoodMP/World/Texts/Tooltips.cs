@@ -7,7 +7,7 @@ using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Texts
 {
     /// <summary>
     /// Descriptions the game leaves out. About two thirds of the items in
