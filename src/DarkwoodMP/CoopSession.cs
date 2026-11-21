@@ -164,7 +164,7 @@ namespace DarkwoodMP
         public readonly World.Scripted.FarEvents FarEvents;
 
         /// The scripted events the players set off.
-        public readonly World.ScriptedEvents Scripted;
+        public readonly World.Scripted.ScriptedEvents Scripted;
 
         /// Whether a death may reset the world, with others in it.
         public readonly World.Deaths.WorldResets Resets;
@@ -243,7 +243,7 @@ namespace DarkwoodMP
             Landings = new Combat.EnemyLandings(this);
             Owed = new World.Owed.OwedParts(this);
             FarEvents = new World.Scripted.FarEvents(this);
-            Scripted = new World.ScriptedEvents(this);
+            Scripted = new World.Scripted.ScriptedEvents(this);
             Resets = new World.Deaths.WorldResets(this);
             Pause = new World.Pause.CoopPause(this);
             Mornings = new World.Mornings.AfterNight(this);

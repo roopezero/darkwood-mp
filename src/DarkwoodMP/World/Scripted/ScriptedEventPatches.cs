@@ -5,11 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
     // ---- which part runs ----------------------------------------------------
     // These three keep EventParts (ModHost.Parts) also in a game played
@@ -21,7 +20,7 @@ namespace DarkwoodMP.World
     /// coroutine does nothing).
     /// </summary>
     [HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire))]
-    static class GameEventFireParts
+    static class GameEventFire
     {
         static bool Prefix(
             GameEvent __instance, GameObject thisGO, ref IEnumerator __result)

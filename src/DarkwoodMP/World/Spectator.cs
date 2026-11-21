@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
+using DarkwoodMP.World.Scripted;
 using HarmonyLib;
 using UnityEngine;
 

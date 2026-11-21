@@ -1,10 +1,9 @@
 using System;
 using System.Collections;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Scripted;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Scripted
 {
     internal sealed partial class ScriptedEvents
     {

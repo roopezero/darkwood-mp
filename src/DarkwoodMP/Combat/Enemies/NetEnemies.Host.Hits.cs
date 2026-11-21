@@ -3,6 +3,7 @@ using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Scripted;
 using UnityEngine;
 
 namespace DarkwoodMP.Combat

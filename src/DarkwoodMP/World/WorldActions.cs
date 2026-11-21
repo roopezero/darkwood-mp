@@ -7,6 +7,7 @@ using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Doors;
+using DarkwoodMP.World.Scripted;
 using DarkwoodMP.World.Windows;
 using HarmonyLib;
 using UnityEngine;
