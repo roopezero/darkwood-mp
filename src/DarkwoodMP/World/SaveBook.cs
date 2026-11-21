@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Saves;
-using HarmonyLib;
 using Newtonsoft.Json;
 
 namespace DarkwoodMP.World
@@ -296,16 +295,12 @@ namespace DarkwoodMP.World
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}'s record dropped ({why})");
         }
-    }
 
-    /// <summary>
-    /// A new game starts in a slot (the profile isn't active yet): its record
-    /// starts empty.
-    /// </summary>
-    [HarmonyPatch(typeof(UI), nameof(UI.initNewGame))]
-    static class SaveBookNewGamePatch
-    {
-        static void Prefix()
+        /// <summary>
+        /// A new game starts in a slot (UI.initNewGame, the profile isn't
+        /// active yet): its record starts empty.
+        /// </summary>
+        internal static void OnNewGame()
         {
             var p = Core.currentProfile;
             bool active = false;
@@ -319,7 +314,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            SaveBook.Forget(p.id, "a new game");
+            Forget(p.id, "a new game");
             // The characters the host kept for the players who joined the
             // slot's last world: the game writes the new world over the old
             // save and leaves them, so a joiner would get their old character
@@ -332,43 +327,37 @@ namespace DarkwoodMP.World
             }
 
             var sm = Singleton<SaveManager>.Instance;
-            if (RedirectRules.NewGameDeletes(sm != null, SaveBook.HostCopy()))
+            if (RedirectRules.NewGameDeletes(sm != null, HostCopy()))
             {
-                SaveBook.DeletePlayersDir(
-                    sm.baseSaveDirectory, p.id, "(a new game)");
+                DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
             }
         }
-    }
 
-    /// <summary>
-    /// The game deletes a slot's save: its record goes too, and so do the
-    /// characters the host kept for the players who joined it
-    /// (prof&lt;id&gt;/darkwoodmp_players, World.Characters), which the game's
-    /// deleteSave leaves behind: otherwise a new game in that slot would hand
-    /// them their old characters.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(SaveManager), nameof(SaveManager.deleteCurrentProfile))]
-    static class SaveBookDeletePatch
-    {
-        static void Prefix(SaveManager __instance)
+        /// <summary>
+        /// The game deletes a slot's save (SaveManager.deleteCurrentProfile):
+        /// its record goes too, and so do the characters the host kept for
+        /// the players who joined it (prof&lt;id&gt;/darkwoodmp_players,
+        /// World.Characters), which the game's deleteSave leaves behind:
+        /// otherwise a new game in that slot would hand them their old
+        /// characters.
+        /// </summary>
+        internal static void OnSlotDeleted(SaveManager saves)
         {
             var p = Core.currentProfile;
-            bool? hostCopy = SaveBook.HostCopy();
+            bool? hostCopy = HostCopy();
             if (!RedirectRules.SlotDeleteForgets(p != null, hostCopy))
             {
                 return;
             }
 
-            SaveBook.Forget(p.id, "deleted");
+            Forget(p.id, "deleted");
             Characters instance = Characters.Instance;
             if (instance != null)
             {
                 instance.Forget("the slot deleted");
             }
 
-            SaveBook.DeletePlayersDir(
-                __instance.baseSaveDirectory, p.id, "with it");
+            DeletePlayersDir(saves.baseSaveDirectory, p.id, "with it");
         }
     }
 }

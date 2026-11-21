@@ -1,5 +1,3 @@
-using HarmonyLib;
-
 namespace DarkwoodMP.World
 {
     /// <summary>
@@ -11,12 +9,11 @@ namespace DarkwoodMP.World
     /// the host's world.
     ///
     /// The redirect lasts until the main menu loads again after the world was
-    /// started. Its state is ModHost's SaveFolders; this class keeps no
-    /// state, so its many callers read it as before.
+    /// started. The getter's patch is SaveManagerBaseSaveDirectory, which
+    /// also runs in a game played alone (a test's copy of the saves). Its
+    /// state is ModHost's SaveFolders; this class keeps none, so its many
+    /// callers read it as before.
     /// </summary>
-    [HarmonyPatch(
-        typeof(SaveManager), nameof(SaveManager.baseSaveDirectory),
-        MethodType.Getter)]
     public static class SaveRedirect
     {
         private static SaveFolders Folders => Plugin.Instance.Host.SaveFolders;
@@ -45,16 +42,21 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void End() => Folders.End();
 
-        private static bool Prefix(ref string __result)
+        /// <summary>
+        /// SaveManager.baseSaveDirectory: sets folder to where the saves go
+        /// now and is true, or false for the game's own folder, left as it
+        /// is.
+        /// </summary>
+        internal static bool Replace(ref string folder)
         {
             string dir = Folders.Now;
             if (dir == null)
             {
-                return true;
+                return false;
             }
 
-            __result = dir;
-            return false;
+            folder = dir;
+            return true;
         }
     }
 }

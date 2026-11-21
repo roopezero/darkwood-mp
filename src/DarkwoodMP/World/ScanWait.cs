@@ -1,5 +1,4 @@
 using HarmonyLib;
-using Pathfinding;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -21,12 +20,10 @@ namespace DarkwoodMP.World
     /// their graph updates as it loaded, and its graph was scanned while the
     /// flood fill they queued was still running. The game can do the same in
     /// single player; more doors move in co-op. AstarData.RemoveGraph already
-    /// waits for the pending graph work first; this makes ScanLoop do the same.
+    /// waits for the pending graph work first; this makes ScanLoop do the same
+    /// (AstarPathScanLoop), in a game played alone too.
     /// </summary>
-    [HarmonyPatch(
-        typeof(AstarPath), nameof(AstarPath.ScanLoop),
-        new[] { typeof(OnScanStatus), typeof(int) })]
-    static class ScanWaitPatch
+    static class ScanWait
     {
         private static readonly
             AccessTools.FieldRef<AstarPath, bool> ProcessingWorkItems =
@@ -35,20 +32,24 @@ namespace DarkwoodMP.World
             AccessTools.FieldRef<AstarPath, bool> WorkItemsQueued =
                 AccessTools.FieldRefAccess<AstarPath, bool>("workItemsQueued");
 
-        static void Prefix(AstarPath __instance)
+        /// <summary>
+        /// Before AstarPath.ScanLoop: finishes the pending graph updates
+        /// when TeardownRules.Flushes says so.
+        /// </summary>
+        internal static void BeforeScan(AstarPath astar)
         {
             try
             {
-                if (__instance == null
-                    || !Teardown.TeardownRules.Flushes(FactsOf(__instance)))
+                if (astar == null
+                    || !Teardown.TeardownRules.Flushes(FactsOf(astar)))
                 {
                     return;
                 }
 
                 // Hand queued graph updates over, then finish every work item,
                 // waiting for the graph update thread.
-                __instance.FlushGraphUpdates();
-                __instance.FlushWorkItems();
+                astar.FlushGraphUpdates();
+                astar.FlushWorkItems();
                 Plugin.Log.LogInfo(
                     "[pathfinding] finished the pending graph updates before a "
                         + "scan");

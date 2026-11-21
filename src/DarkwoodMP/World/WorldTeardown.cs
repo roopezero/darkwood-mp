@@ -1,4 +1,3 @@
-using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -41,52 +40,31 @@ namespace DarkwoodMP.World
         public bool Active { get; private set; }
 
         internal void Begin() => Active = true;
-    }
 
-    [HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
-    static class TeardownMenuPatch
-    {
-        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
-    }
-
-    [HarmonyPatch(typeof(Core), nameof(Core.restartGame))]
-    static class TeardownRestartPatch
-    {
-        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
-    }
-
-    [HarmonyPatch(typeof(Controller), nameof(Controller.generateChapter))]
-    static class TeardownChapterPatch
-    {
-        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
-    }
-
-    /// <summary>
-    /// A character destroyed with its world does only what outlives the world
-    /// (a static flag, sounds the AudioController plays, which isn't destroyed
-    /// with the scene). The rest of Character.OnDestroy takes it off the
-    /// player's attackers, its location, the night's characters, and the
-    /// banshee's sight and overlay: all of them objects of the same scene,
-    /// going with it.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.OnDestroy))]
-    static class CharacterTeardownPatch
-    {
-        static bool Prefix(Character __instance)
+        /// <summary>
+        /// Whether the game's Character.OnDestroy runs. A character destroyed
+        /// with its world does only what outlives the world (a static flag,
+        /// sounds the AudioController plays, which isn't destroyed with the
+        /// scene). The rest of Character.OnDestroy takes it off the player's
+        /// attackers, its location, the night's characters, and the
+        /// banshee's sight and overlay: all of them objects of the same
+        /// scene, going with it.
+        /// </summary>
+        public bool RunsOnDestroy(Character character)
         {
-            if (!Plugin.Instance.Host.Teardown.Active)
+            if (!Active)
             {
                 return true;
             }
 
-            if (__instance.forestSpirit)
+            if (character.forestSpirit)
             {
                 Core.chasedByForestSpirit = false;
                 AudioController.Stop("my_heaven", 10f);
             }
 
             var p = Player.Instance;
-            if (__instance.banshee && (object)p != null
+            if (character.banshee && (object)p != null
                 && p.bansheeAgitatedSoundAO != null)
             {
                 p.bansheeAgitatedSoundAO.Stop(1f);
