@@ -461,7 +461,6 @@ namespace DarkwoodMP
             _drag = new DragSync(_host.Session);
             DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
-            new TraderSync(_host.Session);
             new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
             new ThrowSync(_host.Session);
@@ -2329,13 +2328,10 @@ namespace DarkwoodMP
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();
-            if (_host.Session.IsHost && WorldShare.InWorld)
+            coop = Coop.Current;
+            if (_host.Session.IsHost && WorldShare.InWorld && coop != null)
             {
-                TraderSync instance = TraderSync.Instance;
-                if (instance != null)
-                {
-                    instance.HostUpdate();
-                }
+                coop.Traders.HostUpdate();
             }
 
             NpcSync npcs = NpcSync.Instance;

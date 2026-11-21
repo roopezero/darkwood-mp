@@ -40,27 +40,21 @@ namespace DarkwoodMP.World
     /// the trader's reputation (which FlagsSync otherwise shares as changes),
     /// so two trades close together both count.
     /// </summary>
-    public sealed class TraderSync
+    internal sealed class TraderSync
     {
-        public static TraderSync Instance { get; private set; }
+        private readonly CoopSession _coop;
         private readonly Session _session;
         // client: stock for traders not here yet
         private readonly Dictionary<string, string> _waiting =
             new Dictionary<string, string>();
 
-        public TraderSync(Session session)
+        public TraderSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.TraderAsk, OnAsk);
-            session.Register(MsgType.TraderStock, OnStock);
-            session.Register(MsgType.TraderTrade, OnTrade);
-            session.OnSessionEnded += () =>
-            {
-                _waiting.Clear();
-                _applied.Clear();
-                _copies.Clear();
-            };
+            _coop = coop;
+            _session = coop.Net;
+            coop.Handle(MsgType.TraderAsk, OnAsk);
+            coop.Handle(MsgType.TraderStock, OnStock);
+            coop.Handle(MsgType.TraderTrade, OnTrade);
         }
 
         /// <summary>
@@ -500,7 +494,7 @@ namespace DarkwoodMP.World
         /// sent no stock for is undone here.
         /// </summary>
         // by the NPC's instance id
-        private static readonly Dictionary<int, int> _applied =
+        private readonly Dictionary<int, int> _applied =
             new Dictionary<int, int>();
 
         /// <summary>
@@ -580,7 +574,7 @@ namespace DarkwoodMP.World
 
             // The session may have ended by the time the answer comes (it
             // then runs as refused), so keep this session's Authority.
-            Authority authority = Coop.Current.Authority;
+            Authority authority = _coop.Authority;
             authority.Request(
                 w, $"trade with {name}", (ok, reason, result) =>
             {
@@ -697,7 +691,7 @@ namespace DarkwoodMP.World
 
             if (verdict.Refused)
             {
-                Coop.Current.Authority.Refuse(verdict);
+                _coop.Authority.Refuse(verdict);
                 return;
             }
 
@@ -754,7 +748,7 @@ namespace DarkwoodMP.World
 
             facts = facts with
             {
-                Reach = Coop.Current.Authority.ReachOf(at),
+                Reach = _coop.Authority.ReachOf(at),
                 Has = TraderTradePatch.Stacks(Inv(npc)),
                 Reputation = rep,
             };
@@ -824,7 +818,7 @@ namespace DarkwoodMP.World
             return string.Join(", ", parts);
         }
 
-        private static void Apply(NPC npc, string stock)
+        private void Apply(NPC npc, string stock)
         {
             if (Inv(npc) == null)
             {
@@ -848,7 +842,7 @@ namespace DarkwoodMP.World
         /// The host's stock goes to our copy of that trader. False: he isn't
         /// here.
         /// </summary>
-        private static bool ApplyTo(
+        private bool ApplyTo(
             string name, ObjRef who, Vector3 at, string stock)
         {
             var n = Find(name, who, at);
@@ -948,10 +942,10 @@ namespace DarkwoodMP.World
                 return true;
             }
 
-            TraderSync instance = TraderSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.ClientStocking(__instance);
+                coop.Traders.ClientStocking(__instance);
             }
 
             return false;
@@ -961,10 +955,10 @@ namespace DarkwoodMP.World
         {
             if (TraderRules.RollsHere(NetEnemies.ClientMode))
             {
-                TraderSync instance = TraderSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.HostStocked(__instance);
+                    coop.Traders.HostStocked(__instance);
                 }
             }
         }
@@ -1050,10 +1044,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            TraderSync instance = TraderSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.LocalTrade(
+                coop.Traders.LocalTrade(
                     __instance.npc, took, gave,
                     __instance.npc.reputation - rep);
             }
