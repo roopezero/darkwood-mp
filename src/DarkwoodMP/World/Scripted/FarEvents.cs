@@ -68,7 +68,9 @@ namespace DarkwoodMP.World.Scripted
             S != null && S.Active && WorldShare.InWorld;
 
         internal static bool WorldLocation(Location l) =>
-            l != null && !l.isSubLocation && !l.isOutsideLocation;
+            l != null
+                && FarEventRules.IsWorldLocation(
+                    l.isSubLocation, l.isOutsideLocation);
 
         internal static void Note(
             List<Entry> list, Location l, string kind, ScriptedEvents.Part part)
@@ -89,61 +91,88 @@ namespace DarkwoodMP.World.Scripted
         }
 
         /// <summary>
-        /// Host: whether our own player is by this location (in its cull rect;
-        /// `was`: by it last time, a margin to leave it).
+        /// The facts of a location for FarEventRules: where it and the host's
+        /// player are, our culling's distances, and the host's record of it.
         /// </summary>
-        private static bool HostNear(Location l, bool was)
+        private static FarFacts FactsOf(Location l)
         {
-            var p = Player.Instance;
-            if (p == null || SharedCullingPatch.HostAway)
-            {
-                return false;
-            }
-
+            var s = S;
+            bool client = s != null && s.IsClient;
             SharedCullingPatch.Distances(out int dx, out int dy);
-            float m = 0f;
-            if (was)
+            var b = l.transform.position;
+            var p = Player.Instance;
+            var host = new HostSpot { Known = p != null };
+            if (p != null)
             {
-                m = 600f;
+                var a = p.transform.position;
+                host = new HostSpot
+                {
+                    Known = true,
+                    Away = SharedCullingPatch.HostAway,
+                    Pos = new Vec2(a.x, a.z),
+                };
             }
 
-            var a = p.transform.position;
-            var b = l.transform.position;
-            return Mathf.Abs(a.x - b.x) <= dx + m
-                && Mathf.Abs(a.z - b.z) <= dy + m;
+            bool recorded = HostIn.TryGetValue(l, out bool hostIn);
+            return new FarFacts
+            {
+                Together = Together,
+                Sub = l.isSubLocation,
+                Outside = l.isOutsideLocation,
+                Current = (EventPart)ScriptedEvents.Current,
+                Replaying = Coop.Guards.Replaying,
+                Client = client,
+                AnyProxies = Proxies.Any,
+                Host = host,
+                CullX = dx,
+                CullZ = dy,
+                At = new Vec2(b.x, b.z),
+                Recorded = recorded,
+                HostIn = hostIn,
+                Entered = l.entered,
+                Loaded = l.finishedLoading,
+                Activating = l.activatingOverTime,
+            };
         }
 
         /// <summary>
-        /// Client: whether another player (not in a separate location or a
-        /// dream) is by this location.
+        /// Client: the other players' puppets, for whether one is by a
+        /// location.
         /// </summary>
-        private static bool OtherNear(Location l)
+        private static List<RemoteSpot> RemoteSpots()
         {
+            var spots = new List<RemoteSpot>();
             var sync = Plugin.Instance.Host.Players;
             if (sync == null)
             {
-                return false;
+                return spots;
             }
 
-            // theirs isn't known here: about ours
-            SharedCullingPatch.Distances(out int dx, out int dy);
-            var b = l.transform.position;
             foreach (var r in sync.Remotes.Values)
             {
-                if (r == null || r.Root == null || r.Away
-                    || r.Owner == Sync.PlayerSync.DummyId)
+                if (r == null)
                 {
                     continue;
                 }
 
-                var a = r.Root.transform.position;
-                if (Mathf.Abs(a.x - b.x) <= dx && Mathf.Abs(a.z - b.z) <= dy)
+                bool shown = r.Root != null;
+                Vec2 pos = default;
+                if (shown)
                 {
-                    return true;
+                    var a = r.Root.transform.position;
+                    pos = new Vec2(a.x, a.z);
                 }
+
+                spots.Add(new RemoteSpot
+                {
+                    Shown = shown,
+                    Away = r.Away,
+                    Dummy = r.Owner == Sync.PlayerSync.DummyId,
+                    Pos = pos,
+                });
             }
 
-            return false;
+            return spots;
         }
 
         /// <summary>
@@ -152,41 +181,34 @@ namespace DarkwoodMP.World.Scripted
         /// </summary>
         internal static ScriptedEvents.Part? PartFor(Location l, bool enter)
         {
-            if (!Together || !WorldLocation(l)
-                || ScriptedEvents.Current != ScriptedEvents.Part.All
-                || Coop.Guards.Replaying)
+            // not together: as the game runs them (FarEventRules.OnEnter)
+            if (l == null || !Together)
             {
                 return null;
             }
 
-            if (S.IsClient)
-            {
-                return ScriptedEvents.Part.PlayerAndShared;
-            }
-
-            bool hostIn;
+            FarFacts f = FactsOf(l);
+            FarPart part = FarEventRules.OnExit(f);
             if (enter)
             {
-                // with the margin: the location's node is up to 300 nearer than
-                // it
-                HostIn[l] = hostIn = !Proxies.Any || HostNear(l, true);
+                part = FarEventRules.OnEnter(f);
             }
-            else
-            {
-                if (!HostIn.TryGetValue(l, out hostIn))
-                {
-                    hostIn = true;
-                }
 
+            if (part.Record == FarRecord.Store)
+            {
+                HostIn[l] = part.HostIn;
+            }
+            else if (part.Record == FarRecord.Forget)
+            {
                 HostIn.Remove(l);
             }
 
-            if (hostIn)
+            if (!part.Set)
             {
-                return (ScriptedEvents.Part?)null;
+                return null;
             }
 
-            return ScriptedEvents.Part.HostAndShared;
+            return (ScriptedEvents.Part)part.Part;
         }
 
         /// <summary>
@@ -244,8 +266,23 @@ namespace DarkwoodMP.World.Scripted
         /// Whether the location's exit despawns its trader, porter and wolf
         /// here.
         /// </summary>
-        internal static bool Despawns(Location l) =>
-            !(Together && S.IsClient && WorldLocation(l) && OtherNear(l));
+        internal static bool Despawns(Location l)
+        {
+            // not together: it despawns (FarEventRules.Despawns)
+            if (l == null || !Together)
+            {
+                return true;
+            }
+
+            FarFacts f = FactsOf(l);
+            var remotes = new List<RemoteSpot>();
+            if (f.Together && f.Client)
+            {
+                remotes = RemoteSpots();
+            }
+
+            return FarEventRules.Despawns(f, remotes);
+        }
 
         /// <summary>
         /// Host, each culling refresh: our player came into a location already
@@ -254,20 +291,12 @@ namespace DarkwoodMP.World.Scripted
         /// </summary>
         internal static void Tick()
         {
-            var s = S;
-            if (s == null || !s.IsHost || !WorldShare.InWorld
-                || Core.loadingGame)
+            if (!FarEventRules.MayTick(TickFactsOf()))
             {
                 return;
             }
 
-            var d = Singleton<Dreams>.Instance;
-            if (d != null && (d.dreaming || d.wantToDream))
-            {
-                return;
-            }
-
-            if (_all == null || Time.realtimeSinceStartup - _allAt > 10f)
+            if (FarEventRules.Relist(TickFactsOf()))
             {
                 _all = Object.FindObjectsOfType<Location>(true)
                     .Where(WorldLocation).ToArray();
@@ -281,30 +310,26 @@ namespace DarkwoodMP.World.Scripted
                     continue;
                 }
 
-                if (!l.entered)
+                FarFacts f = FactsOf(l);
+                FarTick tick = FarEventRules.Tick(f);
+                if (tick == FarTick.Forget)
                 {
                     HostIn.Remove(l);
                     continue;
                 }
 
-                if (!l.finishedLoading || l.activatingOverTime)
+                if (tick == FarTick.Wait || tick == FarTick.Same)
                 {
-                    continue; // its enter events haven't run yet
+                    continue; // its enter events haven't run yet, or no change
                 }
 
-                bool was;
-                if (!HostIn.TryGetValue(l, out was))
+                if (tick == FarTick.Record)
                 {
-                    HostIn[l] = HostNear(l, false);
+                    HostIn[l] = FarEventRules.HostNear(f, false);
                     continue;
                 }
 
-                bool now = HostNear(l, was);
-                if (now == was)
-                {
-                    continue;
-                }
-
+                bool now = tick == FarTick.Came;
                 HostIn[l] = now;
                 global::EventTrigger.Type type;
                 if (now)
@@ -364,6 +389,22 @@ namespace DarkwoodMP.World.Scripted
                     }
                 });
             }
+        }
+
+        private static FarTickFacts TickFactsOf()
+        {
+            var s = S;
+            var d = Singleton<Dreams>.Instance;
+            return new FarTickFacts
+            {
+                Host = s != null && s.IsHost,
+                InWorld = WorldShare.InWorld,
+                Loading = Core.loadingGame,
+                Dreaming = d != null && (d.dreaming || d.wantToDream),
+                Listed = _all != null,
+                ListedAt = new Seconds(_allAt),
+                Now = new Seconds(Time.realtimeSinceStartup),
+            };
         }
 
         public static void Register(Session s) => s.OnSessionEnded += () =>
