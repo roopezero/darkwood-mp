@@ -32,10 +32,21 @@ namespace DarkwoodMP.World
     /// It isn't rollback in the fighting-game sense (re-simulating frames from
     /// the last confirmed input): that needs a deterministic game that can save
     /// and restore its whole state every frame, which Darkwood can't.
+    ///
+    /// The core decides (AuthorityRules, ReachRules) and holds the bytes
+    /// (RequestMessage, VerdictMessage). One lives for each session, in
+    /// CoopSession.Authority.
     /// </summary>
-    public static class Authority
+    internal sealed class Authority
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
+        private readonly Session _session;
+
+        /// <summary>
+        /// Client: what our player carries, to undo a refused request's
+        /// change.
+        /// </summary>
+        public readonly InventoryWatch Inventory = new InventoryWatch();
 
         // ---- client ---------------------------------------------------------
 
@@ -47,25 +58,43 @@ namespace DarkwoodMP.World
             public Action<bool, string, string> Done;
         }
 
-        private static uint _seq;
-        private static readonly Dictionary<uint, Pending> _pending =
+        private uint _seq;
+        private readonly Dictionary<uint, Pending> _pending =
             new Dictionary<uint, Pending>();
-        private static readonly byte[] _copy =
+        private readonly byte[] _copy =
             new byte[AuthorityRules.MaxRequest];
 
         /// <summary>Requests sent and not answered yet.</summary>
-        public static int Waiting => _pending.Count;
+        public int Waiting => _pending.Count;
         /// <summary>
         /// Requests the host refused (and that were rolled back) this session.
         /// </summary>
-        public static int RolledBack { get; private set; }
+        public int RolledBack { get; private set; }
 
-        public static void Register(Session s)
+        private readonly Func<ulong, MsgType, bool> _allowBare;
+
+        public Authority(CoopSession coop)
         {
-            s.Register(MsgType.Request, OnRequest);
-            s.Register(MsgType.Verdict, OnVerdict);
-            s.AllowBare = AllowBare;
-            s.OnSessionEnded += EndPending;
+            _coop = coop;
+            _session = coop.Net;
+            coop.Handle(MsgType.Request, OnRequest);
+            coop.Handle(MsgType.Verdict, OnVerdict);
+            _allowBare = AllowBare;
+            _session.AllowBare = _allowBare;
+            coop.Hook(StopAllowBare);
+            coop.Hook(EndPending);
+        }
+
+        /// <summary>
+        /// The session is over: stop checking messages, unless the next
+        /// session's Authority (made before this one ends) already does.
+        /// </summary>
+        private void StopAllowBare()
+        {
+            if (_session.AllowBare == _allowBare)
+            {
+                _session.AllowBare = null;
+            }
         }
 
         /// <summary>
@@ -75,11 +104,10 @@ namespace DarkwoodMP.World
         /// the host's world is gone, and the caller's own rollback is all that
         /// runs.
         /// </summary>
-        private static void EndPending()
+        private void EndPending()
         {
             var left = new List<Pending>(_pending.Values);
             _pending.Clear();
-            _bareWarned.Clear();
             string ended =
                 Refusals.Text(Verdict.Refuse(Refusal.SessionEnded));
             foreach (var p in left)
@@ -98,18 +126,16 @@ namespace DarkwoodMP.World
                         $"[authority] after {p.What}: {e.Message}");
                 }
             }
-
-            InventoryWatch.Reset();
         }
 
-        private static readonly HashSet<(ulong, MsgType)> _bareWarned =
+        private readonly HashSet<(ulong, MsgType)> _bareWarned =
             new HashSet<(ulong, MsgType)>();
 
         /// <summary>
         /// Host (Session.Dispatch): whether a client's message may be handled
         /// as it came (AuthorityRules.TakesBare).
         /// </summary>
-        private static bool AllowBare(ulong from, MsgType type)
+        private bool AllowBare(ulong from, MsgType type)
         {
             if (AuthorityRules.TakesBare(type, Handling))
             {
@@ -118,13 +144,7 @@ namespace DarkwoodMP.World
 
             if (_bareWarned.Add((from, type)))
             {
-                Session session = S;
-                string name = null;
-                if (session != null)
-                {
-                    name = session.NameOf(from);
-                }
-
+                string name = _session.NameOf(from);
                 if (name == null)
                 {
                     name = "#" + from;
@@ -145,12 +165,12 @@ namespace DarkwoodMP.World
         /// refused (unless inventory is false: for a request that isn't about
         /// items, made from a coroutine at any moment).
         /// </summary>
-        public static void Request(
+        public void Request(
             PacketWriter message, string what,
             Action<bool, string, string> done = null, bool inventory = true)
         {
-            var s = S;
-            if (s == null || !s.IsClient)
+            var s = _session;
+            if (!s.IsClient)
             {
                 return;
             }
@@ -168,7 +188,7 @@ namespace DarkwoodMP.World
                 new Pending { What = what, At = Time.realtimeSinceStartup };
             if (inventory)
             {
-                pending.Inventory = InventoryWatch.TakeChange();
+                pending.Inventory = Inventory.TakeChange();
             }
 
             pending.Done = done;
@@ -182,10 +202,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void OnVerdict(ulong from, PacketReader r)
+        private void OnVerdict(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !s.IsClient || from != s.HostId)
+            var s = _session;
+            if (!s.IsClient || from != s.HostId)
             {
                 return;
             }
@@ -203,7 +223,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[authority] the host refused {p.What}: {reply.Reason}; "
                         + "rolled back");
-                InventoryWatch.Undo(p.Inventory);
+                Inventory.Undo(p.Inventory);
             }
             else if (WorldActions.Debug)
             {
@@ -239,21 +259,21 @@ namespace DarkwoodMP.World
         /// Host: what has been decided about the request being handled, or
         /// the last one handled (AuthorityRules).
         /// </summary>
-        private static RequestAnswer _answer;
+        private RequestAnswer _answer;
 
         /// <summary>
         /// Host: true while handling a client's Request (its handler may Refuse
         /// it or set a Result).
         /// </summary>
-        public static bool Handling => _answer.Handling;
+        public bool Handling => _answer.Handling;
         /// <summary>Host: who sent the request being handled.</summary>
-        public static ulong From => _answer.From;
+        public ulong From => _answer.From;
 
         /// <summary>
         /// Host, in a request's handler: refuse it. Send the client the state
         /// it should roll back to first. The first refusal counts.
         /// </summary>
-        public static void Refuse(Verdict refusal)
+        public void Refuse(Verdict refusal)
         {
             _answer = AuthorityRules.Refuse(_answer, refusal);
         }
@@ -262,7 +282,7 @@ namespace DarkwoodMP.World
         /// Refuse(Verdict) in words not named yet (Refusal.Words), for the
         /// handlers that don't call their rules yet. Null refuses nothing.
         /// </summary>
-        public static void Refuse(string reason)
+        public void Refuse(string reason)
         {
             if (reason != null)
             {
@@ -270,20 +290,20 @@ namespace DarkwoodMP.World
             }
         }
 
-        public static bool Refused => _answer.Verdict.Refused;
+        public bool Refused => _answer.Verdict.Refused;
         /// <summary>
         /// Host, in a request's handler: what came of it, for the client
         /// (decided here: damage, a roll).
         /// </summary>
-        public static void Result(string result)
+        public void Result(string result)
         {
             _answer = AuthorityRules.Result(_answer, result);
         }
 
-        private static void OnRequest(ulong from, PacketReader r)
+        private void OnRequest(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !s.IsHost)
+            var s = _session;
+            if (!s.IsHost)
             {
                 return;
             }
@@ -334,7 +354,7 @@ namespace DarkwoodMP.World
         /// Host: the proxy (the host's stand-in) of the player whose request is
         /// being handled.
         /// </summary>
-        public static NetPlayerProxy Requester
+        public NetPlayerProxy Requester
         {
             get
             {
@@ -354,7 +374,7 @@ namespace DarkwoodMP.World
         /// they did there isn't in the host's world, so it can't be checked
         /// here, nor refused.
         /// </summary>
-        public static bool RequesterAway
+        public bool RequesterAway
         {
             get
             {
@@ -372,7 +392,7 @@ namespace DarkwoodMP.World
         /// tells the requester so (ScriptedEvents: "alone" runs the event's
         /// every part there).
         /// </summary>
-        public static void AcceptAway(string what, string result = "")
+        public void AcceptAway(string what, string result = "")
         {
             if (!Handling)
             {
@@ -386,7 +406,8 @@ namespace DarkwoodMP.World
             }
 
             Plugin.Log.LogInfo(
-                $"[authority] {S.NameOf(From)}'s {what}: they're where the "
+                $"[authority] {_session.NameOf(From)}'s {what}: they're "
+                    + "where the "
                     + $"host doesn't run ({refusal}), so it's theirs alone: "
                     + "accepted, not applied here");
             _answer = AuthorityRules.AcceptAway(_answer, result);
@@ -396,7 +417,7 @@ namespace DarkwoodMP.World
         /// Host: whether this player's stand-in is within reach of pos (true if
         /// it isn't known yet).
         /// </summary>
-        public static bool Near(ulong player, Vector3 pos, float reach)
+        public bool Near(ulong player, Vector3 pos, float reach)
         {
             NetPlayerProxy.All.TryGetValue(player, out var p);
             var facts = FactsOf(p, pos) with { Reach = reach };
@@ -411,7 +432,7 @@ namespace DarkwoodMP.World
         /// Sync.PlayerSync.FlushNow) has already been through MoveCheck, so
         /// it's as trustworthy as the stand-in and newer: the nearer counts.
         /// </summary>
-        public static bool InReach(Vector3 pos, float reach, string what)
+        public bool InReach(Vector3 pos, float reach, string what)
         {
             var facts = FactsOf(Requester, pos) with
             {
@@ -420,8 +441,7 @@ namespace DarkwoodMP.World
                 What = what,
             };
 
-            var coop = Coop.Current;
-            if (coop != null && coop.Moves.TryAccepted(From, out var at))
+            if (_coop.Moves.TryAccepted(From, out var at))
             {
                 facts = facts with { Checked = true, Accepted = Flat(at) };
             }
@@ -452,42 +472,6 @@ namespace DarkwoodMP.World
         }
 
         private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
-
-        /// <summary>
-        /// The session's way to Authority (CoopSession.Authority), while the
-        /// state above is still static: each member is Authority's own.
-        /// </summary>
-        internal sealed class Now
-        {
-            public int Waiting => Authority.Waiting;
-            public int RolledBack => Authority.RolledBack;
-            public bool Handling => Authority.Handling;
-            public ulong From => Authority.From;
-            public bool Refused => Authority.Refused;
-            public NetPlayerProxy Requester => Authority.Requester;
-            public bool RequesterAway => Authority.RequesterAway;
-
-            public void Request(
-                PacketWriter message, string what,
-                Action<bool, string, string> done = null,
-                bool inventory = true) =>
-                Authority.Request(message, what, done, inventory);
-
-            public void Refuse(Verdict refusal) => Authority.Refuse(refusal);
-
-            public void Refuse(string reason) => Authority.Refuse(reason);
-
-            public void Result(string result) => Authority.Result(result);
-
-            public void AcceptAway(string what, string result = "") =>
-                Authority.AcceptAway(what, result);
-
-            public bool Near(ulong player, Vector3 pos, float reach) =>
-                Authority.Near(player, pos, reach);
-
-            public bool InReach(Vector3 pos, float reach, string what) =>
-                Authority.InReach(pos, reach, what);
-        }
     }
 
     /// <summary>
@@ -495,16 +479,14 @@ namespace DarkwoodMP.World
     /// last frame: what a request's frame added or used up is the difference,
     /// which a refused request gives back or takes away again.
     /// </summary>
-    public static class InventoryWatch
+    internal sealed class InventoryWatch
     {
-        private static Dictionary<string, int> _base;
-
-        public static void Reset() => _base = null;
+        private Dictionary<string, int> _base;
 
         /// <summary>
         /// Every frame (late): remember what the player carries now.
         /// </summary>
-        public static void LateUpdate()
+        public void LateUpdate()
         {
             if (!NetEnemies.ClientMode || !WorldShare.InWorld)
             {
@@ -519,7 +501,7 @@ namespace DarkwoodMP.World
         /// What changed since the frame began (and start counting from here,
         /// for the next request).
         /// </summary>
-        public static Dictionary<string, int> TakeChange()
+        public Dictionary<string, int> TakeChange()
         {
             var now = Count();
             var change = InventoryRules.Change(_base, now);
@@ -530,7 +512,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Give back what was used up, take away what was gained.
         /// </summary>
-        public static void Undo(Dictionary<string, int> change)
+        public void Undo(Dictionary<string, int> change)
         {
             var p = Player.Instance;
             if (change == null || p == null)
@@ -573,7 +555,7 @@ namespace DarkwoodMP.World
             _base = Count();
         }
 
-        private static Dictionary<string, int> Count()
+        private Dictionary<string, int> Count()
         {
             var p = Player.Instance;
             if (p == null || p.Inventory == null)

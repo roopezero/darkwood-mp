@@ -497,7 +497,10 @@ namespace DarkwoodMP.World
                 change[kv.Key] = n - kv.Value;
             }
 
-            Coop.Current.Authority.Request(
+            // The session may have ended by the time the answer comes (it
+            // then runs as refused), so keep this session's Authority.
+            Authority authority = Coop.Current.Authority;
+            authority.Request(
                 w, $"trade with {name}", (ok, reason, result) =>
             {
                 if (ok)
@@ -505,7 +508,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                InventoryWatch.Undo(change);
+                authority.Inventory.Undo(change);
                 NPC t;
                 if (npc != null)
                 {
