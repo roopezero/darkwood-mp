@@ -32,7 +32,8 @@ namespace DarkwoodMP.Combat
             // The stack is walked here, in Prefix itself: CalledFromPlayer
             // skips its own frame and this one.
             bool fromPlayer = false;
-            if (Threat.NoiseSource == null && OwnNoise <= 0)
+            int own = Plugin.Instance.Host.Noise.OwnNoise;
+            if (Threat.NoiseSource == null && own <= 0)
             {
                 fromPlayer = CalledFromPlayer();
             }
@@ -67,7 +68,7 @@ namespace DarkwoodMP.Combat
             return new NoiseFacts
             {
                 Set = set,
-                OwnNoise = OwnNoise,
+                OwnNoise = Plugin.Instance.Host.Noise.OwnNoise,
                 FromPlayer = fromPlayer,
                 Client = s != null && s.IsClient && NetEnemies.ClientMode,
             };
@@ -113,64 +114,6 @@ namespace DarkwoodMP.Combat
 
             return false;
         }
-
-        /// <summary>
-        /// Above zero inside the game's code that makes noise only for this
-        /// game's own player (PlayerNoiseSourcePatch): those methods are
-        /// patched too, so their stack frames can't be told apart by type.
-        /// </summary>
-        public static int OwnNoise;
-
-        /// <summary>
-        /// Host: a client's character made noise; raise it here, as theirs.
-        /// </summary>
-        public static void OnRemoteNoise(ulong from, Net.PacketReader r)
-        {
-            var s = Net.Session.Instance;
-            if (s == null || !s.IsHost)
-            {
-                return;
-            }
-
-            SentNoise noise = PlayerNoiseMessage.Read(r);
-            NetPlayerProxy proxy;
-            NetPlayerProxy.All.TryGetValue(from, out proxy);
-            if (!NoiseRules.Raises(FactsOf(proxy, noise)))
-            {
-                return; // it's meant to be where they are
-            }
-
-            Vector3 pos = new Vector3(noise.At.X, noise.At.Y, noise.At.Z);
-            var before = Threat.NoiseSource;
-            Threat.NoiseSource = proxy;
-            try
-            {
-                Character.alertInArea(
-                    pos, NoiseRules.Range(noise.Range), noise.Dangerous,
-                    NoiseRules.Volume(noise.Volume), noise.Gunshot);
-            }
-            finally
-            {
-                Threat.NoiseSource = before;
-            }
-        }
-
-        private static RemoteNoiseFacts FactsOf(
-            NetPlayerProxy proxy, in SentNoise noise)
-        {
-            if (proxy == null)
-            {
-                return new RemoteNoiseFacts { StandIn = false };
-            }
-
-            Vector3 at = proxy.transform.position;
-            return new RemoteNoiseFacts
-            {
-                StandIn = true,
-                At = new Vec3(at.x, at.y, at.z),
-                Noise = noise.At,
-            };
-        }
     }
 
     /// <summary>
@@ -202,7 +145,7 @@ namespace DarkwoodMP.Combat
             __state = NoiseRules.CountsAsOurs(FactsOf(__instance, __args));
             if (__state)
             {
-                PlayerNoisePatch.OwnNoise++;
+                Plugin.Instance.Host.Noise.OwnNoise++;
             }
         }
 
@@ -261,7 +204,7 @@ namespace DarkwoodMP.Combat
         {
             if (__state)
             {
-                PlayerNoisePatch.OwnNoise--;
+                Plugin.Instance.Host.Noise.OwnNoise--;
             }
 
             return __exception;

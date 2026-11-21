@@ -75,7 +75,6 @@ namespace DarkwoodMP
 
         private DirectPanel _direct;
         private WorldShare _world;
-        private NetEnemies _enemies;
         private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
@@ -443,7 +442,6 @@ namespace DarkwoodMP
             SaveRedirect.Init();
             WorldTeardown.Init();
             AfterNight.Register(_host.Session);
-            _enemies = new NetEnemies(_host.Session);
             WorldActions.Register(_host.Session);
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
@@ -2259,7 +2257,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("player fx");
             _host.Proxies.Update(_host.Players, _host.Session.IsHost);
             ModProfiler.Mark("proxies");
-            _enemies.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Enemies.Update();
+            }
+
             ModProfiler.Mark("enemies");
             coop = Coop.Current;
             if (coop != null)

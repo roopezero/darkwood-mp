@@ -130,6 +130,12 @@ namespace DarkwoodMP
         /// A client's swings and aims, which the host's enemies react to.
         public readonly Combat.PlayerCues Cues;
 
+        /// <summary>The host's enemies and their copies on clients.</summary>
+        public readonly Combat.NetEnemies Enemies;
+
+        /// <summary>Host: the noise clients' characters make.</summary>
+        public readonly Combat.RemoteNoise Noise;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -178,6 +184,8 @@ namespace DarkwoodMP
             PlayerFx = new Sync.PlayerFx(this);
             View = new Sync.ViewWatch();
             Cues = new Combat.PlayerCues(this);
+            Enemies = new Combat.NetEnemies(this);
+            Noise = new Combat.RemoteNoise(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

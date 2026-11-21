@@ -317,7 +317,7 @@ namespace DarkwoodMP.World
             int steps = 0;
             for (; steps < 20 && (sleeper == null || sleeper.sleeping); steps++)
             {
-                PlayerNoisePatch.OwnNoise++;
+                Plugin.Instance.Host.Noise.OwnNoise++;
                 try
                 {
                     // a running step (Player.checkFrameTrigger)
@@ -325,7 +325,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    PlayerNoisePatch.OwnNoise--;
+                    Plugin.Instance.Host.Noise.OwnNoise--;
                 }
 
                 yield return new WaitForSeconds(0.3f);

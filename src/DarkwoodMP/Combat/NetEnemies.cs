@@ -37,52 +37,60 @@ namespace DarkwoodMP.Combat
     /// friendly. One that turns on a player is run by the host as one of these
     /// enemies until it calms down (Combat.HostileNpcs).
     /// </summary>
-    public sealed class NetEnemies
+    internal sealed class NetEnemies
     {
         public const float RelevantRange = 3000f;
         public const float StateInterval = 0.05f;
         private const float CorpseLinger = 6f;
 
-        public static NetEnemies Instance { get; private set; }
+        /// <summary>
+        /// The session's NetEnemies (CoopSession.Enemies), or null when
+        /// there's no session.
+        /// </summary>
+        public static NetEnemies Instance
+        {
+            get
+            {
+                CoopSession coop = Coop.Current;
+                if (coop == null)
+                {
+                    return null;
+                }
+
+                return coop.Enemies;
+            }
+        }
+
         private readonly Session _session;
 
-        public NetEnemies(Session session)
+        internal NetEnemies(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.EnemySpawn, OnSpawn);
-            session.Register(MsgType.EnemyState, OnState);
-            session.Register(MsgType.EnemyDespawn, OnDespawn);
-            session.Register(MsgType.EnemySound, OnSound);
-            session.Register(MsgType.EnemyHit, OnHit);
-            session.Register(
-                MsgType.PlayerNoise, PlayerNoisePatch.OnRemoteNoise);
-            session.Register(MsgType.EnemyBlood, OnBlood);
-            session.Register(MsgType.EnemyArmor, OnArmor);
-            session.OnPeerDisconnected += id =>
-            {
-                _known.Remove(id);
-                _corpseKnown.Remove(id);
-            };
+            _session = coop.Net;
+            coop.Handle(MsgType.EnemySpawn, OnSpawn);
+            coop.Handle(MsgType.EnemyState, OnState);
+            coop.Handle(MsgType.EnemyDespawn, OnDespawn);
+            coop.Handle(MsgType.EnemySound, OnSound);
+            coop.Handle(MsgType.EnemyHit, OnHit);
+            coop.Handle(MsgType.EnemyBlood, OnBlood);
+            coop.Handle(MsgType.EnemyArmor, OnArmor);
+            coop.Net.OnPeerDisconnected += PeerLeft;
+            coop.Hook(() => coop.Net.OnPeerDisconnected -= PeerLeft);
+            coop.Handle(MsgType.NpcHit, HostileNpcs.OnNpcHit);
+            coop.Handle(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
+            // Still static: they're HostileNpcs' and EnemyMotion's.
+            coop.Hook(ForgetStatics);
+        }
 
-            session.Register(MsgType.NpcHit, HostileNpcs.OnNpcHit);
-            session.Register(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
-            session.OnSessionEnded += () =>
-            {
-                HostileNpcs.Clear();
-                _known.Clear();
-                _corpseKnown.Clear();
-                _byCharHost.Clear();
-                _byIdHost.Clear();
-                _puppets.Clear();
-                _byChar.Clear();
-                EnemyMotion.Reset();
-                _corpses.Clear();
-                _corpseIds.Clear();
-                Frozen.Clear();
-                Hidden.Clear();
-                _switchedOff.Clear();
-            };
+        private static void ForgetStatics()
+        {
+            HostileNpcs.Clear();
+            EnemyMotion.Reset();
+        }
+
+        private void PeerLeft(ulong id)
+        {
+            _known.Remove(id);
+            _corpseKnown.Remove(id);
         }
 
         /// <summary>
@@ -166,12 +174,27 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void Thaw(Character c)
         {
-            if (c == null || !Frozen.Remove(c))
+            NetEnemies enemies = Instance;
+            if (enemies != null)
+            {
+                enemies.ThawHere(c);
+            }
+        }
+
+        /// <summary>
+        /// Set while ThawHere starts a character itself, so the Character.Start
+        /// patch lets it start.
+        /// </summary>
+        public bool Starting { get; private set; }
+
+        private void ThawHere(Character c)
+        {
+            if (c == null || !_frozen.Remove(c))
             {
                 return;
             }
 
-            Hidden.Remove(c);
+            _hidden.Remove(c);
             SetVisible(c, true);
             var rb = c.GetComponent<Rigidbody>();
             if (rb != null)
@@ -193,7 +216,7 @@ namespace DarkwoodMP.Combat
             }
 
             c.enabled = true; // its OnEnable hooks its animators back up
-            ClientFreezeCharacterPatch.Starting = true;
+            Starting = true;
             try
             {
                 c.Start();
@@ -205,7 +228,7 @@ namespace DarkwoodMP.Combat
             }
             finally
             {
-                ClientFreezeCharacterPatch.Starting = false;
+                Starting = false;
             }
 
             PlayIdleLoop(c);
@@ -383,7 +406,7 @@ namespace DarkwoodMP.Combat
             if (now >= _nextScan)
             {
                 _nextScan = now + 0.5f;
-                foreach (var c in AllCharacters.Active())
+                foreach (var c in Plugin.Instance.Host.Characters.Active())
                 {
                     if (Eligible(c) && !_byCharHost.ContainsKey(c))
                     {
@@ -1256,7 +1279,7 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static readonly Dictionary<InvItem, List<InvItemEffect>>
+        private readonly Dictionary<InvItem, List<InvItemEffect>>
             _weaponEffects = new Dictionary<InvItem, List<InvItemEffect>>();
 
         /// <summary>
@@ -1267,7 +1290,7 @@ namespace DarkwoodMP.Combat
         /// Player.spawnBullet spawns, a flamethrower's flame among them; also
         /// its muzzle and particle prefabs). Bare hands cause none.
         /// </summary>
-        private static List<InvItemEffect> WeaponEffects(
+        private List<InvItemEffect> WeaponEffects(
             InvItemClass weapon, List<InvItemEffect> sent)
         {
             var result = new List<InvItemEffect>();
@@ -1753,7 +1776,7 @@ namespace DarkwoodMP.Combat
         /// Client: stop one of our own characters from acting, and hide it
         /// until the host says it's there.
         /// </summary>
-        public static void Freeze(Character c, bool hide)
+        public void Freeze(Character c, bool hide)
         {
             if (c == null)
             {
@@ -1788,7 +1811,7 @@ namespace DarkwoodMP.Combat
                 a.AnimationCompleted = null;
             }
 
-            if (hide && Instance != null && Instance._corpseIds.ContainsKey(c))
+            if (hide && _corpseIds.ContainsKey(c))
             {
                 hide = false; // a corpse the host sent stays shown
             }
@@ -1799,11 +1822,28 @@ namespace DarkwoodMP.Combat
                 StopSounds(c, keepDeathSound: false);
             }
 
-            Frozen.Add(c);
+            _frozen.Add(c);
         }
 
-        public static readonly HashSet<Character> Frozen =
-            new HashSet<Character>();
+        private readonly HashSet<Character> _frozen = new HashSet<Character>();
+
+        /// <summary>
+        /// Client: our own characters frozen (Freeze), the session's; with no
+        /// session an empty set that keeps nothing.
+        /// </summary>
+        public static HashSet<Character> Frozen
+        {
+            get
+            {
+                NetEnemies enemies = Instance;
+                if (enemies == null)
+                {
+                    return new HashSet<Character>();
+                }
+
+                return enemies._frozen;
+            }
+        }
 
         /// <summary>
         /// Client: our own characters hidden while the host runs the world
@@ -1813,14 +1853,28 @@ namespace DarkwoodMP.Combat
         /// CharacterSounds.OnEnable starts their idle loop again
         /// (ClientHiddenSilentPatch keeps them silent): a dead dog camp's dogs
         /// barked on in a joiner's game.
+        /// The session's; with no session an empty set that keeps nothing.
         /// </summary>
-        public static readonly HashSet<Character> Hidden =
-            new HashSet<Character>();
+        public static HashSet<Character> Hidden
+        {
+            get
+            {
+                NetEnemies enemies = Instance;
+                if (enemies == null)
+                {
+                    return new HashSet<Character>();
+                }
 
-        private static void Hide(Character c)
+                return enemies._hidden;
+            }
+        }
+
+        private readonly HashSet<Character> _hidden = new HashSet<Character>();
+
+        private void Hide(Character c)
         {
             SetVisible(c, false);
-            Hidden.Add(c);
+            _hidden.Add(c);
         }
 
         private static readonly System.Reflection.FieldInfo FovLightField =
@@ -1933,10 +1987,10 @@ namespace DarkwoodMP.Combat
         /// view's shadow layers then cut the player's view to nothing beside
         /// the corpse.
         /// </summary>
-        private static readonly Dictionary<Character, List<Component>>
+        private readonly Dictionary<Character, List<Component>>
             _switchedOff = new Dictionary<Character, List<Component>>();
 
-        private static void SetVisible(Character c, bool on)
+        private void SetVisible(Character c, bool on)
         {
             if (!on)
             {
@@ -1997,7 +2051,7 @@ namespace DarkwoodMP.Combat
             }
 
             _nextSweep = Time.unscaledTime + 1f;
-            foreach (var c in AllCharacters.Active())
+            foreach (var c in Plugin.Instance.Host.Characters.Active())
             {
                 if (!Eligible(c) || _byChar.ContainsKey(c))
                 {
@@ -2005,11 +2059,11 @@ namespace DarkwoodMP.Combat
                 }
 
                 bool local = LocalOnly(c);
-                if (local && Frozen.Contains(c))
+                if (local && _frozen.Contains(c))
                 {
-                    Thaw(c);
+                    ThawHere(c);
                 }
-                else if (!local && !Frozen.Contains(c))
+                else if (!local && !_frozen.Contains(c))
                 {
                     Freeze(c, hide: true);
                 }
@@ -2133,7 +2187,7 @@ namespace DarkwoodMP.Combat
             Freeze(c, hide: false);
             SetVisible(c, true);
             // shown as the host's now: its idle loop plays again
-            Hidden.Remove(c);
+            _hidden.Remove(c);
             PlayIdleLoop(c);
             c.transform.SetPositionAndRotation(pos, rot);
             Animators(c.transform, out var list, out var paths);
@@ -2164,7 +2218,7 @@ namespace DarkwoodMP.Combat
 
             Plugin.Log.LogInfo(
                 $"Showing the host's {name} #{id} ({text}{switched}); "
-                    + $"{Frozen.Count} of our own characters are frozen");
+                    + $"{_frozen.Count} of our own characters are frozen");
             LogFovBlockers(c, $"#{id} shown");
         }
 
@@ -2240,9 +2294,10 @@ namespace DarkwoodMP.Combat
             }
 
             var c = a.GetComponent<Character>();
-            return c != null
-                && (Frozen.Contains(c)
-                    || (Instance != null && Instance._byChar.ContainsKey(c)));
+            NetEnemies enemies = Instance;
+            return c != null && enemies != null
+                && (enemies._frozen.Contains(c)
+                    || enemies._byChar.ContainsKey(c));
         }
 
         private void OnState(ulong from, PacketReader r)
@@ -2627,7 +2682,7 @@ namespace DarkwoodMP.Combat
         /// copy's frames are left on the last one rather than replayed from the
         /// host's updates.
         /// </summary>
-        private static void Settle(Puppet p)
+        private void Settle(Puppet p)
         {
             p.Settled = true;
             var c = p.C;
@@ -3405,9 +3460,33 @@ namespace DarkwoodMP.Combat
 
         /// <summary>
         /// Client: the effects of the weapon hitting right now (set around a
-        /// player's MeleeSensor hit).
+        /// player's MeleeSensor hit), the session's: with no session it reads
+        /// null and keeps nothing.
         /// </summary>
-        public static List<InvItemEffect> HitEffects;
+        public static List<InvItemEffect> HitEffects
+        {
+            get
+            {
+                NetEnemies enemies = Instance;
+                if (enemies == null)
+                {
+                    return null;
+                }
+
+                return enemies._hitEffects;
+            }
+
+            set
+            {
+                NetEnemies enemies = Instance;
+                if (enemies != null)
+                {
+                    enemies._hitEffects = value;
+                }
+            }
+        }
+
+        private List<InvItemEffect> _hitEffects;
 
         // ---- shared helpers -------------------------------------------------
 
@@ -3455,53 +3534,5 @@ namespace DarkwoodMP.Combat
         private static Quaternion ReadRot(PacketReader r) => new Quaternion(
             r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
             r.R.ReadSingle());
-    }
-
-    /// <summary>
-    /// The characters that are active now, as
-    /// Object.FindObjectsOfType&lt;Character&gt;() finds them, without
-    /// searching every object in the scene (that took about 50 ms in a loaded
-    /// world, twice a second on the host). Every character passes
-    /// Character.OnEnable (no kind of character has its own), which lists it
-    /// here; the destroyed ones drop out and the inactive ones are skipped.
-    /// </summary>
-    public static class AllCharacters
-    {
-        private static readonly HashSet<Character> _all =
-            new HashSet<Character>();
-        private static readonly List<Character> _now = new List<Character>();
-
-        internal static void Add(Character c)
-        {
-            if (c != null)
-            {
-                _all.Add(c);
-            }
-        }
-
-        /// <summary>
-        /// A list reused on each call: use it before calling again.
-        /// </summary>
-        public static List<Character> Active()
-        {
-            _now.Clear();
-            _all.RemoveWhere(c => c == null);
-            foreach (var c in _all)
-            {
-                if (c.isActiveAndEnabled)
-                {
-                    _now.Add(c);
-                }
-            }
-
-            return _now;
-        }
-    }
-
-    [HarmonyLib.HarmonyPatch(typeof(Character), "OnEnable")]
-    static class AllCharactersPatch
-    {
-        static void Postfix(Character __instance) =>
-            AllCharacters.Add(__instance);
     }
 }

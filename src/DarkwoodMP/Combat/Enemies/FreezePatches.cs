@@ -10,19 +10,17 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), nameof(Character.Start))]
     public static class ClientFreezeCharacterPatch
     {
-        /// <summary>Set while Thaw starts a character itself.</summary>
-        public static bool Starting;
-
         private static bool Prefix(Character __instance)
         {
-            if (!FreezeRules.FreezesAtStart(FactsOf(__instance)))
+            NetEnemies enemies = NetEnemies.Instance;
+            if (enemies == null
+                || !FreezeRules.FreezesAtStart(FactsOf(enemies, __instance)))
             {
                 return true;
             }
 
-            bool puppet = NetEnemies.Instance != null
-                && NetEnemies.Instance.IsPuppet(__instance, out _);
-            NetEnemies.Freeze(__instance, hide: !puppet);
+            bool puppet = enemies.IsPuppet(__instance, out _);
+            enemies.Freeze(__instance, hide: !puppet);
             return false;
         }
 
@@ -30,14 +28,14 @@ namespace DarkwoodMP.Combat
         /// The character as the rule sees it. Whether it's eligible and a
         /// local one are read only on a client, outside Thaw, as before.
         /// </summary>
-        private static StartFacts FactsOf(Character c)
+        private static StartFacts FactsOf(NetEnemies enemies, Character c)
         {
             bool client = NetEnemies.ClientMode;
-            if (Starting || !client)
+            if (enemies.Starting || !client)
             {
                 return new StartFacts
                 {
-                    Thawing = Starting,
+                    Thawing = enemies.Starting,
                     ClientMode = client,
                 };
             }
