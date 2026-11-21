@@ -471,7 +471,6 @@ namespace DarkwoodMP
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
-            TalkLock.Register(_host.Session);
             Progression.Register(_host.Session);
             StackSizes.Register(_host.Session);
             DreamSync.Register(_host.Session);
@@ -2345,7 +2344,12 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("npcs");
-            DialogueGuard.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dialogues.Update();
+            }
+
             TestWorld.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {

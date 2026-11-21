@@ -28,21 +28,29 @@ namespace DarkwoodMP.World
     /// - A dialogue whose NPC is gone and that hasn't closed in StuckAfter
     ///   seconds is closed by force.
     /// </summary>
-    public static class DialogueGuard
+    internal sealed class DialogueGuard
     {
         /// <summary>
         /// Since when the open dialogue's NPC has been gone, and switched off.
         /// </summary>
-        private static DialogueWatch _watch;
+        private DialogueWatch _watch;
         /// <summary>
         /// The trader's own inventory window (parented to the UI, not to him,
         /// so it outlives him).
         /// </summary>
-        private static GameObject _shopUI;
+        private GameObject _shopUI;
+
+        private readonly CoopSession _coop;
 
         private static readonly Action<DialogueWindow> TweenClose =
             AccessTools.MethodDelegate<Action<DialogueWindow>>(
                 AccessTools.Method(typeof(DialogueWindow), "onTweenClose"));
+
+        /// <summary>For one session (CoopSession.Dialogues).</summary>
+        public DialogueGuard(CoopSession coop)
+        {
+            _coop = coop;
+        }
 
         private static DialogueWindow Window
         {
@@ -63,7 +71,7 @@ namespace DarkwoodMP.World
         internal static bool NpcDestroyed(DialogueWindow w) =>
             w != null && !ReferenceEquals(w.npc, null) && w.npc == null;
 
-        internal static void OpenedTrade(DialogueWindow w)
+        internal void OpenedTrade(DialogueWindow w)
         {
             Inventory inv = null;
             if (w != null && w.npc != null)
@@ -84,7 +92,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Every frame: close a dialogue whose NPC is gone or switched off.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             var w = Window;
             DialogueTick tick = DialogueRules.Watch(FactsOf(w), _watch);
@@ -111,7 +119,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The open dialogue and its NPC, this frame. w may be null.
         /// </summary>
-        private static DialogueFacts FactsOf(DialogueWindow w)
+        private DialogueFacts FactsOf(DialogueWindow w)
         {
             var p = Player.Instance;
             if (p == null || w == null || !p.inDialogue)
@@ -144,7 +152,7 @@ namespace DarkwoodMP.World
         /// <summary>Close the dialogue (and its trade) the game's way, without
         /// the NPC's goodbye line. False: it is still opening or closing
         /// (tweening) and nothing was done.</summary>
-        internal static bool Close(DialogueWindow w)
+        internal bool Close(DialogueWindow w)
         {
             DialogueClose way = DialogueRules.CloseWay(CloseFactsOf(w));
             if (way == DialogueClose.Force)
@@ -181,7 +189,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// What closing the dialogue looks at. w may be null.
         /// </summary>
-        private static DialogueCloseFacts CloseFactsOf(DialogueWindow w)
+        private DialogueCloseFacts CloseFactsOf(DialogueWindow w)
         {
             if (w == null)
             {
@@ -203,7 +211,7 @@ namespace DarkwoodMP.World
         /// closeTrade's prefix: false (skip the game's method) after closing
         /// the dialogue if the NPC was destroyed, even while tweening.
         /// </summary>
-        internal static bool RunCloseTrade(DialogueWindow w)
+        internal bool RunCloseTrade(DialogueWindow w)
         {
             if (DialogueRules.RunsCloseTrade(NpcDestroyed(w)))
             {
@@ -219,7 +227,7 @@ namespace DarkwoodMP.World
         /// closing the dialogue if the NPC was destroyed and the window isn't
         /// opening or closing.
         /// </summary>
-        internal static bool RunClose(DialogueWindow w)
+        internal bool RunClose(DialogueWindow w)
         {
             if (DialogueRules.RunsClose(NpcDestroyed(w), w.tweening))
             {
@@ -233,7 +241,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// finishedElement's prefix: whether the game's runs.
         /// </summary>
-        internal static bool RunFinishedLine(DialogueWindow w)
+        internal bool RunFinishedLine(DialogueWindow w)
         {
             var line = new LineFacts
             {
@@ -249,7 +257,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// DialogueWindow.closeTrade and close without the NPC (which is gone).
         /// </summary>
-        internal static void ForceClose(DialogueWindow w, string why)
+        internal void ForceClose(DialogueWindow w, string why)
         {
             var p = Player.Instance;
             if (w == null || p == null)
@@ -365,15 +373,21 @@ namespace DarkwoodMP.World
                 }
             }, 0.5f, timeScaleDependent: false);
 
-            TalkLock.Closed();
+            _coop.Talk.Closed();
         }
     }
 
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.openTrade))]
     static class DialogueGuardOpenTradePatch
     {
-        static void Postfix(DialogueWindow __instance) =>
-            DialogueGuard.OpenedTrade(__instance);
+        static void Postfix(DialogueWindow __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dialogues.OpenedTrade(__instance);
+            }
+        }
     }
 
     /// <summary>
@@ -383,16 +397,32 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.closeTrade))]
     static class DialogueGuardCloseTradePatch
     {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunCloseTrade(__instance);
+        static bool Prefix(DialogueWindow __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunCloseTrade(__instance);
+        }
     }
 
     /// <summary>close() does nothing once the NPC is destroyed.</summary>
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.close))]
     static class DialogueGuardClosePatch
     {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunClose(__instance);
+        static bool Prefix(DialogueWindow __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunClose(__instance);
+        }
     }
 
     /// <summary>
@@ -402,8 +432,16 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.escPress))]
     static class DialogueGuardEscPatch
     {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunClose(__instance);
+        static bool Prefix(DialogueWindow __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunClose(__instance);
+        }
     }
 
     /// <summary>A line still being written (WritingText.Update) when the
@@ -416,7 +454,15 @@ namespace DarkwoodMP.World
         typeof(DialogueWindow), nameof(DialogueWindow.finishedElement))]
     static class DialogueGuardFinishedElementPatch
     {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunFinishedLine(__instance);
+        static bool Prefix(DialogueWindow __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunFinishedLine(__instance);
+        }
     }
 }
