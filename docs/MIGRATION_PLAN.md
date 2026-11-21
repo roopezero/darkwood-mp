@@ -586,6 +586,17 @@ Finish with `tools/run-test.sh full`.
         per session.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
+  - [x] Part b: the rest of `Prologue`, and `Chapters`. They are
+        `CoopSession.Prologue` and `.Chapters` (`World/Story`, `Chapters`
+        a partial class in three files), with `ProloguePatches.cs` and
+        `ChapterPatches.cs`; the game-reading queries and the endings a
+        joiner sees alone stay static, and the quick-end test switch is
+        `ModHost.TestQuickEnd`. Their state lasts the session, chapter
+        loads included, so nothing went on `WorldScope`. The bytes are the
+        core's `ChapterStart`, `GameEnd` and `StoryRequest`. Differs:
+        `StoryRequestRules` gained `ReachesEvent`, since the plugin looks a
+        request's event up only once the checks before it pass, and two
+        patches got `Priority.High` to keep their order after the move.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
 
