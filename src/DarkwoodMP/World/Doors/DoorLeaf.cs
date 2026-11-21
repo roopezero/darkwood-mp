@@ -17,8 +17,11 @@ namespace DarkwoodMP.World.Doors
     /// decides the side it swings to) and given again in Door.OnEnable, once
     /// the leaf takes part in the physics again.
     ///
-    /// The session owns one (CoopSession.Leaves) for the doors waiting for
-    /// that push; its static helpers read and turn a door's leaf.
+    /// One lives as long as the game (ModHost.Leaves), so it works in a
+    /// game played alone too, and a door opened before hosting from the
+    /// pause menu is still waiting in the session; the doors waiting are
+    /// forgotten when a session ends. Its static helpers read and turn a
+    /// door's leaf.
     /// </summary>
     internal sealed class DoorLeaf
     {
@@ -142,7 +145,28 @@ namespace DarkwoodMP.World.Doors
 
         internal static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
 
-        internal void Opened(Door d, Vector3 opener)
+        /// <summary>
+        /// Door.open, with or without a session: the push is remembered for
+        /// a leaf that's switched off here, then the session's DoorPush
+        /// watches the leaf.
+        /// </summary>
+        internal void OnOpen(Door d, Vector3 position, Transform opener)
+        {
+            Opened(d, Doors.Opener(position, opener));
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pushes.Opened(d);
+            }
+        }
+
+        /// <summary>
+        /// The session ended: the doors waiting for their push are
+        /// forgotten.
+        /// </summary>
+        internal void Clear() => _pending.Clear();
+
+        private void Opened(Door d, Vector3 opener)
         {
             if (!LeafRules.RemembersOpen(FactsOf(d)))
             {

@@ -42,6 +42,11 @@ namespace DarkwoodMP
         public readonly HashSet<Generator> Generators =
             new HashSet<Generator>();
 
+        /// Doors opened here while their leaf was switched off, also alone;
+        /// a session forgets them when it ends (CoopSession).
+        public readonly World.Doors.DoorLeaf Leaves =
+            new World.Doors.DoorLeaf();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
