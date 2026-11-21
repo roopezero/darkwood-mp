@@ -643,7 +643,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Dreams.startDreaming in the epilogue: every game puts its player at
         /// the part's start, so a joiner moves to a free spot beside the others
-        /// (Sync.SpawnSpot) once the part is in place.
+        /// (Sync.Players.SpawnSpot) once the part is in place.
         /// </summary>
         internal static void PartStarted()
         {
@@ -676,7 +676,7 @@ namespace DarkwoodMP.World
             }
 
             Vector3 at = p.transform.position;
-            Vector3 to = Sync.SpawnSpot.Find(p, at, taken);
+            Vector3 to = Sync.Players.SpawnSpot.Find(p, at, taken);
             if ((to - at).sqrMagnitude < 1f)
             {
                 yield break;

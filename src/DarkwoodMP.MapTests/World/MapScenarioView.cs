@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -15,7 +16,7 @@ namespace DarkwoodMP.World
     /// watches its own view light (Player.FOVLight) every frame:
     ///
     ///   black: its renderer switched off (Light2D.LateUpdate's ray straight
-    ///   down hit something, Sync.ViewWatch);
+    ///   down hit something, ViewWatch);
     ///   not its own: the cone's mesh doesn't match rays cast from where our
     ///   player stands now (a mesh drawn by another light, somewhere else, as a
     ///   puppet's copied lantern once did);

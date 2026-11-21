@@ -72,11 +72,12 @@ namespace DarkwoodMP
 
         /// The sprite collections by name hash, for the puppets' looks; kept
         /// as long as the game runs, as the game keeps them.
-        public readonly Sync.SpriteCollections Sprites =
-            new Sync.SpriteCollections();
+        public readonly Sync.Players.SpriteCollections Sprites =
+            new Sync.Players.SpriteCollections();
 
         /// Lights outside the pathfinding grid, also when playing alone.
-        public readonly Sync.LightGrid Lights = new Sync.LightGrid();
+        public readonly Sync.Players.LightGrid Lights =
+            new Sync.Players.LightGrid();
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
@@ -117,11 +118,11 @@ namespace DarkwoodMP
         /// before, so its handlers of the session's events run in the same
         /// order.
         /// </summary>
-        public Sync.PlayerSync Players { get; private set; }
+        public Sync.Players.PlayerSync Players { get; private set; }
 
         public void AddPlayers()
         {
-            Players = new Sync.PlayerSync(Session);
+            Players = new Sync.Players.PlayerSync(Session);
         }
 
         public void AddSteam(INetBackend steam)

@@ -1,8 +1,8 @@
 namespace DarkwoodMP.Sync.Players
 {
     /// Which of our player's sounds, shots, wounds and flames the others
-    /// see and hear, and what this game does with theirs (PlayerFx and
-    /// its patches).
+    /// see and hear, and what this game does with theirs (PlayerFx, PuppetFx
+    /// and PlayerFxPatches).
     public static class PlayerFxRules
     {
         /// Seconds (unscaled) between two batches of our sounds.

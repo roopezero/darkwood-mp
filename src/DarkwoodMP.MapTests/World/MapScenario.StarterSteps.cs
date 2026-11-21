@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -255,7 +256,7 @@ namespace DarkwoodMP.World
             {
                 foreach (var rp in ps.Remotes.Values)
                 {
-                    if (rp.Owner == Sync.PlayerSync.DummyId)
+                    if (rp.Owner == PlayerSync.DummyId)
                     {
                         continue;
                     }

@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Soft collision between players: a player standing in another player is

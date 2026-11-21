@@ -186,12 +186,13 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Whether a remote player is in a morning, as their last state says.
         /// </summary>
-        private static RemoteMorning FactsOf(ulong id, Sync.RemotePlayer p)
+        private static RemoteMorning FactsOf(
+            ulong id, Sync.Players.RemotePlayer p)
         {
             var last = p.Last;
             var facts = new RemoteMorning
             {
-                Dummy = id == Sync.PlayerSync.DummyId,
+                Dummy = id == Sync.Players.PlayerSync.DummyId,
                 HasState = last != null,
             };
 

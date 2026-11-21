@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -421,7 +422,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static NetPlayerProxy ClientProxy() =>
             NetPlayerProxy.All.Values.FirstOrDefault(
-                x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+                x => x != null && x.Owner != PlayerSync.DummyId);
 
         /// <summary>
         /// "nl-herd N [KIND]" (host): N enemies (DogMutated by default) by the

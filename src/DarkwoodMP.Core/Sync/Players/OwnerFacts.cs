@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Sync.Players
 {
     /// Who sent one of the effect messages, and whom it says it's about
-    /// (PlayerFx.Owner).
+    /// (PuppetFx.Owner).
     public readonly struct OwnerFacts
     {
         /// This game is the host (Session.IsHost).

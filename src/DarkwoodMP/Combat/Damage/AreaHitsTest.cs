@@ -28,7 +28,7 @@ namespace DarkwoodMP.Combat
             NetPlayerProxy p = null;
             foreach (var x in NetPlayerProxy.All.Values)
             {
-                if (x != null && x.Owner != Sync.PlayerSync.DummyId)
+                if (x != null && x.Owner != Sync.Players.PlayerSync.DummyId)
                 {
                     p = x;
                 }

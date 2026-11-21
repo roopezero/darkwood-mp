@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat.Damage;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Combat

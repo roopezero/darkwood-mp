@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// What hides our player's whole view. Light2D.LateUpdate, each time a

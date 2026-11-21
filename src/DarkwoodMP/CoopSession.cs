@@ -122,10 +122,14 @@ namespace DarkwoodMP
 
         /// What our player sounds and looks like to the others beyond its
         /// sprites: sounds, shots, blood and burning.
-        public readonly Sync.PlayerFx PlayerFx;
+        public readonly Sync.Players.PlayerFx PlayerFx;
+
+        /// The other players' sounds, shots, blood and burning, shown on
+        /// their puppets.
+        public readonly Sync.Players.PuppetFx PuppetFx;
 
         /// Logs what switches off our player's view (a black screen).
-        public readonly Sync.ViewWatch View;
+        public readonly Sync.Players.ViewWatch View;
 
         /// A client's swings and aims, which the host's enemies react to.
         public readonly Combat.PlayerCues Cues;
@@ -175,8 +179,9 @@ namespace DarkwoodMP
             EnemyFx = new Combat.EnemyFx(this);
             Breaks = new World.BreakActions(this);
             Objects = new World.ObjectActions(this);
-            PlayerFx = new Sync.PlayerFx(this);
-            View = new Sync.ViewWatch();
+            PlayerFx = new Sync.Players.PlayerFx(this);
+            PuppetFx = new Sync.Players.PuppetFx(this);
+            View = new Sync.Players.ViewWatch();
             Cues = new Combat.PlayerCues(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.

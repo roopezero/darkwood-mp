@@ -159,7 +159,7 @@ namespace DarkwoodMP.World
                 theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
             }
 
-            Sync.PlayerSync players = Plugin.Instance.Host.Players;
+            Sync.Players.PlayerSync players = Plugin.Instance.Host.Players;
             if (players != null
                 && players.Remotes.TryGetValue(by, out var rp)
                 && rp.Root != null)

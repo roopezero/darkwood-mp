@@ -358,7 +358,7 @@ namespace DarkwoodMP
             int n = 0;
             foreach (var kv in ps.Remotes)
             {
-                if (kv.Key == Sync.PlayerSync.DummyId
+                if (kv.Key == Sync.Players.PlayerSync.DummyId
                     || !s.Peers.Contains(kv.Key))
                 {
                     continue;

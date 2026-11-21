@@ -1041,7 +1041,7 @@ namespace DarkwoodMP.World
         {
             if (S != null && S.IsClient)
             {
-                Sync.PlayerSync instance = Plugin.Instance.Host.Players;
+                Sync.Players.PlayerSync instance = Plugin.Instance.Host.Players;
                 if (instance != null)
                 {
                     instance.FlushNow();

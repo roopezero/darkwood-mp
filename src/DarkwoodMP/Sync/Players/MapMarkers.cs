@@ -1,9 +1,8 @@
 using System.Collections.Generic;
-using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.Sync
+namespace DarkwoodMP.Sync.Players
 {
     /// <summary>
     /// Other players on the map. The game's map (Map.open) has no marker for
@@ -81,7 +80,7 @@ namespace DarkwoodMP.Sync
         /// After the map opens: an icon for each other player in the main
         /// world.
         /// </summary>
-        public void OnOpened(Map map)
+        public void Opened(Map map)
         {
             _markers.Clear();
             var type = WorldType(map);
@@ -229,12 +228,5 @@ namespace DarkwoodMP.Sync
                     r.Name, Plugin.NameTagStyle);
             }
         }
-    }
-
-    [HarmonyPatch(typeof(Map), nameof(Map.open))]
-    public static class MapOpenPatch
-    {
-        private static void Postfix(Map __instance) =>
-            Plugin.Instance.Host.Players.Markers.OnOpened(__instance);
     }
 }

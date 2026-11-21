@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World.Doors;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -309,7 +310,7 @@ namespace DarkwoodMP.World
         private static IEnumerator Overlap(string[] a, Result r)
         {
             var sync = Plugin.Instance.Host.Players;
-            Sync.RemotePlayer near = null;
+            RemotePlayer near = null;
             float best = float.MaxValue;
             if (sync != null)
             {
@@ -339,7 +340,7 @@ namespace DarkwoodMP.World
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
             Place(on);
-            Sync.PlayerSeparation apart =
+            PlayerSeparation apart =
                 Plugin.Instance.Host.Players.Separation;
             float eased = apart.Eased, want = apart.Distance * 0.75f;
             float dist() => StateDump.Flat(
