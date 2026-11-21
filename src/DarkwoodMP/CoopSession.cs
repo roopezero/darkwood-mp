@@ -178,6 +178,10 @@ namespace DarkwoodMP
         /// The story's state (flags, NPCs, dialogues, the journal), shared.
         public readonly World.Story.FlagsSync Story;
 
+        /// The level dreams, the prologue's stages and the epilogue, dreamt
+        /// together.
+        public readonly World.Dreaming.DreamSync Dreaming;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -241,6 +245,7 @@ namespace DarkwoodMP
             Mornings = new World.Mornings.AfterNight(this);
             WorldEvents = new World.Rolls.WorldEvents(this);
             Story = new World.Story.FlagsSync(this);
+            Dreaming = new World.Dreaming.DreamSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

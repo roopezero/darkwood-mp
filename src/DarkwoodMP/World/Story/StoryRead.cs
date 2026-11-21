@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.World.Dreaming;
 using HarmonyLib;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -29,7 +30,7 @@ namespace DarkwoodMP.World.Story
             get
             {
                 var d = Singleton<Dreams>.Instance;
-                return DreamSync.Shared != null && d != null && d.dreaming;
+                return DreamSync.SharedNow != null && d != null && d.dreaming;
             }
         }
 

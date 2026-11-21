@@ -1,6 +1,7 @@
+using DarkwoodMP.Sync.Players;
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
-using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -326,7 +327,7 @@ namespace DarkwoodMP.World
             }
 
             r.Info = System.FormattableString.Invariant(
-                $"entered {DreamSync.EnteredAt:0.000}");
+                $"entered {Coop.Current.Dreaming.EnteredAt:0.000}");
         }
     }
 }

@@ -1,7 +1,8 @@
-using System.Collections;
+using DarkwoodMP.World.Dreaming;
 using HarmonyLib;
-using UnityEngine;
+using System.Collections;
 using UnityEngine.SceneManagement;
+using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
 namespace DarkwoodMP.World
@@ -53,7 +54,7 @@ namespace DarkwoodMP.World
 
             bool dreaming = D != null && D.dreaming;
             bool inEpilogue = P != null && P.inEpilogue;
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -106,7 +107,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             r.Info = Where();
-            if (!EpilogueSync.Playing || DreamSync.Shared == null)
+            if (!EpilogueSync.Playing || DreamSync.SharedNow == null)
             {
                 r.Fail($"the epilogue isn't shared: {r.Info}");
             }
@@ -135,7 +136,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{state}; session {active}; a friend's puppet shown "
                     + $"{FriendShown()}";
-            if (!EpilogueSync.Playing || DreamSync.Shared == null
+            if (!EpilogueSync.Playing || DreamSync.SharedNow == null
                 || Net.Session.Instance == null || !Net.Session.Instance.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");

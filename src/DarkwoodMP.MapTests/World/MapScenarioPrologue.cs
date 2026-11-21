@@ -1,6 +1,7 @@
+using DarkwoodMP.Combat;
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
-using DarkwoodMP.Combat;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -74,7 +75,7 @@ namespace DarkwoodMP.World
 
             float until = Time.realtimeSinceStartup + 90f;
             while (!(Prologue.InStage && Prologue.Stage == stage
-                    && DreamSync.Shared == stage && WorldShare.WorldReady
+                    && DreamSync.SharedNow == stage && WorldShare.WorldReady
                     && FriendSeen())
                 && Time.realtimeSinceStartup < until)
             {
@@ -88,7 +89,7 @@ namespace DarkwoodMP.World
                 stageName = "none";
             }
 
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -101,7 +102,7 @@ namespace DarkwoodMP.World
                     + $"carrying {Items()}, the other player seen "
                     + $"{FriendSeen()}, time "
                     + $"{Singleton<Controller>.Instance.CurrentTime}";
-            if (Prologue.Stage != stage || DreamSync.Shared != stage)
+            if (Prologue.Stage != stage || DreamSync.SharedNow != stage)
             {
                 r.Fail($"not in the shared {stage}: {r.Info}");
             }
@@ -219,7 +220,7 @@ namespace DarkwoodMP.World
             bool active = Prologue.Active;
             bool dreaming = d.dreaming;
             bool first = P.firstPlay;
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -278,7 +279,7 @@ namespace DarkwoodMP.World
                 "[map] traders after the prologue: "
                     + $"{string.Join("; ", wolves)}");
             if (Prologue.Active || d.dreaming || P.firstPlay
-                || DreamSync.Shared != null)
+                || DreamSync.SharedNow != null)
             {
                 r.Fail($"the prologue isn't over: {r.Info}");
             }

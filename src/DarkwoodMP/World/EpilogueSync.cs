@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -220,7 +221,12 @@ namespace DarkwoodMP.World
         {
             Playing = true;
             Reset();
-            DreamSync.Share(Chapters.EpilogueDream);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dreaming.Share(Chapters.EpilogueDream);
+            }
+
             Plugin.Log.LogInfo(
                 "[epilogue] the host starts the epilogue: the players in its "
                     + "world play it too");
@@ -247,7 +253,7 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 "[epilogue] test: in the epilogue: "
                     + (Player.Instance != null && Player.Instance.inEpilogue)
-                    + $", shared dream {DreamSync.Shared}");
+                    + $", shared dream {DreamSync.SharedNow}");
             yield return new WaitForSecondsRealtime(8f);
             Plugin.Log.LogInfo("[epilogue] test: skipping to the credits");
             BeforeCredits();
@@ -792,7 +798,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo(
                     "[epilogue] playing the epilogue together (shared dream "
-                        + $"{DreamSync.Shared})");
+                        + $"{DreamSync.SharedNow})");
                 yield break;
             }
 
@@ -829,7 +835,12 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            DreamSync.Share(Chapters.EpilogueDream);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dreaming.Share(Chapters.EpilogueDream);
+            }
+
             Core.forbidInputs = true;
             p.halt();
             dreams.wantToDream = true;

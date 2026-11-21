@@ -542,6 +542,13 @@ Finish with `tools/run-test.sh full`.
         session.
   - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
 - [ ] 7.3 Skills and progress.
+  - [x] Part a: `DreamSync`. It is `CoopSession.Dreaming`
+        (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'
+        bytes are the core's `DreamStart` and `DreamEnd`. Others read the
+        shared dream through `DreamSync.SharedNow`, null with no session.
+  - [ ] Part b: `Progression`, `SkillTree`, `SkillsPanel`. They also run
+        playing alone, so their state goes on `ModHost`, with their message
+        handlers made per session.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's

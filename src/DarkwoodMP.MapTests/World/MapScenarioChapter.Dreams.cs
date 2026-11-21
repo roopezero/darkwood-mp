@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Dreaming;
 using System.Collections;
 using System.Linq;
 using UnityEngine;
@@ -55,7 +56,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            string shared = DreamSync.Shared;
+            string shared = DreamSync.SharedNow;
             if (shared == null)
             {
                 shared = "none";
@@ -69,7 +70,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"not in a dream: {r.Info}");
             }
-            else if (DreamSync.Shared != null)
+            else if (DreamSync.SharedNow != null)
             {
                 r.Fail($"the dream is shared, not ours: {r.Info}");
             }
