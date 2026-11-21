@@ -366,10 +366,12 @@ namespace DarkwoodMP.World
                 ContainerSlotsAllMessage.Read(r, out string contents));
             var inv = ObjRef.Resolve<Inventory>(obj);
             bool waited = inv != null && _awaiting.Remove(inv);
-            if (inv == null || contents.Length == 0)
+            var answer = SlotRules.Answer(FactsOf(inv, contents, waited));
+            if (answer == HostContents.NotFound
+                || answer == HostContents.HostHasNone)
             {
                 string why = "the host hasn't got it";
-                if (inv == null)
+                if (answer == HostContents.NotFound)
                 {
                     why = "not found here";
                 }
@@ -381,7 +383,7 @@ namespace DarkwoodMP.World
             // Open and already sending changes (we stopped waiting, or this
             // answers an earlier ask): the host's answer is older than what we
             // sent since, which the host settles slot by slot.
-            if (_watched.ContainsKey(inv) && !waited)
+            if (answer == HostContents.NotUsed)
             {
                 Plugin.Log.LogInfo(
                     $"[slots] {obj} contents from host: not used, our changes "
@@ -407,7 +409,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (state.slotCount > inv.slots.Count && Is(inv))
+            if (SlotRules.GrowsRows(state.slotCount, inv.slots.Count, Is(inv)))
             {
                 // the host's rows (an upgrade)
                 WorkbenchStorage.Fit(inv, state.slotCount);
@@ -421,7 +423,7 @@ namespace DarkwoodMP.World
                         + $"{inv.slots.Count} here");
             }
 
-            if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
+            if (answer == HostContents.LoadWhole)
             {
                 Coop.Guards.Replaying = true;
                 try
@@ -447,7 +449,29 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Merge(inv, state, seen, $"{obj} contents from host");
+            Merge(inv, state, Watched(inv), $"{obj} contents from host");
+        }
+
+        /// <summary>
+        /// What OnContents looks at in the host's answer for a container (inv
+        /// null when it isn't here).
+        /// </summary>
+        private AnswerFacts FactsOf(
+            Inventory inv, string contents, bool waited)
+        {
+            if (inv == null)
+            {
+                return default;
+            }
+
+            return new AnswerFacts
+            {
+                Found = true,
+                Empty = contents.Length == 0,
+                Watched = _watched.ContainsKey(inv),
+                Waited = waited,
+                Open = inv.open,
+            };
         }
 
         /// <summary>
@@ -742,13 +766,6 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Keys a and b name the same item but for its durability, which the
-        /// world changes by itself for the item here (SlotKeyRules.RotOnly).
-        /// </summary>
-        private static bool RotOnly(InvItemClass here, string a, string b) =>
-            SlotKeyRules.RotOnly(FactsOf(here), a, b);
-
-        /// <summary>
         /// Host: start the rot of perishables in a container a client opened,
         /// as drawing its slots here would.
         /// </summary>
@@ -1007,62 +1024,25 @@ namespace DarkwoodMP.World
 
             // Host: the player must be at the container, it must be open in the
             // host's world (a locked crate not picked open here isn't), and
-            // nobody else may have it open (but its storage).
-            string refusedAll = Containers.Refusal(from, inv);
-            CoopSession coop = Coop.Current;
-            if (refusedAll == null && !Is(inv) && coop != null
-                && coop.Containers.LockedByOther(
-                    obj, from, out string holder))
-            {
-                refusedAll = holder + " has it open";
-            }
-
-            // The changes stand if every slot still holds what the player saw
-            // there; if one doesn't, none does. A batch is what one look at the
+            // nobody else may have it open (but its storage). The changes
+            // stand if every slot still holds what the player saw there; if
+            // one doesn't, none does. A batch is what one look at the
             // container found changed: an item moved from one slot to another
             // (a cursor drag inside it) is two changes, and taking only one of
-            // them would double or lose that item.
-            changes.RemoveAll(c => c.Slot >= inv.slots.Count);
-            if (refusedAll == null)
+            // them would double or lose that item. A stack bigger than the
+            // host's stack size (StackSizes) isn't one the client could have
+            // made.
+            changes.RemoveAll(c => !SlotRules.InRange(c.Slot, inv.slots.Count));
+            var batch = FactsOf(from, inv, obj) with
             {
-                foreach (var c in changes)
-                {
-                    string now = Key(inv.slots[c.Slot]);
-                    if (now == c.Old
-                        || RotOnly(inv.slots[c.Slot].invItem, now, c.Old))
-                    {
-                        continue;
-                    }
+                Changes = FactsOf(inv, changes),
+            };
 
-                    if (changes.Count > 1)
-                    {
-                        refusedAll =
-                            $"slot {c.Slot} had just changed, so the "
-                                + $"{changes.Count} changes made with it are "
-                                + "refused too";
-                    }
-                    else
-                    {
-                        refusedAll = "it had just changed";
-                    }
-
-                    break;
-                }
-            }
-
-            // A stack bigger than the host's stack size (StackSizes) isn't one
-            // the client could have made.
-            if (refusedAll == null)
+            var verdict = SlotRules.MayChange(batch);
+            string refusedAll = null;
+            if (verdict.Refused)
             {
-                foreach (var c in changes)
-                {
-                    if (!StackSizes.Fits(Item(c.New)))
-                    {
-                        refusedAll =
-                            $"slot {c.Slot}: more than one stack holds";
-                        break;
-                    }
-                }
+                refusedAll = Refusals.Text(verdict);
             }
 
             var accepted = new List<SlotChange>();
@@ -1101,6 +1081,50 @@ namespace DarkwoodMP.World
             UiRefresh.Changed(inv);
             SendChanges(obj, accepted, from);
             RemoveIfEmptied(inv);
+        }
+
+        /// <summary>
+        /// What the host looks at in a container a client changed; Changes is
+        /// left for the caller.
+        /// </summary>
+        private SlotBatchFacts FactsOf(ulong from, Inventory inv, ObjRef obj)
+        {
+            string holder = null;
+            CoopSession coop = Coop.Current;
+            bool held = coop != null
+                && coop.Containers.LockedByOther(obj, from, out holder);
+            return new SlotBatchFacts
+            {
+                Container = Containers.MayChange(from, inv),
+                Storage = Is(inv),
+                HeldByOther = held,
+                Holder = holder,
+                SlotCount = inv.slots.Count,
+            };
+        }
+
+        /// <summary>
+        /// What the host looks at in each change of a client's batch (all
+        /// within the container's slots).
+        /// </summary>
+        private static List<SlotChangeFacts> FactsOf(
+            Inventory inv, List<SlotChange> changes)
+        {
+            var facts = new List<SlotChangeFacts>(changes.Count);
+            foreach (var c in changes)
+            {
+                var here = inv.slots[c.Slot].invItem;
+                facts.Add(new SlotChangeFacts
+                {
+                    Slot = c.Slot,
+                    Old = c.Old,
+                    HostKey = Key(here),
+                    Host = FactsOf(here),
+                    Fits = StackSizes.Fits(Item(c.New)),
+                });
+            }
+
+            return facts;
         }
 
         /// <summary>
@@ -1481,7 +1505,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (level <= ctl.workbenchLevel)
+            if (!WorkbenchLevelRules.Raises(level, ctl.workbenchLevel))
             {
                 return;
             }
@@ -1490,22 +1514,19 @@ namespace DarkwoodMP.World
             {
                 // An upgrade (CraftingRecipes.doCraft) raises the level by one,
                 // at an open workbench.
-                string refused = null;
-                if (level != ctl.workbenchLevel + 1)
+                var raise = new LevelFacts
                 {
-                    refused =
-                        $"level {level} isn't one above {ctl.workbenchLevel}";
-                }
-                else if (!AtWorkbench(from))
-                {
-                    refused = "they aren't at a workbench";
-                }
+                    Level = level,
+                    Current = ctl.workbenchLevel,
+                    AtWorkbench = AtWorkbench(from),
+                };
 
-                if (refused != null)
+                var verdict = WorkbenchLevelRules.MayRaise(raise);
+                if (verdict.Refused)
                 {
                     Plugin.Log.LogInfo(
                         $"[authority] {s.NameOf(from)} raised the workbench "
-                            + $"level: refused ({refused})");
+                            + $"level: refused ({Refusals.Text(verdict)})");
                     return;
                 }
 

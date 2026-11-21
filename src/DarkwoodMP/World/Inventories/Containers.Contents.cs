@@ -144,7 +144,16 @@ namespace DarkwoodMP.World.Inventories
         /// </summary>
         public static string Refusal(ulong from, Inventory inv)
         {
-            return TextOf(ContainerRules.MayChange(FactsOf(from, inv)));
+            return TextOf(MayChange(from, inv));
+        }
+
+        /// <summary>
+        /// Host: whether a client may change this container (too far from it,
+        /// locked), as a verdict.
+        /// </summary>
+        public static Verdict MayChange(ulong from, Inventory inv)
+        {
+            return ContainerRules.MayChange(FactsOf(from, inv));
         }
 
         /// <summary>
