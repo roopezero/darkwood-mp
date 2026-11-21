@@ -15,15 +15,15 @@ Work files go in `.cache/review/` (git-ignored): `part-*.txt` (the slices), `rev
 python3 .claude/skills/darkwood-review/partition.py .cache/review
 ```
 
-Slices: `prod*` (the mod, the core and the analyzers), `test*` (the unit tests, MapScenario*, WorldTest and other in-game test code), `tools*` (Python peers, run-test.sh, pack.sh, launchers). Start from a clean `git status`, so every phase's changes can be seen with `git diff`.
+Slices: `prod*` (the mod, the core and the analyzers), `test*` (the unit tests, the map tests project, the plugin's `Testing/` folder and other in-game test code), `tools*` (Python peers, run-test.sh, pack.sh, launchers). Start from a clean `git status`, so every phase's changes can be seen with `git diff`.
 
 ## Rules every agent gets (paste them into each prompt)
 
-- Read `CLAUDE.md` first: its "Rules the code depends on" bind every change.
+- Read `CLAUDE.md` first: its "Rules the code depends on" bind every change, and the code follows `docs/ARCHITECTURE.md` (decisions as rules in `src/DarkwoodMP.Core`, state on `CoopSession` or `ModHost` with no new statics, thin patches that check `Coop.Current`), so a change keeps to it.
 - **Don't change behaviour that other code or the tests depend on by name or text:**
   - wire bytes (`MsgType` payloads, `Protocol.Version`): a simplification never touches them;
   - log line text: `tools/run-test.sh` and the Python tests wait on and grep the game's log lines, so keep every `Plugin.Log` message exactly as it is (search `tools/` for a line before thinking of changing it);
-  - `--dwmp-*` arguments, test-control commands (`TestControl.cs`), `MapScenario.Add` step names, `StateDump` section names and keys;
+  - `--dwmp-*` arguments, test-control commands (`src/DarkwoodMP/Testing/TestControl.cs`), `MapScenario.Add` step names, `StateDump` section names and keys;
   - Harmony patches: the patch method's parameter names (`__instance`, `__result`, `___field`, and the original's argument names), the patched method names and argument types, `[HarmonyPatch]` targets, and anything found by reflection or by name (`AccessTools.Method(..., "Name")`, `Traverse`);
   - public members used from another slice: if you change one, grep the whole of `src/` and `tools/` first.
 - No `Steamworks` type outside `SteamBackend`, `Lobby`, `SteamTransport` (the build checks this).
