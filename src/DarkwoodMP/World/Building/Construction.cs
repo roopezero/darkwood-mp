@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Building;
+using DarkwoodMP.World.Scripted;
 
 namespace DarkwoodMP.World
 {
@@ -112,7 +113,7 @@ namespace DarkwoodMP.World
                 {
                     c.chosenOption = option;
                     ScriptedEvents.RunAs(
-                        ScriptedEvents.Part.PlayerAndShared, replaying: false,
+                        EventPart.PlayerAndShared, replaying: false,
                         () => c.construct(manual: false, option));
                     if (!string.IsNullOrEmpty(sound))
                     {
@@ -182,14 +183,14 @@ namespace DarkwoodMP.World
                 try
                 {
                     c.chosenOption = option;
-                    ScriptedEvents.Part part;
+                    EventPart part;
                     if (s.IsHost)
                     {
-                        part = ScriptedEvents.Part.HostAndShared;
+                        part = EventPart.HostAndShared;
                     }
                     else
                     {
-                        part = ScriptedEvents.Part.SharedOnly;
+                        part = EventPart.SharedOnly;
                     }
 
                     ScriptedEvents.RunAs(part, replaying: true,

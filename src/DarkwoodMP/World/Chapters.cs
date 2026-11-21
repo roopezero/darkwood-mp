@@ -4,6 +4,7 @@ using DarkwoodMP.Net;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using DarkwoodMP.World.Scripted;
 
 namespace DarkwoodMP.World
 {
@@ -204,7 +205,7 @@ namespace DarkwoodMP.World
             if (s.IsClient)
             {
                 bool ours = ScriptedEvents.Current
-                    == ScriptedEvents.Part.PlayerAndShared;
+                    == EventPart.PlayerAndShared;
                 string text = "";
                 if (kind == StoryKind.Chapter)
                 {
@@ -227,7 +228,7 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (ScriptedEvents.Current != ScriptedEvents.Part.All)
+            if (ScriptedEvents.Current != EventPart.All)
             {
                 return false;
             }

@@ -110,13 +110,13 @@ namespace DarkwoodMP.World
             r.Info = $"{_shared}: its events since we came [{Show(es)}]";
             if (!es.Any(
                 e => e.Kind == "enter"
-                    && e.Part == ScriptedEvents.Part.PlayerOnly))
+                    && e.Part == EventPart.PlayerOnly))
             {
                 r.Fail(
                     "our player's part of its enter events didn't run: "
                         + r.Info);
             }
-            else if (es.Any(e => e.Part != ScriptedEvents.Part.PlayerOnly))
+            else if (es.Any(e => e.Part != EventPart.PlayerOnly))
             {
                 r.Fail("its events ran again for the world: " + r.Info);
             }
@@ -171,7 +171,7 @@ namespace DarkwoodMP.World
                 r.Fail("still entered after everyone went: " + r.Info);
             }
             else if (!es.Any(
-                e => e.Kind == "exit" && e.Part == ScriptedEvents.Part.All))
+                e => e.Kind == "exit" && e.Part == EventPart.All))
             {
                 r.Fail("its exit events didn't run in full: " + r.Info);
             }

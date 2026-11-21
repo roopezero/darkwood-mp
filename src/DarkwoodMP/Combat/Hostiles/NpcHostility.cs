@@ -5,6 +5,7 @@ using DarkwoodMP.Net;
 using DarkwoodMP.World;
 using UnityEngine;
 using Object = UnityEngine.Object;
+using DarkwoodMP.World.Scripted;
 
 namespace DarkwoodMP.Combat
 {
@@ -431,7 +432,7 @@ namespace DarkwoodMP.Combat
                 Frozen = NetEnemies.Frozen.Contains(c),
                 Replaying = _coop.Guards.Replaying,
                 SharedOnly =
-                    ScriptedEvents.Current == ScriptedEvents.Part.SharedOnly,
+                    ScriptedEvents.Current == EventPart.SharedOnly,
             };
         }
 

@@ -23,12 +23,12 @@ namespace DarkwoodMP.World
         // found it marked fired and got nothing: stuck on the wrong side. So a
         // trigger marked fired by another game's player stays owed to ours
         // (IsOwed), and when our player sets it off, the steps a later player
-        // gets (LaterStep) run for them alone (Part.LaterPlayer), after the
-        // host's yes (kind 5) in a joiner's game. The host remembers who had
-        // their part, by player key, so each player gets it once. What is owed
-        // is worked out from the loaded world and that record (OwedParts), so
-        // it also holds for a mid-game joiner and after the world is loaded
-        // again.
+        // gets (LaterStep) run for them alone (EventPart.LaterPlayer), after
+        // the host's yes (kind 5) in a joiner's game. The host remembers
+        // who had their part, by player key, so each player gets it once.
+        // What is owed is worked out from the loaded world and that record
+        // (OwedParts), so it also holds for a mid-game joiner and after the
+        // world is loaded again.
 
         /// <summary>
         /// Joiner: owed triggers asked for and not answered yet.
@@ -255,7 +255,7 @@ namespace DarkwoodMP.World
                 Owed = matches && IsOwed(t),
                 Active = s != null && s.Active,
                 Sharing = Coop.Guards.Sharing,
-                Current = (EventPart)Current,
+                Current = Current,
                 SettingOff = SettingOff,
             });
         }
@@ -359,7 +359,7 @@ namespace DarkwoodMP.World
                     // Had it already (before a reload, or in an earlier
                     // session), or the host won't give it: don't ask again each
                     // time. Too far away is asked again next time.
-                    if (reason == null || !reason.Contains("(reach"))
+                    if (!FiredEventRules.AskAgain(reason))
                     {
                         HadOurPart(t);
                     }
@@ -390,7 +390,7 @@ namespace DarkwoodMP.World
                 $"[world] {what}: it fired for another player, running only "
                     + "our player's steps "
                     + $"({steps})");
-            RunAs(Part.LaterPlayer, replaying: false, () =>
+            RunAs(EventPart.LaterPlayer, replaying: false, () =>
             {
                 foreach (var e in ge.events)
                 {
@@ -458,32 +458,19 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            float delay = 0f;
+            var steps = new List<TripStep>();
             foreach (var e in ge.events)
             {
-                if (e == null || e.disabled)
-                {
-                    continue;
-                }
+                steps.Add(TripOf(e));
+            }
 
-                delay += Mathf.Max(0f, e.delay);
-                if (e.type != GameEvent.Type.transportPlayerToObject
-                    || e.activeModifier)
-                {
-                    continue;
-                }
-
-                var to = FirstTarget(e);
-                if (to == null)
-                {
-                    continue;
-                }
-
-                // The step fades the screen to black first (floatValue seconds,
-                // 0.5 by default), then moves the player.
+            // The step fades the screen to black first (floatValue seconds,
+            // 0.5 by default), then moves the player.
+            foreach (var wait in TripRules.Waits(steps))
+            {
+                var to = FirstTarget(ge.events[wait.Step]);
                 coop.Moves.ExpectTrip(
-                    from, to.transform.position,
-                    10f + delay + Mathf.Max(e.floatValue, 0.5f));
+                    from, to.transform.position, wait.Wait.Value);
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
@@ -491,6 +478,29 @@ namespace DarkwoodMP.World
                             + $"at {to.transform.position}");
                 }
             }
+        }
+
+        /// <summary>
+        /// What TripRules needs to know of a step (e may be null).
+        /// </summary>
+        private static TripStep TripOf(GameEvent e)
+        {
+            if (e == null)
+            {
+                return default;
+            }
+
+            bool trip = e.type == GameEvent.Type.transportPlayerToObject
+                && !e.activeModifier;
+            return new TripStep
+            {
+                Exists = true,
+                Disabled = e.disabled,
+                Delay = new Seconds(e.delay),
+                Trip = trip,
+                HasTarget = trip && FirstTarget(e) != null,
+                Fade = new Seconds(e.floatValue),
+            };
         }
 
         /// <summary>

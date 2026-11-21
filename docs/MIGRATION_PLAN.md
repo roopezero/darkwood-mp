@@ -531,6 +531,12 @@ Finish with `tools/run-test.sh full`.
         `StoryApply`); its bytes are the core's `FlagsDelta`. The journal
         popup patch (`JournalShowJournalInfoPopup`) still runs in a game
         played alone, since the game's own small places have no text.
+  - [ ] `ScriptedEvents`. Done: its bytes (`EventFiredMessage`), and every
+        rule called from the shell (`StepRules`, `DoerRules`, `TriggerRules`,
+        `FiringRules`, `WorldTriggerRules`, `LaterRules`, `FiredEventRules`,
+        `WorldEventRules`, `TripRules`); `ScriptedEvents.Part` is the core's
+        `EventPart`. Left: its state (an instance on `CoopSession`, with
+        what solo play needs on `ModHost`), thin patches, `World/Scripted/`.
 - [ ] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
