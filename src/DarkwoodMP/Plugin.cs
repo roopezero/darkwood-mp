@@ -459,7 +459,6 @@ namespace DarkwoodMP
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
             _drag = new DragSync(_host.Session);
-            DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
             new TraderSync(_host.Session);
             new NpcSync(_host.Session);
@@ -911,7 +910,12 @@ namespace DarkwoodMP
             UiRefresh.Enabled = true;
             TrapFiredPatch.TestRefuse = null;
             WorldShare.TestHoldSecs = 0f;
-            DoorPush.TestTouch = null;
+            var session = Coop.Current;
+            if (session != null)
+            {
+                session.Pushes.TestTouch = null;
+            }
+
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
             EnemyMotion.Stats.On = false;
@@ -2284,7 +2288,12 @@ namespace DarkwoodMP
             World.SharedTank.Update();
             _drag.Update();
             ModProfiler.Mark("drag");
-            DoorPush.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pushes.Update();
+            }
+
             ModProfiler.Mark("door push");
             _fuel.Update();
             ModProfiler.Mark("fuel");

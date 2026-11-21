@@ -45,6 +45,12 @@ namespace DarkwoodMP
 
         public readonly World.Windows.Windows Windows;
 
+        /// Doors opened here while their leaf was switched off.
+        public readonly World.DoorLeaf Leaves;
+
+        /// Open doors' leaves that players push, shared.
+        public readonly World.DoorPush Pushes;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -61,6 +67,8 @@ namespace DarkwoodMP
             Joiners = new JoinerSaveIds();
             Doors = new World.Doors.Doors(this);
             Windows = new World.Windows.Windows(this);
+            Leaves = new World.DoorLeaf();
+            Pushes = new World.DoorPush(this, Leaves);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

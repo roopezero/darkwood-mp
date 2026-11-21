@@ -211,7 +211,8 @@ namespace DarkwoodMP.World
                 {
                     string name = d.name;
                     string state;
-                    if (DoorPush.Watches(d))
+                    var coop = Coop.Current;
+                    if (coop != null && coop.Pushes.Watches(d))
                     {
                         state = "watched";
                     }
