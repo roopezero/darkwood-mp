@@ -78,7 +78,6 @@ namespace DarkwoodMP
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
-        private TimeSync _time;
         private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
@@ -453,7 +452,6 @@ namespace DarkwoodMP
             EnemyFx.Register(_host.Session);
             AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
-            _time = new TimeSync(_host.Session);
             WorldActions.Register(_host.Session);
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
@@ -462,7 +460,6 @@ namespace DarkwoodMP
             DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
             new TraderSync(_host.Session);
-            new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
             new ThrowSync(_host.Session);
             new FireSync(_host.Session);
@@ -470,7 +467,6 @@ namespace DarkwoodMP
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
-            TalkLock.Register(_host.Session);
             Progression.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
@@ -2268,7 +2264,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
-            _time.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Time.Update();
+            }
+
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
             World.WorkbenchStorage.Update();
@@ -2336,14 +2337,19 @@ namespace DarkwoodMP
                 }
             }
 
-            NpcSync npcs = NpcSync.Instance;
-            if (npcs != null)
+            coop = Coop.Current;
+            if (coop != null)
             {
-                npcs.Update();
+                coop.Npcs.Update();
             }
 
             ModProfiler.Mark("npcs");
-            DialogueGuard.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dialogues.Update();
+            }
+
             TestWorld.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {

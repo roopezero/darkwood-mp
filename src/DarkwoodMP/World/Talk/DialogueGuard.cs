@@ -2,7 +2,7 @@ using System;
 using HarmonyLib;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Talk
 {
     /// <summary>
     /// Keeps a dialogue (and a trade) closable when its NPC goes away while it
@@ -27,24 +27,29 @@ namespace DarkwoodMP.World
     /// - A dialogue whose NPC is gone and that hasn't closed in StuckAfter
     ///   seconds is closed by force.
     /// </summary>
-    public static class DialogueGuard
+    internal sealed class DialogueGuard
     {
         /// <summary>
-        /// Seconds a dialogue may stay open without a live NPC before it's
-        /// closed by force.
+        /// Since when the open dialogue's NPC has been gone, and switched off.
         /// </summary>
-        private const float StuckAfter = 4f;
-        private static float _goneSince = -1f;
-        private static float _offSince = -1f;
+        private DialogueWatch _watch;
         /// <summary>
         /// The trader's own inventory window (parented to the UI, not to him,
         /// so it outlives him).
         /// </summary>
-        private static GameObject _shopUI;
+        private GameObject _shopUI;
+
+        private readonly CoopSession _coop;
 
         private static readonly Action<DialogueWindow> TweenClose =
             AccessTools.MethodDelegate<Action<DialogueWindow>>(
                 AccessTools.Method(typeof(DialogueWindow), "onTweenClose"));
+
+        /// <summary>For one session (CoopSession.Dialogues).</summary>
+        public DialogueGuard(CoopSession coop)
+        {
+            _coop = coop;
+        }
 
         private static DialogueWindow Window
         {
@@ -60,12 +65,74 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// DialogueWindow.openTrade's postfix: keep the trader's window.
+        /// </summary>
+        internal static void AfterOpenTrade(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dialogues.OpenedTrade(w);
+            }
+        }
+
+        /// <summary>
+        /// DialogueWindow.closeTrade's prefix (the trade window's close
+        /// button and Escape): closeTrade throws without the trader.
+        /// </summary>
+        internal static bool BeforeCloseTrade(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunCloseTrade(w);
+        }
+
+        /// <summary>
+        /// The prefix of DialogueWindow.close, which does nothing once the
+        /// NPC is destroyed, and of escPress (a line being written,
+        /// onInstantClick, and the other menus use the NPC too).
+        /// </summary>
+        internal static bool BeforeClose(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunClose(w);
+        }
+
+        /// <summary>
+        /// DialogueWindow.finishedElement's prefix. A line still being
+        /// written (WritingText.Update) when the dialogue closes calls it on
+        /// the closed window, which has no board elements and no dialogue
+        /// left and throws on currentDialogue.name. That only happens when a
+        /// dialogue is closed while it writes, as the mod does (a refused
+        /// talk, the host's morning ending, a gone NPC): skip it then.
+        /// </summary>
+        internal static bool BeforeFinishedLine(DialogueWindow w)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Dialogues.RunFinishedLine(w);
+        }
+
+        /// <summary>
         /// The window's NPC was destroyed (Unity's null, not a cleared field).
         /// </summary>
         internal static bool NpcDestroyed(DialogueWindow w) =>
             w != null && !ReferenceEquals(w.npc, null) && w.npc == null;
 
-        internal static void OpenedTrade(DialogueWindow w)
+        private void OpenedTrade(DialogueWindow w)
         {
             Inventory inv = null;
             if (w != null && w.npc != null)
@@ -86,86 +153,82 @@ namespace DarkwoodMP.World
         /// <summary>
         /// Every frame: close a dialogue whose NPC is gone or switched off.
         /// </summary>
-        public static void Update()
+        public void Update()
+        {
+            var w = Window;
+            DialogueTick tick = DialogueRules.Watch(FactsOf(w), _watch);
+            _watch = tick.Watch;
+            switch (tick.Action)
+            {
+                case DialogueAction.ForceDestroyed:
+                    ForceClose(w, "destroyed");
+                    break;
+                case DialogueAction.ForceGone:
+                    ForceClose(
+                        w, "gone for " + DialogueRules.StuckAfter + " s");
+                    break;
+                case DialogueAction.Close:
+                    // tried; tried again in a second if it didn't close
+                    Plugin.Log.LogInfo(
+                        $"[world] {w.npc.name} was switched off during our "
+                            + "dialogue: closing it");
+                    Close(w);
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// The open dialogue and its NPC, this frame. w may be null.
+        /// </summary>
+        private DialogueFacts FactsOf(DialogueWindow w)
         {
             var p = Player.Instance;
-            var w = Window;
             if (p == null || w == null || !p.inDialogue)
             {
-                _goneSince = _offSince = -1f;
-                return;
+                return default;
             }
 
-            float now = Time.unscaledTime;
             // destroyed, or cleared by a close that is on its way
             bool gone = w.npc == null;
-            bool off = !gone && !w.npc.gameObject.activeInHierarchy
-                && Hideouts.Together;
+            bool active = false;
+            bool together = false;
             if (!gone)
             {
-                _goneSince = -1f;
-            }
-            else if (_goneSince < 0f)
-            {
-                _goneSince = now;
+                active = w.npc.gameObject.activeInHierarchy;
+                together = Hideouts.Together;
             }
 
-            if (!off)
+            return new DialogueFacts
             {
-                _offSince = -1f;
-            }
-            else if (_offSince < 0f)
-            {
-                _offSince = now;
-            }
-
-            if (NpcDestroyed(w) && !w.tweening)
-            {
-                ForceClose(w, "destroyed");
-                return;
-            }
-
-            if (gone && now - _goneSince > StuckAfter)
-            {
-                ForceClose(w, "gone for " + StuckAfter + " s");
-                return;
-            }
-
-            if (off && !w.tweening && now - _offSince > 1f)
-            {
-                // tried; try again in a second if it didn't close
-                _offSince = now;
-                Plugin.Log.LogInfo(
-                    $"[world] {w.npc.name} was switched off during our "
-                        + "dialogue: closing it");
-                Close(w);
-            }
+                Open = true,
+                Gone = gone,
+                Destroyed = NpcDestroyed(w),
+                Active = active,
+                Together = together,
+                Tweening = w.tweening,
+                Now = new Seconds(Time.unscaledTime),
+            };
         }
 
         /// <summary>Close the dialogue (and its trade) the game's way, without
         /// the NPC's goodbye line. False: it is still opening or closing
         /// (tweening) and nothing was done.</summary>
-        internal static bool Close(DialogueWindow w)
+        internal bool Close(DialogueWindow w)
         {
-            if (w == null || w.tweening)
-            {
-                return false;
-            }
-
-            if (NpcDestroyed(w))
+            DialogueClose way = DialogueRules.CloseWay(CloseFactsOf(w));
+            if (way == DialogueClose.Force)
             {
                 ForceClose(w, "destroyed");
-                return true;
             }
 
-            if (w.npc == null)
+            if (way != DialogueClose.CloseTrade && way != DialogueClose.Close)
             {
-                return false;
+                return DialogueRules.Closed(way);
             }
 
             try
             {
-                if (Player.Instance != null && Player.Instance.inShop)
+                if (way == DialogueClose.CloseTrade)
                 {
                     w.closeTrade();
                 }
@@ -185,13 +248,33 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// A prefix's answer for a window method that needs the NPC: false
-        /// (skip the game's method) after closing the dialogue if the NPC was
-        /// destroyed. ifTweening: also while the window is opening or closing.
+        /// What closing the dialogue looks at. w may be null.
         /// </summary>
-        internal static bool RunGame(DialogueWindow w, bool ifTweening)
+        private DialogueCloseFacts CloseFactsOf(DialogueWindow w)
         {
-            if (!NpcDestroyed(w) || (!ifTweening && w.tweening))
+            if (w == null)
+            {
+                return default;
+            }
+
+            bool shop = Player.Instance != null && Player.Instance.inShop;
+            return new DialogueCloseFacts
+            {
+                HasWindow = true,
+                Tweening = w.tweening,
+                Destroyed = NpcDestroyed(w),
+                Cleared = w.npc == null,
+                InShop = shop,
+            };
+        }
+
+        /// <summary>
+        /// closeTrade's prefix: false (skip the game's method) after closing
+        /// the dialogue if the NPC was destroyed, even while tweening.
+        /// </summary>
+        private bool RunCloseTrade(DialogueWindow w)
+        {
+            if (DialogueRules.RunsCloseTrade(NpcDestroyed(w)))
             {
                 return true;
             }
@@ -201,9 +284,41 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// close's and escPress's prefix: false (skip the game's method) after
+        /// closing the dialogue if the NPC was destroyed and the window isn't
+        /// opening or closing.
+        /// </summary>
+        private bool RunClose(DialogueWindow w)
+        {
+            if (DialogueRules.RunsClose(NpcDestroyed(w), w.tweening))
+            {
+                return true;
+            }
+
+            ForceClose(w, "destroyed");
+            return false;
+        }
+
+        /// <summary>
+        /// finishedElement's prefix: whether the game's runs.
+        /// </summary>
+        private bool RunFinishedLine(DialogueWindow w)
+        {
+            var line = new LineFacts
+            {
+                Elements = w.currentBoardElements.Count,
+                HasDialogue = w.currentDialogue != null,
+                HasNpc = w.npc != null,
+                Active = w.gameObject.activeSelf,
+            };
+
+            return DialogueRules.RunsFinishedLine(line);
+        }
+
+        /// <summary>
         /// DialogueWindow.closeTrade and close without the NPC (which is gone).
         /// </summary>
-        internal static void ForceClose(DialogueWindow w, string why)
+        internal void ForceClose(DialogueWindow w, string why)
         {
             var p = Player.Instance;
             if (w == null || p == null)
@@ -214,11 +329,12 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(
                 $"[world] the dialogue's NPC is {why}: closing the dialogue "
                     + "without them");
-            _goneSince = _offSince = -1f;
+            _watch = default;
             try
             {
-                if (p.inShop
-                    || (w.trading != null && w.trading.gameObject.activeSelf))
+                bool trading = w.trading != null
+                    && w.trading.gameObject.activeSelf;
+                if (DialogueRules.UndoesTrade(p.inShop, trading))
                 {
                     InventoryController instance =
                         Singleton<InventoryController>.Instance;
@@ -318,60 +434,7 @@ namespace DarkwoodMP.World
                 }
             }, 0.5f, timeScaleDependent: false);
 
-            TalkLock.Closed();
+            _coop.Talk.Closed();
         }
-    }
-
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.openTrade))]
-    static class DialogueGuardOpenTradePatch
-    {
-        static void Postfix(DialogueWindow __instance) =>
-            DialogueGuard.OpenedTrade(__instance);
-    }
-
-    /// <summary>
-    /// The trade window's close button and Escape (escPress): closeTrade throws
-    /// without the trader.
-    /// </summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.closeTrade))]
-    static class DialogueGuardCloseTradePatch
-    {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunGame(__instance, ifTweening: true);
-    }
-
-    /// <summary>close() does nothing once the NPC is destroyed.</summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.close))]
-    static class DialogueGuardClosePatch
-    {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunGame(__instance, ifTweening: false);
-    }
-
-    /// <summary>
-    /// Escape: a line being written (onInstantClick) and the other menus use
-    /// the NPC too.
-    /// </summary>
-    [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.escPress))]
-    static class DialogueGuardEscPatch
-    {
-        static bool Prefix(DialogueWindow __instance) =>
-            DialogueGuard.RunGame(__instance, ifTweening: false);
-    }
-
-    /// <summary>A line still being written (WritingText.Update) when the
-    /// dialogue closes calls finishedElement on the closed window, which has no
-    /// board elements and no dialogue left and throws on currentDialogue.name.
-    /// That only happens when a dialogue is closed while it writes, as the mod
-    /// does (a refused talk, the host's morning ending, a gone NPC): skip it
-    /// then.</summary>
-    [HarmonyPatch(
-        typeof(DialogueWindow), nameof(DialogueWindow.finishedElement))]
-    static class DialogueGuardFinishedElementPatch
-    {
-        static bool Prefix(DialogueWindow __instance) =>
-            __instance.currentBoardElements.Count > 0 ||
-            (__instance.currentDialogue != null && __instance.npc != null
-                && __instance.gameObject.activeSelf);
     }
 }

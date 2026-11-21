@@ -48,6 +48,21 @@ namespace DarkwoodMP
         /// The host's stack size, sent to the clients.
         public readonly StackShare Stacks;
 
+        /// The host's clock, which every client's follows.
+        public readonly TimeSync Time;
+
+        /// Where the NPCs stand: the host sends its own, clients follow.
+        public readonly NpcSync Npcs;
+
+        /// Host: which joiner each recruited follower follows.
+        public readonly NpcFollowers Followers;
+
+        /// One player at a time talks to an NPC.
+        public readonly World.Talk.TalkLock Talk;
+
+        /// Keeps a dialogue closable when its NPC goes away.
+        public readonly World.Talk.DialogueGuard Dialogues;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -64,6 +79,11 @@ namespace DarkwoodMP
             Joiners = new JoinerSaveIds();
             Construction = new Construction(this);
             Stacks = new StackShare(this);
+            Time = new TimeSync(this);
+            Npcs = new NpcSync(this);
+            Followers = new NpcFollowers(this);
+            Talk = new World.Talk.TalkLock(this);
+            Dialogues = new World.Talk.DialogueGuard(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
