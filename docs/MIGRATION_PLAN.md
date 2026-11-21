@@ -569,6 +569,15 @@ Finish with `tools/run-test.sh full`.
       they're the hardest test of `WorldScope`.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
+  - [ ] Part a: `Characters`, `WorldShare`. Done: their bytes (the
+        core's `CharacterLoad`, `CharacterSave`, `SaveOffer`, `NeedSave`,
+        `SaveData`, `JoinWaitMessage`) and every rule called from the shell
+        (`CharacterRules`, `OurCharacterRules`, `GameStateRules`,
+        `JoinGateRules`, `SnapshotRules`, `OfferRules`). Left: their state
+        (`Characters` per session, with the host's kept records on `ModHost`
+        since `SaveManager.Save` writes them also alone; `WorldShare` on
+        `ModHost`), thin patches, the feature folders and the split of
+        `WorldShare` into files of about 600 lines.
 
 Finish with `tools/run-test.sh full`.
 
