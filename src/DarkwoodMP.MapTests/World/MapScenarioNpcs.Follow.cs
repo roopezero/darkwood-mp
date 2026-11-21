@@ -87,7 +87,7 @@ namespace DarkwoodMP.World
             }
 
             r.Info = FollowInfo(c, proxy);
-            if (NpcFollowers.LeaderOf(c) != proxy)
+            if (Coop.Current.Followers.LeaderOf(c) != proxy)
             {
                 r.Fail(
                     $"not recorded as {proxy.OwnerName}'s follower: {r.Info}");

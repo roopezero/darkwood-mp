@@ -44,6 +44,12 @@ namespace DarkwoodMP
         /// The host's clock, which every client's follows.
         public readonly TimeSync Time;
 
+        /// Where the NPCs stand: the host sends its own, clients follow.
+        public readonly NpcSync Npcs;
+
+        /// Host: which joiner each recruited follower follows.
+        public readonly NpcFollowers Followers;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -59,6 +65,8 @@ namespace DarkwoodMP
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
             Time = new TimeSync(this);
+            Npcs = new NpcSync(this);
+            Followers = new NpcFollowers(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

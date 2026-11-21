@@ -181,7 +181,8 @@ namespace DarkwoodMP.Combat
             {
                 // A follower a joiner recruited follows them, not the host's
                 // player (World.NpcFollowers).
-                if (World.NpcFollowers.BeforeSightCheck(c))
+                CoopSession coop = Coop.Current;
+                if (coop != null && coop.Followers.BeforeSightCheck(c))
                 {
                     return;
                 }

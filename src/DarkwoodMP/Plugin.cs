@@ -460,7 +460,6 @@ namespace DarkwoodMP
             DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
             new TraderSync(_host.Session);
-            new NpcSync(_host.Session);
             _events = new WorldEvents(_host.Session);
             new ThrowSync(_host.Session);
             new FireSync(_host.Session);
@@ -2341,10 +2340,10 @@ namespace DarkwoodMP
                 }
             }
 
-            NpcSync npcs = NpcSync.Instance;
-            if (npcs != null)
+            coop = Coop.Current;
+            if (coop != null)
             {
-                npcs.Update();
+                coop.Npcs.Update();
             }
 
             ModProfiler.Mark("npcs");

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Npcs;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -25,62 +26,52 @@ namespace DarkwoodMP.World
     /// has that part on doesn't let its copy walk off by itself (a follower
     /// after the client's own player, say).
     /// </summary>
-    public sealed class NpcSync
+    internal sealed class NpcSync
     {
-        public static NpcSync Instance { get; private set; }
         private readonly Session _session;
 
         /// <summary>Host: where each NPC was when last sent.</summary>
-        private readonly Dictionary<int, Vector2> _sent =
-            new Dictionary<int, Vector2>();
+        private readonly Dictionary<int, Vec2> _sent =
+            new Dictionary<int, Vec2>();
         /// <summary>Client: where the host has each NPC.</summary>
-        private readonly Dictionary<int, Vector2> _target =
-            new Dictionary<int, Vector2>();
-        private float _nextMoved, _nextAll;
+        private readonly Dictionary<int, Vec2> _target =
+            new Dictionary<int, Vec2>();
+        private NpcTimers _timers;
         /// <summary>
         /// Host: the NPCs with a shared save id, active or not (found again
         /// every AllEvery seconds).
         /// </summary>
         private readonly List<(int id, NPC npc)> _npcs = new List<(int, NPC)>();
 
-        private const float Moved = 30f;        // sent when it moved this far
-        private const float MovedEvery = 0.5f, AllEvery = 4f;
-        // a client's copy this far off is put there at once
-        private const float Snap = 600f;
-        // and this close is left alone
-        private const float Close = 15f;
-
-        public NpcSync(Session session)
+        public NpcSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.NpcPos, OnPos);
-            session.OnSessionEnded += () =>
-            {
-                _sent.Clear();
-                _target.Clear();
-                _npcs.Clear();
-            };
+            _session = coop.Net;
+            coop.Handle(MsgType.NpcPos, OnPos);
         }
 
-        private static bool Movable(NPC npc, out Character c)
+        /// <summary>
+        /// Whether an NPC may be placed, and its Character (null with none).
+        /// </summary>
+        private static NpcFacts FactsOf(NPC npc, out Character c)
         {
+            c = null;
             if (npc != null)
             {
                 c = npc.GetComponent<Character>();
             }
-            else
+
+            if (c == null)
             {
-                c = null;
+                return new NpcFacts();
             }
 
-            if (c == null || !c.alive)
+            NetEnemies enemies = NetEnemies.Instance;
+            return new NpcFacts
             {
-                return false;
-            }
-
-            return NetEnemies.Instance == null
-                || !NetEnemies.Instance.NetIdOf(c, out _);
+                HasCharacter = true,
+                Alive = c.alive,
+                RunByEnemies = enemies != null && enemies.NetIdOf(c, out _),
+            };
         }
 
         public void Update()
@@ -102,38 +93,48 @@ namespace DarkwoodMP.World
 
         private void HostUpdate()
         {
-            if (_session.Peers.Count == 0 || Time.unscaledTime < _nextMoved)
+            NpcTick tick = NpcPlaceRules.Tick(
+                _session.Peers.Count,
+                new Seconds(Time.unscaledTime),
+                _timers);
+            _timers = tick.Timers;
+            if (!tick.Sends)
             {
                 return;
             }
 
-            _nextMoved = Time.unscaledTime + MovedEvery;
-            bool all = Time.unscaledTime >= _nextAll;
+            bool all = tick.All;
             if (all)
             {
-                _nextAll = Time.unscaledTime + AllEvery;
                 FindNpcs();
             }
 
-            var list = new List<(int id, Vector2 p)>();
+            var list = new List<NpcPlace>();
             foreach (var (id, npc) in _npcs)
             {
-                if (!Movable(npc, out var c))
+                if (!NpcPlaceRules.Movable(FactsOf(npc, out var c)))
                 {
                     continue;
                 }
 
                 var pos = c.transform.position;
-                var p = new Vector2(pos.x, pos.z);
-                bool moved = !_sent.TryGetValue(id, out var was)
-                    || (p - was).sqrMagnitude > Moved * Moved;
-                if (!moved && !all)
+                var at = new Vec2(pos.x, pos.z);
+                bool sent = _sent.TryGetValue(id, out Vec2 was);
+                var facts = new NpcSendFacts
+                {
+                    All = all,
+                    Sent = sent,
+                    Was = was,
+                    At = at,
+                };
+
+                if (!NpcPlaceRules.Sends(facts))
                 {
                     continue;
                 }
 
-                _sent[id] = p;
-                list.Add((id, p));
+                _sent[id] = at;
+                list.Add(new NpcPlace { Id = id, At = at });
             }
 
             if (list.Count == 0)
@@ -141,18 +142,11 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            for (int start = 0; start < list.Count; start += 200)
+            int start = 0;
+            while (start < list.Count)
             {
-                int n = Mathf.Min(200, list.Count - start);
                 var w = _session.Begin(MsgType.NpcPos);
-                w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++)
-                {
-                    w.W.Write(list[i].id);
-                    w.W.Write(list[i].p.x);
-                    w.W.Write(list[i].p.y);
-                }
-
+                start += NpcPosMessage.Write(w, list, start);
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
         }
@@ -173,7 +167,7 @@ namespace DarkwoodMP.World
 
             foreach (var kv in sm.uniqueIdDict)
             {
-                if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit
+                if (!NpcPlaceRules.Shared(kv.Key, SharedIds.SendLimit)
                     || kv.Value == null)
                 {
                     continue;
@@ -189,17 +183,15 @@ namespace DarkwoodMP.World
 
         private void OnPos(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld)
+            bool fromHost = from == _session.HostId;
+            if (!NpcPlaceRules.TakesPos(fromHost, WorldShare.InWorld))
             {
                 return;
             }
 
-            int n = r.R.ReadUInt16();
-            for (int i = 0; i < n; i++)
+            foreach (NpcPlace place in NpcPosMessage.Read(r))
             {
-                int id = r.R.ReadInt32();
-                float x = r.R.ReadSingle(), z = r.R.ReadSingle();
-                _target[id] = new Vector2(x, z);
+                _target[place.Id] = place.At;
             }
         }
 
@@ -242,6 +234,40 @@ namespace DarkwoodMP.World
             }
         }
 
+        /// <summary>
+        /// Client: our copy of an NPC the host placed at target, and its
+        /// Character (null when it can't be moved). Time.deltaTime is
+        /// scaled, so copies don't slide while the game is paused.
+        /// </summary>
+        private static NpcFollowFacts FollowFactsOf(
+            SaveManager sm,
+            KeyValuePair<int, Vec2> target,
+            out Character c)
+        {
+            c = null;
+            if (!sm.uniqueIdDict.TryGetValue(target.Key, out var so)
+                || so == null)
+            {
+                return new NpcFollowFacts();
+            }
+
+            var npc = so.GetComponent<NPC>();
+            if (!NpcPlaceRules.Movable(FactsOf(npc, out c)))
+            {
+                return new NpcFollowFacts { HasObject = true };
+            }
+
+            var pos = c.transform.position;
+            return new NpcFollowFacts
+            {
+                HasObject = true,
+                Movable = true,
+                At = new Vec3(pos.x, pos.y, pos.z),
+                Target = target.Value,
+                Delta = new Seconds(Time.deltaTime),
+            };
+        }
+
         private void ClientUpdate()
         {
             if (_target.Count == 0)
@@ -255,47 +281,35 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            float dt = Time.deltaTime;
             foreach (var kv in _target)
             {
-                if (!sm.uniqueIdDict.TryGetValue(kv.Key, out var so)
-                    || so == null)
-                {
-                    continue;
-                }
-
-                var npc = so.GetComponent<NPC>();
-                if (!Movable(npc, out var c))
+                NpcFollowFacts facts = FollowFactsOf(sm, kv, out var c);
+                NpcStep step = NpcPlaceRules.Follow(facts);
+                if (step.Move == NpcMove.Forget)
                 {
                     _gone.Add(kv.Key);
                     continue;
                 }
 
-                var t = c.transform;
-                var pos = t.position;
-                var to = new Vector3(kv.Value.x, pos.y, kv.Value.y);
-                float d = StateDump.Flat(to - pos);
-                if (d <= Close)
+                if (step.Move != NpcMove.Snap && step.Move != NpcMove.Step)
                 {
                     continue;
                 }
 
-                if (d > Snap)
+                var to = new Vector3(step.To.X, step.To.Y, step.To.Z);
+                c.transform.position = to;
+                if (step.Move == NpcMove.Step)
                 {
-                    t.position = to;
-                    Recull(c.gameObject, to);
-                    if (WorldActions.Debug)
-                    {
-                        Plugin.Log.LogInfo(
-                            $"[world] {npc.name} is at the host's "
-                                + $"{to.x:0},{to.z:0} ({d:0} away)");
-                    }
-
                     continue;
                 }
 
-                t.position =
-                    Vector3.MoveTowards(pos, to, Mathf.Max(250f, d * 4f) * dt);
+                Recull(c.gameObject, to);
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo(
+                        $"[world] {c.name} is at the host's "
+                            + $"{to.x:0},{to.z:0} ({step.Distance:0} away)");
+                }
             }
 
             foreach (var id in _gone)
