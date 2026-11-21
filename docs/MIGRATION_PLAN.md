@@ -493,6 +493,16 @@ Finish with `tools/run-test.sh full`.
         the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
   - [x] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
         Done: `EnemyMotion` is `CoopSession.Motion` on
+        is `ModHost.Characters`. Its messages' bytes are the core's
+        (`EnemySpawnMessage`, `EnemyStateMessage`, `EnemyMarkMessage` for
+        EnemyArmor and EnemyDespawn, `EnemySoundMessage`,
+        `EnemyHitMessage`, `EnemyBloodMessage`), and the shell calls
+        `EnemyTrackRules`, `EnemyRelayRules`, `EnemyLoopRules` (but
+        `Stopped`), `EnemyHitRules`, `HitRate` and `CopyRules`. Left:
+        calling `CopyStateRules` and the rest of `FreezeRules`, and
+        thinning `FreezePatches` and `EnemySoundPatches`.
+  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
         the core's `MotionClock`; the hostile NPCs' state is
         `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
         `NpcHitMessage` and `NpcAttackMessage`; the night spawns are
