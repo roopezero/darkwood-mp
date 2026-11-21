@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Dragging;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -176,10 +175,32 @@ namespace DarkwoodMP.World
             coop.Hook(ReleaseShown);
         }
 
-        /// The game's drag of a thing someone else drags was stopped.
-        internal void NoteBlocked()
+        /// <summary>
+        /// Item.startDragging, before the game starts our player's drag: not
+        /// of something another player is dragging (as the host decided,
+        /// DragOwner). Then the player is told who is moving it.
+        /// </summary>
+        public bool MayStart(Item item)
         {
+            if (!Coop.Guards.Sharing || item == null)
+            {
+                return true;
+            }
+
+            string who = OtherOwner(ObjRef.Of(item.gameObject));
+            if (who == null)
+            {
+                return true;
+            }
+
+            Player instance = Player.Instance;
+            if (instance != null)
+            {
+                instance.displayMessage(MovingText(who));
+            }
+
             Blocked++;
+            return false;
         }
 
         private void ReleaseShown()
@@ -2081,41 +2102,6 @@ namespace DarkwoodMP.World
                 // where it was put: not to drift off by itself in this game
                 m.Body.Sleep();
             }
-        }
-    }
-
-    /// <summary>
-    /// The player can't take hold of something another player is dragging (as
-    /// the host decided, DragOwner): the game's drag doesn't start, and the
-    /// player is told who is moving it.
-    /// </summary>
-    [HarmonyPatch(typeof(Item), nameof(Item.startDragging))]
-    internal static class DragStartPatch
-    {
-        private static bool Prefix(Item __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null || !Coop.Guards.Sharing || __instance == null)
-            {
-                return true;
-            }
-
-            var d = coop.Drags;
-
-            string who = d.OtherOwner(ObjRef.Of(__instance.gameObject));
-            if (who == null)
-            {
-                return true;
-            }
-
-            Player instance = Player.Instance;
-            if (instance != null)
-            {
-                instance.displayMessage(DragSync.MovingText(who));
-            }
-
-            d.NoteBlocked();
-            return false;
         }
     }
 }
