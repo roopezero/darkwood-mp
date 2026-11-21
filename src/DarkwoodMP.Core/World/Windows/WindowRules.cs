@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Windows
 {
-    /// The host's check of what a client did to a window (the window part
-    /// of the plugin's WorldActions.Allowed), whether a window call is
+    /// The host's check of what a client did to a window (the plugin's
+    /// Windows.Allowed), whether a window call is
     /// sent, and what a client's window is set back to when the host
     /// refused it. The first check that fails wins: is the window there,
     /// is the player in reach, then the window's state.

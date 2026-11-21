@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DarkwoodMP.World.Doors;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -211,7 +212,8 @@ namespace DarkwoodMP.World
                 {
                     string name = d.name;
                     string state;
-                    if (DoorPush.Watches(d))
+                    var coop = Coop.Current;
+                    if (coop != null && coop.Pushes.Watches(d))
                     {
                         state = "watched";
                     }

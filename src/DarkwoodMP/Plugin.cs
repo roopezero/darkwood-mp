@@ -454,7 +454,6 @@ namespace DarkwoodMP
             _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
-            DoorPush.Register(_host.Session);
             _events = new WorldEvents(_host.Session);
             new SlotShare(_host.Session);
             ScriptedEvents.Register(_host.Session);
@@ -896,11 +895,12 @@ namespace DarkwoodMP
             if (session != null)
             {
                 session.Ui.Enabled = true;
+                session.Pushes.TestTouch = null;
             }
 
             TrapFiredPatch.TestRefuse = null;
             WorldShare.TestHoldSecs = 0f;
-            DoorPush.TestTouch = null;
+
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
             EnemyMotion.Stats.On = false;
@@ -2283,7 +2283,12 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("drag");
-            DoorPush.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Pushes.Update();
+            }
+
             ModProfiler.Mark("door push");
             coop = Coop.Current;
             if (coop != null)

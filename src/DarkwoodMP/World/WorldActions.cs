@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Doors;
+using DarkwoodMP.World.Windows;
 using HarmonyLib;
 using UnityEngine;
 
@@ -417,6 +419,15 @@ namespace DarkwoodMP.World
             byte f = r.R.ReadByte();
             string str = r.ReadStr();
             bool f1 = (f & 1) != 0, f2 = (f & 2) != 0;
+            var values = new ActionValues
+            {
+                X = x,
+                Y = y,
+                F1 = f1,
+                F2 = f2,
+                Str = str,
+            };
+
             // A joiner's action (to the host), or one the host says a player
             // did: that player sets off its triggers.
             bool byPlayer = s.IsHost || (f & 4) != 0;
@@ -715,74 +726,14 @@ namespace DarkwoodMP.World
                 }
                 else if (a < Action.WindowBarricade)
                 {
-                    var door = Got<Door>(a, obj);
-                    if (door == null)
+                    if (!Coop.Current.Doors.Apply(a, obj, values))
                     {
                         return;
-                    }
-
-                    switch (a)
-                    {
-                        case Action.DoorOpen:
-                            door.open(
-                                new Vector3(x, door.transform.position.y, y),
-                                null, 0f);
-                            break;
-                        case Action.DoorClose:
-                            door.close(null);
-                            break;
-                        // As the hammer's third stroke: Door.barricade only
-                        // nails it up when barricadeState reaches 3 (and
-                        // rebuilds a broken door instead).
-                        case Action.DoorBarricade:
-                            door.barricadeState = 2;
-                            door.barricade(f1);
-                            break;
-                        case Action.DoorDestroyBarricade:
-                            door.destroyBarricade(f1);
-                            break;
-                        case Action.DoorDestroy:
-                            door.destroyDoor(f1);
-                            break;
-                        case Action.DoorHit:
-                            door.getHit((int)x, null, f1, f2);
-                            break;
-                        case Action.DoorLock:
-                            door.lockMe(str);
-                            break;
-                        case Action.DoorUnlock:
-                            door.unlock();
-                            break;
-                        case Action.DoorUndestroy:
-                            door.unDestroy();
-                            break;
-                        case Action.DoorUnblock:
-                            door.unblock();
-                            break;
                     }
                 }
-                else
+                else if (!Coop.Current.Windows.Apply(a, obj, values))
                 {
-                    var window = Got<Window>(a, obj);
-                    if (window == null)
-                    {
-                        return;
-                    }
-
-                    switch (a)
-                    {
-                        case Action.WindowBarricade:
-                            // as for a door
-                            window.barricadeState = 2;
-                            window.barricade((int)x, f1);
-                            break;
-                        case Action.WindowDestroyBarricade:
-                            window.destroyBarricade(f1);
-                            break;
-                        case Action.WindowHit:
-                            window.getHit((int)x, null, f1);
-                            break;
-                    }
+                    return;
                 }
             }
             catch (Exception e)
@@ -813,7 +764,7 @@ namespace DarkwoodMP.World
         /// Resolve the thing an action names, logging it with
         /// --dwmp-debug-world.
         /// </summary>
-        private static T Got<T>(Action a, ObjRef obj) where T : Component =>
+        internal static T Got<T>(Action a, ObjRef obj) where T : Component =>
             Logged(a, obj, ObjRef.Resolve<T>(obj));
 
         private static T Logged<T>(Action a, ObjRef obj, T found)
@@ -894,7 +845,7 @@ namespace DarkwoodMP.World
         /// part (ScriptedEvents.HostSteps) and never run in a client's game for
         /// a place the host has. A player has no way to.
         /// </summary>
-        private const string StoryOnly =
+        internal const string StoryOnly =
             "only the story does that, in the host's game";
 
         /// <summary>
@@ -1198,133 +1149,10 @@ namespace DarkwoodMP.World
 
             if (a < Action.WindowBarricade)
             {
-                var door = ObjRef.Resolve<Door>(obj);
-                if (door == null)
-                {
-                    Coop.Current.Authority.Refuse("no such door here");
-                    return false;
-                }
-
-                // A hit can come from a shot or our flamethrower's flame
-                // (BreakSync.OwnFlame), which reach further than a hand.
-                float doorReach;
-                if (a == Action.DoorHit)
-                {
-                    doorReach = ShotReach;
-                }
-                else
-                {
-                    doorReach = Reach;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    door.transform.position, doorReach, door.name))
-                {
-                    return false;
-                }
-
-                var locked = door.GetComponent<Locked>();
-                bool isLocked = locked != null && locked.locked;
-                switch (a)
-                {
-                    case Action.DoorOpen when door.destroyed:
-                        Coop.Current.Authority.Refuse("the door is broken");
-                        return false;
-                    case Action.DoorOpen when isLocked:
-                        Coop.Current.Authority.Refuse("the door is locked");
-                        return false;
-                    case Action.DoorOpen when door.blocked:
-                        Coop.Current.Authority.Refuse("the door is blocked");
-                        return false;
-                    // On a broken door the hammer's strokes rebuild it
-                    // (Door.setBarricadeState calls unDestroy): that's a
-                    // repair, allowed.
-                    case Action.DoorBarricade when door.barricaded
-                        && !door.destroyed:
-                        Coop.Current.Authority.Refuse(
-                            "the door is already barricaded");
-                        return false;
-                    case Action.DoorDestroyBarricade when !door.barricaded:
-                        Coop.Current.Authority.Refuse(
-                            "the door isn't barricaded");
-                        return false;
-                    case Action.DoorHit when door.destroyed:
-                        Coop.Current.Authority.Refuse(
-                            "the door is already broken");
-                        return false;
-                    case Action.DoorUnlock when locked == null:
-                        Coop.Current.Authority.Refuse(
-                            "the door has no lock to open");
-                        return false;
-                    case Action.DoorUnlock when !locked.locked:
-                        Coop.Current.Authority.Refuse("the door isn't locked");
-                        return false;
-                    case Action.DoorUnlock when x == 0f:
-                        Coop.Current.Authority.Refuse(StoryOnly);
-                        return false;
-                    case Action.DoorLock:
-                        Coop.Current.Authority.Refuse(StoryOnly);
-                        return false;
-                    case Action.DoorUnblock:
-                        Coop.Current.Authority.Refuse(StoryOnly);
-                        return false;
-                    case Action.DoorUnlock when x == 1f && !HasKey(locked):
-                        Coop.Current.Authority.Refuse(
-                            $"nobody has the key ({locked.keyType})");
-                        return false;
-                    case Action.DoorHit when x > 1000f:
-                        Coop.Current.Authority.Refuse(
-                            $"a hit of {x:0} is more than any weapon does");
-                        return false;
-                }
-
-                return true;
+                return Coop.Current.Doors.Allowed(a, obj, x);
             }
 
-            var window = ObjRef.Resolve<Window>(obj);
-            if (window == null)
-            {
-                Coop.Current.Authority.Refuse("no such window here");
-                return false;
-            }
-
-            float windowReach;
-            if (a == Action.WindowHit)
-            {
-                windowReach = ShotReach;
-            }
-            else
-            {
-                windowReach = Reach;
-            }
-
-            if (!Coop.Current.Authority.InReach(
-                window.transform.position, windowReach, window.name))
-            {
-                return false;
-            }
-
-            if (a == Action.WindowBarricade && window.barricaded)
-            {
-                Coop.Current.Authority.Refuse(
-                    "the window is already barricaded");
-                return false;
-            }
-
-            if (a == Action.WindowDestroyBarricade && !window.barricaded)
-            {
-                Coop.Current.Authority.Refuse("the window isn't barricaded");
-                return false;
-            }
-
-            if (a == Action.WindowHit && x > 1000f)
-            {
-                Coop.Current.Authority.Refuse(
-                    $"a hit of {x:0} is more than any weapon does");
-                return false;
-            }
-
-            return true;
+            return Coop.Current.Windows.Allowed(a, obj, x);
         }
 
         /// <summary>
@@ -1465,60 +1293,13 @@ namespace DarkwoodMP.World
             }
             else if (door != null)
             {
-                var l = door.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Door);
-                int flags = 0;
-                if (door.opened)
-                {
-                    flags |= 1;
-                }
-
-                if (door.barricaded)
-                {
-                    flags |= 2;
-                }
-
-                if (door.destroyed)
-                {
-                    flags |= 4;
-                }
-
-                if (l != null && l.locked)
-                {
-                    flags |= 8;
-                }
-
-                if (door.blocked)
-                {
-                    flags |= 16;
-                }
-
-                w.W.Write((byte)flags);
-                w.W.Write(door.health);
-                w.W.Write(door.barricadeHealth);
-                string s = "";
-                if (l != null)
-                {
-                    s = l.keyType;
-                    if (s == null)
-                    {
-                        s = "";
-                    }
-                }
-
-                w.WriteStr(s);
+                DoorObjState.Write(w, Coop.Current.Doors.HostOf(door));
             }
             else if (window != null)
             {
                 w.W.Write((byte)Kind.Window);
-                int barricadedFlag = 0;
-                if (window.barricaded)
-                {
-                    barricadedFlag = 1;
-                }
-
-                w.W.Write((byte)barricadedFlag);
-                w.W.Write(window.barricadeHealth);
+                WindowObjState.Write(w, Coop.Current.Windows.HostOf(window));
             }
             else if (trap != null)
             {
@@ -1652,103 +1433,35 @@ namespace DarkwoodMP.World
                         break;
                     case Kind.Door:
                         {
-                            byte f = r.R.ReadByte();
-                            int health = r.R.ReadInt32(),
-                                barricade = r.R.ReadInt32();
-                            string key = r.ReadStr();
+                            var host = DoorObjState.Read(r);
                             Door door = null;
                             if (go != null)
                             {
                                 door = go.GetComponent<Door>();
                             }
 
-                            if (door == null)
+                            if (door != null)
                             {
-                                break;
+                                Coop.Current.Doors.RollBack(door, host);
                             }
 
-                            bool open = (f & 1) != 0,
-                                barricaded = (f & 2) != 0,
-                                broken = (f & 4) != 0,
-                                locked = (f & 8) != 0;
-                            // only the story sets or clears it (Door.unblock),
-                            // and only the host runs that
-                            door.blocked = (f & 16) != 0;
-                            if (broken && !door.destroyed)
-                            {
-                                // silently: a rollback, not the door breaking
-                                // again
-                                door.destroyDoor(true);
-                            }
-                            else if (!broken && door.destroyed)
-                            {
-                                door.unDestroy();
-                            }
-
-                            var l = door.GetComponent<Locked>();
-                            if (locked && (l == null || !l.locked))
-                            {
-                                door.lockMe(key);
-                            }
-                            else if (!locked && l != null && l.locked)
-                            {
-                                door.unlock();
-                            }
-
-                            // as in OnAction
-                            if (barricaded && !door.barricaded)
-                            {
-                                door.barricadeState = 2;
-                                door.barricade(false);
-                            }
-                            else if (!barricaded && door.barricaded)
-                            {
-                                door.destroyBarricade(false);
-                            }
-
-                            if (open && !door.opened)
-                            {
-                                door.open(
-                                    door.transform.position
-                                        + door.transform.right,
-                                    null, 0f);
-                            }
-                            else if (!open && door.opened)
-                            {
-                                door.close(null);
-                            }
-
-                            door.health = health;
-                            door.barricadeHealth = barricade;
                             break;
                         }
 
                     case Kind.Window:
                         {
-                            bool barricaded = (r.R.ReadByte() & 1) != 0;
-                            int barricade = r.R.ReadInt32();
+                            var host = WindowObjState.Read(r);
                             Window window = null;
                             if (go != null)
                             {
                                 window = go.GetComponent<Window>();
                             }
 
-                            if (window == null)
+                            if (window != null)
                             {
-                                break;
+                                Coop.Current.Windows.RollBack(window, host);
                             }
 
-                            if (barricaded && !window.barricaded)
-                            {
-                                window.barricadeState = 2;
-                                window.barricade(barricade, false);
-                            }
-                            else if (!barricaded && window.barricaded)
-                            {
-                                window.destroyBarricade(false);
-                            }
-
-                            window.barricadeHealth = barricade;
                             break;
                         }
 
@@ -1884,40 +1597,6 @@ namespace DarkwoodMP.World
                 ScriptedEvents.LeftToActor = leftWas;
             }
         }
-
-        // ---- what changed ---------------------------------------------------
-
-        public struct DoorState
-        {
-            public bool Opened, Barricaded, Destroyed;
-            public int Health, BarricadeHealth;
-            public static DoorState Of(Door d) => new DoorState
-            {
-                Opened = d.opened,
-                Barricaded = d.barricaded,
-                Destroyed = d.destroyed,
-                Health = d.health,
-                BarricadeHealth = d.barricadeHealth
-            };
-
-            public bool Same(DoorState o) => Opened == o.Opened
-                && Barricaded == o.Barricaded && Destroyed == o.Destroyed
-                && Health == o.Health && BarricadeHealth == o.BarricadeHealth;
-        }
-
-        public struct WindowState
-        {
-            public bool Barricaded;
-            public int BarricadeHealth;
-            public static WindowState Of(Window w) => new WindowState
-            {
-                Barricaded = w.barricaded,
-                BarricadeHealth = w.barricadeHealth
-            };
-
-            public bool Same(WindowState o) => Barricaded == o.Barricaded
-                && BarricadeHealth == o.BarricadeHealth;
-        }
     }
 
     // ---- the calls ----------------------------------------------------------
@@ -1964,375 +1643,6 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning(
                         $"Couldn't send a hammer stroke's action: {e.Message}");
                 }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.open))]
-    static class DoorOpenPatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(
-            Door __instance, Vector3 openerPosition, Transform openerTransform,
-            WorldActions.DoorState __state)
-        {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                return;
-            }
-
-            Vector3 at;
-            if (openerTransform != null)
-            {
-                at = openerTransform.position;
-            }
-            else
-            {
-                at = openerPosition;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.DoorOpen, __instance.gameObject, at.x,
-                at.z);
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.close))]
-    static class DoorClosePatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(Door __instance, WorldActions.DoorState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorClose, __instance.gameObject);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.barricade))]
-    static class DoorBarricadePatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(
-            Door __instance, bool byPlayer, WorldActions.DoorState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorBarricade, __instance.gameObject,
-                    f1: byPlayer);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.destroyBarricade))]
-    static class DoorDestroyBarricadePatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(
-            Door __instance, bool silent, WorldActions.DoorState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorDestroyBarricade,
-                    __instance.gameObject, f1: silent);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.destroyDoor))]
-    static class DoorDestroyPatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(
-            Door __instance, bool silently, WorldActions.DoorState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorDestroy, __instance.gameObject,
-                    f1: silently);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.unDestroy))]
-    static class DoorUndestroyPatch
-    {
-        static void Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-        }
-
-        static void Postfix(Door __instance, WorldActions.DoorState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorUndestroy, __instance.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Damage to a door or its barricade. Only the hit is sent (not what it
-    /// causes): the other games make the same call, which takes off the same
-    /// health and breaks the barricade or door when it runs out, as it does
-    /// here.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Door), nameof(Door.getHit),
-        new[] { typeof(int), typeof(Transform), typeof(bool), typeof(bool) })]
-    static class DoorHitPatch
-    {
-        /// <summary>
-        /// On a client, a hit the host makes too (an explosion, fire) isn't
-        /// made here: the host's DoorHit is.
-        /// </summary>
-        static bool Prefix(Door __instance, out WorldActions.DoorState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.DoorState.Of(__instance);
-            return !BreakSync.HostsHit();
-        }
-
-        static void Postfix(
-            Door __instance, int damage, bool normalHit, bool canDamageMetal,
-            WorldActions.DoorState __state)
-        {
-            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
-                || __state.Same(WorldActions.DoorState.Of(__instance)))
-            {
-                return;
-            }
-
-            WorldActions.Send(
-                WorldActions.Action.DoorHit, __instance.gameObject, damage,
-                f1: normalHit, f2: canDamageMetal,
-                byPlayerKnown: BreakSync.OwnFlame());
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.lockMe))]
-    static class DoorLockPatch
-    {
-        static void Prefix() => Coop.Guards.Depth++;
-        static void Postfix(Door __instance, string keyType)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorLock, __instance.gameObject,
-                    str: keyType);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.unlock))]
-    static class DoorUnlockPatch
-    {
-        static void Prefix() => Coop.Guards.Depth++;
-        static void Postfix(Door __instance)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorUnlock, __instance.gameObject);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The story clearing a door's "blocked" (GameEvent modifyDoor unblock),
-    /// which a player can't open through until then (Player.itemDefaultAction
-    /// says "blocked"). That step is the host's (ScriptedEvents.HostSteps), so
-    /// the host sends it to everyone; without this the joiners' copies stayed
-    /// blocked for good (Piotrek's door). Door.unblock only sets a field, so
-    /// Mono inlines it into its caller and a patch on it never runs (tried: the
-    /// host unblocked, nothing was sent). The step's coroutine (GameEvent.fire,
-    /// the only caller) calls DoorUnblockPatch.Unblock instead, by a
-    /// transpiler.
-    /// </summary>
-    [HarmonyPatch]
-    static class DoorUnblockPatch
-    {
-        static IEnumerable<MethodBase> TargetMethods()
-        {
-            foreach (var t in typeof(GameEvent).GetNestedTypes(
-                BindingFlags.NonPublic | BindingFlags.Public))
-            {
-                if (t.Name.StartsWith("<fire>")
-                    && typeof(System.Collections.IEnumerator).IsAssignableFrom(
-                        t))
-                {
-                    var m = AccessTools.Method(t, "MoveNext");
-                    if (m != null)
-                    {
-                        yield return m;
-                    }
-                }
-            }
-        }
-
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions)
-        {
-            var unblock =
-                AccessTools.Method(typeof(Door), nameof(Door.unblock));
-            var ours =
-                AccessTools.Method(typeof(DoorUnblockPatch), nameof(Unblock));
-            int swapped = 0;
-            foreach (var ci in instructions)
-            {
-                if (ci.Calls(unblock))
-                {
-                    yield return new CodeInstruction(OpCodes.Call, ours)
-                    {
-                        labels = ci.labels,
-                        blocks = ci.blocks
-                    };
-
-                    swapped++;
-                }
-                else
-                {
-                    yield return ci;
-                }
-            }
-
-            if (swapped == 0)
-            {
-                Plugin.Log.LogWarning(
-                    "DoorUnblockPatch: no Door.unblock in GameEvent.fire (game "
-                        + "changed?)");
-            }
-        }
-
-        /// <summary>
-        /// Door.unblock, and sent to the others when it cleared the block here.
-        /// </summary>
-        public static void Unblock(Door door)
-        {
-            bool was = door.blocked;
-            door.unblock();
-            if (was && !door.blocked && Coop.Guards.Depth == 0
-                && Coop.Guards.Sharing)
-            {
-                WorldActions.Send(
-                    WorldActions.Action.DoorUnblock, door.gameObject);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Window), nameof(Window.barricade))]
-    static class WindowBarricadePatch
-    {
-        static void Prefix(
-            Window __instance, out WorldActions.WindowState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.WindowState.Of(__instance);
-        }
-
-        static void Postfix(
-            Window __instance, int destHealth, bool byPlayer,
-            WorldActions.WindowState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.WindowState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.WindowBarricade, __instance.gameObject,
-                    destHealth, f1: byPlayer);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Window), nameof(Window.destroyBarricade))]
-    static class WindowDestroyBarricadePatch
-    {
-        static void Prefix(
-            Window __instance, out WorldActions.WindowState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.WindowState.Of(__instance);
-        }
-
-        static void Postfix(
-            Window __instance, bool silent, WorldActions.WindowState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.WindowState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.WindowDestroyBarricade,
-                    __instance.gameObject, f1: silent);
-            }
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(Window), nameof(Window.getHit),
-        new[] { typeof(int), typeof(Transform), typeof(bool) })]
-    static class WindowHitPatch
-    {
-        /// <summary>
-        /// On a client, a hit the host makes too (an explosion, fire) isn't
-        /// made here: the host's WindowHit is.
-        /// </summary>
-        static bool Prefix(
-            Window __instance, out WorldActions.WindowState __state)
-        {
-            Coop.Guards.Depth++;
-            __state = WorldActions.WindowState.Of(__instance);
-            return !BreakSync.HostsHit();
-        }
-
-        static void Postfix(
-            Window __instance, int damage, bool normalHit,
-            WorldActions.WindowState __state)
-        {
-            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
-                && !__state.Same(WorldActions.WindowState.Of(__instance)))
-            {
-                WorldActions.Send(
-                    WorldActions.Action.WindowHit, __instance.gameObject,
-                    damage, f1: normalHit, byPlayerKnown: BreakSync.OwnFlame());
             }
         }
     }

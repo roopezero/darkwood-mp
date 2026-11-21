@@ -3,7 +3,7 @@ using System;
 namespace DarkwoodMP.World.Windows
 {
     /// A window before or after one of its game calls (the plugin's
-    /// WorldActions.WindowState): if any of it differs, the call changed
+    /// Windows.StateOf): if any of it differs, the call changed
     /// the window and is sent.
     public readonly struct WindowState : IEquatable<WindowState>
     {

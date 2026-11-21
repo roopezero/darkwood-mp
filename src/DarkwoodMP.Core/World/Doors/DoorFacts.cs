@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Doors
 {
     /// What the host knows about a door when a client asks to change it
-    /// (the plugin's WorldActions.Allowed, below WindowBarricade).
+    /// (the plugin's Doors.Allowed).
     public readonly struct DoorFacts
     {
         /// The door is in the host's world (ObjRef.Resolve of a Door).

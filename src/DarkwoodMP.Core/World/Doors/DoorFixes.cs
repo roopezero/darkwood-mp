@@ -3,7 +3,7 @@ using System;
 namespace DarkwoodMP.World.Doors
 {
     /// What a client does to its door to match the host's state, in the
-    /// order of the values (the plugin's OnObjState, Kind.Door).
+    /// order of the values (the plugin's Doors.RollBack).
     [Flags]
     public enum DoorFixes
     {

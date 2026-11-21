@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Doors
 {
-    /// Whether this game sends what a door call did (the plugin's door
-    /// patches in WorldActions.cs). WorldActions.Send then filters a
+    /// Whether this game sends what a door call did (the plugin's Doors,
+    /// from its DoorPatches). WorldActions.Send then filters a
     /// client's to its own player's.
     public static class DoorSendRules
     {

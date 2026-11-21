@@ -86,6 +86,15 @@ namespace DarkwoodMP
 
         /// The fuel in generators and saws.
         public readonly World.Fuel.Fuel Fuel;
+        public readonly World.Doors.Doors Doors;
+
+        public readonly World.Windows.Windows Windows;
+
+        /// Doors opened here while their leaf was switched off.
+        public readonly World.Doors.DoorLeaf Leaves;
+
+        /// Open doors' leaves that players push, shared.
+        public readonly World.Doors.DoorPush Pushes;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -116,6 +125,10 @@ namespace DarkwoodMP
             Infections = new World.Infections.Infections(this);
             Fire = new World.Fire.Fire(this);
             Fuel = new World.Fuel.Fuel(this);
+            Doors = new World.Doors.Doors(this);
+            Windows = new World.Windows.Windows(this);
+            Leaves = new World.Doors.DoorLeaf();
+            Pushes = new World.Doors.DoorPush(this, Leaves);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -124,14 +124,14 @@ namespace DarkwoodMP.World
             }
 
             yield return Walk(d.transform.position);
-            var was = WorldActions.DoorState.Of(d);
+            var was = World.Doors.Doors.StateOf(d);
             AsPlayer(() => d.getHit(dmg, P.transform));
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{d.name} {Ref(d)} barricaded={d.barricaded} "
                     + $"({d.barricadeHealth}) health {d.health} "
                     + $"broken={d.destroyed}";
-            if (was.Same(WorldActions.DoorState.Of(d)))
+            if (was.Equals(World.Doors.Doors.StateOf(d)))
             {
                 r.Fail($"{r.Info}: the hit did nothing");
             }
