@@ -367,11 +367,7 @@ namespace DarkwoodMP.World.Story
 
             int chapter = ChapterStart.Read(r);
             // before the host's game saves and moves on
-            Characters instance = Characters.Instance;
-            if (instance != null)
-            {
-                instance.SaveNow();
-            }
+            _coop.Characters.SaveNow();
 
             Plugin.Notice(
                 $"The host is starting chapter {chapter}. You'll follow once "

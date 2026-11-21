@@ -210,6 +210,10 @@ namespace DarkwoodMP
         /// New chapters and the game's end, which the host's game starts.
         public readonly World.Story.Chapters Chapters;
 
+        /// Each player's own character in the host's world: what the host
+        /// heard of the joiners' last, and our own asked for and sent.
+        public readonly World.KeptCharacters.Characters Characters;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -283,6 +287,7 @@ namespace DarkwoodMP
             Nights = new World.Nights.NightObjects(this);
             Prologue = new World.Story.Prologue();
             Chapters = new World.Story.Chapters(this);
+            Characters = new World.KeptCharacters.Characters(this);
             // the progression lives as long as the game (ModHost.Progress);
             // this session brings its messages and forgets its record
             Plugin.Instance.Host.Progress.Join(this);

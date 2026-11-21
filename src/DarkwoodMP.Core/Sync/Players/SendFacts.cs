@@ -10,7 +10,7 @@ namespace DarkwoodMP.Sync.Players
         /// Session.Connected.
         public bool Connected { get; init; }
 
-        /// Our character isn't placed yet (Characters.Instance.Placing,
+        /// Our character isn't placed yet (Characters.Placing,
         /// false with no Characters).
         public bool Placing { get; init; }
     }

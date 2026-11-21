@@ -233,11 +233,7 @@ namespace DarkwoodMP.World
                 {
                     WorldShare.RemoveDir(Dir);
                     Copy(mine, Dir);
-                    Characters instance = Characters.Instance;
-                    if (instance != null)
-                    {
-                        instance.Forget("the test world reset");
-                    }
+                    Plugin.Instance.Host.Kept.Forget("the test world reset");
                 }
                 catch (Exception e)
                 {

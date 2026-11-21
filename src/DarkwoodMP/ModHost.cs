@@ -102,6 +102,11 @@ namespace DarkwoodMP
         internal readonly Combat.AllCharacters Characters =
             new Combat.AllCharacters();
 
+        /// Host: the other players' characters kept beside the save, written
+        /// whenever the game saves, also with no session.
+        public readonly World.KeptCharacters.CharacterRecords Kept =
+            new World.KeptCharacters.CharacterRecords();
+
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
 
@@ -162,7 +167,7 @@ namespace DarkwoodMP
             {
                 PlayerCount = () => Session.PlayerCount,
                 MapPort = opensPort,
-                BeforeLeave = World.Characters.SaveBeforeLeaving
+                BeforeLeave = World.KeptCharacters.Characters.SaveBeforeLeaving
             };
 
             Session.Add(Tcp);

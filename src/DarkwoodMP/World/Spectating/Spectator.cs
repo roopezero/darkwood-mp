@@ -398,10 +398,10 @@ namespace DarkwoodMP.World.Spectating
             if (_coop.Net.IsClient)
             {
                 // the host keeps it with our character
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendDead();
+                    coop.Characters.SendDead();
                 }
             }
 

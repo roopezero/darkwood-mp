@@ -103,11 +103,7 @@ namespace DarkwoodMP.World.Story
                 Playing = true;
                 Reset();
                 // before the epilogue's own save
-                Characters instance = Characters.Instance;
-                if (instance != null)
-                {
-                    instance.SaveNow();
-                }
+                _coop.Characters.SaveNow();
 
                 Plugin.Notice(
                     "The host has reached the end of the game: the epilogue "

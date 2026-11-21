@@ -310,10 +310,10 @@ namespace DarkwoodMP.World
                     yield break;
                 }
 
-                Characters instance = Characters.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SaveNow();
+                    coop.Characters.SaveNow();
                 }
             }
 

@@ -617,23 +617,25 @@ Finish with `tools/run-test.sh full`.
         `EpilogueStepMessage`. `InEpilogueAlone` stays static, as hosting
         asks it with no session. It writes Chapters' `GameEnd` message
         from the core.
-- [ ] 7.5 Characters and saves. After each change here, confirm that the run's
+- [x] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
-  - [ ] Part a: `Characters`, `WorldShare`. Done: their bytes (the
-        core's `CharacterLoad`, `CharacterSave`, `SaveOffer`, `NeedSave`,
-        `SaveData`, `JoinWaitMessage`) and every rule called from the shell
-        (`CharacterRules`, `OurCharacterRules`, `GameStateRules`,
-        `JoinGateRules`, `SnapshotRules`, `OfferRules`). Left: their state
-        (`Characters` per session, with the host's kept records on `ModHost`
-        since `SaveManager.Save` writes them also alone; `WorldShare` on
-        `ModHost`), thin patches, the feature folders and the split of
-        `WorldShare` into files of about 600 lines.
+  - [x] Part a: `Characters`, `WorldShare`. Their bytes are the core's
+        `CharacterLoad`, `CharacterSave`, `SaveOffer`, `NeedSave`,
+        `SaveData` and `JoinWaitMessage`, and the shell calls
+        `CharacterRules`, `OurCharacterRules`, `GameStateRules`,
+        `JoinGateRules`, `SnapshotRules` and `OfferRules`.
     - [x] `WorldShare`'s state, patch and files. It is `ModHost.Share`
           (`World/Joining/WorldShare`, a partial class in six files, with
           `WorldSharePatches.cs`); its statics are fields of the instance.
           The namespace stays `DarkwoodMP.World` for its 149 calling files,
           and `WorldReady`, `Snapshotting` and the other game-state
           questions stay static, reading `ModHost.Share`.
+    - [x] `Characters`' state, patch and files. It is
+          `CoopSession.Characters` (`World/KeptCharacters`, split into
+          `Characters.cs`, `.Client.cs` and `.Placing.cs`), and the host's
+          kept records are `ModHost.Kept` (`CharacterRecords`, with
+          `CharacterRecord`), written by
+          `CharacterPatches.SaveManagerSaveCharacters` also alone.
   - [x] Part b: `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`,
         `ScanWait`, `WorldTeardown`. They are in `World/Saves` and
         `World/Teardown`, namespace still `DarkwoodMP.World`, with

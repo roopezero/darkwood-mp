@@ -77,7 +77,6 @@ namespace DarkwoodMP
         }
 
         private DirectPanel _direct;
-        private Characters _characters;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
         private bool? _cursorBefore;
@@ -438,7 +437,6 @@ namespace DarkwoodMP
             _host.Players.OnRemoteDied += n => Notice($"{n} died");
             _host.AddShare(this, Paths.CachePath);
             WorldActions.Register(_host.Session);
-            _characters = new Characters(_host.Session);
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
@@ -2008,8 +2006,8 @@ namespace DarkwoodMP
         private System.Collections.IEnumerator ClientMenuRejoin(string address)
         {
             while (!(_host.Session.IsClient && WorldShare.WorldReady
-                    && World.Characters.Instance != null
-                    && World.Characters.Instance.HasCharacter))
+                    && Coop.Current != null
+                    && Coop.Current.Characters.HasCharacter))
             {
                 yield return null;
             }
@@ -2265,7 +2263,12 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("containers");
-            _characters.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Characters.Update();
+            }
+
             ModProfiler.Mark("characters");
             coop = Coop.Current;
             if (coop != null)
@@ -3102,10 +3105,10 @@ namespace DarkwoodMP
             // Our character goes to the host here, while the world is whole,
             // and only here: OnDestroy's Dispose leaves the session (which
             // waits for the TCP writers) without sending it again.
-            Characters characters = _characters;
-            if (characters != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                characters.SaveForQuit();
+                coop.Characters.SaveForQuit();
             }
         }
 
