@@ -29,7 +29,8 @@ namespace DarkwoodMP.World
     internal sealed class SharedTank
     {
         public const string Item = SharedTankRules.Item;
-        public const string Flag = FlagsSync.ModPrefix + "oxygenTankFilled";
+        public const string Flag =
+            Story.StoryKeys.ModPrefix + "oxygenTankFilled";
         private Seconds _next;
         private Object _tankPrefab;
 
