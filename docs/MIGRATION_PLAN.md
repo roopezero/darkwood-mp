@@ -501,7 +501,12 @@ Finish with `tools/run-test.sh full`.
 | 7.4 | `Chapters`, `Prologue`, `EpilogueSync`, `Spectator` | 1,588 | `story map:chapter map:prologue map:epilogue` |
 | 7.5 | `Characters`, `WorldShare`, `WorldFiles`, `SnapshotSave`, `SaveBook`, `SaveRedirect`, `ScanWait`, `WorldTeardown` | 2,387 | `chars net world map:join map:corpse` |
 
-- [ ] 7.1 Flags and scripted events.
+- [ ] 7.1 Flags and scripted events. `WorldEvents` is done: it moved to
+      `World/Rolls` (beside the core's `RollRules`, `ShadowRules` and
+      `AmbushRules`) as a partial class in four files with its patches in
+      `WorldEventPatches.cs`, and the session owns it. Its message classes
+      are `NightScenarioMessage`, `NightEventMessage`,
+      `RandomObjectsMessage` and `WeatherMessage`.
 - [ ] 7.2 Places and nights.
 - [ ] 7.3 Skills and progress.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so

@@ -366,7 +366,8 @@ namespace DarkwoodMP.Net
         PlayerHurt = 52,
         /// <summary>
         /// Host -> client: str the night scenario the host chose ("" none).
-        /// Sent when it changes and every 10 seconds (see World.WorldEvents).
+        /// Sent when it changes and every 10 seconds (see
+        /// World.Rolls.WorldEvents).
         /// </summary>
         NightScenario = 62,
         /// <summary>
