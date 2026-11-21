@@ -457,9 +457,7 @@ namespace DarkwoodMP
             _flags = new FlagsSync(_host.Session);
             DoorPush.Register(_host.Session);
             _fuel = new FuelSync(_host.Session);
-            new TraderSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new ThrowSync(_host.Session);
             new FireSync(_host.Session);
             new SlotShare(_host.Session);
             ScriptedEvents.Register(_host.Session);
@@ -475,7 +473,6 @@ namespace DarkwoodMP
             EggSync.Register(_host.Session);
             InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
-            _host.Session.OnSessionEnded += ThrownHits.Clear;
             _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
 
@@ -900,7 +897,12 @@ namespace DarkwoodMP
             OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
-            UiRefresh.Enabled = true;
+            CoopSession session = Coop.Current;
+            if (session != null)
+            {
+                session.Ui.Enabled = true;
+            }
+
             TrapFiredPatch.TestRefuse = null;
             WorldShare.TestHoldSecs = 0f;
             DoorPush.TestTouch = null;
@@ -2331,13 +2333,10 @@ namespace DarkwoodMP
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();
-            if (_host.Session.IsHost && WorldShare.InWorld)
+            coop = Coop.Current;
+            if (_host.Session.IsHost && WorldShare.InWorld && coop != null)
             {
-                TraderSync instance = TraderSync.Instance;
-                if (instance != null)
-                {
-                    instance.HostUpdate();
-                }
+                coop.Traders.HostUpdate();
             }
 
             coop = Coop.Current;
@@ -2357,7 +2356,6 @@ namespace DarkwoodMP
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
                 Spectator.Reset();
-                ThrownHits.Clear();
                 EnemyAreaHits.Clear();
             }
 

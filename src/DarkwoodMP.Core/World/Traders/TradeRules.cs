@@ -2,9 +2,9 @@ using System.Collections.Generic;
 
 namespace DarkwoodMP.World.Traders
 {
-    /// Trades with a trader (the plugin's TraderSync and TraderTradePatch):
-    /// which trade the player made, how it is shared, the host's check of a
-    /// client's trade, and what a refused one gives back.
+    /// Trades with a trader (the plugin's TraderSync and its AcceptTrade
+    /// patch): which trade the player made, how it is shared, the host's
+    /// check of a client's trade, and what a refused one gives back.
     public static class TradeRules
     {
         /// What a trade with no list of items took or gave.
@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Traders
 
         /// Item type -> how many: each stack with a type adds its amount,
         /// and at least 1 (InventoryRules.CountOf). Empty for no list.
-        /// TraderTradePatch.Count and the stock check count the same way.
+        /// TraderSync.Count and the stock check count the same way.
         public static Dictionary<string, int> Count(
             IReadOnlyList<ItemStack> stacks)
         {
@@ -199,7 +199,7 @@ namespace DarkwoodMP.World.Traders
             return items;
         }
 
-        /// After DialogueWindow.acceptTrade (TraderTradePatch): whether
+        /// After DialogueWindow.acceptTrade (TraderSync.AfterTrade): whether
         /// the player traded. Something was in the exchange windows before,
         /// and both are empty after; a trade the game didn't accept (not
         /// enough reputation, no room) leaves the things in them.

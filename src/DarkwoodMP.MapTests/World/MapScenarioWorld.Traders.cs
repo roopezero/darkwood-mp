@@ -238,11 +238,11 @@ namespace DarkwoodMP.World
                 }
 
                 npc.reputation += repChange;
-                // What TraderTradePatch does after acceptTrade.
-                TraderSync traders = TraderSync.Instance;
-                if (traders != null)
+                // What the AcceptTrade patch does after acceptTrade.
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    traders.LocalTrade(npc, new Dictionary<string, int>
+                    coop.Traders.LocalTrade(npc, new Dictionary<string, int>
                     {
                         [boughtType] = 1
                     }, gave, repChange);

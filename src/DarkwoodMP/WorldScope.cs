@@ -7,7 +7,7 @@ namespace DarkwoodMP
     /// State that lives as long as one loaded world. CoopSession owns it and
     /// replaces it at each world load (a chapter change loads a new world
     /// while the session goes on), and drops it when the world is left.
-    /// Empty for now: world state moves here with its subsystem.
+    /// World state moves here with its subsystem (ThrownThings so far).
     /// </summary>
     internal sealed class WorldScope : IDisposable
     {
@@ -15,6 +15,9 @@ namespace DarkwoodMP
         /// from the next one.
         public readonly Player Player;
         public readonly int Scene;
+
+        /// What thrown things are doing in this world (ThrownHits).
+        public readonly World.ThrownThings Thrown = new World.ThrownThings();
 
         public WorldScope(Player player, Scene scene)
         {

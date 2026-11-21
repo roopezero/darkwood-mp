@@ -418,7 +418,12 @@ namespace DarkwoodMP.World
             }
 
             var before = new HashSet<Burn>(Object.FindObjectsOfType<Burn>());
-            ThrowSync.Instance.Thrown("molotov", go, from);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Throws.Thrown("molotov", go, from);
+            }
+
             // Something near where it lands catches fire (not what was burning
             // already).
             float until = Time.realtimeSinceStartup + 15f;

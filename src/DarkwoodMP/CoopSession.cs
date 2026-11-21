@@ -66,6 +66,15 @@ namespace DarkwoodMP
         /// Things dragged and pushed, shared.
         public readonly DragSync Drags;
 
+        /// Redraws an open window after another player's change to it.
+        public readonly UiRefresh Ui;
+
+        /// What traders have for sale, and trades with them.
+        public readonly TraderSync Traders;
+
+        /// Thrown and dropped things, shared.
+        public readonly World.ThrowSync Throws;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -88,6 +97,9 @@ namespace DarkwoodMP
             Talk = new World.Talk.TalkLock(this);
             Dialogues = new World.Talk.DialogueGuard(this);
             Drags = new DragSync(this);
+            Ui = new UiRefresh(this);
+            Traders = new TraderSync(this);
+            Throws = new World.ThrowSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

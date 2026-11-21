@@ -952,8 +952,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (inv.open && state.slotCount == inv.slots.Count
-                && UiRefresh.Enabled)
+            CoopSession coop = Coop.Current;
+            bool redraws = coop != null && coop.Ui.Enabled;
+            if (inv.open && state.slotCount == inv.slots.Count && redraws)
             {
                 ApplyOpen(inv, state);
                 return;
@@ -1046,7 +1047,11 @@ namespace DarkwoodMP.World
                 $"[ui] {inv.name} "
                     + $"{ObjRef.Of(inv.gameObject)}: contents loaded into "
                     + $"its open window ({inv.getAllItems().Count} items)");
-            UiRefresh.Changed(inv);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Ui.Changed(inv);
+            }
         }
 
         // ---- things dropped while playing together --------------------------

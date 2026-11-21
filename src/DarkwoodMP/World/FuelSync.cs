@@ -585,7 +585,12 @@ namespace DarkwoodMP.World
             }
 
             // an open saw's "Fuel" label, the fuel bar under the cursor
-            UiRefresh.FuelChanged(c);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Ui.FuelChanged(c);
+            }
+
             if (WorldActions.Debug)
             {
                 string name = c.name;

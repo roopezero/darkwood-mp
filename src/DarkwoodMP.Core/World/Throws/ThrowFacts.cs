@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Throws
 {
-    /// What ThrowSync.Thrown looks at when our player throws or drops
-    /// something.
+    /// What ThrowSync.Thrown and Dropped look at when our player throws or
+    /// drops something.
     public readonly struct ThrowFacts
     {
         /// Coop.Guards.Sharing: connected, in a world, not replaying.
