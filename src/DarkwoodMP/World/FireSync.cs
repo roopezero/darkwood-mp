@@ -1,6 +1,7 @@
 using System.Collections;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Fire;
 using HarmonyLib;
 using UnityEngine;
 
@@ -23,22 +24,12 @@ namespace DarkwoodMP.World
     /// within reach and the thing can burn, and lights its copy, which then
     /// burns for everyone; a refused one is put out again.
     ///
-    /// Burning: ObjRef, u8 what (1 enemy, 2 door, 3 window, 4 item), f32 burn
-    /// time, u8 on.
+    /// Burning: the core's Burning (ObjRef, u8 what, f32 burn time, u8 on).
     /// </summary>
     public sealed class FireSync
     {
         public static FireSync Instance { get; private set; }
         private readonly Session _session;
-
-        public enum What : byte
-        {
-            None = 0,
-            Enemy = 1,
-            Door = 2,
-            Window = 3,
-            Item = 4
-        }
 
         public FireSync(Session session)
         {
@@ -47,35 +38,26 @@ namespace DarkwoodMP.World
             session.Register(MsgType.Burning, OnBurning);
         }
 
-        private static What Kind(GameObject go)
+        /// <summary>
+        /// What a GameObject is for the fire rules (null: nothing). The only
+        /// code that reads its components for them.
+        /// </summary>
+        private static FireKind KindOf(GameObject go)
         {
-            if (go.GetComponent<Player>() != null
-                || go.GetComponent<NetPlayerProxy>() != null)
+            if (go == null)
             {
-                return What.None;
+                return FireKind.None;
             }
 
-            if (go.GetComponent<Character>() != null)
+            return FireRules.KindOf(new KindFacts
             {
-                return What.Enemy;
-            }
-
-            if (go.GetComponent<Door>() != null)
-            {
-                return What.Door;
-            }
-
-            if (go.GetComponent<Window>() != null)
-            {
-                return What.Window;
-            }
-
-            if (go.GetComponent<Item>() != null)
-            {
-                return What.Item;
-            }
-
-            return What.None;
+                Player = go.GetComponent<Player>() != null,
+                Proxy = go.GetComponent<NetPlayerProxy>() != null,
+                Character = go.GetComponent<Character>() != null,
+                Door = go.GetComponent<Door>() != null,
+                Window = go.GetComponent<Window>() != null,
+                Item = go.GetComponent<Item>() != null,
+            });
         }
 
         /// <summary>
@@ -83,35 +65,21 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void Changed(Burn b, bool on)
         {
-            if (b == null || Coop.Guards.Replaying || !_session.IsHost
-                || _session.Peers.Count == 0 || !WorldShare.InWorld)
-            {
-                return;
-            }
-
-            var what = Kind(b.gameObject);
-            if (what == What.None)
-            {
-                return;
-            }
-
-            var r = ObjRef.Of(b.gameObject);
-            if (!r.Valid)
+            var facts = FactsOf(b, out var r);
+            if (!FireRules.SendsChange(facts))
             {
                 return;
             }
 
             var w = _session.Begin(MsgType.Burning);
-            r.Write(w);
-            w.W.Write((byte)what);
-            w.W.Write(b.burnTime);
-            int onFlag = 0;
-            if (on)
+            Burning.Write(w, new FireReport
             {
-                onFlag = 1;
-            }
+                Thing = ObjRef.NameOf(r),
+                Kind = facts.Kind,
+                Time = b.burnTime,
+                On = on,
+            });
 
-            w.W.Write((byte)onFlag);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -126,6 +94,36 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// Host: what the fire rules know of a fire starting or going out
+        /// here, and its ObjRef.
+        /// </summary>
+        private ChangeFacts FactsOf(Burn b, out ObjRef r)
+        {
+            r = default;
+            if (b == null)
+            {
+                return default;
+            }
+
+            var kind = KindOf(b.gameObject);
+            if (kind != FireKind.None)
+            {
+                r = ObjRef.Of(b.gameObject);
+            }
+
+            return new ChangeFacts
+            {
+                Exists = true,
+                Replaying = Coop.Guards.Replaying,
+                Host = _session.IsHost,
+                Peers = _session.Peers.Count,
+                InWorld = WorldShare.InWorld,
+                Kind = kind,
+                Named = r.Valid,
+            };
+        }
+
+        /// <summary>
         /// What a flame touching this would set alight, found as
         /// Flame.onCollideWith finds it: furniture that can break, a door, a
         /// window. Null for a character (its burn is an effect on the hit) or
@@ -133,41 +131,55 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static GameObject Flammable(Transform t, Collider col)
         {
+            switch (FireRules.Flammable(FactsOf(t, col)))
+            {
+                case FlameTarget.ColliderItem:
+                    return col.transform.GetComponent<Item>().gameObject;
+                case FlameTarget.TransformItem:
+                    return t.GetComponent<Item>().gameObject;
+                case FlameTarget.Door:
+                    return Door.getDoorScript(col.transform).gameObject;
+                case FlameTarget.Window:
+                    return col.GetComponent<Window>().gameObject;
+                default:
+                    return null;
+            }
+        }
+
+        /// <summary>
+        /// What the fire rules know of what a flame touched. The only code
+        /// that reads the collider and the transform for them.
+        /// </summary>
+        private static FlameFacts FactsOf(Transform t, Collider col)
+        {
             if (col == null)
             {
-                return null;
+                return default;
             }
 
-            if (col.transform.GetComponent<CharBase>() != null
-                || (t != null && t.GetComponent<CharBase>() != null))
-            {
-                return null;
-            }
-
-            var item = col.transform.GetComponent<Item>();
-            if (item == null && t != null)
+            var colItem = col.transform.GetComponent<Item>();
+            Item item = null;
+            bool charOnT = false;
+            if (t != null)
             {
                 item = t.GetComponent<Item>();
+                charOnT = t.GetComponent<CharBase>() != null;
             }
 
-            if (item != null && item.destructible)
+            return new FlameFacts
             {
-                return item.gameObject;
-            }
-
-            var door = Door.getDoorScript(col.transform);
-            if (door != null)
-            {
-                return door.gameObject;
-            }
-
-            var window = col.GetComponent<Window>();
-            if (window != null)
-            {
-                return window.gameObject;
-            }
-
-            return null;
+                Collider = true,
+                CharOnCollider =
+                    col.transform.GetComponent<CharBase>() != null,
+                CharOnTransform = charOnT,
+                ColliderItem = colItem != null,
+                ColliderItemDestructible =
+                    colItem != null && colItem.destructible,
+                TransformItem = item != null,
+                TransformItemDestructible = item != null && item.destructible,
+                Door = Door.getDoorScript(col.transform) != null,
+                Window = col.GetComponent<Window>() != null,
+            };
         }
 
         /// <summary>
@@ -176,120 +188,114 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void ClientIgnited(GameObject go)
         {
-            if (go == null || !NetEnemies.ClientMode || Coop.Guards.Replaying
-                || WorldActions.OursAlone(go))
-            {
-                return;
-            }
-
-            var what = Kind(go);
-            if (what == What.None || what == What.Enemy)
-            {
-                return;
-            }
-
-            var r = ObjRef.Of(go);
-            if (!r.Valid)
+            var facts = FactsOf(go, out var r);
+            if (!FireRules.MayAskToIgnite(facts))
             {
                 return;
             }
 
             var burn = go.GetComponent<Burn>();
-            var w = _session.Begin(MsgType.Burning);
-            r.Write(w);
-            w.W.Write((byte)what);
-            float seconds = 20f;
+            float seconds = 0f;
             if (burn != null)
             {
                 seconds = burn.burnTime;
             }
 
-            w.W.Write(seconds);
-            w.W.Write((byte)1);
-            Coop.Current.Authority.Request(w, $"set {go.name} alight",
-                (ok, reason, result) =>
+            var w = _session.Begin(MsgType.Burning);
+            Burning.Write(w, new FireReport
             {
-                if (ok || go == null)
-                {
-                    return;
-                }
-
-                var b = go.GetComponent<Burn>();
-                if (b == null)
-                {
-                    return;
-                }
-
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    b.stop();
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                }
+                Thing = ObjRef.NameOf(r),
+                Kind = facts.Kind,
+                Time = FireRules.AskedTime(burn != null, seconds),
+                On = true,
             });
+
+            Coop.Current.Authority.Request(w, $"set {go.name} alight",
+                (ok, reason, result) => Answered(go, ok));
+        }
+
+        /// <summary>
+        /// Client: what the fire rules know of a thing our player's flame
+        /// set alight, and its ObjRef.
+        /// </summary>
+        private static AskFacts FactsOf(GameObject go, out ObjRef r)
+        {
+            r = default;
+            if (go == null)
+            {
+                return default;
+            }
+
+            var kind = KindOf(go);
+            if (kind != FireKind.None)
+            {
+                r = ObjRef.Of(go);
+            }
+
+            return new AskFacts
+            {
+                Exists = true,
+                ClientMode = NetEnemies.ClientMode,
+                Replaying = Coop.Guards.Replaying,
+                OursAlone = WorldActions.OursAlone(go),
+                Kind = kind,
+                Named = r.Valid,
+            };
+        }
+
+        /// <summary>
+        /// Client: the host's answer to our Burning; a refused one puts our
+        /// fire out again.
+        /// </summary>
+        private static void Answered(GameObject go, bool ok)
+        {
+            Burn b = null;
+            if (go != null)
+            {
+                b = go.GetComponent<Burn>();
+            }
+
+            if (!FireRules.PutsOut(ok, go != null, b != null))
+            {
+                return;
+            }
+
+            Coop.Guards.Replaying = true;
+            try
+            {
+                b.stop();
+            }
+            finally
+            {
+                Coop.Guards.Replaying = false;
+            }
         }
 
         /// <summary>
         /// Host: a client's player set this alight (a Burning request).
         /// </summary>
-        private void OnClientIgnited(ObjRef obj, What what, float time, bool on)
+        private void OnClientIgnited(in FireReport sent)
         {
-            if (!Coop.Current.Authority.Handling)
+            var obj = ObjRef.RefOf(sent.Thing);
+            Component c = null;
+            if (sent.Kind != FireKind.Enemy)
             {
-                return; // only as a request
+                c = Resolve(obj, sent.Kind);
             }
 
-            if (!on)
+            var fire = FireRules.MayIgnite(FactsOf(c, sent));
+            if (fire.Verdict.Refused)
             {
-                Coop.Current.Authority.Refuse("players only light things");
+                Coop.Current.Authority.Refuse(fire.Verdict);
                 return;
             }
 
-            Component c;
-            if (what == What.Enemy)
+            if (!fire.Lights)
             {
-                c = null;
-            }
-            else
-            {
-                c = Resolve(obj, what);
+                return; // not a request, or burning already
             }
 
-            if (c == null)
-            {
-                Coop.Current.Authority.Refuse(
-                    "there's no such thing here to burn");
-                return;
-            }
-
-            if (!Coop.Current.Authority.InReach(
-                c.transform.position, FlameReach, c.name))
-            {
-                return;
-            }
-
-            if (c is Item item && (!item.destructible || item.destroyed))
-            {
-                Coop.Current.Authority.Refuse($"{c.name} can't burn");
-                return;
-            }
-
-            if (c is Door door && door.destroyed)
-            {
-                Coop.Current.Authority.Refuse($"{c.name} is broken");
-                return;
-            }
-
-            if (c.GetComponent<Burn>() != null)
-            {
-                return; // burning already: nothing to do
-            }
-
-            c.gameObject.AddComponent<Burn>().burnTime =
-                Mathf.Clamp(time, 1f, 20f);
+            c.gameObject.AddComponent<Burn>().burnTime = fire.Time;
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -300,22 +306,60 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// How far a player's flames reach, generously (a flamethrower's flame
-        /// flies 700 a second for 1 to 1.5 s).
+        /// Host: what the fire rules know of the thing a client's Burning
+        /// names (null: not found here). The only code that reads it for
+        /// them.
         /// </summary>
-        public const float FlameReach = 1500f;
-
-        private static Component Resolve(ObjRef obj, What what)
+        private static IgniteFacts FactsOf(Component c, in FireReport sent)
         {
-            switch (what)
+            var authority = Coop.Current.Authority;
+            var facts = new IgniteFacts
             {
-                case What.Enemy:
+                On = sent.On,
+                Kind = sent.Kind,
+                Time = sent.Time,
+                Reach = new ReachFacts { Handling = authority.Handling },
+            };
+
+            if (c == null)
+            {
+                return facts;
+            }
+
+            bool destructible = false;
+            bool destroyed = false;
+            if (c is Item item)
+            {
+                destructible = item.destructible;
+                destroyed = item.destroyed;
+            }
+            else if (c is Door door)
+            {
+                destroyed = door.destroyed;
+            }
+
+            return facts with
+            {
+                Found = true,
+                Destructible = destructible,
+                Destroyed = destroyed,
+                Burning = c.GetComponent<Burn>() != null,
+                Name = c.name,
+                Reach = authority.ReachOf(c.transform.position),
+            };
+        }
+
+        private static Component Resolve(ObjRef obj, FireKind kind)
+        {
+            switch (kind)
+            {
+                case FireKind.Enemy:
                     return ObjRef.Resolve<Character>(obj);
-                case What.Door:
+                case FireKind.Door:
                     return ObjRef.Resolve<Door>(obj);
-                case What.Window:
+                case FireKind.Window:
                     return ObjRef.Resolve<Window>(obj);
-                case What.Item:
+                case FireKind.Item:
                     return ObjRef.Resolve<Item>(obj);
                 default:
                     return null;
@@ -325,36 +369,55 @@ namespace DarkwoodMP.World
         private void OnBurning(ulong from, PacketReader r)
         {
             var s = _session;
-            if (!WorldShare.InWorld)
+            var arrival = new ArrivalFacts
             {
-                return;
-            }
+                Session = true,
+                InWorld = WorldShare.InWorld,
+                Client = s.IsClient,
+                FromHost = from == s.HostId,
+            };
 
-            var obj = ObjRef.Read(r);
-            var what = (What)r.R.ReadByte();
-            float time = r.R.ReadSingle();
-            bool on = r.R.ReadByte() != 0;
             if (s.IsHost)
             {
-                OnClientIgnited(obj, what, time, on);
+                if (ArrivalRules.Takes(arrival))
+                {
+                    OnClientIgnited(Burning.Read(r));
+                }
+
                 return;
             }
 
-            if (!s.IsClient || from != s.HostId)
+            if (ArrivalRules.TakesFromHost(arrival))
             {
-                return;
+                OnHostBurning(Burning.Read(r));
             }
+        }
 
-            if (what == What.None || (int)what > 4)
+        /// <summary>
+        /// Client: something started or stopped burning on the host.
+        /// </summary>
+        private static void OnHostBurning(in FireReport sent)
+        {
+            var obj = ObjRef.RefOf(sent.Thing);
+            Component c = Resolve(obj, sent.Kind);
+            Burn burn = null;
+            if (c != null)
             {
-                return;
+                burn = c.GetComponent<Burn>();
             }
 
-            Component c = Resolve(obj, what);
-            if (WorldActions.Debug)
+            var change = FireRules.FromHost(new HostFireFacts
+            {
+                Kind = sent.Kind,
+                Found = c != null,
+                On = sent.On,
+                Burning = burn != null,
+            });
+
+            if (WorldActions.Debug && Resolves(sent.Kind))
             {
                 string state = "off";
-                if (on)
+                if (sent.On)
                 {
                     state = "on";
                 }
@@ -369,20 +432,19 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(line + name);
             }
 
-            if (c == null)
+            if (change == FireChange.Nothing)
             {
                 return;
             }
 
-            var burn = c.GetComponent<Burn>();
             Coop.Guards.Replaying = true;
             try
             {
-                if (on && burn == null)
+                if (change == FireChange.Light)
                 {
-                    c.gameObject.AddComponent<Burn>().burnTime = time;
+                    c.gameObject.AddComponent<Burn>().burnTime = sent.Time;
                 }
-                else if (!on && burn != null)
+                else if (change == FireChange.PutOut)
                 {
                     burn.stop();
                 }
@@ -391,6 +453,15 @@ namespace DarkwoodMP.World
             {
                 Coop.Guards.Replaying = false;
             }
+        }
+
+        /// <summary>
+        /// Whether a Burning of this kind names something here: the kinds
+        /// the message has, for the debug line.
+        /// </summary>
+        private static bool Resolves(FireKind kind)
+        {
+            return kind >= FireKind.Enemy && kind <= FireKind.Item;
         }
     }
 
