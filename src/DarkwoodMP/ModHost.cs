@@ -34,6 +34,11 @@ namespace DarkwoodMP
         /// The village cellar's full oxygen tank, shared once filled.
         public readonly World.SharedTank Tank = new World.SharedTank();
 
+        /// Host: who is owed their part of fired once-only triggers, kept
+        /// across sessions and world reloads and written beside the save.
+        public readonly World.Owed.OwedRecordFile Owed =
+            new World.Owed.OwedRecordFile();
+
         /// One stack size for every stackable item.
         public readonly World.StackSizes Stacks;
 

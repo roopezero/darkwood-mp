@@ -1,9 +1,5 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using DarkwoodMP.Net;
-using HarmonyLib;
-using Newtonsoft.Json;
 
 namespace DarkwoodMP.World.Owed
 {
@@ -33,9 +29,19 @@ namespace DarkwoodMP.World.Owed
     /// A trigger is named by its object's save id (or scene, name and place)
     /// and its index in the object's triggers.
     /// </summary>
-    internal static class OwedParts
+    internal sealed class OwedParts
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
+
+        public OwedParts(CoopSession coop)
+        {
+            _coop = coop;
+        }
+
+        private Session S => _coop.Net;
+
+        /// The host's record, kept as long as the game runs.
+        private static OwedRecordFile Record => Plugin.Instance.Host.Owed;
 
         // ---- naming a trigger -----------------------------------------------
 
@@ -88,116 +94,25 @@ namespace DarkwoodMP.World.Owed
         /// Joiner: triggers whose own part our player had in the world loaded
         /// now.
         /// </summary>
-        private static readonly HashSet<global::EventTrigger> OursHad =
+        private readonly HashSet<global::EventTrigger> _oursHad =
             new HashSet<global::EventTrigger>();
-        private static int _oursScene;
+        private int _oursScene;
 
-        private static HashSet<global::EventTrigger> Ours()
+        private HashSet<global::EventTrigger> Ours()
         {
             int scene =
                 UnityEngine.SceneManagement.SceneManager
                     .GetActiveScene().handle;
             if (scene != _oursScene)
             {
-                OursHad.Clear();
+                _oursHad.Clear();
                 _oursScene = scene;
             }
 
-            return OursHad;
+            return _oursHad;
         }
 
-        // ---- the host's record ----------------------------------------------
-
-        private static OwedRecord _data;
-        // the profile folder _data.Had belongs to
-        private static string _dir;
-        // the loaded world _data.HostOwed belongs to
-        private static int _owedScene;
-
-        private static string ProfileDir()
-        {
-            var sm = Singleton<SaveManager>.Instance;
-            if (sm == null || Core.currentProfile == null)
-            {
-                return null;
-            }
-
-            return Path.Combine(
-                sm.baseSaveDirectory, "prof" + Core.currentProfile.id);
-        }
-
-        private static OwedRecord Read(string dir)
-        {
-            try
-            {
-                string path = null;
-                if (dir != null)
-                {
-                    path = Path.Combine(dir, OwedRules.FileName);
-                }
-
-                if (path != null && File.Exists(path))
-                {
-                    OwedRecord d = JsonConvert.DeserializeObject<OwedRecord>(
-                        File.ReadAllText(path));
-                    if (d == null)
-                    {
-                        d = new OwedRecord();
-                    }
-
-                    d.Repair();
-                    return d;
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    "Couldn't read who is owed their part of fired events in "
-                        + $"{dir}: {e.Message}");
-            }
-
-            return new OwedRecord();
-        }
-
-        /// <summary>
-        /// Host: the record for this world, read from beside its save the first
-        /// time, and again on a new world.
-        /// </summary>
-        private static OwedRecord Data()
-        {
-            string dir = ProfileDir();
-            int scene =
-                UnityEngine.SceneManagement.SceneManager
-                    .GetActiveScene().handle;
-            RecordRead read = OwedRules.Reads(new RecordReadFacts
-            {
-                Loaded = _data != null,
-                Profile = dir,
-                RecordProfile = _dir,
-                Scene = scene,
-                OwedScene = _owedScene,
-            });
-
-            if (read == RecordRead.Whole)
-            {
-                _data = Read(dir);
-                _dir = dir;
-                _owedScene = scene;
-            }
-            else if (read == RecordRead.HostOwed)
-            {
-                // The world was loaded again (a reload, a new chapter): our
-                // player is where the save has them, and so is what they're
-                // owed. What the joiners had stays: their characters are kept
-                // as they last sent them.
-                _data.HostOwed = Read(dir).HostOwed;
-                _owedScene = scene;
-            }
-
-            return _data;
-        }
-
-        private static string KeyOf(ulong peer)
+        private string KeyOf(ulong peer)
         {
             string key = null;
             if (S != null)
@@ -213,61 +128,18 @@ namespace DarkwoodMP.World.Owed
             return OwedRules.Unkeyed(peer);
         }
 
-        /// <summary>
-        /// Host: write the record beside the save (the game saved).
-        /// </summary>
-        internal static void HostSaved()
-        {
-            string dir = ProfileDir();
-            bool empty = false;
-            if (_data != null)
-            {
-                empty = _data.Empty;
-            }
-
-            bool writes = OwedRules.Writes(new RecordSaveFacts
-            {
-                Snapshotting = WorldShare.Snapshotting,
-                Client = Combat.NetEnemies.ClientMode,
-                Loaded = _data != null,
-                Profile = dir,
-                RecordProfile = _dir,
-                Empty = empty,
-            });
-
-            if (!writes)
-            {
-                return;
-            }
-
-            try
-            {
-                Directory.CreateDirectory(dir);
-                File.WriteAllText(
-                    Path.Combine(dir, OwedRules.FileName),
-                    JsonConvert.SerializeObject(
-                        new { _data.Had, _data.HostOwed }));
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    "Couldn't write who is owed their part of fired events: "
-                        + $"{e.Message}");
-            }
-        }
-
         // ---- what ScriptedEvents asks ---------------------------------------
 
         /// <summary>
         /// Whether our player is owed its own part of this fired once-only
         /// trigger (see the class comment).
         /// </summary>
-        internal static bool Owed(global::EventTrigger t)
+        internal bool Owed(global::EventTrigger t)
         {
             return OwedRules.Owed(FactsOf(t));
         }
 
-        private static OwedFacts FactsOf(global::EventTrigger t)
+        private OwedFacts FactsOf(global::EventTrigger t)
         {
             var s = S;
             bool active = s != null && s.Active;
@@ -283,7 +155,7 @@ namespace DarkwoodMP.World.Owed
                     Trigger = true,
                     Active = true,
                     Host = true,
-                    HostOwed = Data().IsHostOwed(IdOf(t)),
+                    HostOwed = Record.Data().IsHostOwed(IdOf(t)),
                 };
             }
 
@@ -309,7 +181,7 @@ namespace DarkwoodMP.World.Owed
         /// Host: a joiner set off this once-only trigger first; our player is
         /// owed its own part of it.
         /// </summary>
-        internal static bool HostOwe(global::EventTrigger t)
+        internal bool HostOwe(global::EventTrigger t)
         {
             var s = S;
             string id = null;
@@ -318,14 +190,14 @@ namespace DarkwoodMP.World.Owed
                 id = IdOf(t);
             }
 
-            return id != null && Data().HostOwe(id);
+            return id != null && Record.Data().HostOwe(id);
         }
 
         /// <summary>
         /// Our player had (or is having now) its own part of this trigger: it
         /// isn't owed any more.
         /// </summary>
-        internal static bool Had(global::EventTrigger t)
+        internal bool Had(global::EventTrigger t)
         {
             var s = S;
             if (t == null || s == null || !s.Active)
@@ -335,7 +207,7 @@ namespace DarkwoodMP.World.Owed
 
             if (s.IsHost)
             {
-                return Data().HostHad(IdOf(t));
+                return Record.Data().HostHad(IdOf(t));
             }
 
             return Ours().Add(t);
@@ -345,16 +217,16 @@ namespace DarkwoodMP.World.Owed
         /// Host: whether this joiner had its own part of this trigger (set it
         /// off, or got it as a later player).
         /// </summary>
-        internal static bool Given(ulong peer, global::EventTrigger t)
+        internal bool Given(ulong peer, global::EventTrigger t)
         {
             string id = IdOf(t);
-            return id != null && Data().Given(KeyOf(peer), id);
+            return id != null && Record.Data().Given(KeyOf(peer), id);
         }
 
         /// <summary>
         /// Host: this joiner has its own part of this trigger now.
         /// </summary>
-        internal static void Give(ulong peer, global::EventTrigger t)
+        internal void Give(ulong peer, global::EventTrigger t)
         {
             string id = IdOf(t);
             if (id == null)
@@ -362,47 +234,7 @@ namespace DarkwoodMP.World.Owed
                 return;
             }
 
-            Data().Give(KeyOf(peer), id);
+            Record.Data().Give(KeyOf(peer), id);
         }
-
-        /// <summary>
-        /// The session ended: a joiner's record of its own goes (the host's
-        /// stays with its world).
-        /// </summary>
-        internal static void SessionEnded() => OursHad.Clear();
-
-        /// <summary>
-        /// For the tests: the host's game saves and starts again (the record is
-        /// written, then read back).
-        /// </summary>
-        internal static void TestReload()
-        {
-            if (_data == null)
-            {
-                Data();
-            }
-
-            HostSaved();
-            _data = null;
-        }
-    }
-
-    /// <summary>
-    /// Host: the game saved; write who is owed their part of fired events
-    /// beside it.
-    /// </summary>
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new[]
-    {
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool)
-    })]
-    static class OwedPartsSavedPatch
-    {
-        static void Postfix() => OwedParts.HostSaved();
     }
 }
