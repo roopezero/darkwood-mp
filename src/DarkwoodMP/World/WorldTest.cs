@@ -1626,7 +1626,12 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[world test] porter from {src.name} ({ItemsIn(src)} "
                         + $"items) to {dest.name}");
-                Hideouts.Deliver(src, dest);
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Porter.Deliver(src, dest);
+                }
+
                 Plugin.Log.LogInfo(
                     $"[world test] {src.name} has {ItemsIn(src)} items after");
                 yield return new WaitForSeconds(1f);

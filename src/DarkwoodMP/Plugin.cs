@@ -443,8 +443,6 @@ namespace DarkwoodMP
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
             ScriptedEvents.Register(_host.Session);
-            Hideouts.Register(_host.Session);
-            NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
@@ -2318,7 +2316,11 @@ namespace DarkwoodMP
             }
 
             ModProfiler.Mark("host ids");
-            NightObjects.Update();
+            if (coop != null)
+            {
+                coop.Nights.Update();
+            }
+
             ModProfiler.Mark("night objects");
             coop = Coop.Current;
             if (coop != null)

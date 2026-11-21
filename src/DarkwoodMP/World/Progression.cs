@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Hideout;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;

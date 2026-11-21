@@ -538,7 +538,7 @@ namespace DarkwoodMP.Net
         /// (Location.transportAllItemsToCurrentHideout, from a dialogue's world
         /// event); our game didn't do it. The host checks that the player's
         /// stand-in is at another hideout, does the move into a package at that
-        /// hideout and sends PorterDelivered (see World.Hideouts).
+        /// hideout and sends PorterDelivered (see World.Hideout.Porter).
         /// </summary>
         PorterTransport = 120,
         /// <summary>
@@ -548,7 +548,7 @@ namespace DarkwoodMP.Net
         /// package). The porter took the unlocked containers' contents of the
         /// first hideout to the second: empty yours, make the hidden package
         /// there with these contents and the event that shows it later, and the
-        /// porter leaves (World.Hideouts).
+        /// porter leaves (World.Hideout.Porter).
         /// </summary>
         PorterDelivered = 121,
         /// <summary>
@@ -558,7 +558,7 @@ namespace DarkwoodMP.Net
         /// (Player.setExperienceMachine) and the second was its oven before.
         /// From the host: the first is lit in every game, and the second is put
         /// out (the host decided nobody uses it as theirs any more), except in
-        /// the game whose player still has it as theirs (see World.Hideouts).
+        /// the game whose player still has it as theirs (World.Hideout.Ovens).
         /// </summary>
         OvenLit = 122,
         /// <summary>
@@ -653,7 +653,8 @@ namespace DarkwoodMP.Net
         /// it has, when the trap it is was armed or disarmed. Kind 3: the same,
         /// made before this client came: its copy from the save, of that name
         /// within 50, is tied to the id, or else it's made. Kind 2 (only the
-        /// id): the host's is gone, so is the client's. See World.NightObjects.
+        /// id): the host's is gone, so is the client's. See
+        /// World.Nights.NightObjects.
         /// </summary>
         NightObject = 165,
         /// <summary>
@@ -756,7 +757,7 @@ namespace DarkwoodMP.Net
         /// isn't in transit or dead, and that the player's stand-in is in that
         /// location, then calls the porter (Location.spawnPorter). From the
         /// host: the porter was called there; call it in your game too
-        /// (World.Hideouts).
+        /// (World.Hideout.Porter).
         /// </summary>
         PorterCalled = 220,
 

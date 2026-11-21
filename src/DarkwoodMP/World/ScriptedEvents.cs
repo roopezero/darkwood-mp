@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Scripted;
+using DarkwoodMP.World.Hideout;
 using HarmonyLib;
 using UnityEngine;
 

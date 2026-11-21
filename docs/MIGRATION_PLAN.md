@@ -547,7 +547,7 @@ Finish with `tools/run-test.sh full`.
         `WorldEventRules`, `TripRules`); `ScriptedEvents.Part` is the core's
         `EventPart`. Left: its state (an instance on `CoopSession`, with
         what solo play needs on `ModHost`), thin patches, `World/Scripted/`.
-- [ ] 7.2 Places and nights.
+- [x] 7.2 Places and nights.
   - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
         `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
         (`World/Pause/CoopPause`) and `.Mornings`
@@ -556,14 +556,19 @@ Finish with `tools/run-test.sh full`.
         `FlagsSync` became `CoopSession.Story` (7.1 part c), the after-night
         reward's part of `ControllerStartAfterNight` does nothing with no
         session.
-  - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
-        `Locations` done: it is `CoopSession.Locations`
+  - [x] Part b: `Locations`. It is `CoopSession.Locations`
         (`World/Places/Locations`), with the host's kept locations as its
         `KeptLocations` and its patches in `LocationPatches.cs`. Where a
         player is (`Current`, `SamePlace`, `HostRunsHere`, `HostRunsAt`,
         `SharedDream`) is the stateless `Whereabouts`, which also works
         with no session. The build's location names are read once per
         session, not once per game.
+  - [x] Part c: `Hideouts`, `NightObjects`. They are `CoopSession.Porter`
+        and `.Ovens` (`World/Hideout/Porter`, `Ovens`), with the stateless
+        `Hideouts` (`Together`, the world-container moves) left static, and
+        `.Nights` (`World/Nights/NightObjects`, split in two parts), each
+        folder with its `...Patches.cs`. Their five messages' bytes are in the
+        core.
 - [ ] 7.3 Skills and progress.
   - [x] Part a: `DreamSync`. It is `CoopSession.Dreaming`
         (`World/Dreaming/DreamSync`, with `DreamPatches.cs`); its messages'
