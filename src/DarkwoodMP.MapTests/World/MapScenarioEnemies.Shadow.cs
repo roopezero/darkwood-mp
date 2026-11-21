@@ -86,10 +86,11 @@ namespace DarkwoodMP.World
                 {
                     on++;
                     var pos = armor.transform.position;
-                    bool inside = ShadowArmorJoinerLightPatch.InBeam(
-                        rp.Root.transform, pos, out float ahead,
-                        out float aside);
-                    if (inside)
+                    var spot = ShadowArmorJoinerLightPatch.InBeam(
+                        rp.Root.transform, pos);
+                    float ahead = spot.Ahead;
+                    float aside = spot.Aside;
+                    if (spot.In)
                     {
                         inBox++;
                     }

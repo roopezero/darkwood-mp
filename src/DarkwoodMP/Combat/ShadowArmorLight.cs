@@ -1,3 +1,5 @@
+using DarkwoodMP.Combat.Beams;
+using DarkwoodMP.Combat.Joiners;
 using DarkwoodMP.Sync;
 using HarmonyLib;
 using UnityEngine;
@@ -29,13 +31,7 @@ namespace DarkwoodMP.Combat
         static void Postfix(ShadowArmor __instance)
         {
             var a = __instance;
-            if (a == null || !(a.health > 0f) || NetPlayerProxy.All.Count == 0)
-            {
-                return;
-            }
-
-            var s = Net.Session.Instance;
-            if (s == null || !s.IsHost)
+            if (!BeamRules.ChecksArmour(FactsOf(a)))
             {
                 return;
             }
@@ -49,19 +45,35 @@ namespace DarkwoodMP.Combat
             // The game's own check already hurt it if the spot is lit (the
             // puppet's beam lights the graph too); a beam the graph doesn't
             // show as lit still counts, as the host's flashlight's box does.
-            bool hurtAlready = Core.isInLight(
-                a.transform.position, mustBeWalkable: false)
-                || a.GetComponent<Burn>() != null;
-            if (!hurtAlready)
+            bool lit = Core.isInLight(
+                a.transform.position, mustBeWalkable: false);
+            bool burning = false;
+            if (!lit)
+            {
+                burning = a.GetComponent<Burn>() != null;
+            }
+
+            if (BeamRules.HurtsArmour(lit, burning))
             {
                 Particles(a, true);
-                a.damageMe(a.lightDamage * a.normalDamageMod * RefreshRate(a));
+                a.damageMe(BeamRules.ArmourDamage(
+                    a.lightDamage, a.normalDamageMod, RefreshRate(a)));
             }
 
             var c = a.GetComponent<Character>();
-            if (c != null && c.alive && !c.dummy)
+            bool alive = false;
+            bool dummy = false;
+            if (c != null)
             {
-                if (c.aggressiveness != Aggressiveness.defensive)
+                alive = c.alive;
+                dummy = c.dummy;
+            }
+
+            if (BeamRules.ArmourTurns(c != null, alive, dummy))
+            {
+                bool defensive =
+                    c.aggressiveness == Aggressiveness.defensive;
+                if (JoinerAiRules.AttacksOnSight(defensive))
                 {
                     c.aggressiveness = Aggressiveness.attackOnSight;
                 }
@@ -78,6 +90,53 @@ namespace DarkwoodMP.Combat
                             + $"{proxy.OwnerName}'s flashlight: goes for them");
                 }
             }
+        }
+
+        private static ArmorFacts FactsOf(ShadowArmor a)
+        {
+            if (a == null)
+            {
+                return default;
+            }
+
+            var s = Net.Session.Instance;
+            bool hosting = false;
+            if (s != null)
+            {
+                hosting = s.IsHost;
+            }
+
+            return new ArmorFacts
+            {
+                Exists = true,
+                Health = a.health,
+                StandIns = NetPlayerProxy.All.Count,
+                Hosting = hosting,
+            };
+        }
+
+        private static BeamOwnerFacts FactsOf(
+            NetPlayerProxy proxy, RemotePlayer rp)
+        {
+            var facts = new BeamOwnerFacts
+            {
+                StandInAlive = proxy != null && proxy.alive,
+                Root = rp != null && rp.Root != null,
+            };
+
+            if (rp == null || rp.Last == null)
+            {
+                return facts;
+            }
+
+            var last = rp.Last;
+            return facts with
+            {
+                HasSnapshot = true,
+                Flashlight = last.Flashlight,
+                Alive = last.Alive,
+                Spectating = last.Spectating,
+            };
         }
 
         /// <summary>
@@ -99,25 +158,18 @@ namespace DarkwoodMP.Combat
 
             foreach (var proxy in NetPlayerProxy.All.Values)
             {
-                if (proxy == null || !proxy.alive)
+                RemotePlayer rp = null;
+                if (proxy != null)
+                {
+                    ps.Remotes.TryGetValue(proxy.Owner, out rp);
+                }
+
+                if (!BeamRules.LightsBeam(FactsOf(proxy, rp)))
                 {
                     continue;
                 }
 
-                if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp)
-                    || rp.Root == null)
-                {
-                    continue;
-                }
-
-                var last = rp.Last;
-                if (last == null || !last.Flashlight || !last.Alive
-                    || last.Spectating)
-                {
-                    continue;
-                }
-
-                if (InBeam(rp.Root.transform, pos, out _, out _))
+                if (InBeam(rp.Root.transform, pos).In)
                 {
                     return proxy;
                 }
@@ -127,35 +179,18 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// How far ahead a joiner's flashlight reaches (the game's box: up to
-        /// 1000 ahead and 500 past that).
+        /// Where a spot is in the beam of a flashlight held by a player
+        /// standing as `root`.
         /// </summary>
-        public const float MaxBeam = 1500f;
-
-        /// <summary>
-        /// Whether a spot is in the beam of a flashlight held by a player
-        /// standing as `root` (players are rotated Euler(90, yaw, 0): local up
-        /// is ahead).
-        /// </summary>
-        internal static bool InBeam(
-            Transform root, Vector3 pos, out float ahead, out float aside)
+        internal static BeamSpot InBeam(Transform root, Vector3 pos)
         {
-            Vector3 fwd = root.TransformDirection(Vector3.up);
-            fwd.y = 0f;
-            Vector3 rel = pos - root.position;
-            rel.y = 0f;
-            ahead = aside = 0f;
-            if (fwd.sqrMagnitude < 0.01f)
-            {
-                return false;
-            }
-
-            fwd.Normalize();
-            ahead = Vector3.Dot(rel, fwd);
-            aside = Vector3.Cross(fwd, rel).magnitude;
-            return ahead >= -50f && ahead <= MaxBeam
-                && aside <= Mathf.Max(100f, ahead * 0.5f + 50f);
+            return BeamRules.InBeam(
+                VecOf(root.position),
+                VecOf(root.TransformDirection(Vector3.up)),
+                VecOf(pos));
         }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
     }
 
     /// <summary>

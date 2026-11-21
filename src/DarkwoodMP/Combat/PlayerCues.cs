@@ -1,3 +1,4 @@
+using DarkwoodMP.Combat.Cues;
 using HarmonyLib;
 using UnityEngine;
 
@@ -16,21 +17,26 @@ namespace DarkwoodMP.Combat
     /// </summary>
     public static class PlayerCues
     {
-        public const byte Dodge = 0, Scare = 1;
-        // the game's layers in both calls
-        private const int EnemyLayers = 2099200;
-        private static readonly Collider[] _near = new Collider[128];
+        public const byte Dodge = CueRules.Dodge, Scare = CueRules.Scare;
+        private static readonly Collider[] _near =
+            new Collider[CueRules.MaxNear];
 
         public static void Send(byte kind)
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsClient || !NetEnemies.ClientMode)
+            bool client = false;
+            if (s != null)
+            {
+                client = s.IsClient;
+            }
+
+            if (!CueRules.Sends(s != null, client, NetEnemies.ClientMode))
             {
                 return;
             }
 
             var w = s.Begin(Net.MsgType.PlayerCue);
-            Cues.PlayerCue.Write(w, kind);
+            PlayerCue.Write(w, kind);
             s.SendToHost(w, Net.Channel.Control, reliable: true);
         }
 
@@ -40,25 +46,21 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static void OnCue(ulong from, Net.PacketReader r)
         {
-            var s = Net.Session.Instance;
-            if (s == null || !s.IsHost)
-            {
-                return;
-            }
-
-            byte kind = Cues.PlayerCue.Read(r);
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
-                || proxy == null || !proxy.alive)
+            byte kind = PlayerCue.Read(r);
+            NetPlayerProxy.All.TryGetValue(from, out var proxy);
+            var cue = FactsOf(Net.Session.Instance, kind, proxy);
+            CueReaction reaction = CueRules.Reaction(cue);
+            if (reaction == CueReaction.None)
             {
                 return;
             }
 
             Vector3 pos = proxy.transform.position;
             int n = 0;
-            if (kind == Dodge)
+            if (reaction == CueReaction.Dodge)
             {
                 int hits = Physics.OverlapSphereNonAlloc(
-                    pos, 150f, _near, EnemyLayers);
+                    pos, CueRules.DodgeRadius, _near, CueRules.EnemyLayers);
                 for (int i = 0; i < hits; i++)
                 {
                     Character c = null;
@@ -76,30 +78,26 @@ namespace DarkwoodMP.Combat
                     n++;
                 }
             }
-            else if (kind == Scare)
+            else
             {
                 if (Threat.Debug)
                 {
-                    n = CountCharacters(pos, 350f);
+                    n = CountCharacters(pos, CueRules.ScareRadius);
                 }
 
-                Character.scareInArea(pos, 350f);
-            }
-            else
-            {
-                return;
+                Character.scareInArea(pos, CueRules.ScareRadius);
             }
 
             if (Threat.Debug)
             {
                 string text = "aims";
-                if (kind == Dodge)
+                if (reaction == CueReaction.Dodge)
                 {
                     text = "swings";
                 }
 
                 string effect = "within 350 told to be scared";
-                if (kind == Dodge)
+                if (reaction == CueReaction.Dodge)
                 {
                     effect = "within 150 may dodge";
                 }
@@ -110,10 +108,43 @@ namespace DarkwoodMP.Combat
             }
         }
 
+        /// <summary>
+        /// Client: whether a character dodges or gets scared (not a frozen
+        /// copy of the host's enemy).
+        /// </summary>
+        public static bool Reacts(Character c)
+        {
+            return CueRules.Reacts(
+                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(c));
+        }
+
+        private static CueFacts FactsOf(
+            Net.Session s, byte kind, NetPlayerProxy proxy)
+        {
+            bool alive = false;
+            if (proxy != null)
+            {
+                alive = proxy.alive;
+            }
+
+            bool hosting = false;
+            if (s != null)
+            {
+                hosting = s.IsHost;
+            }
+
+            return new CueFacts
+            {
+                Hosting = hosting,
+                Kind = kind,
+                StandInAlive = alive,
+            };
+        }
+
         private static int CountCharacters(Vector3 pos, float range)
         {
             int hits = Physics.OverlapSphereNonAlloc(
-                pos, range, _near, EnemyLayers),
+                pos, range, _near, CueRules.EnemyLayers),
                 n = 0;
             for (int i = 0; i < hits; i++)
             {
@@ -156,13 +187,13 @@ namespace DarkwoodMP.Combat
     static class FrozenNoDodgePatch
     {
         static bool Prefix(Character __instance) =>
-            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+            PlayerCues.Reacts(__instance);
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.getScared))]
     static class FrozenNotScaredPatch
     {
         static bool Prefix(Character __instance) =>
-            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+            PlayerCues.Reacts(__instance);
     }
 }

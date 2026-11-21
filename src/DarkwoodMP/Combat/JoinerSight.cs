@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using DarkwoodMP.Combat.Joiners;
+using DarkwoodMP.Combat.Targeting;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -20,38 +23,52 @@ namespace DarkwoodMP.Combat
 
         public static bool Sees(NetPlayerProxy p, Transform t)
         {
-            if (p == null || !p.alive || t == null)
-            {
-                return false;
-            }
-
-            var host = Player.Instance;
-            float d = Core.trueDistance(p.transform.position, t.position);
-            if (d >= 800f)
-            {
-                return false;
-            }
-
-            float fov = 90f;
-            if (host != null)
-            {
-                fov = Fov(host);
-            }
-
-            float light = 0f;
-            if (host != null && host.FOVDot != null)
-            {
-                light = host.FOVDot.LightRadius;
-            }
-
-            if (Vector3.Angle(t.position
-                    - p.transform.position, p.transform.up) >= fov / 2f
-                && d >= light)
+            if (!JoinerSightRules.InView(FactsOf(p, t)))
             {
                 return false;
             }
 
             return Core.canSee(p.transform, t);
+        }
+
+        private static ViewFacts FactsOf(NetPlayerProxy p, Transform t)
+        {
+            if (p == null || !p.alive || t == null)
+            {
+                return new ViewFacts
+                {
+                    StandInAlive = p != null && p.alive,
+                    Target = t != null,
+                };
+            }
+
+            var host = Player.Instance;
+            float fov = 0f;
+            float light = 0f;
+            bool hasLight = false;
+            if (host != null)
+            {
+                fov = Fov(host);
+                hasLight = host.FOVDot != null;
+            }
+
+            if (hasLight)
+            {
+                light = host.FOVDot.LightRadius;
+            }
+
+            return new ViewFacts
+            {
+                StandInAlive = true,
+                Target = true,
+                Distance = Core.trueDistance(p.transform.position, t.position),
+                HasHost = host != null,
+                HostFov = fov,
+                HasLight = hasLight,
+                LightRadius = light,
+                Angle = Vector3.Angle(
+                    t.position - p.transform.position, p.transform.up),
+            };
         }
 
         /// <summary>A living joiner who sees this, or null.</summary>
@@ -78,29 +95,133 @@ namespace DarkwoodMP.Combat
 
         public static float NearestPlayer(Transform t)
         {
-            float best;
-            if (Player.Instance != null)
+            var host = Player.Instance;
+            float hostDistance = 0f;
+            if (host != null)
             {
-                best = Core.trueDistance(
-                    Player.Instance._transform.position, t.position);
-            }
-            else
-            {
-                best = float.MaxValue;
+                hostDistance = Core.trueDistance(
+                    host._transform.position, t.position);
             }
 
+            var standIns = new List<StandInSpot>();
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p != null && p.alive)
+                if (p == null)
                 {
-                    best = Mathf.Min(
-                        best,
-                        Core.trueDistance(p.transform.position, t.position));
+                    continue;
                 }
+
+                standIns.Add(new StandInSpot
+                {
+                    Alive = p.alive,
+                    Distance = Core.trueDistance(
+                        p.transform.position, t.position),
+                });
             }
 
-            return best;
+            return JoinerSightRules.Nearest(
+                host != null, hostDistance, standIns);
         }
+
+        /// <summary>
+        /// The forest spirit's teleport, read before the rolls.
+        /// </summary>
+        public static TeleportFacts SpiritFactsOf(Character c)
+        {
+            var spirit = new TeleportFacts
+            {
+                On = Threat.Enabled,
+                ClientMode = NetEnemies.ClientMode,
+                HasTarget = c.target != null,
+            };
+
+            if (!spirit.On || spirit.ClientMode || !spirit.HasTarget)
+            {
+                return spirit;
+            }
+
+            bool seen = AnyPlayerSees(c.transform);
+            float nearest = 0f;
+            if (!seen)
+            {
+                nearest = NearestPlayer(c.transform);
+            }
+
+            return spirit with
+            {
+                Seen = seen,
+                Nearest = nearest,
+                TargetAt = VecOf(c.target.position),
+                TargetUp = VecOf(c.target.up),
+            };
+        }
+
+        /// <summary>
+        /// A banshee's sight check, and the stand-in who sees it (null when
+        /// the rule doesn't need to know).
+        /// </summary>
+        public static BansheeFacts BansheeFactsOf(
+            Character c, out NetPlayerProxy seer)
+        {
+            seer = null;
+            var banshee = new BansheeFacts
+            {
+                On = Threat.Enabled,
+                ClientMode = NetEnemies.ClientMode,
+                Banshee = c.banshee,
+                Alive = c.alive,
+            };
+
+            if (!banshee.On || banshee.ClientMode || !banshee.Banshee
+                || !banshee.Alive)
+            {
+                return banshee;
+            }
+
+            bool hostSees = Player.Instance != null
+                && Player.Instance.isInSight(c.transform);
+            if (!hostSees)
+            {
+                seer = AnySees(c.transform);
+            }
+
+            return banshee with
+            {
+                HostSees = hostSees,
+                JoinerSees = seer != null,
+            };
+        }
+
+        /// <summary>
+        /// A banshee out of its player's sight, and its target's stand-in.
+        /// </summary>
+        public static BansheeFacts ChaseFactsOf(
+            Character c, out NetPlayerProxy target)
+        {
+            target = null;
+            var banshee = new BansheeFacts
+            {
+                On = Threat.Enabled,
+                ClientMode = NetEnemies.ClientMode,
+                HasTarget = c.target != null,
+            };
+
+            if (!banshee.On || banshee.ClientMode || !banshee.HasTarget)
+            {
+                return banshee;
+            }
+
+            target = c.target.GetComponent<NetPlayerProxy>();
+            return banshee with
+            {
+                TargetStandIn = target != null,
+                TargetAlive = target != null && target.alive,
+            };
+        }
+
+        public static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
     }
 
     /// <summary>
@@ -115,20 +236,25 @@ namespace DarkwoodMP.Combat
     {
         static bool Prefix(Character __instance)
         {
-            if (!Threat.Enabled || NetEnemies.ClientMode)
+            var c = __instance;
+            var spirit = JoinerSight.SpiritFactsOf(c);
+            var step = JoinerSightRules.Teleport(spirit);
+            if (step == TeleportStep.Game)
             {
                 return true;
             }
 
-            var c = __instance;
-            if (c.target != null && !JoinerSight.AnyPlayerSees(c.transform)
-                && JoinerSight.NearestPlayer(c.transform) > 200f)
+            if (step == TeleportStep.Teleport)
             {
+                int x = UnityEngine.Random.Range(
+                    JoinerSightRules.SpreadMin, JoinerSightRules.SpreadMax);
+                int z = UnityEngine.Random.Range(
+                    JoinerSightRules.SpreadMin, JoinerSightRules.SpreadMax);
+                spirit = spirit with { RollX = x, RollZ = z };
                 c.teleportWithEffect(
-                    c.target.position + c.target.up * 500f + new Vector3(
-                        UnityEngine.Random.Range(-100, 100), 0f,
-                        UnityEngine.Random.Range(-100, 100)),
-                    "ForestSpirit_fastSpawnEff", 4f);
+                    JoinerSight.VectorOf(JoinerSightRules.SpotOf(spirit)),
+                    JoinerSightRules.SpiritEffect,
+                    JoinerSightRules.SpiritEffectTime);
             }
 
             return false;
@@ -157,22 +283,10 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Character __instance)
         {
             var c = __instance;
-            if (!Threat.Enabled || NetEnemies.ClientMode || !c.banshee
-                || !c.alive)
+            var banshee = JoinerSight.BansheeFactsOf(c, out var proxy);
+            if (!JoinerSightRules.BansheeGoesForJoiner(banshee))
             {
-                return true;
-            }
-
-            if (Player.Instance != null
-                && Player.Instance.isInSight(c.transform))
-            {
-                return true; // the game's own
-            }
-
-            var proxy = JoinerSight.AnySees(c.transform);
-            if (proxy == null)
-            {
-                return true; // nobody sees it: the game does nothing either
+                return true; // the game's own, or nobody sees it
             }
 
             c.target = proxy.transform;
@@ -188,7 +302,7 @@ namespace DarkwoodMP.Combat
             {
                 c.startRoutine(
                     (Action)Delegate.CreateDelegate(typeof(Action), c, Check),
-                    0.5f);
+                    JoinerSightRules.BansheeCheckEvery);
             }
 
             var light = c.transform.Find("SightLight");
@@ -197,9 +311,11 @@ namespace DarkwoodMP.Combat
                 light.gameObject.SetActive(true);
             }
 
-            c.canSeeEnemyFar = Core.trueDistance(proxy.transform, c.transform)
-                < c.farViewDistance;
-            if (c.behaviour != Character.Behaviour.defensive)
+            c.canSeeEnemyFar = JoinerSightRules.SeesFar(
+                Core.trueDistance(proxy.transform, c.transform),
+                c.farViewDistance);
+            bool defensive = c.behaviour == Character.Behaviour.defensive;
+            if (JoinerSightRules.Approaches(defensive))
             {
                 c.goToPos(proxy.transform);
             }
@@ -221,13 +337,8 @@ namespace DarkwoodMP.Combat
         static void Postfix(Character __instance)
         {
             var c = __instance;
-            if (!Threat.Enabled || NetEnemies.ClientMode || c.target == null)
-            {
-                return;
-            }
-
-            var proxy = c.target.GetComponent<NetPlayerProxy>();
-            if (proxy != null && proxy.alive)
+            var banshee = JoinerSight.ChaseFactsOf(c, out var proxy);
+            if (JoinerSightRules.BansheeKeepsChasing(banshee))
             {
                 c.goToPos(proxy.transform);
             }
