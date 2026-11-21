@@ -30,15 +30,15 @@ namespace DarkwoodMP
     /// (HKCU\Software\Acid Wizard Studio\Darkwood), which this test can't read,
     /// so it doesn't run there.
     /// </summary>
-    internal static class OptionsTest
+    internal sealed class OptionsTest
     {
-        private static string PrefsPath =>
+        private string PrefsPath =>
             Path.Combine(Application.persistentDataPath, "prefs");
-        private static void Log(string s) =>
+        private void Log(string s) =>
             Plugin.Log.LogInfo("[options] " + s);
-        private static int _fails;
+        private int _fails;
 
-        private static void Check(bool ok, string what)
+        private void Check(bool ok, string what)
         {
             if (!ok)
             {
@@ -54,7 +54,7 @@ namespace DarkwoodMP
             Log($"{text} {what}");
         }
 
-        public static IEnumerator Run(string dir, bool inWorld)
+        public IEnumerator Run(string dir, bool inWorld)
         {
             Directory.CreateDirectory(dir);
             _fails = 0;
@@ -388,14 +388,14 @@ namespace DarkwoodMP
         // What Run changed, kept until it has put it back, so a run cut short
         // (an exception, a reset's StopTests, the game quitting) still restores
         // the player's settings.
-        private static Dictionary<string, (string type, string value)> _before;
-        private static (int w, int h, FullScreenMode mode) _sizeBefore;
+        private Dictionary<string, (string type, string value)> _before;
+        private (int w, int h, FullScreenMode mode) _sizeBefore;
 
         /// <summary>
         /// Plugin.StopTests and quitting: put the settings back if a run
         /// stopped before it did.
         /// </summary>
-        internal static void RestoreIfCutShort()
+        internal void RestoreIfCutShort()
         {
             var before = _before;
             if (before == null)
@@ -435,7 +435,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static IEnumerator Shot(string path)
+        private IEnumerator Shot(string path)
         {
             yield return new WaitForSecondsRealtime(0.8f);
             ScreenCapture.CaptureScreenshot(path);
@@ -445,17 +445,17 @@ namespace DarkwoodMP
 
         // ---- the prefs file -------------------------------------------------
 
-        private static readonly Regex PrefRx = new Regex(
+        private readonly Regex PrefRx = new Regex(
             "<pref name=\"([^\"]*)\" type=\"([a-z]+)\">([^<]*)</pref>");
 
         /// <summary>
         /// Unity's own entries, which it changes itself (the window's size and
         /// place, sessions).
         /// </summary>
-        private static bool Unity(string name) => name.StartsWith("unity.")
+        private bool Unity(string name) => name.StartsWith("unity.")
             || name.StartsWith("Screenmanager") || name == "UnitySelectMonitor";
 
-        private static Dictionary<string, (string type, string value)>
+        private Dictionary<string, (string type, string value)>
             ReadPrefs()
         {
             PlayerPrefs.Save();
@@ -469,7 +469,7 @@ namespace DarkwoodMP
             return d;
         }
 
-        private static void RestorePrefs(
+        private void RestorePrefs(
             Dictionary<string, (string type, string value)> before)
         {
             var now = ReadPrefs();
@@ -528,7 +528,7 @@ namespace DarkwoodMP
             PlayerPrefs.Save();
         }
 
-        private static List<string> Compare(
+        private List<string> Compare(
             Dictionary<string, (string type, string value)> a,
             Dictionary<string, (string type, string value)> b)
         {
@@ -559,7 +559,7 @@ namespace DarkwoodMP
             return diffs;
         }
 
-        private static string Short(string key)
+        private string Short(string key)
         {
             if (key.Length > 70)
             {

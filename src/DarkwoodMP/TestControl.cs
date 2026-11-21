@@ -35,17 +35,17 @@ namespace DarkwoodMP
     ///                     player-joined (host: a player, or N players, in and
     ///                     out of loading) -> ok / fail timeout
     /// </summary>
-    public static class TestControl
+    internal sealed class TestControl
     {
-        public static string Title { get; private set; }
+        public string Title { get; private set; }
 
-        private static Plugin _plugin;
-        private static readonly
+        private Plugin _plugin;
+        private readonly
             ConcurrentQueue<(string line, ReplyWriter reply)> _commands =
                 new ConcurrentQueue<(string, ReplyWriter)>();
-        private static bool _busy;
+        private bool _busy;
 
-        public static void Start(Plugin plugin, int port)
+        public void Start(Plugin plugin, int port)
         {
             _plugin = plugin;
             var listener = new TcpListener(IPAddress.Loopback, port);
@@ -78,7 +78,7 @@ namespace DarkwoodMP
             }.Start();
         }
 
-        private static void Serve(TcpClient c)
+        private void Serve(TcpClient c)
         {
             try
             {
@@ -149,7 +149,7 @@ namespace DarkwoodMP
         /// Called every frame (Plugin.Update): runs the commands that came in,
         /// one at a time.
         /// </summary>
-        public static void Update()
+        public void Update()
         {
             if (_busy || !_commands.TryDequeue(out var cmd))
             {
@@ -177,7 +177,7 @@ namespace DarkwoodMP
             }
         }
 
-        private static void Run(string[] words, StreamWriter reply)
+        private void Run(string[] words, StreamWriter reply)
         {
             switch (words[0])
             {
@@ -296,12 +296,12 @@ namespace DarkwoodMP
         /// <summary>
         /// Wait for something to happen in this game ("wait EVENT SECS").
         /// </summary>
-        private static float Number(string text)
+        private float Number(string text)
         {
             return float.Parse(text, CultureInfo.InvariantCulture);
         }
 
-        private static IEnumerator Wait(
+        private IEnumerator Wait(
             string what, float secs, int count, StreamWriter reply)
         {
             Func<bool> done;
@@ -340,7 +340,7 @@ namespace DarkwoodMP
         /// <summary>Host: how many players have joined and are out of loading
         /// (their PlayerState no longer comes from the loading spot at
         /// x = 75000, and they aren't away).</summary>
-        private static int PlayersIn()
+        private int PlayersIn()
         {
             var s = Net.Session.Instance;
             if (s == null || !s.IsHost || s.Peers.Count == 0
@@ -382,7 +382,7 @@ namespace DarkwoodMP
         /// Back to a clean main menu: the last test stopped, its session left,
         /// its world closed.
         /// </summary>
-        private static IEnumerator Reset(StreamWriter reply)
+        private IEnumerator Reset(StreamWriter reply)
         {
             try
             {
@@ -458,7 +458,7 @@ namespace DarkwoodMP
         /// Called from Plugin.OnGUI: the test's title along the top of the
         /// screen.
         /// </summary>
-        public static void OnGUI()
+        public void OnGUI()
         {
             if (string.IsNullOrEmpty(Title))
             {
@@ -485,7 +485,7 @@ namespace DarkwoodMP
             GUI.Label(r, Title, _style);
         }
 
-        private static GUIStyle _style;
-        private static Texture2D _back;
+        private GUIStyle _style;
+        private Texture2D _back;
     }
 }
