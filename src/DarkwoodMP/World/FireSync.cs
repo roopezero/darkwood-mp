@@ -1,8 +1,6 @@
-using System.Collections;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Fire;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -59,9 +57,40 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: something started (on) or stopped burning here.
+        /// Host: something started burning here (Burn.Start).
         /// </summary>
-        internal void Changed(Burn b, bool on)
+        internal void Started(Burn b)
+        {
+            Changed(b, true);
+        }
+
+        /// <summary>
+        /// Host: something stopped burning here (Burn.stop).
+        /// </summary>
+        internal void Stopped(Burn b)
+        {
+            Changed(b, false);
+        }
+
+        /// <summary>
+        /// Whether a Burn's damage runs here (Burn.waitToGetHit): on a
+        /// client only on its own player; the rest burns on the host.
+        /// </summary>
+        internal static bool Hurts(Burn b)
+        {
+            if (Coop.Current == null)
+            {
+                return true;
+            }
+
+            bool onPlayer = b.GetComponent<Player>() != null;
+            return FireRules.BurnHurts(NetEnemies.ClientMode, onPlayer);
+        }
+
+        /// <summary>
+        /// Host: send that this started (on) or stopped burning.
+        /// </summary>
+        private void Changed(Burn b, bool on)
         {
             var facts = FactsOf(b, out var r);
             if (!FireRules.SendsChange(facts))
@@ -460,56 +489,6 @@ namespace DarkwoodMP.World
         private static bool Resolves(FireKind kind)
         {
             return kind >= FireKind.Enemy && kind <= FireKind.Item;
-        }
-    }
-
-    [HarmonyPatch(typeof(Burn), "Start")]
-    static class BurnStartPatch
-    {
-        static void Postfix(Burn __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fire.Changed(__instance, on: true);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Burn), nameof(Burn.stop))]
-    static class BurnStopPatch
-    {
-        static void Prefix(Burn __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Fire.Changed(__instance, on: false);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Client: fire hurts only our own player here; the rest burns on the host.
-    /// </summary>
-    [HarmonyPatch(typeof(Burn), nameof(Burn.waitToGetHit))]
-    static class ClientBurnDamagePatch
-    {
-        static bool Prefix(Burn __instance, ref IEnumerator __result)
-        {
-            if (!NetEnemies.ClientMode
-                || __instance.GetComponent<Player>() != null)
-            {
-                return true;
-            }
-
-            __result = Nothing();
-            return false;
-        }
-
-        private static IEnumerator Nothing()
-        {
-            yield break;
         }
     }
 }
