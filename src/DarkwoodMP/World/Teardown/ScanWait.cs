@@ -1,5 +1,4 @@
 using HarmonyLib;
-using Pathfinding;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -21,12 +20,10 @@ namespace DarkwoodMP.World
     /// their graph updates as it loaded, and its graph was scanned while the
     /// flood fill they queued was still running. The game can do the same in
     /// single player; more doors move in co-op. AstarData.RemoveGraph already
-    /// waits for the pending graph work first; this makes ScanLoop do the same.
+    /// waits for the pending graph work first; this makes ScanLoop do the same
+    /// (AstarPathScanLoop), in a game played alone too.
     /// </summary>
-    [HarmonyPatch(
-        typeof(AstarPath), nameof(AstarPath.ScanLoop),
-        new[] { typeof(OnScanStatus), typeof(int) })]
-    static class ScanWaitPatch
+    static class ScanWait
     {
         private static readonly
             AccessTools.FieldRef<AstarPath, bool> ProcessingWorkItems =
@@ -35,33 +32,24 @@ namespace DarkwoodMP.World
             AccessTools.FieldRef<AstarPath, bool> WorkItemsQueued =
                 AccessTools.FieldRefAccess<AstarPath, bool>("workItemsQueued");
 
-        static void Prefix(AstarPath __instance)
+        /// <summary>
+        /// Before AstarPath.ScanLoop: finishes the pending graph updates
+        /// when TeardownRules.Flushes says so.
+        /// </summary>
+        internal static void BeforeScan(AstarPath astar)
         {
             try
             {
-                if (!Application.isPlaying || __instance == null
-                    || __instance.graphs == null || __instance.isScanning)
-                {
-                    return;
-                }
-
-                if (ProcessingWorkItems(__instance))
-                {
-                    // called from inside a work item: flushing would recurse
-                    return;
-                }
-
-                bool pending = WorkItemsQueued(__instance)
-                    || __instance.IsAnyGraphUpdatesQueued;
-                if (!pending)
+                if (astar == null
+                    || !Teardown.TeardownRules.Flushes(FactsOf(astar)))
                 {
                     return;
                 }
 
                 // Hand queued graph updates over, then finish every work item,
                 // waiting for the graph update thread.
-                __instance.FlushGraphUpdates();
-                __instance.FlushWorkItems();
+                astar.FlushGraphUpdates();
+                astar.FlushWorkItems();
                 Plugin.Log.LogInfo(
                     "[pathfinding] finished the pending graph updates before a "
                         + "scan");
@@ -73,5 +61,20 @@ namespace DarkwoodMP.World
                         + $"scan: {e.Message}");
             }
         }
+
+        /// <summary>
+        /// What the scan's check looks at. Called from inside a work item
+        /// (processingWorkItems), flushing would recurse.
+        /// </summary>
+        private static Teardown.ScanFacts FactsOf(AstarPath astar) =>
+            new Teardown.ScanFacts
+            {
+                Playing = Application.isPlaying,
+                Graphs = astar.graphs != null,
+                Scanning = astar.isScanning,
+                InWorkItem = ProcessingWorkItems(astar),
+                WorkQueued = WorkItemsQueued(astar),
+                UpdatesQueued = astar.IsAnyGraphUpdatesQueued,
+            };
     }
 }

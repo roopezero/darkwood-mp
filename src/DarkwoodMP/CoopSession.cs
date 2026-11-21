@@ -274,6 +274,9 @@ namespace DarkwoodMP
             // the progression lives as long as the game (ModHost.Progress);
             // this session brings its messages and forgets its record
             Plugin.Instance.Host.Progress.Join(this);
+            // the save book's file lives as long as the game (ModHost.Book);
+            // a host notes who joins while this runs
+            DarkwoodMP.World.SaveBook.Watch(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

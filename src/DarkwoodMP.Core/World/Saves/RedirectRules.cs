@@ -14,7 +14,7 @@ namespace DarkwoodMP.World.Saves
         public const string BookName = "DarkwoodMP.saves.json";
         public const string RedirectedBookName = "darkwoodmp-saves.json";
 
-        /// The save folder the game gets (SaveRedirect.Prefix): the
+        /// The save folder the game gets (SaveFolders.Now): the
         /// snapshot's for its one frame, else the redirect's, else null for
         /// the game's own. An empty temporary folder still wins: only null
         /// passes it by.
@@ -28,7 +28,7 @@ namespace DarkwoodMP.World.Saves
             return redirect;
         }
 
-        /// A scene load ends the redirect (SaveRedirect.OnSceneLoaded): a
+        /// A scene load ends the redirect (SaveFolders.OnSceneLoaded): a
         /// Single load of the main menu after a world was started.
         public static bool EndsAt(bool started, string scene, bool single) =>
             started && scene == MenuScene && single;
@@ -72,7 +72,7 @@ namespace DarkwoodMP.World.Saves
         }
 
         /// A new game in a slot drops what the mod kept for the slot's last
-        /// world (SaveBookNewGamePatch): not when the slot's world is the
+        /// world (SaveBook.OnNewGame): not when the slot's world is the
         /// one playing.
         public static bool NewGameForgets(bool profile, bool active) =>
             profile && !active;
@@ -82,7 +82,7 @@ namespace DarkwoodMP.World.Saves
         public static bool NewGameDeletes(bool saves, bool? hostCopy) =>
             saves && hostCopy != true;
 
-        /// A deleted slot drops and deletes the same (SaveBookDeletePatch):
+        /// A deleted slot drops and deletes the same (SaveBook.OnSlotDeleted):
         /// with a profile, never in a host's copy. Unknown (null) does.
         public static bool SlotDeleteForgets(bool profile, bool? hostCopy) =>
             profile && hostCopy != true;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
-using HarmonyLib;
+using DarkwoodMP.World.Saves;
 using Newtonsoft.Json;
 
 namespace DarkwoodMP.World
@@ -42,146 +42,63 @@ namespace DarkwoodMP.World
             public List<Player> Players = new List<Player>();
         }
 
-        private sealed class FileData
-        {
-            public Dictionary<string, Record> Slots =
-                new Dictionary<string, Record>();
-        }
-
-        private static FileData _data;
-        private static string _loadedFrom;
-        private static DateTime _stamp;
-
         /// <summary>
         /// The file for the saves the game uses now, or null when there's none
         /// (a host's world in the cache).
         /// </summary>
-        public static string FilePath
+        public static string FilePath => RedirectRules.BookFile(
+            BepInEx.Paths.ConfigPath, SaveRedirect.Dir, HostCopy());
+
+        /// <summary>
+        /// Whether we play a copy of a host's world, or null when that isn't
+        /// known (no WorldShare yet).
+        /// </summary>
+        internal static bool? HostCopy()
         {
-            get
-            {
-                if (!SaveRedirect.Active)
-                {
-                    return Path.Combine(
-                        BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
-                }
-
-                WorldShare instance = WorldShare.Instance;
-                if (instance == null || instance.PlayingHostCopy)
-                {
-                    return null;
-                }
-
-                return Path.Combine(SaveRedirect.Dir, "darkwoodmp-saves.json");
-            }
-        }
-
-        public static void Register(Session session)
-        {
-            session.OnPeerConnected += id =>
-            {
-                if (!session.IsHost || Core.currentProfile == null)
-                {
-                    return;
-                }
-
-                string name = session.NameOf(id);
-                session.Keys.TryGetValue(id, out string key);
-                string stored = key;
-                if (stored == null)
-                {
-                    stored = "";
-                }
-
-                AddPlayer(Core.currentProfile.id, name, stored);
-            };
-        }
-
-        private static FileData Data()
-        {
-            string path = FilePath;
-            if (path == null)
+            WorldShare share = WorldShare.Instance;
+            if (share == null)
             {
                 return null;
             }
 
-            // Read again when the file changed or went away underneath (a
-            // test's fresh copy of the saves).
-            DateTime stamp;
-            if (File.Exists(path))
-            {
-                stamp = File.GetLastWriteTimeUtc(path);
-            }
-            else
-            {
-                stamp = DateTime.MinValue;
-            }
-
-            if (_data != null && _loadedFrom == path && _stamp == stamp)
-            {
-                return _data;
-            }
-
-            _loadedFrom = path;
-            _stamp = stamp;
-            _data = new FileData();
-            try
-            {
-                if (File.Exists(path))
-                {
-                    FileData data = JsonConvert.DeserializeObject<FileData>(
-                        File.ReadAllText(path));
-                    if (data == null)
-                    {
-                        data = new FileData();
-                    }
-
-                    _data = data;
-                }
-
-                if (_data.Slots == null)
-                {
-                    _data.Slots = new Dictionary<string, Record>();
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"[saves] couldn't read {path}: {e.Message}");
-            }
-
-            return _data;
+            return share.PlayingHostCopy;
         }
 
-        private static void Write()
+        /// <summary>
+        /// For as long as the session runs, a host notes each player who
+        /// joins in the slot's record.
+        /// </summary>
+        internal static void Watch(CoopSession coop)
         {
-            string path = FilePath;
-            if (path == null || _data == null || _loadedFrom != path)
+            Session session = coop.Net;
+            Action<ulong> onPeer = id => OnPeer(session, id);
+            session.OnPeerConnected += onPeer;
+            coop.Hook(() => session.OnPeerConnected -= onPeer);
+        }
+
+        private static void OnPeer(Session session, ulong id)
+        {
+            if (!session.IsHost || Core.currentProfile == null)
             {
                 return;
             }
 
-            try
+            string name = session.NameOf(id);
+            session.Keys.TryGetValue(id, out string key);
+            string stored = key;
+            if (stored == null)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                string tmp = path + ".tmp";
-                File.WriteAllText(
-                    tmp,
-                    JsonConvert.SerializeObject(_data, Formatting.Indented));
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
+                stored = "";
+            }
 
-                File.Move(tmp, path);
-                _stamp = File.GetLastWriteTimeUtc(path);
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"[saves] couldn't write {path}: {e.Message}");
-            }
+            AddPlayer(Core.currentProfile.id, name, stored);
         }
+
+        private static SaveBookFile Book => Plugin.Instance.Host.Book;
+
+        private static SaveBookFile.FileData Data() => Book.Data(FilePath);
+
+        private static void Write() => Book.Write(FilePath);
 
         /// <summary>
         /// The record for slot <paramref name="slot"/>, or null if there's
@@ -238,18 +155,14 @@ namespace DarkwoodMP.World
             return name;
         }
 
-        public static void SetName(int slot, string name)
+        public static void SetName(int slot, string typed)
         {
-            if (name == null)
-            {
-                name = "";
-            }
-
-            name = name.Trim();
-            if (NameOf(slot) == name)
+            if (!SaveBookRules.Renames(NameOf(slot), typed))
             {
                 return;
             }
+
+            string name = SaveBookRules.SlotName(typed);
 
             var r = GetOrAdd(slot);
             if (r == null)
@@ -290,7 +203,7 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    dir = PlayersDir(sm.baseSaveDirectory, slot);
+                    dir = DeleteRules.PlayersOf(sm.baseSaveDirectory, slot);
                 }
 
                 if (FilePath != null && dir != null && Directory.Exists(dir))
@@ -327,15 +240,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var p = r.Players.FirstOrDefault(x =>
-            {
-                if (key != "")
-                {
-                    return x.Key == key;
-                }
-
-                return x.Name == name;
-            });
+            var joiner = new BookPlayer { Key = key, Name = name };
+            var p = r.Players.FirstOrDefault(x => SaveBookRules.SamePlayer(
+                new BookPlayer { Key = x.Key, Name = x.Name },
+                joiner));
 
             if (p == null)
             {
@@ -347,14 +255,6 @@ namespace DarkwoodMP.World
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}: played with {name}");
         }
-
-        /// <summary>
-        /// The folder where the host keeps the characters of the players who
-        /// joined slot <paramref name="slot"/>.
-        /// </summary>
-        private static string PlayersDir(string baseDir, int slot) =>
-            Path.Combine(
-                Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
 
         /// <summary>
         /// Delete slot <paramref name="slot"/>'s players' characters;
@@ -395,24 +295,26 @@ namespace DarkwoodMP.World
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}'s record dropped ({why})");
         }
-    }
 
-    /// <summary>
-    /// A new game starts in a slot (the profile isn't active yet): its record
-    /// starts empty.
-    /// </summary>
-    [HarmonyPatch(typeof(UI), nameof(UI.initNewGame))]
-    static class SaveBookNewGamePatch
-    {
-        static void Prefix()
+        /// <summary>
+        /// A new game starts in a slot (UI.initNewGame, the profile isn't
+        /// active yet): its record starts empty.
+        /// </summary>
+        internal static void OnNewGame()
         {
             var p = Core.currentProfile;
-            if (p == null || p.Active)
+            bool active = false;
+            if (p != null)
+            {
+                active = p.Active;
+            }
+
+            if (!RedirectRules.NewGameForgets(p != null, active))
             {
                 return;
             }
 
-            SaveBook.Forget(p.id, "a new game");
+            Forget(p.id, "a new game");
             // The characters the host kept for the players who joined the
             // slot's last world: the game writes the new world over the old
             // save and leaves them, so a joiner would get their old character
@@ -425,52 +327,37 @@ namespace DarkwoodMP.World
             }
 
             var sm = Singleton<SaveManager>.Instance;
-            if (sm != null)
+            if (RedirectRules.NewGameDeletes(sm != null, HostCopy()))
             {
-                WorldShare share = WorldShare.Instance;
-                if (share == null || !share.PlayingHostCopy)
-                {
-                    SaveBook.DeletePlayersDir(
-                        sm.baseSaveDirectory, p.id, "(a new game)");
-                }
+                DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
             }
         }
-    }
 
-    /// <summary>
-    /// The game deletes a slot's save: its record goes too, and so do the
-    /// characters the host kept for the players who joined it
-    /// (prof&lt;id&gt;/darkwoodmp_players, World.Characters), which the game's
-    /// deleteSave leaves behind: otherwise a new game in that slot would hand
-    /// them their old characters.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(SaveManager), nameof(SaveManager.deleteCurrentProfile))]
-    static class SaveBookDeletePatch
-    {
-        static void Prefix(SaveManager __instance)
+        /// <summary>
+        /// The game deletes a slot's save (SaveManager.deleteCurrentProfile):
+        /// its record goes too, and so do the characters the host kept for
+        /// the players who joined it (prof&lt;id&gt;/darkwoodmp_players,
+        /// World.Characters), which the game's deleteSave leaves behind:
+        /// otherwise a new game in that slot would hand them their old
+        /// characters.
+        /// </summary>
+        internal static void OnSlotDeleted(SaveManager saves)
         {
             var p = Core.currentProfile;
-            if (p == null)
+            bool? hostCopy = HostCopy();
+            if (!RedirectRules.SlotDeleteForgets(p != null, hostCopy))
             {
                 return;
             }
 
-            WorldShare share = WorldShare.Instance;
-            if (share != null && share.PlayingHostCopy)
-            {
-                return;
-            }
-
-            SaveBook.Forget(p.id, "deleted");
+            Forget(p.id, "deleted");
             Characters instance = Characters.Instance;
             if (instance != null)
             {
                 instance.Forget("the slot deleted");
             }
 
-            SaveBook.DeletePlayersDir(
-                __instance.baseSaveDirectory, p.id, "with it");
+            DeletePlayersDir(saves.baseSaveDirectory, p.id, "with it");
         }
     }
 }

@@ -1,4 +1,3 @@
-using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -22,11 +21,11 @@ namespace DarkwoodMP.World
     /// (UI.initBansheeOverlay), which throws when the UI has gone first. Each
     /// throw ended that banshee's OnDestroy there.
     /// </summary>
-    static class WorldTeardown
+    internal sealed class WorldTeardown
     {
-        public static bool Active { get; private set; }
-
-        public static void Init()
+        /// It lives as long as the game (ModHost.Teardown): leaving a world
+        /// happens alone too.
+        public WorldTeardown()
         {
             Application.quitting += () => Active = true;
             SceneManager.sceneLoaded += (scene, mode) =>
@@ -38,53 +37,34 @@ namespace DarkwoodMP.World
             };
         }
 
-        internal static void Begin() => Active = true;
-    }
+        public bool Active { get; private set; }
 
-    [HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
-    static class TeardownMenuPatch
-    {
-        static void Prefix() => WorldTeardown.Begin();
-    }
+        internal void Begin() => Active = true;
 
-    [HarmonyPatch(typeof(Core), nameof(Core.restartGame))]
-    static class TeardownRestartPatch
-    {
-        static void Prefix() => WorldTeardown.Begin();
-    }
-
-    [HarmonyPatch(typeof(Controller), nameof(Controller.generateChapter))]
-    static class TeardownChapterPatch
-    {
-        static void Prefix() => WorldTeardown.Begin();
-    }
-
-    /// <summary>
-    /// A character destroyed with its world does only what outlives the world
-    /// (a static flag, sounds the AudioController plays, which isn't destroyed
-    /// with the scene). The rest of Character.OnDestroy takes it off the
-    /// player's attackers, its location, the night's characters, and the
-    /// banshee's sight and overlay: all of them objects of the same scene,
-    /// going with it.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.OnDestroy))]
-    static class CharacterTeardownPatch
-    {
-        static bool Prefix(Character __instance)
+        /// <summary>
+        /// Whether the game's Character.OnDestroy runs. A character destroyed
+        /// with its world does only what outlives the world (a static flag,
+        /// sounds the AudioController plays, which isn't destroyed with the
+        /// scene). The rest of Character.OnDestroy takes it off the player's
+        /// attackers, its location, the night's characters, and the
+        /// banshee's sight and overlay: all of them objects of the same
+        /// scene, going with it.
+        /// </summary>
+        public bool RunsOnDestroy(Character character)
         {
-            if (!WorldTeardown.Active)
+            if (!Active)
             {
                 return true;
             }
 
-            if (__instance.forestSpirit)
+            if (character.forestSpirit)
             {
                 Core.chasedByForestSpirit = false;
                 AudioController.Stop("my_heaven", 10f);
             }
 
             var p = Player.Instance;
-            if (__instance.banshee && (object)p != null
+            if (character.banshee && (object)p != null
                 && p.bansheeAgitatedSoundAO != null)
             {
                 p.bansheeAgitatedSoundAO.Stop(1f);
