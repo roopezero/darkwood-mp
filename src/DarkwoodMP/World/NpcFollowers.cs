@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Npcs;
 using HarmonyLib;
 using UnityEngine;
 
@@ -105,25 +106,44 @@ namespace DarkwoodMP.World
         /// </summary>
         public static NetPlayerProxy LeaderOf(Character c)
         {
-            if (c == null || Recruiter.Count == 0
-                || !Recruiter.TryGetValue(c, out var id))
+            if (c == null || Recruiter.Count == 0)
             {
                 return null;
             }
 
-            if (c.aggressiveness != Aggressiveness.follower
-                && c.behaviour != Character.Behaviour.following)
+            FollowerFacts facts = FactsOf(c, out NetPlayerProxy leader);
+            if (!FollowerRules.FollowsLeader(facts))
             {
                 return null;
             }
 
-            if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null
-                && p.alive)
+            return leader;
+        }
+
+        /// <summary>
+        /// The facts of a character that may follow a joiner, and that
+        /// joiner's stand-in (null with none, or not recorded).
+        /// </summary>
+        private static FollowerFacts FactsOf(
+            Character c,
+            out NetPlayerProxy leader)
+        {
+            leader = null;
+            bool recruited = Recruiter.TryGetValue(c, out ulong id);
+            if (recruited
+                && NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
             {
-                return p;
+                leader = p;
             }
 
-            return null;
+            return new FollowerFacts
+            {
+                IsNpc = c.npc != null,
+                IsFollower = c.aggressiveness == Aggressiveness.follower,
+                IsFollowing = c.behaviour == Character.Behaviour.following,
+                Recruited = recruited,
+                LeaderAlive = leader != null && leader.alive,
+            };
         }
 
         /// <summary>
@@ -139,20 +159,9 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            c.charactersInViewRange.RemoveAll(col =>
-            {
-                CharBase cb = null;
-                if (col != null)
-                {
-                    cb = col.GetComponent<CharBase>();
-                }
-
-                return cb != null && cb != leader && Proxies.IsPlayer(cb);
-            });
-
-            if (c.target == null
-                || c.target != leader.transform
-                    && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
+            c.charactersInViewRange.RemoveAll(
+                col => FollowerRules.Hides(SeenOf(col, leader)));
+            if (FollowerRules.Retargets(TargetOf(c, leader)))
             {
                 c.target = leader.transform;
             }
@@ -161,22 +170,90 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Whether a scripted step makes its targets followers.
+        /// What a follower with a leader sees: a collider in its view range.
         /// </summary>
-        internal static bool MakesFollowers(GameEvent ge)
+        private static SeenFacts SeenOf(Collider col, NetPlayerProxy leader)
         {
-            if (ge.type == GameEvent.Type.modifyCharacter)
+            CharBase cb = null;
+            if (col != null)
             {
-                return ge.characterModifyType
-                            == GameEvent.CharacterModify.aggressiveness
-                        && ge.destAggressiveness == Aggressiveness.follower
-                    || ge.characterModifyType
-                            == GameEvent.CharacterModify.behaviour
-                        && ge.destCharacterBehaviour
-                            == Character.Behaviour.following;
+                cb = col.GetComponent<CharBase>();
             }
 
-            return ge.type == GameEvent.Type.gameObject;
+            if (cb == null)
+            {
+                return new SeenFacts();
+            }
+
+            return new SeenFacts
+            {
+                Exists = true,
+                IsLeader = cb == leader,
+                IsPlayer = Proxies.IsPlayer(cb),
+            };
+        }
+
+        /// <summary>
+        /// What a follower with a leader has as its target.
+        /// </summary>
+        private static SeenFacts TargetOf(Character c, NetPlayerProxy leader)
+        {
+            if (c.target == null)
+            {
+                return new SeenFacts();
+            }
+
+            if (c.target == leader.transform)
+            {
+                return new SeenFacts { Exists = true, IsLeader = true };
+            }
+
+            return new SeenFacts
+            {
+                Exists = true,
+                IsPlayer = Proxies.IsPlayer(
+                    c.target.GetComponent<CharBase>()),
+            };
+        }
+
+        /// <summary>
+        /// A scripted step as it starts, by the peer whose event it is.
+        /// </summary>
+        internal static StepFacts FactsOf(GameEvent ge, ulong by)
+        {
+            Session session = Session.Instance;
+            return new StepFacts
+            {
+                Hosting = session != null && session.IsHost,
+                By = by,
+                ModifiesCharacter =
+                    ge.type == GameEvent.Type.modifyCharacter,
+                SwitchesObject = ge.type == GameEvent.Type.gameObject,
+                SetsAggressiveness = ge.characterModifyType
+                    == GameEvent.CharacterModify.aggressiveness,
+                ToFollower = ge.destAggressiveness == Aggressiveness.follower,
+                SetsBehaviour = ge.characterModifyType
+                    == GameEvent.CharacterModify.behaviour,
+                ToFollowing = ge.destCharacterBehaviour
+                    == Character.Behaviour.following,
+            };
+        }
+
+        /// <summary>
+        /// A target of a recruiting step, as one that may be recruited.
+        /// </summary>
+        internal static FollowerFacts TargetFactsOf(Character c)
+        {
+            if (c == null)
+            {
+                return new FollowerFacts();
+            }
+
+            return new FollowerFacts
+            {
+                IsNpc = c.npc != null,
+                IsFollower = c.aggressiveness == Aggressiveness.follower,
+            };
         }
 
         internal static IEnumerable<GameObject> Targets(GameEvent ge)
@@ -215,36 +292,26 @@ namespace DarkwoodMP.World
     {
         static void Prefix(GameEvent __instance)
         {
-            var by = ScriptedEvents.By;
-            if (by == 0 || __instance == null || Session.Instance == null
-                || !Session.Instance.IsHost)
+            if (__instance == null)
             {
                 return;
             }
 
-            if (!NpcFollowers.MakesFollowers(__instance))
+            ulong by = ScriptedEvents.By;
+            StepFacts step = NpcFollowers.FactsOf(__instance, by);
+            if (!FollowerRules.Recruits(step))
             {
                 return;
             }
 
-            bool gameObjectStep = __instance.type == GameEvent.Type.gameObject;
             foreach (var go in NpcFollowers.Targets(__instance))
             {
                 var c = go.GetComponent<Character>();
-                if (c == null || c.npc == null)
+                FollowerFacts target = NpcFollowers.TargetFactsOf(c);
+                if (FollowerRules.Counts(step, target))
                 {
-                    continue;
+                    NpcFollowers.Recruited(go, step.By);
                 }
-
-                // A gameObject step counts only for a character that is a
-                // follower already (switched on to follow).
-                if (gameObjectStep
-                    && c.aggressiveness != Aggressiveness.follower)
-                {
-                    continue;
-                }
-
-                NpcFollowers.Recruited(go, by);
             }
         }
     }
