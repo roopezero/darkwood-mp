@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Doors;
+using DarkwoodMP.World.Windows;
 using HarmonyLib;
 using UnityEngine;
 
@@ -1465,60 +1467,13 @@ namespace DarkwoodMP.World
             }
             else if (door != null)
             {
-                var l = door.GetComponent<Locked>();
                 w.W.Write((byte)Kind.Door);
-                int flags = 0;
-                if (door.opened)
-                {
-                    flags |= 1;
-                }
-
-                if (door.barricaded)
-                {
-                    flags |= 2;
-                }
-
-                if (door.destroyed)
-                {
-                    flags |= 4;
-                }
-
-                if (l != null && l.locked)
-                {
-                    flags |= 8;
-                }
-
-                if (door.blocked)
-                {
-                    flags |= 16;
-                }
-
-                w.W.Write((byte)flags);
-                w.W.Write(door.health);
-                w.W.Write(door.barricadeHealth);
-                string s = "";
-                if (l != null)
-                {
-                    s = l.keyType;
-                    if (s == null)
-                    {
-                        s = "";
-                    }
-                }
-
-                w.WriteStr(s);
+                DoorObjState.Write(w, HostOf(door));
             }
             else if (window != null)
             {
                 w.W.Write((byte)Kind.Window);
-                int barricadedFlag = 0;
-                if (window.barricaded)
-                {
-                    barricadedFlag = 1;
-                }
-
-                w.W.Write((byte)barricadedFlag);
-                w.W.Write(window.barricadeHealth);
+                WindowObjState.Write(w, HostOf(window));
             }
             else if (trap != null)
             {
@@ -1652,103 +1607,35 @@ namespace DarkwoodMP.World
                         break;
                     case Kind.Door:
                         {
-                            byte f = r.R.ReadByte();
-                            int health = r.R.ReadInt32(),
-                                barricade = r.R.ReadInt32();
-                            string key = r.ReadStr();
+                            var host = DoorObjState.Read(r);
                             Door door = null;
                             if (go != null)
                             {
                                 door = go.GetComponent<Door>();
                             }
 
-                            if (door == null)
+                            if (door != null)
                             {
-                                break;
+                                RollBack(door, host);
                             }
 
-                            bool open = (f & 1) != 0,
-                                barricaded = (f & 2) != 0,
-                                broken = (f & 4) != 0,
-                                locked = (f & 8) != 0;
-                            // only the story sets or clears it (Door.unblock),
-                            // and only the host runs that
-                            door.blocked = (f & 16) != 0;
-                            if (broken && !door.destroyed)
-                            {
-                                // silently: a rollback, not the door breaking
-                                // again
-                                door.destroyDoor(true);
-                            }
-                            else if (!broken && door.destroyed)
-                            {
-                                door.unDestroy();
-                            }
-
-                            var l = door.GetComponent<Locked>();
-                            if (locked && (l == null || !l.locked))
-                            {
-                                door.lockMe(key);
-                            }
-                            else if (!locked && l != null && l.locked)
-                            {
-                                door.unlock();
-                            }
-
-                            // as in OnAction
-                            if (barricaded && !door.barricaded)
-                            {
-                                door.barricadeState = 2;
-                                door.barricade(false);
-                            }
-                            else if (!barricaded && door.barricaded)
-                            {
-                                door.destroyBarricade(false);
-                            }
-
-                            if (open && !door.opened)
-                            {
-                                door.open(
-                                    door.transform.position
-                                        + door.transform.right,
-                                    null, 0f);
-                            }
-                            else if (!open && door.opened)
-                            {
-                                door.close(null);
-                            }
-
-                            door.health = health;
-                            door.barricadeHealth = barricade;
                             break;
                         }
 
                     case Kind.Window:
                         {
-                            bool barricaded = (r.R.ReadByte() & 1) != 0;
-                            int barricade = r.R.ReadInt32();
+                            var host = WindowObjState.Read(r);
                             Window window = null;
                             if (go != null)
                             {
                                 window = go.GetComponent<Window>();
                             }
 
-                            if (window == null)
+                            if (window != null)
                             {
-                                break;
+                                RollBack(window, host);
                             }
 
-                            if (barricaded && !window.barricaded)
-                            {
-                                window.barricadeState = 2;
-                                window.barricade(barricade, false);
-                            }
-                            else if (!barricaded && window.barricaded)
-                            {
-                                window.destroyBarricade(false);
-                            }
-
-                            window.barricadeHealth = barricade;
                             break;
                         }
 
@@ -1883,6 +1770,117 @@ namespace DarkwoodMP.World
                 Coop.Guards.Replaying = false;
                 ScriptedEvents.LeftToActor = leftWas;
             }
+        }
+
+        /// <summary>
+        /// The door as the host has it, for an ObjState.
+        /// </summary>
+        private static HostDoor HostOf(Door door)
+        {
+            var l = door.GetComponent<Locked>();
+            string key = "";
+            if (l != null)
+            {
+                key = l.keyType;
+            }
+
+            var status = new DoorStatus
+            {
+                Opened = door.opened,
+                Barricaded = door.barricaded,
+                Destroyed = door.destroyed,
+                Locked = l != null && l.locked,
+            };
+
+            return new HostDoor
+            {
+                Status = status,
+                Blocked = door.blocked,
+                Health = door.health,
+                BarricadeHealth = door.barricadeHealth,
+                KeyType = key,
+            };
+        }
+
+        private static HostWindow HostOf(Window window) => new HostWindow
+        {
+            Barricaded = window.barricaded,
+            BarricadeHealth = window.barricadeHealth,
+        };
+
+        /// <summary>
+        /// Client: put our door as the host has it.
+        /// </summary>
+        private static void RollBack(Door door, in HostDoor host)
+        {
+            bool open = host.Status.Opened,
+                barricaded = host.Status.Barricaded,
+                broken = host.Status.Destroyed,
+                locked = host.Status.Locked;
+            // only the story sets or clears it (Door.unblock), and only the
+            // host runs that
+            door.blocked = host.Blocked;
+            if (broken && !door.destroyed)
+            {
+                // silently: a rollback, not the door breaking again
+                door.destroyDoor(true);
+            }
+            else if (!broken && door.destroyed)
+            {
+                door.unDestroy();
+            }
+
+            var l = door.GetComponent<Locked>();
+            if (locked && (l == null || !l.locked))
+            {
+                door.lockMe(host.KeyType);
+            }
+            else if (!locked && l != null && l.locked)
+            {
+                door.unlock();
+            }
+
+            // as in OnAction
+            if (barricaded && !door.barricaded)
+            {
+                door.barricadeState = 2;
+                door.barricade(false);
+            }
+            else if (!barricaded && door.barricaded)
+            {
+                door.destroyBarricade(false);
+            }
+
+            if (open && !door.opened)
+            {
+                door.open(
+                    door.transform.position + door.transform.right, null, 0f);
+            }
+            else if (!open && door.opened)
+            {
+                door.close(null);
+            }
+
+            door.health = host.Health;
+            door.barricadeHealth = host.BarricadeHealth;
+        }
+
+        /// <summary>
+        /// Client: put our window as the host has it.
+        /// </summary>
+        private static void RollBack(Window window, in HostWindow host)
+        {
+            if (host.Barricaded && !window.barricaded)
+            {
+                window.barricadeState = 2;
+                window.barricade(host.BarricadeHealth, false);
+            }
+            else if (!host.Barricaded && window.barricaded)
+            {
+                window.destroyBarricade(false);
+            }
+
+            window.barricadeHealth = host.BarricadeHealth;
         }
 
         // ---- what changed ---------------------------------------------------
