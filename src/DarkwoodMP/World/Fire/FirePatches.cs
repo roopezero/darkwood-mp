@@ -1,7 +1,7 @@
 using System.Collections;
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Fire
 {
     [HarmonyPatch(typeof(Burn), "Start")]
     static class BurnStart
@@ -37,7 +37,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Burn __instance, ref IEnumerator __result)
         {
-            if (FireSync.Hurts(__instance))
+            if (Fire.Hurts(__instance))
             {
                 return true;
             }

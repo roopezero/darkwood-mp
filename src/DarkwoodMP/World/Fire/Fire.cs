@@ -1,9 +1,8 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Fire;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Fire
 {
     /// <summary>
     /// Things on fire (the game's Burn: flames and the fire sound on an enemy,
@@ -24,11 +23,11 @@ namespace DarkwoodMP.World
     ///
     /// Burning: the core's Burning (ObjRef, u8 what, f32 burn time, u8 on).
     /// </summary>
-    internal sealed class FireSync
+    internal sealed class Fire
     {
         private readonly CoopSession _coop;
 
-        public FireSync(CoopSession coop)
+        public Fire(CoopSession coop)
         {
             _coop = coop;
             coop.Handle(MsgType.Burning, OnBurning);

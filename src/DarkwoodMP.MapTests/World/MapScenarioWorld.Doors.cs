@@ -138,7 +138,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>"door-burn N": set it alight. The host's world burns it; a
-        /// client's lights its copy and asks the host (FireSync.ClientIgnited,
+        /// client's lights its copy and asks the host (Fire.ClientIgnited,
         /// as its flamethrower does).</summary>
         private static IEnumerator DoorBurn(string[] a, Result r)
         {

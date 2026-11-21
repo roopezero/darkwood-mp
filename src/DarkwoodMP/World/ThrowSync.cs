@@ -546,7 +546,7 @@ namespace DarkwoodMP.World
     /// on a client, our own weapon's flame (a flamethrower) sends its burn with
     /// the hit on the host's enemy (NetEnemies.HitEffects), and a door, window
     /// or furniture it sets alight goes to the host as a request
-    /// (FireSync.ClientIgnited).
+    /// (Fire.ClientIgnited).
     /// </summary>
     [HarmonyPatch(typeof(Flame), "onCollideWith")]
     static class FlameTouchPatch
@@ -571,7 +571,7 @@ namespace DarkwoodMP.World
                     new List<InvItemEffect> { __instance.effect };
             }
 
-            var target = FireSync.Flammable(_transform, _collider);
+            var target = Fire.Fire.Flammable(_transform, _collider);
             if (target != null && target.GetComponent<Burn>() == null)
             {
                 __state = target;

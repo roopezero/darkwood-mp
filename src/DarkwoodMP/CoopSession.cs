@@ -42,7 +42,7 @@ namespace DarkwoodMP
         public readonly JoinerSaveIds Joiners;
 
         /// Things on fire, shown from the host's world.
-        public readonly FireSync Fire;
+        public readonly World.Fire.Fire Fire;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -58,7 +58,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
-            Fire = new FireSync(this);
+            Fire = new World.Fire.Fire(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
