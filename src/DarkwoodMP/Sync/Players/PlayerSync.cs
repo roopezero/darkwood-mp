@@ -224,7 +224,7 @@ namespace DarkwoodMP.Sync.Players
 
         private SendFacts SendOf()
         {
-            World.Characters characters = null;
+            World.KeptCharacters.Characters characters = null;
             CoopSession coop = Coop.Current;
             if (coop != null)
             {

@@ -389,7 +389,8 @@ namespace DarkwoodMP.World
 
             if (p != null && spawn != null)
             {
-                Characters.PlaceFree(p, spawn.transform.position);
+                KeptCharacters.Characters.PlaceFree(
+                    p, spawn.transform.position);
             }
         }
     }

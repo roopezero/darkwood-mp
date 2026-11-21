@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.KeptCharacters;
 using HarmonyLib;
 using Newtonsoft.Json;
 

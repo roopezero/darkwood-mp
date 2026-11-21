@@ -122,7 +122,7 @@ namespace DarkwoodMP.World.Owed
 
             if (OwedRules.UsesKey(key))
             {
-                return CharacterRecords.KeyHash(key);
+                return KeptCharacters.CharacterRecords.KeyHash(key);
             }
 
             return OwedRules.Unkeyed(peer);

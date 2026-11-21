@@ -333,7 +333,8 @@ namespace DarkwoodMP.World
             }
 
             bool ground = OnGround(p);
-            float nearest = Characters.NearestChunk(p.transform.position);
+            float nearest = KeptCharacters.Characters.NearestChunk(
+                p.transform.position);
             WorldGenerator generator = Singleton<WorldGenerator>.Instance;
             float? size = null;
             if (generator != null)
@@ -502,7 +503,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static bool OnGround(Player p) =>
             WorldChunk.getChunkAtPos(p.transform.position) != null
-                || Characters.OnMap(p.transform.position);
+                || KeptCharacters.Characters.OnMap(p.transform.position);
 
         /// <summary>
         /// The hotbar has the same slots as `had`, with the same kind of thing

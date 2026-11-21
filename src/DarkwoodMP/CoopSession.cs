@@ -184,7 +184,7 @@ namespace DarkwoodMP
 
         /// Each player's own character in the host's world: what the host
         /// heard of the joiners' last, and our own asked for and sent.
-        public readonly World.Characters Characters;
+        public readonly World.KeptCharacters.Characters Characters;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -250,7 +250,7 @@ namespace DarkwoodMP
             WorldEvents = new World.Rolls.WorldEvents(this);
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
-            Characters = new World.Characters(this);
+            Characters = new World.KeptCharacters.Characters(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
