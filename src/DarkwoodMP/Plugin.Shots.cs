@@ -135,9 +135,9 @@ namespace DarkwoodMP
                 SetPanel(false);
                 OpenPanel();
                 yield return Shot("main-menu-panel");
-                _direct.ShowForShots(address: false);
+                _host.Panel.Direct.ShowForShots(address: false);
                 yield return Shot("main-menu-browser");
-                _direct.ShowForShots(address: true);
+                _host.Panel.Direct.ShowForShots(address: true);
                 yield return Shot("main-menu-connect");
                 SetPanel(false);
             }
@@ -272,7 +272,7 @@ namespace DarkwoodMP
                 _host.MenuList.Click("Join Game");
                 yield return new WaitForSecondsRealtime(1f);
                 yield return Shot("panel");
-                _direct.ShowForShots(address: false);
+                _host.Panel.Direct.ShowForShots(address: false);
                 yield return new WaitForSecondsRealtime(0.5f);
                 yield return Shot("browser");
                 SetPanel(false);
@@ -357,8 +357,8 @@ namespace DarkwoodMP
             yield return null;
             yield return null;
             Log.LogInfo(
-                $"[menu-entry] {where}: clicked, panel open: {_showMenu} "
-                    + $"(entry taken: {took})");
+                $"[menu-entry] {where}: clicked, panel open: "
+                    + $"{_host.Panel.IsOpen} (entry taken: {took})");
             if (shots != null)
             {
                 yield return Screenshot(

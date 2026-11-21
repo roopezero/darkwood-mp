@@ -24,8 +24,6 @@ namespace DarkwoodMP
         private void StartTest(System.Collections.IEnumerator routine) =>
             _tests.Add(StartCoroutine(routine));
 
-        private static (int w, int h, FullScreenMode mode)? _sizeBefore;
-
         /// <summary>
         /// The --dwmp-* arguments for hosting, joining and testing: from the
         /// command line at start, or from TestControl before each test of a
@@ -68,19 +66,19 @@ namespace DarkwoodMP
                     && int.TryParse(wh[0], out int ww)
                     && int.TryParse(wh[1], out int hh))
                 {
-                    if (_sizeBefore == null)
+                    if (_host.WindowBefore == null)
                     {
-                        _sizeBefore = (Screen.width, Screen.height,
+                        _host.WindowBefore = (Screen.width, Screen.height,
                             Screen.fullScreenMode);
                     }
 
                     Screen.SetResolution(ww, hh, FullScreenMode.Windowed);
                     Log.LogInfo($"--dwmp-window: {ww}x{hh}");
                 }
-                else if (_sizeBefore is var sb && sb.HasValue)
+                else if (_host.WindowBefore is var sb && sb.HasValue)
                 {
                     Screen.SetResolution(sb.Value.w, sb.Value.h, sb.Value.mode);
-                    _sizeBefore = null;
+                    _host.WindowBefore = null;
                 }
             }
 
@@ -94,7 +92,7 @@ namespace DarkwoodMP
             // even without Steam, to check it.
             if (Has("--dwmp-test-presence"))
             {
-                _testPresence = true;
+                _host.Presence.Logged = true;
             }
 
             if (Has("--dwmp-low-quality"))
@@ -105,7 +103,7 @@ namespace DarkwoodMP
 
             if (int.TryParse(Arg("--dwmp-fps"), out int fps) && fps > 0)
             {
-                _fpsCap = fps;
+                _host.FpsCap = fps;
                 Log.LogInfo($"--dwmp-fps: {fps}");
             }
 
@@ -243,7 +241,7 @@ namespace DarkwoodMP
                 StartTest(SaveAfterJoin(saveAfter));
             }
 
-            _spawnType = Arg("--dwmp-spawn");
+            _host.SpawnType = Arg("--dwmp-spawn");
             // "--dwmp-test-blast": once a player joins, an enemy bomb, damage
             // aura and flame go off at them (see Combat.AreaHitsTest).
             if (Has("--dwmp-test-blast"))
@@ -435,8 +433,8 @@ namespace DarkwoodMP
             WorldActions.Debug = false;
             _host.LoadSpeed.Verify = false;
             _host.TestQuickEnd = false;
-            _spawnType = null;
-            _testPresence = false;
+            _host.SpawnType = null;
+            _host.Presence.Logged = false;
             TcpBackend.TestMaxPlayers = 0;
             _host.Confirm.Cancel();
             if (_host.Session.Active)

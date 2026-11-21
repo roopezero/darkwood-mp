@@ -113,6 +113,18 @@ namespace DarkwoodMP
 
         /// For tests ("--dwmp-test-quick-end"): skip the epilogue and the
         /// credits as soon as they start, also after leaving the session.
+        /// <summary>--dwmp-fps N: the frame cap, 0 for none.</summary>
+        public int FpsCap;
+
+        /// <summary>
+        /// The screen's size before --dwmp-window, put back when a later test
+        /// has none.
+        /// </summary>
+        public (int w, int h, UnityEngine.FullScreenMode mode)? WindowBefore;
+
+        /// <summary>--dwmp-spawn TYPE: what the dummy test spawns.</summary>
+        public string SpawnType;
+
         public bool TestQuickEnd;
 
         /// The shared essence and levels, and the stove's skill reset: also
@@ -251,8 +263,16 @@ namespace DarkwoodMP
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
+        /// <summary>Finds Steam and works out the player's name.</summary>
+        internal readonly Net.SteamStartup SteamStart;
+
+        /// <summary>The Steam presence, the browser's World label.</summary>
+        internal readonly Net.Presence.PresenceReport Presence;
+
         public ModHost(Func<bool> opensPort)
         {
+            SteamStart = new Net.SteamStartup(this);
+            Presence = new Net.Presence.PresenceReport(this);
             Threats = new Combat.Threats(Proxies);
             var log = new BepInLog();
             Session = new Session(new UnityClock(), log, PluginInfo.Version)
@@ -281,6 +301,14 @@ namespace DarkwoodMP
         /// The Steam backend once Steam is up; null before that and on GOG.
         /// Typed as the interface: no Steamworks type may appear here.
         public INetBackend Steam { get; private set; }
+
+        /// <summary>The Multiplayer window, made at Plugin.Load.</summary>
+        internal Menus.CoopPanel Panel { get; private set; }
+
+        public void AddPanel(UnityEngine.MonoBehaviour runner)
+        {
+            Panel = new Menus.CoopPanel(this, runner);
+        }
 
         /// <summary>
         /// The other players' puppets, and our player's look sent to them.

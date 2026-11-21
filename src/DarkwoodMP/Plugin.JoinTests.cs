@@ -30,7 +30,7 @@ namespace DarkwoodMP
             yield return new WaitForSeconds(5f);
             _host.Players.SpawnDummy(new Vector3(120f, 0f, 0f));
             Log.LogInfo("--dwmp-dummy: dummy left 120 units east of you");
-            if (_spawnType == null)
+            if (_host.SpawnType == null)
             {
                 yield break;
             }
@@ -54,7 +54,7 @@ namespace DarkwoodMP
 
             Vector3 spot = mid + new Vector3(0f, 0f, 250f);
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
-                Player.Instance.gameObject, spot, 1f, _spawnType,
+                Player.Instance.gameObject, spot, 1f, _host.SpawnType,
                 nocturnal: false, attackPlayer: false);
             string data;
             if (c != null)
@@ -63,7 +63,7 @@ namespace DarkwoodMP
             }
             else
             {
-                data = $"--dwmp-spawn: couldn't spawn {_spawnType}";
+                data = $"--dwmp-spawn: couldn't spawn {_host.SpawnType}";
             }
 
             Log.LogInfo(data);
@@ -95,7 +95,7 @@ namespace DarkwoodMP
             float until = Time.realtimeSinceStartup + 60f;
             while (_host.Steam == null)
             {
-                if (Time.realtimeSinceStartup > until || _steamUnavailable)
+                if (Time.realtimeSinceStartup > until || SteamMissing)
                 {
                     Log.LogWarning("--dwmp-steam-test: no Steam");
                     yield break;
@@ -357,7 +357,7 @@ namespace DarkwoodMP
             Log.LogInfo(
                 $"[menu test] joining {address} again from the Multiplayer "
                     + "window");
-            _direct.JoinForTest(address);
+            _host.Panel.Direct.JoinForTest(address);
             string data;
             if (_host.Tcp.InSession)
             {

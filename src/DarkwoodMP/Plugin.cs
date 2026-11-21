@@ -25,27 +25,6 @@ namespace DarkwoodMP
         public const string Version = ModVersion.Text;
     }
 
-    public sealed class ModConfig
-    {
-        public ConfigEntry<int> SendRate;
-        public ConfigEntry<bool> LogPlayerSprites;
-        public ConfigEntry<bool> SkipIntro;
-        public ConfigEntry<string> PlayerName;
-        public ConfigEntry<int> DirectPort;
-        public ConfigEntry<bool> OpenPort;
-        public ConfigEntry<string> LastAddress;
-        public ConfigEntry<string> Password;
-        public ConfigEntry<string> ServerName;
-        public ConfigEntry<int> MaxPlayers;
-        public ConfigEntry<bool> LiveWorld;
-        public ConfigEntry<bool> SnapshotOffThread;
-        public ConfigEntry<string> NewCharacters;
-        public ConfigEntry<KeyCode> SkillsKey;
-        public ConfigEntry<string> HostWith;
-        public ConfigEntry<int> StackSize;
-        public ConfigEntry<bool> SoftPlayerCollision;
-    }
-
     [BepInPlugin(PluginInfo.Guid, PluginInfo.Name, PluginInfo.Version)]
     public sealed partial class Plugin : BaseUnityPlugin
     {
@@ -77,18 +56,7 @@ namespace DarkwoodMP
             }
         }
 
-        private DirectPanel _direct;
         private bool _wasInWorld;
-        // the system cursor's visibility before the panel showed it
-        private bool? _cursorBefore;
-        // SteamManager.s_instance and its m_bInitialized
-        private FieldInfo _steamInstance, _steamInitialized;
-        private bool _steamUnavailable;
-        private float _nextSteamCheck;
-
-        private string _spawnType;
-        private bool _showMenu;
-        private bool _buttonsOffByUs;
 
         /// <summary>
         /// Why you can't host yet, or null if you can. A host shares the world
@@ -129,7 +97,10 @@ namespace DarkwoodMP
         /// <summary>
         /// Open the co-op panel (Multiplayer in the pause menu).
         /// </summary>
-        public void OpenPanel() => SetPanel(true);
+        public void OpenPanel() => _host.Panel.SetPanel(true);
+
+        /// <summary>Open or close the co-op panel.</summary>
+        internal void SetPanel(bool show) => _host.Panel.SetPanel(show);
 
         /// <summary>
         /// The main menu's Join Game: the server browser alone. Once a join
@@ -137,15 +108,10 @@ namespace DarkwoodMP
         /// (DirectPanel.OnJoining); closing the browser before that closes the
         /// co-op windows (Update).
         /// </summary>
-        public void OpenJoin()
-        {
-            _showMenu = true;
-            _panel.Open = false;
-            _direct.OpenServerBrowser();
-        }
+        public void OpenJoin() => _host.Panel.OpenJoin();
 
         /// <summary>The co-op panel is open.</summary>
-        public bool PanelOpen => _showMenu;
+        public bool PanelOpen => _host.Panel.IsOpen;
 
         /// <summary>
         /// The process state: the session, its backends, the server browser
@@ -161,7 +127,14 @@ namespace DarkwoodMP
         /// <summary>
         /// Steam isn't there at all (GOG), as opposed to not up yet.
         /// </summary>
-        internal bool SteamMissing => _steamUnavailable;
+        internal bool SteamMissing => _host.SteamStart.Missing;
+
+        /// <summary>
+        /// Your name (General.PlayerName; empty: the Steam or OS user name),
+        /// changed in Options.
+        /// </summary>
+        public void SetPlayerName(string name) =>
+            _host.SteamStart.SetPlayerName(name);
 
         /// <summary>
         /// The Start Game window's host box: host with Steam or Direct once the
@@ -255,21 +228,6 @@ namespace DarkwoodMP
             return _host.Tcp.Host(serverName, port, password, maxPlayers);
         }
 
-        internal void SetPanel(bool show)
-        {
-            _showMenu = show;
-            if (show) // in its default place each time it's opened
-            {
-                _panel.ResetPlace();
-                _panel.Show();
-            }
-            else
-            {
-                _panel.Open = false;
-                _direct.CloseAll();
-            }
-        }
-
         /// <summary>
         /// Whether the game was started for the tests (a --dwmp-test...
         /// argument, the test world, or tools/run-test.sh's test control). Only
@@ -282,8 +240,6 @@ namespace DarkwoodMP
         /// Awake; null when it isn't loaded (a player's game).
         /// </summary>
         internal ITestSteps TestSteps { get; set; }
-
-        private UiWindow _panel;
 
         private void Awake()
         {
@@ -314,119 +270,10 @@ namespace DarkwoodMP
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void Load()
         {
-            Cfg = new ModConfig
-            {
-                PlayerName = Config.Bind(
-                    "General", "PlayerName", "",
-                    "Name shown to other players. Empty = Steam name, or your "
-                        + "OS user name."),
-                SendRate = Config.Bind(
-                    "Network", "SendRate", 20,
-                    "Player state updates per second."),
-                ServerName = Config.Bind(
-                    "Host", "ServerName", "Darkwood",
-                    "Your server's name in other players' server browsers."),
-                DirectPort = Config.Bind(
-                    "Host", "Port", TcpBackend.DefaultPort,
-                    "Port to host on: TCP for the game, UDP for the server "
-                        + "browser."),
-                OpenPort = Config.Bind(
-                    "Host", "OpenPort", true,
-                    "When hosting with Direct, ask your router to forward the "
-                        + "port (UPnP or NAT-PMP), and close it again when you "
-                        + "stop. Off: forward it by hand."),
-                Password = Config.Bind(
-                    "Host", "Password", "",
-                    "Password players need to join your server (empty for "
-                        + "none)."),
-                MaxPlayers = Config.Bind(
-                    "Host", "MaxPlayers", Protocol.MaxPlayers,
-                    "Most players at once, you included."),
-                LiveWorld = Config.Bind(
-                    "Host", "LiveWorld", true,
-                    "Players who join get the world as it is now (a snapshot "
-                        + "saved for them, your own save untouched). Off: as "
-                        + "you last saved it."),
-                SnapshotOffThread = Config.Bind(
-                    "Host", "SnapshotOffThread", true,
-                    "Write the snapshot for a joiner on a worker thread, so "
-                        + "your game stops only while the world is read. Off: "
-                        + "the game saves it its own way, all at once."),
-                NewCharacters = Config.Bind(
-                    "Host", "NewCharacters", "fresh",
-                    new ConfigDescription(
-                        "Someone joining your world for the first time starts "
-                            + "with: fresh (no items, full health, beside you) "
-                            + "or copy (a copy of your character).",
-                        new AcceptableValueList<string>("fresh", "copy"))),
-                HostWith = Config.Bind(
-                    "Host", "HostWith", "steam",
-                    new ConfigDescription(
-                        "How the Start Game window hosts: steam (friends join "
-                            + "by invite) or direct (IP and port). Without "
-                            + "Steam (GOG) it's always direct.",
-                        new AcceptableValueList<string>("steam", "direct"))),
-                StackSize = Config.Bind(
-                    "Host", "StackSize", 50,
-                    new ConfigDescription(
-                        "How many of an item one inventory slot holds, for "
-                            + "every item that stacks (players in your game "
-                            + "use yours). Items that already stack higher "
-                            + "keep theirs. 0: the game's own sizes.",
-                        new AcceptableValueRange<int>(0, 999))),
-                LastAddress = Config.Bind(
-                    "Network", "LastAddress", "",
-                    "Last server joined directly."),
-                SkipIntro = Config.Bind(
-                    "General", "SkipIntro", true,
-                    "Start without the studio logo (about 6 seconds sooner at "
-                        + "the main menu)."),
-                SkillsKey = Config.Bind(
-                    "General", "SkillsKey", KeyCode.K,
-                    "Key that opens and closes the Skills panel (spend skill "
-                        + "points)."),
-                SoftPlayerCollision = Config.Bind(
-                    "General", "SoftPlayerCollision", true,
-                    "Players standing in each other are eased apart, gently "
-                        + "(no hard bump). Off: players pass through each "
-                        + "other."),
-                LogPlayerSprites = Config.Bind(
-                    "Debug", "LogPlayerSprites", false,
-                    "Log every sprite in the player hierarchy once (which are "
-                        + "synced/skipped)."),
-            };
+            Cfg = new ModConfig(Config);
 
             _host = new ModHost(OpensPort);
-            _direct = new DirectPanel(_host.Tcp, _host.Browser, _host.Session);
-            _direct.OnJoining = () =>
-            {
-                if (!_panel.Open)
-                {
-                    _panel.ResetPlace();
-                    _panel.Show();
-                }
-            };
-
-            _panel = new UiWindow(0x0D3A, "Multiplayer")
-            {
-                MinSize = new Vector2(300, 160),
-                FitContent = true,
-                // Beside the main menu's words (which MenuEntry moves a little
-                // to the left), on the right.
-                DefaultRect = () => UiWindow.RightSide(
-                    380 * PixelFont.Scale, 300 * PixelFont.Scale, top: 0.16f),
-                Body = DrawMenu,
-                Footer = r =>
-                {
-                    if (Ui.Button(Ui.Split(r, 0, 90)[1], "Close"))
-                    {
-                        SetPanel(false);
-                    }
-                },
-                FooterHeight = 13 + 8,
-                OnClose = () => SetPanel(false),
-            };
-
+            _host.AddPanel(this);
             _host.AddWindows();
             _host.AddPlayers();
             _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
@@ -437,7 +284,7 @@ namespace DarkwoodMP
             _host.Players.OnRemoteDied += n => Notice($"{n} died");
             _host.AddShare(this, Paths.CachePath);
             WorldActions.Register(_host.Session);
-            UpdateLocalName();
+            _host.SteamStart.UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
             PatchAll();
@@ -555,66 +402,22 @@ namespace DarkwoodMP
                     || _host.Drag.WindowOpen);
         }
 
-        private static int _fpsCap;
-
         private void Update()
         {
-            if (_fpsCap > 0
-                && (Application.targetFrameRate != _fpsCap
+            if (_host.FpsCap > 0
+                && (Application.targetFrameRate != _host.FpsCap
                     || QualitySettings.vSyncCount != 0))
             {
                 QualitySettings.vSyncCount = 0;
-                Application.targetFrameRate = _fpsCap;
+                Application.targetFrameRate = _host.FpsCap;
             }
 
-            if (_host.Steam == null && !_steamUnavailable
-                && Time.unscaledTime >= _nextSteamCheck)
-            {
-                _nextSteamCheck = Time.unscaledTime + 1f;
-                if (SteamReady())
-                {
-                    TryCreateSteamBackend();
-                }
-            }
-
-            // Escape closes the panel, unless a question over it takes it
-            // (ConfirmDialog answers No).
-            if (_showMenu && !_host.Confirm.Open
-                && Input.GetKeyDown(KeyCode.Escape))
-            {
-                SetPanel(false);
-            }
-
-            // The browser was opened alone (Join Game) and closed without
-            // joining: nothing of the co-op windows is left.
-            if (_showMenu && !_panel.Open && !_direct.AnyOpen)
-            {
-                SetPanel(false);
-            }
-
+            _host.SteamStart.Update();
+            _host.Panel.Update();
             _host.MenuEntry.Update();
             _host.LoadProfiler.Frame();
             _host.Control.Update();
-            // Over the game's menus, its buttons (and its Escape) would take
-            // the clicks and keys meant for our windows.
-            bool windows = MenuWindows.AnyOpen;
-            if (_buttonsOffByUs && !windows)
-            {
-                _buttonsOffByUs = false;
-                if (Singleton<Controller>.Instance != null)
-                {
-                    Singleton<Controller>.Instance.buttonsDisabled = false;
-                }
-            }
-
-            if (windows && Core.mainMenu
-                && Singleton<Controller>.Instance != null
-                && !Singleton<Controller>.Instance.buttonsDisabled)
-            {
-                Singleton<Controller>.Instance.buttonsDisabled = true;
-                _buttonsOffByUs = true;
-            }
-
+            _host.Panel.HoldGameButtons();
             // After the buttons are let go: an answered question's action, then
             // the menu's list (and a click on it).
             _host.Confirm.Update();
@@ -733,18 +536,7 @@ namespace DarkwoodMP
             _host.Profiler.Mark("enemy fx");
             _host.Share.Update();
             _host.Profiler.Mark("world");
-            if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
-            {
-                _nextWorldLabel = Time.unscaledTime + 2f;
-                _host.Tcp.WorldLabel = WorldLabel();
-            }
-
-            if ((_host.Steam != null || _testPresence)
-                && Time.unscaledTime >= _nextPresence)
-            {
-                _nextPresence = Time.unscaledTime + 5f;
-                UpdatePresence();
-            }
+            _host.Presence.Update();
 
             _host.Join.Update(_host.Session, _host.Share);
             _host.Loading.Update();
@@ -755,7 +547,7 @@ namespace DarkwoodMP
             }
 
             _host.Progress.Update();
-            SkillsPanel.Update(_showMenu);
+            SkillsPanel.Update(_host.Panel.IsOpen);
             coop = Coop.Current;
             if (coop != null)
             {
@@ -825,136 +617,6 @@ namespace DarkwoodMP
             _host.Profiler.EndFrame();
         }
 
-        /// <summary>
-        /// Checks the game's own SteamManager via reflection (it may be missing
-        /// or never init on GOG). Only one the game made is looked at:
-        /// SteamManager.Initialized makes a SteamManager when there's none yet,
-        /// and its Awake quits the game when steam_api can't be loaded (as on a
-        /// GOG build that never makes one itself).
-        /// </summary>
-        private bool SteamReady()
-        {
-            try
-            {
-                if (_steamInstance == null)
-                {
-                    var t = AccessTools.TypeByName("SteamManager");
-                    if (t != null)
-                    {
-                        _steamInstance = t.GetField(
-                            "s_instance",
-                            BindingFlags.NonPublic | BindingFlags.Public
-                                | BindingFlags.Static);
-                    }
-                    else
-                    {
-                        _steamInstance = null;
-                    }
-
-                    if (t != null)
-                    {
-                        _steamInitialized = t.GetField(
-                            "m_bInitialized",
-                            BindingFlags.NonPublic | BindingFlags.Public
-                                | BindingFlags.Instance);
-                    }
-                    else
-                    {
-                        _steamInitialized = null;
-                    }
-
-                    if (_steamInstance == null || _steamInitialized == null)
-                    {
-                        _steamUnavailable = true;
-                        Log.LogInfo(
-                            "No SteamManager in this build: direct IP only");
-                        return false;
-                    }
-                }
-
-                var manager =
-                    _steamInstance.GetValue(null) as UnityEngine.Object;
-                return manager != null
-                    && (bool)_steamInitialized.GetValue(manager);
-            }
-            catch
-            {
-                return false; // Steam not running (GOG)
-            }
-        }
-
-        private void TryCreateSteamBackend()
-        {
-            try
-            {
-                CreateSteamBackend();
-            }
-            catch (Exception e)
-            {
-                _steamUnavailable = true;
-                Log.LogWarning(
-                    "Steam networking unavailable, direct IP only: "
-                        + $"{e.Message}");
-            }
-        }
-
-        // Separate, non-inlined method: if Steamworks.NET can't load, only this
-        // call fails.
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void CreateSteamBackend()
-        {
-            _host.AddSteam(new SteamBackend());
-            UpdateLocalName();
-            Log.LogInfo("Steam ready: Steam lobbies and invites enabled");
-        }
-
-        /// <summary>
-        /// Your name (General.PlayerName; empty: the Steam or OS user name),
-        /// changed in Options.
-        /// </summary>
-        public void SetPlayerName(string name)
-        {
-            string stored = name;
-            if (stored == null)
-            {
-                stored = "";
-            }
-
-            Cfg.PlayerName.Value = stored;
-            UpdateLocalName();
-        }
-
-        private void UpdateLocalName()
-        {
-            string name = Cfg.PlayerName.Value;
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                IGuiSection guiSection = _host.Steam as IGuiSection;
-                if (guiSection != null)
-                {
-                    name = guiSection.SuggestedPlayerName;
-                }
-                else
-                {
-                    name = null;
-                }
-            }
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                name = Environment.UserName;
-            }
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                _host.Session.LocalName = "Player";
-            }
-            else
-            {
-                _host.Session.LocalName = name.Trim();
-            }
-        }
-
         private void OnGUI()
         {
             _host.Control.OnGUI();
@@ -979,531 +641,7 @@ namespace DarkwoodMP
 
             _host.Progress.OnGUI();
             SkillsPanel.OnGUI();
-            ShowSystemCursor(
-                MenuWindows.AnyOpen || SkillsPanel.Open
-                    || _host.Drag.WindowOpen);
-            if (!_showMenu && !_host.MenuList.Shown && !MenuWindows.AnyOpen)
-            {
-                _host.Drag.OnGUI();
-                return;
-            }
-
-            MenuSkin.Ensure();
-            var skin = GUI.skin;
-            GUI.skin = MenuSkin.Skin;
-            // The menu's list under the windows, then the co-op windows, the
-            // other menu windows, and a question on top.
-            _host.MenuList.OnGUI();
-            if (_showMenu)
-            {
-                _panel.Title =
-                    $"Multiplayer  -  DarkwoodMP {PluginInfo.Version}";
-                _panel.OnGUI();
-                _direct.OnGUI();
-            }
-
-            MenuWindows.DrawAll();
-            _host.Confirm.OnGUI();
-            GUI.skin = skin;
-            _host.Drag.OnGUI();
-        }
-
-        /// <summary>
-        /// The game draws its cursor as a sprite in the world's UI, which the
-        /// panel covers. While the panel is open the system cursor is shown
-        /// over it; when it closes, the cursor is as the game had it.
-        /// </summary>
-        private void ShowSystemCursor(bool show)
-        {
-            if (show)
-            {
-                if (_cursorBefore == null)
-                {
-                    _cursorBefore = UnityEngine.Cursor.visible;
-                }
-
-                if (!UnityEngine.Cursor.visible)
-                {
-                    UnityEngine.Cursor.visible = true;
-                }
-            }
-            else if (_cursorBefore != null)
-            {
-                UnityEngine.Cursor.visible = _cursorBefore.Value;
-                _cursorBefore = null;
-            }
-        }
-
-        private void DrawMenu(Flow f)
-        {
-            {
-                // The name is changed in Options (Multiplayer); here it's only
-                // shown.
-                var r = f.Row(Ui.RowH, 90, 0, 0);
-                Ui.Label(r[0], "Your name");
-                Ui.Label(
-                    r[1], PixelFont.Fit(_host.Session.LocalName, r[1].width),
-                    MenuSkin.Bright);
-                if (!_host.Session.Active)
-                {
-                    Ui.Label(
-                        r[2], "change it in Options", MenuSkin.Dim,
-                        TextAnchor.MiddleRight);
-                }
-            }
-
-            if (_host.Share.Progress is var p && p.HasValue)
-            {
-                Ui.Text(
-                    f,
-                    "Downloading the host's world: "
-                        + $"{p.Value.Got / 1048576f:0.0} / "
-                        + $"{p.Value.Total / 1048576f:0.0} MB",
-                    MenuSkin.Bright);
-            }
-            else if (_host.Share.LoadStatus != null)
-            {
-                Ui.Text(f, _host.Share.LoadStatus, MenuSkin.Bright);
-            }
-
-            if (TestWorld.Active)
-            {
-                Ui.Text(
-                    f,
-                    "You're in the test world: your own saves are untouched.",
-                    MenuSkin.Dim);
-            }
-            else if (SaveRedirect.Active)
-            {
-                Ui.Text(
-                    f,
-                    "You're in the host's world: your own saves are untouched.",
-                    MenuSkin.Dim);
-            }
-            else if (WorldShare.InWorld && !_host.Session.Active)
-            {
-                Ui.Text(
-                    f, "Joining a game leaves the one you're in (save first).",
-                    MenuSkin.Dim);
-            }
-
-            if (!_host.Session.Active && CantHostReason is string why)
-            {
-                Ui.Text(f, why, MenuSkin.Dim);
-            }
-
-            Ui.Heading(f, "Steam");
-            if (_host.Steam is IGuiSection steamGui)
-            {
-                steamGui.DrawGui(_host.Session, f);
-            }
-            else
-            {
-                string text = "Waiting for Steam...";
-                if (_steamUnavailable)
-                {
-                    text =
-                        "Steam isn't running (the GOG version, say): use a "
-                            + "direct connection.";
-                }
-
-                Ui.Text(f, text, MenuSkin.Dim);
-            }
-
-            Ui.Heading(f, "Direct connection");
-            _direct.Draw(f);
-
-            if (_host.Session.Active && _host.Session.Names.Count > 0)
-            {
-                Ui.Heading(f, "Players");
-                ulong hostId;
-                if (_host.Session.IsHost)
-                {
-                    hostId = _host.Session.LocalId;
-                }
-                else
-                {
-                    hostId = _host.Session.HostId;
-                }
-
-                foreach (var kv in _host.Session.Names)
-                {
-                    string hostTag = "";
-                    if (kv.Key == hostId)
-                    {
-                        hostTag = "  (host)";
-                    }
-
-                    string youTag = "";
-                    if (kv.Key == _host.Session.LocalId)
-                    {
-                        youTag = "  (you)";
-                    }
-
-                    string tags = hostTag + youTag;
-                    Ui.Label(f, kv.Value + tags);
-                }
-            }
-
-            if (TestMode)
-            {
-                DrawTestWorld(f);
-            }
-        }
-
-        /// <summary>
-        /// The test world (only when the game was started for the tests): start
-        /// or reset it from the main menu; in it, the host's tools.
-        /// </summary>
-        private void DrawTestWorld(Flow f)
-        {
-            bool inMenu = WorldShare.MainMenuReady() && !_host.Session.Active;
-            if (!inMenu && !(TestWorld.Active && !_host.Session.IsClient))
-            {
-                return;
-            }
-
-            Ui.Heading(f, "Test world");
-            if (inMenu)
-            {
-                Ui.Text(
-                    f,
-                    "A copy of your saves with a test area of everything "
-                        + "that's shared. Host it, and friends join it as "
-                        + "usual.",
-                    MenuSkin.Dim);
-                var r = f.Row(Ui.RowH, 0, 90);
-                string label = "Make and start a test world";
-                if (TestWorld.Exists)
-                {
-                    label = "Start the test world";
-                }
-
-                if (Ui.Button(r[0], label))
-                {
-                    SetPanel(false);
-                    StartCoroutine(
-                        _host.TestArea.Start(_host.Share, reset: false));
-                }
-
-                if (TestWorld.Exists && Ui.Button(r[1], "Reset it"))
-                {
-                    SetPanel(false);
-                    StartCoroutine(
-                        _host.TestArea.Start(_host.Share, reset: true));
-                }
-
-                if (_host.TestArea.Status != null)
-                {
-                    Ui.Text(f, _host.TestArea.Status);
-                }
-
-                return;
-            }
-
-            var t = f.Row(Ui.RowH, 0, 0, 0, 0, 0);
-            if (Ui.Button(t[0], "Kit"))
-            {
-                TestWorld.GiveKit();
-            }
-
-            if (Ui.Button(t[1], "Dawn"))
-            {
-                TestWorld.SetTime(Singleton<Controller>.Instance.dayTime + 5);
-            }
-
-            if (Ui.Button(t[2], "Noon"))
-            {
-                TestWorld.SetTime(720);
-            }
-
-            if (Ui.Button(t[3], "Dusk"))
-            {
-                TestWorld.SetTime(
-                    Singleton<Controller>.Instance.nightTime - 30);
-            }
-
-            if (Ui.Button(t[4], "Night"))
-            {
-                TestWorld.SetTime(
-                    Singleton<Controller>.Instance.nightTime + 30);
-            }
-
-            Ui.Label(f, "Spawn an enemy near you:", MenuSkin.Dim);
-            var list = new List<string>(TestWorld.Enemies);
-            for (int i = 0; i < list.Count; i += 4)
-            {
-                var r = f.Row(Ui.RowH, 0, 0, 0, 0);
-                for (int j = 0; j < 4 && i + j < list.Count; j++)
-                {
-                    if (Ui.Button(
-                        r[j], PixelFont.Fit(list[i + j], r[j].width - 4)))
-                    {
-                        TestWorld.SpawnEnemy(list[i + j]);
-                    }
-                }
-            }
-        }
-
-        private float _nextWorldLabel;
-
-        /// <summary>
-        /// The server browser's World column for this host: the day and chapter
-        /// its world is on.
-        /// </summary>
-        private static string WorldLabel()
-        {
-            try
-            {
-                if (!WorldShare.InWorld)
-                {
-                    return "";
-                }
-
-                var (day, chapter) = DayAndChapter();
-                if (chapter > 0)
-                {
-                    return $"Day {day}, chapter {chapter}";
-                }
-
-                return $"Day {day}";
-            }
-            catch
-            {
-                return "";
-            }
-        }
-
-        /// <summary>
-        /// The world's day, and its chapter (0 when there's no world
-        /// generator).
-        /// </summary>
-        private static (int day, int chapter) DayAndChapter()
-        {
-            int day = Singleton<Controller>.Instance.day;
-            int chapter = 0;
-            if (Singleton<WorldGenerator>.Instance != null)
-            {
-                chapter = Singleton<WorldGenerator>.Instance.chapterID;
-            }
-
-            return (day, chapter);
-        }
-
-        private float _nextPresence;
-        private string _lastPresence;
-        private bool _testPresence;
-
-        /// <summary>
-        /// Our Steam rich presence: what friends see in "View game info" (see
-        /// SteamBackend.SetPresence).
-        /// </summary>
-        private void UpdatePresence()
-        {
-            string text;
-            try
-            {
-                text = PresenceText();
-            }
-            catch (Exception e)
-            {
-                text = $"DarkwoodMP {PluginInfo.Version}";
-                Log.LogWarning($"Steam presence: {e.Message}");
-            }
-
-            if (text.Length > 256)
-            {
-                text = text.Substring(0, 256); // Steam's limit for a value
-            }
-
-            bool changed = text != _lastPresence;
-            _lastPresence = text;
-            if (_host.Steam == null)
-            {
-                if (changed)
-                {
-                    Log.LogInfo($"[presence] {text} (no Steam: not set)");
-                }
-
-                return;
-            }
-
-            try
-            {
-                SetSteamPresence(text, changed);
-            }
-            catch (Exception e)
-            {
-                Log.LogWarning($"Couldn't set the Steam presence: {e.Message}");
-            }
-        }
-
-        // Non-inlined, like CreateSteamBackend: names SteamBackend, so it runs
-        // only once Steam is there.
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private void SetSteamPresence(string text, bool log)
-        {
-            if (!(_host.Steam is SteamBackend sb))
-            {
-                return;
-            }
-
-            int players = 1;
-            if (_host.Session.Active)
-            {
-                players = _host.Session.PlayerCount;
-            }
-
-            sb.SetPresence(text, players);
-            if (log)
-            {
-                Log.LogInfo(
-                    $"[presence] {text} (Steam has: {sb.PresenceReadBack()})");
-            }
-        }
-
-        /// <summary>
-        /// "DarkwoodMP 0.22.0 · Chapter 2, day 5 · Silent Forest · Hosting, 3/5
-        /// players", or "... · In the main menu".
-        /// </summary>
-        private string PresenceText()
-        {
-            var parts = new List<string> { $"DarkwoodMP {PluginInfo.Version}" };
-            if (!WorldShare.InWorld)
-            {
-                parts.Add("In the main menu");
-                return string.Join(" · ", parts);
-            }
-
-            var (day, chapter) = DayAndChapter();
-            string item;
-            if (chapter > 0)
-            {
-                item = $"Chapter {Mathf.Clamp(chapter, 1, 10)}, day {day}";
-            }
-            else
-            {
-                item = $"Day {day}";
-            }
-
-            parts.Add(item);
-            string biome = BiomeName();
-            if (!string.IsNullOrEmpty(biome))
-            {
-                parts.Add(biome);
-            }
-
-            if (!_host.Session.Active)
-            {
-                parts.Add("Playing alone");
-            }
-            else
-            {
-                string count =
-                    $"{_host.Session.PlayerCount}/"
-                        + $"{_host.Session.Backend.MaxPlayers} players";
-                if (_host.Session.IsHost)
-                {
-                    parts.Add($"Hosting, {count}");
-                }
-                else if (_host.Session.Names.TryGetValue(
-                    _host.Session.HostId, out var host)
-                    && !string.IsNullOrEmpty(host))
-                {
-                    parts.Add($"In {host}'s game, {count}");
-                }
-                else
-                {
-                    parts.Add($"In co-op, {count}");
-                }
-            }
-
-            return string.Join(" · ", parts);
-        }
-
-        private static bool _biomeKeysLogged;
-
-        /// <summary>
-        /// The name of the part of the map our player is in, as the game's map
-        /// screen names it (its "UI" sheet, key "biome_" + the biome type), or
-        /// an English name if the sheet can't be read. Empty inside a separate
-        /// location (a cave, an interior), where the biome doesn't apply.
-        /// </summary>
-        private static string BiomeName()
-        {
-            if (Player.Instance == null || Player.Instance.whereAmI == null)
-            {
-                return "";
-            }
-
-            if (Singleton<OutsideLocations>.Instance != null
-                && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
-            {
-                return "";
-            }
-
-            var b = Player.Instance.whereAmI.currentInfoBiome;
-            if (b == null || b.type == Biome.Type.empty)
-            {
-                return "";
-            }
-
-            // The game's sheet has biome_forest, _forest_mutated, _meadow and
-            // _swamp; dense forest is forest on its map.
-            Biome.Type biomeType;
-            if (b.type == Biome.Type.forest_dense)
-            {
-                biomeType = Biome.Type.forest;
-            }
-            else
-            {
-                biomeType = b.type;
-            }
-
-            string key = "biome_" + biomeType;
-            string name = "";
-            try
-            {
-                if (!_biomeKeysLogged)
-                {
-                    _biomeKeysLogged = true;
-                    var keys = new List<string>();
-                    foreach (var k in Language.GetAllKeysForSheet("UI").Keys)
-                    {
-                        if (k.StartsWith("biome"))
-                        {
-                            keys.Add(k);
-                        }
-                    }
-
-                    Log.LogInfo(
-                        "[presence] the game's biome names: "
-                            + $"{string.Join(", ", keys)}");
-                }
-
-                name = Language.Get(key, "UI");
-            }
-            catch
-            {
-            }
-
-            if (!string.IsNullOrEmpty(name) && name != key)
-            {
-                return name;
-            }
-
-            switch (b.type)
-            {
-                case Biome.Type.meadow:
-                    return "Dry Meadow";
-                case Biome.Type.forest:
-                case Biome.Type.forest_dense:
-                    return "Silent Forest";
-                case Biome.Type.swamp:
-                    return "Swamp";
-                default:
-                    return "";
-            }
+            _host.Panel.OnGUI();
         }
 
         private void OnApplicationQuit()
