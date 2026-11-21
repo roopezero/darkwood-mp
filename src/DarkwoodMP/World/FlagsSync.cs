@@ -24,7 +24,7 @@ namespace DarkwoodMP.World
     /// places. Another player's new entry is added here, with the game's own
     /// "journal updated" popup for an entry, a note or a place (not for a place
     /// the game finds quietly, and not for anything the game has no text for:
-    /// JournalPopupTextPatch). An entry, note, key or item can also go: a
+    /// JournalPopups). An entry, note, key or item can also go: a
     /// dialogue's removeItem takes a key or quest item the player hands over.
     /// That goes as the value "-", and the entry is removed in the other games
     /// too. What a player picks up in a dream is marked inDream, and the game
@@ -1257,6 +1257,54 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// A scripted event's step is about to run: the reputation a
+        /// reputation step (GameEvent modifyCharacter / reputation) changes,
+        /// or int.MinValue for any other step (or no such NPC).
+        /// </summary>
+        internal int ReputationBefore(GameEvent ev)
+        {
+            if (ev == null || ev.type != GameEvent.Type.modifyCharacter
+                || ev.characterModifyType
+                    != GameEvent.CharacterModify.reputation)
+            {
+                return int.MinValue;
+            }
+
+            var st = NpcState(ev.Value);
+            if (st == null)
+            {
+                return int.MinValue;
+            }
+
+            return st.reputation;
+        }
+
+        /// <summary>
+        /// A scripted event's reputation step ran. It is a shared step: it
+        /// runs in every game (ScriptedEvents), so each game's change is its
+        /// own and isn't sent as a change too.
+        /// </summary>
+        internal void StepRan(GameEvent ev, int before)
+        {
+            var st = NpcState(ev.Value);
+            if (st != null && st.reputation != before)
+            {
+                Absorb(ev.Value, st.reputation - before);
+            }
+        }
+
+        private static Flags.NPCState NpcState(string npc)
+        {
+            Flags instance = Singleton<Flags>.Instance;
+            if (instance == null)
+            {
+                return null;
+            }
+
+            return instance.getNPCState(npc);
+        }
+
+        /// <summary>
         /// One NPC here, when another game's state says the NPC of this
         /// name died, with this save id. A copy of one the host runs as an
         /// enemy dies with the host's state (Combat.NetEnemies).
@@ -1289,131 +1337,6 @@ namespace DarkwoodMP.World
                 Alive = alive,
                 Puppet = puppet,
             };
-        }
-    }
-
-    /// <summary>
-    /// The "journal updated" popup (Journal.showJournalInfoPopup) shows the
-    /// game's text for what was found, looked up by its name. When the game has
-    /// no text for that name, Language.Get gives back the bare name, and the
-    /// popup would say something like "Location found: place_10". This happens
-    /// for some small places in the game itself, and for a place, entry or note
-    /// another player found (FlagsSync), so such a popup isn't shown at all;
-    /// what was found is still added to the journal.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Journal), nameof(Journal.showJournalInfoPopup),
-        new[] { typeof(string), typeof(string) })]
-    static class JournalPopupTextPatch
-    {
-        static bool Prefix(string _type, string _desc)
-        {
-            bool has;
-            try
-            {
-                var text = JournalRules.TextOf(_type, _desc);
-                if (text.Always)
-                {
-                    // reputation and others carry their own text
-                    return true;
-                }
-
-                has = Has(text.Key, text.Sheet)
-                    || (text.OtherSheet != null
-                        && Has(text.Key, text.OtherSheet));
-            }
-            catch (Exception)
-            {
-                return true; // the language isn't loaded: leave it to the game
-            }
-
-            if (!has)
-            {
-                Plugin.Log.LogInfo(
-                    $"Journal: no popup for {_type} {_desc}, the game has no "
-                        + "text for it");
-            }
-
-            return has;
-        }
-
-        private static bool Has(string key, string sheet)
-            => !string.IsNullOrEmpty(key)
-                && global::Language.HasKey(key, sheet)
-                && !string.IsNullOrEmpty(global::Language.Get(key, sheet));
-    }
-
-    /// <summary>
-    /// A scripted event's reputation step (GameEvent modifyCharacter /
-    /// reputation) is a shared step: it runs in every game (ScriptedEvents), so
-    /// each game's change is its own and isn't sent as a change too.
-    /// </summary>
-    [HarmonyPatch]
-    static class EventReputationPatch
-    {
-        private static System.Reflection.FieldInfo _this;
-
-        static System.Reflection.MethodBase TargetMethod()
-        {
-            var mn = AccessTools.EnumeratorMoveNext(
-                AccessTools.Method(typeof(GameEvent), nameof(GameEvent.fire)));
-            if (mn != null)
-            {
-                _this = AccessTools.Field(mn.DeclaringType, "<>4__this");
-            }
-
-            return mn;
-        }
-
-        static void Prefix(object __instance, out int __state)
-        {
-            __state = int.MinValue;
-            if (_this == null || Coop.Current == null)
-            {
-                return;
-            }
-
-            var ev = _this.GetValue(__instance) as GameEvent;
-            if (ev == null || ev.type != GameEvent.Type.modifyCharacter
-                || ev.characterModifyType
-                    != GameEvent.CharacterModify.reputation)
-            {
-                return;
-            }
-
-            Flags instance = Singleton<Flags>.Instance;
-            Flags.NPCState st = null;
-            if (instance != null)
-            {
-                st = instance.getNPCState(ev.Value);
-            }
-
-            if (st != null)
-            {
-                __state = st.reputation;
-            }
-        }
-
-        static void Postfix(object __instance, int __state)
-        {
-            if (__state == int.MinValue)
-            {
-                return;
-            }
-
-            var ev = (GameEvent)_this.GetValue(__instance);
-            Flags instance = Singleton<Flags>.Instance;
-            Flags.NPCState st = null;
-            if (instance != null)
-            {
-                st = instance.getNPCState(ev.Value);
-            }
-
-            CoopSession coop = Coop.Current;
-            if (coop != null && st != null && st.reputation != __state)
-            {
-                coop.Story.Absorb(ev.Value, st.reputation - __state);
-            }
         }
     }
 }
