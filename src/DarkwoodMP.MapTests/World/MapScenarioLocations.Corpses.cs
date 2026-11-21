@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -180,7 +181,7 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSeconds(0.5f);
             var p = Player.Instance;
-            var from = Sync.ViewWatch.LightPos();
+            var from = ViewWatch.LightPos();
             if (p == null || from == null)
             {
                 r.Fail("no player view light");
@@ -229,7 +230,7 @@ namespace DarkwoodMP.World
                     {
                         var at = new Vector3(c.x + dx, y, c.z + dz);
                         spots++;
-                        if (!Sync.ViewWatch.Hidden(at))
+                        if (!ViewWatch.Hidden(at))
                         {
                             continue;
                         }
@@ -237,7 +238,7 @@ namespace DarkwoodMP.World
                         dark++;
                         foreach (var h in Physics.RaycastAll(
                             at + new Vector3(0f, 100f, 0f), Vector3.down, 200f,
-                            Sync.ViewWatch.HideMask))
+                            ViewWatch.HideMask))
                         {
                             if (h.collider == null)
                             {
@@ -245,7 +246,7 @@ namespace DarkwoodMP.World
                             }
 
                             var t = h.collider.transform;
-                            string path = Sync.ViewWatch.Path(t);
+                            string path = ViewWatch.Path(t);
                             string text = "";
                             if (h.collider.isTrigger)
                             {

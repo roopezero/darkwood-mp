@@ -192,10 +192,10 @@ namespace DarkwoodMP.Combat
 
             if (inv != null)
             {
-                Containers instance = Containers.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.SendContentsTo(peer, inv);
+                    coop.Containers.SendContentsTo(peer, inv);
                 }
             }
         }

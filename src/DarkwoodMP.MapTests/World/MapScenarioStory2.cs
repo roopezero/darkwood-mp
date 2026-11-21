@@ -84,7 +84,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator OwedReload(string[] a, Result r)
         {
-            OwedParts.TestReload();
+            Plugin.Instance.Host.Owed.TestReload();
             yield return null;
             r.Info = "who is owed what written beside the save and read back";
         }

@@ -308,7 +308,7 @@ namespace DarkwoodMP.World
 
             w.WriteBigStr(hotbar);
             // Where the host stands: the joiner's game finds a free spot beside
-            // it (Sync.SpawnSpot), off the host.
+            // it (Sync.Players.SpawnSpot), off the host.
             Vector3 v;
             if (host != null)
             {
@@ -437,7 +437,7 @@ namespace DarkwoodMP.World
         /// (bags and hotbar), by the character it last sent this session, less
         /// the things it has placed since; null: not known (nothing sent yet).
         /// A client sends its character as its player begins placing something
-        /// (PlacingPatch), so this is current then.
+        /// (ContainerPatches.ProgressBarCompleted), so this is current then.
         /// </summary>
         public int? Carries(ulong peer, ICollection<string> types)
         {
@@ -956,9 +956,9 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Move our player to a free spot near where it was just put
-        /// (Sync.SpawnSpot), so it doesn't appear on top of another player or
-        /// in a wall. host: where the host stands, kept clear too (we may not
-        /// have heard where it is yet).
+        /// (Sync.Players.SpawnSpot), so it doesn't appear on top of another
+        /// player or in a wall. host: where the host stands, kept clear too
+        /// (we may not have heard where it is yet).
         /// </summary>
         internal static void PlaceFree(Player p, Vector3? host)
         {
@@ -969,7 +969,7 @@ namespace DarkwoodMP.World
                 taken = new[] { host.Value };
             }
 
-            var at = Sync.SpawnSpot.Find(p, want, taken);
+            var at = Sync.Players.SpawnSpot.Find(p, want, taken);
             if ((at - want).sqrMagnitude < 1f)
             {
                 Plugin.Log.LogInfo($"[spawn] placed at {want}: free");

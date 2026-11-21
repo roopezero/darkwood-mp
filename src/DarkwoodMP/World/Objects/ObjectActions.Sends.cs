@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Inventories;
 using DarkwoodMP.World.Objects;
 using UnityEngine;
 using Action = DarkwoodMP.World.WorldActions.Action;
@@ -347,14 +348,14 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            Containers.ThrownSpawning = path;
+            _coop.Containers.ThrownSpawning = path;
             return true;
         }
 
         /// <summary>Explodes.spawnObjects is over, or threw.</summary>
         public void EndSpawn()
         {
-            Containers.ThrownSpawning = null;
+            _coop.Containers.ThrownSpawning = null;
         }
 
         private static string PathOf(Object prefab)

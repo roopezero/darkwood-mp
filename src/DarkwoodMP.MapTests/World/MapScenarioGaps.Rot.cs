@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using HarmonyLib;
+using DarkwoodMP.World.Inventories;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -27,7 +28,7 @@ namespace DarkwoodMP.World
             yield return Walk(inv.transform.position);
             p.openedItemInventory = inv; // as if its window were open
             yield return new WaitForSecondsRealtime(
-                SlotShare.AskTimeout + 0.5f);
+                SlotRules.AskTimeout + 0.5f);
             var slot = inv.slots.FirstOrDefault(
                 s => !InvItemClass.isNull(s.invItem)
                     && s.invItem.baseClass != null

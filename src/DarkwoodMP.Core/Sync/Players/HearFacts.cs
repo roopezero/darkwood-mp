@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Sync.Players
 {
     /// Whether another player's sounds are heard here
-    /// (PlayerFx.OnSounds).
+    /// (PuppetFx.OnSounds).
     public readonly struct HearFacts
     {
         /// Their puppet is there and active in the hierarchy.

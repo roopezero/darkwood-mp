@@ -396,7 +396,14 @@ with the baseline.
       `WorldAction` and `ObjState` dispatch, `HasKey`, `Crate`, the
       `HammerStroke` patch) so its many callers don't change; it is still
       about 1,000 lines.
-- [ ] 5.3 Items.
+- [x] 5.3 Items.
+  - [x] Part a: `Containers`, `SlotShare` (with `SlotShare.Sort`) and
+        `WorkbenchStorage`. Done: the containers and the slot sharing are
+        `CoopSession.Containers` and `CoopSession.Slots` in
+        `World/Inventories`; the workbench storage works alone too, so it's
+        `ModHost.Workbenches` in `World/Workbenches`, and so is the
+        placeables cache (`ModHost.Placeables`). Sort & Stack still works
+        alone, through a static `SortAlone` that sends nothing.
   - [x] Part b: `UiRefresh`, `TraderSync`, `ThrowSync`. `UiRefresh` and
         `TraderSync` are `CoopSession.Ui` and `.Traders`, `ThrowSync` is
         `.Throws`, and its thrown things' state is `WorldScope.Thrown`
@@ -423,7 +430,14 @@ Finish with `tools/run-test.sh full`.
 | 6.3 | `PlayerDamage`, `EnemyAreaHits`, `CombatPatches`, `EnemyFx` | 1,583 | `combat map:enemies map:hostile map:savage` |
 | 6.4 | `NetEnemies`, `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings` | 2,675 | `combat map:night map:enemies map:hostile map:far map4` |
 
-- [ ] 6.1 Player puppets.
+- [x] 6.1 Player puppets, in `Sync/Players` on both sides. `PlayerSync` is
+      `ModHost.Players` (with `.Markers`, `.Separation`; `ModHost.Lights`,
+      `ModHost.Sprites`), since the test dummy is a puppet with no session;
+      the light grid and map patches still run without one. `PlayerFx`
+      (our side) and `PuppetFx` (the others', split from it) are
+      `CoopSession` subsystems, as is `ViewWatch` (`.View`).
+      `PlayerState`'s bytes stay in `PlayerSnapshot` (Unity types, about 40
+      callers), and `SpawnSpot` keeps its static `Hits` raycast buffer.
 - [x] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
       by the closest player.
   - [x] Part a: `Threat`, `NetPlayerProxy`, `ViewRects`. The threat tables
@@ -477,6 +491,16 @@ Finish with `tools/run-test.sh full`.
         `EnemyRelayRules`, `EnemyHitRules`, `EnemyLoopRules`,
         `CopyRules`, `CopyStateRules`, the rest of `FreezeRules`) from
         the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
+  - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
+        Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
+        the core's `MotionClock`; the hostile NPCs' state is
+        `CoopSession.Hostiles` (`NpcHostility`), its bytes the core's
+        `NpcHitMessage` and `NpcAttackMessage`; the night spawns are
+        `ModHost.Nights` (`NightSpawner`), since the test dummy brings a
+        stand-in into a game played alone and the worm loop replaces the
+        game's coroutine with no session too. `HostileNpcs` and
+        `NightSpawns` keep static members that pass on to them, so callers
+        in files other steps were moving didn't change.
 
 Finish with `tools/run-test.sh full`.
 

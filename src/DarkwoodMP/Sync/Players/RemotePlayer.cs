@@ -1,0 +1,644 @@
+using System.Collections.Generic;
+using DarkwoodMP.Net;
+using UnityEngine;
+
+namespace DarkwoodMP.Sync.Players
+{
+    /// <summary>
+    /// Visual puppet of another player: a root GameObject with one flat child
+    /// per mirrored sprite. Deliberately NOT a Player/CharBase: those are
+    /// singletons wired into input, UI and saving. Root motion is
+    /// snapshot-interpolated; sprite frames snap to the latest snapshot.
+    /// </summary>
+    public sealed class RemotePlayer
+    {
+        public readonly ulong Owner;
+        public string Name;
+        public GameObject Root { get; private set; }
+        public bool Alive => PuppetRules.IsAlive(Facts);
+        public bool Spectating => PuppetRules.IsSpectating(Facts);
+        /// <summary>In a separate location or a dream.</summary>
+        public bool Away => PuppetRules.IsAway(Facts);
+        /// <summary>
+        /// The latest snapshot (its state bits: invisible, wards, forest
+        /// skills), or null before the first.
+        /// </summary>
+        public PlayerSnapshot Last
+        {
+            get
+            {
+                if (_hasLast)
+                {
+                    return _last;
+                }
+
+                return null;
+            }
+        }
+
+        private readonly PlayerSnapshot _prev = new PlayerSnapshot();
+        private readonly PlayerSnapshot _last = new PlayerSnapshot();
+        private bool _hasPrev, _hasLast;
+        private readonly Dictionary<int, tk2dSprite> _parts =
+            new Dictionary<int, tk2dSprite>();
+        private readonly HashSet<int> _seen = new HashSet<int>();
+
+        /// What the latest snapshot says, for PuppetRules.
+        private PuppetFacts Facts => new PuppetFacts
+        {
+            HasLast = _hasLast,
+            Alive = _last.Alive,
+            Spectating = _last.Spectating,
+            Away = _last.Away,
+            Flashlight = _last.Flashlight,
+            HeldLight = _last.HeldLight,
+            Lantern = _last.Lantern,
+            BeamRadius = _last.BeamRadius,
+        };
+
+        private static Vec2 Flat(Vector3 v) => new Vec2(v.x, v.z);
+
+        public RemotePlayer(ulong owner, string name)
+        {
+            Owner = owner;
+            Name = name;
+        }
+
+        /// <summary>
+        /// A snapshot said they're no longer alive, after one that said they
+        /// were.
+        /// </summary>
+        public event System.Action<RemotePlayer> OnDied;
+
+        public void Push(PlayerSnapshot snap)
+        {
+            if (PuppetRules.Died(_hasLast, _last.Alive, snap.Alive))
+            {
+                System.Action<RemotePlayer> handler = OnDied;
+                if (handler != null)
+                {
+                    handler(this);
+                }
+            }
+
+            // A first position, or a jump further than anyone walks between two
+            // updates (placed on joining, a teleport), is shown at once rather
+            // than slid across, through whoever stands between.
+            if (PuppetRules.KeepsPrevious(
+                _hasLast, Flat(_last.Position), Flat(snap.Position)))
+            {
+                _prev.CopyFrom(_last);
+                _hasPrev = true;
+            }
+            else
+            {
+                _hasPrev = false;
+            }
+
+            _last.CopyFrom(snap);
+            _last.Time = Time.time;
+            _hasLast = true;
+            ApplySprites();
+            ApplyLights();
+        }
+
+        // ---- what lights them -----------------------------------------------
+        // A torch or lamp in hand (its light and flames), or the flashlight's
+        // beam.
+
+        private string _heldShown = "";
+        private Transform _heldLight, _heldFlames;
+        private GameObject _beam;
+
+        /// <summary>
+        /// For the tests: the puppet's flashlight beam (null if it never had
+        /// one).
+        /// </summary>
+        internal GameObject Beam => _beam;
+        /// <summary>
+        /// For the tests: the puppet's lantern light (null when there's none).
+        /// </summary>
+        internal Light2D LanternLight => _lantern;
+        /// <summary>
+        /// For the tests: the light of the torch or lamp in the puppet's hand
+        /// (null when there's none).
+        /// </summary>
+        internal Light2D HeldLightShown
+        {
+            get
+            {
+                if (_heldLight != null)
+                {
+                    return _heldLight.GetComponent<Light2D>();
+                }
+
+                return null;
+            }
+        }
+
+        private bool _flamesLogged;
+
+        private void ApplyLights()
+        {
+            if (Root == null)
+            {
+                return;
+            }
+
+            PuppetFacts puppet = Facts;
+            string want = PuppetRules.HeldLight(puppet);
+            if (PuppetRules.RedoesHeld(want, _heldShown, _heldLight != null))
+            {
+                RemoveHeld();
+                _heldShown = want;
+                if (want != "")
+                {
+                    try
+                    {
+                        ItemsDatabase instance =
+                            Singleton<ItemsDatabase>.Instance;
+                        InvItem item = null;
+                        if (instance != null)
+                        {
+                            item = instance.getItem(want, instantiate: false);
+                        }
+
+                        if (item != null && item.lightEmitter != null)
+                        {
+                            // As the game does for its own player
+                            // (Player.onDoneSwitchingItem), on the puppet.
+                            _heldLight = Core.AddPrefab(
+                                item.lightEmitter, Vector3.zero,
+                                Quaternion.Euler(90f, 0f, 0f), Root).transform;
+                            if (item._particleEmitter != null)
+                            {
+                                _heldFlames = Core.AddPrefab(
+                                    item._particleEmitter, Vector3.zero,
+                                    Quaternion.Euler(90f, 0f, 0f),
+                                    Root).transform;
+                            }
+
+                            NotSolid(_heldLight);
+                            NotSolid(_heldFlames);
+                        }
+                    }
+                    catch (System.Exception e)
+                    {
+                        Plugin.Log.LogWarning(
+                            $"Couldn't show {Name}'s {want}: {e.Message}");
+                    }
+                }
+            }
+
+            // The flames go where their game put them: on the torch in hand,
+            // which moves with each animation frame and facing
+            // (Player.ProcessAnims). The light itself stays at the player's
+            // centre, as the game leaves it.
+            if (_heldFlames != null)
+            {
+                _heldFlames.localPosition = _last.HeldFlames;
+                if (!_flamesLogged && _last.HeldFlames != Vector3.zero)
+                {
+                    _flamesLogged = true;
+                    Plugin.Log.LogInfo(
+                        $"[fx] {Name}'s {_heldShown}: flames on the puppet at "
+                            + $"{_heldFlames.localPosition} from its centre "
+                            + "(on the item in hand)");
+                }
+            }
+
+            bool beam = PuppetRules.Beam(puppet);
+            if (beam && _beam == null)
+            {
+                Transform own = null;
+                if (Player.Instance != null)
+                {
+                    own = Player.Instance.transform.Find("Flashlight");
+                }
+
+                if (own != null)
+                {
+                    _beam =
+                        CopyLight(own.gameObject, Root.transform, "Flashlight");
+                    NotSolid(_beam.transform);
+                }
+            }
+
+            if (_beam != null && _beam.activeSelf != beam)
+            {
+                _beam.SetActive(beam);
+            }
+
+            // The copy keeps the radius and colour our own beam had when it was
+            // copied (the prefab's, if we never used one); their game sets them
+            // each frame from where their mouse is (Player.processFlashlight).
+            Light2D beamLight = null;
+            if (beam && _beam != null)
+            {
+                beamLight = _beam.GetComponent<Light2D>();
+            }
+
+            if (beamLight != null && PuppetRules.SetsBeam(puppet))
+            {
+                if (beamLight.LightRadius != _last.BeamRadius)
+                {
+                    beamLight.LightRadius = _last.BeamRadius;
+                }
+
+                var c = new Color(
+                    _last.BeamBright, _last.BeamBright, _last.BeamBright, 0f);
+                if (beamLight.LightColor != c)
+                {
+                    beamLight.LightColor = c;
+                }
+            }
+
+            ApplyLantern();
+        }
+
+        // A lantern worn on the hotbar: in their game it widens Player.lightDot
+        // and makes it a logic light (InvItemClass.checkForActiveSwitches).
+        // Here a copy of our own player's light dot on the puppet does the
+        // same: it's drawn, and it lights the path nodes around them
+        // (Controller.logicLights), so the host's AI and Core.isInLight see the
+        // joiner's proxy, which stands where the puppet is, as lit.
+        private Light2D _lantern;
+
+        /// <summary>
+        /// The radius of the lantern light shown on the puppet (0: none).
+        /// </summary>
+        public float LanternShown
+        {
+            get
+            {
+                if (_lantern != null)
+                {
+                    return _lantern.LightRadius;
+                }
+
+                return 0f;
+            }
+        }
+
+        private void ApplyLantern()
+        {
+            float want = PuppetRules.Lantern(Facts);
+            if (PuppetRules.RemovesLantern(want))
+            {
+                RemoveLantern();
+                return;
+            }
+
+            var ctl = Singleton<Controller>.Instance;
+            if (_lantern == null)
+            {
+                Light2D own = null;
+                if (Player.Instance != null)
+                {
+                    own = Player.Instance.lightDot;
+                }
+
+                if (own == null || ctl == null)
+                {
+                    return;
+                }
+
+                var go = CopyLight(
+                    own.gameObject, Root.transform, "PuppetLanternDot");
+                go.SetActive(true);
+                NotSolid(go.transform);
+                _lantern = go.GetComponent<Light2D>();
+                if (_lantern == null)
+                {
+                    Object.Destroy(go);
+                    return;
+                }
+
+                Plugin.Log.LogInfo(
+                    $"[fx] {Name}'s lantern: a light of radius {want:0} on "
+                        + "their puppet");
+            }
+
+            if (_lantern.LightRadius != want)
+            {
+                _lantern.LightRadius = want;
+            }
+
+            _lantern.lightsPlayer = true;
+            _lantern.updateGraph = true;
+            if (ctl != null && !ctl.logicLights.Contains(_lantern))
+            {
+                ctl.logicLights.Add(_lantern);
+            }
+        }
+
+        private void RemoveLantern()
+        {
+            if (_lantern == null)
+            {
+                return;
+            }
+
+            Unlight(_lantern);
+            Object.Destroy(_lantern.gameObject);
+            _lantern = null;
+        }
+
+        private void RemoveHeld()
+        {
+            if (_heldLight != null)
+            {
+                var light = _heldLight.GetComponent<Light2D>();
+                if (light != null)
+                {
+                    Unlight(light);
+                }
+
+                Object.Destroy(_heldLight.gameObject);
+            }
+
+            if (_heldFlames != null)
+            {
+                Object.Destroy(_heldFlames.gameObject);
+            }
+
+            _heldLight = _heldFlames = null;
+            _heldShown = "";
+        }
+
+        /// <summary>
+        /// A copy of one of our own player's lights (its flashlight beam, its
+        /// light dot) for the puppet, with a mesh of its own. Light2D keeps the
+        /// mesh it draws in a serialized field (_mesh) and its MeshFilter holds
+        /// it too, so Object.Instantiate gave the copy our light's mesh: both
+        /// lights then drew their shape, walls' shadows and all, into the one
+        /// mesh, and our player's light showed the shape worked out where the
+        /// puppet stands (a joiner beside the host's lantern saw the host's
+        /// shadows around their own player, and the puppet's lantern showed our
+        /// small dot). Destroying the copy also destroyed our light's mesh
+        /// (Light2D.OnDestroy). So the copy is made under a switched-off holder
+        /// (no Awake or OnEnable yet), its mesh references are cleared, and
+        /// only then is it put on the puppet, where it makes its own mesh when
+        /// it first draws (Light2D.CreateMeshObject).
+        /// </summary>
+        internal static GameObject CopyLight(
+            GameObject own, Transform parent, string name)
+        {
+            var holder = new GameObject("DarkwoodMP_LightCopy");
+            holder.SetActive(false);
+            var go = Object.Instantiate(own, holder.transform, false);
+            go.name = name;
+            foreach (var l in go.GetComponentsInChildren<Light2D>(true))
+            {
+                l._mesh = null;
+            }
+
+            foreach (var f in go.GetComponentsInChildren<MeshFilter>(true))
+            {
+                f.sharedMesh = null;
+            }
+
+            go.transform.SetParent(parent, false);
+            Object.Destroy(holder);
+            return go;
+        }
+
+        /// <summary>
+        /// Take a puppet's light off the lighting graph and out of the game's
+        /// list of lights.
+        /// </summary>
+        private static void Unlight(Light2D light)
+        {
+            light.unlightGraphNodes();
+            var ctl = Singleton<Controller>.Instance;
+            if (ctl != null)
+            {
+                while (ctl.logicLights.Remove(light))
+                {
+                }
+            }
+        }
+
+        /// <summary>
+        /// A puppet is only seen: a sprite whose collection has collider data,
+        /// or a copied light, may bring a solid collider, and a puppet moved to
+        /// where its player is would shove the furniture and dropped items it
+        /// walks through in this game only. Their own game decides where those
+        /// end up (DragSync), so it's turned off.
+        /// </summary>
+        private static void NotSolid(Transform t)
+        {
+            if (t == null)
+            {
+                return;
+            }
+
+            foreach (var c in t.GetComponentsInChildren<Collider>(true))
+            {
+                if (c != null && !c.isTrigger)
+                {
+                    c.enabled = false;
+                }
+            }
+        }
+
+        private void EnsureRoot()
+        {
+            if (Root != null)
+            {
+                return; // Unity null: also true after scene unload destroyed it
+            }
+
+            Root = new GameObject($"DarkwoodMP_Remote_{Owner}");
+            _parts.Clear();
+        }
+
+        private void ApplySprites()
+        {
+            EnsureRoot();
+            _seen.Clear();
+            foreach (var s in _last.Sprites)
+            {
+                _seen.Add(s.PathHash);
+                var coll =
+                    Plugin.Instance.Host.Sprites.Get(
+                        s.CollectionHash, _last.Library);
+                if (coll == null)
+                {
+                    continue;
+                }
+
+                if (!_parts.TryGetValue(s.PathHash, out var spr) || spr == null)
+                {
+                    var go = new GameObject($"part_{s.PathHash:X8}");
+                    go.transform.SetParent(Root.transform, false);
+                    spr = tk2dBaseSprite.AddComponent<tk2dSprite>(
+                        go, coll, s.SpriteId);
+                    _parts[s.PathHash] = spr;
+                    NotSolid(spr.transform);
+                }
+
+                var t = spr.transform;
+                if (!spr.gameObject.activeSelf)
+                {
+                    spr.gameObject.SetActive(true);
+                }
+
+                if (spr.gameObject.layer != s.Layer)
+                {
+                    spr.gameObject.layer = s.Layer;
+                }
+
+                if (spr.Collection != coll || spr.spriteId != s.SpriteId)
+                {
+                    spr.SetSprite(coll, s.SpriteId);
+                    NotSolid(spr.transform);
+                }
+
+                t.localPosition = s.Pos;
+                t.localRotation = s.Rot;
+                t.localScale = s.Scale;
+                if (spr.scale != s.SpriteScale)
+                {
+                    spr.scale = s.SpriteScale;
+                }
+
+                spr.color = s.Color;
+                var mr = spr.GetComponent<Renderer>();
+                if (mr != null)
+                {
+                    mr.sortingOrder = s.SortingOrder;
+                }
+            }
+
+            foreach (var kv in _parts)
+            {
+                if (kv.Value != null && !_seen.Contains(kv.Key)
+                    && kv.Value.gameObject.activeSelf)
+                {
+                    kv.Value.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        /// <summary>Call every frame.</summary>
+        public void Tick()
+        {
+            if (!_hasLast)
+            {
+                return;
+            }
+
+            EnsureRoot();
+            Vector3 pos;
+            Quaternion rot;
+            PuppetBlend blend = PuppetRules.Blend(new BlendFacts
+            {
+                HasPrevious = _hasPrev,
+                Previous = new Seconds(_prev.Time),
+                Last = new Seconds(_last.Time),
+                Now = new Seconds(Time.time),
+            });
+
+            if (blend.Blends)
+            {
+                // Render one snapshot interval behind: blend prev->last over
+                // the time it took last to arrive.
+                float t = blend.Fraction;
+                pos = Vector3.Lerp(_prev.Position, _last.Position, t);
+                rot = Quaternion.Slerp(_prev.Rotation, _last.Rotation, t);
+            }
+            else
+            {
+                pos = _last.Position;
+                rot = _last.Rotation;
+            }
+
+            Root.transform.SetPositionAndRotation(pos, rot);
+            // A spectator isn't seen, nor a player somewhere else: in a
+            // separate location or a dream while we aren't in the same location
+            // (or the other way round), where their coordinates are in an area
+            // this game hasn't loaded, or is another place. A location stands
+            // in the same place in every game (World.Locations).
+            bool shown = PuppetRules.Shown(
+                _last.Spectating,
+                World.Locations.SamePlace(_last.Away, _last.Place));
+            if (Root.activeSelf != shown)
+            {
+                Root.SetActive(shown);
+            }
+        }
+
+        // ---- a burning player's flames and fire sound (see PlayerFx) --------
+
+        private Transform _flames;
+        private AudioObject _fireSound;
+
+        /// <summary>
+        /// Show them burning, as the game's Burn does on a burning character:
+        /// pooled flames that follow them and the fire loop. Only the look: the
+        /// burning itself (its damage) happens in their own game.
+        /// </summary>
+        public void ShowBurning(string flames, string sound)
+        {
+            StopBurning();
+            EnsureRoot();
+            if (flames != "")
+            {
+                try
+                {
+                    _flames = Core.AddPooledPrefab(
+                        "FX", flames, Root.transform.position,
+                        Quaternion.identity, Root.transform);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning(
+                        $"[fx] no flames \"{flames}\" here: {e.Message}");
+                }
+            }
+
+            if (sound != "")
+            {
+                _fireSound = AudioController.Play(sound, Root.transform);
+            }
+        }
+
+        public void StopBurning()
+        {
+            if (_flames != null)
+            {
+                Core.stopAllParticlesInChildren(_flames, includeInactive: true);
+            }
+
+            if (_fireSound != null)
+            {
+                _fireSound.Stop();
+            }
+
+            _fireSound = null;
+        }
+
+        public void Destroy()
+        {
+            StopBurning();
+            // The flames belong to the game's pool: take them off the puppet
+            // before it goes, so the pool keeps them.
+            if (_flames != null)
+            {
+                _flames.SetParent(null, true);
+            }
+
+            _flames = null;
+            RemoveHeld();
+            RemoveLantern();
+            if (Root != null)
+            {
+                Object.Destroy(Root);
+            }
+
+            Root = null;
+            _parts.Clear();
+        }
+    }
+}

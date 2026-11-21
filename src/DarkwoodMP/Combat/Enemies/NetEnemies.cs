@@ -75,16 +75,6 @@ namespace DarkwoodMP.Combat
             coop.Handle(MsgType.EnemyArmor, OnArmor);
             coop.Net.OnPeerDisconnected += PeerLeft;
             coop.Hook(() => coop.Net.OnPeerDisconnected -= PeerLeft);
-            coop.Handle(MsgType.NpcHit, HostileNpcs.OnNpcHit);
-            coop.Handle(MsgType.NpcAttack, HostileNpcs.OnNpcAttack);
-            // Still static: they're HostileNpcs' and EnemyMotion's.
-            coop.Hook(ForgetStatics);
-        }
-
-        private static void ForgetStatics()
-        {
-            HostileNpcs.Clear();
-            EnemyMotion.Reset();
         }
 
         private void PeerLeft(ulong id)
@@ -291,7 +281,14 @@ namespace DarkwoodMP.Combat
         private void MovePuppets()
         {
             float now = Time.unscaledTime, dt = Time.unscaledDeltaTime;
-            EnemyMotion.Frame(dt);
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            var motion = coop.Motion;
+            motion.Frame(dt);
             foreach (var p in _puppets.Values)
             {
                 if (p.C != null && p.DiedAt >= 0f && !p.Settled
@@ -313,13 +310,13 @@ namespace DarkwoodMP.Combat
                     p.C.gameObject.SetActive(true);
                 }
 
-                if (!EnemyMotion.Where(p.Motion, now, out var pos, out var rot))
+                if (!motion.Where(p.Motion, now, out var pos, out var rot))
                 {
                     continue;
                 }
 
                 p.C.transform.SetPositionAndRotation(pos, rot);
-                EnemyMotion.Stats.Drawn(p.Motion, pos, dt);
+                motion.Drawn(p.Motion, pos, dt);
                 AlignShadow(p.C);
             }
         }

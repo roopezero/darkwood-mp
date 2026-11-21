@@ -1,6 +1,7 @@
 using DarkwoodMP.Combat.Beams;
 using DarkwoodMP.Combat.Joiners;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using UnityEngine;
 

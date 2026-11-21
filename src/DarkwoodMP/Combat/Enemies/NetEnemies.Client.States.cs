@@ -343,7 +343,12 @@ namespace DarkwoodMP.Combat
 
             float sent = r.R.ReadSingle();
             float now = Time.unscaledTime;
-            EnemyMotion.Arrived(sent, now);
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Motion.Arrived(sent, now);
+            }
+
             int n = r.R.ReadUInt16();
             for (int i = 0; i < n; i++)
             {

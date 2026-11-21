@@ -423,7 +423,7 @@ namespace DarkwoodMP.Combat
                 var inv = c.GetComponent<Inventory>();
                 if (inv != null)
                 {
-                    World.Containers.CloseIfOpen(c.gameObject);
+                    World.Inventories.Containers.CloseIfOpen(c.gameObject);
                     Object.Destroy(inv);
                 }
 

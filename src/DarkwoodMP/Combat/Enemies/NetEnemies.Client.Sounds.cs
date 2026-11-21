@@ -255,7 +255,7 @@ namespace DarkwoodMP.Combat
                 // Destroyed, our copy from the save too: the host's is out of
                 // its world for good, and a hidden copy would still be in ours
                 // (its body searchable by name, saved with our world).
-                World.Containers.CloseIfOpen(p.C.gameObject);
+                World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
                 Object.Destroy(p.C.gameObject);
                 return;
             }
@@ -292,7 +292,7 @@ namespace DarkwoodMP.Combat
 
             // its window, if our player has its corpse open: gone or hidden, it
             // is gone for us
-            World.Containers.CloseIfOpen(p.C.gameObject);
+            World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
             if (p.Ours)
             {
                 Object.Destroy(p.C.gameObject);

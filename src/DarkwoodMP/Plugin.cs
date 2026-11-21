@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Inventories;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -8,6 +9,7 @@ using BepInEx.Logging;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
 using HarmonyLib;
 using UnityEngine;
@@ -75,7 +77,6 @@ namespace DarkwoodMP
 
         private DirectPanel _direct;
         private WorldShare _world;
-        private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
         private WorldEvents _events;
@@ -443,18 +444,15 @@ namespace DarkwoodMP
             WorldTeardown.Init();
             AfterNight.Register(_host.Session);
             WorldActions.Register(_host.Session);
-            _containers = new Containers(_host.Session);
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new SlotShare(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
             NightObjects.Register(_host.Session);
             Progression.Register(_host.Session);
             DreamSync.Register(_host.Session);
             Locations.Register(_host.Session);
-            FarEvents.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
@@ -886,6 +884,7 @@ namespace DarkwoodMP
             {
                 session.Ui.Enabled = true;
                 session.Pushes.TestTouch = null;
+                session.Motion.Stats.On = false;
                 session.Traps.TestRefuse = World.Traps.TrapTest.None;
             }
 
@@ -893,7 +892,6 @@ namespace DarkwoodMP
 
             SkillsPanel.TestMouse = null;
             UiWindow.TestMouse = null;
-            EnemyMotion.Stats.On = false;
             WorldActions.TestAsPlayer = false;
             var player = Player.Instance;
             if (player != null)
@@ -2272,8 +2270,15 @@ namespace DarkwoodMP
 
             ModProfiler.Mark("time");
             // also without co-op: each upgrade adds a row to the storage
-            World.WorkbenchStorage.Update();
-            _containers.Update();
+            _host.Workbenches.Update();
+            // also without co-op: see Containers.EachFrame
+            Containers.EachFrame();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Containers.Update();
+            }
+
             ModProfiler.Mark("containers");
             _characters.Update();
             ModProfiler.Mark("characters");

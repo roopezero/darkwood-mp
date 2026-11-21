@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Sync.Players
 {
     /// A light about to mark the pathfinding nodes it lights, and the
-    /// nearest grid (LightGridPatch.Prefix).
+    /// nearest grid (LightGrid.Populates).
     public readonly struct LightGridFacts
     {
         /// AstarPath.active isn't null.

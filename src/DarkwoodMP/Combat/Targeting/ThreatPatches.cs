@@ -99,7 +99,7 @@ namespace DarkwoodMP.Combat
     /// means the player with the most threat.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.attackPlayer))]
-    static class CharacterAttackPlayer
+    static class CharacterAttackPlayerThreat
     {
         static bool Prefix(Character __instance)
         {

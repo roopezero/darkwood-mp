@@ -49,7 +49,8 @@ namespace DarkwoodMP.Combat
             // taken out of our culling while the host sends it (Uncull)
             public bool Unculled;
             public Location HomeLoc;
-            public readonly EnemyMotion.Track Motion = new EnemyMotion.Track();
+            public readonly DarkwoodMP.Combat.Motion.MotionTrack Motion =
+                new DarkwoodMP.Combat.Motion.MotionTrack();
         }
 
         /// <summary>

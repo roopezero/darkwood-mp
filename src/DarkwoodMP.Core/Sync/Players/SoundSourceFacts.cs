@@ -17,7 +17,7 @@ namespace DarkwoodMP.Sync.Players
         public bool ParentIsOurs { get; init; }
 
         /// How deep we are in our player's own methods
-        /// (PlayerFx.InPlayerCode).
+        /// (PlayerFx._inPlayerCode).
         public int InPlayerCode { get; init; }
 
         /// Coop.Guards.Depth: a shared world action is running.

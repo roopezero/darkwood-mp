@@ -41,6 +41,13 @@ namespace DarkwoodMP
         /// Host: the save id counters of the joiners let in to the world.
         public readonly JoinerSaveIds Joiners;
 
+        /// What's in the world's containers, and who has which open.
+        public readonly World.Inventories.Containers Containers;
+
+        /// The containers shared slot by slot: the workbench's storage, and
+        /// every container a client changes.
+        public readonly World.Inventories.SlotShare Slots;
+
         /// Building and repairing, and a joiner's builds waiting for the
         /// host's answer.
         public readonly Construction Construction;
@@ -122,19 +129,36 @@ namespace DarkwoodMP
 
         /// What our player sounds and looks like to the others beyond its
         /// sprites: sounds, shots, blood and burning.
-        public readonly Sync.PlayerFx PlayerFx;
+        public readonly Sync.Players.PlayerFx PlayerFx;
+
+        /// The other players' sounds, shots, blood and burning, shown on
+        /// their puppets.
+        public readonly Sync.Players.PuppetFx PuppetFx;
 
         /// Logs what switches off our player's view (a black screen).
-        public readonly Sync.ViewWatch View;
+        public readonly Sync.Players.ViewWatch View;
 
         /// A client's swings and aims, which the host's enemies react to.
         public readonly Combat.PlayerCues Cues;
 
-        /// <summary>The host's enemies and their copies on clients.</summary>
+        /// The host's enemies and their copies on clients.
         public readonly Combat.NetEnemies Enemies;
 
-        /// <summary>Host: the noise clients' characters make.</summary>
+        /// Host: the noise clients' characters make.
         public readonly Combat.RemoteNoise Noise;
+
+        /// Client: where the host's enemies are drawn between its states.
+        public readonly Combat.EnemyMotion Motion;
+
+        /// The NPCs that turned on a player, and our hits and scripted
+        /// attacks on NPCs left to the host.
+        public readonly Combat.NpcHostility Hostiles;
+
+        /// Who is still owed their own part of a fired once-only trigger.
+        public readonly World.Owed.OwedParts Owed;
+
+        /// A location's enter and exit events with players far apart.
+        public readonly World.Scripted.FarEvents FarEvents;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -150,6 +174,8 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
+            Containers = new World.Inventories.Containers(this);
+            Slots = new World.Inventories.SlotShare(this);
             Construction = new Construction(this);
             Stacks = new StackShare(this);
             Time = new TimeSync(this);
@@ -181,11 +207,16 @@ namespace DarkwoodMP
             EnemyFx = new Combat.EnemyFx(this);
             Breaks = new World.BreakActions(this);
             Objects = new World.ObjectActions(this);
-            PlayerFx = new Sync.PlayerFx(this);
-            View = new Sync.ViewWatch();
+            PlayerFx = new Sync.Players.PlayerFx(this);
+            PuppetFx = new Sync.Players.PuppetFx(this);
+            View = new Sync.Players.ViewWatch();
             Cues = new Combat.PlayerCues(this);
             Enemies = new Combat.NetEnemies(this);
             Noise = new Combat.RemoteNoise(this);
+            Motion = new Combat.EnemyMotion();
+            Hostiles = new Combat.NpcHostility(this);
+            Owed = new World.Owed.OwedParts(this);
+            FarEvents = new World.Scripted.FarEvents(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

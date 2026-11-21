@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -8,7 +9,7 @@ namespace DarkwoodMP.World
 {
     /// <summary>
     /// Map test steps for the lights the others' puppets carry
-    /// (Sync.RemotePlayer: a torch or lamp in hand, a hotbar lantern, the
+    /// (RemotePlayer: a torch or lamp in hand, a hotbar lantern, the
     /// flashlight's beam) and for our own view: each Light2D draws into a mesh
     /// of its own, so what our player sees (its view cone, its light dot, its
     /// beam) is worked out where our player stands, not where a puppet does.
@@ -140,22 +141,22 @@ namespace DarkwoodMP.World
             bool ok = false;
             while (true)
             {
-                Sync.PlayerSync instance = Plugin.Instance.Host.Players;
-                List<Sync.RemotePlayer> puppets = null;
+                PlayerSync instance = Plugin.Instance.Host.Players;
+                List<RemotePlayer> puppets = null;
                 if (instance != null)
                 {
                     puppets = instance.Remotes.Values.Where(
-                        x => x.Owner != Sync.PlayerSync.DummyId
+                        x => x.Owner != PlayerSync.DummyId
                             && x.Root != null).ToList();
                 }
 
                 if (puppets == null)
                 {
-                    puppets = new List<Sync.RemotePlayer>();
+                    puppets = new List<RemotePlayer>();
                 }
 
                 seen = string.Join("; ", puppets.Select(Describe));
-                bool any(System.Func<Sync.RemotePlayer, bool> f) =>
+                bool any(System.Func<RemotePlayer, bool> f) =>
                     puppets.Any(f);
                 switch (what)
                 {
@@ -242,13 +243,13 @@ namespace DarkwoodMP.World
                 && l._mesh.vertexCount > 2;
         }
 
-        private static string Describe(Sync.RemotePlayer x)
+        private static string Describe(RemotePlayer x)
         {
             var parts = new List<string>();
             var held = x.HeldLightShown;
             if (held != null)
             {
-                Sync.PlayerSnapshot snapshot = x.Last;
+                PlayerSnapshot snapshot = x.Last;
                 string heldLight = null;
                 if (snapshot != null)
                 {
@@ -276,7 +277,7 @@ namespace DarkwoodMP.World
                     lightRadius = l.LightRadius;
                 }
 
-                Sync.PlayerSnapshot last = x.Last;
+                PlayerSnapshot last = x.Last;
                 float beamRadius = 0f;
                 if (last != null)
                 {
@@ -354,7 +355,7 @@ namespace DarkwoodMP.World
                     kv => string.Join(
                         " + ",
                         kv.Value.Select(
-                            l => Sync.ViewWatch.Path(l.transform))));
+                            l => ViewWatch.Path(l.transform))));
             return string.Join("; ", bad);
         }
 
@@ -412,7 +413,7 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    text = "on " + Sync.ViewWatch.Path(l.transform);
+                    text = "on " + ViewWatch.Path(l.transform);
                 }
 
                 string meshNote = "not its own";

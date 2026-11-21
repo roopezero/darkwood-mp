@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using DarkwoodMP.Combat;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -104,7 +105,7 @@ namespace DarkwoodMP.World
         {
             bool want = a.Length == 0 || a[0] == "yes";
             var ps = Plugin.Instance.Host.Players;
-            Sync.RemotePlayer rp = null;
+            RemotePlayer rp = null;
             NetPlayerProxy proxy = null;
             bool shown = false, inLight = false;
             float until = Time.realtimeSinceStartup + 6f;
@@ -113,7 +114,7 @@ namespace DarkwoodMP.World
                 if (ps != null)
                 {
                     rp = ps.Remotes.Values.FirstOrDefault(
-                        x => x.Owner != Sync.PlayerSync.DummyId);
+                        x => x.Owner != PlayerSync.DummyId);
                 }
                 else
                 {
@@ -136,7 +137,7 @@ namespace DarkwoodMP.World
                     Vector3? position = null;
                     if (rp != null)
                     {
-                        Sync.PlayerSnapshot last = rp.Last;
+                        PlayerSnapshot last = rp.Last;
                         if (last != null)
                         {
                             position = last.Position;

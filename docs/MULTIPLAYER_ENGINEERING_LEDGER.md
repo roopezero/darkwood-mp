@@ -28,7 +28,7 @@ its own `WORK` folder. MsgType numbers handed out: A 222-228, B 243-248, C 91-99
 | Id | Task | Owner | Owns (files) | Status |
 |---|---|---|---|---|
 | A | Open UI windows kept up to date (workbench, containers, generator, saw, ...) | agent A, A2 | new `World/UiRefresh*.cs`, its map steps; minimal hooks in SlotShare/Containers/FuelSync | merged, map:ui PASS |
-| B | Savage attack/animation sync, compared with dogs | agent B | `Combat/NetEnemies.cs` and enemy anim code, its map steps | merged; stuck loop not reproduced; copy catch-up fixed |
+| B | Savage attack/animation sync, compared with dogs | agent B | `Combat/Enemies/NetEnemies.cs` and enemy anim code, its map steps | merged; stuck loop not reproduced; copy catch-up fixed |
 | C | Determinism audit | agent C | `docs/MULTIPLAYER_DETERMINISM_AUDIT.md`; fixes only outside A's and B's files | merged; knocked items sent to G |
 | D | Test batteries: run any part alone, in any order, timed | agent D | `tools/run-test.sh`, `tools/tests/mapdriver.py`, battery list, `docs/MULTIPLAYER_TESTING_GUIDE.md` | merged (D, D2); verified in game |
 | E | Entity and mechanic coverage audit | agent E | `docs/MULTIPLAYER_TEST_COVERAGE.md` (read-only otherwise) | merged |

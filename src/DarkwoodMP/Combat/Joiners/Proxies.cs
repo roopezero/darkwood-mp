@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat.Joiners;
 using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Combat

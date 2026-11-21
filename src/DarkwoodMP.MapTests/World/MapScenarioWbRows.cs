@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DarkwoodMP.World.Inventories;
+using DarkwoodMP.World.Workbenches;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 using Object = UnityEngine.Object;
@@ -11,7 +13,7 @@ namespace DarkwoodMP.World
 {
     /// <summary>
     /// Map test steps for the workbench storage's rows
-    /// (World.WorkbenchStorage): an upgrade adds a row of six slots in both
+    /// (WorkbenchStorage): an upgrade adds a row of six slots in both
     /// games, the open window draws it (every slot on the screen, none on top
     /// of another, Sort &amp; Stack under the last row), a client puts
     /// something in the new row, and the host's save and reload keep it. The
@@ -40,6 +42,9 @@ namespace DarkwoodMP.World
 
         private static int Level =>
             Singleton<Controller>.Instance.workbenchLevel;
+
+        private static WorkbenchStorage Rows =>
+            Plugin.Instance.Host.Workbenches;
 
         private static string Slot(InvSlot s)
         {
@@ -117,16 +122,16 @@ namespace DarkwoodMP.World
             var st = wb.normalInventory;
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until
-                && (st.slots.Count != WorkbenchStorage.Wanted(wb, Level)
+                && (st.slots.Count != Rows.Wanted(wb, Level)
                     || (wantLevel > 0 && Level != wantLevel)))
             {
                 yield return null;
             }
 
-            int want = WorkbenchStorage.Wanted(wb, Level);
+            int want = Rows.Wanted(wb, Level);
             r.Info =
                 $"{MapScenarioWorld.Ref(st)} level {Level}: {st.slots.Count} "
-                    + $"slots (base {WorkbenchStorage.BaseSlots(wb)}, wanted "
+                    + $"slots (base {Rows.BaseSlots(wb)}, wanted "
                     + $"{want}), {st.maxColumns} columns, "
                     + $"{st.getAllItems().Count} filled";
             if (wantLevel > 0 && Level != wantLevel)
@@ -407,7 +412,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
 
-                if (st.slots.Count != before + WorkbenchStorage.RowSize)
+                if (st.slots.Count != before + WorkbenchRules.RowSize)
                 {
                     r.Fail(
                         $"the storage didn't grow by a row at level {Level}: "

@@ -245,7 +245,7 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// Either way: i32 level: the workbench was upgraded. Each game gives
         /// every workbench's storage that level's rows as it takes it, before
-        /// any change to the new slots arrives (see World.WorkbenchStorage).
+        /// any change to the new slots arrives (see WorkbenchStorage).
         /// </summary>
         WorkbenchLevel = 39,
         /// <summary>
@@ -345,7 +345,7 @@ namespace DarkwoodMP.Net
         /// who sent it), u8 n, n x (str audio id, f32 volume): sounds that
         /// player's game played on its own player since the last one (steps,
         /// shots, reloads, hammering, pain), batched and sent at most 10 times
-        /// a second (see Sync.PlayerFx). Played on their puppet.
+        /// a second (see Sync.Players.PlayerFx). Played on their puppet.
         /// </summary>
         PlayerSounds = 50,
         /// <summary>

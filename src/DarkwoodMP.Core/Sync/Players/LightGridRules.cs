@@ -2,9 +2,9 @@ namespace DarkwoodMP.Sync.Players
 {
     /// Whether a light is so far outside the pathfinding grid that the
     /// game's node lookup would read past the grid's node array
-    /// (LightGridPatch). It runs with or without a session: a shared
-    /// dream's level stays in the host's world with its lamps far off the
-    /// grid.
+    /// (Light2DPopulateAffectedNodes). It runs with or without a session:
+    /// a shared dream's level stays in the host's world with its lamps far
+    /// off the grid.
     public static class LightGridRules
     {
         /// The game's lookup is skipped (and the light's nodes cleared)

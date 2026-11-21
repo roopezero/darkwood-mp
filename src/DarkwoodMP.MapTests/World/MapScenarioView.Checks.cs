@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -65,7 +66,7 @@ namespace DarkwoodMP.World
             {
                 if (c != null && (IsGhost(c) || IsOurs(c)))
                 {
-                    string path = Sync.ViewWatch.Path(c.transform);
+                    string path = ViewWatch.Path(c.transform);
                     int layer = c.gameObject.layer;
                     string kind;
                     if (IsOurs(c))

@@ -27,12 +27,26 @@ namespace DarkwoodMP
         /// scans of the scene.
         public readonly World.ObjNames AloneNames = new World.ObjNames(null);
 
+        /// The workbenches' storage rows, which grow with each upgrade also
+        /// without co-op.
+        public readonly World.Workbenches.WorkbenchStorage Workbenches =
+            new World.Workbenches.WorkbenchStorage();
+
+        /// What a player can place, built once from the item database.
+        public readonly World.Inventories.Placeables Placeables =
+            new World.Inventories.Placeables();
+
         /// One generator for the random ids of shared objects
         /// (HostIds.NewId), so ids made in the same millisecond differ.
         public readonly Random IdRandom = new Random();
 
         /// The village cellar's full oxygen tank, shared once filled.
         public readonly World.SharedTank Tank = new World.SharedTank();
+
+        /// Host: who is owed their part of fired once-only triggers, kept
+        /// across sessions and world reloads and written beside the save.
+        public readonly World.Owed.OwedRecordFile Owed =
+            new World.Owed.OwedRecordFile();
 
         /// One stack size for every stackable item.
         public readonly World.StackSizes Stacks;
@@ -57,6 +71,11 @@ namespace DarkwoodMP
         /// The stand-in an enemy checking out a location chases.
         public readonly Combat.JoinerChases Chases = new Combat.JoinerChases();
 
+        /// The host's night attackers and worms for every player, and each
+        /// hideout's budget; the test dummy needs them alone too.
+        internal readonly Combat.NightSpawner Nights =
+            new Combat.NightSpawner();
+
         /// Keeps a dialogue closable when its NPC goes away, also alone.
         public readonly World.Talk.DialogueGuard Dialogues =
             new World.Talk.DialogueGuard();
@@ -72,11 +91,12 @@ namespace DarkwoodMP
 
         /// The sprite collections by name hash, for the puppets' looks; kept
         /// as long as the game runs, as the game keeps them.
-        public readonly Sync.SpriteCollections Sprites =
-            new Sync.SpriteCollections();
+        public readonly Sync.Players.SpriteCollections Sprites =
+            new Sync.Players.SpriteCollections();
 
         /// Lights outside the pathfinding grid, also when playing alone.
-        public readonly Sync.LightGrid Lights = new Sync.LightGrid();
+        public readonly Sync.Players.LightGrid Lights =
+            new Sync.Players.LightGrid();
 
         /// <summary>The active characters (Combat.AllCharacters).</summary>
         internal readonly Combat.AllCharacters Characters =
@@ -124,11 +144,11 @@ namespace DarkwoodMP
         /// before, so its handlers of the session's events run in the same
         /// order.
         /// </summary>
-        public Sync.PlayerSync Players { get; private set; }
+        public Sync.Players.PlayerSync Players { get; private set; }
 
         public void AddPlayers()
         {
-            Players = new Sync.PlayerSync(Session);
+            Players = new Sync.Players.PlayerSync(Session);
         }
 
         public void AddSteam(INetBackend steam)

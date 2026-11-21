@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Spectating
 {
-    /// A remote player, as watching sees it (Sync.RemotePlayer).
+    /// A remote player, as watching sees it (Sync.Players.RemotePlayer).
     public readonly struct Watched
     {
         /// RemotePlayer.Owner.
