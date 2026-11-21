@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
+using DarkwoodMP.World.Throws;
 using HarmonyLib;
 using UnityEngine;
 
@@ -117,9 +118,15 @@ namespace DarkwoodMP.World
                 distance = Vector3.Distance(ti.landTarget, from);
             }
 
-            Write(
-                w, _session.LocalId, type, go.transform.position,
-                go.transform.rotation, vel, target, distance);
+            var shot = new ThrowShot
+            {
+                Velocity = VecOf(vel),
+                Target = VecOf(target),
+                Distance = distance,
+            };
+
+            ItemThrown.Write(
+                w, Report(_session.LocalId, type, go.transform, shot));
             if (_session.IsHost)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -186,21 +193,23 @@ namespace DarkwoodMP.World
         /// </summary>
         private const float Dropped = -1f;
 
-        private static void Write(
-            PacketWriter w, ulong by, string type, Vector3 pos, Quaternion rot,
-            Vector3 vel, Vector3 target, float distance)
+        private static ThrowReport Report(
+            ulong by, string type, Transform at, ThrowShot shot)
         {
-            w.W.Write(by);
-            w.WriteStr(type);
-            w.Write(pos);
-            w.W.Write(rot.x);
-            w.W.Write(rot.y);
-            w.W.Write(rot.z);
-            w.W.Write(rot.w);
-            w.Write(vel);
-            w.Write(target);
-            w.W.Write(distance);
+            Quaternion rot = at.rotation;
+            return new ThrowReport
+            {
+                By = by,
+                Type = type,
+                Pos = VecOf(at.position),
+                Rot = new Quat(rot.x, rot.y, rot.z, rot.w),
+                Shot = shot,
+            };
         }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         private void OnThrown(ulong from, PacketReader r)
         {
@@ -215,15 +224,15 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            ulong by = r.R.ReadUInt64();
-            string type = r.ReadStr();
-            var pos = r.ReadVector3();
+            ThrowReport report = ItemThrown.Read(r);
+            ulong by = report.By;
+            string type = report.Type;
+            var pos = VectorOf(report.Pos);
             var rot = new Quaternion(
-                r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
-                r.R.ReadSingle());
-            var vel = r.ReadVector3();
-            var target = r.ReadVector3();
-            float distance = r.R.ReadSingle();
+                report.Rot.X, report.Rot.Y, report.Rot.Z, report.Rot.W);
+            var vel = VectorOf(report.Shot.Velocity);
+            var target = VectorOf(report.Shot.Target);
+            float distance = report.Shot.Distance;
             if (s.IsHost && !Coop.Current.Authority.Near(from, pos, 400f))
             {
                 Plugin.Log.LogInfo(
@@ -236,7 +245,7 @@ namespace DarkwoodMP.World
             {
                 by = from; // never trust who a client says threw it
                 var w = s.Begin(MsgType.ItemThrown);
-                Write(w, by, type, pos, rot, vel, target, distance);
+                ItemThrown.Write(w, report with { By = by });
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
 
