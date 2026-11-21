@@ -608,7 +608,8 @@ namespace DarkwoodMP.World
                             "is in use by")));
             r.Info =
                 $"{c.name} "
-                    + $"{ObjRef.Of(inv.gameObject)}: {took}; it holds [{MapScenarioWorld.Contents(inv)}]";
+                    + $"{ObjRef.Of(inv.gameObject)}: {took}; "
+                    + $"it holds [{MapScenarioWorld.Contents(inv)}]";
             if (refused != null)
             {
                 r.Fail($"{r.Info}; {refused.Trim()}");
@@ -869,9 +870,13 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             float swung = DoorSwing(door);
             bool drawnOpen = Mathf.Abs(swung) > 15f;
+            bool kinematic =
+                door.body.GetComponent<Rigidbody>() is Rigidbody rb
+                && rb.isKinematic;
             r.Info =
                 $"{door.name} "
-                    + $"{ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
+                    + $"{ObjRef.Of(door.gameObject)}: open {door.opened}, "
+                    + $"swung {swung:0} degrees, kinematic {kinematic}";
             if (drawnOpen != door.opened)
             {
                 string text = "closed";

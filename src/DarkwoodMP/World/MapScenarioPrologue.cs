@@ -67,7 +67,10 @@ namespace DarkwoodMP.World
                                 .GetComponent<KeyReference>() != null)
                         .Select(
                             s => $"{s.invItem.type} (key "
-                                + $"{s.invItem.baseClass.GetComponent<KeyReference>().type}) in {i.name} at {Fmt(i.transform.position)}")))
+                                + s.invItem.baseClass
+                                    .GetComponent<KeyReference>().type
+                                + $") in {i.name} "
+                                + $"at {Fmt(i.transform.position)}")))
                 + " | items with key in their name: " + string.Join(
                 "; ", Here<Inventory>().SelectMany(
                     i => i.slots.Where(
@@ -221,16 +224,20 @@ namespace DarkwoodMP.World
             j.keysDict.TryGetValue(key, out var k);
             string line =
                 $"{_keyItem} (key {key}) from {inv.name} "
-                    + $"{ObjRef.Of(inv.gameObject)} for {KeyDoorOf(key).name}: taken {took}, ";
+                    + $"{ObjRef.Of(inv.gameObject)} for {KeyDoorOf(key).name}: "
+                    + $"taken {took}, ";
             bool? inDream = null;
             if (k != null)
             {
                 inDream = k.inDream;
             }
 
+            int left = inv.slots.Count(
+                x => !InvItemClass.isNull(x.invItem)
+                    && x.invItem.type == _keyItem);
             r.Info = line
                 + $"in our journal {k != null} (inDream {inDream}), left in it "
-                + $"{inv.slots.Count(x => !InvItemClass.isNull(x.invItem) && x.invItem.type == _keyItem)}";
+                + $"{left}";
             if (k == null)
             {
                 r.Fail($"{r.Info}: not in our journal");
@@ -335,7 +342,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2.5f);
             r.Info =
                 $"{d.name} "
-                    + $"{ObjRef.Of(d.gameObject)} key {a[0]}: unlocked with it {unlocked}, locked {l.locked}, open {d.opened}, refusals {Authority.RolledBack - refused}";
+                    + $"{ObjRef.Of(d.gameObject)} key {a[0]}: "
+                    + $"unlocked with it {unlocked}, locked {l.locked}, "
+                    + $"open {d.opened}, "
+                    + $"refusals {Authority.RolledBack - refused}";
             if (Authority.RolledBack != refused)
             {
                 r.Fail($"{r.Info}: the host refused it");
@@ -388,7 +398,8 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"{d.name} "
-                    + $"{ObjRef.Of(d.gameObject)}: locked {l.locked}, open {d.opened}";
+                    + $"{ObjRef.Of(d.gameObject)}: "
+                    + $"locked {l.locked}, open {d.opened}";
             bool condition;
             if (open)
             {
@@ -466,10 +477,15 @@ namespace DarkwoodMP.World
             P.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
+            int back = inv.slots.Count(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.type == _keyItem);
+            bool known =
+                Singleton<UI>.Instance.journal.keysDict.ContainsKey(a[0]);
             r.Info =
                 $"{d.name} locked {l.locked} open {d.opened}, {_keyItem} back "
                     + $"in {inv.name} {ObjRef.Of(inv.gameObject)}: "
-                    + $"{inv.slots.Count(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == _keyItem)}, key in our journal {Singleton<UI>.Instance.journal.keysDict.ContainsKey(a[0])}";
+                    + $"{back}, key in our journal {known}";
             if (!l.locked || d.opened)
             {
                 r.Fail($"{r.Info}: the door isn't shut and locked");

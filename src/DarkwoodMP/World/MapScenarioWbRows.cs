@@ -393,9 +393,12 @@ namespace DarkwoodMP.World
 
                 AsPlayer(() => up.doCraft(recipe));
                 yield return new WaitForSeconds(1f);
-                done.Add(
-                    $"{level} -> {Level} "
-                        + $"({string.Join(", ", recipe.requirements.Where(q => q != null && q.item != null).Select(q => $"{q.item.type}x{q.amount}"))})");
+                string needs = string.Join(
+                    ", ",
+                    recipe.requirements
+                        .Where(q => q != null && q.item != null)
+                        .Select(q => $"{q.item.type}x{q.amount}"));
+                done.Add($"{level} -> {Level} " + $"({needs})");
                 if (Level != level + 1)
                 {
                     r.Fail(

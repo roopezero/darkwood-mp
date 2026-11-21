@@ -857,9 +857,9 @@ namespace DarkwoodMP.World
                             || l.Contains("A death didn't"))).ToList();
             if (deaths.Count > 0)
             {
-                r.Fail(
-                    "deaths in the log: "
-                        + $"{string.Join(" | ", deaths.Select(l => l.Trim()))}");
+                string list =
+                    string.Join(" | ", deaths.Select(l => l.Trim()));
+                r.Fail("deaths in the log: " + $"{list}");
             }
 
             r.Info = string.Join("; ", parts);

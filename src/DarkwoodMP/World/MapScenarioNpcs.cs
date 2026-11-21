@@ -154,8 +154,12 @@ namespace DarkwoodMP.World
                 target = c.target.name;
             }
 
-            return $"{name}: {aggressiveness}, {behaviour}, target {target}, " +
-                   $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, {StateDump.Flat(c.transform.position - Player.Instance.transform.position):0} from us";
+            float fromProxy = StateDump.Flat(
+                c.transform.position - proxy.transform.position);
+            float fromUs = StateDump.Flat(
+                c.transform.position - Player.Instance.transform.position);
+            return $"{name}: {aggressiveness}, {behaviour}, target {target}, "
+                + $"{fromProxy:0} from {proxy.OwnerName}, {fromUs:0} from us";
         }
 
         /// <summary>"follow-check" (host, after the joiner walked off): the
@@ -372,7 +376,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{npc.name} "
-                    + $"{ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> {Fmt(npc.transform.position)}";
+                    + $"{ObjRef.Of(npc.gameObject)}: {Fmt(from)} -> "
+                    + $"{Fmt(npc.transform.position)}";
         }
 
         // ---- a world event from a character's animation ---------------------
@@ -432,7 +437,9 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"{npc.name} "
-                    + $"{ObjRef.Of(npc.gameObject)} at {Fmt(npc.transform.position)}: switched off for talking";
+                    + $"{ObjRef.Of(npc.gameObject)} "
+                    + $"at {Fmt(npc.transform.position)}: "
+                    + "switched off for talking";
         }
 
         /// <summary>"anim-fire left|run": our NPC's animation fires the world

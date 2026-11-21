@@ -264,10 +264,14 @@ namespace DarkwoodMP.World
                         t => t != null
                             && t.type == global::EventTrigger.Type.area))
                 {
+                    var standing = Helpers.isComponentAtPos(
+                        p.transform.position,
+                        1 << et.gameObject.layer,
+                        et);
                     parts.Add(
                         $"{et.name} entered {et.entered} left {et.exited}, on "
                             + "it "
-                            + $"{Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
+                            + $"{standing}");
                 }
             }
 
@@ -357,15 +361,58 @@ namespace DarkwoodMP.World
                 origin = Vector3.zero;
             }
 
+            float away =
+                StateDump.Flat(Player.Instance.transform.position - origin);
             r.Info =
                 $"{Me()} "
-                    + $"{StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
+                    + $"{away:0} from the mark: {ColorsNow(names)}";
             if (!Ok())
             {
                 r.Fail(
                     $"{names[0]} isn't {want} here: {r.Info}; areas: "
                         + $"{AreasNow()}");
             }
+        }
+
+        private static string EventNote(GameEvent e)
+        {
+            List<GameObject> targetGameObjects =
+                e.targetGameObjects;
+            if (targetGameObjects == null)
+            {
+                targetGameObjects =
+                    new List<GameObject>();
+            }
+
+            string names = string.Join(",",
+                targetGameObjects.Select(g =>
+            {
+                if (g == null)
+                {
+                    return "null";
+                }
+
+                return g.name;
+            }));
+
+            List<string> ids =
+                e.targetUniqueObjects;
+            if (ids == null)
+            {
+                ids = new List<string>();
+            }
+
+            string disabled = "";
+            if (e.disabled)
+            {
+                disabled = " disabled";
+            }
+
+            return $"{e.type} '{e.Value}' '{e.Value2}' "
+                + $"f={e.floatValue} dur={e.duration} delay={e.delay} "
+                + $"mod={e.activeModifier} color={e.destColor} "
+                + $"targets=[{names}|{string.Join(",", ids)}] "
+                + $"fromParent={e.getTargetGameObjectsFromParent}{disabled}";
         }
 
         private static IEnumerator Tree(string[] a, Result r)
@@ -463,40 +510,10 @@ namespace DarkwoodMP.World
                                 {
                                     if (e != null)
                                     {
-                                        List<GameObject> targetGameObjects =
-                                            e.targetGameObjects;
-                                        if (targetGameObjects == null)
-                                        {
-                                            targetGameObjects =
-                                                new List<GameObject>();
-                                        }
-
-                                        string names = string.Join(",",
-                                            targetGameObjects.Select(g =>
-                                        {
-                                            if (g == null)
-                                            {
-                                                return "null";
-                                            }
-
-                                            return g.name;
-                                        }));
-
-                                        List<string> ids =
-                                            e.targetUniqueObjects;
-                                        if (ids == null)
-                                        {
-                                            ids = new List<string>();
-                                        }
-
-                                        string disabled = "";
-                                        if (e.disabled)
-                                        {
-                                            disabled = " disabled";
-                                        }
-
-                                        sb.Append(
-                                            $"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{names}|{string.Join(",", ids)}] fromParent={e.getTargetGameObjectsFromParent}{disabled}");
+                                        string pad =
+                                            new string(' ', depth * 2 + 4);
+                                        sb.Append($"\n{pad}{label} ");
+                                        sb.Append(EventNote(e));
                                     }
                                 }
                             }
@@ -713,9 +730,11 @@ namespace DarkwoodMP.World
             var to = _mark.Value + back * (lead + gap) + right * side;
             yield return Walk(to, 20f, detours: 0);
             Face(_mark.Value);
+            float away = StateDump.Flat(
+                Player.Instance.transform.position - _mark.Value);
             r.Info =
                 $"{me} at {Fmt(Player.Instance.transform.position)}, "
-                    + $"{StateDump.Flat(Player.Instance.transform.position - _mark.Value):0} from the mark {_markName}";
+                    + $"{away:0} from the mark {_markName}";
         }
 
         /// <summary>
@@ -825,9 +844,12 @@ namespace DarkwoodMP.World
                 string causes = "";
                 if (DarkBy.Count != 0)
                 {
-                    causes =
-                        " (by "
-                            + $"{string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
+                    string top = string.Join(
+                        "; ",
+                        DarkBy.OrderByDescending(x => x.Value)
+                            .Take(6)
+                            .Select(x => $"{x.Key} x{x.Value}"));
+                    causes = " (by " + $"{top})";
                 }
 
                 string place = "";
@@ -945,10 +967,11 @@ namespace DarkwoodMP.World
                 w.Frame(true);
             }
 
+            float away = StateDump.Flat(p.transform.position - _mark.Value);
             r.Info =
                 $"{Me()} walked {gone:0} at {speed:0}/s in "
-                    + $"{Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
-                     $"{StateDump.Flat(p.transform.position - _mark.Value):0} "
+                    + $"{Time.time - t0:0.0} s to {Fmt(p.transform.position)}, "
+                    + $"{away:0} "
                     + $"from the mark; {w}";
             Plugin.Log.LogInfo($"[view] vw-approach: {r.Info}");
             var bad = w.Problem();

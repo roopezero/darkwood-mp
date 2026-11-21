@@ -71,13 +71,16 @@ namespace DarkwoodMP.World
         {
             var p = go.transform.position;
             string name = Name(go);
-            ctx.Set($"{name} "
-                    + $"{Mathf.Round(p.x / 10f) * 10f:0},{Mathf.Round(p.z / 10f) * 10f:0}", new Dictionary<string, object>
-                    {
-                        ["name"] = name,
-                        ["pos"] = StateDump.Pos(p),
-                        ["listed"] = listed,
-                    });
+            float x = Mathf.Round(p.x / 10f) * 10f;
+            float z = Mathf.Round(p.z / 10f) * 10f;
+            ctx.Set(
+                $"{name} {x:0},{z:0}",
+                new Dictionary<string, object>
+                {
+                    ["name"] = name,
+                    ["pos"] = StateDump.Pos(p),
+                    ["listed"] = listed,
+                });
         }
 
         private static string Name(GameObject g) =>
@@ -239,9 +242,12 @@ namespace DarkwoodMP.World
                         + $"{string.Join(", ", kv.Value)}");
             }
 
+            string counts = string.Join(
+                " | ",
+                kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"));
             r.Info =
                 $"{events} night events; world steps: "
-                    + $"{string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
+                    + $"{counts}";
             return None();
         }
 

@@ -145,7 +145,9 @@ namespace DarkwoodMP.World
             var inv = prefab.GetComponent<InvItem>();
             r.Info =
                 $"{id} "
-                    + $"{ObjRef.Of(go)} at {Fmt(pos)}; {SharedTank.Item}: important item {inv.isImportantItem}, stackable {inv.stackable}; filled {SharedTank.Filled}";
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}; {SharedTank.Item}: "
+                    + $"important item {inv.isImportantItem}, "
+                    + $"stackable {inv.stackable}; filled {SharedTank.Filled}";
         }
 
         /// <summary>
@@ -326,7 +328,8 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"trip {a[0]} "
-                    + $"{ObjRef.Of(go)} from {Fmt(pos)} to {Fmt(to.position)}, {StateDump.Flat(to.position - pos):0} away";
+                    + $"{ObjRef.Of(go)} from {Fmt(pos)} to {Fmt(to.position)}, "
+                    + $"{StateDump.Flat(to.position - pos):0} away";
         }
 
         /// <summary>
@@ -361,10 +364,11 @@ namespace DarkwoodMP.World
             bool arrived = There();
             // a correction comes within a few State updates
             yield return new WaitForSeconds(3f);
+            float off = StateDump.Flat(p.transform.position - m.To.position);
             r.Info =
                 $"arrived {arrived}, now at {Fmt(p.transform.position)} "
-                    + $"({StateDump.Flat(p.transform.position - m.To.position):0} from the marker), " +
-                     $"put back {Sync.MoveCheck.Corrections - corrections} "
+                    + $"({off:0} from the marker), "
+                    + $"put back {Sync.MoveCheck.Corrections - corrections} "
                     + "time(s)";
             if (!arrived)
             {
@@ -487,9 +491,13 @@ namespace DarkwoodMP.World
             m.T.thisEventTriggers = m.Et;
             _made[id] = m;
             yield return null;
+            bool ours =
+                Singleton<UniqueObjects>.Instance.getObject("player")
+                == Player.Instance.gameObject;
             r.Info =
                 $"trigger {id} "
-                    + $"{ObjRef.Of(go)} at {Fmt(pos)}, {a[3]}; the unique object player is ours: {Singleton<UniqueObjects>.Instance.getObject("player") == Player.Instance.gameObject}";
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}, {a[3]}; "
+                    + $"the unique object player is ours: {ours}";
         }
 
         /// <summary>
@@ -590,7 +598,9 @@ namespace DarkwoodMP.World
         {
             string head =
                 $"{e.type} '{e.Value}' '{e.Value2}' "
-                    + $"mod={e.activeModifier}/{e.activeModifier2}/{e.relentlessPursuit} main={e.mainScriptModify} n={e.amount} delay={e.delay}";
+                    + $"mod={e.activeModifier}/{e.activeModifier2}/"
+                    + $"{e.relentlessPursuit} main={e.mainScriptModify} "
+                    + $"n={e.amount} delay={e.delay}";
             List<Object> prefabs = e.prefabList;
             if (prefabs == null)
             {
@@ -823,10 +833,11 @@ namespace DarkwoodMP.World
                     important = inv.isImportantItem;
                 }
 
+                bool journalItem = jd != null && jd.itemsDict.ContainsKey(type);
                 string head =
                     $"\n[item] {type}: prefab={hasPrefab} "
                         + $"important={important} "
-                        + $"journalItem={(jd != null && jd.itemsDict.ContainsKey(type))}";
+                        + $"journalItem={journalItem}";
                 UI ui = Singleton<UI>.Instance;
                 bool? inJournal = null;
                 if (ui != null)
@@ -905,9 +916,13 @@ namespace DarkwoodMP.World
                 }
             }
 
+            string counts = string.Join(
+                "; ",
+                onPlayer.OrderByDescending(x => x.Value)
+                    .Select(x => $"{x.Key} x{x.Value}"));
             sb.Append(
                 "\n[on player] "
-                    + $"{string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
+                    + $"{counts}; with other targets too: {mixed}");
             UniqueObjects instance = Singleton<UniqueObjects>.Instance;
             GameObject uo = null;
             if (instance != null)
@@ -915,9 +930,13 @@ namespace DarkwoodMP.World
                 uo = instance.getObject("player");
             }
 
+            bool isPlayer =
+                uo != null
+                && Player.Instance != null
+                && uo == Player.Instance.gameObject;
             sb.Append(
                 $"\n[unique] player -> {Name(uo)} is Player.Instance: "
-                    + $"{uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");
+                    + $"{isPlayer}");
             Plugin.Log.LogInfo($"[dive] scan {pat}:{sb}");
             r.Info = $"{n} triggers (in the log)";
             yield break;

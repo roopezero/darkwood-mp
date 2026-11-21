@@ -111,7 +111,8 @@ namespace DarkwoodMP.World
                 }
 
                 parts.Add(
-                    $"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{eatingNote}{aniNote}");
+                    $"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}"
+                        + $"{text}{eatingNote}{aniNote}");
             }
 
             Plugin.Log.LogInfo("[dogwatch] list: " + string.Join("; ", parts));
@@ -145,9 +146,9 @@ namespace DarkwoodMP.World
             var parts = new List<string>();
             if (Player.Instance != null)
             {
-                parts.Add(
-                    "me "
-                        + $"{StateDump.Flat(Player.Instance.transform.position - p):0}");
+                float me =
+                    StateDump.Flat(Player.Instance.transform.position - p);
+                parts.Add("me " + $"{me:0}");
             }
 
             foreach (var px in NetPlayerProxy.All.Values)
@@ -374,7 +375,9 @@ namespace DarkwoodMP.World
 
                     Plugin.Log.LogInfo(
                         $"[dogwatch] {name}#{label} at {place}: "
-                            + $"{dead}{asleep}{waking}{eating}{ani}{attacking}{st.B} -> {target}; {Dists(c.transform.position)}");
+                            + $"{dead}{asleep}{waking}{eating}{ani}{attacking}"
+                            + $"{st.B} -> {target}; "
+                            + $"{Dists(c.transform.position)}");
                 }
 
                 if (Time.unscaledTime >= _nextPos)

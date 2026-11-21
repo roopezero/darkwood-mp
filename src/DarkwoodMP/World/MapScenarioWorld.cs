@@ -373,7 +373,8 @@ namespace DarkwoodMP.World
 
                 parts.Add(
                     $"{name} "
-                        + $"{ObjRef.Of(t.gameObject)} at {Fmt(t.position)}: {string.Join(" ", comps)};{extra}");
+                        + $"{ObjRef.Of(t.gameObject)} at {Fmt(t.position)}: "
+                        + $"{string.Join(" ", comps)};{extra}");
             }
 
             r.Info = string.Join(" | ", parts);
@@ -1698,7 +1699,9 @@ namespace DarkwoodMP.World
 
                 r.Info =
                     $"{prefab} "
-                        + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {it.health}";
+                        + $"{ObjRef.Of(made)} "
+                        + $"at {Fmt(made.transform.position)}, "
+                        + $"health {it.health}";
                 yield break;
             }
 
@@ -1748,7 +1751,9 @@ namespace DarkwoodMP.World
             _worldMadeHealth = _worldMade.health;
             r.Info =
                 $"{made.name} "
-                    + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, health {_worldMade.health}, ids given {HostIds.Given}, tied {HostIds.Tied}";
+                    + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, "
+                    + $"health {_worldMade.health}, ids given {HostIds.Given}, "
+                    + $"tied {HostIds.Tied}";
         }
 
         /// <summary>"ids-tied [hit]" (both): the chair world-furniture made is
@@ -1786,7 +1791,9 @@ namespace DarkwoodMP.World
             var at = ObjRef.Of(go);
             r.Info =
                 $"{go.name} "
-                    + $"{at} tied {ObjRef.IsShared(go)}, health {_worldMadeHealth} -> {_worldMade.health} broken={_worldMade.destroyed}";
+                    + $"{at} tied {ObjRef.IsShared(go)}, "
+                    + $"health {_worldMadeHealth} -> {_worldMade.health} "
+                    + $"broken={_worldMade.destroyed}";
             if (at.K != ObjRef.Kind.Spawned || !ObjRef.IsShared(go)
                 || ObjRef.Resolve<Item>(at) != _worldMade)
             {

@@ -157,11 +157,16 @@ namespace DarkwoodMP.World
             MapScenario.SetCentre(at);
             Plugin.Log.LogInfo(
                 $"[map] far-spot {min:0} {index}: {door.name} "
-                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)}; walking from {Fmt(p.transform.position)}");
+                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, "
+                    + $"{StateDump.Flat(at - from):0} from {Fmt(from)}; "
+                    + $"walking from {Fmt(p.transform.position)}");
             yield return MapScenario.Walk(at, 150f);
             r.Info =
                 $"{door.name} "
-                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)} (spot {index} of {spots.Count}); we're at {Fmt(p.transform.position)}";
+                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, "
+                    + $"{StateDump.Flat(at - from):0} from {Fmt(from)} "
+                    + $"(spot {index} of {spots.Count}); "
+                    + $"we're at {Fmt(p.transform.position)}";
         }
     }
 }

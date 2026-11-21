@@ -130,7 +130,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{door.name} "
-                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
+                    + $"{ObjRef.Of(door.gameObject)} "
+                    + $"at {Fmt(door.transform.position)} open={door.opened} "
+                    + $"leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open)
             {
                 string text = "shut";
@@ -169,7 +171,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f); // let the swing end
             r.Info =
                 $"{door.name} "
-                    + $"{ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
+                    + $"{ObjRef.Of(door.gameObject)} open={door.opened} "
+                    + $"on={door.gameObject.activeInHierarchy} "
+                    + $"leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open || DoorLeaf.Turned(door) != open)
             {
                 string text = "shut";
@@ -211,7 +215,9 @@ namespace DarkwoodMP.World
                             turn = body.localEulerAngles.z;
                         }
 
-                        return $"{id} at {spot} open={opened} leaf {angle:0} (z {turn:0}) on={d.gameObject.activeInHierarchy}";
+                        return $"{id} at {spot} open={opened} leaf {angle:0} "
+                            + $"(z {turn:0}) "
+                            + $"on={d.gameObject.activeInHierarchy}";
                     }));
 
             yield break;
@@ -291,7 +297,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2.5f);
             r.Info =
                 $"{it.name} "
-                    + $"{ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
+                    + $"{ObjRef.Of(it.gameObject)} from {Fmt(start)} "
+                    + $"to {Fmt(it.transform.position)}";
             if (StateDump.Flat(it.transform.position - to) > 300f)
             {
                 r.Fail($"{r.Info}: it didn't get to {Fmt(to)}");
@@ -327,7 +334,9 @@ namespace DarkwoodMP.World
 
             string state =
                 $"{it.name} "
-                    + $"{ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
+                    + $"{ObjRef.Of(it.gameObject)} "
+                    + $"at {Fmt(it.transform.position)} "
+                    + $"on={it.gameObject.activeInHierarchy}";
             string culling = " no node";
             if (node != null)
             {

@@ -243,7 +243,9 @@ namespace DarkwoodMP.World
             yield return null;
             r.Info =
                 $"trigger {a[0]} "
-                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, set off by {lamp.name} {ObjRef.Of(lamp.gameObject)} while on; carrying {m.Had} {Item}";
+                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, "
+                    + $"set off by {lamp.name} {ObjRef.Of(lamp.gameObject)} "
+                    + $"while on; carrying {m.Had} {Item}";
         }
 
         /// <summary>

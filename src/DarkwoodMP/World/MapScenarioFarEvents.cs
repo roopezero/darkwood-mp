@@ -461,12 +461,15 @@ namespace DarkwoodMP.World
                 .Where(e => near.Contains(e.Location)).ToList();
             var flickers = Flickers(_since);
             var all = Since(FarEvents.Switches, _since);
+            string kinds = string.Join(
+                ", ",
+                switched.Select(e => e.Location + " " + e.Kind));
             r.Info =
                 $"since fe-reset {all.Count(e => e.Kind == "enter")} location "
                     + $"enters, {all.Count(e => e.Kind == "leave")} leaves; " +
                      $"by the client ({string.Join(", ", near)}) in the last 5 "
                     + "s: "
-                    + $"[{string.Join(", ", switched.Select(e => e.Location + " " + e.Kind))}]; flickers [{string.Join(", ", flickers)}]";
+                    + $"[{kinds}]; flickers [{string.Join(", ", flickers)}]";
             if (switched.Count > 0)
             {
                 r.Fail(

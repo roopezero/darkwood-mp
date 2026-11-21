@@ -422,8 +422,10 @@ namespace DarkwoodMP.World
             string text = "gone";
             if (c != null)
             {
-                text =
-                    $"{Core.trueDistance(c.transform.position, P.transform.position):0} from us, alive {c.alive}";
+                float away = Core.trueDistance(
+                    c.transform.position,
+                    P.transform.position);
+                text = $"{away:0} from us, alive {c.alive}";
             }
 
             r.Info =
@@ -621,8 +623,8 @@ namespace DarkwoodMP.World
                         w.Targets.Add(who);
                         if (who != w.LastTarget)
                         {
-                            w.Timeline.Add(
-                                $"{Time.realtimeSinceStartup - w.SpawnedAt:0.0}s {who} ({c.behaviour})");
+                            float at = Time.realtimeSinceStartup - w.SpawnedAt;
+                            w.Timeline.Add($"{at:0.0}s {who} ({c.behaviour})");
                         }
 
                         w.LastTarget = who;
@@ -1476,8 +1478,12 @@ namespace DarkwoodMP.World
                     if (aside < best)
                     {
                         best = aside;
-                        closest = FormattableString.Invariant(
-                            $"{ahead:0} ahead, {aside:0} aside; puppet yaw {rp.Root.transform.eulerAngles.y:0} rot {rp.Root.transform.eulerAngles.x:0}");
+                        Vector3 turn = rp.Root.transform.eulerAngles;
+                        closest =
+                            FormattableString.Invariant(
+                                $"{ahead:0} ahead, {aside:0} aside; ")
+                            + FormattableString.Invariant(
+                                $"puppet yaw {turn.y:0} rot {turn.x:0}");
                     }
                 }
 
@@ -1554,9 +1560,12 @@ namespace DarkwoodMP.World
                 }
             }
 
+            float away = Core.trueDistance(
+                dog.transform.position,
+                p.transform.position);
             r.Info =
                 $"flashlight {text} at {dog.name} "
-                    + $"{Core.trueDistance(dog.transform.position, p.transform.position):0} away";
+                    + $"{away:0} away";
             if (beam == null || !beam.gameObject.activeSelf)
             {
                 r.Fail($"our flashlight isn't on: {r.Info}");
