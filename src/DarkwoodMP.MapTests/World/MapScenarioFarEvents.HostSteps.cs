@@ -189,7 +189,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
 
-            var gen = FuelSync.Generators.Where(g => g != null && !g.isSaw)
+            var gen = Plugin.Instance.Host.Generators
+                .Where(g => g != null && !g.isSaw)
                 .OrderBy(
                     g => StateDump.Flat(
                         g.transform.position
@@ -225,13 +226,19 @@ namespace DarkwoodMP.World
                 skillText = skill.Value.ToString();
             }
 
+            string last = null;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                last = coop.Fuel.Drain.Last;
+            }
+
             r.Info =
-                $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the "
+                $"{last}; used {used:0.###} (the "
                     + $"client nearer: {clientNearer}, its electrician skill "
                     + $"{skillText})";
             if (clientNearer && skill.HasValue
-                && GeneratorDrainSkillPatch.Last != null
-                && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
+                && last != null && !last.Contains(j.OwnerName))
             {
                 r.Fail("drained by our skill: " + r.Info);
             }

@@ -75,6 +75,18 @@ namespace DarkwoodMP
         /// Thrown and dropped things, shared.
         public readonly World.ThrowSync Throws;
 
+        /// Larva eggs and other items broken open, shared.
+        public readonly World.Eggs.Eggs Eggs;
+
+        /// The infection's patches: clears and the host's spread.
+        public readonly World.Infections.Infections Infections;
+
+        /// Things on fire, shown from the host's world.
+        public readonly World.Fire.Fire Fire;
+
+        /// The fuel in generators and saws.
+        public readonly World.Fuel.Fuel Fuel;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -100,6 +112,10 @@ namespace DarkwoodMP
             Ui = new UiRefresh(this);
             Traders = new TraderSync(this);
             Throws = new World.ThrowSync(this);
+            Eggs = new World.Eggs.Eggs(this);
+            Infections = new World.Infections.Infections(this);
+            Fire = new World.Fire.Fire(this);
+            Fuel = new World.Fuel.Fuel(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

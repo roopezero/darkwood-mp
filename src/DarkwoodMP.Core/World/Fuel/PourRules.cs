@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace DarkwoodMP.World.Fuel
 {
-    /// The pourer's side of the fuel (the plugin's FuelSync): which changes
+    /// The pourer's side of the fuel (the plugin's Fuel): which changes
     /// it records, when they go out, what it gives back when the host takes
     /// less, and the level it shows.
     public static class PourRules

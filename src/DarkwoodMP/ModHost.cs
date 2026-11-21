@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using DarkwoodMP.Net;
 
@@ -35,6 +36,11 @@ namespace DarkwoodMP
 
         /// One stack size for every stackable item.
         public readonly World.StackSizes Stacks;
+
+        /// The generators the game started (Generator.Start), also alone: a
+        /// world loaded before hosting has them too (Fuel checks them).
+        public readonly HashSet<Generator> Generators =
+            new HashSet<Generator>();
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>

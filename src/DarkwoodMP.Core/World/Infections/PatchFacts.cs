@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Infections
     public readonly struct PatchFacts
     {
         /// The patch was found: by its ObjRef, or as the nearest one not
-        /// fading within InfectionRules.FindRadius (InfectionSync.Find).
+        /// fading within InfectionRules.FindRadius (Infections.Find).
         public bool Found { get; init; }
 
         /// It is fading already (Infection.disappearing).

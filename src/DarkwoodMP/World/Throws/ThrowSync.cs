@@ -487,7 +487,7 @@ namespace DarkwoodMP.World
                     new List<InvItemEffect> { flame.effect };
             }
 
-            var target = FireSync.Flammable(at, col);
+            var target = Fire.Fire.Flammable(at, col);
             if (target != null && target.GetComponent<Burn>() == null)
             {
                 return target;
@@ -499,7 +499,7 @@ namespace DarkwoodMP.World
         /// <summary>
         /// The flame's touch is over. On a client, a door, window or furniture
         /// our flame set alight goes to the host as a request
-        /// (FireSync.ClientIgnited).
+        /// (Fire.ClientIgnited).
         /// </summary>
         internal static void FlameTouched(GameObject lit)
         {
@@ -511,10 +511,10 @@ namespace DarkwoodMP.World
             FlameDone();
             if (lit != null && lit.GetComponent<Burn>() != null)
             {
-                FireSync instance = FireSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.ClientIgnited(lit);
+                    coop.Fire.ClientIgnited(lit);
                 }
             }
         }

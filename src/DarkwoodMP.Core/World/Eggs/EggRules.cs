@@ -3,7 +3,7 @@ using System;
 namespace DarkwoodMP.World.Eggs
 {
     /// Larva eggs and other items broken open to get at what's inside
-    /// (the plugin's EggSync). Breaking one is the one thing shared:
+    /// (the plugin's Eggs). Breaking one is the one thing shared:
     /// EggDestroyed, instead of the ItemHit or ItemBroken BreakSync sends.
     public static class EggRules
     {
@@ -19,7 +19,7 @@ namespace DarkwoodMP.World.Eggs
         public const float Reach = ReachRules.ShotReach;
 
         /// Whether an item is an egg: destructible, and broken open to get
-        /// at its inventory or named so (EggSync.IsEgg). The name is only
+        /// at its inventory or named so (Eggs.IsEgg). The name is only
         /// looked at when the item doesn't say.
         public static bool IsEgg(
             bool destructible,
@@ -39,7 +39,7 @@ namespace DarkwoodMP.World.Eggs
             return name.IndexOf(Word, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        /// Whether this game sends the egg it broke (EggSync.Send): not in a
+        /// Whether this game sends the egg it broke (Eggs.Send): not in a
         /// place of our own (WorldActions.OursAlone), and named by a valid
         /// ObjRef.
         public static bool Sends(bool oursAlone, bool named)

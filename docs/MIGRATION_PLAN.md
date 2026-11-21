@@ -371,6 +371,14 @@ with the baseline.
         `DarkwoodMP.World` namespace. `Construction` checks reach with
         `Authority.InReach` after `MayBuild`, so `BuildFacts.Reach` is
         left empty.
+  - [x] 5.1a `EggSync`, `InfectionSync`, `FireSync`, `FuelSync`. Done: they
+        are `World/Eggs/Eggs`, `World/Infections/Infections`,
+        `World/Fire/Fire` and `World/Fuel/Fuel`, fields of `CoopSession`.
+        The list of generators is `ModHost.Generators`, since generators
+        start before hosting from the pause menu. Their facts take the
+        requester's reach from the new `Authority.ReachOf`. The fuel
+        message's bytes are the core's `FuelMessage`, since `Fuel` is the
+        plugin's class in the same namespace.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.

@@ -81,7 +81,6 @@ namespace DarkwoodMP
         private Containers _containers;
         private Characters _characters;
         private FlagsSync _flags;
-        private FuelSync _fuel;
         private WorldEvents _events;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
@@ -456,9 +455,7 @@ namespace DarkwoodMP
             _characters = new Characters(_host.Session);
             _flags = new FlagsSync(_host.Session);
             DoorPush.Register(_host.Session);
-            _fuel = new FuelSync(_host.Session);
             _events = new WorldEvents(_host.Session);
-            new FireSync(_host.Session);
             new SlotShare(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
@@ -470,8 +467,6 @@ namespace DarkwoodMP
             ViewRects.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
-            EggSync.Register(_host.Session);
-            InfectionSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
             _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
@@ -2290,7 +2285,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("drag");
             DoorPush.Update();
             ModProfiler.Mark("door push");
-            _fuel.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Fuel.Update();
+            }
+
             ModProfiler.Mark("fuel");
             _events.Update();
             ModProfiler.Mark("events");
@@ -2329,7 +2329,12 @@ namespace DarkwoodMP
             Prologue.Update();
             Locations.Update();
             ViewRects.Update();
-            InfectionSync.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Infections.Update();
+            }
+
             CoopPause.Update();
             ModProfiler.Mark("pause");
             AfterNight.Update();

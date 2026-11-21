@@ -1,7 +1,7 @@
 using DarkwoodMP.Net;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Eggs
 {
     /// <summary>
     /// Larva eggs (Objects/larva_egg_big, "Egg": "Something is floating
@@ -28,34 +28,47 @@ namespace DarkwoodMP.World
     /// and the egg isn't broken already, breaks its own and passes it on; if it
     /// refuses, the client gets the egg's state back (WorldActions.SendState).
     /// </summary>
-    public static class EggSync
+    internal sealed class Eggs
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
 
-        public static void Register(Session s) =>
-            s.Register(MsgType.EggDestroyed, OnDestroyed);
+        public Eggs(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.EggDestroyed, OnDestroyed);
+        }
+
+        private Session S => _coop.Net;
 
         /// <summary>
         /// Whether this item is an egg (broken open to get at its contents).
         /// </summary>
-        public static bool IsEgg(Item i) =>
-            i != null && i.destructible
-                && (i.destroyToAccessInventory || i.gameObject.name.IndexOf(
-                    "egg", System.StringComparison.OrdinalIgnoreCase) >= 0);
+        public static bool IsEgg(Item i)
+        {
+            if (i == null)
+            {
+                return false;
+            }
+
+            return EggRules.IsEgg(
+                i.destructible, i.destroyToAccessInventory, i.gameObject.name);
+        }
 
         /// <summary>
         /// This game broke the egg; the caller checked it's ours to send
         /// (BreakSync.OurPlayers).
         /// </summary>
-        public static void Send(Item egg)
+        public void Send(Item egg)
         {
-            if (WorldActions.OursAlone(egg.gameObject))
+            // in a dream of our own: nobody else has it
+            bool alone = WorldActions.OursAlone(egg.gameObject);
+            var r = default(ObjRef);
+            if (!alone)
             {
-                return; // in a dream of our own: nobody else has it
+                r = ObjRef.Of(egg.gameObject);
             }
 
-            var r = ObjRef.Of(egg.gameObject);
-            if (!r.Valid)
+            if (!EggRules.Sends(alone, r.Valid))
             {
                 return;
             }
@@ -63,13 +76,8 @@ namespace DarkwoodMP.World
             // The hit that broke it can leave its health below 0; the others'
             // copies are broken at 0 (Break), and so is ours, so its state is
             // the same in every game.
-            if (egg.health < 0)
-            {
-                egg.health = 0;
-            }
-
-            var p = egg.transform.position;
-            var w = Write(r, p.x, p.z, egg.gameObject.name);
+            egg.health = EggRules.SentHealth(egg.health);
+            var w = Write(BreakOf(egg, r));
             Plugin.Log.LogInfo(
                 $"[world] sent egg {r} destroyed ({egg.gameObject.name})");
             if (S.IsHost)
@@ -78,12 +86,12 @@ namespace DarkwoodMP.World
             }
             else
             {
-                Coop.Current.Authority.Request(
+                _coop.Authority.Request(
                     w, $"egg {r} destroyed ({egg.gameObject.name})");
             }
         }
 
-        private static void OnDestroyed(ulong from, PacketReader r)
+        private void OnDestroyed(ulong from, PacketReader r)
         {
             var s = S;
             if (s == null || !WorldShare.InWorld)
@@ -96,42 +104,25 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            float x = r.R.ReadSingle(), z = r.R.ReadSingle();
-            string name = r.ReadStr();
-
-            var egg = Find(obj, x, z, name);
+            EggBreak sent = EggDestroyed.Read(r);
+            var obj = ObjRef.RefOf(sent.Egg);
+            var egg = Find(obj, sent);
             // a client's break comes only as a request (Authority drops a bare
             // one)
             if (s.IsHost)
             {
-                if (egg == null)
+                Verdict verdict = EggRules.MayBreak(FactsOf(egg));
+                if (verdict.Refused)
                 {
-                    Coop.Current.Authority.Refuse("there's no such egg here");
                     WorldActions.SendState(from, obj);
+                    _coop.Authority.Refuse(verdict);
                     return;
                 }
 
-                if (!IsEgg(egg))
-                {
-                    WorldActions.SendState(from, obj);
-                    Coop.Current.Authority.Refuse(
-                        $"{egg.gameObject.name} isn't an egg");
-                    return;
-                }
-
-                if (egg.destroyed)
+                if (!EggRules.Breaks(true, egg.destroyed))
                 {
                     // broken here already (by the host, or another player):
                     // nothing to do or pass on
-                    return;
-                }
-
-                if (!Coop.Current.Authority.InReach(
-                    egg.transform.position, WorldActions.ShotReach,
-                    egg.gameObject.name))
-                {
-                    WorldActions.SendState(from, obj);
                     return;
                 }
             }
@@ -149,38 +140,67 @@ namespace DarkwoodMP.World
             }
 
             Plugin.Log.LogInfo(line + here);
-            if (egg == null || egg.destroyed)
+            if (!EggRules.Breaks(egg != null, egg != null && egg.destroyed))
             {
                 return;
             }
 
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 Break(egg);
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
 
             if (s.IsHost)
             {
                 s.Broadcast(
-                    Write(obj, x, z, name), Channel.Control, reliable: true,
+                    Write(sent), Channel.Control, reliable: true,
                     except: from);
             }
         }
 
-        private static PacketWriter Write(
-            ObjRef obj, float x, float z, string name)
+        private PacketWriter Write(in EggBreak egg)
         {
             var w = S.Begin(MsgType.EggDestroyed);
-            obj.Write(w);
-            w.W.Write(x);
-            w.W.Write(z);
-            w.WriteStr(name);
+            EggDestroyed.Write(w, egg);
             return w;
+        }
+
+        private static EggBreak BreakOf(Item egg, ObjRef r)
+        {
+            var p = egg.transform.position;
+            return new EggBreak
+            {
+                Egg = ObjRef.NameOf(r),
+                At = new Vec2(p.x, p.z),
+                Name = egg.gameObject.name,
+            };
+        }
+
+        /// <summary>
+        /// Host: what the egg rules know of the egg a client says it broke
+        /// (null: not found here). The only code that reads the egg for them.
+        /// </summary>
+        private EggFacts FactsOf(Item egg)
+        {
+            if (egg == null)
+            {
+                return default;
+            }
+
+            return new EggFacts
+            {
+                Found = true,
+                Destructible = egg.destructible,
+                OpensByBreaking = egg.destroyToAccessInventory,
+                Destroyed = egg.destroyed,
+                Name = egg.gameObject.name,
+                Reach = _coop.Authority.ReachOf(egg.transform.position),
+            };
         }
 
         /// <summary>
@@ -215,8 +235,11 @@ namespace DarkwoodMP.World
         /// The egg by its name across games, or else the one of that name
         /// nearest where it was, active or not.
         /// </summary>
-        private static Item Find(ObjRef obj, float x, float z, string name)
+        private static Item Find(ObjRef obj, in EggBreak sent)
         {
+            string name = sent.Name;
+            float x = sent.At.X;
+            float z = sent.At.Z;
             var egg = ObjRef.Resolve<Item>(obj);
             if (egg != null)
             {
@@ -224,7 +247,7 @@ namespace DarkwoodMP.World
             }
 
             Item best = null;
-            float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
+            float bestD = EggRules.FindRadius * EggRules.FindRadius;
             foreach (var i in Resources.FindObjectsOfTypeAll<Item>())
             {
                 if (i == null || !i.gameObject.scene.IsValid()

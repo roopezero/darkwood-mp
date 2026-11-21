@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Fire
 {
     /// What a client knows about a thing its player's flame set alight
-    /// (FireSync.ClientIgnited).
+    /// (Fire.ClientIgnited).
     public readonly struct AskFacts
     {
         /// The thing is there (not null).

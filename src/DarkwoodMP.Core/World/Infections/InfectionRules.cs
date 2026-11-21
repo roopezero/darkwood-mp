@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Infections
 {
-    /// The infection's patches (the plugin's InfectionSync): who sends a
+    /// The infection's patches (the plugin's Infections): who sends a
     /// clear, which cleared patches a game takes, and the host's spread.
     public static class InfectionRules
     {

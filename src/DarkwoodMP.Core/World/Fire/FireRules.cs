@@ -1,12 +1,13 @@
 namespace DarkwoodMP.World.Fire
 {
-    /// Fires on doors, windows, items and enemies (the plugin's FireSync).
+    /// Fires on doors, windows, items and enemies (the plugin's Fire).
     /// The host's world burns and says so; a client's player's flame asks
     /// the host first.
     public static class FireRules
     {
-        /// How far from a thing a client's player may set it alight
-        /// (FireSync.FlameReach).
+        /// How far from a thing a client's player may set it alight,
+        /// generously (a flamethrower's flame flies 700 a second for 1 to
+        /// 1.5 s).
         public const float FlameReach = 1500f;
 
         /// The shortest burn the host gives a client's fire.

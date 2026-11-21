@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Fuel
 {
     /// How fast a generator burns fuel with several players
-    /// (GeneratorDrainSkillPatch): the electrician skill of the nearest
+    /// (GeneratorDrain): the electrician skill of the nearest
     /// player counts.
     public static class DrainRules
     {

@@ -215,9 +215,9 @@ namespace DarkwoodMP.World
             switch (BreakRules.HitSend(facts))
             {
                 case ItemSend.EggDestroyed:
-                    // EggSync's message breaks it in the other games,
+                    // Eggs's message breaks it in the other games,
                     // wherever it is there.
-                    EggSync.Send(item);
+                    Coop.Current.Eggs.Send(item);
                     return;
                 case ItemSend.ItemHit:
                     WorldActions.Send(
@@ -244,7 +244,7 @@ namespace DarkwoodMP.World
                 item.gameObject.name);
             if (send == ItemSend.EggDestroyed)
             {
-                EggSync.Send(item);
+                Coop.Current.Eggs.Send(item);
                 return;
             }
 

@@ -238,7 +238,8 @@ namespace DarkwoodMP.World
             }
             else if (t == "gen:far")
             {
-                var g = FuelSync.Generators.Where(x => x != null && !x.isSaw)
+                var g = Plugin.Instance.Host.Generators
+                    .Where(x => x != null && !x.isSaw)
                     .OrderByDescending(
                         x => StateDump.Flat(x.transform.position
                                 - Centre)).FirstOrDefault();
