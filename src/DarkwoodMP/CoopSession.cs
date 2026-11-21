@@ -148,6 +148,9 @@ namespace DarkwoodMP
         /// attacks on NPCs left to the host.
         public readonly Combat.NpcHostility Hostiles;
 
+        /// What the host's enemies throw and leave behind, shared.
+        public readonly Combat.EnemyLandings Landings;
+
         /// Who is still owed their own part of a fired once-only trigger.
         public readonly World.Owed.OwedParts Owed;
 
@@ -207,6 +210,7 @@ namespace DarkwoodMP
             Cues = new Combat.PlayerCues(this);
             Motion = new Combat.EnemyMotion();
             Hostiles = new Combat.NpcHostility(this);
+            Landings = new Combat.EnemyLandings(this);
             Owed = new World.Owed.OwedParts(this);
             FarEvents = new World.Scripted.FarEvents(this);
             // Hosting from the pause menu starts in a loaded world: give it

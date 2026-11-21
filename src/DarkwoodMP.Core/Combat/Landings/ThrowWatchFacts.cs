@@ -1,8 +1,8 @@
 namespace DarkwoodMP.Combat.Landings
 {
     /// Host: a throw, a ranged attack or a landing starting, in a patch's
-    /// prefix (EnemyThrowPatch, EnemySensorThrowPatch, EnemyLandingPatch
-    /// with EnemyLandings.ByHostEnemy).
+    /// prefix (EnemyLandings.ThrowStarts, SensorThrowStarts and
+    /// LandingStarts).
     public readonly struct ThrowWatchFacts
     {
         /// One of the same kind is being noted already (its static isn't

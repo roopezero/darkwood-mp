@@ -457,7 +457,6 @@ namespace DarkwoodMP
             Locations.Register(_host.Session);
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
-            EnemyLandings.Register(_host.Session);
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);

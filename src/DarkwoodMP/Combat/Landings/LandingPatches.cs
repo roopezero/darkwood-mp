@@ -11,25 +11,30 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(ThrownItem), nameof(ThrownItem.onCollide))]
     static class ThrownItemOnCollideLanded
     {
-        static void Prefix(ThrownItem __instance, out bool __state)
+        static void Prefix(ThrownItem __instance, out EnemyLandings __state)
         {
-            __state = EnemyLandings.LandingStarts(__instance);
+            __state = null;
+            var coop = Coop.Current;
+            if (coop != null && coop.Landings.LandingStarts(__instance))
+            {
+                __state = coop.Landings;
+            }
         }
 
-        static void Postfix(bool __state)
+        static void Postfix(EnemyLandings __state)
         {
-            if (__state)
+            if (__state != null)
             {
-                EnemyLandings.LandingEnds();
+                __state.LandingEnds();
             }
         }
 
         static System.Exception Finalizer(
-            bool __state, System.Exception __exception)
+            EnemyLandings __state, System.Exception __exception)
         {
-            if (__state && __exception != null)
+            if (__state != null && __exception != null)
             {
-                EnemyLandings.LandingFailed();
+                __state.LandingFailed();
             }
 
             return __exception;
@@ -52,7 +57,11 @@ namespace DarkwoodMP.Combat
     {
         static void Postfix(Object prefab, GameObject __result)
         {
-            EnemyLandings.PrefabMade(prefab, __result);
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Landings.PrefabMade(prefab, __result);
+            }
         }
     }
 
@@ -66,7 +75,13 @@ namespace DarkwoodMP.Combat
         [HarmonyPriority(Priority.First)]
         static bool Prefix(Character __instance)
         {
-            return EnemyLandings.MayThrow(__instance);
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Landings.MayThrow(__instance);
         }
     }
 
@@ -78,25 +93,32 @@ namespace DarkwoodMP.Combat
     static class CharacterSpawnProjectile
     {
         static void Prefix(
-            Character __instance, string _projectileType, out bool __state)
+            Character __instance, string _projectileType,
+            out EnemyLandings __state)
         {
-            __state = EnemyLandings.ThrowStarts(__instance, _projectileType);
+            __state = null;
+            var coop = Coop.Current;
+            if (coop != null
+                && coop.Landings.ThrowStarts(__instance, _projectileType))
+            {
+                __state = coop.Landings;
+            }
         }
 
-        static void Postfix(bool __state)
+        static void Postfix(EnemyLandings __state)
         {
-            if (__state)
+            if (__state != null)
             {
-                EnemyLandings.ThrowEnds();
+                __state.ThrowEnds();
             }
         }
 
         static System.Exception Finalizer(
-            bool __state, System.Exception __exception)
+            EnemyLandings __state, System.Exception __exception)
         {
-            if (__state && __exception != null)
+            if (__state != null && __exception != null)
             {
-                EnemyLandings.ThrowFailed();
+                __state.ThrowFailed();
             }
 
             return __exception;
@@ -117,7 +139,11 @@ namespace DarkwoodMP.Combat
 
         static void Postfix(Transform __result)
         {
-            EnemyLandings.PooledMade(__result);
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Landings.PooledMade(__result);
+            }
         }
     }
 
@@ -131,7 +157,13 @@ namespace DarkwoodMP.Combat
         [HarmonyPriority(Priority.First)]
         static bool Prefix(ThrownItem __instance)
         {
-            return !EnemyLandings.CopyEnds(__instance);
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return !coop.Landings.CopyEnds(__instance);
         }
     }
 
@@ -147,25 +179,31 @@ namespace DarkwoodMP.Combat
     {
         static void Prefix(
             Character __instance, Character.SensorType sensorType,
-            out bool __state)
+            out EnemyLandings __state)
         {
-            __state = EnemyLandings.SensorThrowStarts(__instance, sensorType);
+            __state = null;
+            var coop = Coop.Current;
+            if (coop != null
+                && coop.Landings.SensorThrowStarts(__instance, sensorType))
+            {
+                __state = coop.Landings;
+            }
         }
 
-        static void Postfix(bool __state)
+        static void Postfix(EnemyLandings __state)
         {
-            if (__state)
+            if (__state != null)
             {
-                EnemyLandings.SensorThrowEnds();
+                __state.SensorThrowEnds();
             }
         }
 
         static System.Exception Finalizer(
-            bool __state, System.Exception __exception)
+            EnemyLandings __state, System.Exception __exception)
         {
-            if (__state && __exception != null)
+            if (__state != null && __exception != null)
             {
-                EnemyLandings.SensorThrowFailed();
+                __state.SensorThrowFailed();
             }
 
             return __exception;
@@ -188,7 +226,11 @@ namespace DarkwoodMP.Combat
     {
         static void Postfix(GameObject __result)
         {
-            EnemyLandings.SensorMade(__result);
+            var coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Landings.SensorMade(__result);
+            }
         }
     }
 }

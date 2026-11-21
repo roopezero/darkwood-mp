@@ -23,49 +23,35 @@ namespace DarkwoodMP.Combat
     /// A client's copy of a host enemy never throws (spawnProjectile is skipped
     /// for it), so it can't make anything of its own.
     /// </summary>
-    public static class EnemyLandings
+    internal sealed class EnemyLandings
     {
-        private static Session S => Session.Instance;
+        private readonly CoopSession _coop;
+
+        public EnemyLandings(CoopSession coop)
+        {
+            _coop = coop;
+            coop.Handle(MsgType.EnemyLanded, OnLanded);
+            coop.Handle(MsgType.EnemyProjectile, OnProjectile);
+            coop.Handle(MsgType.EnemyLandedGone, OnLandedGone);
+            coop.Handle(MsgType.EnemySensorThrown, OnSensorThrown);
+        }
+
+        private Session S => _coop.Net;
 
         /// <summary>
         /// Host: the landing thrown thing of one of our enemies, while
         /// ThrownItem.onCollide runs.
         /// </summary>
-        internal static ThrownItem Landing;
-        internal static uint LandingBy;
-        internal static readonly List<GameObject> Made = new List<GameObject>();
-
-        public static void Register(Session s)
-        {
-            s.Register(MsgType.EnemyLanded, OnLanded);
-            s.Register(MsgType.EnemyProjectile, OnProjectile);
-            s.Register(MsgType.EnemyLandedGone, OnLandedGone);
-            s.Register(MsgType.EnemySensorThrown, OnSensorThrown);
-            s.OnSessionEnded += () =>
-            {
-                Landing = null;
-                Made.Clear();
-                _landed.Clear();
-                Throwing = null;
-                Thrown.Clear();
-                Copies.Clear();
-                SensorThrowing = null;
-                SensorThrown.Clear();
-                SensorCopies.Clear();
-            };
-        }
+        private ThrownItem _landing;
+        private uint _landingBy;
+        private readonly List<GameObject> _made = new List<GameObject>();
 
         /// <summary>
         /// Client: the facts of a message about the host's enemies' throws.
         /// </summary>
-        private static HostSendFacts SendOf(ulong from)
+        private HostSendFacts SendOf(ulong from)
         {
             var s = S;
-            if (s == null)
-            {
-                return new HostSendFacts { InWorld = WorldShare.InWorld };
-            }
-
             return new HostSendFacts
             {
                 HasSession = true,
@@ -80,7 +66,7 @@ namespace DarkwoodMP.Combat
         /// thrower (null when what it starts from isn't there); by is its
         /// net id when it's one of our tracked enemies.
         /// </summary>
-        internal static ThrowWatchFacts WatchOf(
+        private ThrowWatchFacts WatchOf(
             Character thrower, bool busy, out uint by)
         {
             by = 0;
@@ -91,19 +77,13 @@ namespace DarkwoodMP.Combat
                 tracked = NetEnemies.Instance.NetIdOf(thrower, out by);
             }
 
-            int peers = 0;
-            if (s != null)
-            {
-                peers = s.Peers.Count;
-            }
-
             return new ThrowWatchFacts
             {
                 Busy = busy,
                 HasSource = thrower != null,
-                Host = s != null && s.IsHost,
-                Peers = peers,
-                Sharing = Coop.Guards.Sharing,
+                Host = s.IsHost,
+                Peers = s.Peers.Count,
+                Sharing = _coop.Guards.Sharing,
                 Tracked = tracked,
             };
         }
@@ -114,30 +94,30 @@ namespace DarkwoodMP.Combat
         /// Host: the projectile type one of our shared enemies is throwing,
         /// while spawnProjectile runs.
         /// </summary>
-        internal static string Throwing;
-        internal static uint ThrowingBy;
-        internal static readonly List<Transform> Thrown = new List<Transform>();
+        private string _throwing;
+        private uint _throwingBy;
+        private readonly List<Transform> _thrown = new List<Transform>();
 
         /// <summary>
         /// Client: how many of the host's enemies' projectiles were shown here
         /// (for the tests).
         /// </summary>
-        internal static int Shown;
+        internal int Shown { get; private set; }
 
         /// <summary>
         /// Client: copies of the host's enemies' projectiles, flying for the
         /// look only.
         /// </summary>
-        internal static readonly HashSet<ThrownItem> Copies =
+        private readonly HashSet<ThrownItem> _copies =
             new HashSet<ThrownItem>();
 
         /// <summary>
         /// Host: after spawnProjectile, its projectile (now aimed and moving)
         /// is sent.
         /// </summary>
-        internal static void Threw()
+        private void Threw()
         {
-            foreach (var t in Thrown)
+            foreach (var t in _thrown)
             {
                 if (t == null)
                 {
@@ -146,17 +126,17 @@ namespace DarkwoodMP.Combat
 
                 var w = S.Begin(MsgType.EnemyProjectile);
                 EnemyProjectileMessage.Write(
-                    w, ThrowOf(ThrowingBy, Throwing, t));
+                    w, ThrowOf(_throwingBy, _throwing, t));
                 S.Broadcast(w, Channel.State, reliable: true);
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{ThrowingBy}'s {Throwing} thrown "
-                            + $"at {t.position}");
+                        $"[world] sent enemy #{_throwingBy}'s {_throwing} "
+                            + $"thrown at {t.position}");
                 }
             }
 
-            Thrown.Clear();
+            _thrown.Clear();
         }
 
         /// <summary>
@@ -194,10 +174,10 @@ namespace DarkwoodMP.Combat
         /// Client: a copy of the host's enemy's projectile, made harmless and
         /// sent flying for the look.
         /// </summary>
-        private static void Fly(
+        private void Fly(
             ThrownItem ti, Rigidbody rb, Character thrower, Vector3 vel)
         {
-            Copies.Add(ti);
+            _copies.Add(ti);
             Shown++;
             var col = ti.GetComponent<Collider>();
             if (thrower != null && thrower.collider != null && col != null)
@@ -219,7 +199,7 @@ namespace DarkwoodMP.Combat
             rb.AddTorque(0f, LandingRules.CopySpin, 0f);
         }
 
-        private static void OnProjectile(ulong from, PacketReader r)
+        private void OnProjectile(ulong from, PacketReader r)
         {
             if (!LandingRules.FromHost(SendOf(from)))
             {
@@ -282,18 +262,18 @@ namespace DarkwoodMP.Combat
         /// Host: the ranged sensor one of our shared enemies is throwing, while
         /// rangedAttack runs.
         /// </summary>
-        internal static string SensorThrowing;
-        internal static uint SensorThrowingBy;
-        internal static readonly List<ThrownItem> SensorThrown =
+        private string _sensorThrowing;
+        private uint _sensorThrowingBy;
+        private readonly List<ThrownItem> _sensorThrown =
             new List<ThrownItem>();
 
         /// <summary>
         /// Host: after rangedAttack, what it threw (now aimed and moving) is
         /// sent as EnemySensorThrown.
         /// </summary>
-        internal static void SensorThrew()
+        private void SensorThrew()
         {
-            foreach (var ti in SensorThrown)
+            foreach (var ti in _sensorThrown)
             {
                 if (ti == null)
                 {
@@ -304,7 +284,7 @@ namespace DarkwoodMP.Combat
                 EnemySensorThrownMessage.Write(w, new EnemySensorThrow
                 {
                     Throw = ThrowOf(
-                        SensorThrowingBy, SensorThrowing, ti.transform),
+                        _sensorThrowingBy, _sensorThrowing, ti.transform),
                     Land = new Vec2(ti.landTarget.x, ti.landTarget.z),
                 });
 
@@ -312,20 +292,20 @@ namespace DarkwoodMP.Combat
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{SensorThrowingBy}'s "
-                            + $"{SensorThrowing} ({ti.name}) thrown at "
+                        $"[world] sent enemy #{_sensorThrowingBy}'s "
+                            + $"{_sensorThrowing} ({ti.name}) thrown at "
                             + $"{ti.transform.position}");
                 }
             }
 
-            SensorThrown.Clear();
+            _sensorThrown.Clear();
         }
 
         /// <summary>
         /// Client: make what the host's enemy threw from our copy's own sensor,
         /// and let it fly for the look.
         /// </summary>
-        private static void OnSensorThrown(ulong from, PacketReader r)
+        private void OnSensorThrown(ulong from, PacketReader r)
         {
             if (!LandingRules.FromHost(SendOf(from)))
             {
@@ -396,7 +376,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            SensorCopies.Add(ti);
+            _sensorCopies.Add(ti);
             rb.drag = LandingRules.SensorDrag;
             Fly(ti, rb, thrower, vel);
             ti.landTarget = new Vector3(land.x, pos.y, land.z);
@@ -433,23 +413,23 @@ namespace DarkwoodMP.Combat
         /// Client: copies made with Core.AddPrefab (not pooled): destroyed when
         /// they go, not put back.
         /// </summary>
-        internal static readonly HashSet<ThrownItem> SensorCopies =
+        private readonly HashSet<ThrownItem> _sensorCopies =
             new HashSet<ThrownItem>();
 
         /// <summary>
         /// Client: a copy that hit nothing in a few seconds goes anyway.
         /// </summary>
-        private static System.Collections.IEnumerator Expire(
+        private System.Collections.IEnumerator Expire(
             ThrownItem ti, Transform t)
         {
             yield return new WaitForSeconds(LandingRules.CopyLife);
-            if (ti != null && Copies.Remove(ti))
+            if (Coop.Current == _coop && ti != null && _copies.Remove(ti))
             {
                 Gone(t);
             }
         }
 
-        internal static void Gone(Transform t)
+        private void Gone(Transform t)
         {
             if (t == null)
             {
@@ -457,7 +437,7 @@ namespace DarkwoodMP.Combat
             }
 
             var sti = t.GetComponent<ThrownItem>();
-            if (sti != null && SensorCopies.Remove(sti))
+            if (sti != null && _sensorCopies.Remove(sti))
             {
                 // it checks for landing each frame until it's destroyed
                 sti.thrown = false;
@@ -492,7 +472,7 @@ namespace DarkwoodMP.Combat
         /// Host: ThrownItem.onCollide starts. Whether it's the landing of
         /// one of our shared enemies' throws, noted until it ends.
         /// </summary>
-        internal static bool LandingStarts(ThrownItem t)
+        internal bool LandingStarts(ThrownItem t)
         {
             Character c = null;
             if (t != null && t.objectThatSpawnedMe != null)
@@ -500,45 +480,45 @@ namespace DarkwoodMP.Combat
                 c = t.objectThatSpawnedMe.GetComponent<Character>();
             }
 
-            var start = WatchOf(c, Landing != null, out uint by);
+            var start = WatchOf(c, _landing != null, out uint by);
             if (!LandingRules.Notes(start))
             {
                 return false;
             }
 
-            LandingBy = by;
-            Landing = t;
-            Made.Clear();
+            _landingBy = by;
+            _landing = t;
+            _made.Clear();
             return true;
         }
 
         /// <summary>Host: the noted landing ended; send what it left.</summary>
-        internal static void LandingEnds()
+        internal void LandingEnds()
         {
-            Landing = null;
+            _landing = null;
             Landed();
         }
 
         /// <summary>Host: the noted landing threw; forget it.</summary>
-        internal static void LandingFailed()
+        internal void LandingFailed()
         {
-            Landing = null;
-            Made.Clear();
+            _landing = null;
+            _made.Clear();
         }
 
         /// <summary>
         /// Host: Core.AddPrefab made this of that prefab: noted when it's
         /// what the noted landing leaves.
         /// </summary>
-        internal static void PrefabMade(Object prefab, GameObject made)
+        internal void PrefabMade(Object prefab, GameObject made)
         {
-            var t = Landing;
+            var t = _landing;
             bool noting = t != null && made != null;
             bool land = noting && prefab != null
                 && prefab == t.prefabToSpawnOnLand;
             if (LandingRules.TakesLanded(noting, land))
             {
-                Made.Add(made);
+                _made.Add(made);
             }
         }
 
@@ -546,7 +526,7 @@ namespace DarkwoodMP.Combat
         /// Client: whether this character may throw (Character
         /// .spawnProjectile): not a copy of the host's enemy.
         /// </summary>
-        internal static bool MayThrow(Character c)
+        internal bool MayThrow(Character c)
         {
             if (c == null)
             {
@@ -563,46 +543,46 @@ namespace DarkwoodMP.Combat
         /// Host: Character.spawnProjectile starts. Whether it's one of our
         /// shared enemies' throws, noted until it ends.
         /// </summary>
-        internal static bool ThrowStarts(Character c, string type)
+        internal bool ThrowStarts(Character c, string type)
         {
-            var start = WatchOf(c, Throwing != null, out uint by);
+            var start = WatchOf(c, _throwing != null, out uint by);
             if (!LandingRules.Notes(start))
             {
                 return false;
             }
 
-            ThrowingBy = by;
-            Throwing = type;
-            Thrown.Clear();
+            _throwingBy = by;
+            _throwing = type;
+            _thrown.Clear();
             return true;
         }
 
         /// <summary>Host: the noted throw ended; send what it threw.</summary>
-        internal static void ThrowEnds()
+        internal void ThrowEnds()
         {
             Threw();
-            Throwing = null;
+            _throwing = null;
         }
 
         /// <summary>Host: the noted throw threw; forget it.</summary>
-        internal static void ThrowFailed()
+        internal void ThrowFailed()
         {
-            Throwing = null;
-            Thrown.Clear();
+            _throwing = null;
+            _thrown.Clear();
         }
 
         /// <summary>
         /// Host: Core.AddPooledPrefab made this: noted when the noted throw
         /// threw it.
         /// </summary>
-        internal static void PooledMade(Transform made)
+        internal void PooledMade(Transform made)
         {
-            bool noting = Throwing != null && made != null;
+            bool noting = _throwing != null && made != null;
             bool thrown = noting && made.GetComponent<ThrownItem>() != null;
-            bool listed = noting && Thrown.Contains(made);
+            bool listed = noting && _thrown.Contains(made);
             if (LandingRules.TakesThrown(noting, thrown, listed))
             {
-                Thrown.Add(made);
+                _thrown.Add(made);
             }
         }
 
@@ -610,9 +590,9 @@ namespace DarkwoodMP.Combat
         /// Client: ThrownItem.onCollide starts. Whether it's one of our
         /// copies of the host's enemies' projectiles, which then just goes.
         /// </summary>
-        internal static bool CopyEnds(ThrownItem t)
+        internal bool CopyEnds(ThrownItem t)
         {
-            if (t == null || !Copies.Remove(t))
+            if (t == null || !_copies.Remove(t))
             {
                 return false;
             }
@@ -625,7 +605,7 @@ namespace DarkwoodMP.Combat
         /// Host: Character.rangedAttack starts. Whether it's one of our
         /// shared enemies' ranged attacks, noted until it ends.
         /// </summary>
-        internal static bool SensorThrowStarts(
+        internal bool SensorThrowStarts(
             Character c, Character.SensorType sensor)
         {
             Character thrower = null;
@@ -634,64 +614,64 @@ namespace DarkwoodMP.Combat
                 thrower = c;
             }
 
-            var start = WatchOf(thrower, SensorThrowing != null, out uint by);
+            var start = WatchOf(thrower, _sensorThrowing != null, out uint by);
             if (!LandingRules.Notes(start))
             {
                 return false;
             }
 
-            SensorThrowingBy = by;
+            _sensorThrowingBy = by;
             string name = sensor.name;
             if (name == null)
             {
                 name = "";
             }
 
-            SensorThrowing = name;
-            SensorThrown.Clear();
+            _sensorThrowing = name;
+            _sensorThrown.Clear();
             return true;
         }
 
         /// <summary>
         /// Host: the noted ranged attack ended; send what it threw.
         /// </summary>
-        internal static void SensorThrowEnds()
+        internal void SensorThrowEnds()
         {
             SensorThrew();
-            SensorThrowing = null;
+            _sensorThrowing = null;
         }
 
         /// <summary>Host: the noted ranged attack threw; forget it.</summary>
-        internal static void SensorThrowFailed()
+        internal void SensorThrowFailed()
         {
-            SensorThrowing = null;
-            SensorThrown.Clear();
+            _sensorThrowing = null;
+            _sensorThrown.Clear();
         }
 
         /// <summary>
         /// Host: Core.AddPrefab made this: noted when the noted ranged attack
         /// threw it.
         /// </summary>
-        internal static void SensorMade(GameObject made)
+        internal void SensorMade(GameObject made)
         {
-            if (SensorThrowing == null || made == null)
+            if (_sensorThrowing == null || made == null)
             {
                 return;
             }
 
             var ti = made.GetComponent<ThrownItem>();
             bool thrown = ti != null;
-            bool listed = thrown && SensorThrown.Contains(ti);
+            bool listed = thrown && _sensorThrown.Contains(ti);
             if (LandingRules.TakesThrown(true, thrown, listed))
             {
-                SensorThrown.Add(ti);
+                _sensorThrown.Add(ti);
             }
         }
 
         /// <summary>Host: after the landing, send what it left.</summary>
-        internal static void Landed()
+        private void Landed()
         {
-            foreach (var go in Made)
+            foreach (var go in _made)
             {
                 if (go == null)
                 {
@@ -705,7 +685,7 @@ namespace DarkwoodMP.Combat
                 EnemyLandedMessage.Write(w, new EnemyLanding
                 {
                     Id = id,
-                    By = LandingBy,
+                    By = _landingBy,
                     Name = go.name,
                     At = VecOf(p),
                     Yaw = go.transform.eulerAngles.y,
@@ -715,14 +695,14 @@ namespace DarkwoodMP.Combat
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] sent enemy #{LandingBy}'s {go.name} landed: "
+                        $"[world] sent enemy #{_landingBy}'s {go.name} landed: "
                             + $"Spawned:{id} at {p}");
                 }
 
                 _landed[id] = go;
             }
 
-            Made.Clear();
+            _made.Clear();
             if (LandingRules.StartsWatch(_landed.Count, _watching))
             {
                 _watching = true;
@@ -732,18 +712,18 @@ namespace DarkwoodMP.Combat
 
         // Host: what our enemies' projectiles left, until it's gone (then
         // EnemyLandedGone).
-        private static readonly Dictionary<long, GameObject> _landed =
+        private readonly Dictionary<long, GameObject> _landed =
             new Dictionary<long, GameObject>();
-        private static bool _watching;
+        private bool _watching;
 
-        private static System.Collections.IEnumerator WatchLanded()
+        private System.Collections.IEnumerator WatchLanded()
         {
             var gone = new List<long>();
             while (_landed.Count > 0)
             {
                 yield return new WaitForSeconds(LandingRules.WatchEvery);
                 var s = S;
-                if (s == null || !s.IsHost)
+                if (Coop.Current != _coop || !s.IsHost)
                 {
                     _landed.Clear();
                     break;
@@ -777,7 +757,7 @@ namespace DarkwoodMP.Combat
             _watching = false;
         }
 
-        private static void OnLandedGone(ulong from, PacketReader r)
+        private void OnLandedGone(ulong from, PacketReader r)
         {
             if (!LandingRules.FromHost(SendOf(from)))
             {
@@ -834,10 +814,10 @@ namespace DarkwoodMP.Combat
 
         // What each name's thrown thing leaves (the prefab), found among the
         // loaded ThrownItems (pooled projectiles).
-        private static readonly Dictionary<string, Object> _prefabs =
+        private readonly Dictionary<string, Object> _prefabs =
             new Dictionary<string, Object>();
 
-        private static Object PrefabNamed(string name)
+        private Object PrefabNamed(string name)
         {
             if (_prefabs.TryGetValue(name, out var o) && o != null)
             {
@@ -857,7 +837,7 @@ namespace DarkwoodMP.Combat
             return null;
         }
 
-        private static void OnLanded(ulong from, PacketReader r)
+        private void OnLanded(ulong from, PacketReader r)
         {
             if (!LandingRules.FromHost(SendOf(from)))
             {
@@ -892,7 +872,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            Coop.Guards.Replaying = true;
+            _coop.Guards.Replaying = true;
             try
             {
                 var go = Core.AddPrefab(
@@ -920,7 +900,7 @@ namespace DarkwoodMP.Combat
             }
             finally
             {
-                Coop.Guards.Replaying = false;
+                _coop.Guards.Replaying = false;
             }
         }
     }
