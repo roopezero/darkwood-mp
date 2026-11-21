@@ -368,34 +368,33 @@ namespace DarkwoodMP.World
             PacketWriter w, Action a, ObjRef r, float x, float y, bool f1,
             bool f2, string str, bool byPlayer = false)
         {
-            w.W.Write((byte)a);
-            r.Write(w);
-            w.W.Write(x);
-            w.W.Write(y);
-            int flags = 0;
+            byte flags = 0;
             if (f1)
             {
-                flags |= 1;
+                flags |= WorldActionBody.First;
             }
 
             if (f2)
             {
-                flags |= 2;
+                flags |= WorldActionBody.Second;
             }
 
             if (byPlayer)
             {
-                flags |= 4;
+                flags |= WorldActionBody.ByPlayer;
             }
 
-            w.W.Write((byte)flags);
-            string written = str;
-            if (written == null)
+            var body = new WorldActionBody
             {
-                written = "";
-            }
+                Action = (byte)a,
+                Obj = ObjRef.NameOf(r),
+                X = x,
+                Y = y,
+                Flags = flags,
+                Text = str,
+            };
 
-            w.WriteStr(written);
+            WorldActionMessage.Write(w, body);
         }
 
         private static void OnAction(ulong from, PacketReader r)
@@ -411,15 +410,16 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var a = (Action)r.R.ReadByte();
-            var obj = ObjRef.Read(r);
-            float x = r.R.ReadSingle(), y = r.R.ReadSingle();
-            byte f = r.R.ReadByte();
-            string str = r.ReadStr();
-            bool f1 = (f & 1) != 0, f2 = (f & 2) != 0;
+            WorldActionBody body = WorldActionMessage.Read(r);
+            var a = (Action)body.Action;
+            var obj = ObjRef.RefOf(body.Obj);
+            float x = body.X, y = body.Y;
+            string str = body.Text;
+            bool f1 = body.Has(WorldActionBody.First);
+            bool f2 = body.Has(WorldActionBody.Second);
             // A joiner's action (to the host), or one the host says a player
             // did: that player sets off its triggers.
-            bool byPlayer = s.IsHost || (f & 4) != 0;
+            bool byPlayer = s.IsHost || body.Has(WorldActionBody.ByPlayer);
 
             if (s.IsHost && Coop.Current.Authority.Handling
                 && !Allowed(a, obj, x, y, f1, str))
