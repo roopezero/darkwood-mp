@@ -131,12 +131,12 @@ namespace DarkwoodMP.World
 
             r.Info =
                 $"{heldText.Trim()}; chapter {Chapter}, generating "
-                    + $"{Chapters.Generating}, dreaming {Dreaming}";
+                    + $"{Generating}, dreaming {Dreaming}";
             if (held == null)
             {
                 r.Fail($"no chapter held: {r.Info}");
             }
-            else if (Chapter != 1 || Chapters.Generating)
+            else if (Chapter != 1 || Generating)
             {
                 r.Fail($"the chapter started in our dream: {r.Info}");
             }

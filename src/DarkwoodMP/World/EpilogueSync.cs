@@ -232,7 +232,7 @@ namespace DarkwoodMP.World
                 "[epilogue] the host starts the epilogue: the players in its "
                     + "world play it too");
             S.Broadcast(GameEnd(0), Channel.Control, reliable: true);
-            if (Chapters.TestQuick)
+            if (Plugin.Instance.Host.TestQuickEnd)
             {
                 Plugin.Instance.StartCoroutine(TestHostQuick());
             }

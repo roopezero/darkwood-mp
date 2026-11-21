@@ -47,7 +47,7 @@ namespace DarkwoodMP.World
     /// the prologue. At the end, each joiner is moved to a free spot beside the
     /// hideout's start, off the host.
     /// </summary>
-    public static class Prologue
+    internal sealed class Prologue
     {
         private static Session S => Session.Instance;
         private static Dreams D => Singleton<Dreams>.Instance;
@@ -121,10 +121,10 @@ namespace DarkwoodMP.World
                 + $"loading {Core.loadingGame}";
         }
 
-        private static string _lastWhy;
+        private string _lastWhy;
 
         /// <summary>Host: log why joiners wait, when it changes.</summary>
-        internal static void NoteWait(string why)
+        internal void NoteWait(string why)
         {
             if (why == _lastWhy)
             {
@@ -149,7 +149,7 @@ namespace DarkwoodMP.World
         /// saved going into the stage we're in, so the joiner's game goes into
         /// it as it loads (SaveManager.Load: Dreams.wantToDream).
         /// </summary>
-        internal static void ForSnapshot(Dreams.SaveState state, Dreams d)
+        internal void ForSnapshot(Dreams.SaveState state, Dreams d)
         {
             if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
             {
@@ -178,7 +178,7 @@ namespace DarkwoodMP.World
         /// into a level dream. What happened in the host's copy of the stage
         /// stays the host's.
         /// </summary>
-        internal static void ForSnapshot(OutsideLocations.SaveState state)
+        internal void ForSnapshot(OutsideLocations.SaveState state)
         {
             var d = D;
             if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
@@ -243,13 +243,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool _firstPlaySet;
-        private static bool _loaded;
-        private static Seconds _loadedAt;
-        private static float _nextWhy;
+        private bool _firstPlaySet;
+        private bool _loaded;
+        private Seconds _loadedAt;
+        private float _nextWhy;
 
         /// <summary>Call every frame.</summary>
-        public static void Update()
+        public void Update()
         {
             if (S == null || !S.Active || !WorldShare.InWorld)
             {
@@ -373,7 +373,7 @@ namespace DarkwoodMP.World
         /// Dreams.endDreaming has run: the prologue's end puts a joiner beside
         /// the hideout's start, off the host.
         /// </summary>
-        internal static void AfterEnd(Dreams d, string ended)
+        internal void AfterEnd(Dreams d, string ended)
         {
             if (!PrologueRules.EndsPrologue(ended, d != null,
                 d != null && d.dreaming))
@@ -416,8 +416,14 @@ namespace DarkwoodMP.World
         new[] { typeof(Dreams) })]
     static class PrologueSnapshotPatch
     {
-        static void Postfix(Dreams.SaveState __instance, Dreams dreams) =>
-            Prologue.ForSnapshot(__instance, dreams);
+        static void Postfix(Dreams.SaveState __instance, Dreams dreams)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Prologue.ForSnapshot(__instance, dreams);
+            }
+        }
     }
 
     [HarmonyPatch(
@@ -425,8 +431,14 @@ namespace DarkwoodMP.World
         new[] { typeof(OutsideLocations) })]
     static class PrologueSnapshotPlacePatch
     {
-        static void Postfix(OutsideLocations.SaveState __instance) =>
-            Prologue.ForSnapshot(__instance);
+        static void Postfix(OutsideLocations.SaveState __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Prologue.ForSnapshot(__instance);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
@@ -444,7 +456,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        static void Postfix(Dreams __instance, string __state) =>
-            Prologue.AfterEnd(__instance, __state);
+        static void Postfix(Dreams __instance, string __state)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Prologue.AfterEnd(__instance, __state);
+            }
+        }
     }
 }

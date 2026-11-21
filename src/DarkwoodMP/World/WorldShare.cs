@@ -1131,7 +1131,12 @@ namespace DarkwoodMP.World
             if (World.Prologue.Active)
             {
                 string why = World.Prologue.WhyWait(WorldReady);
-                World.Prologue.NoteWait(why);
+                CoopSession coop = Coop.Current;
+                if (coop != null)
+                {
+                    coop.Prologue.NoteWait(why);
+                }
+
                 if (why == null)
                 {
                     return null;

@@ -48,9 +48,11 @@ namespace DarkwoodMP.World
     /// take it to the main menu. A joiner whose epilogue can't start falls back
     /// to that too.
     /// </summary>
-    public static class Chapters
+    internal sealed class Chapters
     {
         private static Session S => Session.Instance;
+
+        private readonly CoopSession _coop;
 
         public const string EpilogueDream = StoryRequestRules.EpilogueDream;
         /// <summary>
@@ -62,13 +64,8 @@ namespace DarkwoodMP.World
         /// Host: its next chapter is being built (from generateChapter until
         /// its world is ready again).
         /// </summary>
-        public static bool Generating { get; private set; }
-        private static bool _chapterSent, _endSent;
-
-        /// <summary>
-        /// For tests: skip the epilogue and the credits as soon as they start.
-        /// </summary>
-        public static bool TestQuick;
+        public bool Generating { get; private set; }
+        private bool _chapterSent, _endSent;
 
         /// <summary>The chapter of the world loaded now (0 if none).</summary>
         public static int HostChapter
@@ -84,23 +81,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        public static void Register(Session s)
+        public Chapters(CoopSession coop)
         {
-            s.Register(MsgType.ChapterStart, OnChapterStart);
-            s.Register(MsgType.GameEnd, OnGameEnd);
-            s.Register(MsgType.StoryRequest, OnStoryRequest);
-            s.OnSessionEnded += () =>
-            {
-                _chapterSent = false;
-                _endSent = false;
-                Generating = false;
-                _held = null;
-                _ready = false;
-                _ran.Clear();
-            };
+            _coop = coop;
+            coop.Handle(MsgType.ChapterStart, OnChapterStart);
+            coop.Handle(MsgType.GameEnd, OnGameEnd);
+            coop.Handle(MsgType.StoryRequest, OnStoryRequest);
         }
 
-        public static void Update()
+        public void Update()
         {
             if (ChapterRules.ChapterReady(Generating, WorldShare.WorldReady))
             {
@@ -210,6 +199,7 @@ namespace DarkwoodMP.World
             }
 
             StepRun run = StoryRequestRules.StepRuns(facts);
+            CoopSession coop = Coop.Current;
             if (facts.IsClient)
             {
                 string text = "";
@@ -232,12 +222,20 @@ namespace DarkwoodMP.World
             switch (run)
             {
                 case StepRun.AskHost:
-                    SendStoryRequest(e, thisGO, facts.Kind);
+                    if (coop != null)
+                    {
+                        coop.Chapters.SendStoryRequest(e, thisGO, facts.Kind);
+                    }
+
                     return false;
                 case StepRun.Skip:
                     return false;
                 case StepRun.StartChapter:
-                    SendChapterStart(e.intValue);
+                    if (coop != null)
+                    {
+                        coop.Chapters.SendChapterStart(e.intValue);
+                    }
+
                     return true;
                 default:
                     return true;
@@ -247,13 +245,13 @@ namespace DarkwoodMP.World
         private static string What(StoryKind kind, int chapter) =>
             StoryRequestRules.What(kind, chapter);
 
-        private static Seconds _lastRequest =
+        private Seconds _lastRequest =
             new Seconds(StoryRequestRules.NeverAsked);
 
         /// <summary>
         /// Joiner: our player's event reached a story step; the host decides.
         /// </summary>
-        private static void SendStoryRequest(
+        private void SendStoryRequest(
             GameEvent e, GameObject thisGO, StoryKind kind)
         {
             var now = new Seconds(Time.realtimeSinceStartup);
@@ -283,7 +281,7 @@ namespace DarkwoodMP.World
                 instance.FlushNow();
             }
 
-            var w = S.Begin(MsgType.StoryRequest);
+            var w = _coop.Net.Begin(MsgType.StoryRequest);
             int index = 0;
             if (ge != null)
             {
@@ -305,7 +303,7 @@ namespace DarkwoodMP.World
             });
 
             string what = What(kind, e.intValue);
-            Coop.Current.Authority.Request(w, what, (ok, reason, result) =>
+            _coop.Authority.Request(w, what, (ok, reason, result) =>
             {
                 string notice = StoryRequestRules.NoticeFor(new ReplyFacts
                 {
@@ -332,16 +330,16 @@ namespace DarkwoodMP.World
         /// request that doesn't fit the story (the wrong chapter, an event that
         /// doesn't do that, too far away) is refused.
         /// </summary>
-        private static void OnStoryRequest(ulong from, PacketReader r)
+        private void OnStoryRequest(ulong from, PacketReader r)
         {
-            var s = S;
+            var s = _coop.Net;
             if (s == null || !s.IsHost)
             {
                 return;
             }
 
             StoryAsk ask = StoryRequest.Read(r);
-            if (!Coop.Current.Authority.Handling)
+            if (!_coop.Authority.Handling)
             {
                 return; // only as a Request
             }
@@ -361,10 +359,10 @@ namespace DarkwoodMP.World
             switch (answer.Outcome)
             {
                 case StoryOutcome.Refuse:
-                    Coop.Current.Authority.Refuse(answer.Verdict);
+                    _coop.Authority.Refuse(answer.Verdict);
                     return;
                 case StoryOutcome.Done:
-                    Coop.Current.Authority.Result(
+                    _coop.Authority.Result(
                         StoryRequestRules.DonePrefix + answer.Reason);
                     return;
                 case StoryOutcome.Wait:
@@ -380,7 +378,7 @@ namespace DarkwoodMP.World
                         _ready = false;
                     }
 
-                    Coop.Current.Authority.Result(
+                    _coop.Authority.Result(
                         StoryRequestRules.PendingPrefix + answer.Reason);
                     return;
             }
@@ -389,7 +387,7 @@ namespace DarkwoodMP.World
                 $"{s.NameOf(from)} set off {what}: running it here");
             if (!Run(h))
             {
-                Coop.Current.Authority.Refuse(
+                _coop.Authority.Refuse(
                     Verdict.Refuse(Refusal.RunFailed));
             }
         }
@@ -408,17 +406,17 @@ namespace DarkwoodMP.World
             public string Key => StoryRequestRules.KeyOf(Kind, Chapter);
         }
 
-        private static Held _held;
+        private Held _held;
         /// <summary>
         /// Host: the held step could run on every frame since _readySince.
         /// </summary>
-        private static bool _ready;
-        private static Seconds _readySince;
+        private bool _ready;
+        private Seconds _readySince;
         /// <summary>
         /// Host: the story steps run for a joiner or started by our own game in
         /// this session (StoryRequestRules.KeyOf): none runs twice.
         /// </summary>
-        private static readonly System.Collections.Generic.HashSet<string>
+        private readonly System.Collections.Generic.HashSet<string>
             _ran = new System.Collections.Generic.HashSet<string>();
 
         /// <summary>Who set off a held step, and which (none: zero).</summary>
@@ -458,7 +456,7 @@ namespace DarkwoodMP.World
         /// Host: the only code reading the game for a joiner's story step. The
         /// event is looked up only once the rules get as far as it.
         /// </summary>
-        private static StoryFacts FactsOf(Held h)
+        private StoryFacts FactsOf(Held h)
         {
             var facts = new StoryFacts
             {
@@ -497,7 +495,7 @@ namespace DarkwoodMP.World
                 step = StepOf(ge.events[h.Index]);
             }
 
-            ReachFacts reach = Coop.Current.Authority.NearOf(
+            ReachFacts reach = _coop.Authority.NearOf(
                 h.From, ge.transform.position);
             return facts with
             {
@@ -515,7 +513,7 @@ namespace DarkwoodMP.World
         /// checked once, from where they were then: a held request isn't
         /// refused because they moved on meanwhile.
         /// </summary>
-        private static StoryAnswer Decide(Held h)
+        private StoryAnswer Decide(Held h)
         {
             StoryAnswer answer = StoryRequestRules.Decide(FactsOf(h));
             h.ReachChecked = answer.ReachChecked;
@@ -523,7 +521,7 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Host: run a joiner's story step in our game.</summary>
-        private static bool Run(Held h)
+        private bool Run(Held h)
         {
             _ran.Add(h.Key);
             try
@@ -546,7 +544,7 @@ namespace DarkwoodMP.World
         /// Host: run the held story step once our game can, and has for 3
         /// seconds (a dream's end settles).
         /// </summary>
-        private static void UpdateHeld()
+        private void UpdateHeld()
         {
             var h = _held;
             if (h == null)
@@ -554,7 +552,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var s = S;
+            var s = _coop.Net;
             bool here = s != null && s.IsHost && s.Peers.Contains(h.From);
             StoryAnswer answer = default;
             if (here)
@@ -607,9 +605,9 @@ namespace DarkwoodMP.World
 
         // ---- host -----------------------------------------------------------
 
-        private static void SendChapterStart(int chapter)
+        private void SendChapterStart(int chapter)
         {
-            var s = S;
+            var s = _coop.Net;
             if (!ChapterRules.SendsChapterStart(
                 s != null && s.IsHost, PeersOf(s), _chapterSent))
             {
@@ -640,9 +638,9 @@ namespace DarkwoodMP.World
         /// Controller.generateChapter: a joiner's game doesn't build a chapter
         /// itself; the host tells the joiners.
         /// </summary>
-        internal static bool BeforeGenerate(int chapter, bool generateSave)
+        internal bool BeforeGenerate(int chapter, bool generateSave)
         {
-            var s = S;
+            var s = _coop.Net;
             var facts = new GenerateFacts { NewChapter = generateSave };
             if (s != null && s.Active)
             {
@@ -673,9 +671,9 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        internal static void HostEnding(EndKind kind)
+        internal void HostEnding(EndKind kind)
         {
-            var s = S;
+            var s = _coop.Net;
             kind = EndingRules.HostEnds(s != null && s.IsHost, _endSent, kind);
             if (kind == EndKind.None)
             {
@@ -703,7 +701,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        internal static void OnPrepareDream(string preset)
+        internal void OnPrepareDream(string preset)
         {
             if (EndingRules.DreamEnds(preset))
             {
@@ -711,15 +709,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        internal static void OnShowEndGame() => HostEnding(EndKind.EndScreen);
+        internal void OnShowEndGame() => HostEnding(EndKind.EndScreen);
 
         // ---- joiner ---------------------------------------------------------
 
-        private static Seconds _chapterWaitUntil;
+        private Seconds _chapterWaitUntil;
 
-        private static void OnChapterStart(ulong from, PacketReader r)
+        private void OnChapterStart(ulong from, PacketReader r)
         {
-            var s = S;
+            var s = _coop.Net;
             if (s == null || s.IsHost || from != s.HostId)
             {
                 return;
@@ -767,7 +765,7 @@ namespace DarkwoodMP.World
         /// If the host's WorldReload never comes (its chapter failed), let our
         /// player go on after a while.
         /// </summary>
-        private static IEnumerator ChapterWait(int scene)
+        private IEnumerator ChapterWait(int scene)
         {
             while (true)
             {
@@ -800,9 +798,9 @@ namespace DarkwoodMP.World
                 new Color(0f, 0f, 0f, 0f), 1f);
         }
 
-        private static void OnGameEnd(ulong from, PacketReader r)
+        private void OnGameEnd(ulong from, PacketReader r)
         {
-            var s = S;
+            var s = _coop.Net;
             bool fromHost = s != null && !s.IsHost && from == s.HostId;
             if (!fromHost)
             {
@@ -903,7 +901,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(
                         "Playing the epilogue (the credits follow, then the "
                             + "main menu)");
-                    if (!TestQuick)
+                    if (!Plugin.Instance.Host.TestQuickEnd)
                     {
                         yield return ToMenuAfterEnding();
                         yield break;
@@ -979,7 +977,7 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo("Showing the end screen");
             float time = 12f;
-            if (TestQuick)
+            if (Plugin.Instance.Host.TestQuickEnd)
             {
                 time = 4f;
             }
@@ -1030,7 +1028,7 @@ namespace DarkwoodMP.World
                 {
                     credits = true;
                     Plugin.Log.LogInfo("The credits are rolling");
-                    if (TestQuick)
+                    if (Plugin.Instance.Host.TestQuickEnd)
                     {
                         Plugin.Instance.StartCoroutine(SkipCredits());
                     }
@@ -1058,20 +1056,41 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Controller), nameof(Controller.generateChapter))]
     static class GenerateChapterPatch
     {
-        static bool Prefix(int _chapterId, bool generateSave) =>
-            Chapters.BeforeGenerate(_chapterId, generateSave);
+        static bool Prefix(int _chapterId, bool generateSave)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Chapters.BeforeGenerate(_chapterId, generateSave);
+        }
     }
 
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.prepareDream))]
     static class EpilogueStartPatch
     {
-        static void Prefix(string presetName) =>
-            Chapters.OnPrepareDream(presetName);
+        static void Prefix(string presetName)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Chapters.OnPrepareDream(presetName);
+            }
+        }
     }
 
     [HarmonyPatch(typeof(UI), nameof(UI.showEndGame))]
     static class EndScreenPatch
     {
-        static void Prefix() => Chapters.OnShowEndGame();
+        static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Chapters.OnShowEndGame();
+            }
+        }
     }
 }
